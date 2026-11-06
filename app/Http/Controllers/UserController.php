@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Branch;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,6 +19,7 @@ class UserController extends Controller
         ]);
 
         $users = User::query()
+            ->with(['branch'])
             ->withCount(['courses', 'enrollments', 'certificates'])
             ->when($validated['search'] ?? null, function ($query, string $search): void {
                 $query->where(function ($builder) use ($search): void {
@@ -31,13 +33,16 @@ class UserController extends Controller
             ->paginate(25)
             ->withQueryString();
 
-        $branches = Branch::query()->orderBy('name')->get();\n\n        return view('admin.users.index', compact('users', 'branches'));
+        $branches = Branch::query()->where('is_active', true)->orderBy('name')->get();
+
+        return view('admin.users.index', compact('users', 'branches'));
     }
 
     public function updateRole(User $user, Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'role' => ['required', 'in:admin,branch_manager,accountant,teacher,student'],\n            'branch_id' => ['nullable', 'exists:branches,id'],
+            'role' => ['required', 'in:admin,branch_manager,accountant,teacher,student'],
+            'branch_id' => ['nullable', 'exists:branches,id'],
         ]);
 
         if ($user->id === Auth::id() && $validated['role'] !== 'admin') {
@@ -48,8 +53,13 @@ class UserController extends Controller
             return back()->with('error', 'The last administrator cannot be demoted.');
         }
 
+        if ($validated['role'] === 'branch_manager' && empty($validated['branch_id'])) {
+            return back()->withErrors(['branch_id' => 'Select a branch for the branch manager.']);
+        }
+
         $user->update([
             'role' => $validated['role'],
+            'branch_id' => $validated['role'] === 'branch_manager' ? $validated['branch_id'] : null,
         ]);
 
         return redirect()->route('admin.users.index')->with('success', 'User role updated successfully.');
