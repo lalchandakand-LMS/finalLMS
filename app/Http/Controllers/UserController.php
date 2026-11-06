@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class UserController extends Controller
@@ -42,7 +43,7 @@ class UserController extends Controller
     {
         $validated = $request->validate([
             'role' => ['required', 'in:admin,branch_manager,accountant,teacher,student'],
-            'branch_id' => ['nullable', 'exists:branches,id'],
+            'branch_id' => ['nullable', Rule::exists('branches', 'id')->where('is_active', true)],
         ]);
 
         if ($user->id === Auth::id() && $validated['role'] !== 'admin') {
