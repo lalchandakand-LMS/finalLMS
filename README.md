@@ -33,7 +33,9 @@ The local/testing seeder creates `admin@lms.test`, `teacher@lms.test`, and `stud
 - Lesson progress tracking; certificates require every course lesson completed
 - Batch seat reservation for pending payments, unique transaction references, and last-admin protection
 - SEO metadata, consent-gated GA4/GTM/Meta Pixel tags, and consent-based queued bulk SMS
-- Admin homepage, payment, user, course, and settings controls\n- Student invoices, partial/installment receipts, manual payment ledger, and outstanding balance tracking\n- Admin activity log for successful authenticated changes, with user/action/route/IP filters
+- Admin homepage, payment, user, course, and settings controls
+- Student invoices, partial/installment receipts, manual payment ledger, and outstanding balance tracking
+- Admin activity log for successful authenticated changes, with user/action/route/IP filters
 
 ## Not yet complete
 
