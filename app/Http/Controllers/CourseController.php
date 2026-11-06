@@ -1,0 +1,186 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Certificate;
+use App\Models\Course;
+use App\Models\Lesson;
+use App\Models\LessonProgress;
+use App\Models\Setting;
+use App\Models\User;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
+use Illuminate\View\View;
+
+class CourseController extends Controller
+{
+    public function index(): View
+    {
+        $courses = Course::with('teacher')->where('status', 'published')->latest()->get();
+
+        return view('courses.index', compact('courses'));
+    }
+
+    public function adminIndex(): View
+    {
+        $courses = Course::with('teacher')->latest()->get();
+        $teachers = User::where('role', 'teacher')->get();
+
+        return view('admin.courses.index', compact('courses', 'teachers'));
+    }
+
+    public function create(): View
+    {
+        $teachers = User::where('role', 'teacher')->get();
+
+        return view('admin.courses.form', ['course' => null, 'teachers' => $teachers]);
+    }
+
+    public function edit(Course $course): View
+    {
+        $teachers = User::where('role', 'teacher')->get();
+
+        return view('admin.courses.form', ['course' => $course, 'teachers' => $teachers]);
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['required', 'string'],
+            'teacher_id' => ['required', 'exists:users,id'],
+            'price' => ['required', 'numeric', 'min:0'],
+            'status' => ['required', 'in:published,draft,archived'],
+        ]);
+
+        $validated['slug'] = Str::slug($validated['title']);
+
+        Course::create($validated);
+
+        return redirect()->route('admin.courses.index')->with('success', 'Course created successfully.');
+    }
+
+    public function update(Request $request, Course $course): RedirectResponse
+    {
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['required', 'string'],
+            'teacher_id' => ['required', 'exists:users,id'],
+            'price' => ['required', 'numeric', 'min:0'],
+            'status' => ['required', 'in:published,draft,archived'],
+        ]);
+
+        $validated['slug'] = Str::slug($validated['title']);
+        $course->update($validated);
+
+        return redirect()->route('admin.courses.index')->with('success', 'Course updated successfully.');
+    }
+
+    public function destroy(Course $course): RedirectResponse
+    {
+        $course->delete();
+
+        return redirect()->route('admin.courses.index')->with('success', 'Course deleted successfully.');
+    }
+
+    public function show(Course $course): View
+    {
+        $user = Auth::user();
+        $canManageCourse = $user && ($user->isAdmin() || ($user->isTeacher() && $course->teacher_id === $user->id));
+        abort_unless($course->status === 'published' || $canManageCourse, 404);
+
+        $course->load('teacher', 'enrollments.user', 'lessons');
+
+        $enrollment = null;
+        if (Auth::check()) {
+            $enrollment = $course->enrollments()->where('user_id', Auth::id())->first();
+        }
+        $isEnrolled = $enrollment && in_array($enrollment->status, ['active', 'completed'], true);
+        $canViewLessons = $canManageCourse || $isEnrolled;
+        $lessonProgress = Auth::check() && $isEnrolled
+            ? LessonProgress::where('user_id', Auth::id())
+                ->whereHas('lesson', fn ($query) => $query->where('course_id', $course->id))
+                ->pluck('completed_at', 'lesson_id')
+            : collect();
+
+        $payment = Auth::check() && Auth::user()->isStudent()
+            ? $course->payments()->where('user_id', Auth::id())->latest()->first()
+            : null;
+        $paymentMethods = collect(Setting::paymentMethods())
+            ->filter(fn (array $method) => (bool) ($method['enabled'] ?? false));
+        $batches = $course->batches()
+            ->where('status', 'open')
+            ->with('branch')
+            ->withCount('enrollments')
+            ->orderBy('starts_at')
+            ->get();
+
+        return view('courses.show', compact('course', 'enrollment', 'payment', 'paymentMethods', 'batches', 'canViewLessons', 'lessonProgress'));
+    }
+
+    public function completeLesson(Course $course, Lesson $lesson): RedirectResponse
+    {
+        $user = Auth::user();
+        abort_unless($user?->isStudent() && $lesson->course_id === $course->id, 403);
+        abort_unless($course->enrollments()->where('user_id', $user->id)->where('status', 'active')->exists(), 403);
+
+        LessonProgress::firstOrCreate(
+            ['lesson_id' => $lesson->id, 'user_id' => $user->id],
+            ['completed_at' => now()]
+        );
+
+        return back()->with('success', 'Lesson progress saved.');
+    }
+
+    public function storeLesson(Course $course, Request $request): RedirectResponse
+    {
+        abort_unless(Auth::user()?->isAdmin() || Auth::user()?->isTeacher(), 403);
+
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'content' => ['required', 'string'],
+            'duration_minutes' => ['required', 'integer', 'min:1', 'max:600'],
+            'order' => ['required', 'integer', 'min:1'],
+        ]);
+
+        $course->lessons()->create($validated);
+
+        return redirect()->route('admin.courses.index')->with('success', 'Lesson added successfully.');
+    }
+
+    public function complete(Course $course, Request $request): RedirectResponse
+    {
+        $user = Auth::user();
+        abort_unless($user?->isStudent(), 403);
+
+        $enrollment = $course->enrollments()->where('user_id', $user->id)->where('status', 'active')->firstOrFail();
+        $lessonCount = $course->lessons()->count();
+        $completedLessonCount = LessonProgress::where('user_id', $user->id)
+            ->whereHas('lesson', fn ($query) => $query->where('course_id', $course->id))
+            ->count();
+
+        if ($lessonCount === 0 || $completedLessonCount < $lessonCount) {
+            return back()->with('error', 'Complete every lesson before completing this course.');
+        }
+
+        $enrollment->status = 'completed';
+        $enrollment->completed_at = now();
+        $enrollment->save();
+
+        Certificate::firstOrCreate(
+            [
+                'user_id' => $user->id,
+                'course_id' => $course->id,
+            ],
+            [
+                'certificate_number' => 'LMS-' . strtoupper(Str::random(8)),
+                'status' => 'issued',
+                'issued_at' => now(),
+            ]
+        );
+
+        return back()->with('success', 'Course marked complete and certificate issued.');
+    }
+}

@@ -1,7 +1,10 @@
 /vendor
 /node_modules
 /.env
+/.phpunit.result.cache
+/database/*.sqlite
 /public/build
+/dist
 /public/storage
 /storage/*.key
 /storage/logs/*.log

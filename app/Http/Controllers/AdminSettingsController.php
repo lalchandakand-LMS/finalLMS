@@ -1,0 +1,71 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Setting;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
+
+class AdminSettingsController extends Controller
+{
+    public function index(): View
+    {
+        $settings = Setting::query()->pluck('value', 'key')->toArray();
+        $paymentMethods = Setting::paymentMethods();
+
+        return view('admin.settings.index', compact('settings', 'paymentMethods'));
+    }
+
+    public function update(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'home_title' => ['nullable', 'string', 'max:255'],
+            'home_subtitle' => ['nullable', 'string', 'max:500'],
+            'home_cta_primary' => ['nullable', 'string', 'max:50'],
+            'home_cta_secondary' => ['nullable', 'string', 'max:50'],
+            'home_featured_title' => ['nullable', 'string', 'max:255'],
+            'home_reason_title' => ['nullable', 'string', 'max:255'],
+            'home_metric_1_value' => ['nullable', 'string', 'max:50'],
+            'home_metric_1_label' => ['nullable', 'string', 'max:50'],
+            'home_metric_2_value' => ['nullable', 'string', 'max:50'],
+            'home_metric_2_label' => ['nullable', 'string', 'max:50'],
+            'home_metric_3_value' => ['nullable', 'string', 'max:50'],
+            'home_metric_3_label' => ['nullable', 'string', 'max:50'],
+            'seo_title' => ['nullable', 'string', 'max:255'],
+            'seo_description' => ['nullable', 'string', 'max:320'],
+            'seo_keywords' => ['nullable', 'string', 'max:500'],
+            'google_analytics_id' => ['nullable', 'regex:/^G-[A-Z0-9]+$/i'],
+            'google_tag_manager_id' => ['nullable', 'regex:/^GTM-[A-Z0-9]+$/i'],
+            'facebook_pixel_id' => ['nullable', 'regex:/^\d{5,20}$/'],
+            'payment_methods' => ['sometimes', 'array'],
+            'payment_methods.bkash.enabled' => ['required_with:payment_methods', 'boolean'],
+            'payment_methods.bkash.label' => ['required_with:payment_methods', 'string', 'max:50'],
+            'payment_methods.bkash.account' => ['nullable', 'string', 'max:120'],
+            'payment_methods.bkash.instructions' => ['nullable', 'string', 'max:500'],
+            'payment_methods.rocket.enabled' => ['required_with:payment_methods', 'boolean'],
+            'payment_methods.rocket.label' => ['required_with:payment_methods', 'string', 'max:50'],
+            'payment_methods.rocket.account' => ['nullable', 'string', 'max:120'],
+            'payment_methods.rocket.instructions' => ['nullable', 'string', 'max:500'],
+            'payment_methods.bank.enabled' => ['required_with:payment_methods', 'boolean'],
+            'payment_methods.bank.label' => ['required_with:payment_methods', 'string', 'max:50'],
+            'payment_methods.bank.account' => ['nullable', 'string', 'max:120'],
+            'payment_methods.bank.instructions' => ['nullable', 'string', 'max:500'],
+            'payment_methods.manual.enabled' => ['required_with:payment_methods', 'boolean'],
+            'payment_methods.manual.label' => ['required_with:payment_methods', 'string', 'max:50'],
+            'payment_methods.manual.account' => ['nullable', 'string', 'max:120'],
+            'payment_methods.manual.instructions' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $paymentMethods = $validated['payment_methods'] ?? Setting::paymentMethods();
+        unset($validated['payment_methods']);
+
+        foreach ($validated as $key => $value) {
+            Setting::setValue($key, $value ?? '');
+        }
+
+        Setting::setValue('payment_methods', json_encode($paymentMethods, JSON_THROW_ON_ERROR));
+
+        return redirect()->route('admin.settings.index')->with('success', 'Settings updated successfully.');
+    }
+}

@@ -1,0 +1,56 @@
+@extends('layouts.app')
+
+@section('title', 'Courses | LMS Academy')
+
+@section('content')
+    @php
+        $courseCount = $courses->count();
+    @endphp
+
+    <div class="page-header">
+        <div>
+            <span class="badge info">Catalog</span>
+            <h1 style="margin: 12px 0 0;">Available courses</h1>
+        </div>
+        <span class="badge success">{{ $courseCount }} online</span>
+    </div>
+
+    <div class="dash-summary" style="margin-bottom: 20px;">
+        <div class="summary-box">
+            <span class="muted">Available</span>
+            <strong>{{ $courseCount }}</strong>
+        </div>
+        <div class="summary-box">
+            <span class="muted">Topics</span>
+            <strong>{{ $courses->where('status', 'published')->count() }}</strong>
+        </div>
+        <div class="summary-box">
+            <span class="muted">Access</span>
+            <strong>24/7</strong>
+        </div>
+        <div class="summary-box">
+            <span class="muted">Format</span>
+            <strong>Self-paced</strong>
+        </div>
+    </div>
+
+    <div class="course-list">
+        @foreach($courses as $course)
+            <div class="course-item">
+                <div class="meta-row">
+                    <div>
+                        <div style="margin-bottom: 8px;">
+                            <span class="badge {{ $course->status === 'published' ? 'success' : 'warning' }}">{{ ucfirst($course->status) }}</span>
+                        </div>
+                        <h3 style="margin: 0 0 8px;">{{ $course->title }}</h3>
+                        <p class="muted" style="margin: 0 0 12px;">{{ \Illuminate\Support\Str::limit($course->description, 160) }}</p>
+                        <div class="muted">Teacher: {{ $course->teacher?->name ?? 'N/A' }} · Price: BDT {{ number_format($course->price, 2) }}</div>
+                    </div>
+                    <div>
+                        <a href="{{ route('courses.show', $course) }}" class="btn secondary">View details</a>
+                    </div>
+                </div>
+            </div>
+        @endforeach
+    </div>
+@endsection
