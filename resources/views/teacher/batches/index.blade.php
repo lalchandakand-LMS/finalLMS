@@ -21,6 +21,7 @@
                 <a href="{{ route('teacher.batches.attendance.index', $batch) }}" class="btn secondary">Take attendance</a>
                 <a href="{{ route('teacher.batches.assignments.index', $batch) }}" class="btn secondary">Assignments</a>
                 <a href="{{ route('live-classes.index') }}" class="btn secondary">Live classes</a>
+                <a href="{{ route('teacher.batches.exams.index', $batch) }}" class="btn secondary">Exams</a>
                 <details style="margin-top:14px;">
                     <summary>Schedule a live class</summary>
                     <form method="POST" action="{{ route('teacher.batches.live-classes.store', $batch) }}" class="grid grid-2" style="margin-top:12px;">
