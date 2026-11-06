@@ -47,6 +47,11 @@ class AssignmentWorkflowTest extends TestCase
         $submission = \App\Models\AssignmentSubmission::findOrFail($submissionId);
         Storage::disk('local')->assertExists($submission->attachment_path);
 
+        $this->actingAs($student)->post(route('student.assignments.submit', $assignment), [
+            'attachment' => UploadedFile::fake()->create('duplicate.pdf', 100, 'application/pdf'),
+        ])->assertSessionHas('info');
+        $this->assertCount(1, Storage::disk('local')->allFiles('assignment-submissions/'.$assignment->id));
+
         $this->actingAs($student)->get(route('assignment-submissions.attachment', $submission))->assertOk();
         $this->actingAs($teacher)->get(route('assignment-submissions.attachment', $submission))->assertOk();
         $this->actingAs($otherStudent)->get(route('assignment-submissions.attachment', $submission))->assertForbidden();
