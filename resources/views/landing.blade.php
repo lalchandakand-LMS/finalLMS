@@ -130,4 +130,29 @@
             </div>
         </div>
     </section>
+
+    @php
+        $builderSections = $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('website_sections', '[]'), true) : [];
+        $builderSections = is_array($builderSections) ? $builderSections : [];
+    @endphp
+    @foreach($builderSections as $section)
+        @if(($section['enabled'] ?? false) && (trim($section['title'] ?? '') !== '' || trim($section['body'] ?? '') !== ''))
+            @php($sectionImage = !empty($section['image_id']) ? \App\Models\MediaAsset::find($section['image_id']) : null)
+            <section class="panel" style="margin-top:28px;">
+                <div class="grid grid-2" style="align-items:center;">
+                    <div>
+                        @if(!empty($section['title']))<h2>{{ $section['title'] }}</h2>@endif
+                        @if(!empty($section['body']))<p style="white-space:pre-line;line-height:1.8;">{{ $section['body'] }}</p>@endif
+                        @if(!empty($section['button_label']) && !empty($section['button_url']))
+                            <a class="btn primary" href="{{ $section['button_url'] }}" rel="nofollow noopener">{{ $section['button_label'] }}</a>
+                        @endif
+                    </div>
+                    @if($sectionImage && str_starts_with($sectionImage->mime_type, 'image/'))
+                        <div><img src="{{ $sectionImage->url }}" alt="{{ $sectionImage->alt_text }}" loading="lazy" style="width:100%;max-height:340px;object-fit:cover;border-radius:14px;"></div>
+                    @endif
+                </div>
+            </section>
+        @endif
+    @endforeach
+
 @endsection
