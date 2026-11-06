@@ -10,11 +10,26 @@ use Illuminate\View\View;
 
 class UserController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $users = User::withCount(['courses', 'enrollments', 'certificates'])
+        $validated = $request->validate([
+            'search' => ['nullable', 'string', 'max:120'],
+            'role' => ['nullable', 'in:admin,teacher,student'],
+        ]);
+
+        $users = User::query()
+            ->withCount(['courses', 'enrollments', 'certificates'])
+            ->when($validated['search'] ?? null, function ($query, string $search): void {
+                $query->where(function ($builder) use ($search): void {
+                    $builder->where('name', 'like', '%'.$search.'%')
+                        ->orWhere('email', 'like', '%'.$search.'%')
+                        ->orWhere('phone_number', 'like', '%'.$search.'%');
+                });
+            })
+            ->when($validated['role'] ?? null, fn ($query, string $role) => $query->where('role', $role))
             ->latest()
-            ->get();
+            ->paginate(25)
+            ->withQueryString();
 
         return view('admin.users.index', compact('users'));
     }
