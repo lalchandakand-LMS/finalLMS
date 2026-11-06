@@ -27,7 +27,11 @@ class LiveClassController extends Controller
                 ->whereIn('status', ['active', 'completed']));
         }
 
-        if ($user->isStudent()) {\n            $query->with(['batch.enrollments' => fn ($enrollments) => $enrollments->where('user_id', $user->id)]);\n        }\n\n        $liveClasses = $query->paginate(25);
+        if ($user->isStudent()) {
+            $query->with(['batch.enrollments' => fn ($enrollments) => $enrollments->where('user_id', $user->id)]);
+        }
+
+        $liveClasses = $query->paginate(25);
 
         return view('live-classes.index', compact('liveClasses'));
     }
