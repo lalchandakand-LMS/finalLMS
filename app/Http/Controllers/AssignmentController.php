@@ -41,7 +41,7 @@ class AssignmentController extends Controller
 
     public function show(Assignment $assignment): View
     {
-        abort_unless(Enrollment::where('batch_id', $assignment->batch_id)->where('user_id', Auth::id())->exists(), 403);
+        abort_unless(Enrollment::where('batch_id', $assignment->batch_id)->where('user_id', Auth::id())->where('status', 'active')->exists(), 403);
         $assignment->load('batch.course');
         $submission = $assignment->submissions()->where('student_id', Auth::id())->first();
 
@@ -61,6 +61,11 @@ class AssignmentController extends Controller
             'attachment' => ['nullable', 'file', 'max:10240', 'mimes:pdf,doc,docx,jpg,jpeg,png', 'required_without:answer'],
         ]);
 
+        $existingSubmission = $assignment->submissions()->where('student_id', Auth::id())->first();
+        if ($existingSubmission) {
+            return back()->with('info', 'You have already submitted this assignment.');
+        }
+
         $file = $request->file('attachment');
         $path = $file?->store('assignment-submissions/'.$assignment->id, 'local');
 
@@ -78,6 +83,10 @@ class AssignmentController extends Controller
         );
 
         if (! $submission->wasRecentlyCreated) {
+            if ($path) {
+                Storage::disk('local')->delete($path);
+            }
+
             return back()->with('info', 'You have already submitted this assignment.');
         }
 
