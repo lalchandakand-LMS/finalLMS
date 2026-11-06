@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', __('Media Library'))
 @section('content')
-<div class="page-header"><div><span class="badge info">Admin</span><h1>{{ __('Media Library') }}</h1><p class="muted">Upload and manage images, documents and video files.</p></div><a class="btn secondary" href="{{ route('dashboard') }}">Dashboard</a></div>
+<div class="page-header"><div><span class="badge info">{{ __('Admin') }}</span><h1>{{ __('Media Library') }}</h1><p class="muted">{{ __('Upload and manage images, documents and video files.') }}</p></div><a class="btn secondary" href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a></div>
 <div class="panel" style="margin-bottom:20px;">
 <form method="POST" action="{{ route('admin.media.store') }}" enctype="multipart/form-data">@csrf
 <label>{{ __('Choose files (up to 10 files, 20 MB each)') }}</label><input type="file" name="files[]" multiple required accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.mp4,.webm">
