@@ -71,6 +71,7 @@ class AssignmentController extends Controller
             return back()->with('info', 'Your submission is already received and awaiting review.');
         }
 
+        $previousAttachmentPath = $existingSubmission?->attachment_path;
         $file = $request->file('attachment');
         $path = $file?->store('assignment-submissions/'.$assignment->id, 'local');
         if ($file && ! $path) {
@@ -93,8 +94,8 @@ class AssignmentController extends Controller
         $submission->assignment()->associate($assignment);
         $submission->save();
 
-        if ($path && $existingSubmission?->attachment_path && $existingSubmission->attachment_path !== $path) {
-            Storage::disk('local')->delete($existingSubmission->attachment_path);
+        if ($path && $previousAttachmentPath && $previousAttachmentPath !== $path) {
+            Storage::disk('local')->delete($previousAttachmentPath);
         }
 
         return back()->with('success', $existingSubmission ? 'Your revised assignment has been submitted.' : 'Assignment submitted successfully.');
