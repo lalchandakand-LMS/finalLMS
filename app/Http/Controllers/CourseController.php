@@ -31,6 +31,7 @@ class CourseController extends Controller
         $enrollments = \App\Models\Enrollment::query()
             ->where('user_id', $user->id)
             ->whereIn('status', ['active', 'completed'])
+            ->whereHas('course', fn ($query) => $query->where('status', 'published'))
             ->with(['course.teacher', 'course.lessons'])
             ->latest()
             ->get();
