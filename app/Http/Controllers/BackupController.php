@@ -142,7 +142,7 @@ class BackupController extends Controller
             $payload = json_decode($payloadJson, true, 512, JSON_THROW_ON_ERROR);
             abort_unless(($payload['format_version'] ?? null) === 1 && is_array($payload['tables'] ?? null), 422, 'Unsupported backup format.');
 
-            $currentTables = DB::connection()->getSchemaBuilder()->getTableListing();
+            $currentTables = $this->backupTableNames();
             sort($currentTables);
             $backupTables = array_keys($payload['tables']);
             sort($backupTables);
