@@ -14,6 +14,33 @@ use Throwable;
 
 class BackupController extends Controller
 {
+
+    private function tableNames(): array
+    {
+        $driver = DB::connection()->getDriverName();
+
+        if ($driver === 'mysql') {
+            $rows = DB::select('SHOW TABLES');
+            return array_map(fn ($row) => (string) array_values((array) $row)[0], $rows);
+        }
+
+        if ($driver === 'sqlite') {
+            return array_map(
+                fn ($row) => (string) $row->name,
+                DB::select("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'")
+            );
+        }
+
+        if ($driver === 'pgsql') {
+            return array_map(
+                fn ($row) => (string) $row->tablename,
+                DB::select("SELECT tablename FROM pg_tables WHERE schemaname = current_schema()")
+            );
+        }
+
+        throw new \RuntimeException('Database driver is not supported by backup and restore.');
+    }
+
     public function index(): View
     {
         $files = collect(Storage::disk('local')->files('backups'))
@@ -29,7 +56,7 @@ class BackupController extends Controller
 
     public function create(): RedirectResponse
     {
-        $tableNames = collect(Schema::getTables())->pluck('name')->all();
+        $tableNames = $this->tableNames();
         sort($tableNames);
         $tables = [];
         foreach ($tableNames as $table) {
