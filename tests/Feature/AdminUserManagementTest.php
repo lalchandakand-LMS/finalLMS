@@ -53,4 +53,49 @@ class AdminUserManagementTest extends TestCase
             'role' => 'teacher',
         ]);
     }
+
+
+    public function test_admin_can_assign_branch_manager_to_a_specific_branch(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $manager = User::factory()->create(['role' => 'student']);
+        $branch = \App\Models\Branch::create([
+            'name' => 'North Branch',
+            'slug' => 'north-branch',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.updateRole', $manager), [
+                'role' => 'branch_manager',
+                'branch_id' => $branch->id,
+            ])
+            ->assertRedirect(route('admin.users.index'));
+
+        $this->assertDatabaseHas('users', [
+            'id' => $manager->id,
+            'role' => 'branch_manager',
+            'branch_id' => $branch->id,
+        ]);
+    }
+
+    public function test_branch_manager_must_be_assigned_a_branch(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $manager = User::factory()->create(['role' => 'student']);
+
+        $this->actingAs($admin)
+            ->from(route('admin.users.index'))
+            ->post(route('admin.users.updateRole', $manager), [
+                'role' => 'branch_manager',
+            ])
+            ->assertSessionHasErrors('branch_id');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $manager->id,
+            'role' => 'student',
+            'branch_id' => null,
+        ]);
+    }
+
 }
