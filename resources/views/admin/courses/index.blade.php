@@ -38,6 +38,8 @@
                             <div><label for="lesson-duration-{{ $course->id }}">{{ __('Duration (min)') }}</label><input id="lesson-duration-{{ $course->id }}" type="number" name="duration_minutes" min="1" max="600" value="30" required></div>
                             <div><label for="lesson-order-{{ $course->id }}">{{ __('Order') }}</label><input id="lesson-order-{{ $course->id }}" type="number" name="order" min="1" value="{{ $course->lessons->count() + 1 }}" required></div>
                             <div style="grid-column:1/-1;"><label for="lesson-content-{{ $course->id }}">{{ __('Content') }}</label><textarea id="lesson-content-{{ $course->id }}" name="content" required></textarea></div>
+                            <div style="grid-column:1/-1;"><label for="lesson-video-{{ $course->id }}">{{ __('YouTube or Vimeo URL (optional)') }}</label><input id="lesson-video-{{ $course->id }}" type="url" name="video_url" maxlength="2048" placeholder="https://youtu.be/..."></div>
+                            <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" name="is_preview" value="1"> {{ __('Free preview lesson') }}</label>
                             <div style="grid-column:1/-1;"><button type="submit" class="btn primary">{{ __('Save lesson') }}</button></div>
                         </form>
                     </div>
