@@ -76,6 +76,49 @@
 
             <hr style="border: 0; border-top: 1px solid var(--border); margin: 28px 0;">
             <div style="margin-bottom: 18px;">
+                <span class="badge info">Public website pages</span>
+                <h2 style="margin: 12px 0 6px;">About and contact</h2>
+                <p class="muted" style="margin: 0;">Text is safely escaped on the public pages. Use plain text and line breaks.</p>
+            </div>
+            <div class="grid grid-2" style="margin-bottom:18px;">
+                <div>
+                    <label for="about-title">About page title</label>
+                    <input id="about-title" name="about_title" maxlength="255" value="{{ old('about_title', $settings['about_title'] ?? 'About us') }}">
+                </div>
+                <div>
+                    <label for="contact-title">Contact page title</label>
+                    <input id="contact-title" name="contact_title" maxlength="255" value="{{ old('contact_title', $settings['contact_title'] ?? 'Contact us') }}">
+                </div>
+            </div>
+            <div class="grid grid-2" style="margin-bottom:18px;">
+                <div>
+                    <label for="about-body">About page content</label>
+                    <textarea id="about-body" name="about_body" rows="7" maxlength="10000">{{ old('about_body', $settings['about_body'] ?? '') }}</textarea>
+                </div>
+                <div>
+                    <label for="contact-body">Contact details and instructions</label>
+                    <textarea id="contact-body" name="contact_body" rows="7" maxlength="5000">{{ old('contact_body', $settings['contact_body'] ?? '') }}</textarea>
+                </div>
+            </div>
+            <div style="margin-bottom:18px;">
+                <label for="faq-title">FAQ page title</label>
+                <input id="faq-title" name="faq_title" maxlength="255" value="{{ old('faq_title', $settings['faq_title'] ?? 'Frequently asked questions') }}">
+            </div>
+            @for($i = 1; $i <= 8; $i++)
+                <section class="grid grid-2" style="padding:14px 0;border-top:1px solid var(--border);">
+                    <div>
+                        <label for="faq-{{ $i }}-question">Question {{ $i }}</label>
+                        <input id="faq-{{ $i }}-question" name="faq_{{ $i }}_question" maxlength="255" value="{{ old("faq_{$i}_question", $settings["faq_{$i}_question"] ?? '') }}">
+                    </div>
+                    <div>
+                        <label for="faq-{{ $i }}-answer">Answer {{ $i }}</label>
+                        <textarea id="faq-{{ $i }}-answer" name="faq_{{ $i }}_answer" rows="2" maxlength="2000" style="min-height:70px;">{{ old("faq_{$i}_answer", $settings["faq_{$i}_answer"] ?? '') }}</textarea>
+                    </div>
+                </section>
+            @endfor
+
+            <hr style="border: 0; border-top: 1px solid var(--border); margin: 28px 0;">
+            <div style="margin-bottom: 18px;">
                 <span class="badge info">Search and marketing</span>
                 <h2 style="margin: 12px 0 6px;">SEO and tracking</h2>
                 <p class="muted" style="margin: 0;">Tracking scripts load only after a visitor accepts marketing cookies. Use either direct Google Analytics or Tag Manager to avoid duplicate analytics.</p>
