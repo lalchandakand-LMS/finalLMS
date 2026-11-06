@@ -169,7 +169,7 @@
                 <a href="{{ route('pages.about') }}">{{ __('About') }}</a>
                 <a href="{{ route('pages.contact') }}">{{ __('Contact') }}</a>
                 <a href="{{ route('pages.faq') }}">{{ __('FAQ') }}</a>
-                <a href="{{ route('news.index') }}">{{ __('{{ __('Blog & News') }}') }}</a>
+                <a href="{{ route('news.index') }}">{{ __('Blog & News') }}</a>
                 @auth
                     <a href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a>
                     <a href="{{ route('profile.edit') }}">{{ __('Profile') }}</a>
