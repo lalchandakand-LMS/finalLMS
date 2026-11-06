@@ -17,6 +17,7 @@ use App\Http\Controllers\LiveClassController;
 use App\Http\Controllers\ExamController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\CmsPageController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -30,6 +31,10 @@ Route::middleware('guest')->group(function () {
     Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1')->name('register.store');
 });
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1')->name('login.post');
+
+Route::get('/about', [CmsPageController::class, 'about'])->name('pages.about');
+Route::get('/contact', [CmsPageController::class, 'contact'])->name('pages.contact');
+Route::get('/faq', [CmsPageController::class, 'faq'])->name('pages.faq');
 
 Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
 Route::get('/courses/{course}', [CourseController::class, 'show'])->name('courses.show');
