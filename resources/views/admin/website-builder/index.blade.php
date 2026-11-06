@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', '{{ __('Website Builder') }}')
+@section('title', __('Website Builder'))
 @section('content')
 <div class="page-header"><div><span class="badge info">Admin CMS</span><h1>{{ __('Website Builder') }}</h1><p class="muted">Configure up to 12 homepage sections. HTML and scripts are not accepted.</p></div><a href="{{ route('landing') }}" class="btn secondary" target="_blank">{{ __('Preview website') }}</a></div>
 <div class="panel"><form method="POST" action="{{ route('admin.website-builder.update') }}">@csrf
