@@ -24,7 +24,9 @@ This is the persistent project checklist. Update it whenever a task is started, 
 ### Current blocker
 - [x] Diagnose and fix CI migration ordering: Question Bank category/difficulty migration now runs after its table-creation migration; verified by passing CI run #504.
 - [ ] Add/complete automated tests for assignment create, enrollment authorization, file validation/storage/download, grading, deadline, and resubmission.
-- [x] Add student course overview with active/completed enrollments and lesson progress; feature tests added, CI verification pending.
+- [x] Add student course overview with active/completed enrollments and lesson progress; hide unpublished courses from student view.
+- [x] Add feature tests for student portal access, lesson progress display, idempotent completion, inactive enrollment denial, and cross-course lesson access denial.
+- [ ] Verify latest student portal test changes in CI.
 - [x] Re-run full Laravel CI and cPanel package job; both jobs passed in [run #504](https://github.com/lalchandakand-LMS/finalLMS/actions/runs/42283409532).
 - [ ] Review migration order and schema compatibility against clean MySQL and existing deployment databases.
 
