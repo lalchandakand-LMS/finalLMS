@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', '{{ __('My exams') }} | ' . config('app.name'))
+@section('title', __('My exams') . ' | ' . config('app.name'))
 
 @section('content')
     <div class="page-header">
@@ -11,7 +11,7 @@
         @forelse($exams as $exam)
             <article class="course-item">
                 <span class="badge {{ now()->between($exam->starts_at, $exam->ends_at) ? 'success' : 'info' }}">
-                    {{ now()->lt($exam->starts_at) ? '{{ __('Upcoming') }}' : (now()->gt($exam->ends_at) ? '{{ __('Closed') }}' : '{{ __('Available') }}') }}
+                    {{ now()->lt($exam->starts_at) ? __('Upcoming') : (now()->gt($exam->ends_at) ? __('Closed') : __('Available')) }}
                 </span>
                 <h2 style="margin:12px 0 6px;">{{ $exam->title }}</h2>
                 <p class="muted">{{ $exam->batch->course->title }} · {{ $exam->batch->title }}</p>
