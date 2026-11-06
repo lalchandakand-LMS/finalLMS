@@ -13,11 +13,11 @@
 
     <div class="panel">
         @if($students->isEmpty())
-            <p class="muted" style="margin:0;">No students are enrolled in this batch.</p>
+            <p class="muted" style="margin:0;">{{ __('No students are enrolled in this batch.') }}</p>
         @else
             <form method="POST" action="{{ route('teacher.batches.attendance.store', $batch) }}">
                 @csrf
-                <label for="attendance-date">Class date</label>
+                <label for="attendance-date">{{ __('Class date') }}</label>
                 <input id="attendance-date" type="date" name="attendance_date" value="{{ request('date', now()->toDateString()) }}" required>
 
                 <div class="course-list" style="margin-top:18px;">
@@ -27,7 +27,7 @@
                             <div class="meta-row" style="margin-top:0; align-items:center;">
                                 <div><strong>{{ $enrollment->user->name }}</strong><div class="muted">{{ $enrollment->user->email }}</div></div>
                                 <select name="records[{{ $index }}][status]" required>
-                                    @foreach(['present' => 'Present', 'absent' => 'Absent', 'late' => 'Late'] as $value => $label)
+                                    @foreach(['present' => __('Present'), 'absent' => __('Absent'), 'late' => __('Late')] as $value => $label)
                                         <option value="{{ $value }}" @selected(($attendance[$enrollment->user_id] ?? 'present') === $value)>{{ $label }}</option>
                                     @endforeach
                                 </select>
@@ -35,7 +35,7 @@
                         </div>
                     @endforeach
                 </div>
-                <button type="submit" class="btn primary" style="margin-top:18px;">Save attendance</button>
+                <button type="submit" class="btn primary" style="margin-top:18px;">{{ __('Save attendance') }}</button>
             </form>
         @endif
     </div>
