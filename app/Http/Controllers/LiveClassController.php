@@ -39,7 +39,8 @@ class LiveClassController extends Controller
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:160'],
             'description' => ['nullable', 'string', 'max:5000'],
-            'meeting_url' => ['required', 'url', 'max:2048', 'regex:/^https:\\/\\//i'],\n            'recording_url' => ['nullable', 'url', 'max:2048', 'regex:/^https:\\/\\//i'],
+            'meeting_url' => ['required', 'url', 'max:2048', 'regex:/^https:\\/\\//i'],
+            'recording_url' => ['nullable', 'url', 'max:2048', 'regex:/^https:\\/\\//i'],
             'starts_at' => ['required', 'date'],
             'ends_at' => ['required', 'date', 'after:starts_at'],
         ]);
