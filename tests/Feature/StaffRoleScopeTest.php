@@ -53,6 +53,21 @@ class StaffRoleScopeTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_branch_manager_can_create_and_update_only_batches_in_their_branch(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $course = Course::create(['teacher_id' => $teacher->id, 'title' => 'Branch English', 'slug' => 'branch-english', 'description' => 'Branch course', 'price' => 1000, 'status' => 'published']);
+        $assigned = Branch::create(['name' => 'Manager Branch', 'slug' => 'manager-branch']);
+        $other = Branch::create(['name' => 'Foreign Branch', 'slug' => 'foreign-branch']);
+        $manager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $assigned->id]);
+        $foreignBatch = Batch::create(['branch_id' => $other->id, 'course_id' => $course->id, 'teacher_id' => $teacher->id, 'title' => 'Foreign Batch', 'capacity' => 20, 'starts_at' => now(), 'ends_at' => now()->addMonth(), 'fee' => 1000, 'status' => 'open']);
+        $payload = ['course_id' => $course->id, 'teacher_id' => $teacher->id, 'title' => 'New Local Batch', 'capacity' => 15, 'starts_at' => now()->addDay()->format('Y-m-d H:i:s'), 'ends_at' => now()->addMonth()->format('Y-m-d H:i:s'), 'fee' => 1200];
+        $this->actingAs($manager)->post(route('branch-manager.batches.store'), $payload)->assertRedirect();
+        $this->assertDatabaseHas('batches', ['title' => 'New Local Batch', 'branch_id' => $assigned->id]);
+        $this->put(route('branch-manager.batches.update', $foreignBatch), ['title' => 'Tampered', 'capacity' => 20, 'starts_at' => now()->addDay(), 'ends_at' => now()->addMonth(), 'fee' => 1000, 'status' => 'closed'])->assertNotFound();
+        $this->assertDatabaseHas('batches', ['id' => $foreignBatch->id, 'title' => 'Foreign Batch']);
+    }
+
     public function test_accountant_can_manage_invoice_ledger_but_cannot_open_admin_payment_review(): void
     {
         $accountant = User::factory()->create(['role' => 'accountant']);
