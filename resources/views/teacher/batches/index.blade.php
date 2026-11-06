@@ -19,6 +19,7 @@
                 <p class="muted">{{ $batch->course->title }} · {{ $batch->branch->name }}</p>
                 <p class="muted">{{ $batch->starts_at->format('M j, Y H:i') }} to {{ $batch->ends_at->format('M j, Y H:i') }}</p>
                 <a href="{{ route('teacher.batches.attendance.index', $batch) }}" class="btn secondary">{{ __('Take attendance') }}</a>
+                <a href="{{ route('teacher.courses.lessons.index', $batch->course) }}" class="btn secondary">{{ __('Manage course lessons & progress') }}</a>
                 <a href="{{ route('teacher.batches.assignments.index', $batch) }}" class="btn secondary">{{ __('Assignments') }}</a>
                 <a href="{{ route('live-classes.index') }}" class="btn secondary">{{ __('Live classes') }}</a>
                 <a href="{{ route('teacher.batches.exams.index', $batch) }}" class="btn secondary">{{ __('Exams') }}</a>
