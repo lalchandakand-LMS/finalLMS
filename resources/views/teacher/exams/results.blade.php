@@ -37,7 +37,7 @@
                                     <span class="badge warning">{{ __('Not passed') }}</span>
                                 @endif
                             </td>
-                            <td style="padding:12px;border-bottom:1px solid var(--border);">{{ $attempt->submitted_at?->format('M j, Y H:i') }}</td>
+                            <td style="padding:12px;border-bottom:1px solid var(--border);">{{ optional($attempt->submitted_at)->format('M j, Y H:i') }}</td>
                         </tr>
                     @empty
                         <tr><td colspan="5" class="muted" style="padding:18px;">{{ __('No students have submitted this exam yet.') }}</td></tr>
