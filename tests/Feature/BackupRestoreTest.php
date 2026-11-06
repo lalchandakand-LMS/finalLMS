@@ -47,6 +47,30 @@ class BackupRestoreTest extends TestCase
         ])->assertSessionHasErrors('confirmation');
     }
 
+
+    public function test_valid_backup_restores_database_rows_after_password_confirmation(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->post(route('admin.backups.create'))->assertRedirect();
+        $path = Storage::disk('local')->files('backups')[0];
+        $archive = Storage::disk('local')->get($path);
+
+        $temporary = User::factory()->create(['role' => 'student', 'email' => 'temporary@example.test']);
+        $this->assertDatabaseHas('users', ['id' => $temporary->id]);
+
+        $this->post(route('admin.backups.restore'), [
+            'backup_file' => UploadedFile::fake()->createWithContent('backup.json.gz', $archive),
+            'confirmation' => 'RESTORE',
+            'password' => 'password',
+        ])->assertRedirect(route('admin.backups.index'));
+
+        $this->assertDatabaseMissing('users', ['email' => 'temporary@example.test']);
+        $this->assertDatabaseHas('users', ['id' => $admin->id, 'email' => $admin->email]);
+    }
+
     public function test_non_admin_cannot_open_backup_management(): void
     {
         $student = User::factory()->create(['role' => 'student']);
