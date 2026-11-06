@@ -24,7 +24,7 @@ This is the persistent project checklist. Update it whenever a task is started, 
 - [x] Add lesson editing/deletion endpoints with course ownership checks and a dedicated teacher lesson manager.
 - [x] Add teacher lesson creation/edit/delete UI and per-student lesson progress reporting.
 - [x] Repair malformed admin course create/edit Blade form.
-- [ ] Add provider-specific playback and teacher lesson authorization regression tests; verify latest changes in CI.
+- [x] Add provider-specific playback and teacher lesson authorization regression tests; latest teacher lesson workflow CI runs #566–#569 passed.\n- [x] Corrected over-escaped video URL validation in lesson edit endpoint; added progress-report and unsupported-host regression tests (new CI run pending).
 
 ### Current blocker
 - [x] Diagnose and fix CI migration ordering: Question Bank category/difficulty migration now runs after its table-creation migration; verified by passing CI run #504.
@@ -52,7 +52,7 @@ This is the persistent project checklist. Update it whenever a task is started, 
 - [ ] Assignments: review queue, draft/published/closed states, late labels, resubmission limits, feedback notifications, attachment cleanup.
 - [x] Student portal foundation: dedicated enrolled-courses page, per-course lesson completion progress, student-only authorization, and dashboard entry point (resources and expanded learning tools remain pending).
 - [x] Recorded lesson foundation: YouTube/Vimeo URL support, privacy-enhanced YouTube embeds, preview lessons, protected playback route and enrollment/ownership checks.
-- [ ] Verify lesson edit/delete and teacher management changes in CI (runs #552–#558 pending at last check).
+- [x] Verify lesson edit/delete and teacher management changes in CI (runs #566–#569 passed); latest validation/progress regression additions are pending CI.
 - [ ] Live classes: provider integration, schedules, attendance, access control, recording links.
 - [ ] Attendance: teacher marking, student view, correction/approval, reports.
 - [ ] Certificates: eligibility, issue/download, unique verification code/public verification page.
