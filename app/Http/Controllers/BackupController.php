@@ -29,7 +29,7 @@ class BackupController extends Controller
 
     public function create(): RedirectResponse
     {
-        $tableNames = DB::connection()->getSchemaBuilder()->getTableListing();
+        $tableNames = collect(Schema::getTables())->pluck('name')->all();
         sort($tableNames);
         $tables = [];
         foreach ($tableNames as $table) {
