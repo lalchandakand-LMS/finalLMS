@@ -219,7 +219,9 @@ class CourseController extends Controller
         $validated['is_preview'] = $request->boolean('is_preview');
         $course->lessons()->create($validated);
 
-        return redirect()->route('admin.courses.index')->with('success', 'Lesson added successfully.');
+        return $user->isTeacher()
+            ? redirect()->route('teacher.courses.lessons.index', $course)->with('success', 'Lesson added successfully.')
+            : redirect()->route('admin.courses.index')->with('success', 'Lesson added successfully.');
     }
 
 
