@@ -69,6 +69,25 @@ class ExaminationWorkflowTest extends TestCase
         $this->post(route('student.exams.start', $exam))->assertForbidden();
     }
 
+    public function test_student_exam_list_only_includes_published_exams_for_active_enrollments(): void
+    {
+        [$teacher, $student, $batch] = $this->makeBatchWithStudent();
+        $otherStudent = User::factory()->create(['role' => 'student']);
+        $exam = Exam::create([
+            'batch_id' => $batch->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Enrolled exam',
+            'starts_at' => now()->addHour(),
+            'ends_at' => now()->addHours(2),
+            'duration_minutes' => 30,
+            'pass_marks' => 0,
+            'status' => 'published',
+        ]);
+
+        $this->actingAs($student)->get(route('student.exams.index'))->assertOk()->assertSee('Enrolled exam');
+        $this->actingAs($otherStudent)->get(route('student.exams.index'))->assertOk()->assertDontSee('Enrolled exam');
+    }
+
     public function test_other_teacher_cannot_create_exam_for_batch(): void
     {
         [$teacher, $student, $batch] = $this->makeBatchWithStudent();
