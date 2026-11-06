@@ -1,13 +1,13 @@
 @extends('layouts.app')
 
-@section('title', 'Live classes | ' . config('app.name'))
+@section('title', '{{ __('Live classes') }} | ' . config('app.name'))
 
 @section('content')
     <div class="page-header">
         <div>
             <span class="badge info">Learning room</span>
-            <h1 style="margin:12px 0 0;">Live classes</h1>
-            <p class="muted">Your scheduled online lessons and meeting details.</p>
+            <h1 style="margin:12px 0 0;">{{ __('Live classes') }}</h1>
+            <p class="muted">{{ __('Your scheduled online lessons and meeting details.') }}</p>
         </div>
         <a href="{{ route('dashboard') }}" class="btn secondary">Dashboard</a>
     </div>
@@ -33,16 +33,16 @@
                 @endif
                 @if(auth()->user()->isStudent())
                     @if($joinWindowOpen)
-                        <a class="btn primary" href="{{ $liveClass->meeting_url }}" target="_blank" rel="noopener noreferrer">Join live class</a>
+                        <a class="btn primary" href="{{ $liveClass->meeting_url }}" target="_blank" rel="noopener noreferrer">{{ __('Join live class') }}</a>
                     @else
                         <span class="muted">The secure join link becomes available 15 minutes before class and closes when the session ends.</span>
                     @endif
                 @else
-                    <a class="btn secondary" href="{{ $liveClass->meeting_url }}" target="_blank" rel="noopener noreferrer">Open meeting link</a>
+                    <a class="btn secondary" href="{{ $liveClass->meeting_url }}" target="_blank" rel="noopener noreferrer">{{ __('Open meeting link') }}</a>
                 @endif
                 @if($canManage)
                     <details style="margin-top:14px;">
-                        <summary>Edit session</summary>
+                        <summary>{{ __('Edit session') }}</summary>
                         <form method="POST" action="{{ route('live-classes.update', $liveClass) }}" class="grid grid-2" style="margin-top:12px;">
                             @csrf
                             @method('PUT')
@@ -52,18 +52,18 @@
                             <label>End<input type="datetime-local" name="ends_at" value="{{ $liveClass->ends_at->format('Y-m-d\TH:i') }}" required></label>
                             <label>Status<select name="status">@foreach(['scheduled', 'live', 'completed', 'cancelled'] as $status)<option value="{{ $status }}" @selected($liveClass->status === $status)>{{ ucfirst($status) }}</option>@endforeach</select></label>
                             <label>Description<textarea name="description">{{ $liveClass->description }}</textarea></label>
-                            <button class="btn primary" type="submit">Save changes</button>
+                            <button class="btn primary" type="submit">{{ __('Save changes') }}</button>
                         </form>
                         <form method="POST" action="{{ route('live-classes.destroy', $liveClass) }}" style="margin-top:8px;" onsubmit="return confirm('Delete this live class?')">
                             @csrf
                             @method('DELETE')
-                            <button class="btn secondary" type="submit">Delete session</button>
+                            <button class="btn secondary" type="submit">{{ __('Delete session') }}</button>
                         </form>
                     </details>
                 @endif
             </article>
         @empty
-            <div class="panel"><p class="muted" style="margin:0;">No live classes are scheduled for your account yet.</p></div>
+            <div class="panel"><p class="muted" style="margin:0;">{{ __('No live classes are scheduled for your account yet.') }}</p></div>
         @endforelse
     </div>
 
