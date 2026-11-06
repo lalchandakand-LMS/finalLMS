@@ -165,6 +165,30 @@ class LiveClassAccessTest extends TestCase
             ->assertSessionHasErrors(['meeting_url', 'recording_url']);
     }
 
+
+    public function test_completed_enrollment_cannot_join_an_ongoing_live_session(): void
+    {
+        [$teacher, $batch, $course] = $this->makeBatch();
+        $student = User::factory()->create(['role' => 'student']);
+        Enrollment::create(['user_id' => $student->id, 'course_id' => $course->id, 'batch_id' => $batch->id, 'status' => 'completed']);
+
+        LiveClass::create([
+            'batch_id' => $batch->id,
+            'title' => 'Ongoing session for active learners',
+            'meeting_url' => 'https://meet.example.com/active-only-secret',
+            'starts_at' => now()->subMinutes(5),
+            'ends_at' => now()->addMinutes(30),
+            'status' => 'live',
+            'created_by' => $teacher->id,
+        ]);
+
+        $this->actingAs($student)
+            ->get(route('live-classes.index'))
+            ->assertOk()
+            ->assertSee('Ongoing session for active learners')
+            ->assertDontSee('https://meet.example.com/active-only-secret');
+    }
+
     private function makeBatch(): array
     {
         $teacher = User::factory()->create(['role' => 'teacher']);
