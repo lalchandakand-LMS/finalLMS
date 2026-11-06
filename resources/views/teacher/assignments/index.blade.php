@@ -19,6 +19,7 @@
             <label>{{ __('Instructions') }}<textarea name="instructions" maxlength="10000" required></textarea></label>
             <label>{{ __('Due date') }}<input type="datetime-local" name="due_at" required></label>
             <label>{{ __('Maximum marks') }}<input type="number" name="max_marks" min="1" max="10000" required></label>
+            <label style="display:flex;gap:8px;align-items:center;margin:12px 0;"><input type="checkbox" name="allow_late" value="1"> {{ __('Allow late submissions after the deadline') }}</label>
             <button type="submit" class="btn primary">{{ __('Publish') }}</button>
         </form>
     </div>
@@ -34,6 +35,7 @@
                     <div class="course-item" style="margin-top:12px;">
                         <strong>{{ $submission->student->name }}</strong>
                         <p>{{ $submission->answer }}</p>
+                        @if($submission->attachment_path)<a class="btn secondary" href="{{ route('assignment-submissions.attachment', $submission) }}">{{ __('Download student attachment') }}: {{ $submission->attachment_name }}</a>@endif
                         <form method="POST" action="{{ route('teacher.assignments.grade', [$assignment, $submission]) }}">
                             @csrf
                             <label>{{ __('Score') }}<input type="number" name="score" min="0" max="{{ $assignment->max_marks }}" step="0.01" value="{{ $submission->score }}" required></label>
