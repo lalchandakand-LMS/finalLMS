@@ -166,7 +166,7 @@ class ExaminationWorkflowTest extends TestCase
 
         $exam = Exam::where('title', 'Random Grammar Test')->firstOrFail();
         $this->assertDatabaseCount('exam_questions', 2);
-        $this->assertSame(4, $exam->questions()->sum('marks'));
+        $this->assertSame(4, (int) $exam->questions()->sum('marks'));
     }
 
     public function test_teacher_cannot_use_another_teachers_question_bank_items(): void
