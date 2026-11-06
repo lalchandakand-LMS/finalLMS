@@ -15,7 +15,9 @@
     <div class="course-list">
         @forelse($liveClasses as $liveClass)
             @php
-                $joinWindowOpen = now()->greaterThanOrEqualTo($liveClass->starts_at->copy()->subMinutes(15))
+                $studentCanJoin = ! auth()->user()->isStudent() || $liveClass->batch->enrollments->first()?->status === 'active';
+                $joinWindowOpen = $studentCanJoin
+                    && now()->greaterThanOrEqualTo($liveClass->starts_at->copy()->subMinutes(15))
                     && now()->lessThanOrEqualTo($liveClass->ends_at)
                     && in_array($liveClass->status, ['scheduled', 'live'], true);
                 $canManage = auth()->user()->isAdmin()
