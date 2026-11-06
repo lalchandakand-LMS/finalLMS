@@ -21,6 +21,7 @@ use App\Http\Controllers\CmsPageController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\MediaLibraryController;
 use App\Http\Controllers\BlogController;
+use App\Http\Controllers\WebsiteBuilderController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -143,6 +144,8 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         Route::post('/payments/{payment}/reject', [PaymentController::class, 'reject'])->name('admin.payments.reject');
         Route::get('/payments/{payment}/proof', [PaymentController::class, 'proof'])->name('admin.payments.proof');
 
+        Route::get('/website-builder', [WebsiteBuilderController::class, 'index'])->name('admin.website-builder.index');
+        Route::post('/website-builder', [WebsiteBuilderController::class, 'update'])->name('admin.website-builder.update');
         Route::get('/media', [MediaLibraryController::class, 'index'])->name('admin.media.index');
         Route::post('/media', [MediaLibraryController::class, 'store'])->name('admin.media.store');
         Route::delete('/media/{media}', [MediaLibraryController::class, 'destroy'])->name('admin.media.destroy');
