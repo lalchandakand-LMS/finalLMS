@@ -137,6 +137,7 @@ class BackupController extends Controller
             $backupTables = array_keys($payload['tables']);
             sort($backupTables);
             $missingTables = array_values(array_diff($currentTables, $backupTables));
+            if ($missingTables !== []) { fwrite(STDERR, 'BACKUP_MISSING_TABLES: '.json_encode($missingTables).' BACKUP_TABLES: '.json_encode($backupTables).PHP_EOL); }
             abort_unless($missingTables === [], 422, 'This backup does not contain every table required by the installed LMS version. Update or downgrade the application before restoring.');
 
             $mediaToRestore = [];
