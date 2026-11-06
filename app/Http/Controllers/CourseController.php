@@ -153,6 +153,41 @@ class CourseController extends Controller
         return view('courses.show', compact('course', 'enrollment', 'payment', 'paymentMethods', 'batches', 'canViewLessons', 'lessonProgress'));
     }
 
+    public function showLesson(Course $course, Lesson $lesson): View
+    {
+        abort_unless($lesson->course_id === $course->id, 404);
+        $user = Auth::user();
+        $canManageCourse = $user && ($user->isAdmin() || ($user->isTeacher() && $course->teacher_id === $user->id));
+        abort_unless($course->status === 'published' || $canManageCourse, 404);
+        $isEnrolled = $user && $user->isStudent()
+            && $course->enrollments()->where('user_id', $user->id)->whereIn('status', ['active', 'completed'])->exists();
+        abort_unless($lesson->is_preview || $canManageCourse || $isEnrolled, 403);
+
+        $videoEmbedUrl = null;
+        if ($lesson->video_url) {
+            $host = strtolower((string) parse_url($lesson->video_url, PHP_URL_HOST));
+            $path = trim((string) parse_url($lesson->video_url, PHP_URL_PATH), '/');
+            if (in_array($host, ['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be', 'youtube-nocookie.com', 'www.youtube-nocookie.com'], true)) {
+                $query = [];
+                parse_str((string) parse_url($lesson->video_url, PHP_URL_QUERY), $query);
+                $videoId = $host === 'youtu.be' ? explode('/', $path)[0] : ($query['v'] ?? basename($path));
+                if (preg_match('/^[A-Za-z0-9_-]{11}$/', (string) $videoId)) {
+                    $videoEmbedUrl = 'https://www.youtube-nocookie.com/embed/' . $videoId;
+                }
+            } elseif (in_array($host, ['vimeo.com', 'www.vimeo.com', 'player.vimeo.com'], true)) {
+                $videoId = basename($path);
+                if (preg_match('/^[0-9]+$/', $videoId)) {
+                    $videoEmbedUrl = 'https://player.vimeo.com/video/' . $videoId;
+                }
+            }
+        }
+        $isCompleted = $user && $user->isStudent()
+            ? LessonProgress::where('user_id', $user->id)->where('lesson_id', $lesson->id)->exists()
+            : false;
+
+        return view('student.lessons.show', compact('course', 'lesson', 'videoEmbedUrl', 'isCompleted'));
+    }
+
     public function completeLesson(Course $course, Lesson $lesson): RedirectResponse
     {
         $user = Auth::user();
@@ -177,8 +212,11 @@ class CourseController extends Controller
             'content' => ['required', 'string'],
             'duration_minutes' => ['required', 'integer', 'min:1', 'max:600'],
             'order' => ['required', 'integer', 'min:1'],
+            'video_url' => ['nullable', 'url', 'max:2048', 'regex:/^https:\/\/(?:www\.)?(?:youtube\.com|youtu\.be|youtube-nocookie\.com|vimeo\.com)(?:\/|$)/i'],
+            'is_preview' => ['sometimes', 'boolean'],
         ]);
 
+        $validated['is_preview'] = $request->boolean('is_preview');
         $course->lessons()->create($validated);
 
         return redirect()->route('admin.courses.index')->with('success', 'Lesson added successfully.');
