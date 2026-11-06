@@ -37,10 +37,11 @@ The local/testing seeder creates `admin@lms.test`, `teacher@lms.test`, and `stud
 - Student invoices, partial/installment receipts, manual payment ledger, and outstanding balance tracking
 - Admin activity log for successful authenticated changes, with user/action/route/IP filters
 - Public About, Contact, and FAQ pages with admin-managed, safely escaped text content
+- English/Bangla session-based language selector and starter JSON translation catalogue for primary navigation
 
 ## Not yet complete
 
-This is not yet the complete commercial LMS described in the acceptance specification. Super-admin, branch-manager, and accountant permission matrices; discounts and refunds; media library, blog/news publishing, custom landing-page sections, and Bangla translations; automated backup management; and a secure web installer are not implemented. Activity logging covers successful authenticated write requests; it is not yet a full audit trail for reads, login attempts, failed actions, or field-level changes. Payments are manual-review only; official bKash, Nagad, and SSLCommerz APIs and callback verification are not implemented. SMS/email delivery requires real provider credentials.
+This is not yet the complete commercial LMS described in the acceptance specification. Super-admin, branch-manager, and accountant permission matrices; discounts and refunds; media library, blog/news publishing, custom landing-page sections, and complete translation coverage for every screen; automated backup management; and a secure web installer are not implemented. Activity logging covers successful authenticated write requests; it is not yet a full audit trail for reads, login attempts, failed actions, or field-level changes. Payments are manual-review only; official bKash, Nagad, and SSLCommerz APIs and callback verification are not implemented. SMS/email delivery requires real provider credentials.
 
 ## First production administrator
 
