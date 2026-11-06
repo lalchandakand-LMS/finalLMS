@@ -51,7 +51,7 @@ class AssignmentController extends Controller
 
     public function submit(Assignment $assignment, Request $request): RedirectResponse
     {
-        abort_unless(Enrollment::where('batch_id', $assignment->batch_id)->where('user_id', Auth::id())->exists(), 403);
+        abort_unless(Enrollment::where('batch_id', $assignment->batch_id)->where('user_id', Auth::id())->where('status', 'active')->exists(), 403);
 
         if ($assignment->status !== 'published' || ($assignment->due_at->isPast() && ! $assignment->allow_late)) {
             return back()->with('error', 'This assignment is closed for submissions.');
@@ -73,10 +73,10 @@ class AssignmentController extends Controller
         $submission = $existingSubmission ?? new AssignmentSubmission(['student_id' => Auth::id()]);
         $submission->fill([
                 'answer' => $validated['answer'] ?? '',
-                'attachment_path' => $path,
-                'attachment_name' => $file?->getClientOriginalName(),
-                'attachment_mime' => $file?->getMimeType(),
-                'attachment_size' => $file?->getSize(),
+                'attachment_path' => $path ?? $existingSubmission?->attachment_path,
+                'attachment_name' => $file?->getClientOriginalName() ?? $existingSubmission?->attachment_name,
+                'attachment_mime' => $file?->getMimeType() ?? $existingSubmission?->attachment_mime,
+                'attachment_size' => $file?->getSize() ?? $existingSubmission?->attachment_size,
                 'submitted_at' => now(),
                 'status' => 'submitted',
                 'score' => null,
