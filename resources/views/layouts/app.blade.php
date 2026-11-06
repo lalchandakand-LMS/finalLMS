@@ -161,6 +161,7 @@
                 @auth
                     <a href="{{ route('dashboard') }}">Dashboard</a>
                     <a href="{{ route('profile.edit') }}">Profile</a>
+                    <a href="{{ route('live-classes.index') }}">Live classes</a>
                     @if(auth()->user()->isAdmin())
                         <a href="{{ route('admin.batches.index') }}">Batches</a>
                         <a href="{{ route('admin.sms-campaigns.index') }}">SMS</a>
