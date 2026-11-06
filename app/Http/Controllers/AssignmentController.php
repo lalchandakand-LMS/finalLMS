@@ -9,6 +9,8 @@ use App\Models\Enrollment;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\View\View;
 
 class AssignmentController extends Controller
@@ -54,11 +56,25 @@ class AssignmentController extends Controller
             return back()->with('error', 'This assignment is closed for submissions.');
         }
 
-        $validated = $request->validate(['answer' => ['required', 'string', 'max:50000']]);
+        $validated = $request->validate([
+            'answer' => ['nullable', 'string', 'max:50000', 'required_without:attachment'],
+            'attachment' => ['nullable', 'file', 'max:10240', 'mimes:pdf,doc,docx,jpg,jpeg,png', 'required_without:answer'],
+        ]);
+
+        $file = $request->file('attachment');
+        $path = $file?->store('assignment-submissions/'.$assignment->id, 'local');
 
         $submission = $assignment->submissions()->firstOrCreate(
             ['student_id' => Auth::id()],
-            ['answer' => $validated['answer'], 'submitted_at' => now(), 'status' => 'submitted']
+            [
+                'answer' => $validated['answer'] ?? '',
+                'attachment_path' => $path,
+                'attachment_name' => $file?->getClientOriginalName(),
+                'attachment_mime' => $file?->getMimeType(),
+                'attachment_size' => $file?->getSize(),
+                'submitted_at' => now(),
+                'status' => 'submitted',
+            ]
         );
 
         if (! $submission->wasRecentlyCreated) {
@@ -66,6 +82,16 @@ class AssignmentController extends Controller
         }
 
         return back()->with('success', 'Assignment submitted successfully.');
+    }
+
+    public function download(AssignmentSubmission $submission): StreamedResponse
+    {
+        $assignment = $submission->assignment;
+        $user = Auth::user();
+        abort_unless($user->isAdmin() || $assignment->teacher_id === $user->id || ($submission->student_id === $user->id && $user->isStudent()), 403);
+        abort_unless($submission->attachment_path && Storage::disk('local')->exists($submission->attachment_path), 404);
+
+        return Storage::disk('local')->download($submission->attachment_path, $submission->attachment_name ?: 'assignment-submission');
     }
 
     public function grade(Assignment $assignment, AssignmentSubmission $submission, Request $request): RedirectResponse
