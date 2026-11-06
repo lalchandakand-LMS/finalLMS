@@ -1,20 +1,20 @@
 @extends('layouts.app')
-@section('title', 'Backup & Restore')
+@section('title', __('Backup & Restore'))
 @section('content')
-<div class="page-header"><div><span class="badge info">System administration</span><h1>Backup & Restore</h1><p class="muted">Backups contain database records and uploaded media. Archives are stored privately on the server and protected with an application-key signature.</p></div><a href="{{ route('dashboard') }}" class="btn secondary">{{ __('Dashboard') }}</a></div>
+<div class="page-header"><div><span class="badge info">{{ __('System administration') }}</span><h1>{{ __('Backup & Restore') }}</h1><p class="muted">{{ __('Backups contain database records and uploaded media. Archives are stored privately on the server and protected with an application-key signature.') }}</p></div><a href="{{ route('dashboard') }}" class="btn secondary">{{ __('Dashboard') }}</a></div>
 <div class="panel" style="margin-bottom:20px;">
-<h2>{{ __('Create a backup') }}</h2><p class="muted">Create a downloadable backup before changing settings, updating the LMS, or restoring an older copy.</p>
+<h2>{{ __('Create a backup') }}</h2><p class="muted">{{ __('Create a downloadable backup before changing settings, updating the LMS, or restoring an older copy.') }}</p>
 <form method="POST" action="{{ route('admin.backups.create') }}">@csrf<button class="btn primary">{{ __('Create database + media backup') }}</button></form>
 </div>
 <div class="panel" style="margin-bottom:20px;">
 <h2>{{ __('Restore a backup') }}</h2>
-<div class="flash error">{{ __('Warning: restore replaces the current database contents. Make a fresh backup first.') }} The backup must have been created by this application key and the database structure must match the installed LMS version.</div>
+<div class="flash error">{{ __('Warning: restore replaces the current database contents. Make a fresh backup first.') }} {{ __('The backup must have been created by this application key and the database structure must match the installed LMS version.') }}</div>
 <form method="POST" action="{{ route('admin.backups.restore') }}" enctype="multipart/form-data">
 @csrf
 <label>{{ __('Backup archive (.json.gz)') }}<input type="file" name="backup_file" accept=".gz,application/gzip" required></label>
 <label>{{ __('Type RESTORE to confirm') }}<input name="confirmation" autocomplete="off" required></label>
 <label>{{ __('Current administrator password') }}<input type="password" name="password" autocomplete="current-password" required></label>
-<button class="btn secondary" onclick="return confirm('This will replace the current database. Continue?')">{{ __('Restore backup') }}</button>
+<button class="btn secondary" onclick="return confirm('{{ __('This will replace the current database. Continue?') }}')">{{ __('Restore backup') }}</button>
 </form>
 </div>
 <div class="panel"><h2>{{ __('Server backups') }}</h2>
