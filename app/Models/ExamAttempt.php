@@ -17,6 +17,11 @@ class ExamAttempt extends Model
         return $this->belongsTo(Exam::class);
     }
 
+    public function student(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'student_id');
+    }
+
     public function answers(): HasMany
     {
         return $this->hasMany(ExamAnswer::class);
