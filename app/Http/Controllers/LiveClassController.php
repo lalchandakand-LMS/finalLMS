@@ -1,14 +1,14 @@
 <?php
 
-namespace App\\Http\\Controllers;
+namespace App\Http\Controllers;
 
-use App\\Models\\Batch;
-use App\\Models\\LiveClass;
-use Illuminate\\Http\\RedirectResponse;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Facades\\Auth;
-use Illuminate\\Validation\\Rule;
-use Illuminate\\View\\View;
+use App\Models\Batch;
+use App\Models\LiveClass;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
+use Illuminate\View\View;
 
 class LiveClassController extends Controller
 {
