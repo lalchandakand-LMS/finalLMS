@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', '{{ __('Dashboard') }} | LMS Academy')
+@section('title', __('Dashboard') . ' | LMS Academy')
 
 @section('content')
     @php
@@ -22,11 +22,11 @@
         </div>
         <div class="summary-box">
             <span class="muted">{{ __('Enrolled') }}</span>
-            <strong>{{ $enrolled{{ __('Courses') }}->count() }}</strong>
+            <strong>{{ $enrolledCourses->count() }}</strong>
         </div>
         <div class="summary-box">
             <span class="muted">{{ __('Certificates') }}</span>
-            <strong>{{ $recent{{ __('Certificates') }}->count() }}</strong>
+            <strong>{{ $recentCertificates->count() }}</strong>
         </div>
         <div class="summary-box">
             <span class="muted">{{ __('Role') }}</span>
