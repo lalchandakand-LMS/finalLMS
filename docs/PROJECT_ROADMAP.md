@@ -22,7 +22,7 @@ This is the persistent project checklist. Update it whenever a task is started, 
 - [x] Resubmission after grading; preserve existing attachment when changing only the text answer.
 
 ### Current blocker
-- [ ] Diagnose and fix CI migration failure on latest assignment commit.
+- [x] Diagnose and fix CI migration ordering: Question Bank category/difficulty migration now runs after its table-creation migration (verification pending).
 - [ ] Add/complete automated tests for assignment create, enrollment authorization, file validation/storage/download, grading, deadline, and resubmission.
 - [ ] Re-run full Laravel CI and cPanel package job; record passing run URL here.
 - [ ] Review migration order and schema compatibility against clean MySQL and existing deployment databases.
@@ -30,7 +30,7 @@ This is the persistent project checklist. Update it whenever a task is started, 
 ## Priority backlog
 
 ### P0 — Stabilize current work
-- [ ] Fix latest GitHub Actions migration failure.
+- [x] Fix latest GitHub Actions migration ordering issue; rerun CI to verify.
 - [ ] Verify new migrations on clean SQLite/MySQL test databases.
 - [ ] Run tests, route:list, frontend build, and cPanel package workflow.
 - [ ] Audit assignment upload security: private disk, extension/MIME validation, size limit, safe download names, authorization, orphan cleanup, storage failure handling.
