@@ -22,6 +22,7 @@ use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\MediaLibraryController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\WebsiteBuilderController;
+use App\Http\Controllers\BackupController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -144,6 +145,10 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         Route::post('/payments/{payment}/reject', [PaymentController::class, 'reject'])->name('admin.payments.reject');
         Route::get('/payments/{payment}/proof', [PaymentController::class, 'proof'])->name('admin.payments.proof');
 
+        Route::get('/backups', [BackupController::class, 'index'])->name('admin.backups.index');
+        Route::post('/backups', [BackupController::class, 'create'])->name('admin.backups.create');
+        Route::get('/backups/{filename}', [BackupController::class, 'download'])->name('admin.backups.download');
+        Route::post('/backups/restore', [BackupController::class, 'restore'])->middleware('throttle:2,10')->name('admin.backups.restore');
         Route::get('/website-builder', [WebsiteBuilderController::class, 'index'])->name('admin.website-builder.index');
         Route::post('/website-builder', [WebsiteBuilderController::class, 'update'])->name('admin.website-builder.update');
         Route::get('/media', [MediaLibraryController::class, 'index'])->name('admin.media.index');
