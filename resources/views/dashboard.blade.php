@@ -158,11 +158,11 @@
     <div class="grid grid-2">
         <div class="panel">
             <h2 style="margin-top: 0;">{{ $user->role === 'teacher' ? 'Assigned courses' : 'Your enrolled courses' }}</h2>
-            @if($enrolled{{ __('Courses') }}->isEmpty())
+            @if($enrolledCourses->isEmpty())
                 <p class="muted">{{ $user->role === 'teacher' ? 'No courses assigned yet.' : 'You are not enrolled in any courses yet.' }}</p>
             @else
                 <div class="course-list">
-                    @foreach($enrolled{{ __('Courses') }} as $course)
+                    @foreach($enrolledCourses as $course)
                         <div class="course-item">
                             <div class="meta-row">
                                 <div>
@@ -179,10 +179,10 @@
 
         <div class="panel">
             <h2 style="margin-top: 0;">Recent certificates</h2>
-            @if($recent{{ __('Certificates') }}->isEmpty())
+            @if($recentCertificates->isEmpty())
                 <p class="muted">No certificates issued yet.</p>
             @else
-                @foreach($recent{{ __('Certificates') }} as $certificate)
+                @foreach($recentCertificates as $certificate)
                     <div class="course-item" style="margin-bottom: 12px;">
                         <strong>{{ $certificate->course->title }}</strong><br>
                         <span class="muted">{{ $certificate->certificate_number }}</span>
