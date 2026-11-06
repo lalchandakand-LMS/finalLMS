@@ -42,6 +42,7 @@ class AssignmentController extends Controller
 
     public function show(Assignment $assignment): View
     {
+        abort_unless($assignment->status === 'published', 404);
         abort_unless(Enrollment::where('batch_id', $assignment->batch_id)->where('user_id', Auth::id())->where('status', 'active')->exists(), 403);
         $assignment->load('batch.course');
         $submission = $assignment->submissions()->where('student_id', Auth::id())->first();
@@ -72,6 +73,9 @@ class AssignmentController extends Controller
 
         $file = $request->file('attachment');
         $path = $file?->store('assignment-submissions/'.$assignment->id, 'local');
+        if ($file && ! $path) {
+            return back()->withErrors(['attachment' => 'The attachment could not be stored. Please try again.'])->withInput();
+        }
 
         $submission = $existingSubmission ?? new AssignmentSubmission(['student_id' => Auth::id()]);
         $submission->fill([
@@ -88,6 +92,10 @@ class AssignmentController extends Controller
             ]);
         $submission->assignment()->associate($assignment);
         $submission->save();
+
+        if ($path && $existingSubmission?->attachment_path && $existingSubmission->attachment_path !== $path) {
+            Storage::disk('local')->delete($existingSubmission->attachment_path);
+        }
 
         return back()->with('success', $existingSubmission ? 'Your revised assignment has been submitted.' : 'Assignment submitted successfully.');
     }
