@@ -154,6 +154,7 @@ class BackupController extends Controller
             }
         } catch (Throwable $exception) {
             report($exception);
+            fwrite(STDERR, 'BACKUP_RESTORE_DEBUG: '.$exception->getMessage().PHP_EOL);
             abort(422, 'Restore failed. No success was reported; check the application log and database state before retrying.');
         }
 
