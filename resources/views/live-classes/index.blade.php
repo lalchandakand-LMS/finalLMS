@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', '{{ __('Live classes') }} | ' . config('app.name'))
+@section('title', __('Live classes') . ' | ' . config('app.name'))
 
 @section('content')
     <div class="page-header">
