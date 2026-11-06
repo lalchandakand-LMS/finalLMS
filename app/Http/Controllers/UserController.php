@@ -14,7 +14,7 @@ class UserController extends Controller
     {
         $validated = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
-            'role' => ['nullable', 'in:admin,teacher,student'],
+            'role' => ['nullable', 'in:admin,branch_manager,accountant,teacher,student'],
         ]);
 
         $users = User::query()
@@ -31,13 +31,13 @@ class UserController extends Controller
             ->paginate(25)
             ->withQueryString();
 
-        return view('admin.users.index', compact('users'));
+        $branches = Branch::query()->orderBy('name')->get();\n\n        return view('admin.users.index', compact('users', 'branches'));
     }
 
     public function updateRole(User $user, Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'role' => ['required', 'in:admin,teacher,student'],
+            'role' => ['required', 'in:admin,branch_manager,accountant,teacher,student'],\n            'branch_id' => ['nullable', 'exists:branches,id'],
         ]);
 
         if ($user->id === Auth::id() && $validated['role'] !== 'admin') {
