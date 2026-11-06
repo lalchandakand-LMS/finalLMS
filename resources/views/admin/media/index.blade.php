@@ -1,12 +1,12 @@
 @extends('layouts.app')
-@section('title', 'Media Library')
+@section('title', '{{ __('Media Library') }}')
 @section('content')
-<div class="page-header"><div><span class="badge info">Admin</span><h1>Media Library</h1><p class="muted">Upload and manage images, documents and video files.</p></div><a class="btn secondary" href="{{ route('dashboard') }}">Dashboard</a></div>
+<div class="page-header"><div><span class="badge info">Admin</span><h1>{{ __('Media Library') }}</h1><p class="muted">Upload and manage images, documents and video files.</p></div><a class="btn secondary" href="{{ route('dashboard') }}">Dashboard</a></div>
 <div class="panel" style="margin-bottom:20px;">
 <form method="POST" action="{{ route('admin.media.store') }}" enctype="multipart/form-data">@csrf
-<label>Choose files (up to 10 files, 20 MB each)</label><input type="file" name="files[]" multiple required accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.mp4,.webm">
-<label style="margin-top:12px;">Alternative text (for images)</label><input name="alt_text" maxlength="255">
-<button class="btn primary" style="margin-top:14px;">Upload media</button>
+<label>{{ __('Choose files (up to 10 files, 20 MB each)') }}</label><input type="file" name="files[]" multiple required accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.mp4,.webm">
+<label style="margin-top:12px;">{{ __('Alternative text (for images)') }}</label><input name="alt_text" maxlength="255">
+<button class="btn primary" style="margin-top:14px;">{{ __('Upload media') }}</button>
 </form></div>
 <div class="grid grid-3">
 @forelse($media as $item)
@@ -17,7 +17,7 @@
 <a href="{{ $item->url }}" target="_blank" rel="noopener">Open file</a>
 <form method="POST" action="{{ route('admin.media.destroy', $item) }}" onsubmit="return confirm('Delete this media file?')">@csrf @method('DELETE')<button class="btn secondary" style="margin-top:10px;">Delete</button></form>
 </div>
-@empty<p class="muted">No media uploaded yet.</p>@endforelse
+@empty<p class="muted">{{ __('No media uploaded yet.') }}</p>@endforelse
 </div>
 <div style="margin-top:20px;">{{ $media->links() }}</div>
 @endsection
