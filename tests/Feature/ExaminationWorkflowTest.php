@@ -105,6 +105,41 @@ class ExaminationWorkflowTest extends TestCase
         $this->assertDatabaseCount('exams', 0);
     }
 
+    public function test_batch_teacher_can_view_submitted_exam_results_but_other_teacher_cannot(): void
+    {
+        [$teacher, $student, $batch] = $this->makeBatchWithStudent();
+        $exam = Exam::create([
+            'batch_id' => $batch->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Progress Test',
+            'starts_at' => now()->subHour(),
+            'ends_at' => now()->addHour(),
+            'duration_minutes' => 30,
+            'pass_marks' => 5,
+            'status' => 'published',
+        ]);
+        ExamAttempt::create([
+            'exam_id' => $exam->id,
+            'student_id' => $student->id,
+            'started_at' => now()->subMinutes(20),
+            'submitted_at' => now()->subMinutes(5),
+            'score' => 7,
+            'status' => 'submitted',
+        ]);
+
+        $this->actingAs($teacher)
+            ->get(route('teacher.exams.results', $exam))
+            ->assertOk()
+            ->assertSee('Progress Test')
+            ->assertSee($student->name)
+            ->assertSee('Passed');
+
+        $otherTeacher = User::factory()->create(['role' => 'teacher']);
+        $this->actingAs($otherTeacher)
+            ->get(route('teacher.exams.results', $exam))
+            ->assertForbidden();
+    }
+
     private function makeBatchWithStudent(bool $enroll = true): array
     {
         $teacher = User::factory()->create(['role' => 'teacher']);
