@@ -81,7 +81,7 @@
                 <a class="aec-link" href="{{ route('admin.invoices.index') }}"><span class="aec-link-icon">🧾</span><strong>{{ __('Invoices') }}</strong><span>{{ __('Manage invoices and fee records') }}</span></a>
                 <a class="aec-link" href="{{ route('admin.settings.index') }}"><span class="aec-link-icon">⚙️</span><strong>{{ __('System settings') }}</strong><span>{{ __('Configure academy and platform settings') }}</span></a>
                 <a class="aec-link" href="{{ route('admin.sms-campaigns.index') }}"><span class="aec-link-icon">✉️</span><strong>{{ __('SMS campaigns') }}</strong><span>{{ __('Manage learner communication campaigns') }}</span></a>
-                <a class="aec-link" href="{{ route('landing') }}"><span class="aec-link-icon">🌐</span><strong>{{ __('Preview public website') }}</strong><span>{{ __('Open the visitor-facing homepage') }}</span></a>
+                <a class="aec-link" href="{{ route('landing') }}"><span class="aec-link-icon">🌐</span><strong>{{ __('Homepage / Public website') }}</strong><span>{{ __('Open the visitor-facing homepage') }}</span></a>
             </section>
 
             <section class="aec-bottom">
