@@ -147,7 +147,7 @@ class ExamController extends Controller
     public function studentIndex(Exam $exam): View
     {
         $this->ensureEnrolled($exam);
-        $attempt = $exam->attempts()->where('student_id', Auth::id())->first();
+        $attempt = $exam->attempts()->where('student_id', Auth::id())->with('attemptQuestions.question')->first();
         $exam->load('batch.course');
 
         return view('exams.show', compact('exam', 'attempt'));
@@ -159,10 +159,26 @@ class ExamController extends Controller
         abort_unless($exam->status === 'published' && now()->between($exam->starts_at, $exam->ends_at), 403);
         abort_unless($exam->questions()->exists(), 403);
 
-        $attempt = ExamAttempt::firstOrCreate(
-            ['exam_id' => $exam->id, 'student_id' => Auth::id()],
-            ['started_at' => now(), 'status' => 'in_progress']
-        );
+        $attempt = DB::transaction(function () use ($exam) {
+            $attempt = ExamAttempt::firstOrCreate(
+                ['exam_id' => $exam->id, 'student_id' => Auth::id()],
+                ['started_at' => now(), 'status' => 'in_progress']
+            );
+
+            // Freeze a shuffled question order for this attempt exactly once.
+            // Refreshing or reopening the exam will never reshuffle a student's paper.
+            if ($attempt->wasRecentlyCreated || ! $attempt->attemptQuestions()->exists()) {
+                $questionIds = $exam->questions()->inRandomOrder()->pluck('id')->values();
+                $attempt->attemptQuestions()->createMany(
+                    $questionIds->map(fn ($questionId, $index) => [
+                        'exam_question_id' => $questionId,
+                        'position' => $index + 1,
+                    ])->all()
+                );
+            }
+
+            return $attempt;
+        });
 
         if ($attempt->status !== 'in_progress') {
             return redirect()->route('student.exams.show', $exam)->with('info', 'You have already submitted this exam.');
@@ -176,8 +192,10 @@ class ExamController extends Controller
         abort_unless($attempt->student_id === Auth::id(), 403);
         abort_unless($attempt->status === 'in_progress', 403);
 
-        $exam = $attempt->exam()->with('questions')->firstOrFail();
+        $exam = $attempt->exam()->firstOrFail();
         $this->ensureEnrolled($exam);
+        $attemptQuestions = $attempt->attemptQuestions()->with('question')->orderBy('position')->get();
+        abort_if($attemptQuestions->isEmpty(), 422, 'No questions are assigned to this attempt.');
         $deadline = min($exam->ends_at->getTimestamp(), $attempt->started_at->copy()->addMinutes($exam->duration_minutes)->getTimestamp());
         abort_if(now()->getTimestamp() > $deadline, 403, 'The exam submission window has closed.');
 
@@ -186,13 +204,17 @@ class ExamController extends Controller
             'answers.*' => ['required', 'integer', 'between:0,3'],
         ]);
 
-        $questionIds = $exam->questions->pluck('id')->map(fn ($id) => (string) $id)->all();
+        $questionIds = $attemptQuestions->pluck('exam_question_id')->map(fn ($id) => (string) $id)->all();
         $submittedIds = array_keys($validated['answers']);
         abort_unless(count(array_diff($submittedIds, $questionIds)) === 0, 422);
 
         $score = 0;
-        DB::transaction(function () use ($exam, $attempt, $validated, &$score) {
-            foreach ($exam->questions as $question) {
+        DB::transaction(function () use ($attemptQuestions, $attempt, $validated, &$score) {
+            foreach ($attemptQuestions as $attemptQuestion) {
+                $question = $attemptQuestion->question;
+                if (! $question) {
+                    continue;
+                }
                 if (! array_key_exists((string) $question->id, $validated['answers'])) {
                     continue;
                 }
