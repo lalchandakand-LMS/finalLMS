@@ -48,8 +48,8 @@
                             @method('PUT')
                             <label>Title<input name="title" value="{{ $liveClass->title }}" maxlength="160" required></label>
                             <label>Meeting URL<input type="url" name="meeting_url" value="{{ $liveClass->meeting_url }}" maxlength="2048" required></label>
-                            <label>Start<input type="datetime-local" name="starts_at" value="{{ $liveClass->starts_at->format('Y-m-d\\TH:i') }}" required></label>
-                            <label>End<input type="datetime-local" name="ends_at" value="{{ $liveClass->ends_at->format('Y-m-d\\TH:i') }}" required></label>
+                            <label>Start<input type="datetime-local" name="starts_at" value="{{ $liveClass->starts_at->format('Y-m-d\TH:i') }}" required></label>
+                            <label>End<input type="datetime-local" name="ends_at" value="{{ $liveClass->ends_at->format('Y-m-d\TH:i') }}" required></label>
                             <label>Status<select name="status">@foreach(['scheduled', 'live', 'completed', 'cancelled'] as $status)<option value="{{ $status }}" @selected($liveClass->status === $status)>{{ ucfirst($status) }}</option>@endforeach</select></label>
                             <label>Description<textarea name="description">{{ $liveClass->description }}</textarea></label>
                             <button class="btn primary" type="submit">Save changes</button>
