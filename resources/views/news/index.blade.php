@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', '{{ __('News & Updates') }}')
+@section('title', __('News & Updates'))
 @section('content')
 <div class="page-header"><div><span class="badge info">Alom's English Center</span><h1>{{ __('Blog & News') }}</h1><p class="muted">{{ __('Latest announcements, learning tips and center updates.') }}</p></div></div>
 <div class="grid grid-3">
