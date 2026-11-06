@@ -6,7 +6,7 @@
 @for($i = 0; $i < 12; $i++)
 @php($section = old("sections.$i", $sections[$i] ?? []))
 <section class="card" style="margin-bottom:16px;">
-<div class="page-header"><h3>Section {{ $i + 1 }}</h3><label style="display:flex;gap:8px;align-items:center;"><input type="checkbox" name="sections[{{ $i }}][enabled]" value="1" style="width:auto;" @checked($section['enabled'] ?? false)> {{ __('Enabled') }}</label></div>
+<div class="page-header"><h3>{{ __('Section') }} {{ $i + 1 }}</h3><label style="display:flex;gap:8px;align-items:center;"><input type="checkbox" name="sections[{{ $i }}][enabled]" value="1" style="width:auto;" @checked($section['enabled'] ?? false)> {{ __('Enabled') }}</label></div>
 <label>{{ __('Heading') }}<input name="sections[{{ $i }}][title]" maxlength="180" value="{{ $section['title'] ?? '' }}"></label>
 <label>{{ __('Text') }}<textarea name="sections[{{ $i }}][body]" rows="3" maxlength="3000">{{ $section['body'] ?? '' }}</textarea></label>
 <label>{{ __('Image') }}<select name="sections[{{ $i }}][image_id]"><option value="">{{ __('No image') }}</option>@foreach($media as $asset)<option value="{{ $asset->id }}" @selected(($section['image_id'] ?? '') == $asset->id)>{{ $asset->original_name }}</option>@endforeach</select></label>
