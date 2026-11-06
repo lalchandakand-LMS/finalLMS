@@ -137,6 +137,40 @@
         .flash.info { background: rgba(21,70,168,0.12); color: var(--primary-dark); }
         .flash.error { background: rgba(180,35,24,0.12); color: var(--danger); }
         .page-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px; }
+        /* Shared Alom's English Center UI: consistent styling across every module. */
+        main.container { min-height: calc(100vh - 170px); }
+        .page-header h1, .page-header h2 { color: var(--primary-dark); margin: 0; }
+        .page-header p { color: var(--muted); margin: 6px 0 0; }
+        .btn, button, input[type="submit"] { font-family: inherit; }
+        button, input[type="submit"], .btn { border-radius: 10px; }
+        button:not(.nav-links button), input[type="submit"] { cursor: pointer; }
+        table { width:100%; border-collapse: separate; border-spacing:0; background:#fff; border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+        th { background:#edf4ff; color:#17366f; text-align:left; font-size:.88rem; font-weight:700; }
+        th, td { padding:12px 14px; border-bottom:1px solid #e8eef8; vertical-align:middle; }
+        tr:last-child td { border-bottom:0; }
+        tbody tr:hover { background:#f7faff; }
+        .panel table, .card table { box-shadow:none; }
+        .panel h1, .panel h2, .panel h3, .card h1, .card h2, .card h3 { color:var(--primary-dark); }
+        input:focus, select:focus, textarea:focus { outline:3px solid rgba(21,70,168,.14); border-color:var(--primary); }
+        .pagination { display:flex; flex-wrap:wrap; gap:7px; margin-top:18px; }
+        .pagination a, .pagination span { display:inline-flex; padding:8px 12px; border:1px solid var(--border); border-radius:9px; background:#fff; }
+        .pagination .active span { background:var(--primary); color:#fff; border-color:var(--primary); }
+        .nav-links { max-height: min(70vh, 520px); overflow-y:auto; }
+        @media(max-width:820px) {
+            .container { padding:22px 16px 44px; }
+            .nav { padding:14px 16px; }
+            .nav-links { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; max-height:48vh; overflow-y:auto; }
+            .nav-links form { min-width:0; }
+            .nav-links a, .nav-links button { width:100%; min-width:0; }
+            table { display:block; overflow-x:auto; white-space:nowrap; }
+            .panel, .card { padding:16px; }
+        }
+        @media(max-width:480px) {
+            .brand { font-size:1.15rem; }
+            .nav-links { grid-template-columns:1fr 1fr; }
+            .nav-links a, .nav-links button { padding:9px 8px; font-size:.86rem; }
+            th, td { padding:10px; }
+        }
         .inline-form { display: inline; }
         .meta-row { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:18px; }
         @media (max-width: 820px) {
