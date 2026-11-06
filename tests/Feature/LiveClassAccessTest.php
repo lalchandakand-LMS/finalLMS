@@ -111,6 +111,7 @@ class LiveClassAccessTest extends TestCase
             'meeting_url' => 'https://meet.example.com/tomorrow-secret',
             'starts_at' => now()->addHours(3),
             'ends_at' => now()->addHours(4),
+            'recording_url' => 'https://video.example.com/private-recording',
             'status' => 'scheduled',
             'created_by' => $teacher->id,
         ]);
@@ -119,7 +120,49 @@ class LiveClassAccessTest extends TestCase
             ->get(route('live-classes.index'))
             ->assertOk()
             ->assertSee('Tomorrow live lesson')
-            ->assertDontSee('https://meet.example.com/tomorrow-secret');
+            ->assertDontSee('https://meet.example.com/tomorrow-secret')
+            ->assertDontSee('https://video.example.com/private-recording');
+    }
+
+
+    public function test_completed_student_can_watch_published_recording_but_not_get_meeting_link(): void
+    {
+        [$teacher, $batch, $course] = $this->makeBatch();
+        $student = User::factory()->create(['role' => 'student']);
+        Enrollment::create(['user_id' => $student->id, 'course_id' => $course->id, 'batch_id' => $batch->id, 'status' => 'completed']);
+
+        LiveClass::create([
+            'batch_id' => $batch->id,
+            'title' => 'Completed speaking class',
+            'meeting_url' => 'https://meet.example.com/old-meeting-secret',
+            'recording_url' => 'https://video.example.com/recording-123',
+            'starts_at' => now()->subHours(3),
+            'ends_at' => now()->subHours(2),
+            'status' => 'completed',
+            'created_by' => $teacher->id,
+        ]);
+
+        $this->actingAs($student)
+            ->get(route('live-classes.index'))
+            ->assertOk()
+            ->assertSee('Completed speaking class')
+            ->assertSee('https://video.example.com/recording-123')
+            ->assertDontSee('https://meet.example.com/old-meeting-secret');
+    }
+
+    public function test_live_class_rejects_insecure_http_meeting_and_recording_urls(): void
+    {
+        [$teacher, $batch] = $this->makeBatch();
+
+        $this->actingAs($teacher)
+            ->post(route('teacher.batches.live-classes.store', $batch), [
+                'title' => 'Unsafe meeting',
+                'meeting_url' => 'http://meet.example.com/room',
+                'recording_url' => 'http://video.example.com/recording',
+                'starts_at' => now()->addDay()->format('Y-m-d H:i:s'),
+                'ends_at' => now()->addDay()->addHour()->format('Y-m-d H:i:s'),
+            ])
+            ->assertSessionHasErrors(['meeting_url', 'recording_url']);
     }
 
     private function makeBatch(): array
