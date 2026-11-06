@@ -34,11 +34,16 @@
                 @if(auth()->user()->isStudent())
                     @if($joinWindowOpen)
                         <a class="btn primary" href="{{ $liveClass->meeting_url }}" target="_blank" rel="noopener noreferrer">{{ __('Join live class') }}</a>
+                    @elseif($liveClass->status === 'completed' && $liveClass->recording_url)
+                        <a class="btn primary" href="{{ $liveClass->recording_url }}" target="_blank" rel="noopener noreferrer">{{ __('Watch class recording') }}</a>
                     @else
-                        <span class="muted">The secure join link becomes available 15 minutes before class and closes when the session ends.</span>
+                        <span class="muted">The join link opens 15 minutes before class. A recording appears here after the teacher publishes it.</span>
                     @endif
                 @else
                     <a class="btn secondary" href="{{ $liveClass->meeting_url }}" target="_blank" rel="noopener noreferrer">{{ __('Open meeting link') }}</a>
+                    @if($liveClass->recording_url)
+                        <a class="btn secondary" href="{{ $liveClass->recording_url }}" target="_blank" rel="noopener noreferrer">{{ __('Open recording') }}</a>
+                    @endif
                 @endif
                 @if($canManage)
                     <details style="margin-top:14px;">
@@ -48,6 +53,7 @@
                             @method('PUT')
                             <label>Title<input name="title" value="{{ $liveClass->title }}" maxlength="160" required></label>
                             <label>Meeting URL<input type="url" name="meeting_url" value="{{ $liveClass->meeting_url }}" maxlength="2048" required></label>
+                            <label>Recording URL (published after class)<input type="url" name="recording_url" value="{{ $liveClass->recording_url }}" maxlength="2048"></label>
                             <label>Start<input type="datetime-local" name="starts_at" value="{{ $liveClass->starts_at->format('Y-m-d\TH:i') }}" required></label>
                             <label>End<input type="datetime-local" name="ends_at" value="{{ $liveClass->ends_at->format('Y-m-d\TH:i') }}" required></label>
                             <label>Status<select name="status">@foreach(['scheduled', 'live', 'completed', 'cancelled'] as $status)<option value="{{ $status }}" @selected($liveClass->status === $status)>{{ ucfirst($status) }}</option>@endforeach</select></label>
