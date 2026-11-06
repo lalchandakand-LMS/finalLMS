@@ -53,7 +53,11 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
     Route::get('/live-classes', [LiveClassController::class, 'index'])->name('live-classes.index');
-    Route::middleware('role:branch_manager')->get('/branch-manager/batches', [BatchController::class, 'branchManagerIndex'])->name('branch-manager.batches.index');
+    Route::middleware('role:branch_manager')->group(function () {
+        Route::get('/branch-manager/batches', [BatchController::class, 'branchManagerIndex'])->name('branch-manager.batches.index');
+        Route::post('/branch-manager/batches', [BatchController::class, 'branchManagerStore'])->name('branch-manager.batches.store');
+        Route::put('/branch-manager/batches/{batch}', [BatchController::class, 'branchManagerUpdate'])->name('branch-manager.batches.update');
+    });
     Route::middleware('role:accountant')->group(function () {
         Route::get('/accountant/invoices', [InvoiceController::class, 'accountantIndex'])->name('accountant.invoices.index');
         Route::post('/accountant/invoices', [InvoiceController::class, 'store'])->name('accountant.invoices.store');
