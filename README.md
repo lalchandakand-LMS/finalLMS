@@ -39,6 +39,7 @@ The local/testing seeder creates `admin@lms.test`, `teacher@lms.test`, and `stud
 - Admin activity log for successful authenticated changes, with user/action/route/IP filters
 - Public About, Contact, FAQ, and published Blog/News pages; admin-managed article drafts, publishing, SEO metadata, and cover images
 - Admin Media Library for validated image, document, and video uploads with protected deletion of assets referenced by articles
+- Signed, application-key-protected database + uploaded-media + private assignment-attachment backup archives; administrator restore requires current password and explicit confirmation, with schema compatibility checks
 - Section-based homepage Website Builder with up to 12 editable text/image/button sections; user content is escaped and does not accept arbitrary scripts
 - English/Bangla session-based language selector and starter JSON translation catalogue for primary navigation
 
