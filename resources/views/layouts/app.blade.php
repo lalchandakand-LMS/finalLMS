@@ -183,6 +183,12 @@
                         <a href="{{ route('admin.users.index') }}">Users</a>
                         <a href="{{ route('admin.courses.index') }}">Courses</a>
                     @endif
+                    @if(auth()->user()->isBranchManager())
+                        <a href="{{ route('branch-manager.batches.index') }}">My branch</a>
+                    @endif
+                    @if(auth()->user()->isAccountant())
+                        <a href="{{ route('accountant.invoices.index') }}">Finance</a>
+                    @endif
                     @if(auth()->user()->isTeacher())
                         <a href="{{ route('teacher.batches.index') }}">My batches</a>
                     @endif
