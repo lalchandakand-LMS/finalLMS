@@ -51,4 +51,9 @@ class Batch extends Model
     {
         return $this->hasMany(Assignment::class);
     }
+
+    public function liveClasses(): HasMany
+    {
+        return $this->hasMany(LiveClass::class);
+    }
 }
