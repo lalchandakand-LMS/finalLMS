@@ -100,3 +100,14 @@ This is the persistent project checklist. Update it whenever a task is started, 
 2. Never merge PR #2 or deploy without explicit approval.
 3. Update this checklist with meaningful project progress.
 4. Mark tasks complete only after implementation and verification; otherwise mark verification pending.
+
+
+### Recorded lessons and teacher lesson management — implementation update
+- Added teacher-owned course lesson management page with create, edit, and delete actions.
+- Added ownership checks so teachers can manage only lessons in their own courses; lesson/course mismatch is rejected.
+- Added enrolled-student lesson progress summary to the teacher course lesson page.
+- Added a shortcut from the teacher batch list to its course lesson manager.
+- Fixed the course create/edit Blade form, which contained malformed template markup.
+- Fixed lesson creation redirect so teachers return to their own lesson manager.
+- Added feature tests for teacher CRUD and cross-teacher access denial.
+- CI for the latest teacher-management test commit is running; do not treat this work as CI-verified until the run completes successfully.
