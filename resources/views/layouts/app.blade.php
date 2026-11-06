@@ -158,6 +158,9 @@
             <div class="nav-links">
                 <a href="/">Home</a>
                 <a href="{{ route('courses.index') }}">Courses</a>
+                <a href="{{ route('pages.about') }}">About</a>
+                <a href="{{ route('pages.contact') }}">Contact</a>
+                <a href="{{ route('pages.faq') }}">FAQ</a>
                 @auth
                     <a href="{{ route('dashboard') }}">Dashboard</a>
                     <a href="{{ route('profile.edit') }}">Profile</a>
