@@ -222,6 +222,52 @@ class CourseController extends Controller
         return redirect()->route('admin.courses.index')->with('success', 'Lesson added successfully.');
     }
 
+
+    public function teacherLessons(Course $course): View
+    {
+        $user = Auth::user();
+        abort_unless($user?->isTeacher() && $course->teacher_id === $user->id, 403);
+        $course->load('lessons');
+        $students = $course->enrollments()->whereIn('status', ['active', 'completed'])->with('user')->get();
+        $lessonIds = $course->lessons->pluck('id');
+        $progress = LessonProgress::query()->whereIn('lesson_id', $lessonIds)
+            ->whereIn('user_id', $students->pluck('user_id'))->get()->groupBy('user_id');
+        $students->each(function ($enrollment) use ($progress, $course) {
+            $done = ($progress->get($enrollment->user_id) ?? collect())->count();
+            $total = $course->lessons->count();
+            $enrollment->progress_percent = $total ? (int) round($done / $total * 100) : 0;
+            $enrollment->completed_lessons_count = $done;
+        });
+        return view('teacher.courses.lessons', compact('course', 'students'));
+    }
+
+    public function updateLesson(Course $course, Lesson $lesson, Request $request): RedirectResponse
+    {
+        $user = Auth::user();
+        abort_unless($user?->isAdmin() || ($user?->isTeacher() && $course->teacher_id === $user->id), 403);
+        abort_unless($lesson->course_id === $course->id, 404);
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'content' => ['required', 'string'],
+            'duration_minutes' => ['required', 'integer', 'min:1', 'max:600'],
+            'order' => ['required', 'integer', 'min:1'],
+            'video_url' => ['nullable', 'url', 'max:2048', 'regex:/^https:\\/\\/(?:www\\.)?(?:youtube\\.com|youtu\\.be|youtube-nocookie\\.com|vimeo\\.com)(?:\\/|$)/i'],
+            'is_preview' => ['sometimes', 'boolean'],
+        ]);
+        $validated['is_preview'] = $request->boolean('is_preview');
+        $lesson->update($validated);
+        return back()->with('success', 'Lesson updated successfully.');
+    }
+
+    public function destroyLesson(Course $course, Lesson $lesson): RedirectResponse
+    {
+        $user = Auth::user();
+        abort_unless($user?->isAdmin() || ($user?->isTeacher() && $course->teacher_id === $user->id), 403);
+        abort_unless($lesson->course_id === $course->id, 404);
+        $lesson->delete();
+        return back()->with('success', 'Lesson deleted successfully.');
+    }
+
     public function complete(Course $course, Request $request): RedirectResponse
     {
         $user = Auth::user();
