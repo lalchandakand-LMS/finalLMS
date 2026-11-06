@@ -155,8 +155,6 @@ class ExamController extends Controller
     {
         abort_unless(Auth::user()->isAdmin() || $batch->teacher_id === Auth::id(), 403);
         abort_unless($question->teacher_id === Auth::id(), 403);
-        abort_if($question->examQuestions()->exists(), 409, 'This question is already used in an exam and cannot be deleted.');
-
         $question->delete();
 
         return back()->with('success', 'Question deleted successfully.');
