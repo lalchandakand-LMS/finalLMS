@@ -9,22 +9,22 @@
     </div>
 
     <div class="panel" style="margin-bottom:20px;">
-        <h2 style="margin-top:0;">Create multiple-choice exam</h2>
-        <p><a class="btn secondary" href="{{ route('teacher.batches.question-bank.index', $batch) }}">Manage Question Bank</a></p>
+        <h2 style="margin-top:0;">{{ __('Create multiple-choice exam') }}</h2>
+        <p><a class="btn secondary" href="{{ route('teacher.batches.question-bank.index', $batch) }}">{{ __('Manage Question Bank') }}</a></p>
         <p class="muted">Add one or more questions. Each question has four options and one correct answer. Marks are awarded automatically.</p>
         <form method="POST" action="{{ route('teacher.batches.exams.store', $batch) }}">
             @csrf
-            <label>Exam title<input name="title" maxlength="180" required></label>
-            <label>Instructions<textarea name="instructions" maxlength="5000"></textarea></label>
+            <label>{{ __('Exam title') }}<input name="title" maxlength="180" required></label>
+            <label>{{ __('Instructions') }}<textarea name="instructions" maxlength="5000"></textarea></label>
             <div class="grid grid-2">
-                <label>Starts at<input type="datetime-local" name="starts_at" required></label>
-                <label>Ends at<input type="datetime-local" name="ends_at" required></label>
-                <label>Duration (minutes)<input type="number" name="duration_minutes" min="1" max="600" required></label>
-                <label>Pass marks<input type="number" name="pass_marks" min="0" value="0" required></label>
+                <label>{{ __('Starts at') }}<input type="datetime-local" name="starts_at" required></label>
+                <label>{{ __('Ends at') }}<input type="datetime-local" name="ends_at" required></label>
+                <label>{{ __('Duration (minutes)') }}<input type="number" name="duration_minutes" min="1" max="600" required></label>
+                <label>{{ __('Pass marks') }}<input type="number" name="pass_marks" min="0" value="0" required></label>
             </div>
-            <label><input type="checkbox" id="use-question-bank"> Select random questions from my Question Bank</label>
+            <label><input type="checkbox" id="use-question-bank"> {{ __('Select random questions from my Question Bank') }}</label>
             <div id="question-bank-area" hidden>
-                <label>Number of random questions<input type="number" name="random_question_count" min="1" max="100" value="10"></label>
+                <label>{{ __('Number of random questions') }}<input type="number" name="random_question_count" min="1" max="100" value="10"></label>
                 @forelse($bankQuestions as $bankQuestion)
                     <label style="display:block;"><input type="checkbox" name="question_bank_ids[]" value="{{ $bankQuestion->id }}"> {{ $bankQuestion->subject ?: 'General' }} — {{ Str::limit($bankQuestion->question, 120) }} ({{ $bankQuestion->marks }} marks)</label>
                 @empty
@@ -49,8 +49,8 @@
                 </div>
             </div>
             </div>
-            <button type="button" class="btn secondary" id="add-exam-question">Add question</button>
-            <button type="submit" class="btn primary">Publish exam</button>
+            <button type="button" class="btn secondary" id="add-exam-question">{{ __('Add question') }}</button>
+            <button type="submit" class="btn primary">{{ __('Publish exam') }}</button>
         </form>
     </div>
 
@@ -61,10 +61,10 @@
                 <h2>{{ $exam->title }}</h2>
                 <p class="muted">{{ $exam->questions_count }} questions · {{ $exam->attempts_count }} attempts · {{ $exam->duration_minutes }} minutes</p>
                 <p class="muted">{{ $exam->starts_at->format('M j, Y H:i') }} – {{ $exam->ends_at->format('M j, Y H:i') }}</p>
-                <a class="btn secondary" href="{{ route('teacher.exams.results', $exam) }}">View results</a>
+                <a class="btn secondary" href="{{ route('teacher.exams.results', $exam) }}">{{ __('View results') }}</a>
             </article>
         @empty
-            <div class="panel"><p class="muted">No exams have been published for this batch.</p></div>
+            <div class="panel"><p class="muted">{{ __('No exams have been published for this batch.') }}</p></div>
         @endforelse
     </div>
 @endsection
