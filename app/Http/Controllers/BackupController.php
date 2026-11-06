@@ -48,11 +48,17 @@ class BackupController extends Controller
             }
         }
 
+        $privateFiles = [];
+        foreach (Storage::disk('local')->allFiles('assignment-submissions') as $privatePath) {
+            $privateFiles[$privatePath] = base64_encode(Storage::disk('local')->get($privatePath));
+        }
+
         $payload = json_encode([
             'format_version' => 1,
             'created_at' => now()->toIso8601String(),
             'tables' => $tables,
             'public_media' => $mediaFiles,
+            'private_files' => $privateFiles,
         ], JSON_THROW_ON_ERROR);
 
         $signature = hash_hmac('sha256', $payload, (string) config('app.key'));
@@ -114,6 +120,14 @@ class BackupController extends Controller
                 $mediaToRestore[$mediaPath] = $contents;
             }
 
+            $privateFilesToRestore = [];
+            foreach (($payload['private_files'] ?? []) as $privatePath => $encoded) {
+                abort_unless(is_string($privatePath) && str_starts_with($privatePath, 'assignment-submissions/') && ! Str::contains($privatePath, ['..', '\\\\']), 422, 'Unsafe private file path in backup.');
+                $contents = base64_decode($encoded, true);
+                abort_unless(is_string($contents), 422, 'A private file in this backup is damaged.');
+                $privateFilesToRestore[$privatePath] = $contents;
+            }
+
             Schema::disableForeignKeyConstraints();
             try {
                 DB::transaction(function () use ($currentTables, $payload): void {
@@ -135,6 +149,9 @@ class BackupController extends Controller
 
             foreach ($mediaToRestore as $mediaPath => $contents) {
                 Storage::disk('public')->put($mediaPath, $contents);
+            }
+            foreach ($privateFilesToRestore as $privatePath => $contents) {
+                Storage::disk('local')->put($privatePath, $contents);
             }
         } catch (Throwable $exception) {
             report($exception);
