@@ -13,6 +13,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PhoneVerificationController;
 use App\Http\Controllers\SmsCampaignController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\LiveClassController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -41,6 +42,17 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/live-classes', [LiveClassController::class, 'index'])->name('live-classes.index');
+    Route::post('/teacher/batches/{batch}/live-classes', [LiveClassController::class, 'store'])
+        ->middleware('role:teacher')
+        ->name('teacher.batches.live-classes.store');
+    Route::put('/live-classes/{liveClass}', [LiveClassController::class, 'update'])
+        ->middleware('role:teacher,admin')
+        ->name('live-classes.update');
+    Route::delete('/live-classes/{liveClass}', [LiveClassController::class, 'destroy'])
+        ->middleware('role:teacher,admin')
+        ->name('live-classes.destroy');
+
     Route::middleware('role:teacher')->get('/teacher/batches', [BatchController::class, 'teacherIndex'])->name('teacher.batches.index');
     Route::middleware('role:student')->get('/my/attendance', [AttendanceController::class, 'studentIndex'])->name('student.attendance.index');
     Route::middleware('role:teacher')->group(function () {
