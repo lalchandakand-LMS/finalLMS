@@ -7,6 +7,7 @@ use App\Models\Exam;
 use App\Models\ExamAttempt;
 use App\Models\ExamAnswer;
 use App\Models\Enrollment;
+use App\Models\QuestionBankQuestion;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -33,7 +34,10 @@ class ExamController extends Controller
             'ends_at' => ['required', 'date', 'after:starts_at'],
             'duration_minutes' => ['required', 'integer', 'min:1', 'max:600'],
             'pass_marks' => ['required', 'integer', 'min:0'],
-            'questions' => ['required', 'array', 'min:1', 'max:100'],
+            'questions' => ['nullable', 'array', 'min:1', 'max:100'],
+            'question_bank_ids' => ['nullable', 'array', 'min:1', 'max:500'],
+            'question_bank_ids.*' => ['integer', 'distinct', 'exists:question_bank_questions,id'],
+            'random_question_count' => ['nullable', 'integer', 'min:1', 'max:100'],
             'questions.*.question' => ['required', 'string', 'max:3000'],
             'questions.*.options' => ['required', 'array', 'size:4'],
             'questions.*.options.*' => ['required', 'string', 'max:500'],
@@ -41,12 +45,33 @@ class ExamController extends Controller
             'questions.*.marks' => ['required', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $totalMarks = collect($validated['questions'])->sum('marks');
+        $selectedQuestions = collect($validated['questions'] ?? []);
+        if (! empty($validated['question_bank_ids'])) {
+            $bankQuestions = QuestionBankQuestion::query()
+                ->whereIn('id', $validated['question_bank_ids'])
+                ->where('teacher_id', Auth::id())
+                ->inRandomOrder()
+                ->get();
+
+            abort_unless($bankQuestions->count() === count($validated['question_bank_ids']), 422, 'One or more bank questions are unavailable.');
+            $selectedCount = $validated['random_question_count'] ?? $bankQuestions->count();
+            abort_if($selectedCount > $bankQuestions->count(), 422, 'Random question count exceeds the selected bank questions.');
+
+            $selectedQuestions = $bankQuestions->shuffle()->take($selectedCount)->map(fn ($question) => [
+                'question' => $question->question,
+                'options' => $question->options,
+                'correct_option' => $question->correct_option,
+                'marks' => $question->marks,
+            ]);
+        }
+
+        abort_if($selectedQuestions->isEmpty(), 422, 'Add questions or select questions from your question bank.');
+        $totalMarks = $selectedQuestions->sum('marks');
         if ($validated['pass_marks'] > $totalMarks) {
             return back()->withErrors(['pass_marks' => 'Pass marks cannot exceed the total marks.'])->withInput();
         }
 
-        DB::transaction(function () use ($batch, $validated) {
+        DB::transaction(function () use ($batch, $validated, $selectedQuestions) {
             $exam = $batch->exams()->create([
                 'teacher_id' => Auth::id(),
                 'title' => $validated['title'],
@@ -58,7 +83,7 @@ class ExamController extends Controller
                 'status' => 'published',
             ]);
 
-            foreach ($validated['questions'] as $position => $question) {
+            foreach ($selectedQuestions as $position => $question) {
                 $exam->questions()->create([...$question, 'position' => $position + 1]);
             }
         });
