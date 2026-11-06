@@ -73,8 +73,8 @@ jobs:
           node-version: '20'
           cache: npm
       - run: cp deployment/.env.example .env
-      - run: php artisan key:generate --force
       - run: composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+      - run: php artisan key:generate --force
       - run: npm ci
       - run: npm run build
       - name: Create and verify cPanel ZIP
