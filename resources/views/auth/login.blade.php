@@ -4,8 +4,8 @@
 
 @section('content')
     <div class="auth-box">
-        <h2 style="margin-top: 0; font-size: 2rem;">Welcome back</h2>
-        <p class="muted">Login to access your learning dashboard.</p>
+        <h2 style="margin-top: 0; font-size: 2rem;">{{ __('Welcome back') }}</h2>
+        <p class="muted">{{ __('Login to access your learning dashboard.') }}</p>
 
         @if($errors->any())
             <div class="error">{{ $errors->first() }}</div>
@@ -15,18 +15,18 @@
             @csrf
 
             <label>
-                Email
+                {{ __('Email') }}
                 <input type="email" name="email" value="{{ old('email') }}" required>
             </label>
 
             <label>
-                Password
+                {{ __('Password') }}
                 <input type="password" name="password" required>
             </label>
 
-            <button type="submit" class="btn primary" style="width:100%; margin-top: 12px;">Login</button>
+            <button type="submit" class="btn primary" style="width:100%; margin-top: 12px;">{{ __('Login') }}</button>
         </form>
 
-        <p class="muted" style="margin-bottom:0;">New to {{ config('app.name') }}? <a href="{{ route('register') }}">Create a student account</a></p>
+        <p class="muted" style="margin-bottom:0;">New to {{ config('app.name') }}? <a href="{{ route('register') }}">{{ __('Create a student account') }}</a></p>
     </div>
 @endsection
