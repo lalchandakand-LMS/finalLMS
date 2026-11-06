@@ -43,7 +43,7 @@ Route::middleware('auth')->group(function () {
         ->name('verification.send');
 });
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
     Route::get('/live-classes', [LiveClassController::class, 'index'])->name('live-classes.index');
     Route::post('/teacher/batches/{batch}/live-classes', [LiveClassController::class, 'store'])
         ->middleware('role:teacher')
@@ -94,7 +94,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('courses.lessons.complete');
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
-        Route::get('/invoices', [InvoiceController::class, 'adminIndex'])->name('admin.invoices.index');
+        Route::get('/invoices', [InvoiceController::class, 'adminIndex'])->name('admin.invoices.index');\n        Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('admin.activity-logs.index');
         Route::post('/invoices', [InvoiceController::class, 'store'])->name('admin.invoices.store');
         Route::post('/invoices/{invoice}/payments', [InvoiceController::class, 'receivePayment'])->name('admin.invoices.payments.store');
         Route::get('/batches', [BatchController::class, 'index'])->name('admin.batches.index');
