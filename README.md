@@ -27,6 +27,7 @@ The local/testing seeder creates `admin@lms.test`, `teacher@lms.test`, and `stud
 - Branch and batch create/read/update/delete controls; teacher-scoped batch views
 - Batch enrollment associations, teacher attendance entry, and student-private attendance history
 - Batch assignments, one submission per enrolled student, and teacher grading/feedback
+- Batch live-class scheduling with teacher ownership checks, student enrollment filtering, and time-windowed meeting-link visibility
 - Public published-course catalog and slug URLs; lesson bodies require enrollment except preview lessons
 - Lesson progress tracking; certificates require every course lesson completed
 - Batch seat reservation for pending payments, unique transaction references, and last-admin protection
@@ -35,7 +36,7 @@ The local/testing seeder creates `admin@lms.test`, `teacher@lms.test`, and `stud
 
 ## Not yet complete
 
-This is not yet the complete commercial LMS described in the acceptance specification. Super-admin, branch-manager, and accountant permission matrices; online examinations/question banks; live-class scheduling; invoices, installments, discounts and refunds; full public CMS pages; Bangla translations; activity logs; backups; and a secure web installer are not implemented. Payments are manual-review only; official bKash, Nagad, and SSLCommerz APIs and callback verification are not implemented. SMS/email delivery requires real provider credentials.
+This is not yet the complete commercial LMS described in the acceptance specification. Super-admin, branch-manager, and accountant permission matrices; online examinations/question banks; invoices, installments, discounts and refunds; full public CMS pages; Bangla translations; activity logs; backups; and a secure web installer are not implemented. Payments are manual-review only; official bKash, Nagad, and SSLCommerz APIs and callback verification are not implemented. SMS/email delivery requires real provider credentials.
 
 ## First production administrator
 
