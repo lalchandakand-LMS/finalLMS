@@ -19,6 +19,8 @@ use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\CmsPageController;
 use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\MediaLibraryController;
+use App\Http\Controllers\BlogController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -36,6 +38,8 @@ Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,
 Route::get('/about', [CmsPageController::class, 'about'])->name('pages.about');
 Route::get('/contact', [CmsPageController::class, 'contact'])->name('pages.contact');
 Route::get('/faq', [CmsPageController::class, 'faq'])->name('pages.faq');
+Route::get('/news', [BlogController::class, 'index'])->name('news.index');
+Route::get('/news/{post:slug}', [BlogController::class, 'show'])->name('news.show');
 Route::post('/language', [LocaleController::class, 'update'])->middleware('throttle:20,1')->name('locale.update');
 
 Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
@@ -139,6 +143,15 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         Route::post('/payments/{payment}/reject', [PaymentController::class, 'reject'])->name('admin.payments.reject');
         Route::get('/payments/{payment}/proof', [PaymentController::class, 'proof'])->name('admin.payments.proof');
 
+        Route::get('/media', [MediaLibraryController::class, 'index'])->name('admin.media.index');
+        Route::post('/media', [MediaLibraryController::class, 'store'])->name('admin.media.store');
+        Route::delete('/media/{media}', [MediaLibraryController::class, 'destroy'])->name('admin.media.destroy');
+        Route::get('/news', [BlogController::class, 'adminIndex'])->name('admin.news.index');
+        Route::get('/news/create', [BlogController::class, 'create'])->name('admin.news.create');
+        Route::post('/news', [BlogController::class, 'store'])->name('admin.news.store');
+        Route::get('/news/{post}/edit', [BlogController::class, 'edit'])->name('admin.news.edit');
+        Route::put('/news/{post}', [BlogController::class, 'update'])->name('admin.news.update');
+        Route::delete('/news/{post}', [BlogController::class, 'destroy'])->name('admin.news.destroy');
         Route::get('/settings', [AdminSettingsController::class, 'index'])->name('admin.settings.index');
         Route::post('/settings', [AdminSettingsController::class, 'update'])->name('admin.settings.update');
 
