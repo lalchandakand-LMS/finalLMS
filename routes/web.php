@@ -18,6 +18,7 @@ use App\Http\Controllers\ExamController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\CmsPageController;
+use App\Http\Controllers\LocaleController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -35,6 +36,7 @@ Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,
 Route::get('/about', [CmsPageController::class, 'about'])->name('pages.about');
 Route::get('/contact', [CmsPageController::class, 'contact'])->name('pages.contact');
 Route::get('/faq', [CmsPageController::class, 'faq'])->name('pages.faq');
+Route::post('/language', [LocaleController::class, 'update'])->middleware('throttle:20,1')->name('locale.update');
 
 Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
 Route::get('/courses/{course}', [CourseController::class, 'show'])->name('courses.show');
