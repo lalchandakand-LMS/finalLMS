@@ -76,7 +76,7 @@
                     </div>
                 </div>
                 @if($due > 0 && $invoice->status !== 'cancelled')
-                    <form method="POST" action="{{ route(auth()->user()->isAccountant() ? 'accountant.invoices.payments.store' : 'admin.invoices.payments.store') }}" class="grid grid-2" style="margin-top:16px;">
+                    <form method="POST" action="{{ route(auth()->user()->isAccountant() ? 'accountant.invoices.payments.store' : 'admin.invoices.payments.store', $invoice) }}" class="grid grid-2" style="margin-top:16px;">
                         @csrf
                         <div><label>Received amount (BDT)</label><input type="number" name="amount" min="0.01" max="{{ number_format($due, 2, '.', '') }}" step="0.01" required></div>
                         <div><label>Payment method</label><select name="method" required><option value="cash">Cash</option><option value="bkash">bKash</option><option value="nagad">Nagad</option><option value="bank">Bank</option><option value="online">Online gateway</option><option value="other">Other</option></select></div>
