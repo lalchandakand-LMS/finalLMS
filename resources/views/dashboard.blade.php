@@ -167,7 +167,7 @@
                             <div class="meta-row">
                                 <div>
                                     <h3 style="margin: 0 0 8px;">{{ $course->title }}</h3>
-                                    <div class="muted">Teacher: {{ $course->teacher?->name ?? 'N/A' }}</div>
+                                    <div class="muted">Teacher: {{ optional($course->teacher)->name ?? 'N/A' }}</div>
                                 </div>
                                 <a href="{{ route('courses.show', $course) }}" class="btn secondary">Open</a>
                             </div>
