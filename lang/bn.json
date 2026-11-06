@@ -166,9 +166,9 @@
     "SMS campaigns": "এসএমএস প্রচারণা",
     "System settings": "সিস্টেম সেটিংস",
     "Platform insight": "প্ল্যাটফর্মের অবস্থা",
-    "Platform metrics": "প্ল্যাটফর্ম পরিসংখ্যান",
+    "Platform metrics": "প্ল্যাটফর্মের পরিসংখ্যান",
     "Completion rate": "সম্পন্নের হার",
-    "Learner base": "শিক্ষার্থী ও শিক্ষক সংখ্যা",
+    "Learner base": "শিক্ষার্থী সংখ্যা",
     "Landing page": "হোমপেজ",
     "Open homepage": "হোমপেজ খুলুন",
     "Open users": "ব্যবহারকারী দেখুন",
@@ -179,5 +179,15 @@
     "Preview home": "হোমপেজ প্রিভিউ",
     "Students": "শিক্ষার্থী",
     "Teachers": "শিক্ষক",
-    "Catalog": "কোর্স তালিকা"
+    "Catalog": "কোর্স তালিকা",
+    "Admin panel": "অ্যাডমিন প্যানেল",
+    "Edit hero copy, CTAs, and key stats for the public-facing homepage.": "ওয়েবসাইটের হোমপেজের প্রধান লেখা, বাটন ও পরিসংখ্যান সম্পাদনা করুন।",
+    "Review learners, teachers, and admins and change access levels.": "শিক্ষার্থী, শিক্ষক ও অ্যাডমিন পর্যালোচনা এবং প্রবেশাধিকার পরিবর্তন করুন।",
+    "Create, edit, publish, and manage course content and lessons.": "কোর্সের বিষয়বস্তু ও পাঠ তৈরি, সম্পাদনা, প্রকাশ ও পরিচালনা করুন।",
+    "Verify bKash, Rocket, bank, and manual payment submissions before granting course access.": "কোর্সে প্রবেশাধিকার দেওয়ার আগে বিকাশ, রকেট, ব্যাংক ও ম্যানুয়াল পেমেন্ট যাচাই করুন।",
+    "Send updates to verified learners who have opted in to academy messages.": "সম্মতি দেওয়া যাচাইকৃত শিক্ষার্থীদের আপডেট পাঠান।",
+    "Control core homepage configuration and brand messaging.": "হোমপেজের মূল সেটিংস ও ব্র্যান্ডের বার্তা নিয়ন্ত্রণ করুন।",
+    "Monitor learners, certificates, and catalog health from one view.": "এক জায়গা থেকে শিক্ষার্থী, সার্টিফিকেট ও কোর্স তালিকার অবস্থা দেখুন।",
+    "Preview the configured public landing page as visitors see it.": "ভিজিটররা যেভাবে দেখেন, সেভাবে পাবলিক হোমপেজ দেখুন।",
+    "Open analytics": "অ্যানালিটিক্স খুলুন"
 }
