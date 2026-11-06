@@ -10,7 +10,6 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
-use RuntimeException;
 use Throwable;
 
 class BackupController extends Controller
@@ -93,7 +92,7 @@ class BackupController extends Controller
         abort_unless(Hash::check($validated['password'], $request->user()->password), 403, 'Password confirmation failed.');
 
         $compressed = file_get_contents($validated['backup_file']->getRealPath());
-        $envelopeJson = $compressed !== false ? gzdecode($compressed) : false;
+        $envelopeJson = $compressed !== false ? gzdecode($compressed, 536870912) : false;
         abort_unless(is_string($envelopeJson), 422, 'Invalid or damaged backup archive.');
 
         try {
@@ -122,7 +121,7 @@ class BackupController extends Controller
 
             $privateFilesToRestore = [];
             foreach (($payload['private_files'] ?? []) as $privatePath => $encoded) {
-                abort_unless(is_string($privatePath) && str_starts_with($privatePath, 'assignment-submissions/') && ! Str::contains($privatePath, ['..', '\\\\']), 422, 'Unsafe private file path in backup.');
+                abort_unless(is_string($privatePath) && str_starts_with($privatePath, 'assignment-submissions/') && ! Str::contains($privatePath, ['..', '\\']), 422, 'Unsafe private file path in backup.');
                 $contents = base64_decode($encoded, true);
                 abort_unless(is_string($contents), 422, 'A private file in this backup is damaged.');
                 $privateFilesToRestore[$privatePath] = $contents;
