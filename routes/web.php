@@ -95,7 +95,8 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         ->name('courses.lessons.complete');
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
-        Route::get('/invoices', [InvoiceController::class, 'adminIndex'])->name('admin.invoices.index');\n        Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('admin.activity-logs.index');
+        Route::get('/invoices', [InvoiceController::class, 'adminIndex'])->name('admin.invoices.index');
+        Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('admin.activity-logs.index');
         Route::post('/invoices', [InvoiceController::class, 'store'])->name('admin.invoices.store');
         Route::post('/invoices/{invoice}/payments', [InvoiceController::class, 'receivePayment'])->name('admin.invoices.payments.store');
         Route::get('/batches', [BatchController::class, 'index'])->name('admin.batches.index');
