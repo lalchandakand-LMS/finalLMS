@@ -37,6 +37,39 @@ class BatchController extends Controller
         return view('branch-manager.batches.index', compact('batches'));
     }
 
+    public function branchManagerStore(Request $request): RedirectResponse
+    {
+        $branchId = $request->user()->branch_id;
+        abort_unless($branchId, 403, 'No branch is assigned to this account.');
+        $validated = $request->validate([
+            'course_id' => ['required', 'exists:courses,id'],
+            'teacher_id' => ['required', Rule::exists('users', 'id')->where(fn ($query) => $query->where('role', 'teacher'))],
+            'title' => ['required', 'string', 'max:160'],
+            'capacity' => ['required', 'integer', 'min:1', 'max:1000'],
+            'starts_at' => ['required', 'date'],
+            'ends_at' => ['required', 'date', 'after:starts_at'],
+            'fee' => ['required', 'numeric', 'min:0'],
+        ]);
+        Batch::create([...$validated, 'branch_id' => $branchId, 'status' => 'open']);
+        return redirect()->route('branch-manager.batches.index')->with('success', 'Batch created for your branch.');
+    }
+
+    public function branchManagerUpdate(Batch $batch, Request $request): RedirectResponse
+    {
+        abort_unless($request->user()->branch_id && $batch->branch_id === $request->user()->branch_id, 404);
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:160'],
+            'capacity' => ['required', 'integer', 'min:1', 'max:1000'],
+            'starts_at' => ['required', 'date'],
+            'ends_at' => ['required', 'date', 'after:starts_at'],
+            'fee' => ['required', 'numeric', 'min:0'],
+            'status' => ['required', 'in:open,closed,completed'],
+        ]);
+        abort_if($validated['capacity'] < $batch->enrollments()->whereIn('status', ['active', 'completed'])->count(), 422, 'Capacity cannot be lower than the current enrolled student count.');
+        $batch->update($validated);
+        return redirect()->route('branch-manager.batches.index')->with('success', 'Your branch batch was updated.');
+    }
+
     public function teacherIndex(): View
     {
         $batches = Batch::with(['branch', 'course'])
