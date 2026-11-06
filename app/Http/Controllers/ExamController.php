@@ -35,6 +35,7 @@ class ExamController extends Controller
             'ends_at' => ['required', 'date', 'after:starts_at'],
             'duration_minutes' => ['required', 'integer', 'min:1', 'max:600'],
             'pass_marks' => ['required', 'integer', 'min:0'],
+            'questions_per_attempt' => ['nullable', 'integer', 'min:1', 'max:100'],
             'questions' => ['nullable', 'array', 'min:1', 'max:100'],
             'question_bank_ids' => ['nullable', 'array', 'min:1', 'max:500'],
             'question_bank_ids.*' => ['integer', 'distinct', 'exists:question_bank_questions,id'],
@@ -81,6 +82,7 @@ class ExamController extends Controller
                 'ends_at' => $validated['ends_at'],
                 'duration_minutes' => $validated['duration_minutes'],
                 'pass_marks' => $validated['pass_marks'],
+                'questions_per_attempt' => $validated['questions_per_attempt'] ?? null,
                 'status' => 'published',
             ]);
 
@@ -168,7 +170,11 @@ class ExamController extends Controller
             // Freeze a shuffled question order for this attempt exactly once.
             // Refreshing or reopening the exam will never reshuffle a student's paper.
             if ($attempt->wasRecentlyCreated || ! $attempt->attemptQuestions()->exists()) {
-                $questionIds = $exam->questions()->inRandomOrder()->pluck('id')->values();
+                $questionQuery = $exam->questions()->inRandomOrder();
+                if ($exam->questions_per_attempt) {
+                    $questionQuery->limit($exam->questions_per_attempt);
+                }
+                $questionIds = $questionQuery->pluck('id')->values();
                 $attempt->attemptQuestions()->createMany(
                     $questionIds->map(fn ($questionId, $index) => [
                         'exam_question_id' => $questionId,
