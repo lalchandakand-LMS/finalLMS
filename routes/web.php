@@ -15,6 +15,7 @@ use App\Http\Controllers\SmsCampaignController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\LiveClassController;
 use App\Http\Controllers\ExamController;
+use App\Http\Controllers\InvoiceController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -66,6 +67,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/teacher/assignments/{assignment}/submissions/{submission}/grade', [AssignmentController::class, 'grade'])->name('teacher.assignments.grade');
     });
     Route::middleware('role:student')->group(function () {
+        Route::get('/my/invoices', [InvoiceController::class, 'studentIndex'])->name('student.invoices.index');
         Route::get('/assignments/{assignment}', [AssignmentController::class, 'show'])->name('student.assignments.show');
         Route::get('/my/exams', [ExamController::class, 'studentExams'])->name('student.exams.index');
         Route::get('/exams/{exam}', [ExamController::class, 'studentIndex'])->name('student.exams.show');
@@ -92,6 +94,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('courses.lessons.complete');
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
+        Route::get('/invoices', [InvoiceController::class, 'adminIndex'])->name('admin.invoices.index');
+        Route::post('/invoices', [InvoiceController::class, 'store'])->name('admin.invoices.store');
+        Route::post('/invoices/{invoice}/payments', [InvoiceController::class, 'receivePayment'])->name('admin.invoices.payments.store');
         Route::get('/batches', [BatchController::class, 'index'])->name('admin.batches.index');
         Route::get('/batches/{batch}/attendance', [AttendanceController::class, 'index'])->name('admin.batches.attendance.index');
         Route::post('/batches/{batch}/attendance', [AttendanceController::class, 'store'])->name('admin.batches.attendance.store');

@@ -166,6 +166,7 @@
                         <a href="{{ route('admin.batches.index') }}">Batches</a>
                         <a href="{{ route('admin.sms-campaigns.index') }}">SMS</a>
                         <a href="{{ route('admin.payments.index') }}">Payments</a>
+                        <a href="{{ route('admin.invoices.index') }}">Invoices</a>
                         <a href="{{ route('admin.settings.index') }}">Settings</a>
                         <a href="{{ route('admin.users.index') }}">Users</a>
                         <a href="{{ route('admin.courses.index') }}">Courses</a>
@@ -176,6 +177,7 @@
                     @if(auth()->user()->isStudent())
                         <a href="{{ route('student.attendance.index') }}">Attendance</a>
                     <a href="{{ route('student.exams.index') }}">Exams</a>
+                        <a href="{{ route('student.invoices.index') }}">My fees</a>
                     @endif
                     <form method="POST" action="{{ route('logout') }}" class="inline-form">
                         @csrf
