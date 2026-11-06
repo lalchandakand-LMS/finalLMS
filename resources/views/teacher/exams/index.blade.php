@@ -49,6 +49,7 @@
                 <h2>{{ $exam->title }}</h2>
                 <p class="muted">{{ $exam->questions_count }} questions · {{ $exam->attempts_count }} attempts · {{ $exam->duration_minutes }} minutes</p>
                 <p class="muted">{{ $exam->starts_at->format('M j, Y H:i') }} – {{ $exam->ends_at->format('M j, Y H:i') }}</p>
+                <a class="btn secondary" href="{{ route('teacher.exams.results', $exam) }}">View results</a>
             </article>
         @empty
             <div class="panel"><p class="muted">No exams have been published for this batch.</p></div>
