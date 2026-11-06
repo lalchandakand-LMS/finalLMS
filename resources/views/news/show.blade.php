@@ -6,6 +6,6 @@
 <h1>{{ $post->title }}</h1><p class="muted">{{ $post->published_at->format('d M Y') }} · {{ $post->author->name }}</p>
 @if($post->excerpt)<p><strong>{{ $post->excerpt }}</strong></p>@endif
 <div style="white-space:pre-line;line-height:1.8;">{{ $post->body }}</div>
-<p style="margin-top:24px;"><a href="{{ route('news.index') }}" class="btn secondary">All news</a></p>
+<p style="margin-top:24px;"><a href="{{ route('news.index') }}" class="btn secondary">{{ __('All news') }}</a></p>
 </article>
 @endsection
