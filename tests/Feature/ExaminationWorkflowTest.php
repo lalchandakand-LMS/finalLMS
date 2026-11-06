@@ -8,6 +8,7 @@ use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\Exam;
 use App\Models\ExamAttempt;
+use App\Models\QuestionBankQuestion;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -138,6 +139,59 @@ class ExaminationWorkflowTest extends TestCase
         $this->actingAs($otherTeacher)
             ->get(route('teacher.exams.results', $exam))
             ->assertForbidden();
+    }
+
+    public function test_teacher_can_build_exam_using_random_questions_from_owned_question_bank(): void
+    {
+        [$teacher, $student, $batch] = $this->makeBatchWithStudent();
+        $bankQuestions = collect(range(1, 4))->map(fn ($number) => QuestionBankQuestion::create([
+            'teacher_id' => $teacher->id,
+            'subject' => 'Grammar',
+            'question' => 'Question '.$number,
+            'options' => ['A', 'B', 'C', 'D'],
+            'correct_option' => 1,
+            'marks' => 2,
+        ]));
+
+        $this->actingAs($teacher)->post(route('teacher.batches.exams.store', $batch), [
+            'title' => 'Random Grammar Test',
+            'instructions' => 'Randomized question set.',
+            'starts_at' => now()->addHour()->format('Y-m-d H:i:s'),
+            'ends_at' => now()->addHours(2)->format('Y-m-d H:i:s'),
+            'duration_minutes' => 30,
+            'pass_marks' => 2,
+            'question_bank_ids' => $bankQuestions->pluck('id')->all(),
+            'random_question_count' => 2,
+        ])->assertRedirect();
+
+        $exam = Exam::where('title', 'Random Grammar Test')->firstOrFail();
+        $this->assertDatabaseCount('exam_questions', 2);
+        $this->assertSame(4, $exam->questions()->sum('marks'));
+    }
+
+    public function test_teacher_cannot_use_another_teachers_question_bank_items(): void
+    {
+        [$teacher, $student, $batch] = $this->makeBatchWithStudent();
+        $otherTeacher = User::factory()->create(['role' => 'teacher']);
+        $foreignQuestion = QuestionBankQuestion::create([
+            'teacher_id' => $otherTeacher->id,
+            'question' => 'Private question',
+            'options' => ['A', 'B', 'C', 'D'],
+            'correct_option' => 0,
+            'marks' => 1,
+        ]);
+
+        $this->actingAs($teacher)->post(route('teacher.batches.exams.store', $batch), [
+            'title' => 'Unauthorized bank exam',
+            'starts_at' => now()->addHour()->format('Y-m-d H:i:s'),
+            'ends_at' => now()->addHours(2)->format('Y-m-d H:i:s'),
+            'duration_minutes' => 30,
+            'pass_marks' => 0,
+            'question_bank_ids' => [$foreignQuestion->id],
+            'random_question_count' => 1,
+        ])->assertForbidden();
+
+        $this->assertDatabaseCount('exams', 0);
     }
 
     private function makeBatchWithStudent(bool $enroll = true): array
