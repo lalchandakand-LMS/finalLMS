@@ -83,7 +83,7 @@ class WebsiteCmsAndMediaTest extends TestCase
         $this->get(route('news.index'))->assertOk()->assertSee('Published update')->assertDontSee('Draft update');
         $this->get(route('news.show', 'published-update'))
             ->assertOk()
-            ->assertSee('&lt;script&gt;alert(1)&lt;/script&gt;Safe text', false);
+            ->assertSee('<script>alert(1)</script>Safe text');
         $this->get(route('news.show', 'draft-update'))->assertNotFound();
     }
 
