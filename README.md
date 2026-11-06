@@ -22,7 +22,8 @@ The local/testing seeder creates `admin@lms.test`, `teacher@lms.test`, and `stud
 ## Implemented
 
 - Student registration, email verification, profile updates, and Twilio phone OTP integration
-- Admin, teacher, and student roles; role middleware and protected routes
+- Admin, branch manager, accountant, teacher, and student role foundations; role middleware and protected routes
+- Branch managers are assigned one branch and can view only that branch's batch overview; accountants can access the invoice ledger without admin payment-review or user-management access
 - Courses, lessons, course enrollment, certificates, and manual payment review
 - Branch and batch create/read/update/delete controls; teacher-scoped batch views
 - Batch enrollment associations, teacher attendance entry, and student-private attendance history
@@ -41,7 +42,7 @@ The local/testing seeder creates `admin@lms.test`, `teacher@lms.test`, and `stud
 
 ## Not yet complete
 
-This is not yet the complete commercial LMS described in the acceptance specification. Super-admin, branch-manager, and accountant permission matrices; discounts and refunds; media library, blog/news publishing, custom landing-page sections, and complete translation coverage for every screen; automated backup management; and a secure web installer are not implemented. Activity logging covers successful authenticated write requests; it is not yet a full audit trail for reads, login attempts, failed actions, or field-level changes. Payments are manual-review only; official bKash, Nagad, and SSLCommerz APIs and callback verification are not implemented. SMS/email delivery requires real provider credentials.
+This is not yet the complete commercial LMS described in the acceptance specification. Full super-admin/branch-manager/accountant permission matrices and branch-scoped write workflows (branch manager currently has a read-only batch overview; accountant has invoice-ledger access only); discounts and refunds; media library, blog/news publishing, custom landing-page sections, and complete translation coverage for every screen; automated backup management; and a secure web installer are not implemented. Activity logging covers successful authenticated write requests; it is not yet a full audit trail for reads, login attempts, failed actions, or field-level changes. Payments are manual-review only; official bKash, Nagad, and SSLCommerz APIs and callback verification are not implemented. SMS/email delivery requires real provider credentials.
 
 ## First production administrator
 
