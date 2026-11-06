@@ -98,4 +98,31 @@ class AdminUserManagementTest extends TestCase
         ]);
     }
 
+
+
+    public function test_inactive_branch_cannot_be_assigned_to_a_branch_manager(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $manager = User::factory()->create(['role' => 'student']);
+        $branch = \App\Models\Branch::create([
+            'name' => 'Inactive Branch',
+            'slug' => 'inactive-branch',
+            'is_active' => false,
+        ]);
+
+        $this->actingAs($admin)
+            ->from(route('admin.users.index'))
+            ->post(route('admin.users.updateRole', $manager), [
+                'role' => 'branch_manager',
+                'branch_id' => $branch->id,
+            ])
+            ->assertSessionHasErrors('branch_id');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $manager->id,
+            'role' => 'student',
+            'branch_id' => null,
+        ]);
+    }
+
 }
