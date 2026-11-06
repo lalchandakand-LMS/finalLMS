@@ -53,7 +53,7 @@ This is the persistent project checklist. Update it whenever a task is started, 
 - [x] Student portal foundation: dedicated enrolled-courses page, per-course lesson completion progress, student-only authorization, and dashboard entry point (resources and expanded learning tools remain pending).
 - [x] Recorded lesson foundation: YouTube/Vimeo URL support, privacy-enhanced YouTube embeds, preview lessons, protected playback route and enrollment/ownership checks.
 - [x] Verify lesson edit/delete and teacher management changes in CI (runs #566–#569 passed); latest validation/progress regression additions are pending CI.
-- [ ] Live classes: provider integration, schedules, attendance, access control, recording links.
+- [x] Live class foundation: teacher scheduling/edit/delete, batch ownership checks, student enrollment scoping, 15-minute join window, HTTPS meeting links, and recordings visible only to enrolled students after the class is marked completed.\n- [ ] Live class provider API/SDK integrations (Zoom/Google Meet/Teams), attendance capture, and automated recording sync.
 - [ ] Attendance: teacher marking, student view, correction/approval, reports.
 - [ ] Certificates: eligibility, issue/download, unique verification code/public verification page.
 
@@ -111,3 +111,13 @@ This is the persistent project checklist. Update it whenever a task is started, 
 - Fixed lesson creation redirect so teachers return to their own lesson manager.
 - Added feature tests for teacher CRUD and cross-teacher access denial.
 - CI for the latest teacher-management test commit is running; do not treat this work as CI-verified until the run completes successfully.
+
+
+### Live class recording and access update — implementation complete, CI pending
+- Added nullable `recording_url` migration and model support.
+- Teacher/admin edit form can publish a recording link after the session.
+- Student listing now includes active and completed batch enrollments so former learners retain access to course recordings.
+- Student meeting links remain hidden until 15 minutes before the session and close at the session end; completed sessions show only the published recording, not the old meeting link.
+- Meeting and recording URLs require HTTPS.
+- Added regression tests for completed-student recording access, meeting-link secrecy, and rejection of HTTP links.
+- External meeting-provider API/SDK integrations and attendance automation remain pending; this is a secure link workflow, not a Zoom/Meet API integration.
