@@ -14,6 +14,16 @@ use Throwable;
 
 class BackupController extends Controller
 {
+    private const IGNORED_TABLES = ['migrations', 'cache', 'cache_locks', 'sessions', 'jobs', 'job_batches', 'failed_jobs'];
+
+
+    private function backupTableNames(): array
+    {
+        return array_values(array_filter(
+            $this->tableNames(),
+            fn (string $table) => ! in_array($table, self::IGNORED_TABLES, true)
+        ));
+    }
 
     private function tableNames(): array
     {
@@ -56,7 +66,7 @@ class BackupController extends Controller
 
     public function create(): RedirectResponse
     {
-        $tableNames = $this->tableNames();
+        $tableNames = $this->backupTableNames();
         sort($tableNames);
         $tables = [];
         foreach ($tableNames as $table) {
@@ -137,7 +147,6 @@ class BackupController extends Controller
             $backupTables = array_keys($payload['tables']);
             sort($backupTables);
             $missingTables = array_values(array_diff($currentTables, $backupTables));
-            if ($missingTables !== []) { fwrite(STDERR, 'BACKUP_MISSING_TABLES: '.json_encode($missingTables).' BACKUP_TABLES: '.json_encode($backupTables).PHP_EOL); }
             abort_unless($missingTables === [], 422, 'This backup does not contain every table required by the installed LMS version. Update or downgrade the application before restoring.');
 
             $mediaToRestore = [];
