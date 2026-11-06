@@ -23,7 +23,7 @@ class ExaminationWorkflowTest extends TestCase
         $this->actingAs($teacher)->post(route('teacher.batches.exams.store', $batch), [
             'title' => 'English Grammar Test',
             'instructions' => 'Choose the correct answer.',
-            'starts_at' => now()->subMinute()->format('Y-m-d H:i:s'),
+            'starts_at' => now()->addMinute()->format('Y-m-d H:i:s'),
             'ends_at' => now()->addHour()->format('Y-m-d H:i:s'),
             'duration_minutes' => 30,
             'pass_marks' => 2,
@@ -34,6 +34,7 @@ class ExaminationWorkflowTest extends TestCase
         ])->assertRedirect();
 
         $exam = Exam::firstOrFail();
+        $this->travelTo(now()->addMinutes(2));
         $this->assertDatabaseHas('exam_questions', ['exam_id' => $exam->id, 'question' => 'Plural of child?']);
 
         $this->actingAs($student)->post(route('student.exams.start', $exam))->assertRedirect(route('student.exams.show', $exam));
