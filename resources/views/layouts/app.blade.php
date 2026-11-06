@@ -181,6 +181,7 @@
                         <a href="{{ route('admin.invoices.index') }}">Invoices</a>
                         <a href="{{ route('admin.activity-logs.index') }}">Activity log</a>
                         <a href="{{ route('admin.settings.index') }}">Settings</a>
+                        <a href="{{ route('admin.website-builder.index') }}">Website Builder</a>
                         <a href="{{ route('admin.media.index') }}">Media Library</a>
                         <a href="{{ route('admin.news.index') }}">Blog & News</a>
                         <a href="{{ route('admin.users.index') }}">Users</a>
