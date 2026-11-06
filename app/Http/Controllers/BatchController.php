@@ -29,7 +29,7 @@ class BatchController extends Controller
     {
         abort_unless($request->user()->branch_id, 403, 'No branch is assigned to this account.');
 
-        $batches = Batch::with(['branch', 'course', 'teacher'])
+        $batches = Batch::with(['branch', 'course', 'teacher'])->withCount('enrollments')
             ->where('branch_id', $request->user()->branch_id)
             ->latest('starts_at')
             ->paginate(25);
