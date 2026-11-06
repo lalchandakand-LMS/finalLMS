@@ -14,6 +14,11 @@ use Illuminate\View\View;
 
 class InvoiceController extends Controller
 {
+    public function accountantIndex(): View
+    {
+        return $this->adminIndex();
+    }
+
     public function adminIndex(): View
     {
         $invoices = Invoice::with(['user', 'course', 'batch', 'payments'])
