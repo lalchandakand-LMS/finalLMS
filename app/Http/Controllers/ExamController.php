@@ -20,8 +20,9 @@ class ExamController extends Controller
     {
         abort_unless(Auth::user()->isAdmin() || $batch->teacher_id === Auth::id(), 403);
         $exams = $batch->exams()->withCount(['questions', 'attempts'])->latest()->get();
+        $bankQuestions = QuestionBankQuestion::where('teacher_id', Auth::id())->latest()->get();
 
-        return view('teacher.exams.index', compact('batch', 'exams'));
+        return view('teacher.exams.index', compact('batch', 'exams', 'bankQuestions'));
     }
 
     public function store(Batch $batch, Request $request): RedirectResponse
