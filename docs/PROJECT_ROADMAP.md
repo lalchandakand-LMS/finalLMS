@@ -117,7 +117,7 @@ This is the persistent project checklist. Update it whenever a task is started, 
 - Added nullable `recording_url` migration and model support.
 - Teacher/admin edit form can publish a recording link after the session.
 - Student listing now includes active and completed batch enrollments so former learners retain access to course recordings.
-- Student meeting links remain hidden until 15 minutes before the session and close at the session end; completed sessions show only the published recording, not the old meeting link.
+- Student meeting links remain hidden until 15 minutes before the session and close at the session end; only active batch enrollments can join. Completed enrollments can view published recordings but never receive live meeting links.
 - Meeting and recording URLs require HTTPS.
-- Added regression tests for completed-student recording access, meeting-link secrecy, and rejection of HTTP links.
+- Added regression tests for completed-student recording access, meeting-link secrecy, rejection of HTTP links, and blocking completed enrollments from ongoing sessions.
 - External meeting-provider API/SDK integrations and attendance automation remain pending; this is a secure link workflow, not a Zoom/Meet API integration.
