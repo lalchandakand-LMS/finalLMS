@@ -22,9 +22,9 @@ This is the persistent project checklist. Update it whenever a task is started, 
 - [x] Resubmission after grading; preserve existing attachment when changing only the text answer.
 
 ### Current blocker
-- [x] Diagnose and fix CI migration ordering: Question Bank category/difficulty migration now runs after its table-creation migration (verification pending).
+- [x] Diagnose and fix CI migration ordering: Question Bank category/difficulty migration now runs after its table-creation migration; verified by passing CI run #504.
 - [ ] Add/complete automated tests for assignment create, enrollment authorization, file validation/storage/download, grading, deadline, and resubmission.
-- [ ] Re-run full Laravel CI and cPanel package job; record passing run URL here.
+- [x] Re-run full Laravel CI and cPanel package job; both jobs passed in [run #504](https://github.com/lalchandakand-LMS/finalLMS/actions/runs/42283409532).
 - [ ] Review migration order and schema compatibility against clean MySQL and existing deployment databases.
 
 ## Priority backlog
@@ -33,7 +33,7 @@ This is the persistent project checklist. Update it whenever a task is started, 
 - [x] Fix latest GitHub Actions migration ordering issue; rerun CI to verify.
 - [ ] Verify new migrations on clean SQLite/MySQL test databases.
 - [ ] Run tests, route:list, frontend build, and cPanel package workflow.
-- [ ] Audit assignment upload security: private disk, extension/MIME validation, size limit, safe download names, authorization, orphan cleanup, storage failure handling.
+- [x] Harden assignment uploads: private local disk, extension/size validation, download authorization, storage-failure handling, and replacement-file cleanup implemented; full regression verification pending.
 - [ ] Verify teacher grading permissions and admin policy.
 - [ ] Add regression tests for random exam persistence and Question Bank CRUD/filtering.
 - [ ] Keep PR #2 open until CI is green and owner approves merge.
