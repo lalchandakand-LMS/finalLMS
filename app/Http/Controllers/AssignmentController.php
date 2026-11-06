@@ -58,11 +58,14 @@ class AssignmentController extends Controller
         }
 
         $validated = $request->validate([
-            'answer' => ['nullable', 'string', 'max:50000', 'required_without:attachment'],
-            'attachment' => ['nullable', 'file', 'max:10240', 'mimes:pdf,doc,docx,jpg,jpeg,png', 'required_without:answer'],
+            'answer' => ['nullable', 'string', 'max:50000'],
+            'attachment' => ['nullable', 'file', 'max:10240', 'mimes:pdf,doc,docx,jpg,jpeg,png'],
         ]);
 
         $existingSubmission = $assignment->submissions()->where('student_id', Auth::id())->first();
+        if (blank($validated['answer'] ?? null) && ! $request->hasFile('attachment') && ! $existingSubmission?->attachment_path) {
+            return back()->withErrors(['answer' => 'Please enter an answer or attach a file.'])->withInput();
+        }
         if ($existingSubmission && $existingSubmission->status !== 'graded') {
             return back()->with('info', 'Your submission is already received and awaiting review.');
         }
