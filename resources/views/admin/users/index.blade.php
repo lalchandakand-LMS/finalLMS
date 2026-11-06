@@ -23,6 +23,8 @@
                 <select id="role" name="role">
                     <option value="">All roles</option>
                     <option value="admin" @selected(request('role') === 'admin')>Admin</option>
+                    <option value="branch_manager" @selected(request('role') === 'branch_manager')>Branch Manager</option>
+                    <option value="accountant" @selected(request('role') === 'accountant')>Accountant</option>
                     <option value="teacher" @selected(request('role') === 'teacher')>Teacher</option>
                     <option value="student" @selected(request('role') === 'student')>Student</option>
                 </select>
@@ -35,12 +37,13 @@
 
         <p class="muted">Showing {{ $users->firstItem() ?? 0 }}–{{ $users->lastItem() ?? 0 }} of {{ $users->total() }} accounts</p>
         <div style="overflow-x:auto;">
-            <table style="width: 100%; border-collapse: collapse; min-width:760px;">
+            <table style="width: 100%; border-collapse: collapse; min-width:900px;">
                 <thead>
                     <tr style="text-align:left; border-bottom:1px solid var(--border);">
                         <th style="padding: 12px 10px;">Name</th>
                         <th style="padding: 12px 10px;">Email</th>
                         <th style="padding: 12px 10px;">Role</th>
+                        <th style="padding: 12px 10px;">Branch</th>
                         <th style="padding: 12px 10px;">Courses</th>
                         <th style="padding: 12px 10px;">Enrollments</th>
                         <th style="padding: 12px 10px;">Action</th>
@@ -52,10 +55,11 @@
                             <td style="padding: 12px 10px;">{{ $user->name }}</td>
                             <td style="padding: 12px 10px;">{{ $user->email }}</td>
                             <td style="padding: 12px 10px;">
-                                <span class="badge {{ $user->role === 'admin' ? 'info' : ($user->role === 'teacher' ? 'success' : 'warning') }}">
-                                    {{ ucfirst($user->role) }}
+                                <span class="badge {{ $user->role === 'admin' ? 'info' : (in_array($user->role, ['teacher', 'branch_manager'], true) ? 'success' : 'warning') }}">
+                                    {{ ucwords(str_replace('_', ' ', $user->role)) }}
                                 </span>
                             </td>
+                            <td style="padding: 12px 10px;">{{ $user->branch?->name ?? '—' }}</td>
                             <td style="padding: 12px 10px;">{{ $user->courses_count }}</td>
                             <td style="padding: 12px 10px;">{{ $user->enrollments_count }}</td>
                             <td style="padding: 12px 10px;">
@@ -63,15 +67,23 @@
                                     @csrf
                                     <select name="role" style="width: auto; min-width: 120px;">
                                         <option value="student" @selected($user->role === 'student')>Student</option>
+                                        <option value="branch_manager" @selected($user->role === 'branch_manager')>Branch Manager</option>
+                                        <option value="accountant" @selected($user->role === 'accountant')>Accountant</option>
                                         <option value="teacher" @selected($user->role === 'teacher')>Teacher</option>
                                         <option value="admin" @selected($user->role === 'admin')>Admin</option>
+                                    </select>
+                                    <select name="branch_id" style="width:auto;min-width:130px;" aria-label="Branch for branch manager">
+                                        <option value="">No branch</option>
+                                        @foreach($branches as $branch)
+                                            <option value="{{ $branch->id }}" @selected($user->branch_id === $branch->id)>{{ $branch->name }}</option>
+                                        @endforeach
                                     </select>
                                     <button type="submit" class="btn secondary" style="padding: 9px 12px;">Save</button>
                                 </form>
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="6" class="muted" style="padding:18px;">No accounts match this search.</td></tr>
+                        <tr><td colspan="7" class="muted" style="padding:18px;">No accounts match this search.</td></tr>
                     @endforelse
                 </tbody>
             </table>
