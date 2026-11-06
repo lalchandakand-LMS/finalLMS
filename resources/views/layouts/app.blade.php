@@ -175,6 +175,7 @@
                     @endif
                     @if(auth()->user()->isStudent())
                         <a href="{{ route('student.attendance.index') }}">Attendance</a>
+                    <a href="{{ route('student.exams.index') }}">Exams</a>
                     @endif
                     <form method="POST" action="{{ route('logout') }}" class="inline-form">
                         @csrf
