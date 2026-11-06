@@ -166,7 +166,8 @@
                         <a href="{{ route('admin.batches.index') }}">Batches</a>
                         <a href="{{ route('admin.sms-campaigns.index') }}">SMS</a>
                         <a href="{{ route('admin.payments.index') }}">Payments</a>
-                        <a href="{{ route('admin.invoices.index') }}">Invoices</a>\n                        <a href="{{ route('admin.activity-logs.index') }}">Activity log</a>
+                        <a href="{{ route('admin.invoices.index') }}">Invoices</a>
+                        <a href="{{ route('admin.activity-logs.index') }}">Activity log</a>
                         <a href="{{ route('admin.settings.index') }}">Settings</a>
                         <a href="{{ route('admin.users.index') }}">Users</a>
                         <a href="{{ route('admin.courses.index') }}">Courses</a>
