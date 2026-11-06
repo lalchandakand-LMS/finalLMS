@@ -10,6 +10,7 @@
 
     <div class="panel" style="margin-bottom:20px;">
         <h2 style="margin-top:0;">Create multiple-choice exam</h2>
+        <p><a class="btn secondary" href="{{ route('teacher.batches.question-bank.index', $batch) }}">Manage Question Bank</a></p>
         <p class="muted">Add one or more questions. Each question has four options and one correct answer. Marks are awarded automatically.</p>
         <form method="POST" action="{{ route('teacher.batches.exams.store', $batch) }}">
             @csrf
@@ -21,6 +22,16 @@
                 <label>Duration (minutes)<input type="number" name="duration_minutes" min="1" max="600" required></label>
                 <label>Pass marks<input type="number" name="pass_marks" min="0" value="0" required></label>
             </div>
+            <label><input type="checkbox" id="use-question-bank"> Select random questions from my Question Bank</label>
+            <div id="question-bank-area" hidden>
+                <label>Number of random questions<input type="number" name="random_question_count" min="1" max="100" value="10"></label>
+                @forelse($bankQuestions as $bankQuestion)
+                    <label style="display:block;"><input type="checkbox" name="question_bank_ids[]" value="{{ $bankQuestion->id }}"> {{ $bankQuestion->subject ?: 'General' }} — {{ Str::limit($bankQuestion->question, 120) }} ({{ $bankQuestion->marks }} marks)</label>
+                @empty
+                    <p class="muted">Question Bank is empty. <a href="{{ route('teacher.batches.question-bank.index', $batch) }}">Add questions</a>.</p>
+                @endforelse
+            </div>
+            <div id="manual-question-area">
             <div id="exam-questions">
                 <div class="course-item exam-question">
                     <h3>Question 1</h3>
@@ -36,6 +47,7 @@
                         <label>Marks<input type="number" name="questions[0][marks]" min="1" max="100" value="1" required></label>
                     </div>
                 </div>
+            </div>
             </div>
             <button type="button" class="btn secondary" id="add-exam-question">Add question</button>
             <button type="submit" class="btn primary">Publish exam</button>
@@ -62,6 +74,19 @@
 (() => {
     const container = document.getElementById('exam-questions');
     const button = document.getElementById('add-exam-question');
+    const bankToggle = document.getElementById('use-question-bank');
+    const bankArea = document.getElementById('question-bank-area');
+    const manualArea = document.getElementById('manual-question-area');
+    const syncQuestionMode = () => {
+        const useBank = bankToggle.checked;
+        bankArea.hidden = !useBank;
+        manualArea.hidden = useBank;
+        manualArea.querySelectorAll('input, textarea, select').forEach(field => field.disabled = useBank);
+        button.hidden = useBank;
+        bankArea.querySelectorAll('input').forEach(field => field.disabled = !useBank);
+    };
+    bankToggle.addEventListener('change', syncQuestionMode);
+    syncQuestionMode();
     if (!container || !button) return;
     button.addEventListener('click', () => {
         const index = container.querySelectorAll('.exam-question').length;
