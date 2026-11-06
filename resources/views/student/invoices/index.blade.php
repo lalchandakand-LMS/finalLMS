@@ -1,13 +1,13 @@
 @extends('layouts.app')
 
-@section('title', 'My invoices | ' . config('app.name'))
+@section('title', __('My invoices') . ' | ' . config('app.name'))
 
 @section('content')
     <div class="page-header">
         <div>
             <span class="badge info">Student portal</span>
-            <h1 style="margin:12px 0 0;">My fees & invoices</h1>
-            <p class="muted">View your fee invoices, installment balances and recorded receipts.</p>
+            <h1 style="margin:12px 0 0;">{{ __('My fees & invoices') }}</h1>
+            <p class="muted">{{ __('View your fee invoices, installment balances and recorded receipts.') }}</p>
         </div>
     </div>
 
@@ -28,7 +28,7 @@
                 </div>
                 @if($invoice->payments->isNotEmpty())
                     <details style="margin-top:12px;">
-                        <summary>Receipts ({{ $invoice->payments->count() }})</summary>
+                        <summary>{{ __('Receipts') }} ({{ $invoice->payments->count() }})</summary>
                         @foreach($invoice->payments as $receipt)
                             <p class="muted">৳{{ number_format((float) $receipt->amount, 2) }} · {{ ucfirst($receipt->method) }} · {{ $receipt->paid_at->format('d M Y H:i') }} · Receipt ref: {{ $receipt->reference ?: 'N/A' }}</p>
                         @endforeach
@@ -36,7 +36,7 @@
                 @endif
             </article>
         @empty
-            <div class="panel"><p class="muted">You do not have any invoices yet.</p></div>
+            <div class="panel"><p class="muted">{{ __('You do not have any invoices yet.') }}</p></div>
         @endforelse
     </div>
     <div style="margin-top:20px;">{{ $invoices->links() }}</div>
