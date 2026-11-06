@@ -54,7 +54,7 @@ class ExamController extends Controller
                 ->inRandomOrder()
                 ->get();
 
-            abort_unless($bankQuestions->count() === count($validated['question_bank_ids']), 422, 'One or more bank questions are unavailable.');
+            abort_unless($bankQuestions->count() === count($validated['question_bank_ids']), 403, 'One or more selected questions do not belong to you.');
             $selectedCount = $validated['random_question_count'] ?? $bankQuestions->count();
             abort_if($selectedCount > $bankQuestions->count(), 422, 'Random question count exceeds the selected bank questions.');
 
