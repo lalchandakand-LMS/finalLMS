@@ -10,9 +10,9 @@
     <div class="page-header">
         <div>
             <span class="badge info">{{ __('Dashboard') }}</span>
-            <h1 style="margin: 12px 0 0;">Hello, {{ $user->name }}</h1>
+            <h1 style="margin: 12px 0 0;">{{ __('Hello,') }} {{ $user->name }}</h1>
         </div>
-        <span class="badge success">{{ $roleLabel }} account</span>
+        <span class="badge success">{{ $roleLabel }} {{ __('account') }}</span>
     </div>
 
     <div class="dash-summary">
