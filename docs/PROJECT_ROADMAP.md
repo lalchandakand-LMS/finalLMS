@@ -24,6 +24,7 @@ This is the persistent project checklist. Update it whenever a task is started, 
 ### Current blocker
 - [x] Diagnose and fix CI migration ordering: Question Bank category/difficulty migration now runs after its table-creation migration; verified by passing CI run #504.
 - [ ] Add/complete automated tests for assignment create, enrollment authorization, file validation/storage/download, grading, deadline, and resubmission.
+- [x] Add student course overview with active/completed enrollments and lesson progress; feature tests added, CI verification pending.
 - [x] Re-run full Laravel CI and cPanel package job; both jobs passed in [run #504](https://github.com/lalchandakand-LMS/finalLMS/actions/runs/42283409532).
 - [ ] Review migration order and schema compatibility against clean MySQL and existing deployment databases.
 
@@ -42,7 +43,7 @@ This is the persistent project checklist. Update it whenever a task is started, 
 - [ ] Question Bank bulk import/export, tags, question types, explanations, image support, duplicate detection.
 - [ ] Exams: MCQ/short/essay types, timer, auto-submit, negative marking, retake policy, result publication, review/appeal workflow.
 - [ ] Assignments: review queue, draft/published/closed states, late labels, resubmission limits, feedback notifications, attachment cleanup.
-- [ ] Student portal: enrolled courses, lesson progress, resources, completion tracking.
+- [x] Student portal foundation: dedicated enrolled-courses page, per-course lesson completion progress, student-only authorization, and dashboard entry point (resources and expanded learning tools remain pending).
 - [ ] Recorded lessons: protected video links, ordering, progress tracking.
 - [ ] Live classes: provider integration, schedules, attendance, access control, recording links.
 - [ ] Attendance: teacher marking, student view, correction/approval, reports.
