@@ -40,7 +40,7 @@ class BlogController extends Controller
     {
         $validated = $this->validated($request);
         $validated['author_id'] = $request->user()->id;
-        $validated['slug'] = $this->uniqueSlug($validated['slug'] ?: $validated['title']);
+        $validated['slug'] = $this->uniqueSlug(($validated['slug'] ?? '') ?: $validated['title']);
         $validated['published_at'] = $validated['status'] === 'published' ? ($validated['published_at'] ?? now()) : null;
         BlogPost::create($validated);
         return redirect()->route('admin.news.index')->with('success', 'Article saved.');
