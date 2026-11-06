@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
 use Tests\TestCase;
 
 class WebsiteBuilderTest extends TestCase
@@ -28,6 +29,7 @@ class WebsiteBuilderTest extends TestCase
         ])->assertRedirect(route('admin.website-builder.index'));
 
         $this->assertDatabaseHas('settings', ['key' => 'website_sections']);
+        Auth::logout();
         $this->get('/')->assertOk()->assertSee('&lt;script&gt;alert(1)&lt;/script&gt;', false)->assertSee('Learn with confidence.');
     }
 
