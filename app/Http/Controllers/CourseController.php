@@ -28,7 +28,7 @@ class CourseController extends Controller
         $user = Auth::user();
         abort_unless($user?->isStudent(), 403);
 
-        $enrollments = \\App\\Models\\Enrollment::query()
+        $enrollments = \App\Models\Enrollment::query()
             ->where('user_id', $user->id)
             ->whereIn('status', ['active', 'completed'])
             ->with(['course.teacher', 'course.lessons'])
