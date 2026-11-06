@@ -89,6 +89,7 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         Route::post('/exams/{exam}/start', [ExamController::class, 'start'])->name('student.exams.start');
         Route::post('/exam-attempts/{attempt}/submit', [ExamController::class, 'submit'])->name('student.exams.submit');
         Route::post('/assignments/{assignment}/submit', [AssignmentController::class, 'submit'])->name('student.assignments.submit');
+        Route::get('/assignment-submissions/{submission}/attachment', [AssignmentController::class, 'download'])->name('assignment-submissions.attachment');
     });
     Route::post('/phone/verification/send', [PhoneVerificationController::class, 'send'])
         ->middleware('throttle:3,1')
