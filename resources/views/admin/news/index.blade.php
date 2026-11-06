@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', '{{ __('Blog & News') }}')
+@section('title', __('Blog & News'))
 @section('content')
 <div class="page-header"><div><span class="badge info">Admin</span><h1>{{ __('Blog & News') }}</h1><p class="muted">{{ __('Create article') }}s, announcements and news updates.</p></div><a class="btn primary" href="{{ route('admin.news.create') }}">{{ __('New article') }}</a></div>
 <div class="panel"><div class="course-list">
