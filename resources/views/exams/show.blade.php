@@ -21,7 +21,9 @@
             <p class="badge warning">Attempt in progress · {{ ceil($remaining / 60) }} minutes remaining</p>
             <form method="POST" action="{{ route('student.exams.submit', $attempt) }}">
                 @csrf
-                @foreach($exam->questions as $question)
+                @foreach($attempt->attemptQuestions as $attemptQuestion)
+                    @php($question = $attemptQuestion->question)
+                    @if($question)
                     <div class="course-item" style="margin:16px 0;">
                         <h3>{{ $loop->iteration }}. {{ $question->question }}</h3>
                         <p class="muted">{{ $question->marks }} marks</p>
@@ -29,6 +31,7 @@
                             <label style="font-weight:400;"><input style="width:auto;margin-right:8px;" type="radio" name="answers[{{ $question->id }}]" value="{{ $index }}" required> {{ chr(65 + $index) }}. {{ $option }}</label>
                         @endforeach
                     </div>
+                    @endif
                 @endforeach
                 <button class="btn primary" type="submit">Submit exam</button>
             </form>
