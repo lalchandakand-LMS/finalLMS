@@ -23,6 +23,38 @@ class CourseController extends Controller
         return view('courses.index', compact('courses'));
     }
 
+    public function myCourses(): View
+    {
+        $user = Auth::user();
+        abort_unless($user?->isStudent(), 403);
+
+        $enrollments = \\App\\Models\\Enrollment::query()
+            ->where('user_id', $user->id)
+            ->whereIn('status', ['active', 'completed'])
+            ->with(['course.teacher', 'course.lessons'])
+            ->latest()
+            ->get();
+
+        $lessonIds = $enrollments->flatMap(fn ($enrollment) => $enrollment->course->lessons->pluck('id'))->unique();
+        $completedByLesson = LessonProgress::query()
+            ->where('user_id', $user->id)
+            ->whereIn('lesson_id', $lessonIds)
+            ->pluck('completed_at', 'lesson_id');
+
+        $enrollments->each(function ($enrollment) use ($completedByLesson) {
+            $lessons = $enrollment->course->lessons;
+            $enrollment->completed_lessons_count = $lessons->filter(
+                fn ($lesson) => $completedByLesson->has($lesson->id)
+            )->count();
+            $enrollment->total_lessons_count = $lessons->count();
+            $enrollment->progress_percent = $lessons->isEmpty()
+                ? 0
+                : (int) round(($enrollment->completed_lessons_count / $lessons->count()) * 100);
+        });
+
+        return view('student.courses.index', compact('enrollments'));
+    }
+
     public function adminIndex(): View
     {
         $courses = Course::with('teacher')->latest()->get();
