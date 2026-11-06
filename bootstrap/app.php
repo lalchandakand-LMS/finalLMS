@@ -11,6 +11,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->appendToGroup('web', \App\Http\Middleware\SetLocale::class);
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'activity.log' => \App\Http\Middleware\LogUserActivity::class,
