@@ -37,7 +37,7 @@
                                             <span class="badge info">{{ __('Preview') }}</span>
                                         @endif
                                     </div>
-                                    <p style="margin: 10px 0 0;">{{ \\Illuminate\\Support\\Str::limit($lesson->content, 140) }}</p>
+                                    <p style="margin: 10px 0 0;">{{ Illuminate\Support\Str::limit($lesson->content, 140) }}</p>
                                     @auth
                                         @if(auth()->user()->isStudent() && $canViewLessons && ! $lesson->is_preview)
                                             @if($lessonProgress->has($lesson->id))
