@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', '{{ __('Media Library') }}')
+@section('title', __('Media Library'))
 @section('content')
 <div class="page-header"><div><span class="badge info">Admin</span><h1>{{ __('Media Library') }}</h1><p class="muted">Upload and manage images, documents and video files.</p></div><a class="btn secondary" href="{{ route('dashboard') }}">Dashboard</a></div>
 <div class="panel" style="margin-bottom:20px;">
