@@ -22,7 +22,7 @@ class PublicCmsPagesTest extends TestCase
             ->assertOk()
             ->assertSee('About Aloms English Center')
             ->assertSee('We help learners build confidence.')
-            ->assertDontSee('<script>', false);
+            ->assertSee('&lt;script&gt;alert', false);
 
         $this->get('/contact')
             ->assertOk()
