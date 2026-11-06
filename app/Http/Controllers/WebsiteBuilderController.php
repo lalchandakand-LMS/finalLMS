@@ -27,7 +27,7 @@ class WebsiteBuilderController extends Controller
             'sections.*.body' => ['nullable', 'string', 'max:3000'],
             'sections.*.image_id' => ['nullable', 'integer', 'exists:media_assets,id'],
             'sections.*.button_label' => ['nullable', 'string', 'max:60'],
-            'sections.*.button_url' => ['nullable', 'url', 'max:500'],
+            'sections.*.button_url' => ['nullable', 'url:http,https', 'max:500'],
             'sections.*.enabled' => ['nullable', 'boolean'],
         ]);
 
