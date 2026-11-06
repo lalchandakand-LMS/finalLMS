@@ -37,12 +37,14 @@ The local/testing seeder creates `admin@lms.test`, `teacher@lms.test`, and `stud
 - Admin homepage, payment, user, course, and settings controls
 - Student invoices, partial/installment receipts, manual payment ledger, and outstanding balance tracking
 - Admin activity log for successful authenticated changes, with user/action/route/IP filters
-- Public About, Contact, and FAQ pages with admin-managed, safely escaped text content
+- Public About, Contact, FAQ, and published Blog/News pages; admin-managed article drafts, publishing, SEO metadata, and cover images
+- Admin Media Library for validated image, document, and video uploads with protected deletion of assets referenced by articles
+- Section-based homepage Website Builder with up to 12 editable text/image/button sections; user content is escaped and does not accept arbitrary scripts
 - English/Bangla session-based language selector and starter JSON translation catalogue for primary navigation
 
 ## Not yet complete
 
-This is not yet the complete commercial LMS described in the acceptance specification. Full super-admin/branch-manager/accountant permission matrices and branch-scoped write workflows (branch manager currently has a read-only batch overview; accountant has invoice-ledger access only); discounts and refunds; media library, blog/news publishing, custom landing-page sections, and complete translation coverage for every screen; automated backup management; and a secure web installer are not implemented. Activity logging covers successful authenticated write requests; it is not yet a full audit trail for reads, login attempts, failed actions, or field-level changes. Payments are manual-review only; official bKash, Nagad, and SSLCommerz APIs and callback verification are not implemented. SMS/email delivery requires real provider credentials.
+This is not yet the complete commercial LMS described in the acceptance specification. Full super-admin/branch-manager/accountant permission matrices and branch-scoped write workflows (branch manager currently has a read-only batch overview; accountant has invoice-ledger access only); discounts and refunds; media library, blog/news publishing, advanced drag-and-drop page design, full translation coverage for every screen, automated backup/restore management, and a secure web installer are not implemented. Activity logging covers successful authenticated write requests; it is not yet a full audit trail for reads, login attempts, failed actions, or field-level changes. Payments are manual-review only; official bKash, Nagad, and SSLCommerz APIs and callback verification are not implemented. SMS/email delivery requires real provider credentials.
 
 ## First production administrator
 
