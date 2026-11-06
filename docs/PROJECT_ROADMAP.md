@@ -21,12 +21,14 @@ This is the persistent project checklist. Update it whenever a task is started, 
 - [x] Configurable late-submission policy (default closed after deadline).
 - [x] Resubmission after grading; preserve existing attachment when changing only the text answer.
 
+- [ ] Add lesson editing, provider-specific playback tests, and full teacher lesson management workflow.
+
 ### Current blocker
 - [x] Diagnose and fix CI migration ordering: Question Bank category/difficulty migration now runs after its table-creation migration; verified by passing CI run #504.
 - [ ] Add/complete automated tests for assignment create, enrollment authorization, file validation/storage/download, grading, deadline, and resubmission.
 - [x] Add student course overview with active/completed enrollments and lesson progress; hide unpublished courses from student view.
 - [x] Add feature tests for student portal access, lesson progress display, idempotent completion, inactive enrollment denial, and cross-course lesson access denial.
-- [ ] Verify latest student portal test changes in CI.
+- [x] Verify student portal changes in CI (run #535 passed both test and cPanel package jobs).
 - [x] Re-run full Laravel CI and cPanel package job; both jobs passed in [run #504](https://github.com/lalchandakand-LMS/finalLMS/actions/runs/42283409532).
 - [ ] Review migration order and schema compatibility against clean MySQL and existing deployment databases.
 
@@ -46,7 +48,7 @@ This is the persistent project checklist. Update it whenever a task is started, 
 - [ ] Exams: MCQ/short/essay types, timer, auto-submit, negative marking, retake policy, result publication, review/appeal workflow.
 - [ ] Assignments: review queue, draft/published/closed states, late labels, resubmission limits, feedback notifications, attachment cleanup.
 - [x] Student portal foundation: dedicated enrolled-courses page, per-course lesson completion progress, student-only authorization, and dashboard entry point (resources and expanded learning tools remain pending).
-- [ ] Recorded lessons: protected video links, ordering, progress tracking.
+- [x] Recorded lesson foundation: YouTube/Vimeo URL support, privacy-enhanced YouTube embeds, preview lessons, protected playback route and enrollment/ownership checks; CI verification pending.
 - [ ] Live classes: provider integration, schedules, attendance, access control, recording links.
 - [ ] Attendance: teacher marking, student view, correction/approval, reports.
 - [ ] Certificates: eligibility, issue/download, unique verification code/public verification page.
