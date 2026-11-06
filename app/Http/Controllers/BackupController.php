@@ -109,7 +109,8 @@ class BackupController extends Controller
             sort($currentTables);
             $backupTables = array_keys($payload['tables']);
             sort($backupTables);
-            abort_unless($currentTables === $backupTables, 422, 'Backup database structure does not match this LMS version. Update or downgrade the application before restoring.');
+            $missingTables = array_values(array_diff($currentTables, $backupTables));
+            abort_unless($missingTables === [], 422, 'This backup does not contain every table required by the installed LMS version. Update or downgrade the application before restoring.');
 
             $mediaToRestore = [];
             foreach (($payload['public_media'] ?? []) as $mediaPath => $encoded) {
@@ -154,7 +155,6 @@ class BackupController extends Controller
             }
         } catch (Throwable $exception) {
             report($exception);
-            fwrite(STDERR, 'BACKUP_RESTORE_DEBUG: '.$exception->getMessage().PHP_EOL);
             abort(422, 'Restore failed. No success was reported; check the application log and database state before retrying.');
         }
 
