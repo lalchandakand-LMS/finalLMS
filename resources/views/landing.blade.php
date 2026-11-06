@@ -58,23 +58,23 @@
         </div>
 
         <div class="panel">
-            <h2 style="margin-top:0;">Platform overview</h2>
+            <h2 style="margin-top:0;">{{ __('Platform overview') }}</h2>
             <div class="grid grid-2">
                 <div class="card">
-                    <h3>For students</h3>
-                    <p class="muted">Enroll in courses, follow structured lessons, and earn digital certificates.</p>
+                    <h3>{{ __('For students') }}</h3>
+                    <p class="muted">{{ __('Enroll in courses, follow structured lessons, and earn digital certificates.') }}</p>
                 </div>
                 <div class="card">
-                    <h3>For teachers</h3>
-                    <p class="muted">Manage learning tracks, create lesson flow, and keep learners progressing.</p>
+                    <h3>{{ __('For teachers') }}</h3>
+                    <p class="muted">{{ __('Manage learning tracks, create lesson flow, and keep learners progressing.') }}</p>
                 </div>
                 <div class="card">
-                    <h3>For admins</h3>
-                    <p class="muted">Review course access, maintain enrollment health, and control platform operations.</p>
+                    <h3>{{ __('For admins') }}</h3>
+                    <p class="muted">{{ __('Review course access, maintain enrollment health, and control platform operations.') }}</p>
                 </div>
                 <div class="card">
-                    <h3>Built for growth</h3>
-                    <p class="muted">The experience is designed to feel clean, polished, and easy to use daily.</p>
+                    <h3>{{ __('Built for growth') }}</h3>
+                    <p class="muted">{{ __('The experience is designed to feel clean, polished, and easy to use daily.') }}</p>
                 </div>
             </div>
         </div>
@@ -83,7 +83,7 @@
     <section style="margin-top: 28px;">
         <div class="page-header" style="margin-bottom: 16px;">
             <div>
-                <span class="badge info">Featured</span>
+                <span class="badge info">{{ __('Featured') }}</span>
                 <h2 style="margin: 12px 0 0;">{{ $homeFeaturedTitle }}</h2>
             </div>
         </div>
@@ -94,13 +94,13 @@
                     <span class="badge success">{{ ucfirst($course->status) }}</span>
                     <h3 style="margin: 14px 0 8px;">{{ $course->title }}</h3>
                     <p class="muted" style="margin: 0 0 14px;">{{ \Illuminate\Support\Str::limit($course->description, 100) }}</p>
-                    <div class="muted">Teacher: {{ $course->teacher?->name ?? 'N/A' }}</div>
+                    <div class="muted">{{ __('Teacher:') }} {{ $course->teacher?->name ?? 'N/A' }}</div>
                     <div class="meta-row" style="margin-top: 14px;">
-                        <span class="muted">{{ $course->lessons_count }} lessons</span>
+                        <span class="muted">{{ $course->lessons_count }} {{ __('lessons') }}</span>
                         <strong>BDT {{ number_format($course->price, 2) }}</strong>
                     </div>
                     <div style="margin-top: 16px;">
-                        <a href="{{ route('courses.show', $course) }}" class="btn secondary" style="width: 100%;">View course</a>
+                        <a href="{{ route('courses.show', $course) }}" class="btn secondary" style="width: 100%;">{{ __('View course') }}</a>
                     </div>
                 </div>
             @endforeach
@@ -110,23 +110,23 @@
     <section style="margin-top: 28px;">
         <div class="page-header" style="margin-bottom: 16px;">
             <div>
-                <span class="badge info">Why learners stay</span>
+                <span class="badge info">{{ __('Why learners stay') }}</span>
                 <h2 style="margin: 12px 0 0;">{{ $homeReasonTitle }}</h2>
             </div>
         </div>
 
         <div class="grid grid-3">
             <div class="card">
-                <h3>Flexible learning</h3>
-                <p class="muted">Learn at your own pace with lessons that fit your schedule and workflow.</p>
+                <h3>{{ __('Flexible learning') }}</h3>
+                <p class="muted">{{ __('Learn at your own pace with lessons that fit your schedule and workflow.') }}</p>
             </div>
             <div class="card">
-                <h3>Clear progress</h3>
-                <p class="muted">Track enrollments, completions, and certificate progress in one dashboard.</p>
+                <h3>{{ __('Clear progress') }}</h3>
+                <p class="muted">{{ __('Track enrollments, completions, and certificate progress in one dashboard.') }}</p>
             </div>
             <div class="card">
-                <h3>Professional structure</h3>
-                <p class="muted">Course pathways feel organized and simple for students, teachers, and admins alike.</p>
+                <h3>{{ __('Professional structure') }}</h3>
+                <p class="muted">{{ __('Course pathways feel organized and simple for students, teachers, and admins alike.') }}</p>
             </div>
         </div>
     </section>
