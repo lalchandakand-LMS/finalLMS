@@ -1,0 +1,10 @@
+/vendor
+/node_modules
+/.env
+/public/build
+/public/storage
+/storage/*.key
+/storage/logs/*.log
+/.setup.lock
+/.env.*
+!/\.env.example
