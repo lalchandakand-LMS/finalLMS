@@ -20,6 +20,19 @@
                 <p class="muted">{{ $batch->starts_at->format('M j, Y H:i') }} to {{ $batch->ends_at->format('M j, Y H:i') }}</p>
                 <a href="{{ route('teacher.batches.attendance.index', $batch) }}" class="btn secondary">Take attendance</a>
                 <a href="{{ route('teacher.batches.assignments.index', $batch) }}" class="btn secondary">Assignments</a>
+                <a href="{{ route('live-classes.index') }}" class="btn secondary">Live classes</a>
+                <details style="margin-top:14px;">
+                    <summary>Schedule a live class</summary>
+                    <form method="POST" action="{{ route('teacher.batches.live-classes.store', $batch) }}" class="grid grid-2" style="margin-top:12px;">
+                        @csrf
+                        <label>Session title<input name="title" maxlength="160" required></label>
+                        <label>Meeting URL<input type="url" name="meeting_url" placeholder="https://..." maxlength="2048" required></label>
+                        <label>Start time<input type="datetime-local" name="starts_at" required></label>
+                        <label>End time<input type="datetime-local" name="ends_at" required></label>
+                        <label>Description<textarea name="description" maxlength="5000"></textarea></label>
+                        <button class="btn primary" type="submit">Schedule session</button>
+                    </form>
+                </details>
             </article>
         @empty
             <div class="panel"><p class="muted" style="margin:0;">No batches are assigned to your account.</p></div>
