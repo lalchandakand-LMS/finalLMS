@@ -66,6 +66,19 @@ class ExamController extends Controller
         return back()->with('success', 'Exam published successfully.');
     }
 
+    public function teacherResults(Exam $exam): View
+    {
+        abort_unless(Auth::user()->isAdmin() || $exam->batch->teacher_id === Auth::id(), 403);
+
+        $attempts = $exam->attempts()
+            ->with('student:id,name,email')
+            ->where('status', 'submitted')
+            ->latest('submitted_at')
+            ->paginate(30);
+
+        return view('teacher.exams.results', compact('exam', 'attempts'));
+    }
+
     public function studentExams(): View
     {
         abort_unless(Auth::user()->isStudent(), 403);
