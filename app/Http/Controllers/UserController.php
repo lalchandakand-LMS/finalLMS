@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class UserController extends Controller
@@ -24,11 +25,11 @@ class UserController extends Controller
             'role' => ['required', 'in:admin,teacher,student'],
         ]);
 
-        if (
-            $user->role === 'admin' &&
-            $validated['role'] !== 'admin' &&
-            User::where('role', 'admin')->count() <= 1
-        ) {
+        if ($user->id === Auth::id() && $validated['role'] !== 'admin') {
+            return back()->with('error', 'You cannot remove your own administrator access.');
+        }
+
+        if ($user->isAdmin() && $validated['role'] !== 'admin' && User::where('role', 'admin')->count() <= 1) {
             return back()->with('error', 'The last administrator cannot be demoted.');
         }
 

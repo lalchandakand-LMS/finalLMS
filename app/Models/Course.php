@@ -21,11 +21,6 @@ class Course extends Model
         'status',
     ];
 
-    public function getRouteKeyName(): string
-    {
-        return 'slug';
-    }
-
     public function teacher(): BelongsTo
     {
         return $this->belongsTo(User::class, 'teacher_id');
@@ -59,5 +54,10 @@ class Course extends Model
     public function batches(): HasMany
     {
         return $this->hasMany(Batch::class);
+    }
+
+    public function getRouteKeyName(): string
+    {
+        return 'slug';
     }
 }

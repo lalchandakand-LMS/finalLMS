@@ -97,19 +97,19 @@ class CourseController extends Controller
         if (Auth::check()) {
             $enrollment = $course->enrollments()->where('user_id', Auth::id())->first();
         }
-        $isEnrolled = $enrollment && in_array($enrollment->status, ['active', 'completed'], true);
-        $canViewLessons = $canManageCourse || $isEnrolled;
-        $lessonProgress = Auth::check() && $isEnrolled
-            ? LessonProgress::where('user_id', Auth::id())
-                ->whereHas('lesson', fn ($query) => $query->where('course_id', $course->id))
-                ->pluck('completed_at', 'lesson_id')
-            : collect();
 
         $payment = Auth::check() && Auth::user()->isStudent()
             ? $course->payments()->where('user_id', Auth::id())->latest()->first()
             : null;
         $paymentMethods = collect(Setting::paymentMethods())
             ->filter(fn (array $method) => (bool) ($method['enabled'] ?? false));
+        $isEnrolled = $enrollment && in_array($enrollment->status, ['active', 'completed'], true);
+        $canViewLessons = $canManageCourse || $isEnrolled;
+        $lessonProgress = $isEnrolled && $user?->isStudent()
+            ? LessonProgress::where('user_id', $user->id)
+                ->whereHas('lesson', fn ($query) => $query->where('course_id', $course->id))
+                ->pluck('completed_at', 'lesson_id')
+            : collect();
         $batches = $course->batches()
             ->where('status', 'open')
             ->with('branch')
@@ -123,8 +123,8 @@ class CourseController extends Controller
     public function completeLesson(Course $course, Lesson $lesson): RedirectResponse
     {
         $user = Auth::user();
-        abort_unless($user?->isStudent() && $lesson->course_id === $course->id, 403);
-        abort_unless($course->enrollments()->where('user_id', $user->id)->where('status', 'active')->exists(), 403);
+        abort_unless($user?->isStudent() && $course->status === 'published' && $lesson->course_id === $course->id, 403);
+        abort_unless($course->enrollments()->where('user_id', $user->id)->where('status', 'active')->exists(), 404);
 
         LessonProgress::firstOrCreate(
             ['lesson_id' => $lesson->id, 'user_id' => $user->id],
@@ -136,7 +136,8 @@ class CourseController extends Controller
 
     public function storeLesson(Course $course, Request $request): RedirectResponse
     {
-        abort_unless(Auth::user()?->isAdmin() || Auth::user()?->isTeacher(), 403);
+        $user = Auth::user();
+        abort_unless($user?->isAdmin() || ($user?->isTeacher() && $course->teacher_id === $user->id), 403);
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -153,25 +154,34 @@ class CourseController extends Controller
     public function complete(Course $course, Request $request): RedirectResponse
     {
         $user = Auth::user();
-        abort_unless($user?->isStudent(), 403);
+        $studentId = (int) ($request->input('student_id') ?? $user->id);
 
-        $enrollment = $course->enrollments()->where('user_id', $user->id)->where('status', 'active')->firstOrFail();
+        if (! $user || ($user->isStudent() && $studentId !== $user->id)) {
+            abort(403);
+        }
+
+        if ($user->isTeacher() && $course->teacher_id !== $user->id) {
+            abort(403);
+        }
+
+        abort_unless($user->isStudent() || $user->isAdmin() || $user->isTeacher(), 403);
+
+        $enrollment = $course->enrollments()->where('user_id', $studentId)->where('status', 'active')->firstOrFail();
         $lessonCount = $course->lessons()->count();
-        $completedLessonCount = LessonProgress::where('user_id', $user->id)
+        $completedLessonCount = LessonProgress::where('user_id', $studentId)
             ->whereHas('lesson', fn ($query) => $query->where('course_id', $course->id))
             ->count();
 
         if ($lessonCount === 0 || $completedLessonCount < $lessonCount) {
             return back()->with('error', 'Complete every lesson before completing this course.');
         }
-
         $enrollment->status = 'completed';
         $enrollment->completed_at = now();
         $enrollment->save();
 
         Certificate::firstOrCreate(
             [
-                'user_id' => $user->id,
+                'user_id' => $studentId,
                 'course_id' => $course->id,
             ],
             [

@@ -27,6 +27,9 @@ Route::middleware('guest')->group(function () {
 });
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1')->name('login.post');
 
+Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
+Route::get('/courses/{course}', [CourseController::class, 'show'])->name('courses.show');
+
 Route::middleware('auth')->group(function () {
     Route::get('/email/verify', [EmailVerificationController::class, 'notice'])->name('verification.notice');
     Route::get('/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
@@ -36,9 +39,6 @@ Route::middleware('auth')->group(function () {
         ->middleware('throttle:6,1')
         ->name('verification.send');
 });
-
-Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
-Route::get('/courses/{course}', [CourseController::class, 'show'])->name('courses.show');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('role:teacher')->get('/teacher/batches', [BatchController::class, 'teacherIndex'])->name('teacher.batches.index');
@@ -68,7 +68,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::post('/courses/{course}/enroll', [PaymentController::class, 'submit'])->name('courses.enroll');
     Route::post('/courses/{course}/complete', [CourseController::class, 'complete'])->name('courses.complete');
-    Route::post('/courses/{course}/lessons/{lesson}/complete', [CourseController::class, 'completeLesson'])->name('courses.lessons.complete');
+    Route::post('/courses/{course}/lessons/{lesson}/complete', [CourseController::class, 'completeLesson'])
+        ->middleware('role:student')
+        ->name('courses.lessons.complete');
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
         Route::get('/batches', [BatchController::class, 'index'])->name('admin.batches.index');

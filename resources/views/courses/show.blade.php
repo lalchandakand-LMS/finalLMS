@@ -26,34 +26,37 @@
                 @else
                     <div class="course-list">
                         @foreach($course->lessons as $lesson)
-                            <div class="course-item" style="margin-bottom: 14px;">
-                                <div class="meta-row">
-                                    <div>
-                                        <strong>{{ $lesson->order }}. {{ $lesson->title }}</strong><br>
-                                        <span class="muted">{{ $lesson->duration_minutes }} minutes</span>
+                            @if($canViewLessons || $lesson->is_preview)
+                                <div class="course-item" style="margin-bottom: 14px;">
+                                    <div class="meta-row">
+                                        <div>
+                                            <strong>{{ $lesson->order }}. {{ $lesson->title }}</strong><br>
+                                            <span class="muted">{{ $lesson->duration_minutes }} minutes</span>
+                                        </div>
+                                        @if($lesson->is_preview)
+                                            <span class="badge info">Preview</span>
+                                        @endif
                                     </div>
-                                    @if($lesson->is_preview)
-                                        <span class="badge info">Preview</span>
-                                    @endif
-                                </div>
-                                @if($lesson->is_preview || $canViewLessons)
                                     <p style="margin: 10px 0 0;">{{ $lesson->content }}</p>
-                                @else
-                                    <p class="muted" style="margin:10px 0 0;">Enroll in this course to access the lesson.</p>
-                                @endif
-                                @if($canViewLessons && auth()->check() && auth()->user()->isStudent())
-                                    @if(isset($lessonProgress[$lesson->id]))
-                                        <span class="badge success">Completed</span>
-                                    @elseif($enrollment?->status === 'active')
-                                        <form method="POST" action="{{ route('courses.lessons.complete', [$course, $lesson]) }}">
-                                            @csrf
-                                            <button type="submit" class="btn secondary" style="margin-top:10px;">Mark lesson complete</button>
-                                        </form>
-                                    @endif
-                                @endif
-                            </div>
+                                    @auth
+                                        @if(auth()->user()->isStudent() && $canViewLessons && ! $lesson->is_preview)
+                                            @if($lessonProgress->has($lesson->id))
+                                                <span class="badge success" style="margin-top:12px;">Completed</span>
+                                            @else
+                                                <form method="POST" action="{{ route('courses.lessons.complete', [$course, $lesson]) }}" style="margin-top:12px;">
+                                                    @csrf
+                                                    <button type="submit" class="btn secondary">Mark lesson complete</button>
+                                                </form>
+                                            @endif
+                                        @endif
+                                    @endauth
+                                </div>
+                            @endif
                         @endforeach
                     </div>
+                    @unless($canViewLessons)
+                        <p class="muted">Enroll in this course to unlock the full learning path.</p>
+                    @endunless
                 @endif
             </div>
         </div>
@@ -66,7 +69,7 @@
                         @if($enrollment->status === 'completed')
                             <p class="muted">You completed this course and received a certificate.</p>
                         @else
-                            <p class="muted">You are enrolled and the course is active. Complete each lesson to earn your certificate.</p>
+                            <p class="muted">You are enrolled and the course is active.</p>
                             <form method="POST" action="{{ route('courses.complete', $course) }}">
                                 @csrf
                                 <button type="submit" class="btn primary" style="margin-top:12px;">Mark as complete</button>

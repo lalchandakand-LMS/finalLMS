@@ -32,8 +32,8 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-      - run: composer install --no-interaction --prefer-dist
       - run: composer validate --strict
+      - run: composer install --no-interaction --prefer-dist
       - run: npm ci
       - run: cp deployment/.env.example .env
       - run: php artisan key:generate --force
@@ -45,7 +45,7 @@ jobs:
           DB_DATABASE: aloms_lms_test
           DB_USERNAME: root
           DB_PASSWORD: root
-        run: php artisan migrate --force
+        run: php artisan migrate:fresh --force
       - name: Run tests
         env:
           DB_CONNECTION: mysql
@@ -60,6 +60,7 @@ jobs:
 
   package:
     needs: test
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -77,13 +78,30 @@ jobs:
       - run: php artisan key:generate --force
       - run: npm ci
       - run: npm run build
-      - name: Create and verify cPanel ZIP
+      - name: Assemble and verify cPanel ZIP
         run: |
-          mkdir -p dist
-          zip -qr dist/AlomsEnglishCenter-cpanel.zip app artisan bootstrap config database deployment public resources routes storage composer.json composer.lock README.md
+          mkdir -p "$RUNNER_TEMP/cpanel-package" dist
+          rsync -a \
+            --exclude='database/*.sqlite' \
+            --exclude='storage/logs/*' \
+            --exclude='storage/framework/cache/data/*' \
+            --exclude='storage/framework/sessions/*' \
+            --exclude='storage/framework/views/*' \
+            --exclude='storage/framework/testing/*' \
+            --exclude='bootstrap/cache/*.php' \
+            --exclude='tests' \
+            --exclude='node_modules' \
+            --exclude='.git' \
+            --exclude='dist' \
+            app artisan bootstrap config database deployment public resources routes storage vendor composer.json composer.lock README.md \
+            "$RUNNER_TEMP/cpanel-package/"
+          (cd "$RUNNER_TEMP/cpanel-package" && zip -qr "$GITHUB_WORKSPACE/dist/AlomsEnglishCenter-cpanel.zip" .)
           unzip -t dist/AlomsEnglishCenter-cpanel.zip
-          if unzip -Z1 dist/AlomsEnglishCenter-cpanel.zip | grep -Ex '\.env'; then exit 1; fi
-          test -f dist/AlomsEnglishCenter-cpanel.zip
+          unzip -Z1 dist/AlomsEnglishCenter-cpanel.zip > "$RUNNER_TEMP/cpanel-files.txt"
+          ! grep -Eq '(^|/)(\.env|database\.sqlite|laravel\.log|\.git)(/|$)' "$RUNNER_TEMP/cpanel-files.txt"
+          grep -Fxq 'public/index.php' "$RUNNER_TEMP/cpanel-files.txt"
+          grep -Fxq 'vendor/autoload.php' "$RUNNER_TEMP/cpanel-files.txt"
+          grep -Fxq 'deployment/.env.example' "$RUNNER_TEMP/cpanel-files.txt"
       - uses: actions/upload-artifact@v4
         with:
           name: AlomsEnglishCenter-cpanel

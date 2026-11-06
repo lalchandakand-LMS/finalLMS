@@ -41,6 +41,10 @@ This guide deploys the current Laravel 12 application. It is not a one-click ins
 
 9. Run route checks and smoke tests before opening enrollment. Set up database backups and monitor application logs.
 
+## Release Artifact
+
+The `Laravel CI` workflow creates the `AlomsEnglishCenter-cpanel.zip` artifact only after the clean MySQL migrations, automated tests, route check, and asset build pass. Download the artifact from the successful Actions run. The ZIP includes `vendor` and built assets, and excludes `.env`, local SQLite files, logs, tests, Git metadata, and Node modules.
+
 ## Known Deployment Gaps
 
-There is not yet a web installer, installation lock, or automated backup manager. The verified source archive includes production Composer dependencies and prebuilt assets, but it does not create the MySQL database or administrator automatically. Payment methods currently use manual verification; official bKash, Nagad, or SSLCommerz API callbacks are not implemented. Do not advertise automatic payment processing until callback signatures and provider transactions are implemented and tested.
+There is not yet a web installer, installation lock, or automated backup manager. Payment methods currently use manual verification; official bKash, Nagad, or SSLCommerz API callbacks are not implemented. Do not advertise automatic payment processing until callback signatures and provider transactions are implemented and tested. The cPanel guide has not been exercised on an actual cPanel account.

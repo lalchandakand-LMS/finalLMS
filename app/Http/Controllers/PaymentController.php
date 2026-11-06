@@ -30,26 +30,34 @@ class PaymentController extends Controller
             return back()->with('info', 'You are already enrolled in this course.');
         }
 
+        $hasOpenBatches = $course->batches()->where('status', 'open')->exists();
         $validatedBatch = $request->validate([
-            'batch_id' => ['nullable', 'integer', Rule::exists('batches', 'id')->where(fn ($queryBuilder) => $queryBuilder->where('course_id', $course->id)->where('status', 'open'))],
+            'batch_id' => [$hasOpenBatches ? 'required' : 'nullable', 'integer', Rule::exists('batches', 'id')->where(fn ($queryBuilder) => $queryBuilder->where('course_id', $course->id)->where('status', 'open'))],
         ]);
-        $batch = isset($validatedBatch['batch_id'])
-            ? Batch::withCount('enrollments')->findOrFail($validatedBatch['batch_id'])
-            : null;
+        $batchId = $validatedBatch['batch_id'] ?? null;
+        $batchFee = $batchId ? (float) Batch::query()->whereKey($batchId)->value('fee') : 0;
+        $amount = $batchFee > 0 ? $batchFee : (float) $course->price;
 
-        $pendingBatchPayments = $batch
-            ? Payment::where('batch_id', $batch->id)->where('status', 'pending')->count()
-            : 0;
+        if ($amount <= 0) {
+            $enrolled = DB::transaction(function () use ($batchId, $course, $user): bool {
+                if ($batchId) {
+                    $batch = Batch::query()->lockForUpdate()->findOrFail($batchId);
+                    if ($batch->status !== 'open' || ! $this->hasAvailableSeat($batch)) {
+                        return false;
+                    }
+                }
 
-        if ($batch && $batch->enrollments_count + $pendingBatchPayments >= $batch->capacity) {
-            return back()->with('error', 'This batch has reached its enrollment capacity.');
-        }
+                Enrollment::firstOrCreate(
+                    ['user_id' => $user->id, 'course_id' => $course->id],
+                    ['batch_id' => $batchId, 'status' => 'active']
+                );
 
-        if ((float) $course->price <= 0) {
-            Enrollment::firstOrCreate(
-                ['user_id' => $user->id, 'course_id' => $course->id],
-                ['batch_id' => $batch?->id, 'status' => 'active']
-            );
+                return true;
+            });
+
+            if (! $enrolled) {
+                return back()->with('error', 'This batch has reached its enrollment capacity.');
+            }
 
             return back()->with('success', 'You have enrolled in the course successfully.');
         }
@@ -80,20 +88,36 @@ class PaymentController extends Controller
             'proof' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
         ]);
 
-        $proofPath = $request->file('proof')?->store('payment-proofs', 'local');
+        $proof = $request->file('proof');
+        $submitted = DB::transaction(function () use ($amount, $batchId, $course, $proof, $user, $validated): bool {
+            if ($batchId) {
+                $batch = Batch::query()->lockForUpdate()->findOrFail($batchId);
+                if ($batch->status !== 'open' || ! $this->hasAvailableSeat($batch)) {
+                    return false;
+                }
+            }
 
-        Payment::create([
-            'user_id' => $user->id,
-            'course_id' => $course->id,
-            'batch_id' => $batch?->id,
-            'method' => $validated['payment_method'],
-            'amount' => $course->price,
-            'currency' => 'BDT',
-            'sender_account' => $validated['sender_account'] ?? null,
-            'transaction_reference' => $validated['transaction_reference'],
-            'proof_path' => $proofPath,
-            'status' => 'pending',
-        ]);
+            $proofPath = $proof?->store('payment-proofs', 'local');
+
+            Payment::create([
+                'user_id' => $user->id,
+                'course_id' => $course->id,
+                'batch_id' => $batchId,
+                'method' => $validated['payment_method'],
+                'amount' => $amount,
+                'currency' => 'BDT',
+                'sender_account' => $validated['sender_account'] ?? null,
+                'transaction_reference' => $validated['transaction_reference'],
+                'proof_path' => $proofPath,
+                'status' => 'pending',
+            ]);
+
+            return true;
+        });
+
+        if (! $submitted) {
+            return back()->with('error', 'This batch has reached its enrollment capacity.');
+        }
 
         return redirect()->route('courses.show', $course)->with('success', 'Payment submitted. Course access will be available after the admin verifies it.');
     }
@@ -109,20 +133,17 @@ class PaymentController extends Controller
 
     public function approve(Payment $payment): RedirectResponse
     {
-        $capacityReached = false;
-        DB::transaction(function () use ($payment, &$capacityReached): void {
+        $result = DB::transaction(function () use ($payment): string {
             $payment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
 
             if ($payment->status !== 'pending') {
-                return;
+                return 'reviewed';
             }
 
             if ($payment->batch_id) {
                 $batch = Batch::query()->lockForUpdate()->findOrFail($payment->batch_id);
-                if ($batch->enrollments()->count() >= $batch->capacity) {
-                    $capacityReached = true;
-
-                    return;
+                if ($batch->status !== 'open' || ! $this->hasAvailableSeat($batch, false)) {
+                    return 'full';
                 }
             }
 
@@ -136,10 +157,16 @@ class PaymentController extends Controller
                 ['user_id' => $payment->user_id, 'course_id' => $payment->course_id],
                 ['batch_id' => $payment->batch_id, 'status' => 'active']
             );
+
+            return 'approved';
         });
 
-        if ($capacityReached) {
-            return back()->with('error', 'The batch has reached capacity. No enrollment was created.');
+        if ($result === 'full') {
+            return back()->with('error', 'The batch is full. Payment remains pending and requires manual resolution.');
+        }
+
+        if ($result === 'reviewed') {
+            return back()->with('info', 'This payment has already been reviewed.');
         }
 
         return back()->with('success', 'Payment approved and course access granted.');
@@ -170,5 +197,18 @@ class PaymentController extends Controller
         abort_unless($payment->proof_path && Storage::disk('local')->exists($payment->proof_path), 404);
 
         return Storage::disk('local')->download($payment->proof_path);
+    }
+
+    private function hasAvailableSeat(Batch $batch, bool $includePendingPayments = true): bool
+    {
+        $enrollments = Enrollment::query()
+            ->where('batch_id', $batch->id)
+            ->whereIn('status', ['active', 'completed'])
+            ->count();
+        $pendingPayments = $includePendingPayments
+            ? Payment::query()->where('batch_id', $batch->id)->where('status', 'pending')->count()
+            : 0;
+
+        return $enrollments + $pendingPayments < $batch->capacity;
     }
 }

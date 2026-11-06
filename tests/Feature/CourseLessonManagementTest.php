@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Course;
+use App\Models\Enrollment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -61,6 +62,11 @@ class CourseLessonManagementTest extends TestCase
             'content' => 'Install PHP and Laravel.',
             'duration_minutes' => 25,
             'order' => 1,
+        ]);
+        Enrollment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'status' => 'active',
         ]);
 
         $this->actingAs($student)

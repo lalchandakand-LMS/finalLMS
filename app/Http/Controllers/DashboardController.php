@@ -14,18 +14,23 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
 
-        $courses = Course::with('teacher')->latest()->get();
-        $enrolledCourses = Course::whereHas('enrollments', function ($query) use ($user) {
-            $query->where('user_id', $user->id);
-        })->with('teacher')->get();
+        $courses = Course::with('teacher')->where('status', 'published')->latest()->get();
+        $enrolledCourses = $user->isTeacher()
+            ? Course::with('teacher')->where('teacher_id', $user->id)->latest()->get()
+            : Course::whereHas('enrollments', function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })->with('teacher')->get();
 
-        $certificatesQuery = Certificate::with(['course', 'user']);
+        $recentCertificatesQuery = Certificate::with(['course', 'user'])
+            ->latest('issued_at');
+
         if ($user->isStudent()) {
-            $certificatesQuery->where('user_id', $user->id);
+            $recentCertificatesQuery->where('user_id', $user->id);
         } elseif ($user->isTeacher()) {
-            $certificatesQuery->whereHas('course', fn ($query) => $query->where('teacher_id', $user->id));
+            $recentCertificatesQuery->whereHas('course', fn ($query) => $query->where('teacher_id', $user->id));
         }
-        $recentCertificates = $certificatesQuery->latest('issued_at')->take(5)->get();
+
+        $recentCertificates = $recentCertificatesQuery->take(5)->get();
 
         $stats = [
             'courses' => Course::count(),
@@ -40,12 +45,11 @@ class DashboardController extends Controller
     public function certificate(Certificate $certificate): View
     {
         $user = Auth::user();
-        abort_unless(
-            $user->id === $certificate->user_id ||
-            $user->isAdmin() ||
-            ($user->isTeacher() && $certificate->course()->where('teacher_id', $user->id)->exists()),
-            403
-        );
+        $canView = $user->id === $certificate->user_id
+            || $user->isAdmin()
+            || ($user->isTeacher() && $certificate->course()->where('teacher_id', $user->id)->exists());
+
+        abort_unless($canView, 403);
 
         return view('certificates.show', compact('certificate'));
     }
