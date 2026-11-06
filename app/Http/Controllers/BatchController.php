@@ -25,6 +25,18 @@ class BatchController extends Controller
         return view('admin.batches.index', compact('branches', 'batches', 'courses', 'teachers'));
     }
 
+    public function branchManagerIndex(Request $request): View
+    {
+        abort_unless($request->user()->branch_id, 403, 'No branch is assigned to this account.');
+
+        $batches = Batch::with(['branch', 'course', 'teacher'])
+            ->where('branch_id', $request->user()->branch_id)
+            ->latest('starts_at')
+            ->paginate(25);
+
+        return view('branch-manager.batches.index', compact('batches'));
+    }
+
     public function teacherIndex(): View
     {
         $batches = Batch::with(['branch', 'course'])
