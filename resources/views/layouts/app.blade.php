@@ -169,7 +169,7 @@
                 <a href="{{ route('pages.about') }}">{{ __('About') }}</a>
                 <a href="{{ route('pages.contact') }}">{{ __('Contact') }}</a>
                 <a href="{{ route('pages.faq') }}">{{ __('FAQ') }}</a>
-                <a href="{{ route('news.index') }}">{{ __('Blog & News') }}</a>
+                <a href="{{ route('news.index') }}">{{ __('{{ __('Blog & News') }}') }}</a>
                 @auth
                     <a href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a>
                     <a href="{{ route('profile.edit') }}">{{ __('Profile') }}</a>
@@ -181,10 +181,10 @@
                         <a href="{{ route('admin.invoices.index') }}">Invoices</a>
                         <a href="{{ route('admin.activity-logs.index') }}">Activity log</a>
                         <a href="{{ route('admin.settings.index') }}">Settings</a>
-                        <a href="{{ route('admin.website-builder.index') }}">Website Builder</a>
-                        <a href="{{ route('admin.backups.index') }}">Backup &amp; Restore</a>
-                        <a href="{{ route('admin.media.index') }}">Media Library</a>
-                        <a href="{{ route('admin.news.index') }}">Blog & News</a>
+                        <a href="{{ route('admin.website-builder.index') }}">{{ __('Website Builder') }}</a>
+                        <a href="{{ route('admin.backups.index') }}">{{ __('Backup & Restore') }}</a>
+                        <a href="{{ route('admin.media.index') }}">{{ __('Media Library') }}</a>
+                        <a href="{{ route('admin.news.index') }}">{{ __('Blog & News') }}</a>
                         <a href="{{ route('admin.users.index') }}">Users</a>
                         <a href="{{ route('admin.courses.index') }}">Courses</a>
                     @endif
