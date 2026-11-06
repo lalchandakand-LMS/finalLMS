@@ -30,14 +30,14 @@
                                 <div class="course-item" style="margin-bottom: 14px;">
                                     <div class="meta-row">
                                         <div>
-                                            <strong>{{ $lesson->order }}. {{ $lesson->title }}</strong><br>
+                                            <strong><a href="{{ route('courses.lessons.show', [$course, $lesson]) }}">{{ $lesson->order }}. {{ $lesson->title }}</a></strong><br>
                                             <span class="muted">{{ $lesson->duration_minutes }} minutes</span>
                                         </div>
                                         @if($lesson->is_preview)
                                             <span class="badge info">{{ __('Preview') }}</span>
                                         @endif
                                     </div>
-                                    <p style="margin: 10px 0 0;">{{ $lesson->content }}</p>
+                                    <p style="margin: 10px 0 0;">{{ \\Illuminate\\Support\\Str::limit($lesson->content, 140) }}</p>
                                     @auth
                                         @if(auth()->user()->isStudent() && $canViewLessons && ! $lesson->is_preview)
                                             @if($lessonProgress->has($lesson->id))
@@ -50,6 +50,7 @@
                                             @endif
                                         @endif
                                     @endauth
+                                <a class="btn secondary" style="margin-top:10px;" href="{{ route('courses.lessons.show', [$course, $lesson]) }}">{{ __('Open lesson') }}</a>
                                 </div>
                             @endif
                         @endforeach
