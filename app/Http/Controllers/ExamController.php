@@ -91,6 +91,31 @@ class ExamController extends Controller
         return back()->with('success', 'Exam published successfully.');
     }
 
+    public function questionBank(Batch $batch): View
+    {
+        abort_unless(Auth::user()->isAdmin() || $batch->teacher_id === Auth::id(), 403);
+        $questions = QuestionBankQuestion::where('teacher_id', Auth::id())->latest()->paginate(25);
+
+        return view('teacher.exams.question-bank', compact('batch', 'questions'));
+    }
+
+    public function storeBankQuestion(Batch $batch, Request $request): RedirectResponse
+    {
+        abort_unless(Auth::user()->isAdmin() || $batch->teacher_id === Auth::id(), 403);
+        $validated = $request->validate([
+            'subject' => ['nullable', 'string', 'max:120'],
+            'question' => ['required', 'string', 'max:3000'],
+            'options' => ['required', 'array', 'size:4'],
+            'options.*' => ['required', 'string', 'max:500'],
+            'correct_option' => ['required', 'integer', 'between:0,3'],
+            'marks' => ['required', 'integer', 'min:1', 'max:100'],
+        ]);
+
+        QuestionBankQuestion::create([...$validated, 'teacher_id' => Auth::id()]);
+
+        return back()->with('success', 'Question added to your question bank.');
+    }
+
     public function teacherResults(Exam $exam): View
     {
         abort_unless(Auth::user()->isAdmin() || $exam->batch->teacher_id === Auth::id(), 403);
