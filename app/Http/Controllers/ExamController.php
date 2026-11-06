@@ -98,9 +98,18 @@ class ExamController extends Controller
     public function questionBank(Batch $batch): View
     {
         abort_unless(Auth::user()->isAdmin() || $batch->teacher_id === Auth::id(), 403);
-        $questions = QuestionBankQuestion::where('teacher_id', Auth::id())->latest()->paginate(25);
+        $query = QuestionBankQuestion::where('teacher_id', Auth::id());
+        if (request('search')) {
+            $term = trim(request('search'));
+            $query->where(fn ($builder) => $builder->where('question', 'like', "%{$term}%")
+                ->orWhere('subject', 'like', "%{$term}%"));
+        }
+        if (request('category')) $query->where('category', request('category'));
+        if (request('difficulty')) $query->where('difficulty', request('difficulty'));
+        $questions = $query->latest()->paginate(25)->withQueryString();
+        $categories = QuestionBankQuestion::where('teacher_id', Auth::id())->whereNotNull('category')->distinct()->orderBy('category')->pluck('category');
 
-        return view('teacher.exams.question-bank', compact('batch', 'questions'));
+        return view('teacher.exams.question-bank', compact('batch', 'questions', 'categories'));
     }
 
     public function storeBankQuestion(Batch $batch, Request $request): RedirectResponse
@@ -108,6 +117,8 @@ class ExamController extends Controller
         abort_unless(Auth::user()->isAdmin() || $batch->teacher_id === Auth::id(), 403);
         $validated = $request->validate([
             'subject' => ['nullable', 'string', 'max:120'],
+            'category' => ['nullable', 'string', 'max:80'],
+            'difficulty' => ['required', 'in:easy,medium,hard'],
             'question' => ['required', 'string', 'max:3000'],
             'options' => ['required', 'array', 'size:4'],
             'options.*' => ['required', 'string', 'max:500'],
@@ -118,6 +129,37 @@ class ExamController extends Controller
         QuestionBankQuestion::create([...$validated, 'teacher_id' => Auth::id()]);
 
         return back()->with('success', 'Question added to your question bank.');
+    }
+
+
+    public function updateBankQuestion(Batch $batch, QuestionBankQuestion $question, Request $request): RedirectResponse
+    {
+        abort_unless(Auth::user()->isAdmin() || $batch->teacher_id === Auth::id(), 403);
+        abort_unless($question->teacher_id === Auth::id(), 403);
+        $validated = $request->validate([
+            'subject' => ['nullable', 'string', 'max:120'],
+            'category' => ['nullable', 'string', 'max:80'],
+            'difficulty' => ['required', 'in:easy,medium,hard'],
+            'question' => ['required', 'string', 'max:3000'],
+            'options' => ['required', 'array', 'size:4'],
+            'options.*' => ['required', 'string', 'max:500'],
+            'correct_option' => ['required', 'integer', 'between:0,3'],
+            'marks' => ['required', 'integer', 'min:1', 'max:100'],
+        ]);
+        $question->update($validated);
+
+        return back()->with('success', 'Question updated successfully.');
+    }
+
+    public function destroyBankQuestion(Batch $batch, QuestionBankQuestion $question): RedirectResponse
+    {
+        abort_unless(Auth::user()->isAdmin() || $batch->teacher_id === Auth::id(), 403);
+        abort_unless($question->teacher_id === Auth::id(), 403);
+        abort_if($question->examQuestions()->exists(), 409, 'This question is already used in an exam and cannot be deleted.');
+
+        $question->delete();
+
+        return back()->with('success', 'Question deleted successfully.');
     }
 
     public function teacherResults(Exam $exam): View
