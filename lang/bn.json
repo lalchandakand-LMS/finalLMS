@@ -1,0 +1,23 @@
+{
+    "Home": "হোম",
+    "Courses": "কোর্সসমূহ",
+    "About": "আমাদের সম্পর্কে",
+    "Contact": "যোগাযোগ",
+    "FAQ": "সাধারণ জিজ্ঞাসা",
+    "Login": "লগইন",
+    "Register": "নিবন্ধন",
+    "Dashboard": "ড্যাশবোর্ড",
+    "My courses": "আমার কোর্স",
+    "My invoices": "আমার ইনভয়েস",
+    "Live classes": "লাইভ ক্লাস",
+    "My exams": "আমার পরীক্ষা",
+    "My attendance": "আমার উপস্থিতি",
+    "Profile": "প্রোফাইল",
+    "Settings": "সেটিংস",
+    "Logout": "লগআউট",
+    "Search": "খুঁজুন",
+    "Save": "সংরক্ষণ",
+    "Cancel": "বাতিল",
+    "English": "ইংরেজি",
+    "Bangla": "বাংলা"
+}
