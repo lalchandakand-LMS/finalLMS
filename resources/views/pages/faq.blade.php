@@ -12,7 +12,7 @@
                 <p class="muted" style="margin:0;white-space:pre-line;line-height:1.7;">{{ $faq['answer'] }}</p>
             </article>
         @empty
-            <p class="muted">Frequently asked questions will be published here soon.</p>
+            <p class="muted">{{ __('Frequently asked questions will be published here soon.') }}</p>
         @endforelse
     </section>
 @endsection
