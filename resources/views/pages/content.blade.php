@@ -9,7 +9,7 @@
         @if($body)
             <div style="white-space:pre-line;line-height:1.8;">{{ $body }}</div>
         @else
-            <p class="muted">This page is being updated. Please contact the learning center for more information.</p>
+            <p class="muted">{{ __('This page is being updated. Please contact the learning center for more information.') }}</p>
         @endif
     </section>
 @endsection
