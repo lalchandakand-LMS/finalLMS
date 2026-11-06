@@ -19,7 +19,7 @@
                 <h2 style="margin:10px 0 6px;">{{ $batch->title }}</h2>
                 <p class="muted">Course: {{ $batch->course->title }}</p>
                 <p class="muted">Teacher: {{ $batch->teacher->name }}</p>
-                <p class="muted">Students enrolled: {{ $batch->enrollments()->count() }} / {{ $batch->capacity }}</p>
+                <p class="muted">Students enrolled: {{ $batch->enrollments_count }} / {{ $batch->capacity }}</p>
                 <p class="muted">{{ $batch->starts_at->format('d M Y H:i') }} – {{ $batch->ends_at->format('d M Y H:i') }}</p>
             </article>
         @empty
