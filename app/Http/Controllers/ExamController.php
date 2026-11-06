@@ -68,6 +68,7 @@ class ExamController extends Controller
         }
 
         abort_if($selectedQuestions->isEmpty(), 422, 'Add questions or select questions from your question bank.');
+        abort_if(($validated['questions_per_attempt'] ?? 0) > $selectedQuestions->count(), 422, 'Questions per attempt cannot exceed the number of questions in this exam.');
         $totalMarks = $selectedQuestions->sum('marks');
         if ($validated['pass_marks'] > $totalMarks) {
             return back()->withErrors(['pass_marks' => 'Pass marks cannot exceed the total marks.'])->withInput();
