@@ -67,6 +67,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
     Route::middleware('role:student')->group(function () {
         Route::get('/assignments/{assignment}', [AssignmentController::class, 'show'])->name('student.assignments.show');
+        Route::get('/my/exams', [ExamController::class, 'studentExams'])->name('student.exams.index');
         Route::get('/exams/{exam}', [ExamController::class, 'studentIndex'])->name('student.exams.show');
         Route::post('/exams/{exam}/start', [ExamController::class, 'start'])->name('student.exams.start');
         Route::post('/exam-attempts/{attempt}/submit', [ExamController::class, 'submit'])->name('student.exams.submit');
