@@ -66,6 +66,20 @@ class ExamController extends Controller
         return back()->with('success', 'Exam published successfully.');
     }
 
+    public function studentExams(): View
+    {
+        abort_unless(Auth::user()->isStudent(), 403);
+        $exams = Exam::with('batch.course')
+            ->where('status', 'published')
+            ->whereHas('batch.enrollments', fn ($query) => $query
+                ->where('user_id', Auth::id())
+                ->where('status', 'active'))
+            ->orderBy('starts_at')
+            ->paginate(20);
+
+        return view('exams.index', compact('exams'));
+    }
+
     public function studentIndex(Exam $exam): View
     {
         $this->ensureEnrolled($exam);
