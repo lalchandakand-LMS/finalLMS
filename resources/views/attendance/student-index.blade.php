@@ -1,12 +1,12 @@
 @extends('layouts.app')
 
-@section('title', 'My attendance | ' . config('app.name'))
+@section('title', __('My attendance') . ' | ' . config('app.name'))
 
 @section('content')
     <div class="page-header">
         <div>
             <span class="badge info">Student portal</span>
-            <h1 style="margin:12px 0 0;">My attendance</h1>
+            <h1 style="margin:12px 0 0;">{{ __('My attendance') }}</h1>
         </div>
         <a href="{{ route('dashboard') }}" class="btn secondary">Dashboard</a>
     </div>
@@ -20,7 +20,7 @@
                 <div class="muted">{{ $record->attendance_date->format('M j, Y') }}</div>
             </article>
         @empty
-            <div class="panel"><p class="muted" style="margin:0;">No attendance records are available yet.</p></div>
+            <div class="panel"><p class="muted" style="margin:0;">{{ __('No attendance records are available yet.') }}</p></div>
         @endforelse
     </div>
     <div style="margin-top:20px;">{{ $attendanceRecords->links() }}</div>
