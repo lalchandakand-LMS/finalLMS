@@ -97,6 +97,7 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
     });
     Route::get('/assignment-submissions/{submission}/attachment', [AssignmentController::class, 'download'])->name('assignment-submissions.attachment');
     Route::middleware('role:student')->group(function () {
+        Route::get('/my/courses', [CourseController::class, 'myCourses'])->name('student.courses.index');
         Route::get('/my/invoices', [InvoiceController::class, 'studentIndex'])->name('student.invoices.index');
         Route::get('/assignments/{assignment}', [AssignmentController::class, 'show'])->name('student.assignments.show');
         Route::get('/my/exams', [ExamController::class, 'studentExams'])->name('student.exams.index');
