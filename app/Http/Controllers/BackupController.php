@@ -129,7 +129,11 @@ class BackupController extends Controller
         abort_unless(Hash::check($validated['password'], $request->user()->password), 403, 'Password confirmation failed.');
 
         $compressed = file_get_contents($validated['backup_file']->getRealPath());
-        $envelopeJson = $compressed !== false ? gzdecode($compressed, 536870912) : false;
+        try {
+            $envelopeJson = $compressed !== false ? @gzdecode($compressed, 536870912) : false;
+        } catch (Throwable $exception) {
+            $envelopeJson = false;
+        }
         abort_unless(is_string($envelopeJson), 422, 'Invalid or damaged backup archive.');
 
         try {
