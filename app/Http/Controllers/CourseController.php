@@ -253,7 +253,7 @@ class CourseController extends Controller
             'content' => ['required', 'string'],
             'duration_minutes' => ['required', 'integer', 'min:1', 'max:600'],
             'order' => ['required', 'integer', 'min:1'],
-            'video_url' => ['nullable', 'url', 'max:2048', 'regex:/^https:\\/\\/(?:www\\.)?(?:youtube\\.com|youtu\\.be|youtube-nocookie\\.com|vimeo\\.com)(?:\\/|$)/i'],
+            'video_url' => ['nullable', 'url', 'max:2048', 'regex:/^https:\/\/(?:www\.)?(?:youtube\.com|youtu\.be|youtube-nocookie\.com|vimeo\.com)(?:\/|$)/i'],
             'is_preview' => ['sometimes', 'boolean'],
         ]);
         $validated['is_preview'] = $request->boolean('is_preview');
