@@ -99,6 +99,7 @@ class ExamController extends Controller
         abort_unless($attempt->status === 'in_progress', 403);
 
         $exam = $attempt->exam()->with('questions')->firstOrFail();
+        $this->ensureEnrolled($exam);
         $deadline = min($exam->ends_at->getTimestamp(), $attempt->started_at->copy()->addMinutes($exam->duration_minutes)->getTimestamp());
         abort_if(now()->getTimestamp() > $deadline, 403, 'The exam submission window has closed.');
 
