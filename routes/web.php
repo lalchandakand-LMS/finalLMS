@@ -14,6 +14,7 @@ use App\Http\Controllers\PhoneVerificationController;
 use App\Http\Controllers\SmsCampaignController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\LiveClassController;
+use App\Http\Controllers\ExamController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -59,11 +60,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/teacher/batches/{batch}/attendance', [AttendanceController::class, 'index'])->name('teacher.batches.attendance.index');
         Route::post('/teacher/batches/{batch}/attendance', [AttendanceController::class, 'store'])->name('teacher.batches.attendance.store');
         Route::get('/teacher/batches/{batch}/assignments', [AssignmentController::class, 'index'])->name('teacher.batches.assignments.index');
+        Route::get('/teacher/batches/{batch}/exams', [ExamController::class, 'teacherIndex'])->name('teacher.batches.exams.index');
+        Route::post('/teacher/batches/{batch}/exams', [ExamController::class, 'store'])->name('teacher.batches.exams.store');
         Route::post('/teacher/batches/{batch}/assignments', [AssignmentController::class, 'store'])->name('teacher.batches.assignments.store');
         Route::post('/teacher/assignments/{assignment}/submissions/{submission}/grade', [AssignmentController::class, 'grade'])->name('teacher.assignments.grade');
     });
     Route::middleware('role:student')->group(function () {
         Route::get('/assignments/{assignment}', [AssignmentController::class, 'show'])->name('student.assignments.show');
+        Route::get('/exams/{exam}', [ExamController::class, 'studentIndex'])->name('student.exams.show');
+        Route::post('/exams/{exam}/start', [ExamController::class, 'start'])->name('student.exams.start');
+        Route::post('/exam-attempts/{attempt}/submit', [ExamController::class, 'submit'])->name('student.exams.submit');
         Route::post('/assignments/{assignment}/submit', [AssignmentController::class, 'submit'])->name('student.assignments.submit');
     });
     Route::post('/phone/verification/send', [PhoneVerificationController::class, 'send'])
