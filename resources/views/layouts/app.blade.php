@@ -221,5 +221,6 @@
             window.location.reload();
         }
     </script>
+    @stack('scripts')
 </body>
 </html>
