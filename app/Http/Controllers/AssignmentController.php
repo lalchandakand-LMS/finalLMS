@@ -18,7 +18,7 @@ class AssignmentController extends Controller
     public function index(Batch $batch): View
     {
         abort_unless(Auth::user()->isAdmin() || $batch->teacher_id === Auth::id(), 403);
-        $assignments = $batch->assignments()->withCount('submissions')->latest()->get();
+        $assignments = $batch->assignments()->with(['submissions.student'])->withCount('submissions')->latest()->get();
 
         return view('teacher.assignments.index', compact('batch', 'assignments'));
     }
@@ -31,10 +31,11 @@ class AssignmentController extends Controller
             'title' => ['required', 'string', 'max:160'],
             'instructions' => ['required', 'string', 'max:10000'],
             'due_at' => ['required', 'date', 'after:now'],
+            'allow_late' => ['nullable', 'boolean'],
             'max_marks' => ['required', 'integer', 'min:1', 'max:10000'],
         ]);
 
-        $batch->assignments()->create([...$validated, 'teacher_id' => Auth::id(), 'status' => 'published']);
+        $batch->assignments()->create([...$validated, 'allow_late' => $request->boolean('allow_late'), 'teacher_id' => Auth::id(), 'status' => 'published']);
 
         return back()->with('success', 'Assignment published to the batch.');
     }
@@ -52,7 +53,7 @@ class AssignmentController extends Controller
     {
         abort_unless(Enrollment::where('batch_id', $assignment->batch_id)->where('user_id', Auth::id())->exists(), 403);
 
-        if ($assignment->due_at->isPast() || $assignment->status !== 'published') {
+        if ($assignment->status !== 'published' || ($assignment->due_at->isPast() && ! $assignment->allow_late)) {
             return back()->with('error', 'This assignment is closed for submissions.');
         }
 
@@ -62,16 +63,15 @@ class AssignmentController extends Controller
         ]);
 
         $existingSubmission = $assignment->submissions()->where('student_id', Auth::id())->first();
-        if ($existingSubmission) {
-            return back()->with('info', 'You have already submitted this assignment.');
+        if ($existingSubmission && $existingSubmission->status !== 'graded') {
+            return back()->with('info', 'Your submission is already received and awaiting review.');
         }
 
         $file = $request->file('attachment');
         $path = $file?->store('assignment-submissions/'.$assignment->id, 'local');
 
-        $submission = $assignment->submissions()->firstOrCreate(
-            ['student_id' => Auth::id()],
-            [
+        $submission = $existingSubmission ?? new AssignmentSubmission(['student_id' => Auth::id()]);
+        $submission->fill([
                 'answer' => $validated['answer'] ?? '',
                 'attachment_path' => $path,
                 'attachment_name' => $file?->getClientOriginalName(),
@@ -79,18 +79,14 @@ class AssignmentController extends Controller
                 'attachment_size' => $file?->getSize(),
                 'submitted_at' => now(),
                 'status' => 'submitted',
-            ]
-        );
+                'score' => null,
+                'feedback' => null,
+                'graded_by' => null,
+            ]);
+        $submission->assignment()->associate($assignment);
+        $submission->save();
 
-        if (! $submission->wasRecentlyCreated) {
-            if ($path) {
-                Storage::disk('local')->delete($path);
-            }
-
-            return back()->with('info', 'You have already submitted this assignment.');
-        }
-
-        return back()->with('success', 'Assignment submitted successfully.');
+        return back()->with('success', $existingSubmission ? 'Your revised assignment has been submitted.' : 'Assignment submitted successfully.');
     }
 
     public function download(AssignmentSubmission $submission): StreamedResponse
