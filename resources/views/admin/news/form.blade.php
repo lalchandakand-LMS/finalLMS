@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', $post->exists ? __('Edit article') : __('New article'))
 @section('content')
-<div class="page-header"><h1>{{ $post->exists ? '{{ __('Edit article') }}' : '{{ __('Create article') }}' }}</h1><a class="btn secondary" href="{{ route('admin.news.index') }}">{{ __('Back') }}</a></div>
+<div class="page-header"><h1>{{ $post->exists ? __('Edit article') : __('Create article') }}</h1><a class="btn secondary" href="{{ route('admin.news.index') }}">{{ __('Back') }}</a></div>
 <div class="panel"><form method="POST" action="{{ $post->exists ? route('admin.news.update', $post) : route('admin.news.store') }}">@csrf @if($post->exists) @method('PUT') @endif
 <label>Title<input name="title" maxlength="180" value="{{ old('title', $post->title) }}" required></label>
 <label>{{ __('URL slug (optional)') }}<input name="slug" maxlength="200" value="{{ old('slug', $post->slug) }}"></label>
