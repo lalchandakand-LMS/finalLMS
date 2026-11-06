@@ -11,7 +11,7 @@ class LiveClass extends Model
         'batch_id',
         'title',
         'description',
-        'meeting_url',
+        'meeting_url',\n        'recording_url',
         'starts_at',
         'ends_at',
         'status',
