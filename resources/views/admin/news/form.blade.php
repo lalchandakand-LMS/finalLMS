@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', $post->exists ? '{{ __('Edit article') }}' : '{{ __('New article') }}')
+@section('title', $post->exists ? __('Edit article') : __('New article'))
 @section('content')
 <div class="page-header"><h1>{{ $post->exists ? '{{ __('Edit article') }}' : '{{ __('Create article') }}' }}</h1><a class="btn secondary" href="{{ route('admin.news.index') }}">Back</a></div>
 <div class="panel"><form method="POST" action="{{ $post->exists ? route('admin.news.update', $post) : route('admin.news.store') }}">@csrf @if($post->exists) @method('PUT') @endif
