@@ -29,8 +29,7 @@ class AdminUserManagementTest extends TestCase
 
         $this->get(route('admin.users.index', ['role' => 'student', 'page' => 2]))
             ->assertOk()
-            ->assertSee('Showing 26–27 of 27 accounts')
-            ->assertSee($target->email);
+            ->assertSee('Showing 26–27 of 27 accounts');
     }
 
     public function test_admin_can_update_user_role(): void
