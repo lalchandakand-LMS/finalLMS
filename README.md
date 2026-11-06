@@ -33,11 +33,11 @@ The local/testing seeder creates `admin@lms.test`, `teacher@lms.test`, and `stud
 - Lesson progress tracking; certificates require every course lesson completed
 - Batch seat reservation for pending payments, unique transaction references, and last-admin protection
 - SEO metadata, consent-gated GA4/GTM/Meta Pixel tags, and consent-based queued bulk SMS
-- Admin homepage, payment, user, course, and settings controls
+- Admin homepage, payment, user, course, and settings controls\n- Student invoices, partial/installment receipts, manual payment ledger, and outstanding balance tracking\n- Admin activity log for successful authenticated changes, with user/action/route/IP filters
 
 ## Not yet complete
 
-This is not yet the complete commercial LMS described in the acceptance specification. Super-admin, branch-manager, and accountant permission matrices; invoices, installments, discounts and refunds; full public CMS pages; Bangla translations; activity logs; backups; and a secure web installer are not implemented. Payments are manual-review only; official bKash, Nagad, and SSLCommerz APIs and callback verification are not implemented. SMS/email delivery requires real provider credentials.
+This is not yet the complete commercial LMS described in the acceptance specification. Super-admin, branch-manager, and accountant permission matrices; discounts and refunds; full public CMS pages; Bangla translations; automated backup management; and a secure web installer are not implemented. Activity logging covers successful authenticated write requests; it is not yet a full audit trail for reads, login attempts, failed actions, or field-level changes. Payments are manual-review only; official bKash, Nagad, and SSLCommerz APIs and callback verification are not implemented. SMS/email delivery requires real provider credentials.
 
 ## First production administrator
 
