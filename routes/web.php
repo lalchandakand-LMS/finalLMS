@@ -76,6 +76,8 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         Route::post('/teacher/batches/{batch}/attendance', [AttendanceController::class, 'store'])->name('teacher.batches.attendance.store');
         Route::get('/teacher/batches/{batch}/assignments', [AssignmentController::class, 'index'])->name('teacher.batches.assignments.index');
         Route::get('/teacher/batches/{batch}/exams', [ExamController::class, 'teacherIndex'])->name('teacher.batches.exams.index');
+        Route::get('/teacher/batches/{batch}/question-bank', [ExamController::class, 'questionBank'])->name('teacher.batches.question-bank.index');
+        Route::post('/teacher/batches/{batch}/question-bank', [ExamController::class, 'storeBankQuestion'])->name('teacher.batches.question-bank.store');
         Route::get('/teacher/exams/{exam}/results', [ExamController::class, 'teacherResults'])->name('teacher.exams.results');
         Route::post('/teacher/batches/{batch}/exams', [ExamController::class, 'store'])->name('teacher.batches.exams.store');
         Route::post('/teacher/batches/{batch}/assignments', [AssignmentController::class, 'store'])->name('teacher.batches.assignments.store');
