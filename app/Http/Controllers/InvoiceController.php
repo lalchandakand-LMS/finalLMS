@@ -40,7 +40,7 @@ class InvoiceController extends Controller
 
     public function adminIndex(): View
     {
-        $invoices = Invoice::with(['user', 'course', 'batch', 'payments'])
+        $invoices = Invoice::with(['user', 'course', 'batch', 'payments', 'refunds'])
             ->latest()
             ->paginate(25);
         $students = User::query()->where('role', 'student')->orderBy('name')->get();
