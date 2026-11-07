@@ -372,5 +372,6 @@
     "Paid": "Paid",
     "Partial": "Partial",
     "Unpaid": "Unpaid",
-    "Cancelled": "Cancelled"
+    "Cancelled": "Cancelled",
+    "Online": "Online"
 }
