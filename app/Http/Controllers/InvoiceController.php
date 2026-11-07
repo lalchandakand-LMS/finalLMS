@@ -74,6 +74,8 @@ class InvoiceController extends Controller
             'title' => ['required', 'string', 'max:160'],
             'description' => ['nullable', 'string', 'max:2000'],
             'amount' => ['required', 'numeric', 'gt:0', 'max:99999999'],
+            'discount_type' => ['nullable', 'in:fixed,percentage'],
+            'discount_value' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
             'due_date' => ['nullable', 'date'],
         ]);
 
@@ -110,8 +112,34 @@ class InvoiceController extends Controller
             );
         }
 
+        $subtotal = round((float) $validated['amount'], 2);
+        $discountType = $validated['discount_type'] ?? null;
+        $discountValue = round((float) ($validated['discount_value'] ?? 0), 2);
+        if (! $discountType && $discountValue > 0) {
+            return back()->withErrors(['discount_type' => 'Choose a discount type before entering a discount value.'])->withInput();
+        }
+        if ($discountType === 'percentage' && $discountValue > 100) {
+            return back()->withErrors(['discount_value' => 'Percentage discount cannot exceed 100%.'])->withInput();
+        }
+        $discountAmount = match ($discountType) {
+            'fixed' => $discountValue,
+            'percentage' => round($subtotal * $discountValue / 100, 2),
+            default => 0,
+        };
+        if ($discountAmount > $subtotal) {
+            return back()->withErrors(['discount_value' => 'Discount cannot exceed the invoice subtotal.'])->withInput();
+        }
+        $netAmount = round($subtotal - $discountAmount, 2);
+        if ($netAmount <= 0) {
+            return back()->withErrors(['discount_value' => 'The final invoice amount must be greater than zero.'])->withInput();
+        }
+
         Invoice::create([
             ...$validated,
+            'amount' => $netAmount,
+            'subtotal' => $subtotal,
+            'discount_type' => $discountType,
+            'discount_value' => $discountValue,
             'created_by' => $request->user()->id,
             'invoice_number' => 'AEC-'.now()->format('Ymd').'-'.Str::upper(Str::random(6)),
             'status' => 'unpaid',
