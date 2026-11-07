@@ -14,7 +14,9 @@
         <div class="panel">
             <p class="muted">{{ __('Instructor:') }} {{ $course->teacher?->name ?? __('N/A') }}</p>
             <p>{{ $course->description }}</p>
-            @if(auth()->check() && (auth()->user()->isAdmin() || (auth()->user()->isTeacher() && $course->teacher_id === auth()->id())))
+            @if(auth()->check() && auth()->user()->isAdmin())
+                <a class="btn secondary" href="{{ route('admin.courses.lessons.index', $course) }}">{{ __('Manage lessons') }}</a>
+            @elseif(auth()->check() && auth()->user()->isTeacher() && $course->teacher_id === auth()->id())
                 <a class="btn secondary" href="{{ route('teacher.courses.lessons.index', $course) }}">{{ __('Manage lessons') }}</a>
             @endif
             <div class="meta-row">
