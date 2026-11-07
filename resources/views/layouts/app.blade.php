@@ -41,6 +41,7 @@
             fbq('track','PageView');
         </script>
     @endif
+    @php($isAdminLayout = auth()->check() && auth()->user()->isAdmin())
     <style>
         :root {
             --bg: #f3f6fb;
@@ -55,7 +56,23 @@
             --danger: #b42318;
             --shadow: 0 14px 34px rgba(21, 70, 168, 0.12);
         }
+
         * { box-sizing: border-box; }
+        body.admin-shell { background:#f5f7fb; }
+        .admin-shell .topbar { margin-left:252px; }
+        .admin-shell .nav { max-width:none; padding:14px 26px; }
+        .admin-sidebar { position:fixed; inset:0 auto 0 0; z-index:30; width:252px; padding:24px 15px; overflow-y:auto; color:#dbe7ff; background:linear-gradient(180deg,#102b63,#0b1d42); }
+        .admin-sidebar-brand { display:flex; align-items:center; gap:11px; padding:4px 10px 24px; color:#fff; font-weight:800; font-size:1rem; line-height:1.35; }
+        .admin-sidebar-brand span:first-child { display:grid; place-items:center; width:39px; height:39px; border-radius:12px; background:#ffffff1c; font-size:1.2rem; }
+        .admin-sidebar-label { margin:15px 10px 8px; color:#91a9d0; font-size:.68rem; font-weight:800; letter-spacing:.13em; text-transform:uppercase; }
+        .admin-sidebar a { display:flex; align-items:center; gap:11px; padding:10px 12px; margin:3px 0; border-radius:10px; color:#dbe7ff; font-size:.88rem; font-weight:600; text-decoration:none; }
+        .admin-sidebar a:hover,.admin-sidebar a.active { color:#fff; background:#ffffff1a; }
+        .admin-sidebar a span:first-child { width:22px; text-align:center; font-size:1.05rem; }
+        .admin-sidebar-footer { margin:22px 8px 0; padding:14px 10px; border-top:1px solid #ffffff25; color:#9fb3d4; font-size:.78rem; line-height:1.6; }
+        .admin-shell .container { max-width:none; margin-left:252px; padding:28px 30px 55px; }
+        @media(max-width:900px) { .admin-sidebar { width:76px; padding:20px 9px; } .admin-sidebar-brand { justify-content:center; padding:4px 0 22px; } .admin-sidebar-brand strong,.admin-sidebar-label,.admin-sidebar a .nav-text,.admin-sidebar-footer { display:none; } .admin-sidebar a { justify-content:center; padding:12px 5px; } .admin-sidebar a span:first-child { width:auto; } .admin-shell .topbar,.admin-shell .container { margin-left:76px; } .admin-shell .nav { padding:12px 16px; } }
+        @media(max-width:600px) { .admin-sidebar { width:60px; } .admin-shell .topbar,.admin-shell .container { margin-left:60px; } .admin-shell .container { padding:18px 12px 40px; } .admin-shell .nav { padding:10px; } .admin-shell .brand { font-size:1rem; } }
+
         body {
             margin: 0;
             font-family: Arial, Helvetica, sans-serif;
@@ -148,9 +165,36 @@
         }
     </style>
 </head>
-<body>
+<body class="{{ $isAdminLayout ? 'admin-shell' : '' }}">
     @if($marketingConsent && $googleTagManagerId)
         <noscript><iframe src="https://www.googletagmanager.com/ns.html?id={{ urlencode($googleTagManagerId) }}" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    @endif
+
+    @if($isAdminLayout)
+        <aside class="admin-sidebar" aria-label="Admin navigation">
+            <a class="admin-sidebar-brand" href="{{ route('dashboard') }}"><span>📘</span><strong>Alom’s English Center<br><small style="font-weight:500;color:#a9bee0;">Admin workspace</small></strong></a>
+            <div class="admin-sidebar-label">Overview</div>
+            <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><span>▦</span><span class="nav-text">Dashboard</span></a>
+            <div class="admin-sidebar-label">Academy</div>
+            <a href="{{ route('admin.courses.index') }}"><span>📚</span><span class="nav-text">Courses & lessons</span></a>
+            <a href="{{ route('admin.users.index') }}"><span>👥</span><span class="nav-text">Students & teachers</span></a>
+            <a href="{{ route('admin.batches.index') }}"><span>🗓️</span><span class="nav-text">Batches & branches</span></a>
+            <a href="{{ route('live-classes.index') }}"><span>🎥</span><span class="nav-text">Live classes</span></a>
+            <div class="admin-sidebar-label">Finance</div>
+            <a href="{{ route('admin.payments.index') }}"><span>💳</span><span class="nav-text">Payments</span></a>
+            <a href="{{ route('admin.invoices.index') }}"><span>🧾</span><span class="nav-text">Invoices</span></a>
+            <a href="{{ route('admin.refunds.index') }}"><span>↩️</span><span class="nav-text">Refunds</span></a>
+            <a href="{{ route('admin.expenses.index') }}"><span>💸</span><span class="nav-text">Expenses & reports</span></a>
+            <div class="admin-sidebar-label">Website & tools</div>
+            <a href="{{ route('admin.website-builder.index') }}"><span>🖥️</span><span class="nav-text">Website builder</span></a>
+            <a href="{{ route('admin.media.index') }}"><span>🖼️</span><span class="nav-text">Media library</span></a>
+            <a href="{{ route('admin.news.index') }}"><span>📰</span><span class="nav-text">Blog & news</span></a>
+            <a href="{{ route('admin.backups.index') }}"><span>💾</span><span class="nav-text">Backup & restore</span></a>
+            <a href="{{ route('admin.activity-logs.index') }}"><span>📋</span><span class="nav-text">Activity logs</span></a>
+            <a href="{{ route('admin.settings.index') }}"><span>⚙️</span><span class="nav-text">Settings</span></a>
+            <a href="{{ route('admin.sms-campaigns.index') }}"><span>✉️</span><span class="nav-text">SMS campaigns</span></a>
+            <div class="admin-sidebar-footer">Alom’s English Center<br>Learning Management System</div>
+        </aside>
     @endif
     <header class="topbar">
         <nav class="nav">
