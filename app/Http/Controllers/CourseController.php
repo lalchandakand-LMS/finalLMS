@@ -228,7 +228,7 @@ class CourseController extends Controller
     public function teacherLessons(Course $course): View
     {
         $user = Auth::user();
-        abort_unless($user?->isTeacher() && $course->teacher_id === $user->id, 403);
+        abort_unless($user?->isAdmin() || ($user?->isTeacher() && $course->teacher_id === $user->id), 403);
         $course->load('lessons');
         $students = $course->enrollments()->whereIn('status', ['active', 'completed'])->with('user')->get();
         $lessonIds = $course->lessons->pluck('id');
