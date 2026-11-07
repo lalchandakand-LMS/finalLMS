@@ -179,6 +179,8 @@
                         <a href="{{ route('admin.sms-campaigns.index') }}">SMS</a>
                         <a href="{{ route('admin.payments.index') }}">Payments</a>
                         <a href="{{ route('admin.invoices.index') }}">Invoices</a>
+                        <a href="{{ route('admin.expenses.index') }}">Expenses</a>
+                        <a href="{{ route('admin.finance-reports.index') }}">Finance reports</a>
                         <a href="{{ route('admin.activity-logs.index') }}">Activity log</a>
                         <a href="{{ route('admin.settings.index') }}">Settings</a>
                         <a href="{{ route('admin.website-builder.index') }}">{{ __('Website Builder') }}</a>
@@ -193,6 +195,8 @@
                     @endif
                     @if(auth()->user()->isAccountant())
                         <a href="{{ route('accountant.invoices.index') }}">Finance</a>
+                        <a href="{{ route('accountant.expenses.index') }}">Expenses</a>
+                        <a href="{{ route('accountant.finance-reports.index') }}">Reports</a>
                     @endif
                     @if(auth()->user()->isTeacher())
                         <a href="{{ route('teacher.batches.index') }}">My batches</a>
