@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ app()->getLocale() }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -156,32 +156,65 @@
         <nav class="nav">
             <a href="/{{ auth()->check() ? 'dashboard' : '' }}" class="brand">{{ config('app.name') }}</a>
             <div class="nav-links">
-                <a href="/">Home</a>
-                <a href="{{ route('courses.index') }}">Courses</a>
+                <form method="POST" action="{{ route('locale.update') }}" class="inline-form" style="display:inline-flex;gap:6px;align-items:center;">
+                    @csrf
+                    <label for="locale-switch" class="muted" style="margin:0;">{{ __('Language') }}</label>
+                    <select id="locale-switch" name="locale" onchange="this.form.submit()" style="width:auto;padding:8px 10px;">
+                        <option value="en" @selected(app()->getLocale() === 'en')>{{ __('English') }}</option>
+                        <option value="bn" @selected(app()->getLocale() === 'bn')>{{ __('Bangla') }}</option>
+                    </select>
+                </form>
+                <a href="/">{{ __('Home') }}</a>
+                <a href="{{ route('courses.index') }}">{{ __('Courses') }}</a>
+                <a href="{{ route('pages.about') }}">{{ __('About') }}</a>
+                <a href="{{ route('pages.contact') }}">{{ __('Contact') }}</a>
+                <a href="{{ route('pages.faq') }}">{{ __('FAQ') }}</a>
+                <a href="{{ route('news.index') }}">{{ __('Blog & News') }}</a>
                 @auth
-                    <a href="{{ route('dashboard') }}">Dashboard</a>
-                    <a href="{{ route('profile.edit') }}">Profile</a>
+                    <a href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a>
+                    <a href="{{ route('profile.edit') }}">{{ __('Profile') }}</a>
+                    <a href="{{ route('live-classes.index') }}">{{ __('Live classes') }}</a>
                     @if(auth()->user()->isAdmin())
                         <a href="{{ route('admin.batches.index') }}">Batches</a>
                         <a href="{{ route('admin.sms-campaigns.index') }}">SMS</a>
                         <a href="{{ route('admin.payments.index') }}">Payments</a>
+                        <a href="{{ route('admin.invoices.index') }}">Invoices</a>
+                        <a href="{{ route('admin.refunds.index') }}">Refunds</a>
+                        <a href="{{ route('admin.expenses.index') }}">Expenses</a>
+                        <a href="{{ route('admin.finance-reports.index') }}">Finance reports</a>
+                        <a href="{{ route('admin.activity-logs.index') }}">Activity log</a>
                         <a href="{{ route('admin.settings.index') }}">Settings</a>
+                        <a href="{{ route('admin.website-builder.index') }}">{{ __('Website Builder') }}</a>
+                        <a href="{{ route('admin.backups.index') }}">{{ __('Backup & Restore') }}</a>
+                        <a href="{{ route('admin.media.index') }}">{{ __('Media Library') }}</a>
+                        <a href="{{ route('admin.news.index') }}">{{ __('Blog & News') }}</a>
                         <a href="{{ route('admin.users.index') }}">Users</a>
                         <a href="{{ route('admin.courses.index') }}">Courses</a>
+                    @endif
+                    @if(auth()->user()->isBranchManager())
+                        <a href="{{ route('branch-manager.batches.index') }}">My branch</a>
+                    @endif
+                    @if(auth()->user()->isAccountant())
+                        <a href="{{ route('accountant.invoices.index') }}">Finance</a>
+                        <a href="{{ route('accountant.refunds.index') }}">Refunds</a>
+                        <a href="{{ route('accountant.expenses.index') }}">Expenses</a>
+                        <a href="{{ route('accountant.finance-reports.index') }}">Reports</a>
                     @endif
                     @if(auth()->user()->isTeacher())
                         <a href="{{ route('teacher.batches.index') }}">My batches</a>
                     @endif
                     @if(auth()->user()->isStudent())
                         <a href="{{ route('student.attendance.index') }}">Attendance</a>
+                    <a href="{{ route('student.exams.index') }}">Exams</a>
+                        <a href="{{ route('student.invoices.index') }}">My fees</a>
                     @endif
                     <form method="POST" action="{{ route('logout') }}" class="inline-form">
                         @csrf
-                        <button type="submit">Logout</button>
+                        <button type="submit">{{ __('Logout') }}</button>
                     </form>
                 @else
-                    <a href="{{ route('login') }}">Login</a>
-                    <a href="{{ route('register') }}">Register</a>
+                    <a href="{{ route('login') }}">{{ __('Login') }}</a>
+                    <a href="{{ route('register') }}">{{ __('Register') }}</a>
                 @endauth
             </div>
         </nav>
@@ -220,5 +253,6 @@
             window.location.reload();
         }
     </script>
+    @stack('scripts')
 </body>
 </html>

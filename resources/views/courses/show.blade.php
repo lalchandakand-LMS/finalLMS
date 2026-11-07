@@ -20,9 +20,9 @@
             </div>
 
             <div style="margin-top: 28px;">
-                <h2 style="margin-top:0;">Learning path</h2>
+                <h2 style="margin-top:0;">{{ __('Learning path') }}</h2>
                 @if($course->lessons->isEmpty())
-                    <p class="muted">No lessons are available for this course yet.</p>
+                    <p class="muted">{{ __('No lessons are available for this course yet.') }}</p>
                 @else
                     <div class="course-list">
                         @foreach($course->lessons as $lesson)
@@ -34,18 +34,18 @@
                                             <span class="muted">{{ $lesson->duration_minutes }} minutes</span>
                                         </div>
                                         @if($lesson->is_preview)
-                                            <span class="badge info">Preview</span>
+                                            <span class="badge info">{{ __('Preview') }}</span>
                                         @endif
                                     </div>
                                     <p style="margin: 10px 0 0;">{{ $lesson->content }}</p>
                                     @auth
                                         @if(auth()->user()->isStudent() && $canViewLessons && ! $lesson->is_preview)
                                             @if($lessonProgress->has($lesson->id))
-                                                <span class="badge success" style="margin-top:12px;">Completed</span>
+                                                <span class="badge success" style="margin-top:12px;">{{ __('Completed') }}</span>
                                             @else
                                                 <form method="POST" action="{{ route('courses.lessons.complete', [$course, $lesson]) }}" style="margin-top:12px;">
                                                     @csrf
-                                                    <button type="submit" class="btn secondary">Mark lesson complete</button>
+                                                    <button type="submit" class="btn secondary">{{ __('Mark lesson complete') }}</button>
                                                 </form>
                                             @endif
                                         @endif
@@ -55,14 +55,14 @@
                         @endforeach
                     </div>
                     @unless($canViewLessons)
-                        <p class="muted">Enroll in this course to unlock the full learning path.</p>
+                        <p class="muted">{{ __('Enroll in this course to unlock the full learning path.') }}</p>
                     @endunless
                 @endif
             </div>
         </div>
 
         <div class="panel">
-            <h2 style="margin-top:0;">Enrollment</h2>
+            <h2 style="margin-top:0;">{{ __('Enrollment') }}</h2>
             @auth
                 @if(auth()->user()->isStudent())
                     @if($enrollment)
@@ -99,7 +99,7 @@
                                             @endforeach
                                         </select>
                                     @endif
-                                    <button type="submit" class="btn primary">Enroll now</button>
+                                    <button type="submit" class="btn primary">{{ __('Enroll now') }}</button>
                                 </form>
                             @elseif($paymentMethods->isEmpty())
                                 <p class="muted">Payment is not available for this course yet. Please contact the academy.</p>

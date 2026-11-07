@@ -1,12 +1,12 @@
 @extends('layouts.app')
 
-@section('title', isset($course) ? 'Edit Course | LMS Academy' : 'Create Course | LMS Academy')
+@section('title', isset($course) ? __('Edit course') . ' | ' . config('app.name') : __('Create course') . ' | ' . config('app.name'))
 
 @section('content')
     <div class="page-header">
         <div>
-            <span class="badge info">Admin</span>
-            <h1 style="margin: 12px 0 0;">{{ isset($course) ? 'Edit course' : 'Create course' }}</h1>
+            <span class="badge info">{{ __('Admin') }}</span>
+            <h1 style="margin: 12px 0 0;">{{ isset($course) ? __('Edit course') : __('Create course') }}</h1>
         </div>
     </div>
 
@@ -18,21 +18,21 @@
             @endif
 
             <label>
-                Title
-                <input type="text" name="title" value="{{ old('title', $course->title ?? '') }}" required>
+                {{ __('Title') }}
+                <input type="text" name="title" value="{{ old('title', $course?->title ?? '') }}" maxlength="255" required>
             </label>
 
             <label>
-                Description
-                <textarea name="description" rows="6" required>{{ old('description', $course->description ?? '') }}</textarea>
+                {{ __('Description') }}
+                <textarea name="description" rows="6" required>{{ old('description', $course?->description ?? '') }}</textarea>
             </label>
 
             <label>
-                Teacher
+                {{ __('Teacher') }}
                 <select name="teacher_id" required>
-                    <option value="">Select a teacher</option>
+                    <option value="">{{ __('Select a teacher') }}</option>
                     @foreach($teachers as $teacher)
-                        <option value="{{ $teacher->id }}" {{ old('teacher_id', $course->teacher_id ?? '') == $teacher->id ? 'selected' : '' }}>
+                        <option value="{{ $teacher->id }}" {{ (string) old('teacher_id', $course?->teacher_id ?? '') === (string) $teacher->id ? 'selected' : '' }}>
                             {{ $teacher->name }}
                         </option>
                     @endforeach
@@ -40,22 +40,22 @@
             </label>
 
             <label>
-                Price (BDT)
-                <input type="number" step="0.01" min="0" name="price" value="{{ old('price', $course->price ?? 0) }}" required>
+                {{ __('Price (BDT)') }}
+                <input type="number" step="0.01" min="0" name="price" value="{{ old('price', $course?->price ?? 0) }}" required>
             </label>
 
             <label>
-                Status
+                {{ __('Status') }}
                 <select name="status" required>
-                    <option value="published" {{ old('status', $course->status ?? '') === 'published' ? 'selected' : '' }}>Published</option>
-                    <option value="draft" {{ old('status', $course->status ?? '') === 'draft' ? 'selected' : '' }}>Draft</option>
-                    <option value="archived" {{ old('status', $course->status ?? '') === 'archived' ? 'selected' : '' }}>Archived</option>
+                    <option value="published" {{ old('status', $course?->status ?? 'draft') === 'published' ? 'selected' : '' }}>{{ __('Published') }}</option>
+                    <option value="draft" {{ old('status', $course?->status ?? 'draft') === 'draft' ? 'selected' : '' }}>{{ __('Draft') }}</option>
+                    <option value="archived" {{ old('status', $course?->status ?? 'draft') === 'archived' ? 'selected' : '' }}>{{ __('Archived') }}</option>
                 </select>
             </label>
 
             <div style="display:flex; gap:12px; margin-top:20px;">
-                <button type="submit" class="btn primary">Save course</button>
-                <a href="{{ route('admin.courses.index') }}" class="btn secondary">Cancel</a>
+                <button type="submit" class="btn primary">{{ __('Save course') }}</button>
+                <a href="{{ route('admin.courses.index') }}" class="btn secondary">{{ __('Cancel') }}</a>
             </div>
         </form>
     </div>

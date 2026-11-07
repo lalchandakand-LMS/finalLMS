@@ -13,6 +13,19 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PhoneVerificationController;
 use App\Http\Controllers\SmsCampaignController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\LiveClassController;
+use App\Http\Controllers\ExamController;
+use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\FinanceReportController;
+use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\InvoiceRefundController;
+use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\CmsPageController;
+use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\MediaLibraryController;
+use App\Http\Controllers\BlogController;
+use App\Http\Controllers\WebsiteBuilderController;
+use App\Http\Controllers\BackupController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -27,6 +40,13 @@ Route::middleware('guest')->group(function () {
 });
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1')->name('login.post');
 
+Route::get('/about', [CmsPageController::class, 'about'])->name('pages.about');
+Route::get('/contact', [CmsPageController::class, 'contact'])->name('pages.contact');
+Route::get('/faq', [CmsPageController::class, 'faq'])->name('pages.faq');
+Route::get('/news', [BlogController::class, 'index'])->name('news.index');
+Route::get('/news/{post:slug}', [BlogController::class, 'show'])->name('news.show');
+Route::post('/language', [LocaleController::class, 'update'])->middleware('throttle:20,1')->name('locale.update');
+
 Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
 Route::get('/courses/{course}', [CourseController::class, 'show'])->name('courses.show');
 
@@ -40,18 +60,63 @@ Route::middleware('auth')->group(function () {
         ->name('verification.send');
 });
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
+    Route::get('/live-classes', [LiveClassController::class, 'index'])->name('live-classes.index');
+    Route::get('/invoice-payments/{payment}/receipt', [InvoiceController::class, 'receipt'])
+        ->middleware('role:admin,accountant')
+        ->name('invoice-payments.receipt');
+    Route::middleware('role:branch_manager')->group(function () {
+        Route::get('/branch-manager/batches', [BatchController::class, 'branchManagerIndex'])->name('branch-manager.batches.index');
+        Route::get('/branch-manager/students', [BatchController::class, 'branchManagerStudents'])->name('branch-manager.students.index');
+        Route::post('/branch-manager/batches', [BatchController::class, 'branchManagerStore'])->name('branch-manager.batches.store');
+        Route::put('/branch-manager/batches/{batch}', [BatchController::class, 'branchManagerUpdate'])->name('branch-manager.batches.update');
+    });
+    Route::middleware('role:accountant')->group(function () {
+        Route::get('/accountant/invoices', [InvoiceController::class, 'accountantIndex'])->name('accountant.invoices.index');
+        Route::get('/accountant/refunds', [InvoiceRefundController::class, 'index'])->name('accountant.refunds.index');
+        Route::post('/accountant/refunds', [InvoiceRefundController::class, 'store'])->name('accountant.refunds.store');
+        Route::get('/accountant/finance-reports', [FinanceReportController::class, 'index'])->name('accountant.finance-reports.index');
+        Route::get('/accountant/expenses', [ExpenseController::class, 'index'])->name('accountant.expenses.index');
+        Route::post('/accountant/expenses', [ExpenseController::class, 'store'])->name('accountant.expenses.store');
+        Route::put('/accountant/expenses/{expense}', [ExpenseController::class, 'update'])->name('accountant.expenses.update');
+        Route::delete('/accountant/expenses/{expense}', [ExpenseController::class, 'destroy'])->name('accountant.expenses.destroy');
+        Route::post('/accountant/invoices', [InvoiceController::class, 'store'])->name('accountant.invoices.store');
+        Route::post('/accountant/invoices/{invoice}/payments', [InvoiceController::class, 'receivePayment'])->name('accountant.invoices.payments.store');
+    });
+    Route::post('/teacher/batches/{batch}/live-classes', [LiveClassController::class, 'store'])
+        ->middleware('role:teacher')
+        ->name('teacher.batches.live-classes.store');
+    Route::put('/live-classes/{liveClass}', [LiveClassController::class, 'update'])
+        ->middleware('role:teacher,admin')
+        ->name('live-classes.update');
+    Route::delete('/live-classes/{liveClass}', [LiveClassController::class, 'destroy'])
+        ->middleware('role:teacher,admin')
+        ->name('live-classes.destroy');
+
     Route::middleware('role:teacher')->get('/teacher/batches', [BatchController::class, 'teacherIndex'])->name('teacher.batches.index');
     Route::middleware('role:student')->get('/my/attendance', [AttendanceController::class, 'studentIndex'])->name('student.attendance.index');
     Route::middleware('role:teacher')->group(function () {
         Route::get('/teacher/batches/{batch}/attendance', [AttendanceController::class, 'index'])->name('teacher.batches.attendance.index');
         Route::post('/teacher/batches/{batch}/attendance', [AttendanceController::class, 'store'])->name('teacher.batches.attendance.store');
         Route::get('/teacher/batches/{batch}/assignments', [AssignmentController::class, 'index'])->name('teacher.batches.assignments.index');
+        Route::get('/teacher/batches/{batch}/exams', [ExamController::class, 'teacherIndex'])->name('teacher.batches.exams.index');
+        Route::get('/teacher/batches/{batch}/question-bank', [ExamController::class, 'questionBank'])->name('teacher.batches.question-bank.index');
+        Route::post('/teacher/batches/{batch}/question-bank', [ExamController::class, 'storeBankQuestion'])->name('teacher.batches.question-bank.store');
+        Route::put('/teacher/batches/{batch}/question-bank/{question}', [ExamController::class, 'updateBankQuestion'])->name('teacher.batches.question-bank.update');
+        Route::delete('/teacher/batches/{batch}/question-bank/{question}', [ExamController::class, 'destroyBankQuestion'])->name('teacher.batches.question-bank.destroy');
+        Route::get('/teacher/exams/{exam}/results', [ExamController::class, 'teacherResults'])->name('teacher.exams.results');
+        Route::post('/teacher/batches/{batch}/exams', [ExamController::class, 'store'])->name('teacher.batches.exams.store');
         Route::post('/teacher/batches/{batch}/assignments', [AssignmentController::class, 'store'])->name('teacher.batches.assignments.store');
         Route::post('/teacher/assignments/{assignment}/submissions/{submission}/grade', [AssignmentController::class, 'grade'])->name('teacher.assignments.grade');
     });
+    Route::get('/assignment-submissions/{submission}/attachment', [AssignmentController::class, 'download'])->name('assignment-submissions.attachment');
     Route::middleware('role:student')->group(function () {
+        Route::get('/my/invoices', [InvoiceController::class, 'studentIndex'])->name('student.invoices.index');
         Route::get('/assignments/{assignment}', [AssignmentController::class, 'show'])->name('student.assignments.show');
+        Route::get('/my/exams', [ExamController::class, 'studentExams'])->name('student.exams.index');
+        Route::get('/exams/{exam}', [ExamController::class, 'studentIndex'])->name('student.exams.show');
+        Route::post('/exams/{exam}/start', [ExamController::class, 'start'])->name('student.exams.start');
+        Route::post('/exam-attempts/{attempt}/submit', [ExamController::class, 'submit'])->name('student.exams.submit');
         Route::post('/assignments/{assignment}/submit', [AssignmentController::class, 'submit'])->name('student.assignments.submit');
     });
     Route::post('/phone/verification/send', [PhoneVerificationController::class, 'send'])
@@ -73,6 +138,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('courses.lessons.complete');
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
+        Route::get('/invoices', [InvoiceController::class, 'adminIndex'])->name('admin.invoices.index');
+        Route::get('/refunds', [InvoiceRefundController::class, 'index'])->name('admin.refunds.index');
+        Route::post('/refunds', [InvoiceRefundController::class, 'store'])->name('admin.refunds.store');
+        Route::post('/refunds/{refund}/approve', [InvoiceRefundController::class, 'approve'])->name('admin.refunds.approve');
+        Route::post('/refunds/{refund}/reject', [InvoiceRefundController::class, 'reject'])->name('admin.refunds.reject');
+        Route::get('/finance-reports', [FinanceReportController::class, 'index'])->name('admin.finance-reports.index');
+        Route::get('/expenses', [ExpenseController::class, 'index'])->name('admin.expenses.index');
+        Route::post('/expenses', [ExpenseController::class, 'store'])->name('admin.expenses.store');
+        Route::put('/expenses/{expense}', [ExpenseController::class, 'update'])->name('admin.expenses.update');
+        Route::delete('/expenses/{expense}', [ExpenseController::class, 'destroy'])->name('admin.expenses.destroy');
+        Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('admin.activity-logs.index');
+        Route::post('/invoices', [InvoiceController::class, 'store'])->name('admin.invoices.store');
+        Route::post('/invoices/{invoice}/payments', [InvoiceController::class, 'receivePayment'])->name('admin.invoices.payments.store');
         Route::get('/batches', [BatchController::class, 'index'])->name('admin.batches.index');
         Route::get('/batches/{batch}/attendance', [AttendanceController::class, 'index'])->name('admin.batches.attendance.index');
         Route::post('/batches/{batch}/attendance', [AttendanceController::class, 'store'])->name('admin.batches.attendance.store');
@@ -92,6 +170,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/payments/{payment}/reject', [PaymentController::class, 'reject'])->name('admin.payments.reject');
         Route::get('/payments/{payment}/proof', [PaymentController::class, 'proof'])->name('admin.payments.proof');
 
+        Route::get('/backups', [BackupController::class, 'index'])->name('admin.backups.index');
+        Route::post('/backups', [BackupController::class, 'create'])->name('admin.backups.create');
+        Route::get('/backups/{filename}', [BackupController::class, 'download'])->name('admin.backups.download');
+        Route::post('/backups/restore', [BackupController::class, 'restore'])->middleware('throttle:2,10')->name('admin.backups.restore');
+        Route::get('/website-builder', [WebsiteBuilderController::class, 'index'])->name('admin.website-builder.index');
+        Route::post('/website-builder', [WebsiteBuilderController::class, 'update'])->name('admin.website-builder.update');
+        Route::get('/media', [MediaLibraryController::class, 'index'])->name('admin.media.index');
+        Route::post('/media', [MediaLibraryController::class, 'store'])->name('admin.media.store');
+        Route::delete('/media/{media}', [MediaLibraryController::class, 'destroy'])->name('admin.media.destroy');
+        Route::get('/news', [BlogController::class, 'adminIndex'])->name('admin.news.index');
+        Route::get('/news/create', [BlogController::class, 'create'])->name('admin.news.create');
+        Route::post('/news', [BlogController::class, 'store'])->name('admin.news.store');
+        Route::get('/news/{post}/edit', [BlogController::class, 'edit'])->name('admin.news.edit');
+        Route::put('/news/{post}', [BlogController::class, 'update'])->name('admin.news.update');
+        Route::delete('/news/{post}', [BlogController::class, 'destroy'])->name('admin.news.destroy');
         Route::get('/settings', [AdminSettingsController::class, 'index'])->name('admin.settings.index');
         Route::post('/settings', [AdminSettingsController::class, 'update'])->name('admin.settings.update');
 

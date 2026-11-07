@@ -9,11 +9,53 @@ use App\Models\Enrollment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class AssignmentWorkflowTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_student_can_submit_private_attachment_and_only_authorized_users_can_download_it(): void
+    {
+        Storage::fake('local');
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $student = User::factory()->create(['role' => 'student']);
+        $otherStudent = User::factory()->create(['role' => 'student']);
+        $course = Course::create([
+            'teacher_id' => $teacher->id, 'title' => 'File Course', 'slug' => 'file-course',
+            'description' => 'Files.', 'price' => 0, 'status' => 'published',
+        ]);
+        $branch = Branch::create(['name' => 'File Branch', 'slug' => 'file-branch']);
+        $batch = Batch::create([
+            'branch_id' => $branch->id, 'course_id' => $course->id, 'teacher_id' => $teacher->id,
+            'title' => 'File Batch', 'capacity' => 10, 'starts_at' => now(),
+            'ends_at' => now()->addMonth(), 'fee' => 0, 'status' => 'open',
+        ]);
+        Enrollment::create(['user_id' => $student->id, 'course_id' => $course->id, 'batch_id' => $batch->id, 'status' => 'active']);
+        $assignment = $batch->assignments()->create([
+            'teacher_id' => $teacher->id, 'title' => 'Upload work', 'instructions' => 'Attach a PDF.',
+            'due_at' => now()->addDay(), 'max_marks' => 10, 'status' => 'published',
+        ]);
+
+        $this->actingAs($student)->post(route('student.assignments.submit', $assignment), [
+            'attachment' => UploadedFile::fake()->create('homework.pdf', 100, 'application/pdf'),
+        ])->assertRedirect();
+
+        $submissionId = DB::table('assignment_submissions')->value('id');
+        $submission = \App\Models\AssignmentSubmission::findOrFail($submissionId);
+        Storage::disk('local')->assertExists($submission->attachment_path);
+
+        $this->actingAs($student)->post(route('student.assignments.submit', $assignment), [
+            'attachment' => UploadedFile::fake()->create('duplicate.pdf', 100, 'application/pdf'),
+        ])->assertSessionHas('info');
+        $this->assertCount(1, Storage::disk('local')->allFiles('assignment-submissions/'.$assignment->id));
+
+        $this->actingAs($student)->get(route('assignment-submissions.attachment', $submission))->assertOk();
+        $this->actingAs($teacher)->get(route('assignment-submissions.attachment', $submission))->assertOk();
+        $this->actingAs($otherStudent)->get(route('assignment-submissions.attachment', $submission))->assertForbidden();
+    }
 
     public function test_teacher_can_publish_assignment_student_submits_once_and_teacher_grades(): void
     {

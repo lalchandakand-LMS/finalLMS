@@ -25,6 +25,88 @@ class BatchController extends Controller
         return view('admin.batches.index', compact('branches', 'batches', 'courses', 'teachers'));
     }
 
+    public function branchManagerIndex(Request $request): View
+    {
+        abort_unless($request->user()->branch_id, 403, 'No branch is assigned to this account.');
+
+        $batches = Batch::with(['branch', 'course', 'teacher'])->withCount('enrollments')
+            ->where('branch_id', $request->user()->branch_id)
+            ->latest('starts_at')
+            ->paginate(25);
+
+        $courses = Course::where('status', 'published')->orderBy('title')->get();
+        $teachers = User::where('role', 'teacher')->where('branch_id', $request->user()->branch_id)->orderBy('name')->get();
+
+        return view('branch-manager.batches.index', compact('batches', 'courses', 'teachers'));
+    }
+
+    public function branchManagerStore(Request $request): RedirectResponse
+    {
+        $branchId = $request->user()->branch_id;
+        abort_unless($branchId && Branch::whereKey($branchId)->where('is_active', true)->exists(), 403, 'No active branch is assigned to this account.');
+        $validated = $request->validate([
+            'course_id' => ['required', Rule::exists('courses', 'id')->where(fn ($query) => $query->where('status', 'published'))],
+            'teacher_id' => ['required', Rule::exists('users', 'id')->where(fn ($query) => $query->where('role', 'teacher')->where('branch_id', $branchId))],
+            'title' => ['required', 'string', 'max:160'],
+            'capacity' => ['required', 'integer', 'min:1', 'max:1000'],
+            'starts_at' => ['required', 'date'],
+            'ends_at' => ['required', 'date', 'after:starts_at'],
+            'fee' => ['required', 'numeric', 'min:0'],
+        ]);
+        Batch::create([...$validated, 'branch_id' => $branchId, 'status' => 'open']);
+        return redirect()->route('branch-manager.batches.index')->with('success', 'Batch created for your branch.');
+    }
+
+    public function branchManagerUpdate(Batch $batch, Request $request): RedirectResponse
+    {
+        abort_unless($request->user()->branch_id && $batch->branch_id === $request->user()->branch_id, 404);
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:160'],
+            'capacity' => ['required', 'integer', 'min:1', 'max:1000'],
+            'starts_at' => ['required', 'date'],
+            'ends_at' => ['required', 'date', 'after:starts_at'],
+            'fee' => ['required', 'numeric', 'min:0'],
+            'status' => ['required', 'in:open,closed,completed'],
+        ]);
+        abort_if($validated['capacity'] < $batch->enrollments()->whereIn('status', ['active', 'completed'])->count(), 422, 'Capacity cannot be lower than the current enrolled student count.');
+        $batch->update($validated);
+        return redirect()->route('branch-manager.batches.index')->with('success', 'Your branch batch was updated.');
+    }
+
+    public function branchManagerStudents(Request $request): View
+    {
+        $branchId = $request->user()->branch_id;
+        abort_unless($branchId && Branch::whereKey($branchId)->where('is_active', true)->exists(), 403, 'No active branch is assigned to this account.');
+
+        $validated = $request->validate([
+            'search' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        $students = User::query()
+            ->where('role', 'student')
+            ->where(function ($query) use ($branchId): void {
+                $query->where('branch_id', $branchId)
+                    ->orWhereHas('enrollments.batch', fn ($batch) => $batch->where('branch_id', $branchId));
+            })
+            ->with(['enrollments' => function ($query) use ($branchId): void {
+                $query->whereIn('status', ['active', 'completed'])
+                    ->whereHas('batch', fn ($batch) => $batch->where('branch_id', $branchId))
+                    ->with(['batch.course']);
+            }])
+            ->when($validated['search'] ?? null, function ($query, string $search): void {
+                $query->where(function ($builder) use ($search): void {
+                    $builder->where('name', 'like', '%'.$search.'%')
+                        ->orWhere('email', 'like', '%'.$search.'%')
+                        ->orWhere('phone_number', 'like', '%'.$search.'%');
+                });
+            })
+            ->orderBy('name')
+            ->paginate(25)
+            ->withQueryString();
+
+        return view('branch-manager.students.index', compact('students'));
+    }
+
     public function teacherIndex(): View
     {
         $batches = Batch::with(['branch', 'course'])

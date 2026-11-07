@@ -10,27 +10,27 @@
     <div class="page-header">
         <div>
             <span class="badge info">Catalog</span>
-            <h1 style="margin: 12px 0 0;">Available courses</h1>
+            <h1 style="margin: 12px 0 0;">{{ __('Available courses') }}</h1>
         </div>
         <span class="badge success">{{ $courseCount }} online</span>
     </div>
 
     <div class="dash-summary" style="margin-bottom: 20px;">
         <div class="summary-box">
-            <span class="muted">Available</span>
+            <span class="muted">{{ __('Available') }}</span>
             <strong>{{ $courseCount }}</strong>
         </div>
         <div class="summary-box">
-            <span class="muted">Topics</span>
+            <span class="muted">{{ __('Topics') }}</span>
             <strong>{{ $courses->where('status', 'published')->count() }}</strong>
         </div>
         <div class="summary-box">
-            <span class="muted">Access</span>
+            <span class="muted">{{ __('Access') }}</span>
             <strong>24/7</strong>
         </div>
         <div class="summary-box">
-            <span class="muted">Format</span>
-            <strong>Self-paced</strong>
+            <span class="muted">{{ __('Format') }}</span>
+            <strong>{{ __('Self-paced') }}</strong>
         </div>
     </div>
 
@@ -44,10 +44,10 @@
                         </div>
                         <h3 style="margin: 0 0 8px;">{{ $course->title }}</h3>
                         <p class="muted" style="margin: 0 0 12px;">{{ \Illuminate\Support\Str::limit($course->description, 160) }}</p>
-                        <div class="muted">Teacher: {{ $course->teacher?->name ?? 'N/A' }} · Price: BDT {{ number_format($course->price, 2) }}</div>
+                        <div class="muted">{{ __('Teacher:') }} {{ $course->teacher?->name ?? 'N/A' }} · {{ __('Price:') }} BDT {{ number_format($course->price, 2) }}</div>
                     </div>
                     <div>
-                        <a href="{{ route('courses.show', $course) }}" class="btn secondary">View details</a>
+                        <a href="{{ route('courses.show', $course) }}" class="btn secondary">{{ __('View details') }}</a>
                     </div>
                 </div>
             </div>

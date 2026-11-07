@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Dashboard | LMS Academy')
+@section('title', __('Dashboard') . ' | LMS Academy')
 
 @section('content')
     @php
@@ -9,27 +9,27 @@
 
     <div class="page-header">
         <div>
-            <span class="badge info">Dashboard</span>
-            <h1 style="margin: 12px 0 0;">Hello, {{ $user->name }}</h1>
+            <span class="badge info">{{ __('Dashboard') }}</span>
+            <h1 style="margin: 12px 0 0;">{{ __('Hello,') }} {{ $user->name }}</h1>
         </div>
-        <span class="badge success">{{ $roleLabel }} account</span>
+        <span class="badge success">{{ $roleLabel }} {{ __('account') }}</span>
     </div>
 
     <div class="dash-summary">
         <div class="summary-box">
-            <span class="muted">Courses</span>
+            <span class="muted">{{ __('Courses') }}</span>
             <strong>{{ $courses->count() }}</strong>
         </div>
         <div class="summary-box">
-            <span class="muted">Enrolled</span>
+            <span class="muted">{{ __('Enrolled') }}</span>
             <strong>{{ $enrolledCourses->count() }}</strong>
         </div>
         <div class="summary-box">
-            <span class="muted">Certificates</span>
+            <span class="muted">{{ __('Certificates') }}</span>
             <strong>{{ $recentCertificates->count() }}</strong>
         </div>
         <div class="summary-box">
-            <span class="muted">Role</span>
+            <span class="muted">{{ __('Role') }}</span>
             <strong>{{ $roleLabel }}</strong>
         </div>
     </div>
@@ -38,78 +38,78 @@
         <div class="panel" style="margin-bottom: 20px;">
             <div class="page-header" style="margin-bottom: 0;">
                 <div>
-                    <span class="badge info">Admin panel</span>
-                    <h2 style="margin: 12px 0 0;">Operations overview</h2>
+                    <span class="badge info">{{ __('Admin panel') }}</span>
+                    <h2 style="margin: 12px 0 0;">{{ __('Operations overview') }}</h2>
                 </div>
-                <a href="{{ route('admin.courses.index') }}" class="btn primary">Manage courses</a>
+                <a href="{{ route('admin.courses.index') }}" class="btn primary">{{ __('Manage courses') }}</a>
             </div>
 
             <div class="grid grid-3" style="margin-top: 20px;">
                 <div class="card">
-                    <span class="badge info">Homepage</span>
-                    <h3 style="margin: 12px 0 8px;">Landing page</h3>
-                    <p class="muted" style="margin: 0 0 12px;">Edit hero copy, CTAs, and key stats for the public-facing homepage.</p>
-                    <a href="{{ route('admin.settings.index') }}" class="btn secondary" style="width: 100%;">Open homepage</a>
+                    <span class="badge info">{{ __('Homepage') }}</span>
+                    <h3 style="margin: 12px 0 8px;">{{ __('Landing page') }}</h3>
+                    <p class="muted" style="margin: 0 0 12px;">{{ __('Edit hero copy, CTAs, and key stats for the public-facing homepage.') }}</p>
+                    <a href="{{ route('admin.settings.index') }}" class="btn secondary" style="width: 100%;">{{ __('Open homepage') }}</a>
                 </div>
                 <div class="card">
-                    <span class="badge info">Users</span>
-                    <h3 style="margin: 12px 0 8px;">Manage roles</h3>
-                    <p class="muted" style="margin: 0 0 12px;">Review learners, teachers, and admins and change access levels.</p>
-                    <a href="{{ route('admin.users.index') }}" class="btn secondary" style="width: 100%;">Open users</a>
+                    <span class="badge info">{{ __('Users') }}</span>
+                    <h3 style="margin: 12px 0 8px;">{{ __('Manage roles') }}</h3>
+                    <p class="muted" style="margin: 0 0 12px;">{{ __('Review learners, teachers, and admins and change access levels.') }}</p>
+                    <a href="{{ route('admin.users.index') }}" class="btn secondary" style="width: 100%;">{{ __('Open users') }}</a>
                 </div>
                 <div class="card">
-                    <span class="badge info">Courses</span>
-                    <h3 style="margin: 12px 0 8px;">Course catalog</h3>
-                    <p class="muted" style="margin: 0 0 12px;">Create, edit, publish, and manage course content and lessons.</p>
-                    <a href="{{ route('admin.courses.index') }}" class="btn secondary" style="width: 100%;">Open courses</a>
+                    <span class="badge info">{{ __('Courses') }}</span>
+                    <h3 style="margin: 12px 0 8px;">{{ __('Course catalog') }}</h3>
+                    <p class="muted" style="margin: 0 0 12px;">{{ __('Create, edit, publish, and manage course content and lessons.') }}</p>
+                    <a href="{{ route('admin.courses.index') }}" class="btn secondary" style="width: 100%;">{{ __('Open courses') }}</a>
                 </div>
                 <div class="card">
-                    <span class="badge info">Payments</span>
-                    <h3 style="margin: 12px 0 8px;">Review payments</h3>
-                    <p class="muted" style="margin: 0 0 12px;">Verify bKash, Rocket, bank, and manual payment submissions before granting course access.</p>
-                    <a href="{{ route('admin.payments.index') }}" class="btn secondary" style="width: 100%;">Open payments</a>
+                    <span class="badge info">{{ __('Payments') }}</span>
+                    <h3 style="margin: 12px 0 8px;">{{ __('Review payments') }}</h3>
+                    <p class="muted" style="margin: 0 0 12px;">{{ __('Verify bKash, Rocket, bank, and manual payment submissions before granting course access.') }}</p>
+                    <a href="{{ route('admin.payments.index') }}" class="btn secondary" style="width: 100%;">{{ __('Open payments') }}</a>
                 </div>
                 <div class="card">
-                    <span class="badge info">Marketing</span>
-                    <h3 style="margin: 12px 0 8px;">SMS campaigns</h3>
-                    <p class="muted" style="margin: 0 0 12px;">Send updates to verified learners who have opted in to academy messages.</p>
-                    <a href="{{ route('admin.sms-campaigns.index') }}" class="btn secondary" style="width: 100%;">Manage SMS</a>
+                    <span class="badge info">{{ __('Marketing') }}</span>
+                    <h3 style="margin: 12px 0 8px;">{{ __('SMS campaigns') }}</h3>
+                    <p class="muted" style="margin: 0 0 12px;">{{ __('Send updates to verified learners who have opted in to academy messages.') }}</p>
+                    <a href="{{ route('admin.sms-campaigns.index') }}" class="btn secondary" style="width: 100%;">{{ __('Manage SMS') }}</a>
                 </div>
                 <div class="card">
-                    <span class="badge info">Settings</span>
-                    <h3 style="margin: 12px 0 8px;">System settings</h3>
-                    <p class="muted" style="margin: 0 0 12px;">Control core homepage configuration and brand messaging.</p>
-                    <a href="{{ route('admin.settings.index') }}" class="btn secondary" style="width: 100%;">Open settings</a>
+                    <span class="badge info">{{ __('Settings') }}</span>
+                    <h3 style="margin: 12px 0 8px;">{{ __('System settings') }}</h3>
+                    <p class="muted" style="margin: 0 0 12px;">{{ __('Control core homepage configuration and brand messaging.') }}</p>
+                    <a href="{{ route('admin.settings.index') }}" class="btn secondary" style="width: 100%;">{{ __('Open settings') }}</a>
                 </div>
                 <div class="card">
-                    <span class="badge info">Analytics</span>
-                    <h3 style="margin: 12px 0 8px;">Platform insight</h3>
-                    <p class="muted" style="margin: 0 0 12px;">Monitor learners, certificates, and catalog health from one view.</p>
-                    <a href="#analytics" class="btn secondary" style="width: 100%;">Open analytics</a>
+                    <span class="badge info">{{ __('Analytics') }}</span>
+                    <h3 style="margin: 12px 0 8px;">{{ __('Platform insight') }}</h3>
+                    <p class="muted" style="margin: 0 0 12px;">{{ __('Monitor learners, certificates, and catalog health from one view.') }}</p>
+                    <a href="#analytics" class="btn secondary" style="width: 100%;">{{ __('Open analytics') }}</a>
                 </div>
                 <div class="card">
-                    <span class="badge info">Live</span>
-                    <h3 style="margin: 12px 0 8px;">Public site</h3>
-                    <p class="muted" style="margin: 0 0 12px;">Preview the configured public landing page as visitors see it.</p>
-                    <a href="{{ route('landing') }}" class="btn secondary" style="width: 100%;">Preview home</a>
+                    <span class="badge info">{{ __('Live') }}</span>
+                    <h3 style="margin: 12px 0 8px;">{{ __('Public site') }}</h3>
+                    <p class="muted" style="margin: 0 0 12px;">{{ __('Preview the configured public landing page as visitors see it.') }}</p>
+                    <a href="{{ route('landing') }}" class="btn secondary" style="width: 100%;">{{ __('Preview home') }}</a>
                 </div>
             </div>
 
             <div class="dash-summary" style="margin-top: 18px;">
                 <div class="summary-box">
-                    <span class="muted">Students</span>
+                    <span class="muted">{{ __('Students') }}</span>
                     <strong>{{ $stats['students'] }}</strong>
                 </div>
                 <div class="summary-box">
-                    <span class="muted">Teachers</span>
+                    <span class="muted">{{ __('Teachers') }}</span>
                     <strong>{{ $stats['teachers'] }}</strong>
                 </div>
                 <div class="summary-box">
-                    <span class="muted">Certificates</span>
+                    <span class="muted">{{ __('Certificates') }}</span>
                     <strong>{{ $stats['certificates'] }}</strong>
                 </div>
                 <div class="summary-box">
-                    <span class="muted">Catalog</span>
+                    <span class="muted">{{ __('Catalog') }}</span>
                     <strong>{{ $stats['courses'] }}</strong>
                 </div>
             </div>
@@ -118,18 +118,18 @@
         <div id="analytics" class="panel" style="margin-bottom: 20px;">
             <div class="page-header" style="margin-bottom: 0;">
                 <div>
-                    <span class="badge info">Analytics</span>
-                    <h2 style="margin: 12px 0 0;">Platform metrics</h2>
+                    <span class="badge info">{{ __('Analytics') }}</span>
+                    <h2 style="margin: 12px 0 0;">{{ __('Platform metrics') }}</h2>
                 </div>
             </div>
 
             <div class="dash-summary" style="margin-top: 18px;">
                 <div class="summary-box">
-                    <span class="muted">Completion rate</span>
+                    <span class="muted">{{ __('Completion rate') }}</span>
                     <strong>{{ $stats['courses'] > 0 ? round((min($stats['certificates'], $stats['courses']) / max($stats['courses'], 1)) * 100) : 0 }}%</strong>
                 </div>
                 <div class="summary-box">
-                    <span class="muted">Learner base</span>
+                    <span class="muted">{{ __('Learner base') }}</span>
                     <strong>{{ $stats['students'] + $stats['teachers'] }}</strong>
                 </div>
                 <div class="summary-box">
@@ -167,7 +167,7 @@
                             <div class="meta-row">
                                 <div>
                                     <h3 style="margin: 0 0 8px;">{{ $course->title }}</h3>
-                                    <div class="muted">Teacher: {{ $course->teacher?->name ?? 'N/A' }}</div>
+                                    <div class="muted">Teacher: {{ optional($course->teacher)->name ?? 'N/A' }}</div>
                                 </div>
                                 <a href="{{ route('courses.show', $course) }}" class="btn secondary">Open</a>
                             </div>
