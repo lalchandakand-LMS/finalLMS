@@ -364,5 +364,13 @@
     "Total:": "Total:",
     "Net paid:": "Net paid:",
     "Outstanding:": "Outstanding:",
-    "Receipt ref:": "Receipt ref:"
+    "Receipt ref:": "Receipt ref:",
+    "Invoices & finance": "Invoices & finance",
+    "Refunded:": "Refunded:",
+    "Receipts": "Receipts",
+    "You do not have any invoices yet.": "You do not have any invoices yet.",
+    "Paid": "Paid",
+    "Partial": "Partial",
+    "Unpaid": "Unpaid",
+    "Cancelled": "Cancelled"
 }
