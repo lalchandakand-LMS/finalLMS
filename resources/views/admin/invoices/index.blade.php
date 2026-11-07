@@ -75,7 +75,8 @@
 
     <div class="course-list">
         @forelse($invoices as $invoice)
-            @php($paid = (float) $invoice->payments->sum('amount'))
+            @php($refunded = (float) $invoice->refunds->where('status', 'approved')->sum('amount'))
+            @php($paid = max(0, (float) $invoice->payments->sum('amount') - $refunded))
             @php($due = max(0, (float) $invoice->amount - $paid))
             <article class="course-item">
                 <div class="meta-row" style="margin-top:0;">
@@ -87,7 +88,7 @@
                             @if((float) ($invoice->discount_value ?? 0) > 0)
                                 · Discount {{ $invoice->discount_type === 'percentage' ? number_format((float) $invoice->discount_value, 2).'%' : '৳'.number_format((float) $invoice->discount_value, 2) }}
                             @endif
-                            · Net total ৳{{ number_format((float) $invoice->amount, 2) }} · Paid ৳{{ number_format($paid, 2) }} · Due ৳{{ number_format($due, 2) }}</div>
+                            · Net total ৳{{ number_format((float) $invoice->amount, 2) }} · Net paid ৳{{ number_format($paid, 2) }} · Refunded ৳{{ number_format($refunded, 2) }} · Due ৳{{ number_format($due, 2) }}</div>
                         @if($invoice->due_date)<div class="muted">Due date: {{ $invoice->due_date->format('d M Y') }}</div>@endif
                         @if($invoice->description)<p>{{ $invoice->description }}</p>@endif
                     </div>
