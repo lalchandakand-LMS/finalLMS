@@ -42,7 +42,7 @@
                         <span class="badge {{ $campaign->status === 'completed' ? 'success' : 'warning' }}">{{ __(ucfirst($campaign->status)) }}</span>
                         <h3 style="margin:10px 0 6px;">{{ $campaign->title }}</h3>
                         <p class="muted" style="margin:0 0 8px;">{{ $campaign->message }}</p>
-                        <div class="muted">{{ __('Audience:') }} {{ __(ucfirst($campaign->audience)) }} · {{ __('Created by') }} {{ $campaign->creator?->name ?? __('Former user') }}</div>
+                        <div class="muted">{{ __('Audience:') }} {{ $campaign->audience === 'all' ? __('All opted-in users') : __(ucfirst($campaign->audience)) }} · {{ __('Created by') }} {{ $campaign->creator?->name ?? __('Former user') }}</div>
                         <div class="muted">{{ $campaign->sent_count }} {{ __('sent') }} · {{ $campaign->failed_count }} {{ __('failed') }} · {{ $campaign->skipped_count }} {{ __('skipped') }} · {{ $campaign->recipient_count }} {{ __('total') }}</div>
                     </div>
                     <time class="muted" datetime="{{ $campaign->created_at->toIso8601String() }}">{{ $campaign->created_at->format('M j, Y H:i') }}</time>
