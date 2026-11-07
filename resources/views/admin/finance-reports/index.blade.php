@@ -23,7 +23,8 @@
     <div class="dash-summary">
         <div class="summary-box"><span class="muted">Collected in selected period</span><strong>৳{{ number_format($collected, 2) }}</strong><small>{{ $paymentCount }} transactions</small></div>
         <div class="summary-box"><span class="muted">Expenses in selected period</span><strong>৳{{ number_format($expenses, 2) }}</strong><small>{{ $expenseCount }} records</small></div>
-        <div class="summary-box"><span class="muted">Net cash movement</span><strong>৳{{ number_format($netBalance, 2) }}</strong><small>Collections minus expenses</small></div>
+        <div class="summary-box"><span class="muted">Approved refunds</span><strong>৳{{ number_format($refundTotal, 2) }}</strong><small>{{ $refundCount }} refunds in selected period</small></div>
+        <div class="summary-box"><span class="muted">Net cash movement</span><strong>৳{{ number_format($netBalance, 2) }}</strong><small>Collections minus refunds and expenses</small></div>
         <div class="summary-box"><span class="muted">Invoices issued in period</span><strong>{{ number_format($issuedInvoices) }}</strong><small>৳{{ number_format($issuedAmount, 2) }} billed</small></div>
         <div class="summary-box"><span class="muted">Current outstanding</span><strong>৳{{ number_format($outstanding, 2) }}</strong><small>All unpaid / partial invoices</small></div>
         <div class="summary-box"><span class="muted">Average collection</span><strong>৳{{ number_format($paymentCount ? $collected / $paymentCount : 0, 2) }}</strong><small>Per transaction</small></div>
