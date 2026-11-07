@@ -38,4 +38,19 @@ Integrate verified LMS work from `feature/admin-dashboard-refresh` into protecte
 
 ## Current status
 
-The integration branch is isolated from main. No production code has been merged or deployed by this audit commit. The first code stage must preserve main's newer installer and finance modules while adding only reviewed feature changes.
+The integration branch is isolated from main. No production code has been merged or deployed.
+
+### Stage 1: student learning portal and recorded lessons
+
+Ported into the integration branch:
+- Student "My Courses" list with enrollment status and lesson completion progress.
+- Recorded lesson route and protected lesson playback for enrolled students, with public preview support.
+- Privacy-enhanced YouTube embeds and Vimeo embeds; arbitrary host URLs are not embedded.
+- Teacher-owned lesson create/update/delete and student progress overview.
+- Lesson video URL migration and model field.
+- Regression tests for student access, cross-course access, preview access, lesson progress, and teacher ownership.
+- Course page links to lessons and a teacher-only lesson-management shortcut.
+
+The first attempt to transplant isolated tests for question-bank and branch-manager changes failed because the matching production implementation was not present on main. Those tests were removed from this increment and are deferred until their implementation and migrations are integrated together. This is intentional: tests must not be merged ahead of the code they exercise.
+
+Stage 1 CI is being rerun on the integration branch. Do not mark this stage complete until the latest test and cPanel package jobs pass.
