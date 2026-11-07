@@ -98,18 +98,32 @@ class ExamController extends Controller
     public function questionBank(Batch $batch): View
     {
         abort_unless(Auth::user()->isAdmin() || $batch->teacher_id === Auth::id(), 403);
-        $query = QuestionBankQuestion::where('teacher_id', Auth::id());
-        if (request('search')) {
-            $term = trim(request('search'));
-            $query->where(fn ($builder) => $builder->where('question', 'like', "%{$term}%")
-                ->orWhere('subject', 'like', "%{$term}%"));
-        }
-        if (request('category')) $query->where('category', request('category'));
-        if (request('difficulty')) $query->where('difficulty', request('difficulty'));
+        $filters = request()->validate([
+            'subject' => ['nullable', 'string', 'max:120'],
+            'search' => ['nullable', 'string', 'max:120'],
+            'category' => ['nullable', 'string', 'max:80'],
+            'difficulty' => ['nullable', 'in:easy,medium,hard'],
+        ]);
+        $query = QuestionBankQuestion::where('teacher_id', Auth::id())
+            ->when($filters['subject'] ?? null, fn ($builder, string $subject) => $builder->where('subject', $subject))
+            ->when($filters['category'] ?? null, fn ($builder, string $category) => $builder->where('category', $category))
+            ->when($filters['difficulty'] ?? null, fn ($builder, string $difficulty) => $builder->where('difficulty', $difficulty))
+            ->when($filters['search'] ?? null, function ($builder, string $term): void {
+                $term = trim($term);
+                if ($term !== '') {
+                    $builder->where(fn ($nested) => $nested->where('question', 'like', '%'.$term.'%')
+                        ->orWhere('subject', 'like', '%'.$term.'%'));
+                }
+            });
         $questions = $query->latest()->paginate(25)->withQueryString();
-        $categories = QuestionBankQuestion::where('teacher_id', Auth::id())->whereNotNull('category')->distinct()->orderBy('category')->pluck('category');
+        $subjects = QuestionBankQuestion::where('teacher_id', Auth::id())
+            ->whereNotNull('subject')->where('subject', '<>', '')
+            ->select('subject')->distinct()->orderBy('subject')->pluck('subject');
+        $categories = QuestionBankQuestion::where('teacher_id', Auth::id())
+            ->whereNotNull('category')->where('category', '<>', '')
+            ->select('category')->distinct()->orderBy('category')->pluck('category');
 
-        return view('teacher.exams.question-bank', compact('batch', 'questions', 'categories'));
+        return view('teacher.exams.question-bank', compact('batch', 'questions', 'subjects', 'categories'));
     }
 
     public function storeBankQuestion(Batch $batch, Request $request): RedirectResponse
@@ -118,7 +132,7 @@ class ExamController extends Controller
         $validated = $request->validate([
             'subject' => ['nullable', 'string', 'max:120'],
             'category' => ['nullable', 'string', 'max:80'],
-            'difficulty' => ['required', 'in:easy,medium,hard'],
+            'difficulty' => ['sometimes', 'in:easy,medium,hard'],
             'question' => ['required', 'string', 'max:3000'],
             'options' => ['required', 'array', 'size:4'],
             'options.*' => ['required', 'string', 'max:500'],

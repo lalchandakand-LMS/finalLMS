@@ -35,6 +35,7 @@
     <form method="GET" class="panel" style="margin-bottom:18px;">
         <div class="grid grid-2">
             <label>{{ __('Search') }}<input name="search" value="{{ request('search') }}" placeholder="{{ __('Search question or subject') }}"></label>
+            <label>{{ __('Subject') }}<select name="subject"><option value="">{{ __('All subjects') }}</option>@foreach($subjects as $subject)<option value="{{ $subject }}" @selected(request('subject') === $subject)>{{ $subject }}</option>@endforeach</select></label>
             <label>{{ __('Category') }}<select name="category"><option value="">{{ __('All categories') }}</option>@foreach($categories as $category)<option value="{{ $category }}" @selected(request('category') === $category)>{{ $category }}</option>@endforeach</select></label>
             <label>{{ __('Difficulty') }}<select name="difficulty"><option value="">{{ __('All levels') }}</option>@foreach(['easy','medium','hard'] as $level)<option value="{{ $level }}" @selected(request('difficulty') === $level)>{{ ucfirst($level) }}</option>@endforeach</select></label>
         </div>
