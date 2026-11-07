@@ -95,9 +95,21 @@ class ExamController extends Controller
     public function questionBank(Batch $batch): View
     {
         abort_unless(Auth::user()->isAdmin() || $batch->teacher_id === Auth::id(), 403);
-        $questions = QuestionBankQuestion::where('teacher_id', Auth::id())->latest()->paginate(25);
+        $subjectFilter = request()->query('subject');
+        $search = trim((string) request()->query('search', ''));
+        $questionQuery = QuestionBankQuestion::where('teacher_id', Auth::id());
+        if (is_string($subjectFilter) && $subjectFilter !== '') {
+            $questionQuery->where('subject', $subjectFilter);
+        }
+        if ($search !== '') {
+            $questionQuery->where('question', 'like', '%'.$search.'%');
+        }
+        $subjects = QuestionBankQuestion::where('teacher_id', Auth::id())
+            ->whereNotNull('subject')->where('subject', '<>', '')
+            ->select('subject')->distinct()->orderBy('subject')->pluck('subject');
+        $questions = $questionQuery->latest()->paginate(25)->withQueryString();
 
-        return view('teacher.exams.question-bank', compact('batch', 'questions'));
+        return view('teacher.exams.question-bank', compact('batch', 'questions', 'subjects', 'subjectFilter', 'search'));
     }
 
     public function storeBankQuestion(Batch $batch, Request $request): RedirectResponse
