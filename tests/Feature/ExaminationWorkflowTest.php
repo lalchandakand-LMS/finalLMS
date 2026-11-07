@@ -194,6 +194,66 @@ class ExaminationWorkflowTest extends TestCase
         $this->assertDatabaseCount('exams', 0);
     }
 
+
+    public function test_teacher_can_update_and_delete_questions_in_own_question_bank(): void
+    {
+        [$teacher, $student, $batch] = $this->makeBatchWithStudent();
+        $question = QuestionBankQuestion::create([
+            'teacher_id' => $teacher->id,
+            'subject' => 'Grammar',
+            'question' => 'Original question?',
+            'options' => ['A', 'B', 'C', 'D'],
+            'correct_option' => 0,
+            'marks' => 1,
+        ]);
+
+        $this->actingAs($teacher)->put(route('teacher.batches.question-bank.update', [$batch, $question]), [
+            'subject' => 'Tenses',
+            'question' => 'Updated question?',
+            'options' => ['One', 'Two', 'Three', 'Four'],
+            'correct_option' => 2,
+            'marks' => 3,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('question_bank_questions', [
+            'id' => $question->id,
+            'subject' => 'Tenses',
+            'question' => 'Updated question?',
+            'correct_option' => 2,
+            'marks' => 3,
+        ]);
+
+        $this->delete(route('teacher.batches.question-bank.destroy', [$batch, $question]))
+            ->assertRedirect();
+        $this->assertDatabaseMissing('question_bank_questions', ['id' => $question->id]);
+    }
+
+    public function test_teacher_cannot_edit_or_delete_another_teachers_question(): void
+    {
+        [$teacher, $student, $batch] = $this->makeBatchWithStudent();
+        $otherTeacher = User::factory()->create(['role' => 'teacher']);
+        $question = QuestionBankQuestion::create([
+            'teacher_id' => $otherTeacher->id,
+            'subject' => 'Private',
+            'question' => 'Protected question?',
+            'options' => ['A', 'B', 'C', 'D'],
+            'correct_option' => 0,
+            'marks' => 1,
+        ]);
+
+        $this->actingAs($teacher)->put(route('teacher.batches.question-bank.update', [$batch, $question]), [
+            'subject' => 'Changed',
+            'question' => 'Tampered question?',
+            'options' => ['A', 'B', 'C', 'D'],
+            'correct_option' => 0,
+            'marks' => 1,
+        ])->assertForbidden();
+
+        $this->delete(route('teacher.batches.question-bank.destroy', [$batch, $question]))
+            ->assertForbidden();
+        $this->assertDatabaseHas('question_bank_questions', ['id' => $question->id]);
+    }
+
     private function makeBatchWithStudent(bool $enroll = true): array
     {
         $teacher = User::factory()->create(['role' => 'teacher']);
