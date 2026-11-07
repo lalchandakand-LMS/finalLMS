@@ -9,7 +9,7 @@
             <h1 style="margin:12px 0 0;">{{ auth()->user()->branch?->name }} — batches</h1>
             <p class="muted">{{ __('You can view batches assigned to your branch only.') }}</p>
         </div>
-        <a href="{{ route('dashboard') }}" class="btn secondary">Dashboard</a>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;"><a href="{{ route('branch-manager.students.index') }}" class="btn secondary">{{ __('Students') }}</a><a href="{{ route('dashboard') }}" class="btn secondary">Dashboard</a></div>
     </div>
 
     <section class="panel" style="margin-bottom:22px;">
