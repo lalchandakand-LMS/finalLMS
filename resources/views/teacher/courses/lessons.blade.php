@@ -1,10 +1,11 @@
 @extends('layouts.app')
 @section('title', __('Course lessons') . ' | ' . config('app.name'))
 @section('content')
+@php($lessonRoutePrefix = auth()->user()->isAdmin() ? 'admin.courses.lessons' : 'teacher.courses.lessons')
 <div class="page-header"><div><span class="badge info">{{ __('Teacher portal') }}</span><h1 style="margin:12px 0 0;">{{ $course->title }} — {{ __('Lessons') }}</h1></div><a href="{{ route('dashboard') }}" class="btn secondary">{{ __('Dashboard') }}</a></div>
 <div class="panel">
     <h2>{{ __('Add lesson') }}</h2>
-    <form method="POST" action="{{ route('teacher.courses.lessons.store', $course) }}" class="grid grid-2">
+    <form method="POST" action="{{ route($lessonRoutePrefix . '.store', $course) }}" class="grid grid-2">
         @csrf
         <label>{{ __('Title') }}<input name="title" maxlength="255" required></label>
         <label>{{ __('Duration (min)') }}<input type="number" name="duration_minutes" min="1" max="600" value="30" required></label>
@@ -20,7 +21,7 @@
 @forelse($course->lessons as $lesson)
 <details style="padding:14px 0;border-bottom:1px solid var(--border);">
     <summary><strong>{{ $lesson->order }}. {{ $lesson->title }}</strong> · {{ $lesson->duration_minutes }} {{ __('min') }}</summary>
-    <form method="POST" action="{{ route('teacher.courses.lessons.update', [$course,$lesson]) }}" class="grid grid-2" style="margin-top:14px;">
+    <form method="POST" action="{{ route($lessonRoutePrefix . '.update', [$course,$lesson]) }}" class="grid grid-2" style="margin-top:14px;">
         @csrf @method('PUT')
         <label>{{ __('Title') }}<input name="title" value="{{ $lesson->title }}" maxlength="255" required></label>
         <label>{{ __('Duration (min)') }}<input type="number" name="duration_minutes" value="{{ $lesson->duration_minutes }}" min="1" max="600" required></label>
@@ -30,7 +31,7 @@
         <label><input type="checkbox" name="is_preview" value="1" @checked($lesson->is_preview)> {{ __('Free preview') }}</label>
         <button class="btn primary" type="submit">{{ __('Save changes') }}</button>
     </form>
-    <form method="POST" action="{{ route('teacher.courses.lessons.destroy', [$course,$lesson]) }}" style="margin-top:10px;" onsubmit="return confirm('{{ __('Delete this lesson? Student progress for this lesson will also be removed if the database cascade is configured.') }}')">
+    <form method="POST" action="{{ route($lessonRoutePrefix . '.destroy', [$course,$lesson]) }}" style="margin-top:10px;" onsubmit="return confirm('{{ __('Delete this lesson? Student progress for this lesson will also be removed if the database cascade is configured.') }}')">
         @csrf @method('DELETE')<button class="btn" style="background:#b42318;color:#fff;">{{ __('Delete lesson') }}</button>
     </form>
 </details>
