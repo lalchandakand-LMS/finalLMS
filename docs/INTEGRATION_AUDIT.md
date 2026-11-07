@@ -46,11 +46,24 @@ Ported into the integration branch:
 - Student "My Courses" list with enrollment status and lesson completion progress.
 - Recorded lesson route and protected lesson playback for enrolled students, with public preview support.
 - Privacy-enhanced YouTube embeds and Vimeo embeds; arbitrary host URLs are not embedded.
-- Teacher-owned lesson create/update/delete and student progress overview.
+- Teacher/admin lesson create/update/delete and student progress overview.
 - Lesson video URL migration and model field.
 - Regression tests for student access, cross-course access, preview access, lesson progress, and teacher ownership.
 - Course page links to lessons and a teacher-only lesson-management shortcut.
 
-The first attempt to transplant isolated tests for question-bank and branch-manager changes failed because the matching production implementation was not present on main. Those tests were removed from this increment and are deferred until their implementation and migrations are integrated together. This is intentional: tests must not be merged ahead of the code they exercise.
+An initial isolated test transplant correctly exposed that question-bank category metadata and frozen randomized attempts were missing from main. Stage 2 therefore brought in the production controller/model changes, three supporting migrations, the student attempt view, teacher forms, and their regression tests as one coherent group. Legacy subject filtering and existing question-bank update forms were retained.
 
-Stage 1 CI is being rerun on the integration branch. Do not mark this stage complete until the latest test and cPanel package jobs pass.
+### Stage 2: Question Bank and randomized exams
+
+Integrated:
+- Question category and difficulty metadata with filtering.
+- Four-option MCQ validation and teacher ownership checks.
+- Optional difficulty field for compatibility with existing question-bank forms.
+- Random question selection from a teacher's own bank.
+- Per-attempt question limits and persisted/frozen randomized question order.
+- Attempt-question model, relation, unique constraints, and migrations.
+- Regression tests for ownership, validation, and randomized attempt stability.
+
+Stage 1 CI passed on commit `9582f231f1ad339ee0746ba2515a2f48fac37e1c` (test and cPanel package). Stage 2 CI passed on commit `d84e96cee5a4ae59febddbe1b7fed93cc19e3a97` (test and cPanel package).
+
+Branch-scope and role-assignment tests are now being reconciled against main's stricter rules: both branch managers and accountants must have an active branch, and only branch managers are restricted to branch-owned batches. Tests must reflect those existing business rules rather than weaken them.
