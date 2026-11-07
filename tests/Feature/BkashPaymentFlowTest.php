@@ -49,14 +49,12 @@ class BkashPaymentFlowTest extends TestCase
                 'paymentID' => 'BKASH-PAY-001',
                 'trxID' => 'BKASH-TRX-001',
                 'amount' => '1500.00',
-                'merchantInvoiceNumber' => 'BKASH-LOCAL-REF',
             ], 200),
             '*/tokenized/checkout/payment/status' => Http::response([
                 'transactionStatus' => 'Completed',
                 'paymentID' => 'BKASH-PAY-001',
                 'trxID' => 'BKASH-TRX-001',
                 'amount' => '1500.00',
-                'merchantInvoiceNumber' => 'BKASH-LOCAL-REF',
             ], 200),
         ]);
 
@@ -65,8 +63,6 @@ class BkashPaymentFlowTest extends TestCase
             ->assertRedirect('https://tokenized.sandbox.bka.sh/checkout/pay/BKASH-PAY-001');
 
         $payment = Payment::query()->where('course_id', $course->id)->firstOrFail();
-        $payment->update(['transaction_reference' => 'BKASH-LOCAL-REF']);
-
         $this->assertSame('pending', $payment->status);
         $this->assertDatabaseMissing('enrollments', ['user_id' => $student->id, 'course_id' => $course->id]);
 
