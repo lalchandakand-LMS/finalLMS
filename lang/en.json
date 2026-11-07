@@ -249,5 +249,10 @@
     "Certificate": "Certificate",
     "N/A": "N/A",
     "batches": "batches",
-    "Archived": "Archived"
+    "Archived": "Archived",
+    "Transactions": "Transactions",
+    "Branch manager": "Branch manager",
+    "Students": "Students",
+    "Teacher": "Teacher",
+    "No batches are assigned to this branch yet.": "No batches are assigned to this branch yet."
 }
