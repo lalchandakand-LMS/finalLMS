@@ -5,7 +5,7 @@
 @section('content')
     <div class="page-header">
         <div>
-            <span class="badge info">Admin</span>
+            <span class="badge info">{{ __('Admin') }}</span>
             <h1 style="margin: 12px 0 0;">{{ __('Payment review') }}</h1>
         </div>
         <a href="{{ route('admin.settings.index') }}" class="btn secondary">{{ __('Payment settings') }}</a>
@@ -16,10 +16,10 @@
             <article class="course-item">
                 <div class="meta-row">
                     <div>
-                        <span class="badge {{ $payment->status === 'approved' ? 'success' : ($payment->status === 'pending' ? 'warning' : 'info') }}">{{ ucfirst($payment->status) }}</span>
+                        <span class="badge {{ $payment->status === 'approved' ? 'success' : ($payment->status === 'pending' ? 'warning' : 'info') }}">{{ __(ucfirst($payment->status)) }}</span>
                         <h2 style="margin: 10px 0 6px;">{{ $payment->course->title }}</h2>
                         <div class="muted">{{ __('Student:') }} {{ $payment->user->name }} ({{ $payment->user->email }})</div>
-                        <div class="muted">{{ ucfirst($payment->method) }} · BDT {{ number_format($payment->amount, 2) }} · Reference: {{ $payment->transaction_reference }}</div>
+                        <div class="muted">{{ __(ucfirst($payment->method)) }} · BDT {{ number_format($payment->amount, 2) }} · {{ __('Reference:') }} {{ $payment->transaction_reference }}</div>
                         @if($payment->sender_account)
                             <div class="muted">{{ __('Sender:') }} {{ $payment->sender_account }}</div>
                         @endif
@@ -48,7 +48,7 @@
                         </form>
                     </div>
                 @elseif($payment->reviewed_at)
-                    <div class="muted" style="margin-top: 12px;">Reviewed {{ $payment->reviewed_at->format('M j, Y H:i') }}@if($payment->reviewer) by {{ $payment->reviewer->name }}@endif</div>
+                    <div class="muted" style="margin-top: 12px;">{{ __('Reviewed') }} {{ $payment->reviewed_at->format('M j, Y H:i') }}@if($payment->reviewer) {{ __('by') }} {{ $payment->reviewer->name }}@endif</div>
                 @endif
             </article>
         @empty
