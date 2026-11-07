@@ -64,7 +64,7 @@ Integrated:
 - Attempt-question model, relation, unique constraints, and migrations.
 - Regression tests for ownership, validation, and randomized attempt stability.
 
-Stage 1 CI passed on commit `9582f231f1ad339ee0746ba2515a2f48fac37e1c` (test and cPanel package). Stage 2 CI passed on commit `d84e96cee5a4ae59febddbe1b7fed93cc19e3a97` (test and cPanel package). Stage 3 branch-scope and role-assignment tests passed on commit `a6d202efebb4bf72ec89f27ad357099edec2990a` (test and cPanel package). Stage 4 and 5 passed together on commit `34ae5f60c7b4381dd92f74fe2a3560b9429c2dd5` (test and cPanel package).
+Stage 1 CI passed on commit `9582f231f1ad339ee0746ba2515a2f48fac37e1c` (test and cPanel package). Stage 2 CI passed on commit `d84e96cee5a4ae59febddbe1b7fed93cc19e3a97` (test and cPanel package). Stage 3 branch-scope and role-assignment tests passed on commit `a6d202efebb4bf72ec89f27ad357099edec2990a` (test and cPanel package). Stage 4 and 5 passed together on commit `34ae5f60c7b4381dd92f74fe2a3560b9429c2dd5` (test and cPanel package). Stage 6 CMS media hardening passed on commit `7d107e62dcd47e62c9a9e66f9a836dbdf7f00b2e` (test and cPanel package).
 
 Branch-scope and role-assignment tests are now being reconciled against main's stricter rules: both branch managers and accountants must have an active branch, and only branch managers are restricted to branch-owned batches. Tests must reflect those existing business rules rather than weaken them.
 
@@ -102,4 +102,15 @@ Audited on the current main-based integration branch:
 - Bangla catalog has 561 keys and English catalog has 312 keys; every English key is present in Bangla. The development branch's smaller translation files are not copied over main's larger catalogs.
 - Backup restore requires admin role, explicit `RESTORE` confirmation, current password, and an HMAC-valid backup. Tampered and invalid gzip archives are covered by tests.
 - New hardening being added: homepage and blog cover references must point to image assets, and media used by homepage sections or article covers cannot be deleted.
-- Stage 6 CI is pending; do not mark complete until test and cPanel package jobs pass.
+- Stage 6 CI passed on commit `7d107e62dcd47e62c9a9e66f9a836dbdf7f00b2e` (test and cPanel package).
+
+
+### Stage 7: deployment and security verification
+
+In progress:
+- Add CodeQL scanning for JavaScript/TypeScript on pull requests targeting main. CodeQL does not analyze this Laravel PHP codebase in the selected supported language configuration.
+- Add PHP syntax lint across app, bootstrap, config, database, routes, and tests.
+- Add Composer dependency vulnerability audit to CI.
+- Compile Laravel configuration and all Blade views in the production package job.
+- Update cPanel deployment documentation to describe the implemented bKash adapter and the remaining merchant-credential / sandbox activation steps.
+- Real cPanel staging installation, production bKash merchant testing, off-site backup scheduling, and disaster-recovery rehearsal remain outstanding operational tasks.

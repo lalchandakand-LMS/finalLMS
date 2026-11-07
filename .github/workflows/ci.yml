@@ -79,6 +79,8 @@ jobs:
       - run: cp deployment/.env.example .env
       - run: composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
       - run: php artisan key:generate --force
+      - run: php artisan config:cache
+      - run: php artisan view:cache
       - run: npm ci
       - run: npm run build
       - name: Assemble and verify cPanel ZIP
