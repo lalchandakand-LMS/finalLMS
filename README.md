@@ -35,6 +35,7 @@ The local/testing seeder creates `admin@lms.test`, `teacher@lms.test`, and `stud
 - Batch seat reservation for pending payments, unique transaction references, and last-admin protection
 - SEO metadata, consent-gated GA4/GTM/Meta Pixel tags, and consent-based queued bulk SMS
 - Admin homepage, payment, user, course, and settings controls, including a branded responsive operations dashboard
+- Secure first-run cPanel web installer with database connection checks, empty-database guard, random app key, first-admin creation, and installation gate
 - Administrator assignment of students to active branches, with inactive-branch validation
 - Student invoices with fixed/percentage discounts (including student-specific scholarship adjustments), partial/installment receipts, and net outstanding balance tracking
 - Refund request ledger tied to original receipts, refund caps, admin approval/rejection, and invoice balance recalculation
@@ -49,7 +50,7 @@ The local/testing seeder creates `admin@lms.test`, `teacher@lms.test`, and `stud
 
 ## Not yet complete
 
-This remains an actively developed LMS and is not yet a fully validated commercial release. Remaining work includes complete Bangla translation coverage across every screen, richer drag-and-drop page design and reusable page templates, deeper branch-scoped enrollment, transfer, and teacher-assignment workflows beyond the current student-to-branch assignment, official bKash/Nagad/SSLCommerz API integration with verified callbacks, automated scheduled off-site backups and tested disaster recovery, and a secure web installer. The current backup/restore feature is administrator-triggered and should be tested on a staging database before production use. Activity logging covers successful authenticated write requests; it is not yet a full audit trail for reads, login attempts, failed actions, or field-level changes. SMS/email delivery requires real provider credentials.
+This remains an actively developed LMS and is not yet a fully validated commercial release. Remaining work includes complete Bangla translation coverage across every screen, richer drag-and-drop page design and reusable page templates, deeper branch-scoped enrollment, transfer, and teacher-assignment workflows beyond the current student-to-branch assignment, official bKash/Nagad/SSLCommerz API integration with verified callbacks, automated scheduled off-site backups and tested disaster recovery, and real cPanel staging validation of the installer and deployment process. The current backup/restore feature is administrator-triggered and should be tested on a staging database before production use. Activity logging covers successful authenticated write requests; it is not yet a full audit trail for reads, login attempts, failed actions, or field-level changes. SMS/email delivery requires real provider credentials.
 
 ## First production administrator
 
