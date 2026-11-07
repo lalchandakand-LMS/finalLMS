@@ -1,17 +1,17 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\\Http\\Controllers;
 
-use App\Models\Assignment;
-use App\Models\AssignmentSubmission;
-use App\Models\Batch;
-use App\Models\Enrollment;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
-use Symfony\Component\HttpFoundation\StreamedResponse;
-use Illuminate\View\View;
+use App\\Models\\Assignment;
+use App\\Models\\AssignmentSubmission;
+use App\\Models\\Batch;
+use App\\Models\\Enrollment;
+use Illuminate\\Http\\RedirectResponse;
+use Illuminate\\Http\\Request;
+use Illuminate\\Support\\Facades\\Auth;
+use Illuminate\\Support\\Facades\\Storage;
+use Symfony\\Component\\HttpFoundation\\StreamedResponse;
+use Illuminate\\View\\View;
 
 class AssignmentController extends Controller
 {
@@ -50,7 +50,11 @@ class AssignmentController extends Controller
 
     public function submit(Assignment $assignment, Request $request): RedirectResponse
     {
-        abort_unless(Enrollment::where('batch_id', $assignment->batch_id)->where('user_id', Auth::id())->exists(), 403);
+        $user = Auth::user();
+        abort_unless($user?->isStudent() && Enrollment::where('batch_id', $assignment->batch_id)
+            ->where('user_id', $user->id)
+            ->where('status', 'active')
+            ->exists(), 403);
 
         if ($assignment->due_at->isPast() || $assignment->status !== 'published') {
             return back()->with('error', 'This assignment is closed for submissions.');
@@ -61,7 +65,7 @@ class AssignmentController extends Controller
             'attachment' => ['nullable', 'file', 'max:10240', 'mimes:pdf,doc,docx,jpg,jpeg,png', 'required_without:answer'],
         ]);
 
-        $existingSubmission = $assignment->submissions()->where('student_id', Auth::id())->first();
+        $existingSubmission = $assignment->submissions()->where('student_id', $user->id)->first();
         if ($existingSubmission) {
             return back()->with('info', 'You have already submitted this assignment.');
         }
@@ -70,7 +74,7 @@ class AssignmentController extends Controller
         $path = $file?->store('assignment-submissions/'.$assignment->id, 'local');
 
         $submission = $assignment->submissions()->firstOrCreate(
-            ['student_id' => Auth::id()],
+            ['student_id' => $user->id],
             [
                 'answer' => $validated['answer'] ?? '',
                 'attachment_path' => $path,
