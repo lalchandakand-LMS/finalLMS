@@ -64,6 +64,20 @@ Integrated:
 - Attempt-question model, relation, unique constraints, and migrations.
 - Regression tests for ownership, validation, and randomized attempt stability.
 
-Stage 1 CI passed on commit `9582f231f1ad339ee0746ba2515a2f48fac37e1c` (test and cPanel package). Stage 2 CI passed on commit `d84e96cee5a4ae59febddbe1b7fed93cc19e3a97` (test and cPanel package).
+Stage 1 CI passed on commit `9582f231f1ad339ee0746ba2515a2f48fac37e1c` (test and cPanel package). Stage 2 CI passed on commit `d84e96cee5a4ae59febddbe1b7fed93cc19e3a97` (test and cPanel package). Stage 3 branch-scope and role-assignment tests passed on commit `a6d202efebb4bf72ec89f27ad357099edec2990a` (test and cPanel package).
 
 Branch-scope and role-assignment tests are now being reconciled against main's stricter rules: both branch managers and accountants must have an active branch, and only branch managers are restricted to branch-owned batches. Tests must reflect those existing business rules rather than weaken them.
+
+
+### Stage 4: bKash server-side checkout
+
+In progress:
+- Token grant, checkout creation, execute, and payment-status query use server-side credentials.
+- Enrollment activation requires a completed server-side status query matching payment ID, amount, BDT currency (when returned), transaction ID, and invoice reference (when returned).
+- Callback status alone is never treated as proof of payment; cancellation/failure is accepted only when the server-side status confirms it.
+- Gateway payment IDs are unique, callbacks are idempotent, and gateway-backed payments cannot be manually approved/rejected through the generic admin payment review.
+- Checkout URL hosts are allowlisted and TLS verification defaults to enabled.
+- cPanel environment placeholders and merchant setup instructions are included.
+- Nagad remains disabled/configuration-only until official merchant API documentation and credentials are available.
+
+Stage 4 must pass gateway service/flow tests and cPanel packaging before being marked complete.

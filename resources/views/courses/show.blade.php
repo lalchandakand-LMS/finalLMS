@@ -91,7 +91,7 @@
                                 <p class="muted">{{ $payment->admin_note ?: __('Your previous payment could not be verified. Please check the details and submit again.') }}</p>
                             @endif
 
-                            @if((float) $course->price <= 0)
+                            @if((float) $course->price <= 0 && $batches->every(fn ($batch) => (float) $batch->fee <= 0))
                                 <form method="POST" action="{{ route('courses.enroll', $course) }}">
                                     @csrf
                                     @if($batches->isNotEmpty())
@@ -108,11 +108,13 @@
                                     <button type="submit" class="btn primary">{{ __('Enroll now') }}</button>
                                 </form>
                             @elseif($paymentMethods->isEmpty())
-                                <p class="muted">{{ __('Payment is not available for this course yet. Please contact the academy.') }}</p>
+                                @unless(config('services.bkash.enabled'))
+                                    <p class="muted">{{ __('Payment is not available for this course yet. Please contact the academy.') }}</p>
+                                @endunless
                             @else
                                 <form method="POST" action="{{ route('courses.enroll', $course) }}" enctype="multipart/form-data">
                                     @csrf
-                                    <p class="muted">{{ __('Pay') }} <strong>BDT {{ number_format($course->price, 2) }}</strong> {{ __('using one of the methods below. Your enrollment starts after admin verification.') }}</p>
+                                    <p class="muted">{{ __('The payable amount is based on the selected batch fee, or the course price if no batch fee applies. Your enrollment starts after admin verification.') }}</p>
                                     @if($batches->isNotEmpty())
                                         <label for="paid-batch">{{ __('Choose a batch') }}</label>
                                         <select id="paid-batch" name="batch_id" required>
@@ -156,6 +158,29 @@
                                     paymentMethod.addEventListener('change', updatePaymentDetails);
                                     updatePaymentDetails();
                                 </script>
+                            @endif
+                            @if((float) $course->price > 0 || $batches->contains(fn ($batch) => (float) $batch->fee > 0))
+                                @if(config('services.bkash.enabled'))
+                                    <section class="course-item" style="margin-top:18px;">
+                                        <h3>{{ __('Pay securely with bKash') }}</h3>
+                                        <p class="muted">{{ __('You will be redirected to the official bKash checkout. Enrollment is enabled only after server-side payment verification.') }}</p>
+                                        <form method="POST" action="{{ route('courses.payments.bkash', $course) }}">
+                                            @csrf
+                                            @if($batches->isNotEmpty())
+                                                <label for="bkash-batch">{{ __('Choose a batch') }}</label>
+                                                <select id="bkash-batch" name="batch_id" required>
+                                                    <option value="">{{ __('Select batch') }}</option>
+                                                    @foreach($batches as $batch)
+                                                        @if($batch->enrollments_count < $batch->capacity)
+                                                            <option value="{{ $batch->id }}">{{ $batch->title }} · {{ $batch->branch->name }} · {{ $batch->starts_at->format('M j') }}</option>
+                                                        @endif
+                                                    @endforeach
+                                                </select>
+                                            @endif
+                                            <button type="submit" class="btn primary" style="margin-top:12px;">{{ __('Continue to bKash checkout') }}</button>
+                                        </form>
+                                    </section>
+                                @endif
                             @endif
                         @endif
                     @endif
