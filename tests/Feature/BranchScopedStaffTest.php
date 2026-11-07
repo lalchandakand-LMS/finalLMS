@@ -82,4 +82,35 @@ class BranchScopedStaffTest extends TestCase
 
         $this->assertDatabaseCount('invoice_payments', 0);
     }
+
+    public function test_accountant_cannot_create_invoice_for_local_student_using_another_branches_batch(): void
+    {
+        $localBranch = Branch::create(['name' => 'Local Branch', 'slug' => 'local-branch']);
+        $remoteBranch = Branch::create(['name' => 'Remote Branch', 'slug' => 'remote-branch']);
+        $accountant = User::factory()->create(['role' => 'accountant', 'branch_id' => $localBranch->id]);
+        $localStudent = User::factory()->create(['role' => 'student', 'branch_id' => $localBranch->id]);
+        $remoteTeacher = User::factory()->create(['role' => 'teacher', 'branch_id' => $remoteBranch->id]);
+        $course = Course::factory()->create(['teacher_id' => $remoteTeacher->id, 'status' => 'published']);
+        $remoteBatch = Batch::create([
+            'branch_id' => $remoteBranch->id,
+            'course_id' => $course->id,
+            'teacher_id' => $remoteTeacher->id,
+            'title' => 'Remote batch',
+            'capacity' => 20,
+            'starts_at' => now()->addDay(),
+            'ends_at' => now()->addMonth(),
+            'fee' => 1000,
+            'status' => 'open',
+        ]);
+
+        $this->actingAs($accountant)->post(route('accountant.invoices.store'), [
+            'user_id' => $localStudent->id,
+            'batch_id' => $remoteBatch->id,
+            'title' => 'Invalid cross-branch invoice',
+            'amount' => 1000,
+        ])->assertUnprocessable();
+
+        $this->assertDatabaseMissing('invoices', ['title' => 'Invalid cross-branch invoice']);
+    }
+
 }
