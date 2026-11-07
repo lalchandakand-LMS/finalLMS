@@ -19,7 +19,7 @@ class InvoiceController extends Controller
         $branchId = $request->user()->branch_id;
         abort_unless($branchId && \App\Models\Branch::whereKey($branchId)->where('is_active', true)->exists(), 403, 'No active branch is assigned to this account.');
 
-        $invoices = Invoice::with(['user', 'course', 'batch', 'payments'])
+        $invoices = Invoice::with(['user', 'course', 'batch', 'payments', 'refunds'])
             ->where(function ($query) use ($branchId): void {
                 $query->whereHas('batch', fn ($batch) => $batch->where('branch_id', $branchId))
                     ->orWhere(function ($unbatched) use ($branchId): void {
@@ -51,7 +51,7 @@ class InvoiceController extends Controller
 
     public function studentIndex(Request $request): View
     {
-        $invoices = Invoice::with(['course', 'batch', 'payments.receiver'])
+        $invoices = Invoice::with(['course', 'batch', 'payments.receiver', 'refunds'])
             ->where('user_id', $request->user()->id)
             ->latest()
             ->paginate(20);
