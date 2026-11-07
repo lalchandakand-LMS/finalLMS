@@ -54,13 +54,13 @@ class UserController extends Controller
             return back()->with('error', 'The last administrator cannot be demoted.');
         }
 
-        if ($validated['role'] === 'branch_manager' && empty($validated['branch_id'])) {
-            return back()->withErrors(['branch_id' => 'Select a branch for the branch manager.']);
+        if (in_array($validated['role'], ['branch_manager', 'accountant'], true) && empty($validated['branch_id'])) {
+            return back()->withErrors(['branch_id' => 'Select an active branch for this staff account.']);
         }
 
         $user->update([
             'role' => $validated['role'],
-            'branch_id' => $validated['role'] === 'branch_manager' ? $validated['branch_id'] : null,
+            'branch_id' => in_array($validated['role'], ['branch_manager', 'accountant'], true) ? $validated['branch_id'] : null,
         ]);
 
         return redirect()->route('admin.users.index')->with('success', 'User role updated successfully.');
