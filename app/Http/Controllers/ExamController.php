@@ -117,6 +117,33 @@ class ExamController extends Controller
         return back()->with('success', 'Question added to your question bank.');
     }
 
+    public function updateBankQuestion(Batch $batch, QuestionBankQuestion $question, Request $request): RedirectResponse
+    {
+        abort_unless($batch->teacher_id === Auth::id() && $question->teacher_id === Auth::id(), 403);
+
+        $validated = $request->validate([
+            'subject' => ['nullable', 'string', 'max:120'],
+            'question' => ['required', 'string', 'max:3000'],
+            'options' => ['required', 'array', 'size:4'],
+            'options.*' => ['required', 'string', 'max:500'],
+            'correct_option' => ['required', 'integer', 'between:0,3'],
+            'marks' => ['required', 'integer', 'min:1', 'max:100'],
+        ]);
+
+        $question->update($validated);
+
+        return back()->with('success', 'Question updated successfully.');
+    }
+
+    public function destroyBankQuestion(Batch $batch, QuestionBankQuestion $question): RedirectResponse
+    {
+        abort_unless($batch->teacher_id === Auth::id() && $question->teacher_id === Auth::id(), 403);
+
+        $question->delete();
+
+        return back()->with('success', 'Question deleted successfully.');
+    }
+
     public function teacherResults(Exam $exam): View
     {
         abort_unless(Auth::user()->isAdmin() || $exam->batch->teacher_id === Auth::id(), 403);
