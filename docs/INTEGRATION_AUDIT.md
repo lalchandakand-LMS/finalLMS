@@ -139,3 +139,11 @@ In progress:
 - Localize admin invoice creation, payment ledger, student invoice balances, and printable receipts.
 - Preserve branch-scoped accountant and branch-manager regression coverage.
 - Main's existing translation keys and invoice finance behavior are retained; the incoming catalogs are supersets of the current main catalogs.
+
+
+### Stage 9: Nagad official API handoff
+
+- Added `docs/NAGAD_INTEGRATION_HANDOFF.md` to define exactly which official merchant documents, endpoint schemas, cryptographic details, callback rules, and sandbox materials are needed before implementation.
+- Existing Nagad manual/configuration mode remains available; direct API checkout stays disabled.
+- No endpoint, signing/encryption algorithm, callback rule, or credential format will be guessed.
+- When the official guide is supplied, the implementation can be completed against that specification with server-side verification, idempotency, and automated failure/replay tests.
