@@ -60,7 +60,7 @@ class UserController extends Controller
 
         $user->update([
             'role' => $validated['role'],
-            'branch_id' => in_array($validated['role'], ['branch_manager', 'accountant'], true) ? $validated['branch_id'] : null,
+            'branch_id' => in_array($validated['role'], ['branch_manager', 'accountant', 'student'], true) ? ($validated['branch_id'] ?? null) : null,
         ]);
 
         return redirect()->route('admin.users.index')->with('success', 'User role updated successfully.');

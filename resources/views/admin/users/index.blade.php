@@ -55,7 +55,7 @@
                                         <option value="{{ $roleValue }}" @selected($user->role === $roleValue)>{{ __($roleLabel) }}</option>
                                     @endforeach
                                 </select>
-                                <select name="branch_id" style="width:auto;min-width:130px;" aria-label="{{ __('Branch for branch manager') }}">
+                                <select name="branch_id" style="width:auto;min-width:130px;" aria-label="{{ __('Assigned branch for this account') }}">
                                     <option value="">{{ __('No branch') }}</option>
                                     @foreach($branches as $branch)
                                         <option value="{{ $branch->id }}" @selected($user->branch_id === $branch->id)>{{ $branch->name }}</option>
