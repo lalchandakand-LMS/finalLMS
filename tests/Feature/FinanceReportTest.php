@@ -1,13 +1,13 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use App\\Models\\Branch;
-use App\\Models\\Invoice;
-use App\\Models\\InvoicePayment;
-use App\\Models\\User;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Tests\\TestCase;
+use App\Models\Branch;
+use App\Models\Invoice;
+use App\Models\InvoicePayment;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class FinanceReportTest extends TestCase
 {
