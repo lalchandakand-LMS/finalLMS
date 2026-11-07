@@ -27,6 +27,27 @@
         </form>
     </div>
 
+    <div class="panel" style="margin-bottom:20px;">
+        <form method="GET" action="{{ route('teacher.batches.question-bank.index', $batch) }}" class="grid grid-2">
+            <label>{{ __('Filter by subject') }}
+                <select name="subject">
+                    <option value="">{{ __('All subjects') }}</option>
+                    @foreach($subjects as $subject)
+                        <option value="{{ $subject }}" {{ $subjectFilter === $subject ? 'selected' : '' }}>{{ $subject }}</option>
+                    @endforeach
+                </select>
+            </label>
+            <label>{{ __('Search questions') }}
+                <input type="search" name="search" value="{{ $search }}" maxlength="120" placeholder="{{ __('Search question text...') }}">
+            </label>
+            <div style="display:flex;gap:8px;align-items:end;">
+                <button class="btn primary" type="submit">{{ __('Apply filters') }}</button>
+                <a class="btn secondary" href="{{ route('teacher.batches.question-bank.index', $batch) }}">{{ __('Clear') }}</a>
+            </div>
+        </form>
+        <p class="muted">{{ __('Showing') }} {{ $questions->total() }} {{ __('questions') }}</p>
+    </div>
+
     <div class="course-list">
         @forelse($questions as $question)
             <article class="course-item">
