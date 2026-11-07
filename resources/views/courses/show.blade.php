@@ -102,9 +102,10 @@
                                     @endif
                                     <button type="submit" class="btn primary">{{ __('Enroll now') }}</button>
                                 </form>
-                            @elseif($paymentMethods->isEmpty())
+                            @elseif($paymentMethods->isEmpty() && ! config('services.bkash.enabled'))
                                 <p class="muted">Payment is not available for this course yet. Please contact the academy.</p>
                             @else
+                                @if($paymentMethods->isNotEmpty())
                                 <form method="POST" action="{{ route('courses.enroll', $course) }}" enctype="multipart/form-data">
                                     @csrf
                                     <p class="muted">Pay <strong>BDT {{ number_format($course->price, 2) }}</strong> using one of the methods below. Your enrollment starts after admin verification.</p>
@@ -151,6 +152,28 @@
                                     paymentMethod.addEventListener('change', updatePaymentDetails);
                                     updatePaymentDetails();
                                 </script>
+                                @endif
+                                @if(config('services.bkash.enabled'))
+                                    <div class="course-item" style="margin-top:18px;">
+                                        <strong>Online payment</strong>
+                                        <p class="muted">Pay securely through bKash Checkout. Course access is enabled only after the server verifies the transaction.</p>
+                                        <form method="POST" action="{{ route('courses.payments.bkash', $course) }}">
+                                            @csrf
+                                            @if($batches->isNotEmpty())
+                                                <label for="bkash-batch">Choose a batch</label>
+                                                <select id="bkash-batch" name="batch_id" required>
+                                                    <option value="">Select batch</option>
+                                                    @foreach($batches as $batch)
+                                                        @if($batch->enrollments_count < $batch->capacity)
+                                                            <option value="{{ $batch->id }}">{{ $batch->title }} · {{ $batch->branch->name }} · {{ $batch->starts_at->format('M j') }}</option>
+                                                        @endif
+                                                    @endforeach
+                                                </select>
+                                            @endif
+                                            <button type="submit" class="btn primary" style="margin-top:12px;">Pay with bKash</button>
+                                        </form>
+                                    </div>
+                                @endif
                             @endif
                         @endif
                     @endif
