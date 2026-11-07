@@ -17,8 +17,8 @@
         </div>
 
         <div class="meta-row" style="justify-content: center;">
-            <span class="badge success"">{{ __('Certificate ID:') }} {{ $certificate->certificate_number }}</span>
-            <span class="badge warning"">{{ __('Issued:') }} {{ $certificate->issued_at?->format('F j, Y') }}</span>
+            <span class="badge success">{{ __('Certificate ID:') }} {{ $certificate->certificate_number }}</span>
+            <span class="badge warning">{{ __('Issued:') }} {{ $certificate->issued_at?->format('F j, Y') }}</span>
         </div>
     </div>
 @endsection
