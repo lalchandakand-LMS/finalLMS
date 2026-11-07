@@ -254,6 +254,44 @@ class ExaminationWorkflowTest extends TestCase
         $this->assertDatabaseHas('question_bank_questions', ['id' => $question->id]);
     }
 
+    public function test_teacher_can_filter_question_bank_by_subject_and_search_question_text(): void
+    {
+        [$teacher, $student, $batch] = $this->makeBatchWithStudent();
+        QuestionBankQuestion::create([
+            'teacher_id' => $teacher->id, 'subject' => 'Grammar',
+            'question' => 'Choose the past tense', 'options' => ['A', 'B', 'C', 'D'],
+            'correct_option' => 1, 'marks' => 1,
+        ]);
+        QuestionBankQuestion::create([
+            'teacher_id' => $teacher->id, 'subject' => 'Vocabulary',
+            'question' => 'Meaning of diligent', 'options' => ['A', 'B', 'C', 'D'],
+            'correct_option' => 2, 'marks' => 1,
+        ]);
+
+        $this->actingAs($teacher)
+            ->get(route('teacher.batches.question-bank.index', [$batch, 'subject' => 'Grammar']))
+            ->assertOk()->assertSee('Choose the past tense')->assertDontSee('Meaning of diligent');
+
+        $this->actingAs($teacher)
+            ->get(route('teacher.batches.question-bank.index', [$batch, 'search' => 'diligent']))
+            ->assertOk()->assertSee('Meaning of diligent')->assertDontSee('Choose the past tense');
+    }
+
+    public function test_question_bank_filter_does_not_expose_another_teachers_questions(): void
+    {
+        [$teacher, $student, $batch] = $this->makeBatchWithStudent();
+        $otherTeacher = User::factory()->create(['role' => 'teacher']);
+        QuestionBankQuestion::create([
+            'teacher_id' => $otherTeacher->id, 'subject' => 'Grammar',
+            'question' => 'Private teacher question', 'options' => ['A', 'B', 'C', 'D'],
+            'correct_option' => 0, 'marks' => 1,
+        ]);
+
+        $this->actingAs($teacher)
+            ->get(route('teacher.batches.question-bank.index', [$batch, 'subject' => 'Grammar']))
+            ->assertOk()->assertDontSee('Private teacher question');
+    }
+
     private function makeBatchWithStudent(bool $enroll = true): array
     {
         $teacher = User::factory()->create(['role' => 'teacher']);
