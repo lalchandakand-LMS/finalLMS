@@ -14,6 +14,7 @@
     <div class="panel" style="max-width: 980px; margin: 0 auto;">
         <form method="POST" action="{{ route('admin.settings.update') }}">
             @csrf
+            @php($savedSlides = json_decode((string) ($settings['home_slides'] ?? '[]'), true) ?: [])
 
             <div class="grid grid-2" style="margin-bottom: 18px;">
                 <div>
@@ -73,6 +74,56 @@
                     <input type="text" name="home_metric_3_label" value="{{ old('home_metric_3_label', $settings['home_metric_3_label'] ?? 'Support') }}">
                 </div>
             </div>
+
+            <hr style="border: 0; border-top: 1px solid var(--border); margin: 28px 0;">
+            <div style="margin-bottom: 18px;">
+                <span class="badge info">{{ __('Homepage slider') }}</span>
+                <h2 style="margin: 12px 0 6px;">{{ __('Hero image slides') }}</h2>
+                <p class="muted" style="margin: 0;">{{ __('Choose up to three images from Media Library. Upload images there first, then select them here. Only enabled slides with an image are shown.') }} <a href="{{ route('admin.media.index') }}">{{ __('Open Media Library') }}</a></p>
+            </div>
+            @for($i = 0; $i < 3; $i++)
+                @php($savedSlide = $savedSlides[$i] ?? [])
+                <section class="panel" style="padding:18px;margin-bottom:14px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;">
+                        <h3 style="margin:0;">{{ __('Slide') }} {{ $i + 1 }}</h3>
+                        <label style="display:flex;align-items:center;gap:8px;margin:0;">
+                            <input type="hidden" name="home_slides[{{ $i }}][enabled]" value="0">
+                            <input type="checkbox" name="home_slides[{{ $i }}][enabled]" value="1" style="width:auto;" @checked(old("home_slides.$i.enabled", $savedSlide['enabled'] ?? false))>
+                            {{ __('Enabled') }}
+                        </label>
+                    </div>
+                    <div style="margin-bottom:14px;">
+                        <label for="home-slide-{{ $i }}-image">{{ __('Media Library image') }}</label>
+                        <select id="home-slide-{{ $i }}-image" name="home_slides[{{ $i }}][image_id]">
+                            <option value="">{{ __('Select an image') }}</option>
+                            @foreach($mediaAssets as $asset)
+                                <option value="{{ $asset->id }}" @selected((string) old("home_slides.$i.image_id", $savedSlide['image_id'] ?? '') === (string) $asset->id)>{{ $asset->original_name }} — {{ $asset->alt_text ?: $asset->mime_type }}</option>
+                            @endforeach
+                        </select>
+                        @if($mediaAssets->isEmpty())
+                            <small class="muted">{{ __('No images available. Upload JPG, PNG, WebP or GIF files in Media Library first.') }}</small>
+                        @endif
+                    </div>
+                    <div class="grid grid-2">
+                        <div>
+                            <label for="home-slide-{{ $i }}-title">{{ __('Slide title') }}</label>
+                            <input id="home-slide-{{ $i }}-title" name="home_slides[{{ $i }}][title]" maxlength="180" value="{{ old("home_slides.$i.title", $savedSlide['title'] ?? '') }}">
+                        </div>
+                        <div>
+                            <label for="home-slide-{{ $i }}-subtitle">{{ __('Slide subtitle') }}</label>
+                            <textarea id="home-slide-{{ $i }}-subtitle" name="home_slides[{{ $i }}][subtitle]" rows="2" maxlength="500">{{ old("home_slides.$i.subtitle", $savedSlide['subtitle'] ?? '') }}</textarea>
+                        </div>
+                        <div>
+                            <label for="home-slide-{{ $i }}-button-label">{{ __('Button label') }}</label>
+                            <input id="home-slide-{{ $i }}-button-label" name="home_slides[{{ $i }}][button_label]" maxlength="60" value="{{ old("home_slides.$i.button_label", $savedSlide['button_label'] ?? '') }}">
+                        </div>
+                        <div>
+                            <label for="home-slide-{{ $i }}-button-url">{{ __('Button URL') }}</label>
+                            <input id="home-slide-{{ $i }}-button-url" name="home_slides[{{ $i }}][button_url]" maxlength="500" value="{{ old("home_slides.$i.button_url", $savedSlide['button_url'] ?? '') }}" placeholder="/courses">
+                        </div>
+                    </div>
+                </section>
+            @endfor
 
             <hr style="border: 0; border-top: 1px solid var(--border); margin: 28px 0;">
             <div style="margin-bottom: 18px;">

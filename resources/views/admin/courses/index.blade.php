@@ -17,7 +17,7 @@
             <tbody>
             @forelse($courses as $course)
                 <tr style="border-bottom:1px solid var(--border);">
-                    <td style="padding:12px 10px;">{{ $course->title }}</td>
+                    <td style="padding:12px 10px;">@if($course->image_path)<img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($course->image_path) }}" alt="{{ $course->title }}" style="width:76px;height:48px;object-fit:cover;border-radius:8px;vertical-align:middle;margin-right:8px;">@endif{{ $course->title }}</td>
                     <td style="padding:12px 10px;">{{ $course->teacher?->name ?? __('Unassigned') }}</td>
                     <td style="padding:12px 10px;">৳{{ number_format($course->price, 2) }}</td>
                     <td style="padding:12px 10px;"><span class="badge {{ $course->status === 'published' ? 'success' : 'warning' }}">{{ ucfirst($course->status) }}</span></td>

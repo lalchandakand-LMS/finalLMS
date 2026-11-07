@@ -12,6 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class CourseController extends Controller
@@ -86,9 +87,13 @@ class CourseController extends Controller
             'teacher_id' => ['required', 'exists:users,id'],
             'price' => ['required', 'numeric', 'min:0'],
             'status' => ['required', 'in:published,draft,archived'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ]);
 
         $validated['slug'] = Str::slug($validated['title']);
+        if ($request->hasFile('image')) {
+            $validated['image_path'] = $request->file('image')->store('courses', 'public');
+        }
 
         Course::create($validated);
 
@@ -103,9 +108,15 @@ class CourseController extends Controller
             'teacher_id' => ['required', 'exists:users,id'],
             'price' => ['required', 'numeric', 'min:0'],
             'status' => ['required', 'in:published,draft,archived'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ]);
 
         $validated['slug'] = Str::slug($validated['title']);
+        if ($request->hasFile('image')) {
+            $newImagePath = $request->file('image')->store('courses', 'public');
+            if ($course->image_path) Storage::disk('public')->delete($course->image_path);
+            $validated['image_path'] = $newImagePath;
+        }
         $course->update($validated);
 
         return redirect()->route('admin.courses.index')->with('success', 'Course updated successfully.');
@@ -113,6 +124,9 @@ class CourseController extends Controller
 
     public function destroy(Course $course): RedirectResponse
     {
+        if ($course->image_path) {
+            Storage::disk('public')->delete($course->image_path);
+        }
         $course->delete();
 
         return redirect()->route('admin.courses.index')->with('success', 'Course deleted successfully.');

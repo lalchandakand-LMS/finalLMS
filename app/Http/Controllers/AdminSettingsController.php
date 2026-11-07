@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Setting;
+use App\Models\MediaAsset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -13,8 +14,9 @@ class AdminSettingsController extends Controller
     {
         $settings = Setting::query()->pluck('value', 'key')->toArray();
         $paymentMethods = Setting::paymentMethods();
+        $mediaAssets = MediaAsset::query()->where('mime_type', 'like', 'image/%')->latest()->get();
 
-        return view('admin.settings.index', compact('settings', 'paymentMethods'));
+        return view('admin.settings.index', compact('settings', 'paymentMethods', 'mediaAssets'));
     }
 
     public function update(Request $request): RedirectResponse
@@ -32,6 +34,13 @@ class AdminSettingsController extends Controller
             'home_metric_2_label' => ['nullable', 'string', 'max:50'],
             'home_metric_3_value' => ['nullable', 'string', 'max:50'],
             'home_metric_3_label' => ['nullable', 'string', 'max:50'],
+            'home_slides' => ['nullable', 'array', 'max:3'],
+            'home_slides.*.enabled' => ['nullable', 'boolean'],
+            'home_slides.*.image_id' => ['nullable', 'integer', 'exists:media_assets,id'],
+            'home_slides.*.title' => ['nullable', 'string', 'max:180'],
+            'home_slides.*.subtitle' => ['nullable', 'string', 'max:500'],
+            'home_slides.*.button_label' => ['nullable', 'string', 'max:60'],
+            'home_slides.*.button_url' => ['nullable', 'string', 'max:500'],
             'about_title' => ['nullable', 'string', 'max:255'],
             'about_body' => ['nullable', 'string', 'max:10000'],
             'contact_title' => ['nullable', 'string', 'max:255'],
@@ -71,13 +80,34 @@ class AdminSettingsController extends Controller
         ]);
 
         $paymentMethods = $validated['payment_methods'] ?? Setting::paymentMethods();
-        unset($validated['payment_methods']);
+        $slides = collect($validated['home_slides'] ?? [])->take(3)->map(function (array $slide) {
+            $image = !empty($slide['image_id']) ? MediaAsset::query()->whereKey($slide['image_id'])->where('mime_type', 'like', 'image/%')->first() : null;
+            if (empty($slide['enabled']) || !$image) {
+                return null;
+            }
+
+            $buttonUrl = trim($slide['button_url'] ?? '');
+            if ($buttonUrl !== '' && !preg_match('~^(https?://|/(?!/)|#)~i', $buttonUrl)) {
+                $buttonUrl = '';
+            }
+
+            return [
+                'image_id' => $image->id,
+                'title' => trim($slide['title'] ?? ''),
+                'subtitle' => trim($slide['subtitle'] ?? ''),
+                'button_label' => trim($slide['button_label'] ?? ''),
+                'button_url' => $buttonUrl,
+                'enabled' => true,
+            ];
+        })->filter()->values()->all();
+        unset($validated['payment_methods'], $validated['home_slides']);
 
         foreach ($validated as $key => $value) {
             Setting::setValue($key, $value ?? '');
         }
 
         Setting::setValue('payment_methods', json_encode($paymentMethods, JSON_THROW_ON_ERROR));
+        Setting::setValue('home_slides', json_encode($slides, JSON_THROW_ON_ERROR));
 
         return redirect()->route('admin.settings.index')->with('success', 'Settings updated successfully.');
     }

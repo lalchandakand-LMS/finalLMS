@@ -612,5 +612,21 @@
     "Partial": "আংশিক পরিশোধিত",
     "Unpaid": "অপরিশোধিত",
     "Cancelled": "বাতিল",
-    "Online": "অনলাইন"
+    "Online": "অনলাইন",
+    "Homepage slider": "হোমপেজ স্লাইডার",
+    "Hero image slides": "হিরো ইমেজ স্লাইডসমূহ",
+    "Choose up to three images from Media Library. Upload images there first, then select them here. Only enabled slides with an image are shown.": "মিডিয়া লাইব্রেরি থেকে সর্বোচ্চ তিনটি ছবি নির্বাচন করুন। আগে মিডিয়া লাইব্রেরিতে ছবি আপলোড করুন, তারপর এখানে নির্বাচন করুন। সক্রিয় ও ছবি যুক্ত স্লাইডই হোমপেজে দেখানো হবে।",
+    "Open Media Library": "মিডিয়া লাইব্রেরি খুলুন",
+    "Slide": "স্লাইড",
+    "Media Library image": "মিডিয়া লাইব্রেরির ছবি",
+    "Select an image": "একটি ছবি নির্বাচন করুন",
+    "No images available. Upload JPG, PNG, WebP or GIF files in Media Library first.": "কোনো ছবি পাওয়া যায়নি। আগে মিডিয়া লাইব্রেরিতে JPG, PNG, WebP অথবা GIF ছবি আপলোড করুন।",
+    "Slide title": "স্লাইডের শিরোনাম",
+    "Slide subtitle": "স্লাইডের উপশিরোনাম",
+    "Homepage highlights": "হোমপেজের বিশেষ প্রচার",
+    "Slider navigation": "স্লাইডার নেভিগেশন",
+    "Go to slide": "স্লাইডে যান",
+    "Course image": "কোর্সের ছবি",
+    "JPG, PNG or WebP; maximum 5 MB. Leave empty to keep the current image.": "JPG, PNG অথবা WebP; সর্বোচ্চ ৫ এমবি। বর্তমান ছবি রাখতে খালি রাখুন।",
+    "This file is used by a homepage slider slide.": "এই ফাইলটি হোমপেজ স্লাইডারে ব্যবহৃত হচ্ছে।"
 }
