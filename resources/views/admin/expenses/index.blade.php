@@ -62,6 +62,20 @@
                             <td style="padding:10px;border-top:1px solid var(--border);">{{ ucfirst($expense->payment_method) }}<br><small class="muted">{{ $expense->reference ?: '—' }}</small></td>
                             <td style="padding:10px;border-top:1px solid var(--border);text-align:right;">৳{{ number_format((float)$expense->amount, 2) }}</td>
                             <td style="padding:10px;border-top:1px solid var(--border);">
+                                <details>
+                                    <summary style="cursor:pointer;margin-bottom:8px;">Edit</summary>
+                                    <form method="POST" action="{{ route($isAccountant ? 'accountant.expenses.update' : 'admin.expenses.update', $expense) }}" class="grid" style="min-width:260px;">
+                                        @csrf @method('PUT')
+                                        <label>Title<input name="title" maxlength="160" required value="{{ $expense->title }}"></label>
+                                        <label>Category<input name="category" maxlength="80" required value="{{ $expense->category }}"></label>
+                                        <label>Amount<input type="number" name="amount" min="0.01" step="0.01" required value="{{ $expense->amount }}"></label>
+                                        <label>Date<input type="date" name="expense_date" required value="{{ $expense->expense_date->toDateString() }}"></label>
+                                        <label>Method<select name="payment_method">@foreach(['cash','bkash','nagad','bank','card','other'] as $method)<option value="{{ $method }}" @selected($expense->payment_method === $method)>{{ ucfirst($method) }}</option>@endforeach</select></label>
+                                        <label>Reference<input name="reference" maxlength="120" value="{{ $expense->reference }}"></label>
+                                        <label>Description<textarea name="description" rows="2">{{ $expense->description }}</textarea></label>
+                                        <button class="btn primary" type="submit">Update</button>
+                                    </form>
+                                </details>
                                 <form method="POST" action="{{ route($isAccountant ? 'accountant.expenses.destroy' : 'admin.expenses.destroy', $expense) }}" onsubmit="return confirm('Delete this expense record?')">@csrf @method('DELETE')<button class="btn secondary" type="submit">Delete</button></form>
                             </td>
                         </tr>
