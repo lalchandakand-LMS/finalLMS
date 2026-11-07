@@ -85,4 +85,47 @@ class InvoiceManagementTest extends TestCase
 
         $this->assertDatabaseCount('invoice_payments', 0);
     }
+    public function test_admin_can_apply_percentage_discount_and_net_amount_is_used_for_payment_balance(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+
+        $this->actingAs($admin)->post(route('admin.invoices.store'), [
+            'user_id' => $student->id,
+            'title' => 'Scholarship tuition',
+            'amount' => 3000,
+            'discount_type' => 'percentage',
+            'discount_value' => 25,
+        ])->assertRedirect();
+
+        $invoice = Invoice::firstOrFail();
+        $this->assertSame('3000.00', $invoice->subtotal);
+        $this->assertSame('750.00', $invoice->discount_value);
+        $this->assertSame('2250.00', $invoice->amount);
+        $this->assertSame('percentage', $invoice->discount_type);
+    }
+
+    public function test_discount_cannot_exceed_invoice_subtotal_or_percentage_limit(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $payload = [
+            'user_id' => $student->id,
+            'title' => 'Invalid discount',
+            'amount' => 1000,
+            'discount_type' => 'fixed',
+            'discount_value' => 1001,
+        ];
+
+        $this->actingAs($admin)->post(route('admin.invoices.store'), $payload)
+            ->assertSessionHasErrors('discount_value');
+        $this->assertDatabaseCount('invoices', 0);
+
+        $payload['discount_type'] = 'percentage';
+        $payload['discount_value'] = 101;
+        $this->post(route('admin.invoices.store'), $payload)
+            ->assertSessionHasErrors('discount_value');
+        $this->assertDatabaseCount('invoices', 0);
+    }
+
 }
