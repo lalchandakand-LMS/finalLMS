@@ -13,7 +13,8 @@
 
     <div class="course-list">
         @forelse($invoices as $invoice)
-            @php($paid = (float) $invoice->payments->sum('amount'))
+            @php($refunded = (float) $invoice->refunds->where('status', 'approved')->sum('amount'))
+            @php($paid = max(0, (float) $invoice->payments->sum('amount') - $refunded))
             @php($due = max(0, (float) $invoice->amount - $paid))
             <article class="course-item">
                 <div class="meta-row" style="margin-top:0;">
@@ -21,7 +22,7 @@
                         <span class="badge {{ $invoice->status === 'paid' ? 'success' : ($invoice->status === 'partial' ? 'warning' : 'info') }}">{{ ucfirst($invoice->status) }}</span>
                         <h2 style="margin:10px 0 6px;">{{ $invoice->title }}</h2>
                         <div class="muted">{{ $invoice->invoice_number }}@if($invoice->course) · {{ $invoice->course->title }}@endif</div>
-                        <p>Total: <strong>৳{{ number_format((float) $invoice->amount, 2) }}</strong> · Paid: <strong>৳{{ number_format($paid, 2) }}</strong> · Outstanding: <strong>৳{{ number_format($due, 2) }}</strong></p>
+                        <p>Total: <strong>৳{{ number_format((float) $invoice->amount, 2) }}</strong> · Net paid: <strong>৳{{ number_format($paid, 2) }}</strong> · Refunded: <strong>৳{{ number_format($refunded, 2) }}</strong> · Outstanding: <strong>৳{{ number_format($due, 2) }}</strong></p>
                         @if($invoice->due_date)<div class="muted">Due date: {{ $invoice->due_date->format('d M Y') }}</div>@endif
                         @if($invoice->description)<p>{{ $invoice->description }}</p>@endif
                     </div>
