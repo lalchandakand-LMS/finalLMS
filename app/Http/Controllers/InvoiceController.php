@@ -22,7 +22,10 @@ class InvoiceController extends Controller
         $invoices = Invoice::with(['user', 'course', 'batch', 'payments'])
             ->where(function ($query) use ($branchId): void {
                 $query->whereHas('batch', fn ($batch) => $batch->where('branch_id', $branchId))
-                    ->orWhereHas('user', fn ($user) => $user->where('branch_id', $branchId));
+                    ->orWhere(function ($unbatched) use ($branchId): void {
+                        $unbatched->whereNull('batch_id')
+                            ->whereHas('user', fn ($user) => $user->where('branch_id', $branchId));
+                    });
             })->latest()->paginate(25);
         $students = User::query()->where('role', 'student')
             ->where(function ($query) use ($branchId): void {
@@ -84,7 +87,21 @@ class InvoiceController extends Controller
         abort_unless($studentQuery->exists(), 422, 'Student is not assigned to your branch.');
 
         if ($isAccountant && ! empty($validated['batch_id'])) {
-            abort_unless(\App\Models\Batch::whereKey($validated['batch_id'])->where('branch_id', $branchId)->exists(), 422, 'Batch is outside your branch.');
+            $batch = \App\Models\Batch::whereKey($validated['batch_id'])
+                ->where('branch_id', $branchId)
+                ->first();
+            abort_unless($batch, 422, 'Batch is outside your branch.');
+
+            $studentBelongsToBatchScope = User::whereKey($validated['user_id'])
+                ->where('role', 'student')
+                ->where(function ($query) use ($branchId, $batch): void {
+                    $query->where('branch_id', $branchId)
+                        ->orWhereHas('enrollments', fn ($enrollments) => $enrollments
+                            ->where('batch_id', $batch->id)
+                            ->whereIn('status', ['active', 'completed']));
+                })->exists();
+
+            abort_unless($studentBelongsToBatchScope, 422, 'Student is not assigned to this branch or enrolled in the selected batch.');
         }
         if (! empty($validated['batch_id']) && ! empty($validated['course_id'])) {
             abort_unless(
@@ -117,7 +134,10 @@ class InvoiceController extends Controller
             $branchId = $request->user()->branch_id;
             abort_unless($branchId && Invoice::whereKey($invoice->id)->where(function ($query) use ($branchId): void {
                 $query->whereHas('batch', fn ($batch) => $batch->where('branch_id', $branchId))
-                    ->orWhereHas('user', fn ($user) => $user->where('branch_id', $branchId));
+                    ->orWhere(function ($unbatched) use ($branchId): void {
+                        $unbatched->whereNull('batch_id')
+                            ->whereHas('user', fn ($user) => $user->where('branch_id', $branchId));
+                    });
             })->exists(), 404);
         }
 
