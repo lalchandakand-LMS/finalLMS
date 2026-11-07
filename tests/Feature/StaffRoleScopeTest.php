@@ -55,9 +55,9 @@ class StaffRoleScopeTest extends TestCase
 
     public function test_branch_manager_can_create_and_update_only_batches_in_their_branch(): void
     {
-        $teacher = User::factory()->create(['role' => 'teacher']);
-        $course = Course::create(['teacher_id' => $teacher->id, 'title' => 'Branch English', 'slug' => 'branch-english', 'description' => 'Branch course', 'price' => 1000, 'status' => 'published']);
         $assigned = Branch::create(['name' => 'Manager Branch', 'slug' => 'manager-branch']);
+        $teacher = User::factory()->create(['role' => 'teacher', 'branch_id' => $assigned->id]);
+        $course = Course::create(['teacher_id' => $teacher->id, 'title' => 'Branch English', 'slug' => 'branch-english', 'description' => 'Branch course', 'price' => 1000, 'status' => 'published']);
         $other = Branch::create(['name' => 'Foreign Branch', 'slug' => 'foreign-branch']);
         $manager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $assigned->id]);
         $foreignBatch = Batch::create(['branch_id' => $other->id, 'course_id' => $course->id, 'teacher_id' => $teacher->id, 'title' => 'Foreign Batch', 'capacity' => 20, 'starts_at' => now(), 'ends_at' => now()->addMonth(), 'fee' => 1000, 'status' => 'open']);
@@ -70,8 +70,9 @@ class StaffRoleScopeTest extends TestCase
 
     public function test_accountant_can_manage_invoice_ledger_but_cannot_open_admin_payment_review(): void
     {
-        $accountant = User::factory()->create(['role' => 'accountant']);
-        $student = User::factory()->create(['role' => 'student']);
+        $branch = Branch::create(['name' => 'Accountant Branch', 'slug' => 'accountant-branch']);
+        $accountant = User::factory()->create(['role' => 'accountant', 'branch_id' => $branch->id]);
+        $student = User::factory()->create(['role' => 'student', 'branch_id' => $branch->id]);
 
         $this->actingAs($accountant)
             ->get(route('accountant.invoices.index'))
