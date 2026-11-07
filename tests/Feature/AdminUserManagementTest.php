@@ -169,4 +169,54 @@ class AdminUserManagementTest extends TestCase
         ]);
     }
 
+
+    public function test_admin_can_assign_a_student_to_an_active_branch(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $branch = \\App\\Models\\Branch::create([
+            'name' => 'Student Learning Branch',
+            'slug' => 'student-learning-branch',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.updateRole', $student), [
+                'role' => 'student',
+                'branch_id' => $branch->id,
+            ])
+            ->assertRedirect(route('admin.users.index'));
+
+        $this->assertDatabaseHas('users', [
+            'id' => $student->id,
+            'role' => 'student',
+            'branch_id' => $branch->id,
+        ]);
+    }
+
+    public function test_student_cannot_be_assigned_to_an_inactive_branch(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $branch = \\App\\Models\\Branch::create([
+            'name' => 'Closed Student Branch',
+            'slug' => 'closed-student-branch',
+            'is_active' => false,
+        ]);
+
+        $this->actingAs($admin)
+            ->from(route('admin.users.index'))
+            ->post(route('admin.users.updateRole', $student), [
+                'role' => 'student',
+                'branch_id' => $branch->id,
+            ])
+            ->assertSessionHasErrors('branch_id');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $student->id,
+            'role' => 'student',
+            'branch_id' => null,
+        ]);
+    }
+
 }
