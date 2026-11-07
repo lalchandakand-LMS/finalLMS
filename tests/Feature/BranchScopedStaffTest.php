@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Batch;
 use App\Models\Branch;
 use App\Models\Course;
+use App\Models\Enrollment;
 use App\Models\Invoice;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -112,5 +113,42 @@ class BranchScopedStaffTest extends TestCase
 
         $this->assertDatabaseMissing('invoices', ['title' => 'Invalid cross-branch invoice']);
     }
+
+
+    public function test_branch_manager_student_directory_excludes_other_branches_and_includes_batch_enrollments(): void
+    {
+        $branch = Branch::create(['name' => 'Dhaka Branch', 'slug' => 'dhaka-branch']);
+        $otherBranch = Branch::create(['name' => 'Sylhet Branch', 'slug' => 'sylhet-branch']);
+        $manager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $branch->id]);
+        $localStudent = User::factory()->create(['role' => 'student', 'branch_id' => $branch->id]);
+        $enrolledStudent = User::factory()->create(['role' => 'student', 'branch_id' => $otherBranch->id]);
+        $remoteStudent = User::factory()->create(['role' => 'student', 'branch_id' => $otherBranch->id]);
+        $teacher = User::factory()->create(['role' => 'teacher', 'branch_id' => $branch->id]);
+        $course = Course::factory()->create(['status' => 'published']);
+        $batch = Batch::create([
+            'branch_id' => $branch->id,
+            'course_id' => $course->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Dhaka Evening Batch',
+            'capacity' => 25,
+            'starts_at' => now()->addDay(),
+            'ends_at' => now()->addMonth(),
+            'fee' => 2000,
+            'status' => 'open',
+        ]);
+        Enrollment::create([
+            'user_id' => $enrolledStudent->id,
+            'course_id' => $course->id,
+            'batch_id' => $batch->id,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($manager)->get(route('branch-manager.students.index'))
+            ->assertOk()
+            ->assertSee($localStudent->email)
+            ->assertSee($enrolledStudent->email)
+            ->assertDontSee($remoteStudent->email);
+    }
+
 
 }
