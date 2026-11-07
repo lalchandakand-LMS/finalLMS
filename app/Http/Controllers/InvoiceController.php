@@ -61,7 +61,7 @@ class InvoiceController extends Controller
         $isAccountant = $request->user()->isAccountant();
         $branchId = $request->user()->branch_id;
         if ($isAccountant) {
-            abort_unless($branchId && \\App\\Models\\Branch::whereKey($branchId)->where('is_active', true)->exists(), 403);
+            abort_unless($branchId && \App\Models\Branch::whereKey($branchId)->where('is_active', true)->exists(), 403);
         }
 
         $validated = $request->validate([
@@ -84,7 +84,7 @@ class InvoiceController extends Controller
         abort_unless($studentQuery->exists(), 422, 'Student is not assigned to your branch.');
 
         if ($isAccountant && ! empty($validated['batch_id'])) {
-            abort_unless(\\App\\Models\\Batch::whereKey($validated['batch_id'])->where('branch_id', $branchId)->exists(), 422, 'Batch is outside your branch.');
+            abort_unless(\App\Models\Batch::whereKey($validated['batch_id'])->where('branch_id', $branchId)->exists(), 422, 'Batch is outside your branch.');
         }
         if (! empty($validated['batch_id']) && ! empty($validated['course_id'])) {
             abort_unless(
