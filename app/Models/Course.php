@@ -19,6 +19,7 @@ class Course extends Model
         'description',
         'price',
         'status',
+        'image_path',
     ];
 
     public function teacher(): BelongsTo
