@@ -73,7 +73,6 @@
     </section>
 @endsection
 
-@push('styles')
 <style>
 @media print {
     .topbar, footer, .no-print, button, form { display:none !important; }
@@ -83,4 +82,3 @@
     a { color:#000 !important; }
 }
 </style>
-@endpush
