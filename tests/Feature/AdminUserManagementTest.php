@@ -130,7 +130,7 @@ class AdminUserManagementTest extends TestCase
     {
         $admin = User::factory()->create(['role' => 'admin']);
         $accountant = User::factory()->create(['role' => 'student']);
-        $branch = \\App\\Models\\Branch::create([
+        $branch = \App\Models\Branch::create([
             'name' => 'Finance Branch',
             'slug' => 'finance-branch',
             'is_active' => true,
