@@ -173,7 +173,7 @@ class BkashPaymentController extends Controller
                     $otherPending = Payment::query()
                         ->where('batch_id', $batch->id)
                         ->where('status', 'pending')
-                        ->whereKeyNot($lockedPayment->id)
+                        ->where('id', '<>', $lockedPayment->id)
                         ->count();
 
                     if ($batch->status !== 'open' || $enrollments + $otherPending >= $batch->capacity) {
