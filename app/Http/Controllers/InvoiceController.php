@@ -180,4 +180,27 @@ class InvoiceController extends Controller
 
         return back()->with('success', 'Payment receipt recorded successfully.');
     }
+
+    public function receipt(InvoicePayment $payment, Request $request): View
+    {
+        $payment->load(['invoice.user', 'invoice.course', 'invoice.batch', 'receiver']);
+
+        if ($request->user()->isAccountant()) {
+            $branchId = $request->user()->branch_id;
+            abort_unless($branchId && \\App\\Models\\Branch::whereKey($branchId)->where('is_active', true)->exists(), 403);
+            $invoice = $payment->invoice;
+            $inScope = $invoice && Invoice::whereKey($invoice->id)->where(function ($query) use ($branchId): void {
+                $query->whereHas('batch', fn ($batch) => $batch->where('branch_id', $branchId))
+                    ->orWhere(function ($unbatched) use ($branchId): void {
+                        $unbatched->whereNull('batch_id')
+                            ->whereHas('user', fn ($user) => $user->where('branch_id', $branchId));
+                    });
+            })->exists();
+            abort_unless($inScope, 404);
+        } else {
+            abort_unless($request->user()->isAdmin(), 403);
+        }
+
+        return view('admin.invoices.receipt', compact('payment'));
+    }
 }
