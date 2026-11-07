@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Branch;
+use App\Models\Expense;
 use App\Models\Invoice;
 use App\Models\InvoicePayment;
 use App\Models\User;
@@ -40,6 +41,14 @@ class FinanceReportTest extends TestCase
             'method' => 'cash',
             'paid_at' => now()->subDays(10),
         ]);
+        Expense::create([
+            'created_by' => $admin->id,
+            'category' => 'Utilities',
+            'title' => 'Office electricity',
+            'amount' => 200,
+            'payment_method' => 'cash',
+            'expense_date' => now()->subDay()->toDateString(),
+        ]);
 
         $this->actingAs($admin)->get(route('admin.finance-reports.index', [
             'date_from' => now()->subDays(2)->toDateString(),
@@ -47,6 +56,8 @@ class FinanceReportTest extends TestCase
         ]))->assertOk()
             ->assertSee('৳1,200.00')
             ->assertSee('৳1,300.00')
+            ->assertSee('৳200.00')
+            ->assertSee('৳1,000.00')
             ->assertDontSee('500.00');
     }
 
