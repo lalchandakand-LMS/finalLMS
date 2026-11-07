@@ -171,7 +171,8 @@ class InvoiceController extends Controller
 
         $result = DB::transaction(function () use ($invoice, $validated, $request): string {
             $lockedInvoice = Invoice::query()->lockForUpdate()->findOrFail($invoice->id);
-            $paid = (float) $lockedInvoice->payments()->sum('amount');
+            $refunded = (float) $lockedInvoice->refunds()->where('status', 'approved')->sum('amount');
+            $paid = max(0, (float) $lockedInvoice->payments()->sum('amount') - $refunded);
             $remaining = round((float) $lockedInvoice->amount - $paid, 2);
             $amount = round((float) $validated['amount'], 2);
 
