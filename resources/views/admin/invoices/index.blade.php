@@ -90,7 +90,7 @@
                     <details style="margin-top:14px;">
                         <summary>Payment history ({{ $invoice->payments->count() }})</summary>
                         @foreach($invoice->payments as $receipt)
-                            <p class="muted">৳{{ number_format((float) $receipt->amount, 2) }} · {{ ucfirst($receipt->method) }} · {{ $receipt->paid_at->format('d M Y H:i') }} · {{ $receipt->reference ?: 'No reference' }}</p>
+                            <p class="muted">৳{{ number_format((float) $receipt->amount, 2) }} · {{ ucfirst($receipt->method) }} · {{ $receipt->paid_at->format('d M Y H:i') }} · {{ $receipt->reference ?: 'No reference' }} · <a href="{{ route('invoice-payments.receipt', $receipt) }}" target="_blank" rel="noopener">Print receipt</a></p>
                         @endforeach
                     </details>
                 @endif
