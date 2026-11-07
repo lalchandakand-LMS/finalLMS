@@ -176,5 +176,7 @@
     "Invoice": "Invoice",
     "Received by": "Received by",
     "Receipt": "Receipt",
-    "Print": "Print"
+    "Print": "Print",
+    "Expenses": "Expenses",
+    "Online gateway": "Online gateway"
 }
