@@ -221,7 +221,7 @@ class CourseController extends Controller
 
         return $user->isTeacher()
             ? redirect()->route('teacher.courses.lessons.index', $course)->with('success', 'Lesson added successfully.')
-            : redirect()->route('admin.courses.index')->with('success', 'Lesson added successfully.');
+            : redirect()->route('admin.courses.lessons.index', $course)->with('success', 'Lesson added successfully.');
     }
 
 
