@@ -24,7 +24,7 @@
 
             <label>
                 {{ __('Course image') }}
-                @if($course?->image_path)<img src="{{ \\Illuminate\\Support\\Facades\\Storage::disk('public')->url($course->image_path) }}" alt="{{ $course->title }}" style="display:block;width:220px;max-width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:12px;margin:8px 0;">@endif
+                @if($course?->image_path)<img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($course->image_path) }}" alt="{{ $course->title }}" style="display:block;width:220px;max-width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:12px;margin:8px 0;">@endif
                 <input type="file" name="image" accept="image/jpeg,image/png,image/webp">
                 <small class="muted">{{ __('JPG, PNG or WebP; maximum 5 MB. Leave empty to keep the current image.') }}</small>
             </label>
