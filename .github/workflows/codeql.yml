@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   analyze:
-    name: Analyze PHP
+    name: Analyze JavaScript and TypeScript
     runs-on: ubuntu-24.04
     permissions:
       actions: read
@@ -31,7 +31,7 @@ jobs:
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
-          languages: php
+          languages: javascript-typescript
           queries: security-extended
 
       - name: Perform CodeQL analysis
