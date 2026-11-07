@@ -20,6 +20,7 @@ class Setting extends Model
         $savedMethods = json_decode((string) static::value('payment_methods', ''), true);
         $defaults = [
             'bkash' => ['enabled' => false, 'label' => 'bKash', 'account' => '', 'instructions' => ''],
+            'nagad' => ['enabled' => false, 'label' => 'Nagad', 'account' => '', 'instructions' => ''],
             'rocket' => ['enabled' => false, 'label' => 'Rocket', 'account' => '', 'instructions' => ''],
             'bank' => ['enabled' => false, 'label' => 'Bank transfer', 'account' => '', 'instructions' => ''],
             'manual' => ['enabled' => false, 'label' => 'Manual payment', 'account' => '', 'instructions' => ''],
