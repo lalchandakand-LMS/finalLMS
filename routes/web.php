@@ -26,7 +26,11 @@ use App\Http\Controllers\MediaLibraryController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\WebsiteBuilderController;
 use App\Http\Controllers\BackupController;
+use App\Http\Controllers\InstallController;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/install', [InstallController::class, 'index'])->name('install.index');
+Route::post('/install', [InstallController::class, 'install'])->middleware('throttle:5,1')->name('install.store');
 
 Route::get('/', function () {
     return auth()->check() ? redirect('/dashboard') : view('landing');
