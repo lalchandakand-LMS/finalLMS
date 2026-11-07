@@ -72,7 +72,9 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         Route::put('/branch-manager/batches/{batch}', [BatchController::class, 'branchManagerUpdate'])->name('branch-manager.batches.update');
     });
     Route::middleware('role:accountant')->group(function () {
-        Route::get('/accountant/invoices', [InvoiceController::class, 'accountantIndex'])->name('accountant.invoices.index');\n        Route::get('/accountant/refunds', [InvoiceRefundController::class, 'index'])->name('accountant.refunds.index');\n        Route::post('/accountant/refunds', [InvoiceRefundController::class, 'store'])->name('accountant.refunds.store');
+        Route::get('/accountant/invoices', [InvoiceController::class, 'accountantIndex'])->name('accountant.invoices.index');
+        Route::get('/accountant/refunds', [InvoiceRefundController::class, 'index'])->name('accountant.refunds.index');
+        Route::post('/accountant/refunds', [InvoiceRefundController::class, 'store'])->name('accountant.refunds.store');
         Route::get('/accountant/finance-reports', [FinanceReportController::class, 'index'])->name('accountant.finance-reports.index');
         Route::get('/accountant/expenses', [ExpenseController::class, 'index'])->name('accountant.expenses.index');
         Route::post('/accountant/expenses', [ExpenseController::class, 'store'])->name('accountant.expenses.store');
@@ -134,7 +136,11 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         ->name('courses.lessons.complete');
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
-        Route::get('/invoices', [InvoiceController::class, 'adminIndex'])->name('admin.invoices.index');\n        Route::get('/refunds', [InvoiceRefundController::class, 'index'])->name('admin.refunds.index');\n        Route::post('/refunds', [InvoiceRefundController::class, 'store'])->name('admin.refunds.store');\n        Route::post('/refunds/{refund}/approve', [InvoiceRefundController::class, 'approve'])->name('admin.refunds.approve');\n        Route::post('/refunds/{refund}/reject', [InvoiceRefundController::class, 'reject'])->name('admin.refunds.reject');
+        Route::get('/invoices', [InvoiceController::class, 'adminIndex'])->name('admin.invoices.index');
+        Route::get('/refunds', [InvoiceRefundController::class, 'index'])->name('admin.refunds.index');
+        Route::post('/refunds', [InvoiceRefundController::class, 'store'])->name('admin.refunds.store');
+        Route::post('/refunds/{refund}/approve', [InvoiceRefundController::class, 'approve'])->name('admin.refunds.approve');
+        Route::post('/refunds/{refund}/reject', [InvoiceRefundController::class, 'reject'])->name('admin.refunds.reject');
         Route::get('/finance-reports', [FinanceReportController::class, 'index'])->name('admin.finance-reports.index');
         Route::get('/expenses', [ExpenseController::class, 'index'])->name('admin.expenses.index');
         Route::post('/expenses', [ExpenseController::class, 'store'])->name('admin.expenses.store');
