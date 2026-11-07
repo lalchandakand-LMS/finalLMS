@@ -27,7 +27,7 @@
             <div><label for="expense-method">{{ __('Payment method') }}</label><select id="expense-method" name="payment_method" required>@foreach(['cash','bkash','nagad','bank','card','other'] as $method)<option value="{{ $method }}">{{ __(ucfirst($method)) }}</option>@endforeach</select></div>
             <div><label for="expense-reference">{{ __('Reference (optional)') }}</label><input id="expense-reference" name="reference" maxlength="120" value="{{ old('reference') }}"></div>
             @if(!$isAccountant)
-                <div><label for="expense-branch">Branch</label><select id="expense-branch" name="branch_id"><option value="">{{ __('Head office / Unassigned') }}</option>@foreach($branches as $branch)<option value="{{ $branch->id }}">{{ $branch->name }}</option>@endforeach</select></div>
+                <div><label for="expense-branch">{{ __('Branch') }}</label><select id="expense-branch" name="branch_id"><option value="">{{ __('Head office / Unassigned') }}</option>@foreach($branches as $branch)<option value="{{ $branch->id }}">{{ $branch->name }}</option>@endforeach</select></div>
             @endif
             <div class="grid" style="grid-column:1/-1;"><label for="expense-description">{{ __('Description (optional)') }}</label><textarea id="expense-description" name="description" rows="3">{{ old('description') }}</textarea></div>
             <div><button class="btn primary" type="submit">{{ __('Save expense') }}</button></div>
