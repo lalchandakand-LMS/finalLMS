@@ -128,4 +128,81 @@ class InvoiceManagementTest extends TestCase
         $this->assertDatabaseCount('invoices', 0);
     }
 
+    public function test_refund_requests_are_capped_and_require_admin_approval(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $invoice = Invoice::create([
+            'user_id' => $student->id,
+            'created_by' => $admin->id,
+            'invoice_number' => 'AEC-REFUND-0001',
+            'title' => 'Tuition fee',
+            'amount' => 1000,
+            'status' => 'paid',
+        ]);
+        $payment = InvoicePayment::create([
+            'invoice_id' => $invoice->id,
+            'received_by' => $admin->id,
+            'amount' => 1000,
+            'method' => 'bkash',
+            'paid_at' => now(),
+        ]);
+
+        $payload = [
+            'invoice_payment_id' => $payment->id,
+            'amount' => 600,
+            'method' => 'bkash',
+            'reason' => 'Duplicate payment',
+        ];
+
+        $this->actingAs($admin)->post(route('admin.refunds.store'), $payload)->assertRedirect();
+        $refund = InvoiceRefund::firstOrFail();
+        $this->assertSame('pending', $refund->status);
+
+        $this->post(route('admin.refunds.store'), [...$payload, 'amount' => 401])
+            ->assertSessionHasErrors('amount');
+        $this->assertSame(1, InvoiceRefund::count());
+
+        $this->post(route('admin.refunds.approve', $refund))->assertRedirect();
+        $this->assertDatabaseHas('invoice_refunds', [
+            'id' => $refund->id,
+            'status' => 'approved',
+            'approved_by' => $admin->id,
+        ]);
+    }
+
+    public function test_non_admin_cannot_approve_a_refund(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $invoice = Invoice::create([
+            'user_id' => $student->id,
+            'created_by' => $admin->id,
+            'invoice_number' => 'AEC-REFUND-0002',
+            'title' => 'Tuition fee',
+            'amount' => 500,
+            'status' => 'paid',
+        ]);
+        $payment = InvoicePayment::create([
+            'invoice_id' => $invoice->id,
+            'received_by' => $admin->id,
+            'amount' => 500,
+            'method' => 'cash',
+            'paid_at' => now(),
+        ]);
+        $refund = InvoiceRefund::create([
+            'invoice_id' => $invoice->id,
+            'invoice_payment_id' => $payment->id,
+            'requested_by' => $admin->id,
+            'amount' => 100,
+            'method' => 'cash',
+            'reason' => 'Test refund',
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($teacher)->post(route('admin.refunds.approve', $refund))->assertForbidden();
+        $this->assertDatabaseHas('invoice_refunds', ['id' => $refund->id, 'status' => 'pending']);
+    }
+
 }
