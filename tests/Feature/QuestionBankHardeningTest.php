@@ -1,18 +1,18 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use App\\Models\\Batch;
-use App\\Models\\Branch;
-use App\\Models\\Course;
-use App\\Models\\Enrollment;
-use App\\Models\\Exam;
-use App\\Models\\ExamQuestion;
-use App\\Models\\ExamAttempt;
-use App\\Models\\QuestionBankQuestion;
-use App\\Models\\User;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Tests\\TestCase;
+use App\Models\Batch;
+use App\Models\Branch;
+use App\Models\Course;
+use App\Models\Enrollment;
+use App\Models\Exam;
+use App\Models\ExamQuestion;
+use App\Models\ExamAttempt;
+use App\Models\QuestionBankQuestion;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class QuestionBankHardeningTest extends TestCase
 {
