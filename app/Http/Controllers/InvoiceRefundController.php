@@ -111,7 +111,7 @@ class InvoiceRefundController extends Controller
             $payment = InvoicePayment::query()->lockForUpdate()->findOrFail($locked->invoice_payment_id);
             $otherReserved = (float) InvoiceRefund::where('invoice_payment_id', $payment->id)
                 ->whereIn('status', ['pending', 'approved'])
-                ->whereKeyNot($locked->id)
+                ->where('id', '!=', $locked->id)
                 ->sum('amount');
             if (round($otherReserved + (float) $locked->amount, 2) > (float) $payment->amount) {
                 return 'excess';
