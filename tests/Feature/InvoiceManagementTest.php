@@ -170,6 +170,7 @@ class InvoiceManagementTest extends TestCase
             'status' => 'approved',
             'approved_by' => $admin->id,
         ]);
+        $this->assertDatabaseHas('invoices', ['id' => $invoice->id, 'status' => 'partial']);
     }
 
     public function test_non_admin_cannot_approve_a_refund(): void
