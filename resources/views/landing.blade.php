@@ -27,7 +27,39 @@
         $studentCount = $hasUsersTable ? \App\Models\User::where('role', 'student')->count() : 0;
         $certificateCount = $hasCertificatesTable ? \App\Models\Certificate::count() : 0;
         $featuredCourses = $hasCoursesTable ? \App\Models\Course::with('teacher')->withCount('lessons')->latest()->take(3)->get() : collect();
+        $storedSlides = $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('home_slides', '[]'), true) : [];
+        $homeSlides = collect(is_array($storedSlides) ? $storedSlides : [])->filter(fn ($slide) => is_array($slide) && !empty($slide['enabled']) && !empty($slide['image_id']))->map(function ($slide) {
+            $asset = \App\Models\MediaAsset::query()->whereKey($slide['image_id'])->where('mime_type', 'like', 'image/%')->first();
+            return $asset ? ['asset' => $asset, 'title' => $slide['title'] ?? '', 'subtitle' => $slide['subtitle'] ?? '', 'button_label' => $slide['button_label'] ?? '', 'button_url' => $slide['button_url'] ?? ''] : null;
+        })->filter()->values();
     @endphp
+
+    @if($homeSlides->isNotEmpty())
+        <section aria-label="{{ __('Homepage highlights') }}" style="margin-bottom:28px;">
+            <div id="home-slider-track" style="display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;border-radius:22px;gap:12px;">
+                @foreach($homeSlides as $index => $slide)
+                    <article id="home-slide-{{ $index + 1 }}" style="position:relative;isolation:isolate;flex:0 0 100%;min-height:320px;display:flex;align-items:center;overflow:hidden;border-radius:22px;background:#172554;scroll-snap-align:start;">
+                        <img src="{{ $slide['asset']->url }}" alt="{{ $slide['asset']->alt_text ?: $slide['title'] }}" loading="{{ $index === 0 ? 'eager' : 'lazy' }}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2;">
+                        <div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(8,15,35,.88),rgba(8,15,35,.56) 55%,rgba(8,15,35,.12));z-index:-1;"></div>
+                        <div style="padding:clamp(28px,6vw,64px);max-width:760px;color:#fff;">
+                            @if($slide['title'] !== '')<h2 style="font-size:clamp(28px,4vw,48px);line-height:1.12;margin:0 0 14px;color:#fff;">{{ $slide['title'] }}</h2>@endif
+                            @if($slide['subtitle'] !== '')<p style="font-size:clamp(15px,1.6vw,19px);line-height:1.7;margin:0 0 22px;color:rgba(255,255,255,.9);">{{ $slide['subtitle'] }}</p>@endif
+                            @if($slide['button_label'] !== '' && $slide['button_url'] !== '')
+                                <a class="btn primary" href="{{ $slide['button_url'] }}" rel="noopener">{{ $slide['button_label'] }}</a>
+                            @endif
+                        </div>
+                    </article>
+                @endforeach
+            </div>
+            @if($homeSlides->count() > 1)
+                <nav aria-label="{{ __('Slider navigation') }}" style="display:flex;justify-content:center;gap:8px;margin-top:12px;">
+                    @foreach($homeSlides as $index => $slide)
+                        <a href="#home-slide-{{ $index + 1 }}" aria-label="{{ __('Go to slide') }} {{ $index + 1 }}" style="display:block;width:11px;height:11px;border-radius:50%;background:var(--primary);opacity:.7;"></a>
+                    @endforeach
+                </nav>
+            @endif
+        </section>
+    @endif
 
     <section class="hero">
         <div>
