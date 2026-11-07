@@ -86,12 +86,17 @@ class AdminSettingsController extends Controller
                 return null;
             }
 
+            $buttonUrl = trim($slide['button_url'] ?? '');
+            if ($buttonUrl !== '' && !preg_match('/^(https?:\\/\\/|\\/(?!\\/)|#)/i', $buttonUrl)) {
+                $buttonUrl = '';
+            }
+
             return [
                 'image_id' => $image->id,
                 'title' => trim($slide['title'] ?? ''),
                 'subtitle' => trim($slide['subtitle'] ?? ''),
                 'button_label' => trim($slide['button_label'] ?? ''),
-                'button_url' => trim($slide['button_url'] ?? ''),
+                'button_url' => $buttonUrl,
                 'enabled' => true,
             ];
         })->filter()->values()->all();
