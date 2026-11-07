@@ -1,11 +1,11 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use App\\Services\\Payments\\BkashCheckoutService;
-use Illuminate\\Http\\Client\\Request;
-use Illuminate\\Support\\Facades\\Http;
-use Tests\\TestCase;
+use App\Services\Payments\BkashCheckoutService;
+use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Http;
+use Tests\TestCase;
 
 class BkashCheckoutServiceTest extends TestCase
 {
@@ -98,7 +98,7 @@ class BkashCheckoutServiceTest extends TestCase
             '*/tokenized/checkout/token/grant' => Http::response(['statusCode' => '9999'], 200),
         ]);
 
-        $this->expectException(\\RuntimeException::class);
+        $this->expectException(\RuntimeException::class);
         app(BkashCheckoutService::class)->grantToken();
     }
 }
