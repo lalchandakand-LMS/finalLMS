@@ -120,7 +120,7 @@ class BkashPaymentController extends Controller
             ->firstOrFail();
 
         if ($payment->status === 'approved') {
-            return redirect()->route('courses.show', $payment->course_id)->with('success', 'Your payment is already verified.');
+            return redirect()->route('courses.show', $payment->course)->with('success', 'Your payment is already verified.');
         }
 
         if ($callbackStatus !== 'success') {
@@ -129,7 +129,7 @@ class BkashPaymentController extends Controller
                 'admin_note' => 'The bKash checkout was cancelled or not completed.',
             ]);
 
-            return redirect()->route('courses.show', $payment->course_id)
+            return redirect()->route('courses.show', $payment->course)
                 ->with('error', 'The bKash payment was not completed. You can try again.');
         }
 
@@ -203,19 +203,19 @@ class BkashPaymentController extends Controller
             });
 
             if ($result === 'full') {
-                return redirect()->route('courses.show', $payment->course_id)
+                return redirect()->route('courses.show', $payment->course)
                     ->with('error', 'Your bKash payment succeeded, but the selected batch is full. Please contact the academy for a refund or another batch.');
             }
 
             if ($result === 'closed') {
-                return redirect()->route('courses.show', $payment->course_id)
+                return redirect()->route('courses.show', $payment->course)
                     ->with('error', 'This payment is no longer eligible for automatic approval. Please contact the academy.');
             }
 
-            return redirect()->route('courses.show', $payment->course_id)
+            return redirect()->route('courses.show', $payment->course)
                 ->with('success', 'bKash payment verified. Your course enrollment is now active.');
         } catch (Throwable) {
-            return redirect()->route('courses.show', $payment->course_id)
+            return redirect()->route('courses.show', $payment->course)
                 ->with('warning', 'Your bKash payment is awaiting server-side verification. Do not pay again; contact the academy if this message remains.');
         }
     }
