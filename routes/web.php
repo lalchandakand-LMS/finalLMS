@@ -23,6 +23,7 @@ use App\Http\Controllers\MediaLibraryController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\WebsiteBuilderController;
 use App\Http\Controllers\BackupController;
+use App\Http\Controllers\BkashPaymentController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
