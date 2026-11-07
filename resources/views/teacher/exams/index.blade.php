@@ -21,6 +21,7 @@
                 <label>{{ __('Ends at') }}<input type="datetime-local" name="ends_at" required></label>
                 <label>{{ __('Duration (minutes)') }}<input type="number" name="duration_minutes" min="1" max="600" required></label>
                 <label>{{ __('Pass marks') }}<input type="number" name="pass_marks" min="0" value="0" required></label>
+                <label>{{ __('Questions per student attempt (optional)') }}<input type="number" name="questions_per_attempt" min="1" max="100" placeholder="{{ __('Leave blank to use all questions') }}"></label>
             </div>
             <label><input type="checkbox" id="use-question-bank"> {{ __('Select random questions from my Question Bank') }}</label>
             <div id="question-bank-area" hidden>
