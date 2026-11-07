@@ -64,6 +64,7 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         ->name('invoice-payments.receipt');
     Route::middleware('role:branch_manager')->group(function () {
         Route::get('/branch-manager/batches', [BatchController::class, 'branchManagerIndex'])->name('branch-manager.batches.index');
+        Route::get('/branch-manager/students', [BatchController::class, 'branchManagerStudents'])->name('branch-manager.students.index');
         Route::post('/branch-manager/batches', [BatchController::class, 'branchManagerStore'])->name('branch-manager.batches.store');
         Route::put('/branch-manager/batches/{batch}', [BatchController::class, 'branchManagerUpdate'])->name('branch-manager.batches.update');
     });
