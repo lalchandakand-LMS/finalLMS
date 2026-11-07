@@ -123,6 +123,13 @@ class InvoiceRefundController extends Controller
                 'processed_at' => now(),
             ]);
 
+            $netPaid = (float) InvoicePayment::where('invoice_id', $locked->invoice_id)->sum('amount')
+                - (float) InvoiceRefund::where('invoice_id', $locked->invoice_id)->where('status', 'approved')->sum('amount');
+            $invoice = Invoice::query()->lockForUpdate()->findOrFail($locked->invoice_id);
+            $invoice->update([
+                'status' => $netPaid >= (float) $invoice->amount ? 'paid' : ($netPaid > 0 ? 'partial' : 'unpaid'),
+            ]);
+
             return 'approved';
         });
 
