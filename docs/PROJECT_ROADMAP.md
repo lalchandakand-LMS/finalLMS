@@ -3,7 +3,7 @@
 Last updated: 2026-11-07
 Repository: https://github.com/lalchandakand-LMS/finalLMS
 Working branch: feature/admin-dashboard-refresh
-Pull request: #2 (keep open; do not merge without owner approval)
+PR #2 was closed unmerged on 2026-11-07. Current follow-up work is being committed to this branch; open a fresh PR after verification.
 Production deployment: NOT authorized / NOT done.
 
 This is the persistent project checklist. Update it whenever a task is started, completed, blocked, or verified. A feature is not complete merely because a dashboard link or UI card exists: it must have backend authorization, validation, migrations, tests, and working UI.
@@ -28,7 +28,7 @@ This is the persistent project checklist. Update it whenever a task is started, 
 
 ### Current blocker
 - [x] Diagnose and fix CI migration ordering: Question Bank category/difficulty migration now runs after its table-creation migration; verified by passing CI run #504.
-- [ ] Add/complete automated tests for assignment create, enrollment authorization, file validation/storage/download, grading, deadline, and resubmission.
+- [x] Add automated regression tests for assignment creation ownership/validation, enrollment authorization, file validation/storage/download, grading bounds/ownership, deadline policy, and graded resubmission; CI run #873 passed both test and cPanel package jobs.
 - [x] Add student course overview with active/completed enrollments and lesson progress; hide unpublished courses from student view.
 - [x] Add feature tests for student portal access, lesson progress display, idempotent completion, inactive enrollment denial, and cross-course lesson access denial.
 - [x] Verify student portal changes in CI (run #535 passed both test and cPanel package jobs).
@@ -121,3 +121,13 @@ This is the persistent project checklist. Update it whenever a task is started, 
 - Meeting and recording URLs require HTTPS.
 - Added regression tests for completed-student recording access, meeting-link secrecy, rejection of HTTP links, and blocking completed enrollments from ongoing sessions.
 - External meeting-provider API/SDK integrations and attendance automation remain pending; this is a secure link workflow, not a Zoom/Meet API integration.
+
+
+### Payment gateway implementation update — 2026-11-07
+- Added server-side bKash Checkout client using backend-only credentials, HTTPS requests, token grant, payment creation, execution, and payment-status query.
+- Added bKash online checkout initiation and callback routes. Enrollment is granted only after server-side payment status verification and amount/reference checks; browser redirect alone never approves a payment.
+- Added payment gateway reference columns with uniqueness constraints and bKash flow tests for successful verification and amount-mismatch rejection.
+- bKash CI is running; do not mark this integration verified until the latest test and cPanel package jobs pass.
+- Added environment configuration placeholders for Nagad merchant settings only. No Nagad API calls have been implemented because the exact merchant-specific integration guide and sandbox API contract are not yet available. Do not guess cryptographic signing/encryption or callback endpoints.
+- Required next step for Nagad: obtain the official merchant integration PDF/API guide (no secrets) and implement signature/encryption, request/response verification, callback whitelist notes, idempotency, and mocked regression tests.
+- Never commit merchant credentials or private keys. Configure them in the hosting environment or secure key files outside the public web root.
