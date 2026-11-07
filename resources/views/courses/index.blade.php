@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Courses | LMS Academy')
+@section('title', __('Courses') . ' | ' . config('app.name'))
 
 @section('content')
     @php
@@ -9,10 +9,10 @@
 
     <div class="page-header">
         <div>
-            <span class="badge info">Catalog</span>
+            <span class="badge info">{{ __('Catalog') }}</span>
             <h1 style="margin: 12px 0 0;">{{ __('Available courses') }}</h1>
         </div>
-        <span class="badge success">{{ $courseCount }} online</span>
+        <span class="badge success">{{ $courseCount }} {{ __('online') }}</span>
     </div>
 
     <div class="dash-summary" style="margin-bottom: 20px;">
@@ -40,11 +40,11 @@
                 <div class="meta-row">
                     <div>
                         <div style="margin-bottom: 8px;">
-                            <span class="badge {{ $course->status === 'published' ? 'success' : 'warning' }}">{{ ucfirst($course->status) }}</span>
+                            <span class="badge {{ $course->status === 'published' ? 'success' : 'warning' }}">{{ __(ucfirst($course->status)) }}</span>
                         </div>
                         <h3 style="margin: 0 0 8px;">{{ $course->title }}</h3>
                         <p class="muted" style="margin: 0 0 12px;">{{ \Illuminate\Support\Str::limit($course->description, 160) }}</p>
-                        <div class="muted">{{ __('Teacher:') }} {{ $course->teacher?->name ?? 'N/A' }} · {{ __('Price:') }} BDT {{ number_format($course->price, 2) }}</div>
+                        <div class="muted">{{ __('Teacher:') }} {{ $course->teacher?->name ?? __('N/A') }} · {{ __('Price:') }} BDT {{ number_format($course->price, 2) }}</div>
                     </div>
                     <div>
                         <a href="{{ route('courses.show', $course) }}" class="btn secondary">{{ __('View details') }}</a>

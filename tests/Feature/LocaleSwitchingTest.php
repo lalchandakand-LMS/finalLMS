@@ -27,4 +27,12 @@ class LocaleSwitchingTest extends TestCase
             ->post('/language', ['locale' => 'fr'])
             ->assertSessionHasErrors('locale');
     }
+    public function test_bangla_catalog_contains_every_english_translation_key(): void
+    {
+        $english = json_decode(file_get_contents(lang_path('en.json')), true, 512, JSON_THROW_ON_ERROR);
+        $bangla = json_decode(file_get_contents(lang_path('bn.json')), true, 512, JSON_THROW_ON_ERROR);
+
+        $this->assertSame([], array_diff_key($english, $bangla));
+    }
+
 }
