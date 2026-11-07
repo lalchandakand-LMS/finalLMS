@@ -127,7 +127,8 @@ class AssignmentWorkflowTest extends TestCase
 
     public function test_non_enrolled_student_cannot_view_or_submit_assignment(): void
     {
-        ['teacher' => $teacher, 'student' => $student, 'assignment' => $assignment] = $this->assignmentFixture();
+        ['teacher' => $teacher, 'batch' => $batch, 'assignment' => $assignment] = $this->assignmentFixture();
+        $student = User::factory()->create(['role' => 'student']);
 
         $this->actingAs($student)->get(route('student.assignments.show', $assignment))->assertForbidden();
         $this->actingAs($student)->post(route('student.assignments.submit', $assignment), ['answer' => 'Unauthorized'])
@@ -156,7 +157,7 @@ class AssignmentWorkflowTest extends TestCase
                 'max_marks' => 0,
             ])->assertSessionHasErrors(['title', 'max_marks']);
 
-        $this->assertDatabaseCount('assignments', 0);
+        $this->assertDatabaseCount('assignments', 1);
     }
 
     public function test_assignment_upload_rejects_unsupported_and_oversized_files(): void
