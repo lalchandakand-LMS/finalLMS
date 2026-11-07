@@ -62,7 +62,7 @@
                         <div>
                             <span class="badge {{ $refund->status === 'approved' ? 'success' : ($refund->status === 'pending' ? 'warning' : 'info') }}">{{ __(ucfirst($refund->status)) }}</span>
                             <h3 style="margin:8px 0;">৳{{ number_format((float) $refund->amount, 2) }} — {{ $refund->invoice->user->name }}</h3>
-                            <p class="muted" style="margin:4px 0;">{{ $refund->invoice->invoice_number }} · Payment #{{ $refund->invoice_payment_id }} · {{ ucfirst($refund->method) }} · {{ $refund->reason }}</p>
+                            <p class="muted" style="margin:4px 0;">{{ $refund->invoice->invoice_number }} · Payment #{{ $refund->invoice_payment_id }} · {{ __(ucfirst($refund->method)) }} · {{ $refund->reason }}</p>
                             <p class="muted" style="margin:4px 0;">{{ __('Requested by') }} {{ $refund->requester->name }} · {{ $refund->created_at->format('d M Y H:i') }}
                                 @if($refund->approver) · {{ __('Processed by') }} {{ $refund->approver->name }} @endif
                             </p>
