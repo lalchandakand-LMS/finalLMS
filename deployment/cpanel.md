@@ -10,6 +10,10 @@ This guide covers a fresh Laravel 12 installation on PHP 8.3+ with MySQL/MariaDB
 - Writable `storage`, `bootstrap/cache`, and application-root directories during installation
 - Composer 2 only if installing from source; the CI release ZIP already includes production `vendor` dependencies and built assets
 
+## Staging before production
+
+Use the [cPanel staging acceptance and release runbook](../docs/CPANEL_STAGING_RUNBOOK.md) to validate a separate staging subdomain, empty test database, role-based access, file privacy, backups, and rollback before any production release. Do not use the live database as a staging substitute.
+
 ## Fresh installation
 
 1. Create a new database and database user in cPanel. Do not use a database containing existing tables or application data.
