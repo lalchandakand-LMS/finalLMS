@@ -99,7 +99,7 @@ This stage also repaired escaped namespace corruption in the integration branch'
 
 Audited on the current main-based integration branch:
 - Public CMS pages, blog/news publishing, website builder, media library, activity logs, and backup/restore already exist in main and their existing feature tests are retained.
-- Bangla catalog has 561 keys and English catalog has 312 keys; every English key is present in Bangla. The development branch's smaller translation files are not copied over main's larger catalogs.
+- Bangla catalog now has 614 keys and English catalog has 375 keys; every English key is present in Bangla. The development branch's smaller translation files are not copied over main's larger catalogs.
 - Backup restore requires admin role, explicit `RESTORE` confirmation, current password, and an HMAC-valid backup. Tampered and invalid gzip archives are covered by tests.
 - New hardening being added: homepage and blog cover references must point to image assets, and media used by homepage sections or article covers cannot be deleted.
 - Stage 6 CI passed on commit `7d107e62dcd47e62c9a9e66f9a836dbdf7f00b2e` (test and cPanel package).
@@ -130,3 +130,12 @@ All seven planned code-integration stages are implemented on `integration/lms-to
 - Main-branch Laravel CI: passed (test + package).
 - Main-branch CodeQL: passed.
 - Hosting deployment: not performed.
+
+
+### Stage 8: complete Bangla invoice and receipt coverage
+
+In progress:
+- Add the full invoice/receipt finance vocabulary to both English and Bangla JSON catalogs.
+- Localize admin invoice creation, payment ledger, student invoice balances, and printable receipts.
+- Preserve branch-scoped accountant and branch-manager regression coverage.
+- Main's existing translation keys and invoice finance behavior are retained; the incoming catalogs are supersets of the current main catalogs.
