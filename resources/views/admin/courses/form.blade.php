@@ -11,7 +11,7 @@
     </div>
 
     <div class="panel" style="max-width: 800px; margin: 0 auto;">
-        <form method="POST" action="{{ isset($course) ? route('admin.courses.update', $course) : route('admin.courses.store') }}">
+        <form method="POST" enctype="multipart/form-data" action="{{ isset($course) ? route('admin.courses.update', $course) : route('admin.courses.store') }}">
             @csrf
             @if(isset($course))
                 @method('PUT')
@@ -20,6 +20,13 @@
             <label>
                 {{ __('Title') }}
                 <input type="text" name="title" value="{{ old('title', $course?->title ?? '') }}" maxlength="255" required>
+            </label>
+
+            <label>
+                {{ __('Course image') }}
+                @if($course?->image_path)<img src="{{ \\Illuminate\\Support\\Facades\\Storage::disk('public')->url($course->image_path) }}" alt="{{ $course->title }}" style="display:block;width:220px;max-width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:12px;margin:8px 0;">@endif
+                <input type="file" name="image" accept="image/jpeg,image/png,image/webp">
+                <small class="muted">{{ __('JPG, PNG or WebP; maximum 5 MB. Leave empty to keep the current image.') }}</small>
             </label>
 
             <label>
