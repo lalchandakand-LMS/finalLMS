@@ -1,17 +1,17 @@
 <?php
 
-namespace Tests\Feature;
+namespace Tests\\Feature;
 
-use App\Models\Batch;
-use App\Models\Branch;
-use App\Models\Course;
-use App\Models\Enrollment;
-use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Http\UploadedFile;
-use Tests\TestCase;
+use App\\Models\\Batch;
+use App\\Models\\Branch;
+use App\\Models\\Course;
+use App\\Models\\Enrollment;
+use App\\Models\\User;
+use Illuminate\\Foundation\\Testing\\RefreshDatabase;
+use Illuminate\\Support\\Facades\\DB;
+use Illuminate\\Support\\Facades\\Storage;
+use Illuminate\\Http\\UploadedFile;
+use Tests\\TestCase;
 
 class AssignmentWorkflowTest extends TestCase
 {
@@ -44,7 +44,7 @@ class AssignmentWorkflowTest extends TestCase
         ])->assertRedirect();
 
         $submissionId = DB::table('assignment_submissions')->value('id');
-        $submission = \App\Models\AssignmentSubmission::findOrFail($submissionId);
+        $submission = \\App\\Models\\AssignmentSubmission::findOrFail($submissionId);
         Storage::disk('local')->assertExists($submission->attachment_path);
 
         $this->actingAs($student)->post(route('student.assignments.submit', $assignment), [
@@ -122,6 +122,55 @@ class AssignmentWorkflowTest extends TestCase
             'id' => $submissionId,
             'score' => '8.00',
             'status' => 'graded',
+        ]);
+    }
+
+    public function test_inactive_enrollment_cannot_submit_an_assignment(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $student = User::factory()->create(['role' => 'student']);
+        $course = Course::create([
+            'teacher_id' => $teacher->id,
+            'title' => 'Inactive Enrollment Course',
+            'slug' => 'inactive-enrollment-course',
+            'description' => 'Access control test.',
+            'price' => 0,
+            'status' => 'published',
+        ]);
+        $branch = Branch::create(['name' => 'Inactive Branch', 'slug' => 'inactive-branch']);
+        $batch = Batch::create([
+            'branch_id' => $branch->id,
+            'course_id' => $course->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Inactive Batch',
+            'capacity' => 10,
+            'starts_at' => now(),
+            'ends_at' => now()->addMonth(),
+            'fee' => 0,
+            'status' => 'open',
+        ]);
+        Enrollment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'batch_id' => $batch->id,
+            'status' => 'cancelled',
+        ]);
+        $assignment = $batch->assignments()->create([
+            'teacher_id' => $teacher->id,
+            'title' => 'Restricted assignment',
+            'instructions' => 'Only active students may submit.',
+            'due_at' => now()->addDay(),
+            'max_marks' => 10,
+            'status' => 'published',
+        ]);
+
+        $this->actingAs($student)
+            ->post(route('student.assignments.submit', $assignment), ['answer' => 'Unauthorized submission'])
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('assignment_submissions', [
+            'assignment_id' => $assignment->id,
+            'student_id' => $student->id,
         ]);
     }
 }
