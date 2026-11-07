@@ -25,6 +25,8 @@ Switch to the live base URL and live credentials only after bKash merchant appro
 
 ## Nagad
 
+See [Nagad API integration handoff](NAGAD_INTEGRATION_HANDOFF.md) for the official merchant documents to provide and the implementation/test checklist. Once the guide is available, it can be reviewed and the adapter completed without guessing the protocol.
+
 Nagad configuration placeholders are present, but the direct Nagad API adapter is intentionally not enabled until the merchant-specific official integration guide is available. Nagad integrations use merchant-specific IDs and cryptographic key material; the exact endpoints, payload signing/encryption, callback registration, and response verification must match the guide issued for the account.
 
 Keep the merchant private key and Nagad gateway public key in files outside the public web root, with restrictive filesystem permissions. Configure only their file paths:

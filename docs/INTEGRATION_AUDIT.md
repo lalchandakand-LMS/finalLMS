@@ -120,7 +120,7 @@ Stage 7 CI passed on commit `69df4b6a44d68c1bc98d91b7f17f952484b04b04`: Laravel 
 
 ## Final integration status
 
-All seven planned code-integration stages are implemented on `integration/lms-to-main`. No files were removed from main in the PR comparison. PR #18 is merged as commit `379afe2fa3579a44d874280f96114b7f3cd189fc`. Post-merge Laravel tests, cPanel package verification, and CodeQL all passed on `main`. The PR changed 52 files and removed no files from `main`. Real cPanel staging installation, production bKash merchant activation, Nagad/SSLCommerz integrations, off-site scheduled backups, and disaster-recovery rehearsal remain operational follow-ups and are not represented as completed.
+All seven planned code-integration stages are implemented on `integration/lms-to-main`. No files were removed from main in the PR comparison. PR #18 is merged as commit `379afe2fa3579a44d874280f96114b7f3cd189fc`. PR #20 added full invoice/receipt translation coverage (614 Bangla keys, 375 English keys) as commit `9a43717c87a33f6f84be16f2b2fa89382687d300`. PR #21 added the Nagad handoff document as commit `13bb27310e405f95b562ba057f565f23a26d2ef2`. PR #18 changed 52 files and removed no files from `main`. Real cPanel staging installation, production bKash merchant activation, Nagad/SSLCommerz integrations, off-site scheduled backups, and disaster-recovery rehearsal remain operational follow-ups and are not represented as completed.
 
 
 ## Post-merge verification
@@ -134,7 +134,7 @@ All seven planned code-integration stages are implemented on `integration/lms-to
 
 ### Stage 8: complete Bangla invoice and receipt coverage
 
-In progress:
+Completed and CI-verified:
 - Add the full invoice/receipt finance vocabulary to both English and Bangla JSON catalogs.
 - Localize admin invoice creation, payment ledger, student invoice balances, and printable receipts.
 - Preserve branch-scoped accountant and branch-manager regression coverage.
@@ -143,7 +143,22 @@ In progress:
 
 ### Stage 9: Nagad official API handoff
 
+Completed as documentation-only; direct checkout remains disabled:
 - Added `docs/NAGAD_INTEGRATION_HANDOFF.md` to define exactly which official merchant documents, endpoint schemas, cryptographic details, callback rules, and sandbox materials are needed before implementation.
 - Existing Nagad manual/configuration mode remains available; direct API checkout stays disabled.
 - No endpoint, signing/encryption algorithm, callback rule, or credential format will be guessed.
 - When the official guide is supplied, the implementation can be completed against that specification with server-side verification, idempotency, and automated failure/replay tests.
+
+
+## Final feature integration status
+
+- Student portal and recorded lessons: integrated.
+- Question Bank and randomized exams: integrated.
+- Branch manager/accountant role and data scope: integrated.
+- Assignment upload, late submission, grading and resubmission: integrated.
+- bKash Tokenized Checkout server-side verification: integrated; merchant activation remains disabled pending credentials and sandbox acceptance.
+- CMS, website builder, media, blog/news, backup/restore and Bangla invoice/receipt translation: integrated.
+- Secure cPanel installer and package CI: preserved and validated by automated packaging checks.
+- Nagad: handoff documentation and configuration placeholders integrated; direct API adapter remains disabled pending official merchant guide.
+- SSLCommerz: not integrated.
+- Live cPanel staging, off-site scheduled backup configuration and disaster-recovery rehearsal: still outstanding operational work.
