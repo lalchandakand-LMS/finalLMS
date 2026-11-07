@@ -135,7 +135,13 @@ class BkashPaymentController extends Controller
 
         try {
             $token = $bkash->grantToken();
-            $executed = $bkash->executePayment($token, $paymentId);
+            $executed = [];
+            try {
+                $executed = $bkash->executePayment($token, $paymentId);
+            } catch (Throwable) {
+                // A repeated callback may arrive after bKash has already executed the payment.
+                // The payment-status query below remains the authoritative verification step.
+            }
             $verified = $bkash->queryPayment($token, $paymentId);
 
             $status = strtolower((string) ($verified['transactionStatus'] ?? ''));
@@ -147,6 +153,7 @@ class BkashPaymentController extends Controller
             if ($status !== 'completed'
                 || $verifiedPaymentId !== $paymentId
                 || $verifiedAmount !== round((float) $payment->amount, 2)
+                || (isset($verified['currency']) && strtoupper((string) $verified['currency']) !== 'BDT')
                 || ! is_string($transactionId)
                 || $transactionId === ''
                 || ($invoice !== null && $invoice !== $payment->transaction_reference)) {
