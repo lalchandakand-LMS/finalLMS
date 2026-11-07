@@ -25,7 +25,7 @@ class CourseImageUploadTest extends TestCase
             'teacher_id' => $teacher->id,
             'price' => 3000,
             'status' => 'published',
-            'image' => UploadedFile::fake()->image('spoken-english.webp'),
+            'image' => UploadedFile::fake()->image('spoken-english.jpg'),
         ])->assertRedirect(route('admin.courses.index'));
 
         $course = Course::where('slug', 'spoken-english')->firstOrFail();
