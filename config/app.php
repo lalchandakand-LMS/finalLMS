@@ -99,7 +99,8 @@ return [
 
     'cipher' => 'AES-256-CBC',
 
-    'key' => env('APP_KEY'),
+    // Temporary pre-install key only; the installer replaces it with a random key in the private .env file.
+    'key' => env('APP_KEY') ?: (is_file(dirname(__DIR__).'/.env') ? null : 'base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='),
 
     'previous_keys' => [
         ...array_filter(
