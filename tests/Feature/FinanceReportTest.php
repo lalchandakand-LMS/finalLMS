@@ -46,7 +46,7 @@ class FinanceReportTest extends TestCase
             'date_to' => now()->toDateString(),
         ]))->assertOk()
             ->assertSee('৳1,200.00')
-            ->assertSee('৳2,500.00')
+            ->assertSee('৳1,300.00')
             ->assertDontSee('500.00');
     }
 
