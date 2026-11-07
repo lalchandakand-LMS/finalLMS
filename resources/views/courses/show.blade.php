@@ -14,6 +14,9 @@
         <div class="panel">
             <p class="muted">{{ __('Instructor:') }} {{ $course->teacher?->name ?? __('N/A') }}</p>
             <p>{{ $course->description }}</p>
+            @if(auth()->check() && (auth()->user()->isAdmin() || (auth()->user()->isTeacher() && $course->teacher_id === auth()->id())))
+                <a class="btn secondary" href="{{ route('teacher.courses.lessons.index', $course) }}">{{ __('Manage lessons') }}</a>
+            @endif
             <div class="meta-row">
                 <span class="badge success">{{ __('Price:') }} BDT {{ number_format($course->price, 2) }}</span>
                 <span class="badge warning">{{ __('Status:') }} {{ __(ucfirst($course->status)) }}</span>
@@ -30,14 +33,15 @@
                                 <div class="course-item" style="margin-bottom: 14px;">
                                     <div class="meta-row">
                                         <div>
-                                            <strong>{{ $lesson->order }}. {{ $lesson->title }}</strong><br>
+                                            <strong><a href="{{ route('courses.lessons.show', [$course, $lesson]) }}">{{ $lesson->order }}. {{ $lesson->title }}</a></strong><br>
                                             <span class="muted">{{ $lesson->duration_minutes }} minutes</span>
                                         </div>
                                         @if($lesson->is_preview)
                                             <span class="badge info">{{ __('Preview') }}</span>
                                         @endif
                                     </div>
-                                    <p style="margin: 10px 0 0;">{{ $lesson->content }}</p>
+                                    <p style="margin: 10px 0 0;">{{ \Illuminate\Support\Str::limit($lesson->content, 140) }}</p>
+                                    <a class="btn secondary" style="margin-top:10px;" href="{{ route('courses.lessons.show', [$course, $lesson]) }}">{{ __('Open lesson') }}</a>
                                     @auth
                                         @if(auth()->user()->isStudent() && $canViewLessons && ! $lesson->is_preview)
                                             @if($lessonProgress->has($lesson->id))
