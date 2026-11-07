@@ -49,6 +49,11 @@ class MediaLibraryController extends Controller
             fn ($section) => is_array($section) && (int) ($section['image_id'] ?? 0) === $media->id
         );
         abort_if($usedByWebsite, 422, 'This file is used by a homepage section.');
+        $slides = json_decode((string) Setting::value('home_slides', '[]'), true);
+        $usedBySlider = collect(is_array($slides) ? $slides : [])->contains(
+            fn ($slide) => is_array($slide) && (int) ($slide['image_id'] ?? 0) === $media->id
+        );
+        abort_if($usedBySlider, 422, 'This file is used by a homepage slider slide.');
         Storage::disk($media->disk)->delete($media->path);
         $media->delete();
         return back()->with('success', 'Media deleted.');
