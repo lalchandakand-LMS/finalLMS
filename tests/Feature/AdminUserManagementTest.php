@@ -125,4 +125,48 @@ class AdminUserManagementTest extends TestCase
         ]);
     }
 
+
+    public function test_admin_can_assign_an_accountant_to_a_specific_branch(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $accountant = User::factory()->create(['role' => 'student']);
+        $branch = \\App\\Models\\Branch::create([
+            'name' => 'Finance Branch',
+            'slug' => 'finance-branch',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.updateRole', $accountant), [
+                'role' => 'accountant',
+                'branch_id' => $branch->id,
+            ])
+            ->assertRedirect(route('admin.users.index'));
+
+        $this->assertDatabaseHas('users', [
+            'id' => $accountant->id,
+            'role' => 'accountant',
+            'branch_id' => $branch->id,
+        ]);
+    }
+
+    public function test_accountant_must_be_assigned_an_active_branch(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $accountant = User::factory()->create(['role' => 'student']);
+
+        $this->actingAs($admin)
+            ->from(route('admin.users.index'))
+            ->post(route('admin.users.updateRole', $accountant), [
+                'role' => 'accountant',
+            ])
+            ->assertSessionHasErrors('branch_id');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $accountant->id,
+            'role' => 'student',
+            'branch_id' => null,
+        ]);
+    }
+
 }
