@@ -9,7 +9,7 @@ composer install
 cp deployment/.env.example .env
 ```
 
-For local use, set `APP_ENV=local`, `APP_DEBUG=true`, `DB_CONNECTION=sqlite`, and `MAIL_MAILER=log` in `.env`, then run:
+For local use, set `APP_ENV=local`, `APP_DEBUG=true`, `APP_INSTALLED=true`, `DB_CONNECTION=sqlite`, and `MAIL_MAILER=log` in `.env`, then run:
 
 ```bash
 php artisan key:generate
