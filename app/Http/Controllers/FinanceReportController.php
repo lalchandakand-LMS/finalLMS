@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Branch;
+use App\Models\Expense;
 use App\Models\Invoice;
 use App\Models\InvoicePayment;
 use Illuminate\Http\Request;
@@ -81,6 +82,24 @@ class FinanceReportController extends Controller
             fn (Invoice $invoice): float => max(0, (float) $invoice->amount - (float) ($invoice->payments_sum_amount ?? 0))
         );
 
+        $expensesQuery = Expense::query();
+        if ($accountant) {
+            $expensesQuery->where('branch_id', $branchId);
+        }
+        if (! empty($validated['date_from'])) {
+            $expensesQuery->whereDate('expense_date', '>=', $validated['date_from']);
+        }
+        if (! empty($validated['date_to'])) {
+            $expensesQuery->whereDate('expense_date', '<=', $validated['date_to']);
+        }
+        $expenses = (clone $expensesQuery)->sum('amount');
+        $expenseCount = (clone $expensesQuery)->count();
+        $expenseCategoryTotals = (clone $expensesQuery)
+            ->selectRaw('category, SUM(amount) as total, COUNT(*) as records')
+            ->groupBy('category')
+            ->orderByDesc('total')
+            ->get();
+
         return view('admin.finance-reports.index', [
             'payments' => $payments,
             'collected' => (float) $collected,
@@ -89,6 +108,10 @@ class FinanceReportController extends Controller
             'issuedInvoices' => $issuedInvoices,
             'issuedAmount' => (float) $issuedAmount,
             'outstanding' => (float) $outstanding,
+            'expenses' => (float) $expenses,
+            'expenseCount' => $expenseCount,
+            'expenseCategoryTotals' => $expenseCategoryTotals,
+            'netBalance' => (float) $collected - (float) $expenses,
             'dateFrom' => $validated['date_from'] ?? '',
             'dateTo' => $validated['date_to'] ?? '',
             'accountant' => $accountant,
