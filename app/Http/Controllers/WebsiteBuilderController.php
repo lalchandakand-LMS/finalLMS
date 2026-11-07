@@ -6,6 +6,7 @@ use App\Models\MediaAsset;
 use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class WebsiteBuilderController extends Controller
@@ -25,7 +26,7 @@ class WebsiteBuilderController extends Controller
             'sections' => ['nullable', 'array', 'max:12'],
             'sections.*.title' => ['nullable', 'string', 'max:180'],
             'sections.*.body' => ['nullable', 'string', 'max:3000'],
-            'sections.*.image_id' => ['nullable', 'integer', 'exists:media_assets,id'],
+            'sections.*.image_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
             'sections.*.button_label' => ['nullable', 'string', 'max:60'],
             'sections.*.button_url' => ['nullable', 'url:http,https', 'max:500'],
             'sections.*.enabled' => ['nullable', 'boolean'],

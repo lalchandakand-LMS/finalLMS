@@ -62,4 +62,27 @@ class MediaAndNewsTest extends TestCase
         $this->actingAs($student)->get(route('admin.media.index'))->assertForbidden();
         $this->actingAs($student)->get(route('admin.news.index'))->assertForbidden();
     }
+
+    public function test_blog_cover_must_be_an_image_asset(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $document = MediaAsset::create([
+            'uploaded_by' => $admin->id,
+            'disk' => 'public',
+            'path' => 'media/handbook.pdf',
+            'original_name' => 'handbook.pdf',
+            'mime_type' => 'application/pdf',
+            'size' => 100,
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.news.store'), [
+            'title' => 'Article with invalid cover',
+            'body' => 'Article content.',
+            'status' => 'draft',
+            'cover_media_id' => $document->id,
+        ])->assertSessionHasErrors('cover_media_id');
+
+        $this->assertDatabaseCount('blog_posts', 0);
+    }
+
 }
