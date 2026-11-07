@@ -1,17 +1,17 @@
 <?php
 
-namespace App\\Http\\Controllers;
+namespace App\Http\Controllers;
 
-use App\\Models\\User;
-use Illuminate\\Http\\RedirectResponse;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Facades\\Artisan;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\Support\\Facades\\Log;
-use Illuminate\\Support\\Facades\\Schema;
-use Illuminate\\Support\\Str;
-use Illuminate\\Validation\\Rules\\Password;
-use Illuminate\\View\\View;
+use App\Models\User;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Password;
+use Illuminate\View\View;
 use RuntimeException;
 use Throwable;
 
@@ -30,7 +30,7 @@ class InstallController extends Controller
 
         $validated = $request->validate([
             'site_name' => ['required', 'string', 'max:120'],
-            'app_url' => ['required', 'url', 'max:255'],
+            'app_url' => ['required', 'url', 'regex:/^https:\\/\\//i', 'max:255'],
             'db_host' => ['required', 'string', 'max:255'],
             'db_port' => ['required', 'integer', 'between:1,65535'],
             'db_database' => ['required', 'string', 'max:128'],
