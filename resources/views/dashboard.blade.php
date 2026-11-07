@@ -113,7 +113,7 @@
             <div class="summary-box"><span class="muted">{{ __('Role') }}</span><strong>{{ $roleLabel }}</strong></div>
         </div>
         <div class="panel" style="margin-bottom:20px;">
-            <div class="page-header" style="margin-bottom:0;"><div><span class="badge info">{{ __('Quick start') }}</span><h2 style="margin:12px 0 0;">{{ __('Your learning path') }}</h2></div>@if($user->isStudent())<a href="{{ route('courses.index') }}" class="btn primary">{{ __('My Courses & Progress') }}</a>@endif
+            <div class="page-header" style="margin-bottom:0;"><div><span class="badge info">{{ __('Quick start') }}</span><h2 style="margin:12px 0 0;">{{ __('Your learning path') }}</h2></div>@if($user->isStudent())<a href="{{ route('student.courses.index') }}" class="btn primary">{{ __('My Courses & Progress') }}</a>@endif
                 <a href="{{ route('courses.index') }}" class="btn secondary">{{ __('Explore catalog') }}</a></div>
             <p class="muted" style="margin:12px 0 0;">{{ __('Keep momentum going with a clear set of next actions, from enrollment to course completion.') }}</p>
         </div>
