@@ -17,8 +17,8 @@ return [
         'mode' => env('NAGAD_MODE', 'sandbox'),
         'merchant_id' => env('NAGAD_MERCHANT_ID'),
         'merchant_number' => env('NAGAD_MERCHANT_NUMBER'),
-        'merchant_private_key' => env('NAGAD_MERCHANT_PRIVATE_KEY'),
-        'gateway_public_key' => env('NAGAD_GATEWAY_PUBLIC_KEY'),
+        'merchant_private_key_path' => env('NAGAD_MERCHANT_PRIVATE_KEY_PATH'),
+        'gateway_public_key_path' => env('NAGAD_GATEWAY_PUBLIC_KEY_PATH'),
         'base_url' => env('NAGAD_BASE_URL'),
     ],
 
