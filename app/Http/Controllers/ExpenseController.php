@@ -70,7 +70,7 @@ class ExpenseController extends Controller
         }
 
         $validated = $request->validate([
-            'branch_id' => [$isAccountant ? 'nullable' : 'nullable', 'integer', 'exists:branches,id'],
+            'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
             'category' => ['required', 'string', 'max:80'],
             'title' => ['required', 'string', 'max:160'],
             'description' => ['nullable', 'string', 'max:2000'],
