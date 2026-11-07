@@ -174,7 +174,7 @@ class AdminUserManagementTest extends TestCase
     {
         $admin = User::factory()->create(['role' => 'admin']);
         $student = User::factory()->create(['role' => 'student']);
-        $branch = \\App\\Models\\Branch::create([
+        $branch = \App\Models\Branch::create([
             'name' => 'Student Learning Branch',
             'slug' => 'student-learning-branch',
             'is_active' => true,
@@ -198,7 +198,7 @@ class AdminUserManagementTest extends TestCase
     {
         $admin = User::factory()->create(['role' => 'admin']);
         $student = User::factory()->create(['role' => 'student']);
-        $branch = \\App\\Models\\Branch::create([
+        $branch = \App\Models\Branch::create([
             'name' => 'Closed Student Branch',
             'slug' => 'closed-student-branch',
             'is_active' => false,
