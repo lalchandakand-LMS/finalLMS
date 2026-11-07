@@ -28,7 +28,7 @@
             <tr><td>{{ __('Fee / installment') }}</td><td>{{ $payment->invoice->title }}</td></tr>
             <tr><td>{{ __('Course') }}</td><td>{{ $payment->invoice->course?->title ?? '—' }}</td></tr>
             <tr><td>{{ __('Batch') }}</td><td>{{ $payment->invoice->batch?->title ?? '—' }}</td></tr>
-            <tr><td>{{ __('Payment method') }}</td><td>{{ strtoupper($payment->method) }}</td></tr>
+            <tr><td>{{ __('Payment method') }}</td><td>{{ __(ucfirst($payment->method)) }}</td></tr>
             <tr><td>{{ __('Transaction reference') }}</td><td>{{ $payment->reference ?: '—' }}</td></tr>
             <tr><td>{{ __('Payment date') }}</td><td>{{ $payment->paid_at?->format('d M Y, h:i A') ?? '—' }}</td></tr>
             <tr><td>{{ __('Received by') }}</td><td>{{ $payment->receiver?->name ?? __('Online gateway') }}</td></tr>
