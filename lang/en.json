@@ -308,5 +308,7 @@
     "Reject with note (optional)": "Reject with note (optional)",
     "Explain what needs correction": "Explain what needs correction",
     "Reject payment": "Reject payment",
-    "No payment submissions yet.": "No payment submissions yet."
+    "No payment submissions yet.": "No payment submissions yet.",
+    "Payment review": "Payment review",
+    "Payment settings": "Payment settings"
 }
