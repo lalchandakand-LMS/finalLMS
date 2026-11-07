@@ -43,6 +43,7 @@ Route::get('/faq', [CmsPageController::class, 'faq'])->name('pages.faq');
 Route::get('/news', [BlogController::class, 'index'])->name('news.index');
 Route::get('/news/{post:slug}', [BlogController::class, 'show'])->name('news.show');
 Route::post('/language', [LocaleController::class, 'update'])->middleware('throttle:20,1')->name('locale.update');
+Route::get('/payments/bkash/callback', [BkashPaymentController::class, 'callback'])->middleware('throttle:30,1')->name('payments.bkash.callback');
 
 Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
 Route::get('/courses/{course}', [CourseController::class, 'show'])->name('courses.show');
@@ -102,6 +103,7 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
     });
     Route::get('/assignment-submissions/{submission}/attachment', [AssignmentController::class, 'download'])->name('assignment-submissions.attachment');
     Route::middleware('role:student')->group(function () {
+        Route::post('/courses/{course}/payments/bkash', [BkashPaymentController::class, 'initiate'])->middleware('throttle:5,1')->name('courses.payments.bkash');
         Route::get('/my/courses', [CourseController::class, 'myCourses'])->name('student.courses.index');
         Route::get('/my/invoices', [InvoiceController::class, 'studentIndex'])->name('student.invoices.index');
         Route::get('/assignments/{assignment}', [AssignmentController::class, 'show'])->name('student.assignments.show');
