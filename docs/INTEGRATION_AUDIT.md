@@ -38,7 +38,7 @@ Integrate verified LMS work from `feature/admin-dashboard-refresh` into protecte
 
 ## Current status
 
-The integration branch is isolated from main. No production code has been merged or deployed.
+The integration branch was merged into protected `main` through PR #18 on 2026-11-07. No production code has been deployed to hosting.
 
 ### Stage 1: student learning portal and recorded lessons
 
@@ -120,4 +120,13 @@ Stage 7 CI passed on commit `69df4b6a44d68c1bc98d91b7f17f952484b04b04`: Laravel 
 
 ## Final integration status
 
-All seven planned code-integration stages are implemented on `integration/lms-to-main`. No files were removed from main in the PR comparison. The PR remains subject to protected-main checks and merge; real cPanel staging installation, production bKash merchant activation, Nagad/SSLCommerz integrations, off-site scheduled backups, and disaster-recovery rehearsal are operational follow-ups and are not represented as completed.
+All seven planned code-integration stages are implemented on `integration/lms-to-main`. No files were removed from main in the PR comparison. PR #18 is merged as commit `379afe2fa3579a44d874280f96114b7f3cd189fc`. Post-merge Laravel tests, cPanel package verification, and CodeQL all passed on `main`. The PR changed 52 files and removed no files from `main`. Real cPanel staging installation, production bKash merchant activation, Nagad/SSLCommerz integrations, off-site scheduled backups, and disaster-recovery rehearsal remain operational follow-ups and are not represented as completed.
+
+
+## Post-merge verification
+
+- PR: [#18 — Integrate verified LMS features into main](https://github.com/lalchandakand-LMS/finalLMS/pull/18)
+- Merge commit: `379afe2fa3579a44d874280f96114b7f3cd189fc`
+- Main-branch Laravel CI: passed (test + package).
+- Main-branch CodeQL: passed.
+- Hosting deployment: not performed.
