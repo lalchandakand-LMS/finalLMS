@@ -17,7 +17,7 @@ class ManualPaymentFlowTest extends TestCase
         $admin = User::factory()->create(['role' => 'admin']);
         $paymentMethods = [];
 
-        foreach (['bkash', 'rocket', 'bank', 'manual'] as $method) {
+        foreach (['bkash', 'nagad', 'rocket', 'bank', 'manual'] as $method) {
             $paymentMethods[$method] = [
                 'enabled' => $method === 'bkash' ? '1' : '0',
                 'label' => ucfirst($method),
@@ -33,6 +33,7 @@ class ManualPaymentFlowTest extends TestCase
         $this->assertSame('1', Setting::paymentMethods()['bkash']['enabled']);
         $this->assertSame('01700000000', Setting::paymentMethods()['bkash']['account']);
         $this->assertFalse((bool) Setting::paymentMethods()['rocket']['enabled']);
+        $this->assertFalse((bool) Setting::paymentMethods()['nagad']['enabled']);
 
         $this->actingAs($admin)
             ->get(route('admin.settings.index'))
