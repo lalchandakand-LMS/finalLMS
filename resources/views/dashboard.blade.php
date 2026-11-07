@@ -55,7 +55,7 @@
             </section>
 
             <div class="aec-heading">
-                <div><h2>{{ __('Academy overview') }}</h2><p>{{ __('Live totals from your current LMS records') }}</p></div>
+                <div><h2>{{ __('Analytics & academy overview') }}</h2><p>{{ __('Live totals from your current LMS records') }}</p></div>
                 <span class="badge success">{{ $roleLabel }}</span>
             </div>
 
