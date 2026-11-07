@@ -245,5 +245,9 @@
     "Capacity": "Capacity",
     "Start": "Start",
     "End": "End",
-    "Fee (BDT)": "Fee (BDT)"
+    "Fee (BDT)": "Fee (BDT)",
+    "Certificate": "Certificate",
+    "N/A": "N/A",
+    "batches": "batches",
+    "Archived": "Archived"
 }
