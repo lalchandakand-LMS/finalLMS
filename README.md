@@ -35,7 +35,8 @@ The local/testing seeder creates `admin@lms.test`, `teacher@lms.test`, and `stud
 - Batch seat reservation for pending payments, unique transaction references, and last-admin protection
 - SEO metadata, consent-gated GA4/GTM/Meta Pixel tags, and consent-based queued bulk SMS
 - Admin homepage, payment, user, course, and settings controls
-- Student invoices with fixed/percentage discounts (including student-specific scholarship adjustments), partial/installment receipts, and net outstanding balance tracking\n- Refund request ledger tied to original receipts, refund caps, admin approval/rejection, and invoice balance recalculation
+- Student invoices with fixed/percentage discounts (including student-specific scholarship adjustments), partial/installment receipts, and net outstanding balance tracking
+- Refund request ledger tied to original receipts, refund caps, admin approval/rejection, and invoice balance recalculation
 - Expense management with create/edit/delete, category and date filters, branch-scoped accountant access, and head-office expenses
 - Finance reports with payment-method and expense-category summaries, date filters, current outstanding balance, approved refund totals, printable ledger, and net cash movement (collections minus refunds and expenses)
 - Admin activity log for successful authenticated changes, with user/action/route/IP filters
