@@ -82,6 +82,13 @@ class FinanceReportController extends Controller
             fn (Invoice $invoice): float => max(0, (float) $invoice->amount - (float) ($invoice->payments_sum_amount ?? 0))
         );
 
+        $refundsQuery = InvoiceRefund::query()
+            ->where('status', 'approved')
+            ->whereHas('invoice', $scopeInvoices);
+        $applyDates($refundsQuery, 'processed_at');
+        $refundTotal = (float) $refundsQuery->sum('amount');
+        $refundCount = (clone $refundsQuery)->count();
+
         $expensesQuery = Expense::query();
         if ($accountant) {
             $expensesQuery->where('branch_id', $branchId);
@@ -108,10 +115,10 @@ class FinanceReportController extends Controller
             'issuedInvoices' => $issuedInvoices,
             'issuedAmount' => (float) $issuedAmount,
             'outstanding' => (float) $outstanding,
-            'expenses' => (float) $expenses,
+            'expenses' => (float) $expenses,\n            'refundTotal' => $refundTotal,\n            'refundCount' => $refundCount,
             'expenseCount' => $expenseCount,
             'expenseCategoryTotals' => $expenseCategoryTotals,
-            'netBalance' => (float) $collected - (float) $expenses,
+            'netBalance' => (float) $collected - $refundTotal - (float) $expenses,
             'dateFrom' => $validated['date_from'] ?? '',
             'dateTo' => $validated['date_to'] ?? '',
             'accountant' => $accountant,
