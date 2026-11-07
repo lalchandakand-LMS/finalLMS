@@ -7,6 +7,7 @@
         <div>
             <span class="badge info">{{ auth()->user()->isAccountant() ? "Accountant finance" : "Admin finance" }}</span>
             <h1 style="margin: 12px 0 0;">Invoices & installments</h1>
+            <p><a class="btn secondary" href="{{ route(auth()->user()->isAccountant() ? 'accountant.finance-reports.index' : 'admin.finance-reports.index') }}">Open finance reports</a></p>
             <p class="muted">Create a separate invoice for each fee or installment and record received payments.</p>
         </div>
         @if(auth()->user()->isAdmin())
