@@ -107,10 +107,17 @@ Audited on the current main-based integration branch:
 
 ### Stage 7: deployment and security verification
 
-In progress:
-- Add CodeQL scanning for JavaScript/TypeScript on pull requests targeting main. CodeQL does not analyze this Laravel PHP codebase in the selected supported language configuration.
+Completed and CI-verified:
+- CodeQL scanning for JavaScript/TypeScript runs on pull requests targeting main. CodeQL does not analyze this Laravel PHP codebase in the selected supported language configuration.
 - Add PHP syntax lint across app, bootstrap, config, database, routes, and tests.
 - Add Composer dependency vulnerability audit to CI.
 - Compile Laravel configuration and all Blade views in the production package job.
 - Update cPanel deployment documentation to describe the implemented bKash adapter and the remaining merchant-credential / sandbox activation steps.
 - Real cPanel staging installation, production bKash merchant testing, off-site backup scheduling, and disaster-recovery rehearsal remain outstanding operational tasks.
+
+
+Stage 7 CI passed on commit `69df4b6a44d68c1bc98d91b7f17f952484b04b04`: Laravel tests, Composer audit, PHP syntax lint, production config/view cache compilation, cPanel package verification, and CodeQL JavaScript/TypeScript analysis all succeeded.
+
+## Final integration status
+
+All seven planned code-integration stages are implemented on `integration/lms-to-main`. No files were removed from main in the PR comparison. The PR remains subject to protected-main checks and merge; real cPanel staging installation, production bKash merchant activation, Nagad/SSLCommerz integrations, off-site scheduled backups, and disaster-recovery rehearsal are operational follow-ups and are not represented as completed.
