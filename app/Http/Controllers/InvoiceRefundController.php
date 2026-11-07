@@ -146,15 +146,24 @@ class InvoiceRefundController extends Controller
     public function reject(InvoiceRefund $refund, Request $request): RedirectResponse
     {
         abort_unless($request->user()->isAdmin(), 403);
-        if ($refund->status !== 'pending') {
+        $rejected = DB::transaction(function () use ($refund, $request): bool {
+            $locked = InvoiceRefund::query()->lockForUpdate()->findOrFail($refund->id);
+            if ($locked->status !== 'pending') {
+                return false;
+            }
+
+            $locked->update([
+                'status' => 'rejected',
+                'approved_by' => $request->user()->id,
+                'processed_at' => now(),
+            ]);
+
+            return true;
+        });
+
+        if (! $rejected) {
             return back()->with('error', 'Only pending refund requests can be rejected.');
         }
-
-        $refund->update([
-            'status' => 'rejected',
-            'approved_by' => $request->user()->id,
-            'processed_at' => now(),
-        ]);
 
         return back()->with('success', 'Refund request rejected. The payment record remains unchanged.');
     }
