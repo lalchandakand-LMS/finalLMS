@@ -1,45 +1,42 @@
 # cPanel Deployment
 
-This guide deploys the current Laravel 12 application. It is not a one-click installer; create the database and administrator before opening the site.
+This guide covers a fresh Laravel 12 installation on PHP 8.3+ with MySQL/MariaDB. The secure web installer creates the private environment file, runs migrations, seeds safe default website settings, and creates the first administrator. It never drops existing database tables.
 
 ## Requirements
 
 - PHP 8.3 with `bcmath`, `ctype`, `fileinfo`, `mbstring`, `openssl`, `pdo_mysql`, `tokenizer`, and `xml` enabled
-- MySQL or MariaDB database and database user
-- Composer 2 available through cPanel Terminal
-- A persistent writable `storage` and `bootstrap/cache` directory
+- A new, empty MySQL/MariaDB database and database user with full privileges on that database
+- HTTPS enabled for the domain
+- Writable `storage`, `bootstrap/cache`, and application-root directories during installation
+- Composer 2 only if installing from source; the CI release ZIP already includes production `vendor` dependencies and built assets
 
-## Deploy
+## Fresh installation
 
-1. Build frontend assets on a development machine or CI with `npm ci && npm run build`. Upload `public/build` with the application; Node is not required on the production server.
-2. Keep the application outside `public_html` where possible. Set the domain document root to the application's `public` directory. Never expose the repository root, `.env`, `vendor`, or `storage` through the web server.
-3. Upload the source and install production dependencies from the application directory:
+1. Create a new database and database user in cPanel. Do not use a database containing existing tables or application data.
+2. Download the `AlomsEnglishCenter-cpanel` ZIP from a successful GitHub Actions package run and extract the application outside `public_html` where possible.
+3. Set the domain document root to the application's `public` directory. Never expose the application root, `.env`, `vendor`, or `storage` through the web server.
+4. Ensure the application root and Laravel writable directories are writable by the PHP account for the installation. Restrict permissions again after setup where your host permits.
+5. Visit `https://your-domain.example/install`. Enter the site URL, database credentials, and a unique administrator email/password (minimum 12 characters).
+6. The installer tests the database connection, refuses a database that already has a `migrations` or `users` table, creates a random application key, writes a private `.env` file with restrictive permissions, runs migrations and safe production seeders, creates the administrator, and locks installation.
+7. Sign in at `/login`. The installer URL returns 404 after successful setup. Keep `.env` outside the public document root and never share its contents.
 
-   ```bash
-   composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
-   ```
+If installation fails, inspect `storage/logs/laravel.log`, verify database privileges and PHP extensions, and retry. If the installer reports an existing manually-created `.env`, it will not overwrite it; remove that file only when you have confirmed this is a new installation and backed up any configuration you need.
 
-4. Copy `deployment/.env.example` to `.env`, then set the real domain, MySQL credentials, SMTP credentials, and other secrets in cPanel Terminal or its environment editor. Generate the application key:
+## Existing/manual installation
 
-   ```bash
-   php artisan key:generate --force
-   ```
+For an existing deployment, back up files and database first, follow the migration procedure below, and preserve its existing `.env`. The installer must not be used to overwrite an existing application. Set `APP_INSTALLED=true` in an existing production `.env` if you are upgrading from a release that predates the installation gate.
 
-5. Ensure `APP_ENV=production` and `APP_DEBUG=false`. Make `storage` and `bootstrap/cache` writable by the PHP account, then migrate:
+## Runtime configuration
 
-   ```bash
-   php artisan migrate --force
-   ```
+- Keep `APP_ENV=production` and `APP_DEBUG=false`.
+- Configure SMTP and test email verification. Configure Twilio only if phone verification or SMS campaigns are enabled; secrets belong in `.env`, not admin settings.
+- Use a cPanel cron job to drain queued SMS jobs, for example once each minute:
 
-6. Create the first admin using the procedure in the project README. Do not run local demo seeders in production.
-7. Configure SMTP and test email verification. Configure Twilio only if phone verification or SMS campaigns are enabled; secrets belong in `.env`, not in admin settings.
-8. Use a cPanel cron job to drain queued SMS jobs, for example once each minute:
+  ```bash
+  * * * * * cd /home/ACCOUNT/aloms_lms && php artisan queue:work --stop-when-empty --tries=3
+  ```
 
-   ```bash
-   * * * * * cd /home/ACCOUNT/aloms_lms && php artisan queue:work --stop-when-empty --tries=3
-   ```
-
-9. Run route checks and smoke tests before opening enrollment. Set up database backups and monitor application logs.
+- Run route checks and smoke tests before opening enrollment. Set up database backups and monitor application logs.
 
 ## Release Artifact
 
