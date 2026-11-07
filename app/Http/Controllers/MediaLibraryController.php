@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\MediaAsset;
+use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -43,6 +44,11 @@ class MediaLibraryController extends Controller
     public function destroy(MediaAsset $media): RedirectResponse
     {
         abort_if($media->blogCover()->exists(), 422, 'This file is used as a published or draft article cover.');
+        $sections = json_decode((string) Setting::value('website_sections', '[]'), true);
+        $usedByWebsite = collect(is_array($sections) ? $sections : [])->contains(
+            fn ($section) => is_array($section) && (int) ($section['image_id'] ?? 0) === $media->id
+        );
+        abort_if($usedByWebsite, 422, 'This file is used by a homepage section.');
         Storage::disk($media->disk)->delete($media->path);
         $media->delete();
         return back()->with('success', 'Media deleted.');

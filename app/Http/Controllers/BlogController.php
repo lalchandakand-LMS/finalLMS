@@ -7,6 +7,7 @@ use App\Models\MediaAsset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class BlogController extends Controller
@@ -32,7 +33,7 @@ class BlogController extends Controller
 
     public function create(): View
     {
-        $media = MediaAsset::latest()->limit(200)->get();
+        $media = MediaAsset::where('mime_type', 'like', 'image/%')->latest()->limit(200)->get();
         return view('admin.news.form', ['post' => new BlogPost(), 'media' => $media]);
     }
 
@@ -73,7 +74,7 @@ class BlogController extends Controller
             'slug' => ['nullable', 'string', 'max:200'],
             'excerpt' => ['nullable', 'string', 'max:500'],
             'body' => ['required', 'string', 'max:100000'],
-            'cover_media_id' => ['nullable', 'exists:media_assets,id'],
+            'cover_media_id' => ['nullable', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
             'status' => ['required', 'in:draft,published'],
             'published_at' => ['nullable', 'date'],
             'seo_title' => ['nullable', 'string', 'max:255'],

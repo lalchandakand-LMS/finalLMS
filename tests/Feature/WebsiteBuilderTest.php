@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Setting;
+use App\Models\MediaAsset;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
@@ -38,4 +39,22 @@ class WebsiteBuilderTest extends TestCase
         $student = User::factory()->create(['role' => 'student']);
         $this->actingAs($student)->get(route('admin.website-builder.index'))->assertForbidden();
     }
+
+    public function test_homepage_section_image_must_be_an_image_asset(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $document = MediaAsset::create([
+            'uploaded_by' => $admin->id,
+            'disk' => 'public',
+            'path' => 'media/handbook.pdf',
+            'original_name' => 'handbook.pdf',
+            'mime_type' => 'application/pdf',
+            'size' => 100,
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.website-builder.update'), [
+            'sections' => [['title' => 'Study materials', 'image_id' => $document->id]],
+        ])->assertSessionHasErrors('sections.0.image_id');
+    }
+
 }

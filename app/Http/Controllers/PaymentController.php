@@ -133,6 +133,10 @@ class PaymentController extends Controller
 
     public function approve(Payment $payment): RedirectResponse
     {
+        if (filled($payment->gateway_provider)) {
+            return back()->with('error', 'Gateway payments can only be approved after server-side verification.');
+        }
+
         $result = DB::transaction(function () use ($payment): string {
             $payment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
 
@@ -174,6 +178,10 @@ class PaymentController extends Controller
 
     public function reject(Payment $payment, Request $request): RedirectResponse
     {
+        if (filled($payment->gateway_provider)) {
+            return back()->with('error', 'Gateway payments must be reconciled through the payment provider.');
+        }
+
         $validated = $request->validate([
             'admin_note' => ['nullable', 'string', 'max:1000'],
         ]);

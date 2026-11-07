@@ -18,6 +18,7 @@ class Lesson extends Model
         'duration_minutes',
         'order',
         'is_preview',
+        'video_url',
     ];
 
     public function course(): BelongsTo

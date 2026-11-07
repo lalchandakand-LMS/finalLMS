@@ -113,4 +113,25 @@ class WebsiteCmsAndMediaTest extends TestCase
         $this->actingAs($student)->get(route('admin.media.index'))->assertForbidden();
         $this->actingAs($student)->get(route('admin.website-builder.index'))->assertForbidden();
     }
+
+    public function test_media_used_by_homepage_section_cannot_be_deleted(): void
+    {
+        Storage::fake('public');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $asset = MediaAsset::create([
+            'uploaded_by' => $admin->id,
+            'disk' => 'public',
+            'path' => 'media/homepage.jpg',
+            'original_name' => 'homepage.jpg',
+            'mime_type' => 'image/jpeg',
+            'size' => 100,
+        ]);
+        Setting::setValue('website_sections', json_encode([
+            ['title' => 'Welcome', 'image_id' => $asset->id, 'enabled' => true],
+        ], JSON_THROW_ON_ERROR));
+
+        $this->actingAs($admin)->delete(route('admin.media.destroy', $asset))->assertStatus(422);
+        $this->assertDatabaseHas('media_assets', ['id' => $asset->id]);
+    }
+
 }

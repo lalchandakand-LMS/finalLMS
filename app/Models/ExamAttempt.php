@@ -26,4 +26,9 @@ class ExamAttempt extends Model
     {
         return $this->hasMany(ExamAnswer::class);
     }
+
+    public function attemptQuestions(): HasMany
+    {
+        return $this->hasMany(ExamAttemptQuestion::class)->orderBy('position');
+    }
 }
