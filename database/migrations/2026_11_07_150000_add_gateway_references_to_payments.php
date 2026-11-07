@@ -9,7 +9,6 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('payments', function (Blueprint $table) {
-            $table->foreignId('batch_id')->nullable()->after('course_id')->constrained()->nullOnDelete();
             $table->string('gateway_payment_id')->nullable()->unique();
             $table->string('gateway_transaction_id')->nullable();
         });
@@ -19,7 +18,6 @@ return new class extends Migration
     {
         Schema::table('payments', function (Blueprint $table) {
             $table->dropUnique(['gateway_payment_id']);
-            $table->dropConstrainedForeignId('batch_id');
             $table->dropColumn('gateway_transaction_id');
         });
     }
