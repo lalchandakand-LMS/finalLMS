@@ -605,5 +605,11 @@
     "Batch": "ব্যাচ",
     "Payment date": "পেমেন্টের তারিখ",
     "This receipt confirms that the payment amount shown above has been recorded against the invoice.": "এই রসিদ নিশ্চিত করে যে উপরে প্রদর্শিত পেমেন্টের পরিমাণ ইনভয়েসের বিপরীতে রেকর্ড করা হয়েছে।",
-    "Net paid:": "নিট পরিশোধিত:"
+    "Net paid:": "নিট পরিশোধিত:",
+    "Invoices & finance": "ইনভয়েস ও আর্থিক হিসাব",
+    "Refunded:": "ফেরত দেওয়া হয়েছে:",
+    "Paid": "পরিশোধিত",
+    "Partial": "আংশিক পরিশোধিত",
+    "Unpaid": "অপরিশোধিত",
+    "Cancelled": "বাতিল"
 }
