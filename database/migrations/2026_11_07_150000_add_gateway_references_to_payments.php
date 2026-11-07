@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::table('payments', function (Blueprint $table) {
             $table->string('gateway_payment_id')->nullable()->unique();
-            $table->string('gateway_transaction_id')->nullable();
+            $table->string('gateway_transaction_id')->nullable()->unique();
         });
     }
 
@@ -18,6 +18,7 @@ return new class extends Migration
     {
         Schema::table('payments', function (Blueprint $table) {
             $table->dropUnique(['gateway_payment_id']);
+            $table->dropUnique(['gateway_transaction_id']);
             $table->dropColumn('gateway_transaction_id');
         });
     }
