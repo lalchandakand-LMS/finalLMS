@@ -101,7 +101,7 @@ class InvoiceManagementTest extends TestCase
 
         $invoice = Invoice::firstOrFail();
         $this->assertSame('3000.00', $invoice->subtotal);
-        $this->assertSame('750.00', $invoice->discount_value);
+        $this->assertSame('25.00', $invoice->discount_value);
         $this->assertSame('2250.00', $invoice->amount);
         $this->assertSame('percentage', $invoice->discount_type);
     }
