@@ -18,6 +18,7 @@ use App\Http\Controllers\ExamController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\FinanceReportController;
 use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\InvoiceRefundController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\CmsPageController;
 use App\Http\Controllers\LocaleController;
