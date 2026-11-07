@@ -8,9 +8,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Assignment extends Model
 {
-    protected $fillable = ['batch_id', 'teacher_id', 'title', 'instructions', 'due_at', 'max_marks', 'status'];
+    protected $fillable = ['batch_id', 'teacher_id', 'title', 'instructions', 'due_at', 'allow_late', 'max_marks', 'status'];
 
-    protected $casts = ['due_at' => 'datetime', 'max_marks' => 'integer'];
+    protected $casts = ['due_at' => 'datetime', 'allow_late' => 'boolean', 'max_marks' => 'integer'];
 
     public function batch(): BelongsTo
     {

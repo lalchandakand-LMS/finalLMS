@@ -81,3 +81,15 @@ In progress:
 - Nagad remains disabled/configuration-only until official merchant API documentation and credentials are available.
 
 Stage 4 must pass gateway service/flow tests and cPanel packaging before being marked complete.
+
+
+### Stage 5: Assignment submission and grading hardening
+
+In progress:
+- Late-submission policy is explicit per assignment and disabled by default.
+- Only active enrolled students can view or submit; cancelled/completed enrollment does not grant submission access.
+- Attachments remain on private local storage and are downloadable only by the submitting student, assigned teacher, or admin.
+- Re-submission is permitted only after grading; existing attachment is retained when the student updates only the text answer.
+- Upload size/type, due-date, teacher ownership, grade bounds, and duplicate-submission checks are covered by feature tests.
+
+This stage also repairs an escaped namespace corruption found in the integration branch's AssignmentController; the corrected controller and full regression test suite are being validated together.
