@@ -37,7 +37,7 @@
     <div class="course-list">
         @foreach($courses as $course)
             <div class="course-item">
-                @if($course->image_path)<img src="{{ \\Illuminate\\Support\\Facades\\Storage::disk('public')->url($course->image_path) }}" alt="{{ $course->title }}" loading="lazy" style="width:100%;max-height:240px;aspect-ratio:16/9;object-fit:cover;border-radius:12px;margin-bottom:14px;">@endif
+                @if($course->image_path)<img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($course->image_path) }}" alt="{{ $course->title }}" loading="lazy" style="width:100%;max-height:240px;aspect-ratio:16/9;object-fit:cover;border-radius:12px;margin-bottom:14px;">@endif
                 <div class="meta-row">
                     <div>
                         <div style="margin-bottom: 8px;">
