@@ -87,7 +87,7 @@ class AdminSettingsController extends Controller
             }
 
             $buttonUrl = trim($slide['button_url'] ?? '');
-            if ($buttonUrl !== '' && !preg_match('/^(https?:\\/\\/|\\/(?!\\/)|#)/i', $buttonUrl)) {
+            if ($buttonUrl !== '' && !preg_match('~^(https?://|/(?!/)|#)~i', $buttonUrl)) {
                 $buttonUrl = '';
             }
 
