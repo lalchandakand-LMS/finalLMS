@@ -59,6 +59,9 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
     Route::get('/live-classes', [LiveClassController::class, 'index'])->name('live-classes.index');
+    Route::get('/invoice-payments/{payment}/receipt', [InvoiceController::class, 'receipt'])
+        ->middleware('role:admin,accountant')
+        ->name('invoice-payments.receipt');
     Route::middleware('role:branch_manager')->group(function () {
         Route::get('/branch-manager/batches', [BatchController::class, 'branchManagerIndex'])->name('branch-manager.batches.index');
         Route::post('/branch-manager/batches', [BatchController::class, 'branchManagerStore'])->name('branch-manager.batches.store');
