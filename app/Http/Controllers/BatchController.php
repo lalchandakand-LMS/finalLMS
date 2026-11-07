@@ -19,8 +19,8 @@ class BatchController extends Controller
     {
         $branches = Branch::withCount('batches')->orderBy('name')->get();
         $batches = Batch::with(['branch', 'course', 'teacher'])->latest('starts_at')->get();
-        $courses = Course::orderBy('title')->get();
-        $teachers = User::where('role', 'teacher')->orderBy('name')->get();
+        $courses = Course::where('status', 'published')->orderBy('title')->get();
+        $teachers = User::where('role', 'teacher')->where('branch_id', $request->user()->branch_id)->orderBy('name')->get();
 
         return view('admin.batches.index', compact('branches', 'batches', 'courses', 'teachers'));
     }
@@ -34,16 +34,19 @@ class BatchController extends Controller
             ->latest('starts_at')
             ->paginate(25);
 
-        return view('branch-manager.batches.index', compact('batches'));
+        $courses = Course::where('status', 'published')->orderBy('title')->get();
+        $teachers = User::where('role', 'teacher')->where('branch_id', $request->user()->branch_id)->orderBy('name')->get();
+
+        return view('branch-manager.batches.index', compact('batches', 'courses', 'teachers'));
     }
 
     public function branchManagerStore(Request $request): RedirectResponse
     {
         $branchId = $request->user()->branch_id;
-        abort_unless($branchId, 403, 'No branch is assigned to this account.');
+        abort_unless($branchId && Branch::whereKey($branchId)->where('is_active', true)->exists(), 403, 'No active branch is assigned to this account.');
         $validated = $request->validate([
-            'course_id' => ['required', 'exists:courses,id'],
-            'teacher_id' => ['required', Rule::exists('users', 'id')->where(fn ($query) => $query->where('role', 'teacher'))],
+            'course_id' => ['required', Rule::exists('courses', 'id')->where(fn ($query) => $query->where('status', 'published'))],
+            'teacher_id' => ['required', Rule::exists('users', 'id')->where(fn ($query) => $query->where('role', 'teacher')->where('branch_id', $branchId))],
             'title' => ['required', 'string', 'max:160'],
             'capacity' => ['required', 'integer', 'min:1', 'max:1000'],
             'starts_at' => ['required', 'date'],
