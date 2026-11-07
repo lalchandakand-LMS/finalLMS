@@ -153,7 +153,7 @@ class ExamController extends Controller
         $validated = $request->validate([
             'subject' => ['nullable', 'string', 'max:120'],
             'category' => ['nullable', 'string', 'max:80'],
-            'difficulty' => ['required', 'in:easy,medium,hard'],
+            'difficulty' => ['sometimes', 'in:easy,medium,hard'],
             'question' => ['required', 'string', 'max:3000'],
             'options' => ['required', 'array', 'size:4'],
             'options.*' => ['required', 'string', 'max:500'],
