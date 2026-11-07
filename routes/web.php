@@ -17,6 +17,7 @@ use App\Http\Controllers\LiveClassController;
 use App\Http\Controllers\ExamController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\FinanceReportController;
+use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\CmsPageController;
 use App\Http\Controllers\LocaleController;
@@ -72,6 +73,9 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
     Route::middleware('role:accountant')->group(function () {
         Route::get('/accountant/invoices', [InvoiceController::class, 'accountantIndex'])->name('accountant.invoices.index');
         Route::get('/accountant/finance-reports', [FinanceReportController::class, 'index'])->name('accountant.finance-reports.index');
+        Route::get('/accountant/expenses', [ExpenseController::class, 'index'])->name('accountant.expenses.index');
+        Route::post('/accountant/expenses', [ExpenseController::class, 'store'])->name('accountant.expenses.store');
+        Route::delete('/accountant/expenses/{expense}', [ExpenseController::class, 'destroy'])->name('accountant.expenses.destroy');
         Route::post('/accountant/invoices', [InvoiceController::class, 'store'])->name('accountant.invoices.store');
         Route::post('/accountant/invoices/{invoice}/payments', [InvoiceController::class, 'receivePayment'])->name('accountant.invoices.payments.store');
     });
@@ -130,6 +134,9 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
     Route::middleware('role:admin')->prefix('admin')->group(function () {
         Route::get('/invoices', [InvoiceController::class, 'adminIndex'])->name('admin.invoices.index');
         Route::get('/finance-reports', [FinanceReportController::class, 'index'])->name('admin.finance-reports.index');
+        Route::get('/expenses', [ExpenseController::class, 'index'])->name('admin.expenses.index');
+        Route::post('/expenses', [ExpenseController::class, 'store'])->name('admin.expenses.store');
+        Route::delete('/expenses/{expense}', [ExpenseController::class, 'destroy'])->name('admin.expenses.destroy');
         Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('admin.activity-logs.index');
         Route::post('/invoices', [InvoiceController::class, 'store'])->name('admin.invoices.store');
         Route::post('/invoices/{invoice}/payments', [InvoiceController::class, 'receivePayment'])->name('admin.invoices.payments.store');
