@@ -513,5 +513,8 @@
     "Course:": "কোর্স:",
     "Students enrolled:": "ভর্তি শিক্ষার্থী:",
     "Open": "চালু",
-    "Optional": "ঐচ্ছিক"
+    "Optional": "ঐচ্ছিক",
+    "Certificate": "সনদপত্র",
+    "N/A": "প্রযোজ্য নয়",
+    "batches": "ব্যাচসমূহ"
 }
