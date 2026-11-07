@@ -448,7 +448,7 @@
     "Delete this expense record?": "এই ব্যয়ের রেকর্ড মুছে ফেলবেন?",
     "Cash": "নগদ",
     "Bkash": "বিকাশ",
-    "Nagad": "নগদ (নগদ)",
+    "Nagad": "নগদ",
     "Bank": "ব্যাংক",
     "Card": "কার্ড",
     "Other": "অন্যান্য",
@@ -485,5 +485,7 @@
     "Invoice": "ইনভয়েস",
     "Received by": "গ্রহণকারী",
     "Receipt": "রসিদ",
-    "Print": "প্রিন্ট"
+    "Print": "প্রিন্ট",
+    "Expenses": "ব্যয়",
+    "Online gateway": "অনলাইন পেমেন্ট গেটওয়ে"
 }
