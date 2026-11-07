@@ -1,17 +1,17 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use App\\Models\\Batch;
-use App\\Models\\Branch;
-use App\\Models\\Course;
-use App\\Models\\Enrollment;
-use App\\Models\\User;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\Support\\Facades\\Storage;
-use Illuminate\\Http\\UploadedFile;
-use Tests\\TestCase;
+use App\Models\Batch;
+use App\Models\Branch;
+use App\Models\Course;
+use App\Models\Enrollment;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\UploadedFile;
+use Tests\TestCase;
 
 class AssignmentWorkflowTest extends TestCase
 {
@@ -44,7 +44,7 @@ class AssignmentWorkflowTest extends TestCase
         ])->assertRedirect();
 
         $submissionId = DB::table('assignment_submissions')->value('id');
-        $submission = \\App\\Models\\AssignmentSubmission::findOrFail($submissionId);
+        $submission = \App\Models\AssignmentSubmission::findOrFail($submissionId);
         Storage::disk('local')->assertExists($submission->attachment_path);
 
         $this->actingAs($student)->post(route('student.assignments.submit', $assignment), [
@@ -173,4 +173,5 @@ class AssignmentWorkflowTest extends TestCase
             'student_id' => $student->id,
         ]);
     }
+
 }
