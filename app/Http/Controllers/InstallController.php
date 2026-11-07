@@ -70,6 +70,8 @@ class InstallController extends Controller
 
         try {
             if ($this->isInstalled()) {
+                flock($lock, LOCK_UN);
+                fclose($lock);
                 abort(404);
             }
 
