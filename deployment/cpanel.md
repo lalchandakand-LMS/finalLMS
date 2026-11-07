@@ -44,4 +44,4 @@ The `Laravel CI` workflow creates the `AlomsEnglishCenter-cpanel.zip` artifact o
 
 ## Known Deployment Gaps
 
-There is not yet a web installer, installation lock, or automated backup manager. Payment methods currently use manual verification; official bKash, Nagad, or SSLCommerz API callbacks are not implemented. Do not advertise automatic payment processing until callback signatures and provider transactions are implemented and tested. The cPanel guide has not been exercised on an actual cPanel account.
+The web installer and installation gate are implemented in code, but still require a successful GitHub CI run and a real cPanel staging installation. Automated scheduled off-site backups and disaster recovery are not yet implemented. Payment methods currently use manual verification; official bKash, Nagad, or SSLCommerz API callbacks are not implemented. Do not advertise automatic payment processing until callback signatures and provider transactions are implemented and tested. The cPanel guide has not been exercised on an actual cPanel account.
