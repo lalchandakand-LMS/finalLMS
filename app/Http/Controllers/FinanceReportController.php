@@ -76,11 +76,12 @@ class FinanceReportController extends Controller
 
         $outstandingInvoices = Invoice::query()
             ->withSum('payments', 'amount')
+            ->withSum(['refunds as approved_refunds_sum_amount' => fn ($refunds) => $refunds->where('status', 'approved')], 'amount')
             ->whereIn('status', ['unpaid', 'partial']);
         $scopeInvoices($outstandingInvoices);
         $outstandingRows = $outstandingInvoices->get(['id', 'amount']);
         $outstanding = $outstandingRows->sum(
-            fn (Invoice $invoice): float => max(0, (float) $invoice->amount - (float) ($invoice->payments_sum_amount ?? 0))
+            fn (Invoice $invoice): float => max(0, (float) $invoice->amount - (float) ($invoice->payments_sum_amount ?? 0) + (float) ($invoice->approved_refunds_sum_amount ?? 0))
         );
 
         $refundsQuery = InvoiceRefund::query()
