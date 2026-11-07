@@ -1,13 +1,13 @@
 <?php
 
-namespace App\\Http\\Controllers;
+namespace App\Http\Controllers;
 
-use App\\Models\\Branch;
-use App\\Models\\Invoice;
-use App\\Models\\InvoicePayment;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Carbon;
-use Illuminate\\View\\View;
+use App\Models\Branch;
+use App\Models\Invoice;
+use App\Models\InvoicePayment;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\View\View;
 
 class FinanceReportController extends Controller
 {
