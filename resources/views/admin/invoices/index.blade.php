@@ -46,8 +46,20 @@
                 <input id="batch_id" name="batch_id" type="number" min="1" value="{{ old('batch_id') }}" placeholder="Enter batch ID">
             </div>
             <div>
-                <label for="amount">Invoice amount (BDT)</label>
+                <label for="amount">Invoice subtotal before discount (BDT)</label>
                 <input id="amount" name="amount" type="number" min="0.01" step="0.01" value="{{ old('amount') }}" required>
+            </div>
+            <div>
+                <label for="discount_type">Discount type (optional)</label>
+                <select id="discount_type" name="discount_type">
+                    <option value="">No discount</option>
+                    <option value="fixed" @selected(old('discount_type') === 'fixed')>Fixed amount (BDT)</option>
+                    <option value="percentage" @selected(old('discount_type') === 'percentage')>Percentage (%)</option>
+                </select>
+            </div>
+            <div>
+                <label for="discount_value">Discount value</label>
+                <input id="discount_value" name="discount_value" type="number" min="0" step="0.01" value="{{ old('discount_value', 0) }}">
             </div>
             <div>
                 <label for="due_date">Due date (optional)</label>
@@ -71,7 +83,11 @@
                         <span class="badge {{ $invoice->status === 'paid' ? 'success' : ($invoice->status === 'partial' ? 'warning' : 'info') }}">{{ ucfirst($invoice->status) }}</span>
                         <h2 style="margin: 10px 0 6px;">{{ $invoice->title }}</h2>
                         <div class="muted">{{ $invoice->invoice_number }} · {{ $invoice->user->name }} ({{ $invoice->user->email }})</div>
-                        <div class="muted">Total ৳{{ number_format((float) $invoice->amount, 2) }} · Paid ৳{{ number_format($paid, 2) }} · Due ৳{{ number_format($due, 2) }}</div>
+                        <div class="muted">Subtotal ৳{{ number_format((float) ($invoice->subtotal ?? $invoice->amount), 2) }}
+                            @if((float) ($invoice->discount_value ?? 0) > 0)
+                                · Discount {{ $invoice->discount_type === 'percentage' ? number_format((float) $invoice->discount_value, 2).'%' : '৳'.number_format((float) $invoice->discount_value, 2) }}
+                            @endif
+                            · Net total ৳{{ number_format((float) $invoice->amount, 2) }} · Paid ৳{{ number_format($paid, 2) }} · Due ৳{{ number_format($due, 2) }}</div>
                         @if($invoice->due_date)<div class="muted">Due date: {{ $invoice->due_date->format('d M Y') }}</div>@endif
                         @if($invoice->description)<p>{{ $invoice->description }}</p>@endif
                     </div>
