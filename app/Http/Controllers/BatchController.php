@@ -73,6 +73,40 @@ class BatchController extends Controller
         return redirect()->route('branch-manager.batches.index')->with('success', 'Your branch batch was updated.');
     }
 
+    public function branchManagerStudents(Request $request): View
+    {
+        $branchId = $request->user()->branch_id;
+        abort_unless($branchId && Branch::whereKey($branchId)->where('is_active', true)->exists(), 403, 'No active branch is assigned to this account.');
+
+        $validated = $request->validate([
+            'search' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        $students = User::query()
+            ->where('role', 'student')
+            ->where(function ($query) use ($branchId): void {
+                $query->where('branch_id', $branchId)
+                    ->orWhereHas('enrollments.batch', fn ($batch) => $batch->where('branch_id', $branchId));
+            })
+            ->with(['enrollments' => function ($query) use ($branchId): void {
+                $query->whereIn('status', ['active', 'completed'])
+                    ->whereHas('batch', fn ($batch) => $batch->where('branch_id', $branchId))
+                    ->with(['batch.course']);
+            }])
+            ->when($validated['search'] ?? null, function ($query, string $search): void {
+                $query->where(function ($builder) use ($search): void {
+                    $builder->where('name', 'like', '%'.$search.'%')
+                        ->orWhere('email', 'like', '%'.$search.'%')
+                        ->orWhere('phone_number', 'like', '%'.$search.'%');
+                });
+            })
+            ->orderBy('name')
+            ->paginate(25)
+            ->withQueryString();
+
+        return view('branch-manager.students.index', compact('students'));
+    }
+
     public function teacherIndex(): View
     {
         $batches = Batch::with(['branch', 'course'])
