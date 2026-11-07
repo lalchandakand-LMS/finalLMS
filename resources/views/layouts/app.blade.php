@@ -179,6 +179,7 @@
                         <a href="{{ route('admin.sms-campaigns.index') }}">SMS</a>
                         <a href="{{ route('admin.payments.index') }}">Payments</a>
                         <a href="{{ route('admin.invoices.index') }}">Invoices</a>
+                        <a href="{{ route('admin.refunds.index') }}">Refunds</a>
                         <a href="{{ route('admin.expenses.index') }}">Expenses</a>
                         <a href="{{ route('admin.finance-reports.index') }}">Finance reports</a>
                         <a href="{{ route('admin.activity-logs.index') }}">Activity log</a>
@@ -195,6 +196,7 @@
                     @endif
                     @if(auth()->user()->isAccountant())
                         <a href="{{ route('accountant.invoices.index') }}">Finance</a>
+                        <a href="{{ route('accountant.refunds.index') }}">Refunds</a>
                         <a href="{{ route('accountant.expenses.index') }}">Expenses</a>
                         <a href="{{ route('accountant.finance-reports.index') }}">Reports</a>
                     @endif
