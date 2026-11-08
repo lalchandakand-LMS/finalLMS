@@ -37,6 +37,27 @@ class BranchManagerDataScopeTest extends TestCase
         ]);
     }
 
+
+    public function test_branch_manager_dashboard_shows_branch_metrics_and_only_its_assigned_teachers(): void
+    {
+        $ownBranch = $this->branch('North Branch');
+        $otherBranch = $this->branch('South Branch');
+        $ownTeacher = User::factory()->create(['role' => 'teacher', 'branch_id' => $ownBranch->id, 'name' => 'North Branch Teacher']);
+        User::factory()->create(['role' => 'teacher', 'branch_id' => $otherBranch->id, 'name' => 'South Branch Private Teacher']);
+        $course = Course::factory()->create(['teacher_id' => $ownTeacher->id, 'status' => 'published']);
+        $this->batch($ownBranch, $course, 'North Branch Batch');
+        $manager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $ownBranch->id]);
+
+        $this->actingAs($manager)
+            ->get(route('branch-manager.batches.index'))
+            ->assertOk()
+            ->assertSee('North Branch Teacher')
+            ->assertDontSee('South Branch Private Teacher')
+            ->assertSee('Branch dashboard')
+            ->assertSee('Students')
+            ->assertSee('Open batches');
+    }
+
     public function test_branch_manager_batch_list_contains_only_the_assigned_branch(): void
     {
         $ownBranch = $this->branch('Own Center');
