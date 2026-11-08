@@ -12,10 +12,25 @@
         $googleTagManagerId = $hasSettingsTable ? \App\Models\Setting::value('google_tag_manager_id') : null;
         $facebookPixelId = $hasSettingsTable ? \App\Models\Setting::value('facebook_pixel_id') : null;
 
-        $themeDefaults = {"theme_primary":"#1769e8","theme_primary_dark":"#0b2253","theme_accent":"#268cf5","theme_background":"#f3f6fb","theme_surface":"#ffffff","theme_surface_alt":"#eef4ff","theme_text":"#18212f","theme_muted":"#5b6576","theme_border":"#dfe7f6","theme_sidebar_start":"#102b63","theme_sidebar_end":"#0b1d42","theme_hero_start":"#0b2253","theme_hero_middle":"#0759c8","theme_hero_end":"#268cf5"};
+        $themeDefaults = [
+            'theme_primary' => '#1769e8',
+            'theme_primary_dark' => '#0b2253',
+            'theme_accent' => '#268cf5',
+            'theme_background' => '#f3f6fb',
+            'theme_surface' => '#ffffff',
+            'theme_surface_alt' => '#eef4ff',
+            'theme_text' => '#18212f',
+            'theme_muted' => '#5b6576',
+            'theme_border' => '#dfe7f6',
+            'theme_sidebar_start' => '#102b63',
+            'theme_sidebar_end' => '#0b1d42',
+            'theme_hero_start' => '#0b2253',
+            'theme_hero_middle' => '#0759c8',
+            'theme_hero_end' => '#268cf5',
+        ];
         $themeColors = [];
         foreach ($themeDefaults as $themeKey => $themeDefault) {
-            $savedColor = $hasSettingsTable ? (string) \\App\\Models\\Setting::value($themeKey, $themeDefault) : $themeDefault;
+            $savedColor = $hasSettingsTable ? (string) \App\Models\Setting::value($themeKey, $themeDefault) : $themeDefault;
             $themeColors[$themeKey] = preg_match('/^#[0-9a-fA-F]{6}$/', $savedColor) ? $savedColor : $themeDefault;
         }
         $marketingConsent = request()->cookie('marketing_consent') === 'accepted';
