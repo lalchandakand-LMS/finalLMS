@@ -231,7 +231,10 @@ class StudentAdmissionController extends Controller
         if ($request->filled('guardian_nid_number')) {
             $guardianData['nid_number'] = $validated['guardian_nid_number'];
         }
-        $guardianRecord = StudentGuardian::updateOrCreate(['student_id' => $user->id, 'is_primary' => true], $guardianData);
+        $guardianRecord = StudentGuardian::updateOrCreate(
+            ['student_id' => $user->id, 'guardian_type' => 'guardian'],
+            $guardianData + ['is_primary' => ! StudentGuardian::where('student_id', $user->id)->where('is_primary', true)->exists()]
+        );
         $profile->update([
             ...collect($validated)->except(['course_id','profile_photo','quota_document','guardian_name','guardian_relationship','guardian_mobile','guardian_email','guardian_occupation','guardian_nid_number'])->all(),
             'interested_course_id' => $course->id,
