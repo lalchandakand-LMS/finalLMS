@@ -16,6 +16,10 @@
         $googleTagManagerId = $hasSettingsTable ? \App\Models\Setting::value('google_tag_manager_id') : null;
         $facebookPixelId = $hasSettingsTable ? \App\Models\Setting::value('facebook_pixel_id') : null;
         $marketingConsent = request()->cookie('marketing_consent') === 'accepted';
+        $footerTitle = $hasSettingsTable ? (\\App\\Models\\Setting::value('footer_title') ?: $siteName) : $siteName;
+        $footerText = $hasSettingsTable ? \\App\\Models\\Setting::value('footer_text', '') : '';
+        $footerLinksRaw = $hasSettingsTable ? json_decode((string) \\App\\Models\\Setting::value('footer_links', '[]'), true) : [];
+        $footerLinks = is_array($footerLinksRaw) ? $footerLinksRaw : [];
     @endphp
     @if($siteFavicon)<link rel="icon" href="{{ $siteFavicon->url }}">@endif
     <title>@yield('title', $siteName)</title>
@@ -290,6 +294,23 @@
 
         @yield('content')
     </main>
+    @unless($isAdminLayout)
+        <footer class="container" style="margin-top:36px;margin-bottom:24px;padding:26px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;">
+            <div style="max-width:520px;">
+                <strong>{{ $footerTitle }}</strong>
+                @if($footerText !== '')<p class="muted" style="margin:8px 0 0;white-space:pre-line;">{{ $footerText }}</p>@endif
+            </div>
+            @if(count($footerLinks))
+                <nav aria-label="Footer links" style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start;">
+                    @foreach($footerLinks as $footerLink)
+                        @if(!empty($footerLink['label']) && !empty($footerLink['url']))
+                            <a href="{{ $footerLink['url'] }}" @if(str_starts_with($footerLink['url'], 'https://')) rel="noopener noreferrer" @endif>{{ $footerLink['label'] }}</a>
+                        @endif
+                    @endforeach
+                </nav>
+            @endif
+        </footer>
+    @endunless
     @if(!request()->cookie('marketing_consent'))
         <aside id="cookie-preferences" class="panel" style="position:fixed; right:20px; bottom:20px; z-index:20; max-width:440px; box-shadow:var(--shadow);">
             <strong>Cookie preferences</strong>
