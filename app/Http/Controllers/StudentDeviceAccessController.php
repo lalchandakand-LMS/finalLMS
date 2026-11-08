@@ -159,6 +159,15 @@ class StudentDeviceAccessController extends Controller
             return back()->withErrors(['email' => 'The provided credentials do not match our records.'])->onlyInput('email');
         }
 
+        // Keep administrator recovery available while enforcing SMS MFA for all academy-facing roles.
+        if ($user->isAdmin()) {
+            if (Auth::attempt(['email' => $validated['email'], 'password' => $validated['password']])) {
+                $request->session()->regenerate();
+                DeviceSession::register($request, $user);
+                return redirect()->intended('/dashboard');
+            }
+        }
+
         if (! $user->phone_number) {
             return back()->withErrors(['email' => 'A verified mobile number is required for secure login. Please contact the academy administrator to add one.'])->onlyInput('email');
         }
