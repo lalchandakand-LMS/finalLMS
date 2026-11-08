@@ -169,9 +169,6 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
     Route::post('/contests/{contest}/submit', [QuizContestController::class, 'submit'])->middleware('throttle:5,1')->name('contests.submit');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::get('/my/course-sessions', [StudentAdmissionController::class, 'studentSessions'])->middleware('role:student')->name('student.course-sessions.index');
-    Route::post('/course-sessions/{session}/check-in', [StudentAdmissionController::class, 'studentCheckIn'])->middleware(['role:student','throttle:10,1'])->name('student.course-sessions.check-in');
-    Route::post('/course-attendances/{attendance}/check-out', [StudentAdmissionController::class, 'studentCheckOut'])->middleware('role:student')->name('student.course-attendances.check-out');
     Route::get('/my/admission-profile', [StudentAdmissionController::class, 'edit'])->middleware('role:student')->name('student.admission.edit');
     Route::post('/my/admission-profile', [StudentAdmissionController::class, 'update'])->middleware('role:student')->name('student.admission.update');
     Route::post('/my/admission-profile/delete-request', [StudentAdmissionController::class, 'requestDeletion'])->middleware('role:student')->name('student.admission.delete-request');
