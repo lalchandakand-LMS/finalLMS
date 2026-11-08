@@ -10,7 +10,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-class QuizContestSkillRankingTest extends TestCase
+class QuizContestLotteryTest extends TestCase
 {
     use RefreshDatabase;
 
