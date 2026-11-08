@@ -5,7 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     @php
         $hasSettingsTable = \Illuminate\Support\Facades\Schema::hasTable('settings');
-        $seoTitle = $hasSettingsTable ? \App\Models\Setting::value('seo_title', config('app.name')) : config('app.name');
+        $siteName = $hasSettingsTable ? \App\Models\Setting::value('site_name', config('app.name')) : config('app.name');
+        $siteLogo = $hasSettingsTable ? \App\Models\MediaAsset::query()->whereKey(\App\Models\Setting::value('site_logo_media_id'))->where('mime_type', 'like', 'image/%')->first() : null;
+        $siteFavicon = $hasSettingsTable ? \App\Models\MediaAsset::query()->whereKey(\App\Models\Setting::value('site_favicon_media_id'))->where('mime_type', 'like', 'image/%')->first() : null;
+        $sitePrimaryColor = $hasSettingsTable ? \App\Models\Setting::value('site_primary_color', '#1546a8') : '#1546a8';
+        $seoTitle = $hasSettingsTable ? \App\Models\Setting::value('seo_title', $siteName) : $siteName;
         $seoDescription = $hasSettingsTable ? \App\Models\Setting::value('seo_description', 'Learn with guided courses, track your progress, and grow your skills.') : 'Learn with guided courses, track your progress, and grow your skills.';
         $seoKeywords = $hasSettingsTable ? \App\Models\Setting::value('seo_keywords', 'online learning, courses, education') : 'online learning, courses, education';
         $googleAnalyticsId = $hasSettingsTable ? \App\Models\Setting::value('google_analytics_id') : null;
@@ -13,7 +17,8 @@
         $facebookPixelId = $hasSettingsTable ? \App\Models\Setting::value('facebook_pixel_id') : null;
         $marketingConsent = request()->cookie('marketing_consent') === 'accepted';
     @endphp
-    <title>@yield('title', config('app.name'))</title>
+    @if($siteFavicon)<link rel="icon" href="{{ $siteFavicon->url }}">@endif
+    <title>@yield('title', $siteName)</title>
     <meta name="description" content="{{ $seoDescription }}">
     <meta name="keywords" content="{{ $seoKeywords }}">
     <meta property="og:title" content="{{ $seoTitle }}">
@@ -44,6 +49,7 @@
     @php($isAdminLayout = auth()->check() && auth()->user()->isAdmin())
     <style>
         :root {
+            --primary: {{ preg_match('/^#[0-9A-Fa-f]{6}$/', (string) $sitePrimaryColor) ? $sitePrimaryColor : '#1546a8' }};
             --bg: #f3f6fb;
             --panel: #ffffff;
             --panel-alt: #eef4ff;
@@ -175,7 +181,7 @@
 
     @if($isAdminLayout)
         <aside class="admin-sidebar" aria-label="Admin navigation">
-            <a class="admin-sidebar-brand" href="{{ route('dashboard') }}"><span>📘</span><strong>Alom’s English Center<br><small style="font-weight:500;color:#a9bee0;">Admin workspace</small></strong></a>
+            <a class="admin-sidebar-brand" href="{{ route('dashboard') }}"><span>📘</span><strong>{{ $siteName }}<br><small style="font-weight:500;color:#a9bee0;">Admin workspace</small></strong></a>
             <div class="admin-sidebar-label">Overview</div>
             <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><span>▦</span><span class="nav-text">Dashboard</span></a>
             <div class="admin-sidebar-label">Academy</div>
@@ -202,7 +208,10 @@
     @endif
     <header class="topbar">
         <nav class="nav">
-            <a href="/{{ auth()->check() ? 'dashboard' : '' }}" class="brand">{{ config('app.name') }}</a>
+            <a href="/{{ auth()->check() ? 'dashboard' : '' }}" class="brand" style="display:inline-flex;align-items:center;gap:10px;">
+                @if($siteLogo)<img src="{{ $siteLogo->url }}" alt="{{ $siteName }}" style="max-height:48px;max-width:180px;object-fit:contain;">@endif
+                <span>{{ $siteName }}</span>
+            </a>
             <div class="nav-links">
                 <form method="POST" action="{{ route('locale.update') }}" class="inline-form" style="display:inline-flex;gap:6px;align-items:center;">
                     @csrf
