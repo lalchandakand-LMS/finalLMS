@@ -139,6 +139,29 @@
                 <a href="{{ route('courses.index') }}" class="btn secondary">{{ __('Explore catalog') }}</a></div>
             <p class="muted" style="margin:12px 0 0;">{{ __('Keep momentum going with a clear set of next actions, from enrollment to course completion.') }}</p>
         </div>
+        @if($user->isTeacher() && $teacherInsights)
+            <section class="panel" style="margin-bottom:20px;">
+                <div class="page-header" style="margin-bottom:14px;">
+                    <div><span class="badge info">{{ __('Teaching workspace') }}</span><h2 style="margin:10px 0 0;">{{ __('Your teaching overview') }}</h2></div>
+                    <a href="{{ route('teacher.batches.index') }}" class="btn primary">{{ __('Manage my batches') }}</a>
+                </div>
+                <div class="dash-summary">
+                    <div class="summary-box"><span class="muted">{{ __('Assigned courses') }}</span><strong>{{ number_format($teacherInsights['assigned_courses']) }}</strong></div>
+                    <div class="summary-box"><span class="muted">{{ __('Active batches') }}</span><strong>{{ number_format($teacherInsights['active_batches']) }} / {{ number_format($teacherInsights['total_batches']) }}</strong></div>
+                    <div class="summary-box"><span class="muted">{{ __('Active students') }}</span><strong>{{ number_format($teacherInsights['active_students']) }}</strong></div>
+                    <div class="summary-box"><span class="muted">{{ __('Assignments created') }}</span><strong>{{ number_format($teacherInsights['assignments_created']) }}</strong></div>
+                    <div class="summary-box"><span class="muted">{{ __('Pending reviews') }}</span><strong>{{ number_format($teacherInsights['pending_reviews']) }}</strong></div>
+                    <div class="summary-box"><span class="muted">{{ __('Graded submissions') }}</span><strong>{{ number_format($teacherInsights['graded_submissions']) }}</strong></div>
+                </div>
+                <div class="cta-row">
+                    <a class="btn secondary" href="{{ route('teacher.batches.index') }}">{{ __('My batches') }}</a>
+                    @if($teacherInsights['total_batches'] > 0)
+                        <a class="btn secondary" href="{{ route('teacher.batches.assignments.index', ['batch' => $enrolledCourses->first()?->id]) }}">{{ __('Assignment workspace') }}</a>
+                    @endif
+                </div>
+                <p class="muted" style="margin:12px 0 0;">{{ __('Counts are limited to courses, batches and assignment submissions assigned to your teacher account.') }}</p>
+            </section>
+        @endif
         @if($user->isStudent() && $studentInsights)
             <section class="panel" style="margin-bottom:20px;">
                 <div class="page-header" style="margin-bottom:14px;">
