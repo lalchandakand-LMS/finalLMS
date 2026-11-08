@@ -24,7 +24,7 @@ class WebsiteAnalyticsAndCommentsTest extends TestCase
         ]);
 
         $visitorCookie = \Illuminate\Support\Str::random(48);
-        $this->withCookie('aec_visitor', $visitorCookie)->get(route('courses.show', $course))->assertOk();
+        $this->withCookie('aec_visitor', encrypt($visitorCookie, false))->get(route('courses.show', $course))->assertOk();
         $this->withCookie('aec_visitor', $visitorCookie)->get(route('courses.show', $course))->assertOk();
         $this->withCookie('aec_visitor', $visitorCookie)->get(route('news.show', $post->slug))->assertOk();
 
