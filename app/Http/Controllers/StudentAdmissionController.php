@@ -351,6 +351,29 @@ class StudentAdmissionController extends Controller
         return back()->with('success', __('Admission rejected and student account deactivated.'));
     }
 
+    public function reject(User $student): RedirectResponse
+    {
+        abort_unless($student->isStudent(), 404);
+        DB::transaction(function () use ($student) {
+            $student->admissionProfile()->update([
+                'admission_status' => 'rejected',
+                'reviewed_by' => request()->user()->id,
+                'reviewed_at' => now(),
+            ]);
+            $student->update(['account_status' => 'inactive']);
+            DeviceSession::where('user_id', $student->id)->whereNull('revoked_at')->update([
+                'revoked_at' => now(),
+                'revoke_reason' => 'Admission application rejected',
+                'updated_at' => now(),
+            ]);
+            StudentDevice::where('user_id', $student->id)->where('status', 'approved')->update([
+                'status' => 'revoked',
+                'updated_at' => now(),
+            ]);
+        });
+        return back()->with('success', __('Admission rejected and student access deactivated.'));
+    }
+
     public function setStatus(User $student, Request $request): RedirectResponse
     {
         abort_unless($student->isStudent(), 404);
