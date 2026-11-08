@@ -57,6 +57,7 @@ class AiDeveloperAdminTest extends TestCase
         config([
             'services.ai_developer.api_key' => 'test-key',
             'services.ai_developer.base_url' => 'https://ai.example.test/v1',
+            'services.ai_developer.allowed_hosts' => ['ai.example.test'],
             'services.ai_developer.model' => 'test-model',
         ]);
         Http::fake([
@@ -114,4 +115,30 @@ class AiDeveloperAdminTest extends TestCase
         ]);
         Http::assertNothingSent();
     }
+
+    public function test_ai_provider_rejects_http_and_private_network_urls_without_sending_requests(): void
+    {
+        config([
+            'services.ai_developer.api_key' => 'test-key',
+            'services.ai_developer.base_url' => 'http://127.0.0.1:8000/v1',
+            'services.ai_developer.allowed_hosts' => ['127.0.0.1'],
+            'services.ai_developer.model' => 'test-model',
+        ]);
+        Http::fake();
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+
+        $this->actingAs($admin)->post(route('admin.ai-developer.analyze'), [
+            'title' => 'Unsafe provider configuration',
+            'instruction' => 'Please inspect this provider configuration safely.',
+        ])->assertRedirect(route('admin.ai-developer.index'))
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseHas('ai_developer_tasks', [
+            'user_id' => $admin->id,
+            'status' => 'failed',
+            'error_message' => 'The configured AI provider URL is not HTTPS or is not in the server-side allowed-host list.',
+        ]);
+        Http::assertNothingSent();
+    }
+
 }
