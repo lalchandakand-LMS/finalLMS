@@ -17,6 +17,9 @@
     </div>
 
     <div class="panel" style="max-width: 720px; margin: 0 auto;">
+        @if($user->isStudent() && $user->admissionProfile)
+            <p><a class="btn secondary" href="{{ route('student.admission.edit') }}">{{ __('Update full admission profile, guardian contacts and address') }}</a></p>
+        @endif
         <form method="POST" action="{{ route('profile.update') }}">
             @csrf
 
