@@ -21,8 +21,10 @@ class WebsiteBuilderController extends Controller
         $slides = is_array($slides) ? $slides : [];
         $footerLinks = json_decode((string) ($settings['footer_links'] ?? '[]'), true);
         $footerLinks = is_array($footerLinks) ? $footerLinks : [];
+        $headerLinks = json_decode((string) ($settings['header_links'] ?? '[]'), true);
+        $headerLinks = is_array($headerLinks) ? $headerLinks : [];
 
-        return view('admin.website-builder.index', compact('sections', 'media', 'settings', 'slides', 'footerLinks'));
+        return view('admin.website-builder.index', compact('sections', 'media', 'settings', 'slides', 'footerLinks', 'headerLinks'));
     }
 
     public function update(Request $request): RedirectResponse
@@ -51,6 +53,9 @@ class WebsiteBuilderController extends Controller
             'footer_links' => ['nullable', 'array', 'max:5'],
             'footer_links.*.label' => ['nullable', 'string', 'max:60'],
             'footer_links.*.url' => ['nullable', 'string', 'max:500'],
+            'header_links' => ['nullable', 'array', 'max:6'],
+            'header_links.*.label' => ['nullable', 'string', 'max:60'],
+            'header_links.*.url' => ['nullable', 'string', 'max:500'],
             'sections' => ['nullable', 'array', 'max:12'],
             'sections.*.title' => ['nullable', 'string', 'max:180'],
             'sections.*.body' => ['nullable', 'string', 'max:3000'],
@@ -105,6 +110,15 @@ class WebsiteBuilderController extends Controller
             return ['label' => $label, 'url' => $url];
         })->filter()->take(5)->values()->all();
 
+        $headerLinks = collect($validated['header_links'] ?? [])->map(function (array $link): ?array {
+            $label = trim($link['label'] ?? '');
+            $url = trim($link['url'] ?? '');
+            if ($label === '' || !preg_match('~^(https?://|/(?!/)|#)~i', $url)) {
+                return null;
+            }
+            return ['label' => $label, 'url' => $url];
+        })->filter()->take(6)->values()->all();
+
         foreach (['site_name', 'site_logo_media_id', 'site_favicon_media_id', 'site_primary_color', 'home_title', 'home_subtitle', 'home_featured_title', 'footer_title', 'footer_text'] as $key) {
             if (array_key_exists($key, $validated)) {
                 Setting::setValue($key, $validated[$key] ?? '');
@@ -114,6 +128,7 @@ class WebsiteBuilderController extends Controller
         Setting::setValue('website_sections', json_encode($sections, JSON_THROW_ON_ERROR));
         Setting::setValue('home_slides', json_encode($slides, JSON_THROW_ON_ERROR));
         Setting::setValue('footer_links', json_encode($footerLinks, JSON_THROW_ON_ERROR));
+        Setting::setValue('header_links', json_encode($headerLinks, JSON_THROW_ON_ERROR));
 
         return redirect()->route('admin.website-builder.index')->with('success', 'Website identity, homepage slider and layout saved.');
     }
