@@ -8,6 +8,17 @@
 <form method="POST" action="{{ route('admin.website-builder.update') }}">
 @csrf
 <section class="panel" style="margin-bottom:20px;">
+    <div class="page-header"><div><h2>Choose a homepage design</h2><p class="muted">Select one of 15 responsive visual presets. Your courses, users, media, homepage copy and saved sections remain unchanged when you switch designs.</p></div><span class="badge info">15 designs</span></div>
+    <div class="grid grid-3">
+        @foreach($templates as $templateKey => $template)
+            <label class="card" style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;border:2px solid {{ old('homepage_template', $activeTemplate) === $templateKey ? 'var(--primary)' : 'var(--border)' }};">
+                <input type="radio" name="homepage_template" value="{{ $templateKey }}" style="width:auto;margin-top:4px;" @checked(old('homepage_template', $activeTemplate) === $templateKey)>
+                <span><strong>{{ $template['label'] }}</strong><span class="muted" style="display:block;font-size:13px;margin-top:5px;">{{ $template['description'] }}</span></span>
+            </label>
+        @endforeach
+    </div>
+</section>
+<section class="panel" style="margin-bottom:20px;">
     <h2>Website identity & branding</h2>
     <p class="muted">Upload your logo and favicon in Media Library first, then select them below.</p>
     <div class="grid grid-2">
