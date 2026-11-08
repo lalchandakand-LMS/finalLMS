@@ -74,6 +74,12 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
     Route::get('/live-classes', [LiveClassController::class, 'index'])->name('live-classes.index');
+    Route::get('/community', [\\App\\Http\\Controllers\\CommunityController::class, 'index'])->name('community.index');
+    Route::post('/community/posts', [\\App\\Http\\Controllers\\CommunityController::class, 'store'])->middleware('throttle:10,1')->name('community.posts.store');
+    Route::post('/community/posts/{post}/like', [\\App\\Http\\Controllers\\CommunityController::class, 'toggleLike'])->middleware('throttle:30,1')->name('community.posts.like');
+    Route::post('/community/posts/{post}/comments', [\\App\\Http\\Controllers\\CommunityController::class, 'comment'])->middleware('throttle:20,1')->name('community.posts.comment');
+    Route::post('/community/teachers/{teacherId}/follow', [\\App\\Http\\Controllers\\CommunityController::class, 'followTeacher'])->middleware('throttle:20,1')->name('community.teachers.follow');
+    Route::delete('/community/teachers/{teacherId}/follow', [\\App\\Http\\Controllers\\CommunityController::class, 'unfollowTeacher'])->middleware('throttle:20,1')->name('community.teachers.unfollow');
     Route::get('/invoice-payments/{payment}/receipt', [InvoiceController::class, 'receipt'])
         ->middleware('role:admin,accountant')
         ->name('invoice-payments.receipt');
