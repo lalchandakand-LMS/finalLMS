@@ -12,6 +12,14 @@
 <label>{{ __('Living arrangement') }}<select name="living_type"><option value="residential" @selected($profile->living_type==='residential')>{{ __('Residential') }}</option><option value="non_residential" @selected($profile->living_type==='non_residential')>{{ __('Non-residential') }}</option></select></label>
 <label>{{ __('Special quota') }}<select name="special_quota">@foreach(['none','disability','freedom_fighter','ethnic_minority','other'] as $q)<option value="{{ $q }}" @selected($profile->special_quota===$q)>{{ __(ucwords(str_replace('_',' ',$q))) }}</option>@endforeach</select></label>
 <label>{{ __('Quota details') }}<textarea name="special_quota_notes">{{ old('special_quota_notes',$profile->special_quota_notes) }}</textarea></label><label>{{ __('Replace profile photo') }}<input type="file" name="profile_photo" accept="image/*" capture="user"></label><label>{{ __('Upload quota evidence') }}<input type="file" name="quota_document" accept="image/jpeg,image/png,application/pdf"></label>
+<label>{{ __('Primary guardian full name') }}<input name="guardian_name" value="{{ old('guardian_name',$user->studentGuardians->firstWhere('is_primary',true)?->name) }}" required></label>
+<label>{{ __('Guardian relationship') }}<input name="guardian_relationship" value="{{ old('guardian_relationship',$user->studentGuardians->firstWhere('is_primary',true)?->relationship) }}" required></label>
+<label>{{ __('Guardian mobile number') }}<input type="tel" name="guardian_mobile" value="{{ old('guardian_mobile',$user->studentGuardians->firstWhere('is_primary',true)?->mobile_number) }}" required pattern="[+][1-9][0-9]{7,14}"></label>
+<label>{{ __('Guardian email') }}<input type="email" name="guardian_email" value="{{ old('guardian_email',$user->studentGuardians->firstWhere('is_primary',true)?->email) }}"></label>
+<label>{{ __('Guardian occupation') }}<input name="guardian_occupation" value="{{ old('guardian_occupation',$user->studentGuardians->firstWhere('is_primary',true)?->occupation) }}"></label>
+<label>{{ __('Guardian NID number') }}<input name="guardian_nid_number" value="{{ old('guardian_nid_number',$user->studentGuardians->firstWhere('is_primary',true)?->nid_number) }}"></label>
+<label>{{ __('Guardian NID front') }}<input type="file" name="guardian_nid_front" accept="image/jpeg,image/png,application/pdf"></label>
+<label>{{ __('Guardian NID back') }}<input type="file" name="guardian_nid_back" accept="image/jpeg,image/png,application/pdf"></label>
 </div>
 @php($primaryGuardian=$profile->guardians->firstWhere('is_primary',true))
 <div class="panel" style="margin-top:16px"><h2>{{ __('Parent / guardian contact') }}</h2><div class="grid grid-2">
