@@ -28,6 +28,7 @@ use App\Http\Controllers\BlogController;
 use App\Http\Controllers\WebsiteBuilderController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\InstallController;
+use App\Http\Controllers\QuizContestController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/install', [InstallController::class, 'index'])->name('install.index');
@@ -52,6 +53,9 @@ Route::get('/news', [BlogController::class, 'index'])->name('news.index');
 Route::get('/news/{post:slug}', [BlogController::class, 'show'])->name('news.show');
 Route::post('/language', [LocaleController::class, 'update'])->middleware('throttle:20,1')->name('locale.update');
 Route::get('/payments/bkash/callback', [BkashPaymentController::class, 'callback'])->middleware('throttle:30,1')->name('payments.bkash.callback');
+
+Route::get('/contests', [QuizContestController::class, 'index'])->name('contests.index');
+Route::get('/contests/{contest}', [QuizContestController::class, 'show'])->name('contests.show');
 
 Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
 Route::get('/courses/{course}', [CourseController::class, 'show'])->name('courses.show');
@@ -139,6 +143,8 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         ->middleware('throttle:6,1')
         ->name('phone.verification.verify');
 
+    Route::post('/contests/{contest}/submit', [QuizContestController::class, 'submit'])->middleware(['role:student', 'throttle:5,1'])->name('contests.submit');
+
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -151,6 +157,9 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         ->name('courses.lessons.complete');
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
+        Route::get('/contests', [QuizContestController::class, 'adminIndex'])->name('admin.contests.index');
+        Route::post('/contests', [QuizContestController::class, 'store'])->middleware('throttle:10,1')->name('admin.contests.store');
+        Route::post('/contests/{contest}/draw', [QuizContestController::class, 'draw'])->middleware('throttle:3,10')->name('admin.contests.draw');
         Route::get('/invoices', [InvoiceController::class, 'adminIndex'])->name('admin.invoices.index');
         Route::get('/refunds', [InvoiceRefundController::class, 'index'])->name('admin.refunds.index');
         Route::post('/refunds', [InvoiceRefundController::class, 'store'])->name('admin.refunds.store');
