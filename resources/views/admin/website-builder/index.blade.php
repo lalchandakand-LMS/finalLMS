@@ -44,17 +44,70 @@
 </section>
 <section class="panel" style="margin-bottom:20px;">
     <div class="page-header"><div><h2>Homepage content sections</h2><p class="muted">Enable and fill up to 12 custom sections. HTML and scripts are not accepted.</p></div></div>
+    <div data-section-list>
     @for($i = 0; $i < 12; $i++)
         @php($section = old("sections.$i", $sections[$i] ?? []))
-        <section class="card" style="margin-bottom:16px;">
-            <div class="page-header"><h3>Section {{ $i + 1 }}</h3><label style="display:flex;gap:8px;align-items:center;"><input type="hidden" name="sections[{{ $i }}][enabled]" value="0"><input type="checkbox" name="sections[{{ $i }}][enabled]" value="1" style="width:auto;" @checked($section['enabled'] ?? false)> Enabled</label></div>
+        <section class="card website-section-item" draggable="true" style="margin-bottom:16px;" data-section-item>
+            <div class="page-header"><h3><span class="section-position">{{ $i + 1 }}</span> · Section</h3><button type="button" class="btn secondary section-drag-handle" aria-label="Drag to reorder section" style="cursor:grab;">↕ Drag to reorder</button><label style="display:flex;gap:8px;align-items:center;"><input type="hidden" name="sections[{{ $i }}][enabled]" value="0"><input type="checkbox" name="sections[{{ $i }}][enabled]" value="1" style="width:auto;" @checked($section['enabled'] ?? false)> Enabled</label></div>
             <label>Heading<input name="sections[{{ $i }}][title]" maxlength="180" value="{{ $section['title'] ?? '' }}"></label>
             <label>Text<textarea name="sections[{{ $i }}][body]" rows="3" maxlength="3000">{{ $section['body'] ?? '' }}</textarea></label>
             <label>Image<select name="sections[{{ $i }}][image_id]"><option value="">No image</option>@foreach($media as $asset)<option value="{{ $asset->id }}" @selected(($section['image_id'] ?? '') == $asset->id)>{{ $asset->original_name }}</option>@endforeach</select></label>
             <div class="grid grid-2"><div><label>Button label<input name="sections[{{ $i }}][button_label]" maxlength="60" value="{{ $section['button_label'] ?? '' }}"></label></div><div><label>Button URL<input name="sections[{{ $i }}][button_url]" type="url" maxlength="500" value="{{ $section['button_url'] ?? '' }}"></label></div></div>
         </section>
     @endfor
+    </div>
+</section>
+<section class="panel" style="margin-bottom:20px;">
+    <h2>Footer content & links</h2>
+    <div class="grid grid-2">
+        <div><label for="footer-title">Footer heading</label><input id="footer-title" name="footer_title" maxlength="120" value="{{ old('footer_title', $settings['footer_title'] ?? $settings['site_name'] ?? config('app.name')) }}"></div>
+        <div><label for="footer-text">Footer description</label><textarea id="footer-text" name="footer_text" rows="2" maxlength="500">{{ old('footer_text', $settings['footer_text'] ?? '') }}</textarea></div>
+    </div>
+    <p class="muted">Add up to five footer links. Use internal paths such as /courses or full https:// URLs.</p>
+    @for($i = 0; $i < 5; $i++)
+        @php($link = old("footer_links.$i", $footerLinks[$i] ?? []))
+        <div class="grid grid-2">
+            <div><label>Link {{ $i + 1 }} label<input name="footer_links[{{ $i }}][label]" maxlength="60" value="{{ $link['label'] ?? '' }}"></label></div>
+            <div><label>Link {{ $i + 1 }} URL<input name="footer_links[{{ $i }}][url]" maxlength="500" value="{{ $link['url'] ?? '' }}" placeholder="/courses"></label></div>
+        </div>
+    @endfor
 </section>
 <button type="submit" class="btn primary">Save website design</button>
 </form>
+@push('scripts')
+<script>
+(() => {
+    const list = document.querySelector('[data-section-list]');
+    if (!list) return;
+    let dragged = null;
+    const refresh = () => {
+        [...list.querySelectorAll('[data-section-item]')].forEach((card, index) => {
+            card.querySelector('.section-position').textContent = String(index + 1);
+            card.querySelectorAll('[name]').forEach((field) => {
+                field.name = field.name.replace(/sections\\[\\d+\\]/, 'sections[' + index + ']');
+            });
+        });
+    };
+    list.querySelectorAll('[data-section-item]').forEach((card) => {
+        card.addEventListener('dragstart', (event) => {
+            dragged = card;
+            card.classList.add('is-dragging');
+            event.dataTransfer.effectAllowed = 'move';
+        });
+        card.addEventListener('dragover', (event) => {
+            event.preventDefault();
+            if (!dragged || dragged === card) return;
+            const bounds = card.getBoundingClientRect();
+            const after = event.clientY > bounds.top + bounds.height / 2;
+            list.insertBefore(dragged, after ? card.nextSibling : card);
+        });
+        card.addEventListener('dragend', () => {
+            if (dragged) dragged.classList.remove('is-dragging');
+            dragged = null;
+            refresh();
+        });
+    });
+})();
+</script>
+@endpush
 @endsection
