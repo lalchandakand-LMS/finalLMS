@@ -54,6 +54,15 @@ class AiDeveloperController extends Controller
             return redirect()->route('admin.ai-developer.index')->with('warning', 'AI connection is not configured yet. No external request was made.');
         }
 
+        if (!$this->isAllowedProviderUrl($baseUrl)) {
+            $task->update([
+                'status' => 'failed',
+                'error_message' => 'The configured AI provider URL is not HTTPS or is not in the server-side allowed-host list.',
+            ]);
+
+            return redirect()->route('admin.ai-developer.index')->with('error', 'AI provider URL rejected. Use HTTPS and add its exact hostname to AI_DEVELOPER_ALLOWED_HOSTS on the server.');
+        }
+
         $systemPrompt = <<<'PROMPT'
 You are the read-only diagnostic assistant for Alom's English Center LMS, a Laravel 12 / PHP 8.3 application.
 Analyze the administrator's problem and provide: (1) likely cause, (2) safe investigation steps, (3) a proposed code-level fix with file paths only when justified, (4) tests that should be run, and (5) risks/rollback notes.
@@ -67,6 +76,7 @@ PROMPT;
             $response = Http::withToken($apiKey)
                 ->acceptJson()
                 ->timeout(45)
+                ->withOptions(['allow_redirects' => false])
                 ->post($baseUrl.'/chat/completions', [
                     'model' => $model,
                     'temperature' => 0.2,
@@ -97,6 +107,42 @@ PROMPT;
 
             return redirect()->route('admin.ai-developer.index')->with('error', 'AI analysis failed. No code or production data was changed.');
         }
+    }
+
+    private function isAllowedProviderUrl(string $url): bool
+    {
+        $parts = parse_url($url);
+        if (!is_array($parts)
+            || strtolower((string) ($parts['scheme'] ?? '')) !== 'https'
+            || empty($parts['host'])
+            || isset($parts['user'])
+            || isset($parts['pass'])
+            || isset($parts['query'])
+            || isset($parts['fragment'])
+            || (isset($parts['port']) && (int) $parts['port'] !== 443)) {
+            return false;
+        }
+
+        $host = strtolower(rtrim((string) $parts['host'], '.'));
+        if (filter_var($host, FILTER_VALIDATE_IP)
+            || in_array($host, ['localhost', 'localhost.localdomain'], true)
+            || str_ends_with($host, '.localhost')
+            || str_ends_with($host, '.local')
+            || str_ends_with($host, '.internal')) {
+            return false;
+        }
+
+        $allowedHosts = config('services.ai_developer.allowed_hosts', ['api.openai.com']);
+        if (is_string($allowedHosts)) {
+            $allowedHosts = explode(',', $allowedHosts);
+        }
+
+        $allowedHosts = array_map(
+            static fn ($allowedHost) => strtolower(trim((string) $allowedHost)),
+            is_array($allowedHosts) ? $allowedHosts : []
+        );
+
+        return in_array($host, $allowedHosts, true);
     }
 
     private function redactSensitiveText(string $value): string
