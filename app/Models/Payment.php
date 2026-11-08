@@ -10,6 +10,7 @@ class Payment extends Model
     protected $fillable = [
         'user_id',
         'course_id',
+        'flash_sale_id',
         'batch_id',
         'gateway_provider',
         'gateway_payment_id',
