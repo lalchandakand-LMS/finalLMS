@@ -5,6 +5,7 @@ use App\Http\Controllers\AdminAnalyticsController;
 use App\Http\Controllers\AdminCommentController;
 use App\Http\Controllers\AdminVisitorPopupController;
 use App\Http\Controllers\AdminDashboardAnnouncementController;
+use App\Http\Controllers\AdminDeviceSessionController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\StudentDeviceAccessController;
@@ -89,7 +90,7 @@ Route::middleware('auth')->group(function () {
         ->name('verification.send');
 });
 
-Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
+Route::middleware(['auth', 'verified', 'device.session', 'activity.log'])->group(function () {
     Route::get('/live-classes', [LiveClassController::class, 'index'])->name('live-classes.index');
     Route::get('/invoice-payments/{payment}/receipt', [InvoiceController::class, 'receipt'])
         ->middleware('role:admin,accountant')
@@ -175,6 +176,9 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         ->name('courses.lessons.complete');
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
+        Route::get('/security/sessions', [AdminDeviceSessionController::class, 'index'])->name('admin.security.sessions.index');
+        Route::patch('/security/sessions/{deviceSession}/revoke', [AdminDeviceSessionController::class, 'revoke'])->name('admin.security.sessions.revoke');
+        Route::post('/security/users/{user}/revoke-sessions', [AdminDeviceSessionController::class, 'revokeAllForUser'])->name('admin.security.users.revoke-sessions');
         Route::get('/analytics', [AdminAnalyticsController::class, 'index'])->name('admin.analytics.index');
         Route::get('/dashboard-announcements', [AdminDashboardAnnouncementController::class, 'index'])->name('admin.dashboard-announcements.index');
         Route::get('/dashboard-announcements/create', [AdminDashboardAnnouncementController::class, 'create'])->name('admin.dashboard-announcements.create');
