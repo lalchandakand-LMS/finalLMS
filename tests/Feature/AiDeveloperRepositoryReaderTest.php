@@ -28,7 +28,7 @@ class AiDeveloperRepositoryReaderTest extends TestCase
             'services.ai_developer.allowed_repository_paths' => ['app/Example.php'],
         ]);
 
-        $source = '<?php // Bearer abc.def.ghi sk-1234567890abcdefghijklmnop 01712345678';
+        $source = '<?php // Bearer abc.def.ghi sk-1234567890abcdefghijklmnop 01712345678 admin@example.com password => \'super-secret\'';
         Http::fake([
             'api.github.com/*' => Http::response([
                 'type' => 'file',
@@ -43,6 +43,9 @@ class AiDeveloperRepositoryReaderTest extends TestCase
         $this->assertStringNotContainsString('abc.def.ghi', $files['app/Example.php']);
         $this->assertStringNotContainsString('sk-1234567890abcdefghijklmnop', $files['app/Example.php']);
         $this->assertStringNotContainsString('01712345678', $files['app/Example.php']);
+        $this->assertStringNotContainsString('admin@example.com', $files['app/Example.php']);
+        $this->assertStringNotContainsString('super-secret', $files['app/Example.php']);
+        $this->assertStringContainsString('[REDACTED_EMAIL]', $files['app/Example.php']);
         $this->assertStringContainsString('[REDACTED_SECRET]', $files['app/Example.php']);
         $this->assertStringContainsString('[REDACTED_PHONE]', $files['app/Example.php']);
 
