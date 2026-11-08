@@ -194,6 +194,7 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         Route::post('/security/users/{user}/revoke-sessions', [AdminDeviceSessionController::class, 'revokeAllForUser'])->name('admin.security.users.revoke-sessions');
         Route::get('/admissions/{student}', [StudentAdmissionController::class, 'adminShow'])->name('admin.admissions.show');
         Route::post('/admissions/{student}/approve', [StudentAdmissionController::class, 'approve'])->name('admin.admissions.approve');
+        Route::post('/admissions/{student}/reject', [StudentAdmissionController::class, 'reject'])->name('admin.admissions.reject');
         Route::patch('/admissions/{student}/status', [StudentAdmissionController::class, 'setStatus'])->name('admin.admissions.status');
         Route::post('/admissions/{student}/anonymize', [StudentAdmissionController::class, 'anonymize'])->name('admin.admissions.anonymize');
         Route::get('/course-tracking', [StudentCourseTrackingController::class, 'index'])->name('admin.course-tracking.index');
