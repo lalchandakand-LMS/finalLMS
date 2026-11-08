@@ -25,7 +25,9 @@ return new class extends Migration
             $table->string('school_roll', 80)->nullable();
             $table->foreignId('interested_course_id')->nullable()->constrained('courses')->nullOnDelete();
             $table->decimal('quoted_course_price', 12, 2)->nullable();
-            $table->boolean('course_updates_opt_in')->default(true);
+            $table->boolean('course_updates_opt_in')->default(false);
+            $table->timestamp('privacy_consent_at')->nullable();
+            $table->string('privacy_consent_version', 20)->nullable();
             $table->text('current_address')->nullable();
             $table->string('current_post_office', 120)->nullable();
             $table->string('current_district', 120)->nullable();
