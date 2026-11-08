@@ -13,8 +13,8 @@
         $facebookPixelId = $hasSettingsTable ? \App\Models\Setting::value('facebook_pixel_id') : null;
         $marketingConsent = request()->cookie('marketing_consent') === 'accepted';
         $visitorPopup = null;
-        if (\\Illuminate\\Support\\Facades\\Schema::hasTable('visitor_popups') && !(auth()->check() && auth()->user()->isAdmin())) {
-            $visitorPopupQuery = \\App\\Models\\VisitorPopup::currentlyActive()->with('image')
+        if (\Illuminate\Support\Facades\Schema::hasTable('visitor_popups') && !(auth()->check() && auth()->user()->isAdmin())) {
+            $visitorPopupQuery = \App\Models\VisitorPopup::currentlyActive()->with('image')
                 ->where(function ($query) { $query->where('audience', 'all')->orWhere('audience', auth()->check() ? 'members' : 'guests'); });
             $visitorPopup = $visitorPopupQuery->orderByDesc('priority')->latest()->first();
         }
