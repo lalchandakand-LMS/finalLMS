@@ -80,7 +80,7 @@ class StudentAdmissionController extends Controller
             'privacy_consent' => ['accepted'],
         ]);
 
-        if (empty($validated['father']['mobile']) && empty($validated['mother']['mobile']) && empty($validated['guardian']['mobile'])) {
+        if (empty($validated['father']['mobile'] ?? null) && empty($validated['mother']['mobile'] ?? null) && empty($validated['guardian']['mobile'] ?? null)) {
             return back()->withInput()->withErrors(['guardian.mobile' => __('At least one parent or guardian mobile number is required.')]);
         }
 
