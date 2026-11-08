@@ -20,6 +20,8 @@
         $footerText = $hasSettingsTable ? \App\Models\Setting::value('footer_text', '') : '';
         $footerLinksRaw = $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('footer_links', '[]'), true) : [];
         $footerLinks = is_array($footerLinksRaw) ? $footerLinksRaw : [];
+        $headerLinksRaw = $hasSettingsTable ? json_decode((string) \\App\\Models\\Setting::value('header_links', '[]'), true) : [];
+        $headerLinks = is_array($headerLinksRaw) ? $headerLinksRaw : [];
     @endphp
     @if($siteFavicon)<link rel="icon" href="{{ $siteFavicon->url }}">@endif
     <title>@yield('title', $siteName)</title>
@@ -224,13 +226,21 @@
                         <option value="bn" @selected(app()->getLocale() === 'bn')>{{ __('Bangla') }}</option>
                     </select>
                 </form>
-                <a href="/">{{ __('Home') }}</a>
-                <a href="{{ route('courses.index') }}">{{ __('Courses') }}</a>
-                <a href="{{ route('contests.index') }}">Quiz & prizes</a>
-                <a href="{{ route('pages.about') }}">{{ __('About') }}</a>
-                <a href="{{ route('pages.contact') }}">{{ __('Contact') }}</a>
-                <a href="{{ route('pages.faq') }}">{{ __('FAQ') }}</a>
-                <a href="{{ route('news.index') }}">{{ __('Blog & News') }}</a>
+                @if(count($headerLinks))
+                    @foreach($headerLinks as $headerLink)
+                        @if(!empty($headerLink['label']) && !empty($headerLink['url']))
+                            <a href="{{ $headerLink['url'] }}" @if(str_starts_with($headerLink['url'], 'https://')) rel="noopener noreferrer" @endif>{{ $headerLink['label'] }}</a>
+                        @endif
+                    @endforeach
+                @else
+                    <a href="/">{{ __('Home') }}</a>
+                    <a href="{{ route('courses.index') }}">{{ __('Courses') }}</a>
+                    <a href="{{ route('contests.index') }}">Quiz & prizes</a>
+                    <a href="{{ route('pages.about') }}">{{ __('About') }}</a>
+                    <a href="{{ route('pages.contact') }}">{{ __('Contact') }}</a>
+                    <a href="{{ route('pages.faq') }}">{{ __('FAQ') }}</a>
+                    <a href="{{ route('news.index') }}">{{ __('Blog & News') }}</a>
+                @endif
                 @auth
                     <a href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a>
                     <a href="{{ route('profile.edit') }}">{{ __('Profile') }}</a>
