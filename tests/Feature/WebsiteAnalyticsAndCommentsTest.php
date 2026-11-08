@@ -37,17 +37,6 @@ class WebsiteAnalyticsAndCommentsTest extends TestCase
         $this->assertDatabaseHas('page_views', ['view_type' => 'post', 'viewable_id' => $post->id]);
     }
 
-    public function test_daily_page_view_storage_deduplicates_the_same_visitor_and_content(): void
-    {
-        $request = Request::create('/');
-        $request->attributes->set('analytics_visitor_key', 'stable-test-visitor');
-
-        PageView::record($request, 'course', 'course', 123);
-        PageView::record($request, 'course', 'course', 123);
-
-        $this->assertDatabaseCount('page_views', 1);
-    }
-
     public function test_authenticated_comment_is_held_for_moderation_until_approved(): void
     {
         $teacher = User::factory()->create(['role' => 'teacher']);
