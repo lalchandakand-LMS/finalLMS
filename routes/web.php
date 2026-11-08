@@ -211,6 +211,11 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         Route::post('/settings', [AdminSettingsController::class, 'update'])->name('admin.settings.update');
 
         Route::get('/users', [UserController::class, 'index'])->name('admin.users.index');
+        Route::get('/users/create', [UserController::class, 'create'])->name('admin.users.create');
+        Route::post('/users', [UserController::class, 'store'])->name('admin.users.store');
+        Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('admin.users.edit');
+        Route::put('/users/{user}', [UserController::class, 'update'])->name('admin.users.update');
+        Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('admin.users.destroy');
         Route::post('/users/{user}/role', [UserController::class, 'updateRole'])->name('admin.users.updateRole');
 
         Route::get('/courses', [CourseController::class, 'adminIndex'])->name('admin.courses.index');
