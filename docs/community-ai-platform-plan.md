@@ -30,7 +30,7 @@ This feature set is developed as a separate, reviewable branch. It is not enable
 
 ## Initial database foundation
 
-The companion migration adds normalized tables for posts, likes, comments, teacher follows, discussion rooms/members/messages, direct messages, support tickets, and a metadata-only plugin registry. It deliberately does not enable routes, public uploads, AI provider calls, or plugin execution.
+The companion migration adds normalized tables for posts, likes, comments, teacher follows, discussion rooms/members/messages, direct messages, support tickets, and a metadata-only plugin registry. The first delivery also enables an authenticated text-only public feed with publishing, likes, comments, and student-to-teacher follow/unfollow. Discussion, direct-message, support-ticket, plugin, and font tables remain foundations only; no public uploads, AI provider calls, or plugin execution are enabled.
 
 ## Required staged delivery
 
