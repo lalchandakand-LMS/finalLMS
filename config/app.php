@@ -43,6 +43,8 @@ return [
 
     'installed' => env('APP_INSTALLED', true),
 
+    'version' => env('APP_VERSION', 'development'),
+
     /*
     |--------------------------------------------------------------------------
     | Application URL
