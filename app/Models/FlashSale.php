@@ -12,7 +12,7 @@ class FlashSale extends Model
     protected $fillable = ['title','badge','description','banner_path','discount_type','discount_value','starts_at','ends_at','status','max_redemptions','per_student_limit','priority','created_by'];
     protected $casts = ['starts_at' => 'datetime', 'ends_at' => 'datetime', 'discount_value' => 'decimal:2'];
 
-    public function courses(): BelongsToMany { return $this->belongsToMany(Course::class)->withTimestamps(); }
+    public function courses(): BelongsToMany { return $this->belongsToMany(Course::class, 'flash_sale_course')->withTimestamps(); }
     public function payments(): HasMany { return $this->hasMany(Payment::class); }
     public function creator(): BelongsTo { return $this->belongsTo(User::class, 'created_by'); }
 
