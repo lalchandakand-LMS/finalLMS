@@ -33,7 +33,9 @@
 <style>
 @media print { body * { visibility:hidden !important; } body:after { content:'Printing is disabled for protected course content.'; visibility:visible; position:fixed; inset:40% 5%; text-align:center; font-size:24px; } }
 .protected-learning-content { position:relative; user-select:none; -webkit-user-select:none; }
-.protected-learning-content iframe { user-select:auto; }\n.protected-media-frame { isolation:isolate; }\n.dynamic-media-watermark { position:absolute; z-index:4; left:5%; right:5%; top:42%; transform:rotate(-22deg); color:#fff; text-shadow:0 1px 4px #000; opacity:.24; font-size:clamp(14px,2.4vw,28px); font-weight:800; text-align:center; pointer-events:none; overflow-wrap:anywhere; user-select:none; }
+.protected-learning-content iframe { user-select:auto; }
+.protected-media-frame { isolation:isolate; }
+.dynamic-media-watermark { position:absolute; z-index:4; left:5%; right:5%; top:42%; transform:rotate(-22deg); color:#fff; text-shadow:0 1px 4px #000; opacity:.24; font-size:clamp(14px,2.4vw,28px); font-weight:800; text-align:center; pointer-events:none; overflow-wrap:anywhere; user-select:none; }
 </style>
 <script>
 document.addEventListener('contextmenu', function(e){ if(e.target.closest('.protected-learning-content')) e.preventDefault(); });
