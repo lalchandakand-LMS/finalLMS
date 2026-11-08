@@ -169,6 +169,10 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
     Route::post('/contests/{contest}/submit', [QuizContestController::class, 'submit'])->middleware('throttle:5,1')->name('contests.submit');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/my/course-sessions', [StudentAdmissionController::class, 'studentSessions'])->middleware('role:student')->name('student.course-sessions.index');
+    Route::post('/course-sessions/{session}/check-in', [StudentAdmissionController::class, 'studentCheckIn'])->middleware(['role:student','throttle:10,1'])->name('student.course-sessions.check-in');
+    Route::post('/course-attendances/{attendance}/check-out', [StudentAdmissionController::class, 'studentCheckOut'])->middleware('role:student')->name('student.course-attendances.check-out');
+    Route::post('/teacher/course-sessions', [StudentAdmissionController::class, 'storeSession'])->middleware('role:teacher')->name('teacher.course-sessions.store');
     Route::get('/my/admission-profile', [StudentAdmissionController::class, 'edit'])->middleware('role:student')->name('student.admission.edit');
     Route::post('/my/admission-profile', [StudentAdmissionController::class, 'update'])->middleware('role:student')->name('student.admission.update');
     Route::post('/my/admission-profile/delete-request', [StudentAdmissionController::class, 'requestDeletion'])->middleware('role:student')->name('student.admission.delete-request');
@@ -190,6 +194,8 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         Route::get('/security/sessions', [AdminDeviceSessionController::class, 'index'])->name('admin.security.sessions.index');
         Route::patch('/security/sessions/{deviceSession}/revoke', [AdminDeviceSessionController::class, 'revoke'])->name('admin.security.sessions.revoke');
         Route::post('/security/users/{user}/revoke-sessions', [AdminDeviceSessionController::class, 'revokeAllForUser'])->name('admin.security.users.revoke-sessions');
+        Route::get('/admissions/sessions', [StudentAdmissionController::class, 'adminSessions'])->name('admin.admissions.sessions');
+        Route::post('/admissions/sessions', [StudentAdmissionController::class, 'storeSession'])->name('admin.admissions.sessions.store');
         Route::get('/admissions', [StudentAdmissionController::class, 'adminIndex'])->name('admin.admissions.index');\n        Route::get('/admissions/{student}', [StudentAdmissionController::class, 'adminShow'])->name('admin.admissions.show');\n        Route::post('/admissions/{student}/approve', [StudentAdmissionController::class, 'approve'])->name('admin.admissions.approve');\n        Route::patch('/admissions/{student}/status', [StudentAdmissionController::class, 'setStatus'])->name('admin.admissions.status');\n        Route::delete('/admissions/{student}/personal-data', [StudentAdmissionController::class, 'anonymize'])->name('admin.admissions.anonymize');\n        Route::get('/admissions', [StudentAdmissionController::class, 'adminIndex'])->name('admin.admissions.index');
         Route::get('/admissions/{student}', [StudentAdmissionController::class, 'adminShow'])->name('admin.admissions.show');
         Route::post('/admissions/{student}/approve', [StudentAdmissionController::class, 'approve'])->name('admin.admissions.approve');
