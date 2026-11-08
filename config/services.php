@@ -2,6 +2,13 @@
 
 return [
 
+    'ai_developer' => [
+        'provider' => env('AI_DEVELOPER_PROVIDER', 'openai-compatible'),
+        'base_url' => env('AI_DEVELOPER_BASE_URL', 'https://api.openai.com/v1'),
+        'api_key' => env('AI_DEVELOPER_API_KEY'),
+        'model' => env('AI_DEVELOPER_MODEL'),
+    ],
+
     'bkash' => [
         'enabled' => env('BKASH_ENABLED', false),
         'base_url' => env('BKASH_BASE_URL', 'https://tokenized.sandbox.bka.sh/v1.2.0-beta'),
