@@ -57,8 +57,8 @@ class UserController extends Controller
         ]);
         $this->validateBranchAssignment($validated['role'], $validated['branch_id'] ?? null);
         $validated['branch_id'] = in_array($validated['role'], ['branch_manager', 'accountant', 'student'], true) ? ($validated['branch_id'] ?? null) : null;
-        $validated['email_verified_at'] = now();
-        User::create($validated);
+        $user = User::create($validated);
+        $user->forceFill(['email_verified_at' => now()])->save();
         return redirect()->route('admin.users.index')->with('success', 'Account created successfully.');
     }
 
