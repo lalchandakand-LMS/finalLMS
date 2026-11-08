@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\BlogPost;
 use App\Models\Comment;
 use App\Models\Course;
-use App\Models\PageView;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -24,9 +23,9 @@ class WebsiteAnalyticsAndCommentsTest extends TestCase
             'body' => 'Article text', 'status' => 'published', 'published_at' => now()->subMinute(),
         ]);
 
-        $this->withSession(['visitor_test' => 'same'])->get(route('courses.show', $course))->assertOk();
-        $this->withSession(['visitor_test' => 'same'])->get(route('courses.show', $course))->assertOk();
-        $this->withSession(['visitor_test' => 'same'])->get(route('news.show', $post->slug))->assertOk();
+        $this->get(route('courses.show', $course))->assertOk();
+        $this->get(route('courses.show', $course))->assertOk();
+        $this->get(route('news.show', $post->slug))->assertOk();
 
         $this->assertDatabaseCount('page_views', 3); // one site visitor row, one course view, one post view
         $this->assertDatabaseHas('page_views', ['view_type' => 'course', 'viewable_id' => $course->id]);
