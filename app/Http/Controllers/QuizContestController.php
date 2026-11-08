@@ -134,7 +134,7 @@ class QuizContestController extends Controller
                 ->orderBy('submitted_at')
                 ->orderBy('id')
                 ->get();
-            abort_if($entries->isEmpty(), 422, 'There are no participants to draw from.');
+            abort_if($entries->isEmpty(), 422, 'There are no quiz submissions to rank.');
 
             // Transparent skill-based ranking: highest score, then earliest submission,
             // then lowest entry ID as a deterministic final tie-break.
