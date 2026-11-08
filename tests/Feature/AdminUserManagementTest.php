@@ -45,6 +45,7 @@ class AdminUserManagementTest extends TestCase
         $this->actingAs($admin)
             ->post(route('admin.users.updateRole', $student), [
                 'role' => 'teacher',
+                'phone_number' => '+8801712345601',
             ])
             ->assertRedirect(route('admin.users.index'));
 
@@ -69,6 +70,7 @@ class AdminUserManagementTest extends TestCase
             ->post(route('admin.users.updateRole', $manager), [
                 'role' => 'branch_manager',
                 'branch_id' => $branch->id,
+                'phone_number' => '+8801712345602',
             ])
             ->assertRedirect(route('admin.users.index'));
 
@@ -140,6 +142,7 @@ class AdminUserManagementTest extends TestCase
             ->post(route('admin.users.updateRole', $accountant), [
                 'role' => 'accountant',
                 'branch_id' => $branch->id,
+                'phone_number' => '+8801712345603',
             ])
             ->assertRedirect(route('admin.users.index'));
 
@@ -184,6 +187,7 @@ class AdminUserManagementTest extends TestCase
             ->post(route('admin.users.updateRole', $student), [
                 'role' => 'student',
                 'branch_id' => $branch->id,
+                'phone_number' => '+8801712345604',
             ])
             ->assertRedirect(route('admin.users.index'));
 
