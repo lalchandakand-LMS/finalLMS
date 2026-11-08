@@ -2,7 +2,7 @@
 <section class="panel" aria-label="{{ __('Latest academy announcements') }}" style="margin-bottom:22px;padding:0;overflow:hidden;">
     <div id="aec-announcement-slider" style="position:relative;min-height:180px;background:linear-gradient(115deg,#102b63,#1769e8);color:#fff;">
         @foreach($announcementSlides as $index => $slide)
-            <article class="aec-announcement-slide" data-slide="{{ $index }}" @if($index !== 0) hidden @endif style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(180px,.7fr);gap:18px;align-items:center;padding:24px 58px 24px 26px;min-height:180px;">
+            <article class="aec-announcement-slide" data-slide="{{ $index }}" @if($index !== 0) hidden @endif style="display:{{ $index === 0 ? 'grid' : 'none' }};grid-template-columns:minmax(0,1.3fr) minmax(180px,.7fr);gap:18px;align-items:center;padding:24px 58px 24px 26px;min-height:180px;">
                 <div>
                     <span style="display:inline-block;background:rgba(255,255,255,.16);padding:5px 10px;border-radius:30px;font-size:.78rem;font-weight:700;">{{ $slide->content_type === 'course' ? __('New course') : ($slide->content_type === 'post' ? __('New post') : __('Announcement')) }}</span>
                     <h2 style="margin:10px 0 7px;color:#fff;">{{ $slide->title }}</h2>
