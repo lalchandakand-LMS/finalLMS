@@ -1,12 +1,12 @@
 <?php
 
-namespace App\\Http\\Controllers;
+namespace App\Http\Controllers;
 
-use App\\Models\\AiDeveloperTask;
-use Illuminate\\Http\\RedirectResponse;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Facades\\Http;
-use Illuminate\\View\\View;
+use App\Models\AiDeveloperTask;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
+use Illuminate\View\View;
 use Throwable;
 
 class AiDeveloperController extends Controller
@@ -77,12 +77,12 @@ PROMPT;
                 ]);
 
             if (!$response->successful()) {
-                throw new \\RuntimeException('AI provider returned HTTP '.$response->status().'. Check provider settings and server logs.');
+                throw new \RuntimeException('AI provider returned HTTP '.$response->status().'. Check provider settings and server logs.');
             }
 
             $answer = data_get($response->json(), 'choices.0.message.content');
             if (!is_string($answer) || trim($answer) === '') {
-                throw new \\RuntimeException('AI provider returned an empty or unsupported response.');
+                throw new \RuntimeException('AI provider returned an empty or unsupported response.');
             }
 
             $task->update(['response' => $answer, 'status' => 'completed', 'error_message' => null]);
@@ -101,10 +101,10 @@ PROMPT;
 
     private function redactSensitiveText(string $value): string
     {
-        $value = preg_replace('/(Bearer\\s+)[A-Za-z0-9._\\-]+/i', '$1[REDACTED]', $value) ?? $value;
+        $value = preg_replace('/(Bearer\s+)[A-Za-z0-9._\-]+/i', '$1[REDACTED]', $value) ?? $value;
 
         return preg_replace(
-            '/\\b(sk-[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{10,})\\b/',
+            '/\b(sk-[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{10,})\b/',
             '[REDACTED_SECRET]',
             $value
         ) ?? $value;
