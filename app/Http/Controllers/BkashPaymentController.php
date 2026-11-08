@@ -50,12 +50,18 @@ class BkashPaymentController extends Controller
 
         abort_if($amount <= 0, 422, 'Online checkout is not needed for a free course.');
 
-        $payment = DB::transaction(function () use ($amount, $batchId, $course, $user, $flashSale): Payment {
+        $payment = DB::transaction(function () use ($amount, $baseAmount, $batchId, $course, $user, $flashSale): Payment {
             if ($batchId) {
                 $batch = Batch::query()->lockForUpdate()->findOrFail($batchId);
                 if ($batch->status !== 'open' || ! $this->hasAvailableSeat($batch)) {
                     abort(409, 'This batch has reached its enrollment capacity.');
                 }
+            }
+
+            if ($flashSale) {
+                $lockedSale = FlashSale::query()->lockForUpdate()->find($flashSale->id);
+                abort_unless($lockedSale && $lockedSale->isAvailableFor($user->id), 409, 'This Flash Sale has ended or reached its purchase limit.');
+                $amount = $lockedSale->discountedPrice($baseAmount);
             }
 
             return Payment::create([
@@ -76,7 +82,7 @@ class BkashPaymentController extends Controller
             $token = $bkash->grantToken();
             $created = $bkash->createPayment(
                 $token,
-                number_format($amount, 2, '.', ''),
+                number_format((float) $payment->amount, 2, '.', ''),
                 $payment->transaction_reference,
                 route('payments.bkash.callback'),
                 (string) $user->id
