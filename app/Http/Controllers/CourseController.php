@@ -164,7 +164,7 @@ class CourseController extends Controller
             ->orderBy('starts_at')
             ->get();
 
-        return view('courses.show', compact('course', 'enrollment', 'payment', 'paymentMethods', 'batches', 'canViewLessons', 'lessonProgress'));
+        return view('courses.show', compact('course', 'enrollment', 'payment', 'paymentMethods', 'batches', 'canViewLessons', 'lessonProgress', 'comments'));
     }
 
     public function showLesson(Course $course, Lesson $lesson): View
