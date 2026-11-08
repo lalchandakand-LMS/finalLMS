@@ -12,6 +12,12 @@
         $googleTagManagerId = $hasSettingsTable ? \App\Models\Setting::value('google_tag_manager_id') : null;
         $facebookPixelId = $hasSettingsTable ? \App\Models\Setting::value('facebook_pixel_id') : null;
         $marketingConsent = request()->cookie('marketing_consent') === 'accepted';
+        $visitorPopup = null;
+        if (\\Illuminate\\Support\\Facades\\Schema::hasTable('visitor_popups') && !(auth()->check() && auth()->user()->isAdmin())) {
+            $visitorPopupQuery = \\App\\Models\\VisitorPopup::currentlyActive()->with('image')
+                ->where(function ($query) { $query->where('audience', 'all')->orWhere('audience', auth()->check() ? 'members' : 'guests'); });
+            $visitorPopup = $visitorPopupQuery->orderByDesc('priority')->latest()->first();
+        }
     @endphp
     <title>@yield('title', config('app.name'))</title>
     <meta name="description" content="{{ $seoDescription }}">
@@ -196,6 +202,7 @@
             <a href="{{ route('admin.media.index') }}"><span>🖼️</span><span class="nav-text">Media library</span></a>
             <a href="{{ route('admin.news.index') }}"><span>📰</span><span class="nav-text">Blog & news</span></a>
             <a class="{{ request()->routeIs('admin.analytics.*') ? 'active' : '' }}" href="{{ route('admin.analytics.index') }}"><span>📈</span><span class="nav-text">Website analytics</span></a>
+            <a class="{{ request()->routeIs('admin.visitor-popups.*') ? 'active' : '' }}" href="{{ route('admin.visitor-popups.index') }}"><span>📣</span><span class="nav-text">Visitor popups</span></a>
             <a class="{{ request()->routeIs('admin.comments.*') ? 'active' : '' }}" href="{{ route('admin.comments.index') }}"><span>💬</span><span class="nav-text">Comment moderation</span></a>
             <a href="{{ route('admin.backups.index') }}"><span>💾</span><span class="nav-text">Backup & restore</span></a>
             <a href="{{ route('admin.activity-logs.index') }}"><span>📋</span><span class="nav-text">Activity logs</span></a>
@@ -307,6 +314,71 @@
             window.location.reload();
         }
     </script>
+    @if($visitorPopup)
+        @php
+            $popupButtonUrl = $visitorPopup->popup_type === 'registration'
+                ? (auth()->check() ? route('dashboard') : route('register'))
+                : ($visitorPopup->button_url ? (str_starts_with($visitorPopup->button_url, '/') ? url($visitorPopup->button_url) : $visitorPopup->button_url) : null);
+            $popupButtonLabel = $visitorPopup->button_label ?: ($visitorPopup->popup_type === 'registration' ? __('Register now') : __('Learn more'));
+            $popupIsExternal = $popupButtonUrl && str_starts_with($popupButtonUrl, 'https://') && !str_starts_with($popupButtonUrl, url('/'));
+        @endphp
+        <div id="visitor-promo-overlay" role="dialog" aria-modal="true" aria-labelledby="visitor-promo-title" aria-describedby="visitor-promo-description" data-popup-id="{{ $visitorPopup->id }}" data-frequency="{{ $visitorPopup->frequency }}" data-delay="{{ $visitorPopup->delay_seconds }}" hidden style="position:fixed;inset:0;z-index:1000;background:rgba(8,18,40,.72);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:18px;">
+            <section style="position:relative;width:min(620px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:20px;box-shadow:0 28px 90px rgba(0,0,0,.35);">
+                <button id="visitor-promo-close" type="button" aria-label="{{ __('Close popup') }}" style="position:absolute;right:12px;top:12px;z-index:2;border:0;border-radius:50%;width:40px;height:40px;background:rgba(15,23,42,.82);color:#fff;font-size:25px;cursor:pointer;">&times;</button>
+                @if($visitorPopup->image)
+                    <img src="{{ $visitorPopup->image->url }}" alt="{{ $visitorPopup->title }}" style="display:block;width:100%;max-height:290px;object-fit:cover;">
+                @endif
+                <div style="padding:26px;">
+                    @if($visitorPopup->popup_type === 'ad')<span class="badge warning">{{ __('Advertisement') }}</span>@elseif($visitorPopup->popup_type === 'registration')<span class="badge success">{{ __('Join us') }}</span>@else<span class="badge info">{{ ucfirst($visitorPopup->popup_type) }}</span>@endif
+                    <h2 id="visitor-promo-title" style="margin:12px 0;color:#14213d;">{{ $visitorPopup->title }}</h2>
+                    <p id="visitor-promo-description" style="white-space:pre-line;line-height:1.7;color:#4b5563;">{{ $visitorPopup->body }}</p>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;">
+                        @if($popupButtonUrl)<a class="btn primary" href="{{ $popupButtonUrl }}" @if($popupIsExternal) target="_blank" rel="sponsored noopener noreferrer" @elseif($visitorPopup->popup_type === 'ad') rel="sponsored noopener" @endif>{{ $popupButtonLabel }}</a>@endif
+                        <button id="visitor-promo-dismiss" type="button" class="btn secondary">{{ __('Maybe later') }}</button>
+                    </div>
+                </div>
+            </section>
+        </div>
+        <script>
+            (function () {
+                const overlay = document.getElementById('visitor-promo-overlay');
+                if (!overlay) return;
+                const id = overlay.dataset.popupId;
+                const frequency = overlay.dataset.frequency;
+                const key = 'aec-popup-' + id;
+                const now = Date.now();
+                let shouldShow = true;
+                try {
+                    if (frequency === 'once_per_session') shouldShow = !sessionStorage.getItem(key);
+                    if (frequency === 'once_per_day') shouldShow = !(Number(localStorage.getItem(key) || 0) > now);
+                    if (frequency === 'once_per_browser') shouldShow = !localStorage.getItem(key);
+                } catch (e) {}
+                if (!shouldShow) return;
+                const close = () => {
+                    overlay.style.display = 'none';
+                    overlay.hidden = true;
+                    document.body.style.overflow = '';
+                };
+                const markShown = () => {
+                    try {
+                        if (frequency === 'once_per_session') sessionStorage.setItem(key, '1');
+                        if (frequency === 'once_per_day') localStorage.setItem(key, String(now + 86400000));
+                        if (frequency === 'once_per_browser') localStorage.setItem(key, '1');
+                    } catch (e) {}
+                };
+                document.getElementById('visitor-promo-close')?.addEventListener('click', close);
+                document.getElementById('visitor-promo-dismiss')?.addEventListener('click', close);
+                overlay.addEventListener('click', event => { if (event.target === overlay) close(); });
+                document.addEventListener('keydown', event => { if (event.key === 'Escape' && !overlay.hidden) close(); });
+                window.setTimeout(() => {
+                    overlay.hidden = false;
+                    overlay.style.display = 'flex';
+                    document.body.style.overflow = 'hidden';
+                    markShown();
+                }, Math.max(0, Math.min(60, Number(overlay.dataset.delay || 0))) * 1000);
+            })();
+        </script>
+    @endif
     @stack('scripts')
 </body>
 </html>
