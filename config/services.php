@@ -5,6 +5,7 @@ return [
     'ai_developer' => [
         'provider' => env('AI_DEVELOPER_PROVIDER', 'openai-compatible'),
         'base_url' => env('AI_DEVELOPER_BASE_URL', 'https://api.openai.com/v1'),
+        'allowed_hosts' => array_filter(array_map('trim', explode(',', env('AI_DEVELOPER_ALLOWED_HOSTS', 'api.openai.com')))),
         'api_key' => env('AI_DEVELOPER_API_KEY'),
         'model' => env('AI_DEVELOPER_MODEL'),
     ],
