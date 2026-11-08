@@ -9,7 +9,7 @@
             <h1 style="margin: 12px 0 0;">{{ __('User management') }}</h1>
             <p class="muted">{{ __('Search and manage accounts. The list is paginated to keep large student records responsive.') }}</p>
         </div>
-        <a href="{{ route('admin.users.create') }}" class="btn primary">{{ __('Create account') }}</a>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;"><a href="{{ route('admin.users.trash') }}" class="btn secondary">{{ __('Trash / Restore') }}</a><a href="{{ route('admin.users.create') }}" class="btn primary">{{ __('Create account') }}</a></div>
     </div>
 
     <div class="panel">
