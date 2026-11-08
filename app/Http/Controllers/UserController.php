@@ -69,13 +69,15 @@ class UserController extends Controller
             'phone_number' => $validated['phone_number'] ?? null,
         ]);
 
-        if ($phoneChanged || $roleChangedAwayFromStudent) {
+        if ($phoneChanged) {
             $user->forceFill([
                 'phone_verified_at' => null,
                 'phone_verification_code' => null,
                 'phone_verification_expires_at' => null,
             ])->save();
+        }
 
+        if ($phoneChanged || $roleChangedAwayFromStudent) {
             StudentDevice::query()
                 ->where('user_id', $user->id)
                 ->where('status', 'approved')
