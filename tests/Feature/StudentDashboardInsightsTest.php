@@ -89,4 +89,22 @@ class StudentDashboardInsightsTest extends TestCase
             ->assertSee('0%')
             ->assertSee('0 / 1');
     }
+    public function test_teacher_dashboard_metrics_are_scoped_to_the_signed_in_teacher(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $otherTeacher = User::factory()->create(['role' => 'teacher']);
+
+        Course::factory()->create(['teacher_id' => $teacher->id, 'status' => 'published']);
+        Course::factory()->create(['teacher_id' => $otherTeacher->id, 'status' => 'published']);
+
+        $this->actingAs($teacher)
+            ->get('/dashboard')
+            ->assertOk()
+            ->assertSee('Your teaching overview')
+            ->assertSee('Assigned courses')
+            ->assertSee('1')
+            ->assertSee('Pending reviews')
+            ->assertSee('Graded submissions');
+    }
+
 }
