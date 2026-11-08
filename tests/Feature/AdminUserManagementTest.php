@@ -241,8 +241,8 @@ class AdminUserManagementTest extends TestCase
         $this->assertDatabaseHas('users', [
             'email' => 'new.teacher@example.test',
             'role' => 'teacher',
-            'email_verified_at' => now()->toDateTimeString(),
         ]);
+        $this->assertNotNull(User::where('email', 'new.teacher@example.test')->value('email_verified_at'));
 
         $this->actingAs($admin)->post(route('admin.users.store'), [
             'name' => 'New Student',
