@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
@@ -54,11 +55,17 @@ class UserController extends Controller
             'role' => ['required', Rule::in($this->roles())],
             'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
             'password' => ['required', 'confirmed', Password::min(12)],
+            'profile_photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ]);
         $this->validateBranchAssignment($validated['role'], $validated['branch_id'] ?? null);
         $validated['branch_id'] = in_array($validated['role'], ['branch_manager', 'accountant', 'student'], true) ? ($validated['branch_id'] ?? null) : null;
+        $photo = $validated['profile_photo'] ?? null;
+        unset($validated['profile_photo']);
         $user = User::create($validated);
         $user->forceFill(['email_verified_at' => now()])->save();
+        if ($photo) {
+            $user->forceFill(['profile_photo_path' => $photo->store('profile-photos', 'public')])->save();
+        }
         return redirect()->route('admin.users.index')->with('success', 'Account created successfully.');
     }
 
@@ -77,6 +84,8 @@ class UserController extends Controller
             'role' => ['required', Rule::in($this->roles())],
             'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
             'password' => ['nullable', 'confirmed', Password::min(12)],
+            'profile_photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'remove_profile_photo' => ['nullable', 'boolean'],
         ]);
         $this->validateBranchAssignment($validated['role'], $validated['branch_id'] ?? null);
         if ($user->id === Auth::id() && $validated['role'] !== 'admin') {
@@ -86,10 +95,22 @@ class UserController extends Controller
             return back()->withInput()->withErrors(['role' => 'The last administrator cannot be demoted.']);
         }
         $validated['branch_id'] = in_array($validated['role'], ['branch_manager', 'accountant', 'student'], true) ? ($validated['branch_id'] ?? null) : null;
+        $photo = $validated['profile_photo'] ?? null;
+        $removePhoto = (bool) ($validated['remove_profile_photo'] ?? false);
+        unset($validated['profile_photo'], $validated['remove_profile_photo']);
         if (empty($validated['password'])) {
             unset($validated['password']);
         }
         $user->update($validated);
+        if ($photo) {
+            if ($user->profile_photo_path) {
+                Storage::disk('public')->delete($user->profile_photo_path);
+            }
+            $user->forceFill(['profile_photo_path' => $photo->store('profile-photos', 'public')])->save();
+        } elseif ($removePhoto && $user->profile_photo_path) {
+            Storage::disk('public')->delete($user->profile_photo_path);
+            $user->forceFill(['profile_photo_path' => null])->save();
+        }
         return redirect()->route('admin.users.index')->with('success', 'Account profile updated successfully.');
     }
 
