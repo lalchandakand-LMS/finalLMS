@@ -57,7 +57,7 @@ class FlashSaleController extends Controller
         return $request->validate([
             'title'=>['required','string','max:180'],'badge'=>['required','string','max:60'],
             'description'=>['nullable','string','max:2000'],'discount_type'=>['required','in:percentage,fixed_price'],
-            'discount_value'=>['required','numeric','gt:0','max:1000000'],
+            'discount_value'=>['required','numeric','gt:0', $request->input('discount_type') === 'percentage' ? 'max:99' : 'max:1000000'],
             'starts_at'=>['required','date'],'ends_at'=>['required','date','after:starts_at'],
             'status'=>['required','in:draft,active,paused,archived'],
             'max_redemptions'=>['nullable','integer','min:1','max:1000000'],
