@@ -14,7 +14,7 @@ class TrackWebsiteVisit
         $response = $next($request);
 
         if ($request->isMethod('GET') && !$request->expectsJson() && $response->getStatusCode() < 400
-            && !$request->is('admin/*', 'dashboard', 'login', 'register', 'install*', 'up', 'student-device/*', 'teacher/apply*')
+            && !$request->is('admin/*', 'dashboard', 'login', 'register', 'install*', 'up', 'student-device/*', 'teacher/apply*', 'courses/*/lessons/*')
             && !str_contains((string) $request->header('accept'), 'application/json')) {
             PageView::record($request, 'site');
         }
