@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Batch;
 use App\Models\Branch;
 use App\Models\Course;
+use App\Models\Enrollment;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,17 +28,33 @@ class BatchController extends Controller
 
     public function branchManagerIndex(Request $request): View
     {
-        abort_unless($request->user()->branch_id, 403, 'No branch is assigned to this account.');
+        $branchId = $request->user()->branch_id;
+        abort_unless($branchId && Branch::whereKey($branchId)->where('is_active', true)->exists(), 403, 'No active branch is assigned to this account.');
 
+        $branch = Branch::findOrFail($branchId);
         $batches = Batch::with(['branch', 'course', 'teacher'])->withCount('enrollments')
-            ->where('branch_id', $request->user()->branch_id)
+            ->where('branch_id', $branchId)
             ->latest('starts_at')
             ->paginate(25);
 
         $courses = Course::where('status', 'published')->orderBy('title')->get();
-        $teachers = User::where('role', 'teacher')->where('branch_id', $request->user()->branch_id)->orderBy('name')->get();
+        $teachers = User::where('role', 'teacher')->where('branch_id', $branchId)->orderBy('name')->get();
+        $studentsCount = User::query()
+            ->where('role', 'student')
+            ->where(function ($query) use ($branchId): void {
+                $query->where('branch_id', $branchId)
+                    ->orWhereHas('enrollments.batch', fn ($batch) => $batch->where('branch_id', $branchId));
+            })->count();
+        $stats = [
+            'students' => $studentsCount,
+            'teachers' => $teachers->count(),
+            'batches' => Batch::where('branch_id', $branchId)->count(),
+            'open_batches' => Batch::where('branch_id', $branchId)->where('status', 'open')->count(),
+            'active_enrollments' => Enrollment::whereIn('status', ['active', 'completed'])
+                ->whereHas('batch', fn ($batch) => $batch->where('branch_id', $branchId))->count(),
+        ];
 
-        return view('branch-manager.batches.index', compact('batches', 'courses', 'teachers'));
+        return view('branch-manager.batches.index', compact('branch', 'batches', 'courses', 'teachers', 'stats'));
     }
 
     public function branchManagerStore(Request $request): RedirectResponse
