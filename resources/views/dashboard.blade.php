@@ -13,10 +13,10 @@
         <style>
             .aec-admin { --aec-navy:#102b63; --aec-blue:#1769e8; --aec-muted:#64748b; color:#14213d; }
             .aec-admin * { box-sizing:border-box; }
-            .aec-hero { display:flex; justify-content:space-between; align-items:center; gap:20px; padding:28px 30px; margin-bottom:22px; border-radius:20px; color:#fff; background:linear-gradient(115deg,#0d2b68,#0759c8 65%,#2388f5); box-shadow:0 14px 32px rgba(20,83,170,.18); }
+            .aec-hero { display:flex; justify-content:space-between; align-items:center; gap:20px; padding:30px 32px; margin-bottom:22px; border:1px solid rgba(255,255,255,.18); border-radius:22px; color:#fff; background:radial-gradient(circle at 88% 15%,rgba(255,255,255,.2),transparent 25%),linear-gradient(115deg,#0b2253,#0759c8 62%,#268cf5); box-shadow:0 18px 42px rgba(20,83,170,.2); }
             .aec-hero h1 { margin:8px 0; font-size:clamp(1.45rem,3vw,2.15rem); color:#fff; }
             .aec-hero p { margin:0; color:#e2edff; }
-            .aec-hero-mark { font-size:58px; opacity:.9; }
+            .aec-hero-actions { display:flex; flex-direction:column; align-items:flex-end; gap:12px; }.aec-hero-mark { font-size:54px; opacity:.92; }.aec-hero-buttons { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }.aec-hero-button { display:inline-flex; align-items:center; justify-content:center; padding:10px 13px; border:1px solid rgba(255,255,255,.35); border-radius:10px; color:#fff; background:rgba(255,255,255,.12); font-size:.84rem; font-weight:800; text-decoration:none; }.aec-hero-button:hover { background:rgba(255,255,255,.22); color:#fff; }.aec-hero-button-light { background:#fff; border-color:#fff; color:#12336d; }.aec-hero-button-light:hover { background:#eaf2ff; color:#12336d; }
             .aec-eyebrow { font-size:.76rem; text-transform:uppercase; letter-spacing:.13em; font-weight:800; color:#d8e7ff; }
             .aec-heading { display:flex; justify-content:space-between; align-items:end; gap:12px; margin:22px 0 13px; }
             .aec-heading h2 { margin:0; color:#142b55; font-size:1.18rem; }
@@ -27,8 +27,8 @@
             .aec-stat-icon { display:grid; place-items:center; width:40px; height:40px; border-radius:12px; background:#eaf2ff; font-size:1.25rem; }
             .aec-stat strong { display:block; margin-top:11px; color:#102b63; font-size:1.85rem; line-height:1.1; }
             .aec-stat small { display:block; margin-top:6px; color:#7b8ba3; }
-            .aec-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:13px; }
-            .aec-link { display:flex; flex-direction:column; min-height:138px; padding:17px; border:1px solid #e1eaf8; border-radius:15px; background:#fff; color:#152b50; text-decoration:none; box-shadow:0 5px 18px rgba(15,42,90,.04); transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease; }
+            .aec-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }.aec-link-featured { border-color:#b8d1fa; background:linear-gradient(145deg,#fff,#f1f6ff); }.aec-link-featured .aec-link-icon { background:#dceaff; }
+            .aec-link { display:flex; flex-direction:column; min-height:148px; padding:18px; border:1px solid #e1eaf8; border-radius:17px; background:#fff; color:#152b50; text-decoration:none; box-shadow:0 5px 18px rgba(15,42,90,.04); transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease; }
             .aec-link:hover { transform:translateY(-3px); border-color:#9bbdf5; box-shadow:0 12px 24px rgba(15,42,90,.09); }
             .aec-link-icon { display:grid; place-items:center; width:39px; height:39px; border-radius:12px; background:#edf4ff; font-size:1.25rem; }
             .aec-link strong { margin-top:12px; font-size:.98rem; }
@@ -42,7 +42,7 @@
             .aec-row strong { color:#18335f; font-size:.9rem; text-align:right; }
             .aec-admin .btn { border-radius:10px; }
             @media(max-width:900px) { .aec-stats,.aec-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-            @media(max-width:600px) { .aec-hero { padding:22px; } .aec-hero-mark { display:none; } .aec-stats,.aec-grid,.aec-bottom { grid-template-columns:1fr; } .aec-stat { padding:15px; } }
+            @media(max-width:600px) { .aec-hero { align-items:flex-start; padding:22px; }.aec-hero-actions { align-items:flex-start; }.aec-hero-mark { display:none; }.aec-hero-buttons { justify-content:flex-start; }.aec-stats,.aec-grid,.aec-bottom { grid-template-columns:1fr; } .aec-stat { padding:15px; } }
         </style>
 
         <div class="aec-admin">
@@ -52,7 +52,13 @@
                     <h1>{{ __('Welcome back,') }} {{ $user->name }}!</h1>
                     <p>{{ __('Manage your academy, courses, learners and daily operations from one place.') }}</p>
                 </div>
-                <div class="aec-hero-mark" aria-hidden="true">📘</div>
+                <div class="aec-hero-actions">
+                    <span class="aec-hero-mark" aria-hidden="true">📘</span>
+                    <div class="aec-hero-buttons">
+                        <a class="aec-hero-button aec-hero-button-light" href="{{ route('admin.courses.create') }}">＋ {{ __('Create course') }}</a>
+                        <a class="aec-hero-button" href="{{ route('admin.admissions.index') }}">{{ __('Review admissions') }} →</a>
+                    </div>
+                </div>
             </section>
 
             <div class="aec-heading">
@@ -83,6 +89,14 @@
                 <a class="aec-link" href="{{ route('admin.settings.index') }}"><span class="aec-link-icon">⚙️</span><strong>{{ __('System settings') }}</strong><span>{{ __('Configure academy and platform settings') }}</span></a>
                 <a class="aec-link" href="{{ route('admin.sms-campaigns.index') }}"><span class="aec-link-icon">✉️</span><strong>{{ __('SMS campaigns') }}</strong><span>{{ __('Manage learner communication campaigns') }}</span></a>
                 <a class="aec-link" href="{{ route('landing') }}"><span class="aec-link-icon">🌐</span><strong>{{ __('Homepage / Public website') }}</strong><span>{{ __('Open the visitor-facing homepage') }}</span></a>
+                <a class="aec-link aec-link-featured" href="{{ route('admin.admissions.index') }}"><span class="aec-link-icon">📝</span><strong>{{ __('Student admissions') }}</strong><span>{{ __('Review applications, verify documents and manage admission status') }}</span></a>
+                <a class="aec-link" href="{{ route('admin.analytics.index') }}"><span class="aec-link-icon">📊</span><strong>{{ __('Analytics & insights') }}</strong><span>{{ __('Understand website traffic and learner engagement') }}</span></a>
+                <a class="aec-link" href="{{ route('admin.course-tracking.index') }}"><span class="aec-link-icon">⏱️</span><strong>{{ __('Course time tracking') }}</strong><span>{{ __('Review learner sessions and course participation') }}</span></a>
+                <a class="aec-link" href="{{ route('admin.finance-reports.index') }}"><span class="aec-link-icon">📈</span><strong>{{ __('Finance reports') }}</strong><span>{{ __('Review income, expenses and financial summaries') }}</span></a>
+                <a class="aec-link" href="{{ route('admin.contests.index') }}"><span class="aec-link-icon">🎁</span><strong>{{ __('Quiz & prizes') }}</strong><span>{{ __('Manage quizzes, participation and prize draws') }}</span></a>
+                <a class="aec-link" href="{{ route('admin.security.sessions.index') }}"><span class="aec-link-icon">🔐</span><strong>{{ __('Security center') }}</strong><span>{{ __('Review active sessions and revoke suspicious devices') }}</span></a>
+                <a class="aec-link" href="{{ route('admin.teacher-applications.index') }}"><span class="aec-link-icon">🪪</span><strong>{{ __('Teacher verification') }}</strong><span>{{ __('Review teacher applications and submitted documents') }}</span></a>
+                <a class="aec-link" href="{{ route('admin.dashboard-announcements.index') }}"><span class="aec-link-icon">📢</span><strong>{{ __('Announcements') }}</strong><span>{{ __('Publish notices and dashboard announcements') }}</span></a>
             </section>
 
             <section class="aec-bottom">
