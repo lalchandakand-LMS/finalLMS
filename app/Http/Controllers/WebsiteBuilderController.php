@@ -131,10 +131,18 @@ class WebsiteBuilderController extends Controller
             }
         }
 
-        Setting::setValue('website_sections', json_encode($sections, JSON_THROW_ON_ERROR));
-        Setting::setValue('home_slides', json_encode($slides, JSON_THROW_ON_ERROR));
-        Setting::setValue('footer_links', json_encode($footerLinks, JSON_THROW_ON_ERROR));
-        Setting::setValue('header_links', json_encode($headerLinks, JSON_THROW_ON_ERROR));
+        if (array_key_exists('sections', $validated)) {
+            Setting::setValue('website_sections', json_encode($sections, JSON_THROW_ON_ERROR));
+        }
+        if (array_key_exists('home_slides', $validated)) {
+            Setting::setValue('home_slides', json_encode($slides, JSON_THROW_ON_ERROR));
+        }
+        if (array_key_exists('footer_links', $validated)) {
+            Setting::setValue('footer_links', json_encode($footerLinks, JSON_THROW_ON_ERROR));
+        }
+        if (array_key_exists('header_links', $validated)) {
+            Setting::setValue('header_links', json_encode($headerLinks, JSON_THROW_ON_ERROR));
+        }
 
         return redirect()->route('admin.website-builder.index')->with('success', 'Website identity, homepage slider and layout saved.');
     }
