@@ -3,7 +3,7 @@
 @section('title', $course->title . ' | ' . config('app.name'))
 
 @section('content')
-    @php($activeFlashSale = \\App\\Models\\FlashSale::activeForCourse($course->id, auth()->id()))
+    @php($activeFlashSale = \App\Models\FlashSale::activeForCourse($course->id, auth()->id()))
     @php($courseBasePrice = (float) $course->price)
     @php($courseOfferPrice = $activeFlashSale ? $activeFlashSale->discountedPrice($courseBasePrice) : $courseBasePrice)
     <div class="page-header">
