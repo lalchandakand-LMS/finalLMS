@@ -331,7 +331,8 @@ class AdminUserManagementTest extends TestCase
     {
         \Illuminate\Support\Facades\Storage::fake('public');
         $admin = User::factory()->create(['role' => 'admin']);
-        $photo = \Illuminate\Http\UploadedFile::fake()->image('profile.png');
+        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/2ioAAAAASUVORK5CYII=', true);
+        $photo = \Illuminate\Http\UploadedFile::fake()->createWithContent('profile.png', $png);
 
         $this->actingAs($admin)->post(route('admin.users.store'), [
             'name' => 'Photo Student',
