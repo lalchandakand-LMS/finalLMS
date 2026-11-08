@@ -50,7 +50,7 @@ class BatchController extends Controller
             'teachers' => $teachers->count(),
             'batches' => Batch::where('branch_id', $branchId)->count(),
             'open_batches' => Batch::where('branch_id', $branchId)->where('status', 'open')->count(),
-            'active_enrollments' => Enrollment::whereIn('status', ['active', 'completed'])
+            'active_enrollments' => Enrollment::where('status', 'active')
                 ->whereHas('batch', fn ($batch) => $batch->where('branch_id', $branchId))->count(),
         ];
 
