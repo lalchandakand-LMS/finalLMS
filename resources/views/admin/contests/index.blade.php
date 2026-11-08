@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
-@section('title', 'Quiz & Lottery Control | ' . config('app.name'))
+@section('title', 'Quiz & Results Control | ' . config('app.name'))
 
 @section('content')
 <div class="page-header">
-    <div><span class="badge info">Admin control</span><h1 style="margin:12px 0 0;">Quiz & Lottery Management</h1><p class="muted">Create quizzes, manage participation and draw prize winners fairly.</p></div>
+    <div><span class="badge info">Admin control</span><h1 style="margin:12px 0 0;">Quiz & Competition Management</h1><p class="muted">Create quizzes, manage participation and publish skill-based results transparently.</p></div>
 </div>
 
 <div class="panel" style="margin-bottom:24px;">
@@ -50,9 +50,9 @@
                 <td><span class="badge {{ $contest->drawn_at ? 'success' : ($contest->status === 'published' ? 'info' : 'warning') }}">{{ $contest->drawn_at ? 'Drawn' : ucfirst($contest->status) }}</span></td>
                 <td>
                     @if($contest->drawn_at)
-                        <strong>Completed</strong><br>@foreach($contest->winners as $winner)<small>#{{ $winner->rank }} {{ $winner->user->name }}</small><br>@endforeach
+                        <strong>Results published</strong><br>@foreach($contest->winners as $winner)<small>#{{ $winner->rank }} {{ $winner->user->name }}</small><br>@endforeach
                     @elseif(now()->greaterThan($contest->ends_at) && $contest->entries_count > 0)
-                        <form method="POST" action="{{ route('admin.contests.draw', $contest) }}" onsubmit="return confirm('Draw winners now? This action cannot be repeated.');">@csrf<button class="btn primary" type="submit">Draw winners</button></form>
+                        <form method="POST" action="{{ route('admin.contests.results.publish', $contest) }}" onsubmit="return confirm('Publish results now? This action cannot be repeated.');">@csrf<button class="btn primary" type="submit">Draw winners</button></form>
                     @else
                         <small class="muted">Available after end time</small>
                     @endif
