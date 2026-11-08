@@ -106,6 +106,8 @@ class StudentAdmissionController extends Controller
                 'interested_course_id' => $validated['course_id'],
                 'quoted_course_price' => Course::findOrFail($validated['course_id'])->price,
                 'course_updates_opt_in' => (bool) ($validated['course_updates_opt_in'] ?? false),
+                'privacy_consent_at' => now(),
+                'privacy_consent_version' => '2026-11-09-v1',
                 'current_address' => $validated['current_address'],
                 'current_post_office' => $validated['current_post_office'],
                 'current_district' => $validated['current_district'],
