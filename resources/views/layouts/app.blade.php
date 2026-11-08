@@ -221,6 +221,18 @@
                 <a href="{{ route('pages.contact') }}">{{ __('Contact') }}</a>
                 <a href="{{ route('pages.faq') }}">{{ __('FAQ') }}</a>
                 <a href="{{ route('news.index') }}">{{ __('Blog & News') }}</a>
+                @unless($isAdminLayout)
+                    @php
+                        $websiteHeaderLinks = \\Illuminate\\Support\\Facades\\Schema::hasTable('settings')
+                            ? json_decode((string) \\App\\Models\\Setting::value('header_links', '[]'), true)
+                            : [];
+                    @endphp
+                    @foreach(is_array($websiteHeaderLinks) ? $websiteHeaderLinks : [] as $websiteLink)
+                        @if(is_array($websiteLink) && !empty($websiteLink['label']) && !empty($websiteLink['url']))
+                            <a href="{{ $websiteLink['url'] }}">{{ $websiteLink['label'] }}</a>
+                        @endif
+                    @endforeach
+                @endunless
                 @auth
                     <a href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a>
                     <a href="{{ route('profile.edit') }}">{{ __('Profile') }}</a>
@@ -285,6 +297,32 @@
 
         @yield('content')
     </main>
+    @unless($isAdminLayout)
+        @php
+            $websiteFooterTitle = \\Illuminate\\Support\\Facades\\Schema::hasTable('settings') ? \\App\\Models\\Setting::value('footer_title', config('app.name')) : config('app.name');
+            $websiteFooterText = \\Illuminate\\Support\\Facades\\Schema::hasTable('settings') ? \\App\\Models\\Setting::value('footer_text', '') : '';
+            $websiteFooterLinks = \\Illuminate\\Support\\Facades\\Schema::hasTable('settings')
+                ? json_decode((string) \\App\\Models\\Setting::value('footer_links', '[]'), true)
+                : [];
+        @endphp
+        <footer class="container" style="padding-top:24px;padding-bottom:36px;border-top:1px solid var(--border);">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap;">
+                <div style="max-width:620px;">
+                    <strong>{{ $websiteFooterTitle }}</strong>
+                    @if($websiteFooterText !== '')
+                        <p class="muted" style="margin:8px 0 0;line-height:1.7;">{{ $websiteFooterText }}</p>
+                    @endif
+                </div>
+                <nav aria-label="{{ __('Footer navigation') }}" style="display:flex;gap:12px;flex-wrap:wrap;">
+                    @foreach(is_array($websiteFooterLinks) ? $websiteFooterLinks : [] as $websiteLink)
+                        @if(is_array($websiteLink) && !empty($websiteLink['label']) && !empty($websiteLink['url']))
+                            <a href="{{ $websiteLink['url'] }}">{{ $websiteLink['label'] }}</a>
+                        @endif
+                    @endforeach
+                </nav>
+            </div>
+        </footer>
+    @endunless
     @if(!request()->cookie('marketing_consent'))
         <aside id="cookie-preferences" class="panel" style="position:fixed; right:20px; bottom:20px; z-index:20; max-width:440px; box-shadow:var(--shadow);">
             <strong>Cookie preferences</strong>
