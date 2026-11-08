@@ -110,6 +110,8 @@ class AiDeveloperRepositoryReader
         $content = preg_replace('/(Bearer\s+)[A-Za-z0-9._-]+/i', '$1[REDACTED]', $content) ?? $content;
         $content = preg_replace('/\b(sk-[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|AKIA[0-9A-Z]{16})\b/', '[REDACTED_SECRET]', $content) ?? $content;
         $content = preg_replace('/(?im)^([ \t]*(?:DB_PASSWORD|APP_KEY|AWS_SECRET_ACCESS_KEY|NAGAD_MERCHANT_PRIVATE_KEY)\s*[=:]\s*)[^\r\n]+/', '$1[REDACTED]', $content) ?? $content;
+        $content = preg_replace('/(?im)(["\']?(?:password|secret|api[_-]?key|access[_-]?token|merchant[_-]?(?:id|number)|app[_-]?(?:key|secret))["\']?\s*(?:=>|:|=)\s*)(["\'][^"\'\r\n]*["\']|[^\r\n,]+)/', '$1[REDACTED]', $content) ?? $content;
+        $content = preg_replace('/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i', '[REDACTED_EMAIL]', $content) ?? $content;
         $content = preg_replace('/\b01[3-9]\d{8}\b/', '[REDACTED_PHONE]', $content) ?? $content;
 
         return $content;
