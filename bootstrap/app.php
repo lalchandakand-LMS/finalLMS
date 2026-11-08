@@ -13,6 +13,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->appendToGroup('web', \App\Http\Middleware\SetLocale::class);
         $middleware->appendToGroup('web', \App\Http\Middleware\EnsureInstalled::class);
+        $middleware->appendToGroup('web', \App\Http\Middleware\TrackWebsiteVisit::class);
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'activity.log' => \App\Http\Middleware\LogUserActivity::class,
