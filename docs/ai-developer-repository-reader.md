@@ -11,7 +11,7 @@ Configure these values in the private hosting environment (never commit real cre
 - `AI_DEVELOPER_ALLOWED_REPOSITORY_PATHS=app/Http/Controllers/AuthController.php,routes/web.php,config/auth.php` — comma-separated exact paths; keep this list minimal.
 - Optional limits: `AI_DEVELOPER_REPOSITORY_MAX_FILE_BYTES=12000` and `AI_DEVELOPER_REPOSITORY_MAX_TOTAL_BYTES=40000`.
 
-The reader rejects traversal and sensitive directories/files, limits the number and size of files, redacts common credentials and Bangladesh mobile numbers, uses GitHub's fixed HTTPS API endpoint, and disables redirects. Repository content is passed to the model as untrusted reference data, never as instructions.
+The reader rejects traversal and sensitive directories/files, limits the number and size of files, redacts common credentials, inline password/payment settings, email addresses, and Bangladesh mobile numbers, uses GitHub's fixed HTTPS API endpoint, and disables redirects. Repository content is passed to the model as untrusted reference data, never as instructions.
 
 Do not allow-list `.env`, private keys, payment credentials, student uploads, database exports, logs, backups, `vendor`, `storage`, or secrets. Pattern redaction is not a guarantee; review the allow-list and source files before enabling this feature. The GitHub token is never sent to the AI provider.
 
