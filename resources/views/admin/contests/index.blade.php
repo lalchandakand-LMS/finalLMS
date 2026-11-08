@@ -47,12 +47,12 @@
             <tr style="border-bottom:1px solid var(--border);">
                 <td style="padding:12px 10px;"><strong>{{ $contest->title }}</strong><br><small class="muted">{{ $contest->starts_at->format('d M Y H:i') }} – {{ $contest->ends_at->format('d M Y H:i') }}</small><br><a href="{{ route('contests.show', $contest) }}">View public page</a></td>
                 <td>{{ $contest->questions_count }}</td><td>{{ $contest->entries_count }}</td><td>{{ $contest->prize_description }}<br><small>{{ $contest->winner_count }} winner(s)</small></td>
-                <td><span class="badge {{ $contest->drawn_at ? 'success' : ($contest->status === 'published' ? 'info' : 'warning') }}">{{ $contest->drawn_at ? 'Drawn' : ucfirst($contest->status) }}</span></td>
+                <td><span class="badge {{ $contest->drawn_at ? 'success' : ($contest->status === 'published' ? 'info' : 'warning') }}">{{ $contest->drawn_at ? 'Results published' : ucfirst($contest->status) }}</span></td>
                 <td>
                     @if($contest->drawn_at)
                         <strong>Results published</strong><br>@foreach($contest->winners as $winner)<small>#{{ $winner->rank }} {{ $winner->user->name }}</small><br>@endforeach
                     @elseif(now()->greaterThan($contest->ends_at) && $contest->entries_count > 0)
-                        <form method="POST" action="{{ route('admin.contests.results.publish', $contest) }}" onsubmit="return confirm('Publish results now? This action cannot be repeated.');">@csrf<button class="btn primary" type="submit">Draw winners</button></form>
+                        <form method="POST" action="{{ route('admin.contests.results.publish', $contest) }}" onsubmit="return confirm('Publish results now? This action cannot be repeated.');">@csrf<button class="btn primary" type="submit">Publish results</button></form>
                     @else
                         <small class="muted">Available after end time</small>
                     @endif
