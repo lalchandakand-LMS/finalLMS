@@ -1,26 +1,30 @@
 @extends('layouts.app')
-
-@section('title', 'Create account | ' . config('app.name'))
-
+@section('title', __('Student admission') . ' | ' . config('app.name'))
 @section('content')
-    <div class="auth-box">
-        <h1 style="margin-top:0;">{{ __('Create your student account') }}</h1>
-        <p class="muted">{{ __('Verify your email address to access your learning dashboard. A mobile number is required for secure device sign-in.') }}</p>
-
-        @if($errors->any())
-            <div class="error">{{ $errors->first() }}</div>
-        @endif
-
-        <form method="POST" action="{{ route('register.store') }}">
-            @csrf
-            <label>{{ __('Full name') }}<input type="text" name="name" value="{{ old('name') }}" autocomplete="name" required></label>
-            <label>{{ __('Email address') }}<input type="email" name="email" value="{{ old('email') }}" autocomplete="email" required></label>
-            <label>{{ __('Mobile number (E.164 format, for example +8801XXXXXXXXX)') }}<input type="tel" name="phone_number" value="{{ old('phone_number') }}" autocomplete="tel" pattern="[+][1-9][0-9]{7,14}" placeholder="+8801XXXXXXXXX" required></label>
-            <label>{{ __('Password') }}<input type="password" name="password" autocomplete="new-password" required></label>
-            <label>{{ __('Confirm password') }}<input type="password" name="password_confirmation" autocomplete="new-password" required></label>
-            <button type="submit" class="btn primary" style="width:100%; margin-top:12px;">{{ __('Create account') }}</button>
-        </form>
-
-        <p class="muted" style="margin-bottom:0;">{{ __('Already registered?') }} <a href="{{ route('login') }}">{{ __('Login') }}</a></p>
-    </div>
+<div class="page-header"><div><span class="badge info">{{ __('Online admission') }}</span><h1>{{ __('Student registration & admission form') }}</h1><p class="muted">{{ __('Complete the form accurately. Your mobile number will be verified by SMS and the academy will review your admission.') }}</p></div></div>
+@if($errors->any())<div class="flash error">{{ $errors->first() }}</div>@endif
+<form method="POST" action="{{ route('register.store') }}" enctype="multipart/form-data">@csrf
+<div class="panel"><h2>1. Student information</h2><div class="grid grid-2">
+<label>{{ __('Student full name') }}<input name="name" value="{{ old('name') }}" required maxlength="180"></label>
+<label>{{ __('Email') }}<input type="email" name="email" value="{{ old('email') }}" required></label>
+<label>{{ __('Student mobile number (+880...)') }}<input type="tel" name="phone_number" value="{{ old('phone_number') }}" pattern="[+][1-9][0-9]{7,14}" placeholder="+8801XXXXXXXXX" required></label>
+<label>{{ __('Password') }}<input type="password" name="password" required autocomplete="new-password"></label><label>{{ __('Confirm password') }}<input type="password" name="password_confirmation" required autocomplete="new-password"></label>
+<label>{{ __('School / institution name') }}<input name="school_name" value="{{ old('school_name') }}" required></label><label>{{ __('Current class / grade') }}<input name="class_name" value="{{ old('class_name') }}" required></label><label>{{ __('School roll number') }}<input name="school_roll" value="{{ old('school_roll') }}"></label>
+<label>{{ __('How did you hear about us?') }}<select name="source_channel" required><option value="">-- {{ __('Select source') }} --</option>@foreach(['google'=>'Google / Search','facebook'=>'Facebook','youtube'=>'YouTube','friend'=>'Friend / Relative','referral'=>'Student referral','website'=>'Website','banner'=>'Banner / Poster','other'=>'Other'] as $v=>$label)<option value="{{ $v }}" @selected(old('source_channel')===$v)>{{ __($label) }}</option>@endforeach</select></label>
+<label>{{ __('Source details') }}<input name="source_details" value="{{ old('source_details') }}"></label><label>{{ __('Referral code (optional)') }}<input name="referral_code" value="{{ old('referral_code') }}" maxlength="24"></label>
+<label>{{ __('Interested course') }}<select id="course_id" name="course_id" required><option value="">-- {{ __('Choose course') }} --</option>@foreach($courses as $course)<option value="{{ $course->id }}" data-price="{{ number_format((float)$course->price,2,'.','') }}" @selected(old('course_id')==$course->id)>{{ $course->title }} — ৳{{ number_format((float)$course->price,2) }}</option>@endforeach</select></label><label>{{ __('Current course price') }}<input id="course-price" readonly value="—"></label>
+</div><label style="display:flex;gap:10px;align-items:center"><input type="checkbox" name="course_updates_opt_in" value="1" style="width:auto" @checked(old('course_updates_opt_in',true))>{{ __('Send me course updates and important announcements') }}</label>
+<label>{{ __('Student photo (use your phone camera)') }}<input type="file" name="profile_photo" accept="image/jpeg,image/png" capture="user" required><small class="muted">{{ __('On supported phones this opens the front camera. JPG/PNG, max 5 MB.') }}</small></label></div>
+<div class="panel" style="margin-top:18px"><h2>2. Address information</h2><div class="grid grid-2"><h3>{{ __('Current address') }}</h3><h3>{{ __('Permanent address') }}</h3>
+<label>{{ __('Address') }}<textarea name="current_address" required>{{ old('current_address') }}</textarea></label><label>{{ __('Address') }}<textarea name="permanent_address" required>{{ old('permanent_address') }}</textarea></label>
+@foreach(['post_office'=>'Post office','district'=>'District','division'=>'Division','country'=>'Country'] as $field=>$label)<label>{{ __('Current '.$label) }}<input name="current_{{ $field }}" value="{{ old('current_'.$field,$field==='country'?'Bangladesh':'') }}" required></label><label>{{ __('Permanent '.$label) }}<input name="permanent_{{ $field }}" value="{{ old('permanent_'.$field,$field==='country'?'Bangladesh':'') }}" required></label>@endforeach</div>
+<label>{{ __('Living arrangement') }}<select name="living_type"><option value="non_residential">{{ __('Non-residential / Day student') }}</option><option value="residential">{{ __('Residential') }}</option></select></label></div>
+<div class="panel" style="margin-top:18px"><h2>3. Parents / guardian contacts & NID</h2><p class="muted">{{ __('At least one parent or guardian mobile number is required. Attach both sides of NID where available.') }}</p>
+@foreach(['father'=>'Father','mother'=>'Mother','guardian'=>'Other guardian'] as $key=>$title)<details open style="margin:12px 0"><summary><strong>{{ __($title) }}</strong></summary><div class="grid grid-2" style="margin-top:12px">
+<label>{{ __('Full name') }}<input name="{{ $key }}[name]" value="{{ old($key.'.name') }}"></label><label>{{ __('Mobile number (+880...)') }}<input type="tel" name="{{ $key }}[mobile]" value="{{ old($key.'.mobile') }}" pattern="[+][1-9][0-9]{7,14}" placeholder="+8801XXXXXXXXX"></label>
+<label>{{ __('Email') }}<input type="email" name="{{ $key }}[email]" value="{{ old($key.'.email') }}"></label><label>{{ __('Occupation / profession') }}<input name="{{ $key }}[occupation]" value="{{ old($key.'.occupation') }}"></label><label>{{ __('NID number') }}<input name="{{ $key }}[nid_number]" value="{{ old($key.'.nid_number') }}"></label>
+<label>{{ __('NID front side') }}<input type="file" name="{{ $key }}[nid_front]" accept="image/jpeg,image/png,application/pdf"></label><label>{{ __('NID back side') }}<input type="file" name="{{ $key }}[nid_back]" accept="image/jpeg,image/png,application/pdf"></label></div></details>@endforeach</div>
+<div class="panel" style="margin-top:18px"><h2>4. Special quota / support needs</h2><label>{{ __('Quota category') }}<select name="special_quota"><option value="none">{{ __('None') }}</option><option value="disability">{{ __('Disability / special assistance') }}</option><option value="freedom_fighter">{{ __('Freedom fighter family') }}</option><option value="ethnic_minority">{{ __('Ethnic minority') }}</option><option value="other">{{ __('Other eligible quota') }}</option></select></label><label>{{ __('Details / accommodation required') }}<textarea name="special_quota_notes">{{ old('special_quota_notes') }}</textarea></label><label>{{ __('Supporting document (required for disability / other quota)') }}<input type="file" name="quota_document" accept="image/jpeg,image/png,application/pdf"></label></div>
+<div class="panel" style="margin-top:18px"><label style="display:flex;gap:10px;align-items:flex-start"><input type="checkbox" name="privacy_consent" value="1" required style="width:auto;margin-top:4px"><span>{{ __('I confirm that the information is accurate and consent to the academy securely storing and using these admission records to provide education and contact my parent/guardian.') }}</span></label><p class="muted">{{ __('Identity documents are encrypted before storage and accessible only to authorized academy administrators and the student account.') }}</p><button class="btn primary" type="submit">{{ __('Submit admission application') }}</button></div></form>
+<script>(()=>{const s=document.getElementById('course_id'),p=document.getElementById('course-price');const u=()=>{const o=s.options[s.selectedIndex];p.value=o?.dataset?.price?'৳'+Number(o.dataset.price).toLocaleString('en-BD',{minimumFractionDigits:2}):'—';};s.addEventListener('change',u);u();})();</script>
 @endsection
