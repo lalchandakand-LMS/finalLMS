@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Branch;
+use App\Models\StudentDevice;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -43,7 +44,8 @@ class UserController extends Controller
     {
         $validated = $request->validate([
             'role' => ['required', 'in:admin,branch_manager,accountant,teacher,student'],
-            'branch_id' => ['nullable', Rule::exists('branches', 'id')->where('is_active', true)],\n            'phone_number' => ['nullable', 'string', 'regex:/^\\+[1-9][0-9]{7,14}$/', Rule::unique('users', 'phone_number')->ignore($user->id)],
+            'branch_id' => ['nullable', Rule::exists('branches', 'id')->where('is_active', true)],
+            'phone_number' => ['nullable', 'string', 'regex:/^\+[1-9][0-9]{7,14}$/', Rule::unique('users', 'phone_number')->ignore($user->id)],
         ]);
 
         if ($user->id === Auth::id() && $validated['role'] !== 'admin') {
@@ -67,10 +69,18 @@ class UserController extends Controller
         ]);
 
         if ($phoneChanged) {
-            $user->forceFill(['phone_verified_at' => null, 'phone_verification_code' => null, 'phone_verification_expires_at' => null])->save();
-            StudentDevice::query()->where('user_id', $user->id)->where('status', 'approved')->update(['status' => 'revoked', 'updated_at' => now()]);
+            $user->forceFill([
+                'phone_verified_at' => null,
+                'phone_verification_code' => null,
+                'phone_verification_expires_at' => null,
+            ])->save();
+
+            StudentDevice::query()
+                ->where('user_id', $user->id)
+                ->where('status', 'approved')
+                ->update(['status' => 'revoked', 'updated_at' => now()]);
         }
 
-        return redirect()->route('admin.users.index')->with('success', 'User role updated successfully.');
+        return redirect()->route('admin.users.index')->with('success', 'User role and contact details updated successfully.');
     }
 }
