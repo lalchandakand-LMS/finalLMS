@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AiDeveloperTask;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -25,6 +26,30 @@ class AiDeveloperAdminTest extends TestCase
         $this->actingAs($admin)->get(route('admin.ai-developer.index'))
             ->assertOk()
             ->assertSee('AI Developer');
+    }
+
+    public function test_admin_can_see_only_their_own_ai_task_history(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $otherAdmin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+
+        AiDeveloperTask::create([
+            'user_id' => $admin->id,
+            'title' => 'My private diagnostic',
+            'instruction' => 'A sanitized private instruction.',
+            'status' => 'completed',
+        ]);
+        AiDeveloperTask::create([
+            'user_id' => $otherAdmin->id,
+            'title' => 'Another admin private diagnostic',
+            'instruction' => 'Another sanitized private instruction.',
+            'status' => 'completed',
+        ]);
+
+        $this->actingAs($admin)->get(route('admin.ai-developer.index'))
+            ->assertOk()
+            ->assertSee('My private diagnostic')
+            ->assertDontSee('Another admin private diagnostic');
     }
 
     public function test_admin_can_request_a_diagnostic_and_secrets_are_redacted_before_storage_and_forwarding(): void
