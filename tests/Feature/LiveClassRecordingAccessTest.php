@@ -11,7 +11,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-class LiveClassAccessTest extends TestCase
+class LiveClassRecordingAccessTest extends TestCase
 {
     use RefreshDatabase;
 
