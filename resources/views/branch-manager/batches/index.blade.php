@@ -33,8 +33,8 @@
         <form method="POST" action="{{ route('branch-manager.batches.store') }}" class="grid grid-2">
             @csrf
             <label>{{ __('Batch name') }}<input name="title" maxlength="160" required></label>
-            <label>{{ __('Course') }}<select name="course_id" required><option value="">{{ __('Select course') }}</option>@foreach(\App\Models\Course::where('status', 'published')->orderBy('title')->get() as $course)<option value="{{ $course->id }}">{{ $course->title }}</option>@endforeach</select></label>
-            <label>{{ __('Teacher') }}<select name="teacher_id" required><option value="">{{ __('Select teacher') }}</option>@foreach(\App\Models\User::where('role', 'teacher')->orderBy('name')->get() as $teacher)<option value="{{ $teacher->id }}">{{ $teacher->name }}</option>@endforeach</select></label>
+            <label>{{ __('Course') }}<select name="course_id" required><option value="">{{ __('Select course') }}</option>@foreach($courses as $course)<option value="{{ $course->id }}">{{ $course->title }}</option>@endforeach</select></label>
+            <label>{{ __('Teacher') }}<select name="teacher_id" required><option value="">{{ __('Select teacher') }}</option>@foreach($teachers as $teacher)<option value="{{ $teacher->id }}">{{ $teacher->name }}</option>@endforeach</select></label>
             <label>{{ __('Capacity') }}<input type="number" name="capacity" min="1" max="1000" required></label>
             <label>{{ __('Start') }}<input type="datetime-local" name="starts_at" required></label>
             <label>{{ __('End') }}<input type="datetime-local" name="ends_at" required></label>
