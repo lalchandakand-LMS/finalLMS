@@ -164,7 +164,7 @@ class BackupController extends Controller
 
             $mediaToRestore = [];
             foreach (($payload['public_media'] ?? []) as $mediaPath => $encoded) {
-                abort_unless(is_string($mediaPath) && str_starts_with($mediaPath, 'media/') && ! Str::contains($mediaPath, ['..', '\\']), 422, 'Unsafe media path in backup.');
+                abort_unless(is_string($mediaPath) && (str_starts_with($mediaPath, 'media/') || str_starts_with($mediaPath, 'profile-photos/')) && ! Str::contains($mediaPath, ['..', '\\']), 422, 'Unsafe media path in backup.');
                 $contents = base64_decode($encoded, true);
                 abort_unless(is_string($contents), 422, 'A media file in this backup is damaged.');
                 $mediaToRestore[$mediaPath] = $contents;
