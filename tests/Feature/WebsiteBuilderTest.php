@@ -54,6 +54,12 @@ class WebsiteBuilderTest extends TestCase
             'home_title' => 'Learn English confidently',
             'home_subtitle' => 'Courses for every learner.',
             'home_featured_title' => 'Featured courses',
+            'footer_title' => 'Alom Learning',
+            'footer_text' => 'Learn with confidence.',
+            'footer_links' => [
+                ['label' => 'Courses', 'url' => '/courses'],
+                ['label' => 'Unsafe link', 'url' => 'javascript:alert(1)'],
+            ],
             'home_slides' => [[
                 'enabled' => '1', 'image_id' => $slide->id, 'title' => 'New batch',
                 'subtitle' => 'Admission is open', 'button_label' => 'Apply now', 'button_url' => '/courses',
@@ -65,6 +71,11 @@ class WebsiteBuilderTest extends TestCase
         $this->assertDatabaseHas('settings', ['key' => 'home_title', 'value' => 'Learn English confidently']);
         $savedSlides = json_decode((string) Setting::value('home_slides'), true);
         $this->assertSame($slide->id, $savedSlides[0]['image_id']);
+        $savedFooterLinks = json_decode((string) Setting::value('footer_links'), true);
+        $this->assertSame([['label' => 'Courses', 'url' => '/courses']], $savedFooterLinks);
+        $this->assertDatabaseHas('settings', ['key' => 'footer_title', 'value' => 'Alom Learning']);
+        Auth::logout();
+        $this->get('/')->assertOk()->assertSee('Alom Learning')->assertSee('Learn with confidence.')->assertSee('Courses');
     }
 
     public function test_non_admin_cannot_access_website_builder(): void
