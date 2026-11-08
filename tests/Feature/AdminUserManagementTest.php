@@ -219,4 +219,95 @@ class AdminUserManagementTest extends TestCase
         ]);
     }
 
+
+    public function test_admin_can_create_teacher_and_student_accounts_with_branch_assignment(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $branch = \App\Models\Branch::create([
+            'name' => 'Central Learning Branch',
+            'slug' => 'central-learning-branch',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.users.store'), [
+            'name' => 'New Teacher',
+            'email' => 'new.teacher@example.test',
+            'phone_number' => '01700000000',
+            'role' => 'teacher',
+            'password' => 'SecurePass!2026',
+            'password_confirmation' => 'SecurePass!2026',
+        ])->assertRedirect(route('admin.users.index'));
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'new.teacher@example.test',
+            'role' => 'teacher',
+            'email_verified_at' => now()->toDateTimeString(),
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.users.store'), [
+            'name' => 'New Student',
+            'email' => 'new.student@example.test',
+            'role' => 'student',
+            'branch_id' => $branch->id,
+            'password' => 'SecurePass!2026',
+            'password_confirmation' => 'SecurePass!2026',
+        ])->assertRedirect(route('admin.users.index'));
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'new.student@example.test',
+            'role' => 'student',
+            'branch_id' => $branch->id,
+        ]);
+    }
+
+    public function test_admin_can_edit_user_profile_and_change_password(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+
+        $this->actingAs($admin)->put(route('admin.users.update', $student), [
+            'name' => 'Updated Student Name',
+            'email' => $student->email,
+            'phone_number' => '01800000000',
+            'role' => 'teacher',
+            'password' => 'NewSecurePass!2026',
+            'password_confirmation' => 'NewSecurePass!2026',
+        ])->assertRedirect(route('admin.users.index'));
+
+        $this->assertDatabaseHas('users', [
+            'id' => $student->id,
+            'name' => 'Updated Student Name',
+            'role' => 'teacher',
+            'phone_number' => '01800000000',
+        ]);
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('NewSecurePass!2026', $student->fresh()->password));
+    }
+
+    public function test_admin_can_soft_delete_user_without_physically_removing_account(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+
+        $this->actingAs($admin)->delete(route('admin.users.destroy', $student))
+            ->assertRedirect(route('admin.users.index'));
+
+        $this->assertSoftDeleted('users', ['id' => $student->id]);
+        $this->assertDatabaseHas('users', ['id' => $student->id, 'email' => $student->email]);
+    }
+
+    public function test_admin_cannot_delete_or_demote_the_last_administrator(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->delete(route('admin.users.destroy', $admin))
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('users', ['id' => $admin->id, 'role' => 'admin', 'deleted_at' => null]);
+
+        $this->post(route('admin.users.updateRole', $admin), ['role' => 'student'])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('users', ['id' => $admin->id, 'role' => 'admin']);
+    }
+
 }
