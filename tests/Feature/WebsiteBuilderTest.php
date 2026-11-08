@@ -34,10 +34,56 @@ class WebsiteBuilderTest extends TestCase
         $this->get('/')->assertOk()->assertSee('&lt;script&gt;alert(1)&lt;/script&gt;', false)->assertSee('Learn with confidence.');
     }
 
+    public function test_admin_can_save_branding_homepage_content_and_slider_from_builder(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $logo = MediaAsset::create([
+            'uploaded_by' => $admin->id, 'disk' => 'public', 'path' => 'media/logo.png',
+            'original_name' => 'logo.png', 'mime_type' => 'image/png', 'size' => 100,
+        ]);
+        $slide = MediaAsset::create([
+            'uploaded_by' => $admin->id, 'disk' => 'public', 'path' => 'media/hero.png',
+            'original_name' => 'hero.png', 'mime_type' => 'image/png', 'size' => 100,
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.website-builder.update'), [
+            'site_name' => 'Alom English Center',
+            'site_logo_media_id' => $logo->id,
+            'site_favicon_media_id' => $logo->id,
+            'site_primary_color' => '#123456',
+            'home_title' => 'Learn English confidently',
+            'home_subtitle' => 'Courses for every learner.',
+            'home_featured_title' => 'Featured courses',
+            'home_slides' => [[
+                'enabled' => '1', 'image_id' => $slide->id, 'title' => 'New batch',
+                'subtitle' => 'Admission is open', 'button_label' => 'Apply now', 'button_url' => '/courses',
+            ]],
+        ])->assertRedirect(route('admin.website-builder.index'));
+
+        $this->assertDatabaseHas('settings', ['key' => 'site_name', 'value' => 'Alom English Center']);
+        $this->assertDatabaseHas('settings', ['key' => 'site_logo_media_id', 'value' => (string) $logo->id]);
+        $this->assertDatabaseHas('settings', ['key' => 'home_title', 'value' => 'Learn English confidently']);
+        $savedSlides = json_decode((string) Setting::value('home_slides'), true);
+        $this->assertSame($slide->id, $savedSlides[0]['image_id']);
+    }
+
     public function test_non_admin_cannot_access_website_builder(): void
     {
         $student = User::factory()->create(['role' => 'student']);
         $this->actingAs($student)->get(route('admin.website-builder.index'))->assertForbidden();
+    }
+
+    public function test_branding_media_must_be_an_image_asset(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $document = MediaAsset::create([
+            'uploaded_by' => $admin->id, 'disk' => 'public', 'path' => 'media/handbook.pdf',
+            'original_name' => 'handbook.pdf', 'mime_type' => 'application/pdf', 'size' => 100,
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.website-builder.update'), [
+            'site_logo_media_id' => $document->id,
+        ])->assertSessionHasErrors('site_logo_media_id');
     }
 
     public function test_homepage_section_image_must_be_an_image_asset(): void
