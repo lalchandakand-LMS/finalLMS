@@ -1,15 +1,15 @@
 <?php
 
-namespace App\\Http\\Controllers;
+namespace App\Http\Controllers;
 
-use App\\Models\\CommunityPost;
-use App\\Models\\CommunityPostComment;
-use App\\Models\\CommunityPostLike;
-use App\\Models\\TeacherFollow;
-use Illuminate\\Http\\RedirectResponse;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\View\\View;
+use App\Models\CommunityPost;
+use App\Models\CommunityPostComment;
+use App\Models\CommunityPostLike;
+use App\Models\TeacherFollow;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\View\View;
 
 class CommunityController extends Controller
 {
@@ -97,7 +97,7 @@ class CommunityController extends Controller
         abort_unless($request->user()->isStudent(), 403);
         abort_unless($teacherId !== $request->user()->id, 422, 'You cannot follow your own account.');
 
-        $teacher = \\App\\Models\\User::query()->whereKey($teacherId)->where('role', 'teacher')->whereNull('deleted_at')->firstOrFail();
+        $teacher = \App\Models\User::query()->whereKey($teacherId)->where('role', 'teacher')->whereNull('deleted_at')->firstOrFail();
 
         TeacherFollow::query()->firstOrCreate([
             'teacher_id' => $teacher->id,
