@@ -68,7 +68,7 @@ Route::get('/faq', [CmsPageController::class, 'faq'])->name('pages.faq');
 Route::get('/news', [BlogController::class, 'index'])->name('news.index');
 Route::get('/news/{post:slug}', [BlogController::class, 'show'])->name('news.show');
 Route::post('/news/{post:slug}/comments', [CommentController::class, 'storePost'])->middleware(['auth', 'device.session', 'throttle:5,1'])->name('news.comments.store');
-Route::post('/courses/{course}/comments', [CommentController::class, 'storeCourse'])->middleware(['auth', 'throttle:5,1'])->name('courses.comments.store');
+Route::post('/courses/{course}/comments', [CommentController::class, 'storeCourse'])->middleware(['auth', 'device.session', 'throttle:5,1'])->name('courses.comments.store');
 Route::post('/language', [LocaleController::class, 'update'])->middleware('throttle:20,1')->name('locale.update');
 Route::get('/payments/bkash/callback', [BkashPaymentController::class, 'callback'])->middleware('throttle:30,1')->name('payments.bkash.callback');
 
