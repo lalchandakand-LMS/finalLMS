@@ -41,7 +41,7 @@ class ProfileController extends Controller
             ]);
         }
 
-        $user->save();
+        $user->save();\n\n        if ($phoneChanged) {\n            StudentDevice::query()->where('user_id', $user->id)->where('status', 'approved')->update(['status' => 'revoked', 'updated_at' => now()]);\n        }
 
         if ($emailChanged) {
             $user->sendEmailVerificationNotification();
