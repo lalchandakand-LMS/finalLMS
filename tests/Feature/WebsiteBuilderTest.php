@@ -120,4 +120,45 @@ class WebsiteBuilderTest extends TestCase
         ])->assertSessionHasErrors('sections.0.image_id');
     }
 
+
+    public function test_admin_can_select_one_of_fifteen_homepage_presets_without_changing_content(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        Setting::setValue('home_title', 'Existing academy headline');
+        Setting::setValue('website_sections', json_encode([['title' => 'Existing section', 'enabled' => true]]));
+
+        $this->actingAs($admin)->post(route('admin.website-builder.update'), [
+            'homepage_template' => 'midnight-campus',
+        ])->assertRedirect(route('admin.website-builder.index'));
+
+        $this->assertDatabaseHas('settings', ['key' => 'homepage_template', 'value' => 'midnight-campus']);
+        $this->assertSame('Existing academy headline', Setting::value('home_title'));
+        $this->assertSame('Existing section', json_decode((string) Setting::value('website_sections'), true)[0]['title']);
+
+        Auth::logout();
+        $this->get('/')->assertOk()->assertSee('homepage-template--midnight-campus');
+    }
+
+    public function test_homepage_builder_rejects_unknown_template_keys(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->post(route('admin.website-builder.update'), [
+            'homepage_template' => 'untrusted-template',
+        ])->assertSessionHasErrors('homepage_template');
+    }
+
+    public function test_homepage_builder_offers_exactly_fifteen_design_presets(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->get(route('admin.website-builder.index'))
+            ->assertOk()
+            ->assertSee('15 designs')
+            ->assertSee('Academy Modern')
+            ->assertSee('Community Campus');
+
+        $this->assertCount(15, \\App\\Http\\Controllers\\WebsiteBuilderController::homepageTemplates());
+    }
+
 }
