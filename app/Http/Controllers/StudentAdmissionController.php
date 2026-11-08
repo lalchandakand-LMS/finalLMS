@@ -221,7 +221,6 @@ class StudentAdmissionController extends Controller
         ]);
         $course = Course::findOrFail($validated['course_id']);
         $guardianData = [
-            'guardian_type' => 'guardian',
             'relationship' => $validated['guardian_relationship'],
             'name' => $validated['guardian_name'],
             'mobile_number' => $validated['guardian_mobile'],
