@@ -18,11 +18,54 @@ use Illuminate\View\View;
 
 class CourseController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $courses = Course::with('teacher')->where('status', 'published')->latest()->get();
+        $validated = $request->validate([
+            'q' => ['nullable', 'string', 'max:120'],
+            'teacher' => ['nullable', 'integer', 'min:1'],
+            'min_price' => ['nullable', 'numeric', 'min:0', 'max:100000000'],
+            'max_price' => ['nullable', 'numeric', 'min:0', 'max:100000000', 'gte:min_price'],
+            'sort' => ['nullable', 'in:latest,oldest,price_low,price_high,title'],
+        ]);
 
-        return view('courses.index', compact('courses'));
+        $query = Course::query()
+            ->with('teacher')
+            ->where('status', 'published');
+
+        if (! empty($validated['q'])) {
+            $term = trim($validated['q']);
+            $query->where(function ($builder) use ($term) {
+                $builder->where('title', 'like', '%' . $term . '%')
+                    ->orWhere('description', 'like', '%' . $term . '%')
+                    ->orWhereHas('teacher', fn ($teacher) => $teacher->where('name', 'like', '%' . $term . '%'));
+            });
+        }
+
+        if (! empty($validated['teacher'])) {
+            $query->where('teacher_id', $validated['teacher']);
+        }
+        if (isset($validated['min_price'])) {
+            $query->where('price', '>=', $validated['min_price']);
+        }
+        if (isset($validated['max_price'])) {
+            $query->where('price', '<=', $validated['max_price']);
+        }
+
+        match ($validated['sort'] ?? 'latest') {
+            'oldest' => $query->oldest(),
+            'price_low' => $query->orderBy('price')->orderByDesc('id'),
+            'price_high' => $query->orderByDesc('price')->orderByDesc('id'),
+            'title' => $query->orderBy('title'),
+            default => $query->latest(),
+        };
+
+        $courses = $query->paginate(12)->withQueryString();
+        $teachers = User::query()
+            ->whereIn('id', Course::query()->where('status', 'published')->select('teacher_id'))
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return view('courses.index', compact('courses', 'teachers'));
     }
 
     public function myCourses(): View
