@@ -13,14 +13,16 @@ class AdminDeviceSessionController extends Controller
     {
         $sessions = DeviceSession::with(['user.branch', 'trustedDevice'])
             ->when($request->filled('role'), fn ($query) => $query->whereHas('user', fn ($user) => $user->where('role', $request->string('role'))))
-            ->when($request->filled('status') && $request->string('status') === 'active', fn ($query) => $query->whereNull('revoked_at'))
+            ->when($request->filled('status') && $request->string('status') === 'active', fn ($query) => $query->whereNull('revoked_at')->where('last_seen_at', '>=', now()->subMinutes(config('session.lifetime', 120))))
             ->when($request->filled('status') && $request->string('status') === 'revoked', fn ($query) => $query->whereNotNull('revoked_at'))
+            ->when($request->filled('status') && $request->string('status') === 'expired', fn ($query) => $query->whereNull('revoked_at')->where('last_seen_at', '<', now()->subMinutes(config('session.lifetime', 120))))
             ->latest('last_seen_at')
             ->paginate(30)->withQueryString();
 
         $counts = [
-            'active' => DeviceSession::whereNull('revoked_at')->count(),
+            'active' => DeviceSession::whereNull('revoked_at')->where('last_seen_at', '>=', now()->subMinutes(config('session.lifetime', 120)))->count(),
             'revoked' => DeviceSession::whereNotNull('revoked_at')->count(),
+            'expired' => DeviceSession::whereNull('revoked_at')->where('last_seen_at', '<', now()->subMinutes(config('session.lifetime', 120)))->count(),
             'devices' => \App\Models\StudentDevice::count(),
         ];
 
