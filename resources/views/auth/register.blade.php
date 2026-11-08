@@ -5,7 +5,7 @@
 @section('content')
     <div class="auth-box">
         <h1 style="margin-top:0;">{{ __('Create your student account') }}</h1>
-        <p class="muted">{{ __('Verify your email address to access your learning dashboard. A mobile number is required for secure device sign-in.') }}</p>
+        <p class="muted">{{ __('Verify your email address to access your learning dashboard. A mobile number is required for secure sign-in. A mobile number is required for secure device sign-in.') }}</p>
 
         @if($errors->any())
             <div class="error">{{ $errors->first() }}</div>
