@@ -27,7 +27,15 @@ class EnsureDeviceSessionActive
             ->where('session_hash', $sessionHash)
             ->first();
 
-        if (! $deviceSession || $deviceSession->revoked_at) {
+        $trustedToken = $request->cookie('lms_trusted_device') ?: $request->cookie('lms_student_device');
+        $trustedDeviceInvalid = $deviceSession && $deviceSession->student_device_id && (
+            ! $deviceSession->trustedDevice
+            || $deviceSession->trustedDevice->status !== 'approved'
+            || ! is_string($trustedToken)
+            || ! hash_equals($deviceSession->trustedDevice->device_hash, hash('sha256', $trustedToken))
+        );
+
+        if (! $deviceSession || $deviceSession->revoked_at || $trustedDeviceInvalid) {
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
