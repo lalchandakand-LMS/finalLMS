@@ -28,7 +28,7 @@
         $certificateCount = $hasCertificatesTable ? \App\Models\Certificate::count() : 0;
         $featuredCourses = $hasCoursesTable ? \App\Models\Course::with('teacher')->withCount('lessons')->latest()->take(3)->get() : collect();
         $storedSlides = $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('home_slides', '[]'), true) : [];
-        $flashSales = \\Illuminate\\Support\\Facades\\Schema::hasTable('flash_sales') ? \\App\\Models\\FlashSale::activeCampaigns() : collect();\n        $homeSlides = collect(is_array($storedSlides) ? $storedSlides : [])->filter(fn ($slide) => is_array($slide) && !empty($slide['enabled']) && !empty($slide['image_id']))->map(function ($slide) {
+        $flashSales = \Illuminate\Support\Facades\Schema::hasTable('flash_sales') ? \App\Models\FlashSale::activeCampaigns() : collect();\n        $homeSlides = collect(is_array($storedSlides) ? $storedSlides : [])->filter(fn ($slide) => is_array($slide) && !empty($slide['enabled']) && !empty($slide['image_id']))->map(function ($slide) {
             $asset = \App\Models\MediaAsset::query()->whereKey($slide['image_id'])->where('mime_type', 'like', 'image/%')->first();
             return $asset ? ['asset' => $asset, 'title' => $slide['title'] ?? '', 'subtitle' => $slide['subtitle'] ?? '', 'button_label' => $slide['button_label'] ?? '', 'button_url' => $slide['button_url'] ?? ''] : null;
         })->filter()->values();
@@ -43,14 +43,14 @@
             </div>
             @foreach($flashSales as $sale)
                 <div style="margin:18px 0 12px;">
-                    @if($sale->banner_path)<img src="{{ \\Illuminate\\Support\\Facades\\Storage::disk('public')->url($sale->banner_path) }}" alt="{{ $sale->title }}" style="width:100%;max-height:180px;object-fit:cover;border-radius:14px;margin-bottom:12px;">@endif
+                    @if($sale->banner_path)<img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($sale->banner_path) }}" alt="{{ $sale->title }}" style="width:100%;max-height:180px;object-fit:cover;border-radius:14px;margin-bottom:12px;">@endif
                     <h3 style="color:#fff;margin:0 0 6px;">{{ $sale->title }} <span class="badge warning">{{ $sale->badge }}</span></h3>
                     @if($sale->description)<p style="color:#dbe7ff;">{{ $sale->description }}</p>@endif
                     <div class="grid grid-3">
                         @foreach($sale->courses as $saleCourse)
                             @php($salePrice = $sale->discountedPrice((float) $saleCourse->price))
                             <article class="card" style="color:var(--text);">
-                                @if($saleCourse->image_path)<img src="{{ \\Illuminate\\Support\\Facades\\Storage::disk('public')->url($saleCourse->image_path) }}" alt="{{ $saleCourse->title }}" style="width:100%;height:150px;object-fit:cover;border-radius:10px;">@endif
+                                @if($saleCourse->image_path)<img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($saleCourse->image_path) }}" alt="{{ $saleCourse->title }}" style="width:100%;height:150px;object-fit:cover;border-radius:10px;">@endif
                                 <span class="badge warning">{{ $sale->discount_type === 'percentage' ? number_format((float)$sale->discount_value,0).'%' : __('Special price') }} {{ __('OFF') }}</span>
                                 <h3 style="margin:10px 0;">{{ $saleCourse->title }}</h3>
                                 <div class="meta-row"><del class="muted">৳{{ number_format($saleCourse->price,2) }}</del><strong style="font-size:1.2rem;color:#0f6b42;">৳{{ number_format($salePrice,2) }}</strong></div>
