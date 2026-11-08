@@ -20,7 +20,7 @@
         $footerText = $hasSettingsTable ? \App\Models\Setting::value('footer_text', '') : '';
         $footerLinksRaw = $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('footer_links', '[]'), true) : [];
         $footerLinks = is_array($footerLinksRaw) ? $footerLinksRaw : [];
-        $headerLinksRaw = $hasSettingsTable ? json_decode((string) \\App\\Models\\Setting::value('header_links', '[]'), true) : [];
+        $headerLinksRaw = $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('header_links', '[]'), true) : [];
         $headerLinks = is_array($headerLinksRaw) ? $headerLinksRaw : [];
     @endphp
     @if($siteFavicon)<link rel="icon" href="{{ $siteFavicon->url }}">@endif
