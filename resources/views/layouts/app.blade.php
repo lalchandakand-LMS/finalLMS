@@ -331,11 +331,25 @@
                     <img src="{{ $visitorPopup->image->url }}" alt="{{ $visitorPopup->title }}" style="display:block;width:100%;max-height:290px;object-fit:cover;">
                 @endif
                 <div style="padding:26px;">
-                    @if($visitorPopup->popup_type === 'ad')<span class="badge warning">{{ __('Advertisement') }}</span>@elseif($visitorPopup->popup_type === 'registration')<span class="badge success">{{ __('Join us') }}</span>@else<span class="badge info">{{ ucfirst($visitorPopup->popup_type) }}</span>@endif
+                    @if($visitorPopup->popup_type === 'ad')
+                        <span class="badge warning">{{ __('Advertisement') }}</span>
+                    @elseif($visitorPopup->popup_type === 'registration')
+                        <span class="badge success">{{ __('Join us') }}</span>
+                    @else
+                        <span class="badge info">{{ ucfirst($visitorPopup->popup_type) }}</span>
+                    @endif
                     <h2 id="visitor-promo-title" style="margin:12px 0;color:#14213d;">{{ $visitorPopup->title }}</h2>
                     <p id="visitor-promo-description" style="white-space:pre-line;line-height:1.7;color:#4b5563;">{{ $visitorPopup->body }}</p>
                     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;">
-                        @if($popupButtonUrl)<a class="btn primary" href="{{ $popupButtonUrl }}" @if($popupIsExternal) target="_blank" rel="sponsored noopener noreferrer" @elseif($visitorPopup->popup_type === 'ad') rel="sponsored noopener" @endif>{{ $popupButtonLabel }}</a>@endif
+                        @if($popupButtonUrl)
+                            @if($popupIsExternal)
+                                <a class="btn primary" href="{{ $popupButtonUrl }}" target="_blank" rel="sponsored noopener noreferrer">{{ $popupButtonLabel }}</a>
+                            @elseif($visitorPopup->popup_type === 'ad')
+                                <a class="btn primary" href="{{ $popupButtonUrl }}" rel="sponsored noopener">{{ $popupButtonLabel }}</a>
+                            @else
+                                <a class="btn primary" href="{{ $popupButtonUrl }}">{{ $popupButtonLabel }}</a>
+                            @endif
+                        @endif
                         <button id="visitor-promo-dismiss" type="button" class="btn secondary">{{ __('Maybe later') }}</button>
                     </div>
                 </div>
