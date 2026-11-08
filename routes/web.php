@@ -53,7 +53,7 @@ Route::middleware('guest')->group(function () {
     Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
     Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1')->name('register.store');
 });
-Route::post('/login', [StudentDeviceAccessController::class, 'beginLogin'])->middleware('throttle:5,1')->name('login.post');
+Route::post('/login', [StudentDeviceAccessController::class, 'beginLogin'])->middleware(['guest', 'throttle:5,1'])->name('login.post');
 Route::get('/student-device/verify', [StudentDeviceAccessController::class, 'showVerify'])->middleware('throttle:10,1')->name('student-device.verify');
 Route::post('/student-device/verify', [StudentDeviceAccessController::class, 'verifyPhone'])->middleware('throttle:5,1')->name('student-device.verify-phone');
 
