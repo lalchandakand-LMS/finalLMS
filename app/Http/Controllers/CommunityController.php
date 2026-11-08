@@ -23,6 +23,7 @@ class CommunityController extends Controller
         $posts = CommunityPost::query()
             ->where('status', 'published')
             ->where('visibility', 'public')
+            ->whereHas('user')
             ->with(['user:id,name,role,profile_photo_path', 'comments' => fn ($query) => $query->where('status', 'published')->with('user:id,name,role')->latest()->limit(3)])
             ->withCount(['likes', 'comments' => fn ($query) => $query->where('status', 'published')])
             ->when($followedTeacherIds, fn ($query) => $query->orderByRaw(
