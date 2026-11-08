@@ -88,9 +88,24 @@
         .admin-sidebar-footer { margin:22px 8px 0; padding:14px 10px; border-top:1px solid #ffffff25; color:#9fb3d4; font-size:.78rem; line-height:1.6; }
         .admin-shell .nav-links > a { display:none; }
         .admin-shell .nav-links > form { display:inline-flex; }
+        .panel-menu-toggle { display:none; border:1px solid var(--border); background:#fff; color:var(--text); border-radius:9px; padding:9px 11px; font-size:1.1rem; cursor:pointer; }
+        .sidebar-backdrop { display:none; }
         .admin-shell .container { max-width:none; margin-left:252px; padding:28px 30px 55px; }
-        @media(max-width:900px) { .admin-sidebar { width:76px; padding:20px 9px; } .admin-sidebar-brand { justify-content:center; padding:4px 0 22px; } .admin-sidebar-brand strong,.admin-sidebar-label,.admin-sidebar a .nav-text,.admin-sidebar-footer { display:none; } .admin-sidebar a { justify-content:center; padding:12px 5px; } .admin-sidebar a span:first-child { width:auto; } .admin-shell .topbar,.admin-shell .container { margin-left:76px; } .admin-shell .nav { padding:12px 16px; } }
-        @media(max-width:600px) { .admin-sidebar { width:60px; } .admin-shell .topbar,.admin-shell .container { margin-left:60px; } .admin-shell .container { padding:18px 12px 40px; } .admin-shell .nav { padding:10px; } .admin-shell .brand { font-size:1rem; } }
+        @media(max-width:900px) {
+            .panel-menu-toggle { display:inline-flex; align-items:center; justify-content:center; }
+            .admin-sidebar { width:260px; padding:22px 15px; transform:translateX(-105%); transition:transform .22s ease; box-shadow:0 12px 35px rgba(0,0,0,.2); }
+            .admin-shell.sidebar-open .admin-sidebar { transform:translateX(0); }
+            .admin-sidebar-brand { justify-content:flex-start; padding:4px 10px 24px; }
+            .admin-sidebar-brand strong,.admin-sidebar-label,.admin-sidebar a .nav-text,.admin-sidebar-footer { display:initial; }
+            .admin-sidebar-label { display:block; }
+            .admin-sidebar a { justify-content:flex-start; padding:10px 12px; }
+            .admin-sidebar a span:first-child { width:22px; }
+            .sidebar-backdrop { display:none; position:fixed; inset:0; z-index:25; border:0; background:rgba(9,20,40,.45); }
+            .admin-shell.sidebar-open .sidebar-backdrop { display:block; }
+            .admin-shell .topbar,.admin-shell .container { margin-left:0; }
+            .admin-shell .nav { padding:12px 16px; }
+        }
+        @media(max-width:600px) { .admin-shell .container { padding:18px 12px 40px; } .admin-shell .nav { padding:10px; gap:10px; } .admin-shell .brand { font-size:1rem; } }
 
         body {
             margin: 0;
@@ -242,9 +257,11 @@
             <a class="{{ request()->routeIs('profile.*') ? 'active' : '' }}" href="{{ route('profile.edit') }}"><span>👤</span><span class="nav-text">My profile</span></a>
             <div class="admin-sidebar-footer">Alom’s English Center<br>Learning Management System</div>
         </aside>
+        <button type="button" class="sidebar-backdrop" aria-label="Close navigation menu"></button>
     @endif
     <header class="topbar">
         <nav class="nav">
+            @if($isPanelLayout)<button type="button" class="panel-menu-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>@endif
             <a href="/{{ auth()->check() ? 'dashboard' : '' }}" class="brand" style="display:inline-flex;align-items:center;gap:10px;">
                 @if($siteLogo)<img src="{{ $siteLogo->url }}" alt="{{ $siteName }}" style="max-height:48px;max-width:180px;object-fit:contain;">@endif
                 <span>{{ $siteName }}</span>
@@ -336,7 +353,7 @@
 
         @yield('content')
     </main>
-    @unless($isAdminLayout)
+    @unless($isPanelLayout)
         <footer class="container" style="margin-top:36px;margin-bottom:24px;padding:26px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;">
             <div style="max-width:520px;">
                 <strong>{{ $footerTitle }}</strong>
@@ -366,6 +383,24 @@
         <button type="button" class="btn secondary" style="position:fixed; right:16px; bottom:16px; z-index:20;" onclick="saveMarketingConsent('')">Cookie settings</button>
     @endif
     <script>
+        (() => {
+            const toggle = document.querySelector('.panel-menu-toggle');
+            const backdrop = document.querySelector('.sidebar-backdrop');
+            if (!toggle || !backdrop) return;
+            const closeMenu = () => {
+                document.body.classList.remove('sidebar-open');
+                toggle.setAttribute('aria-expanded', 'false');
+            };
+            toggle.addEventListener('click', () => {
+                const isOpen = document.body.classList.toggle('sidebar-open');
+                toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            });
+            backdrop.addEventListener('click', closeMenu);
+            document.querySelectorAll('.admin-sidebar a').forEach((link) => link.addEventListener('click', closeMenu));
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape') closeMenu();
+            });
+        })();
         function saveMarketingConsent(choice) {
             const secure = window.location.protocol === 'https:' ? '; Secure' : '';
             const value = choice ? `marketing_consent=${choice}; Max-Age=15552000` : 'marketing_consent=; Max-Age=0';
