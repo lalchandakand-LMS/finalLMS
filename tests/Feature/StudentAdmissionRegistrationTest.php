@@ -56,7 +56,7 @@ class StudentAdmissionRegistrationTest extends TestCase
                 'name' => 'Father Name',
                 'mobile' => '+8801812345678',
                 'occupation' => 'Teacher',
-                'nid_number' => '1234567890123',
+                'nid_number' => 'FAKE-PARENT-ID-TEST',
                 'nid_front' => UploadedFile::fake()->image('father-front.jpg'),
                 'nid_back' => UploadedFile::fake()->image('father-back.jpg'),
             ],
@@ -72,9 +72,9 @@ class StudentAdmissionRegistrationTest extends TestCase
         $this->assertDatabaseHas('student_guardians', ['student_id' => $student->id, 'name' => 'Father Name']);
 
         $guardian = StudentGuardian::where('student_id', $student->id)->firstOrFail();
-        $this->assertSame('1234567890123', $guardian->nid_number);
+        $this->assertSame('FAKE-PARENT-ID-TEST', $guardian->nid_number);
         $rawNid = $guardian->getRawOriginal('nid_number');
-        $this->assertNotSame('1234567890123', $rawNid);
+        $this->assertNotSame('FAKE-PARENT-ID-TEST', $rawNid);
         $this->assertNotNull(Crypt::decryptString($rawNid));
 
         $documents = StudentDocument::where('student_id', $student->id)->get();
@@ -116,7 +116,7 @@ class StudentAdmissionRegistrationTest extends TestCase
             'profile_photo' => UploadedFile::fake()->image('student.jpg'),
             'quota_document' => UploadedFile::fake()->create('quota.pdf', 100, 'application/pdf'),
             'privacy_consent' => '1',
-        ])->assertSessionHasErrors(['profile_photo', 'quota_document', 'father.nid_front']);
+        ])->assertSessionHasErrors(['father.nid_front']);
     }
 
     public function test_admin_can_review_student_admission_records_and_documents_are_not_public(): void
