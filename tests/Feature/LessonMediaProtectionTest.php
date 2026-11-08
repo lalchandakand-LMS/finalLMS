@@ -54,11 +54,14 @@ class LessonMediaProtectionTest extends TestCase
         ]);
         Storage::disk('local')->put($lesson->video_path, 'video-bytes');
 
-        $this->actingAs($teacher)
+        $response = $this->actingAs($teacher)
             ->get(route('courses.lessons.media', [$course, $lesson, 'video']))
             ->assertOk()
-            ->assertHeader('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0')
             ->assertHeader('X-Content-Type-Options', 'nosniff');
+
+        foreach (['private', 'no-store', 'no-cache', 'must-revalidate', 'max-age=0'] as $directive) {
+            $this->assertStringContainsString($directive, $response->headers->get('Cache-Control'));
+        }
     }
 
     public function test_public_preview_lesson_attachment_can_be_viewed_without_login(): void
