@@ -44,7 +44,7 @@
                 <tbody>
                 @forelse($users as $user)
                     <tr style="border-bottom:1px solid var(--border);">
-                        <td style="padding:12px 10px;">{{ $user->name }}</td><td style="padding:12px 10px;">{{ $user->email }}</td>
+                        <td style="padding:12px 10px;"><div style="display:flex;align-items:center;gap:10px;">@if($user->profile_photo_path)<img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($user->profile_photo_path) }}" alt="" style="width:34px;height:34px;object-fit:cover;border-radius:50%;">@else<span style="display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--panel-alt);font-weight:700;">{{ strtoupper(substr($user->name,0,1)) }}</span>@endif<span>{{ $user->name }}</span></div></td><td style="padding:12px 10px;">{{ $user->email }}</td>
                         <td style="padding:12px 10px;"><span class="badge {{ $user->role === 'admin' ? 'info' : (in_array($user->role, ['teacher', 'branch_manager'], true) ? 'success' : 'warning') }}">{{ ucwords(str_replace('_', ' ', $user->role)) }}</span></td>
                         <td style="padding:12px 10px;">{{ $user->branch?->name ?? '—' }}</td><td style="padding:12px 10px;">{{ $user->courses_count }}</td><td style="padding:12px 10px;">{{ $user->enrollments_count }}</td>
                         <td style="padding:12px 10px;">
