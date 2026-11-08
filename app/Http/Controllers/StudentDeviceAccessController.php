@@ -161,11 +161,10 @@ class StudentDeviceAccessController extends Controller
 
         // Keep administrator recovery available while enforcing SMS MFA for all academy-facing roles.
         if ($user->isAdmin()) {
-            if (Auth::attempt(['email' => $validated['email'], 'password' => $validated['password']])) {
-                $request->session()->regenerate();
-                DeviceSession::register($request, $user);
-                return redirect()->intended('/dashboard');
-            }
+            Auth::login($user);
+            $request->session()->regenerate();
+            DeviceSession::register($request, $user);
+            return redirect()->intended('/dashboard');
         }
 
         if (! $user->phone_number) {
