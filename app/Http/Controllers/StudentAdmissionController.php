@@ -216,6 +216,8 @@ class StudentAdmissionController extends Controller
             'guardian_email' => ['nullable','email','max:255'],
             'guardian_occupation' => ['nullable','string','max:120'],
             'guardian_nid_number' => ['nullable','string','max:40'],
+            'guardian_nid_front' => ['nullable','file','mimes:jpg,jpeg,png,pdf','max:5120'],
+            'guardian_nid_back' => ['nullable','file','mimes:jpg,jpeg,png,pdf','max:5120'],
         ]);
         $course = Course::findOrFail($validated['course_id']);
         $guardianData = [
@@ -230,7 +232,7 @@ class StudentAdmissionController extends Controller
         if ($request->filled('guardian_nid_number')) {
             $guardianData['nid_number'] = $validated['guardian_nid_number'];
         }
-        StudentGuardian::updateOrCreate(['student_id' => $user->id, 'is_primary' => true], $guardianData);
+        $guardianRecord = StudentGuardian::updateOrCreate(['student_id' => $user->id, 'is_primary' => true], $guardianData);
         $profile->update([
             ...collect($validated)->except(['course_id','profile_photo','quota_document','guardian_name','guardian_relationship','guardian_mobile','guardian_email','guardian_occupation','guardian_nid_number'])->all(),
             'interested_course_id' => $course->id,
@@ -238,7 +240,10 @@ class StudentAdmissionController extends Controller
         ]);
         if ($request->hasFile('profile_photo')) $this->storeEncryptedDocument($user, null, 'profile_photo', $request->file('profile_photo'));
         if ($request->hasFile('quota_document')) $this->storeEncryptedDocument($user, null, 'quota_evidence', $request->file('quota_document'));
-        return back()->with('success', __('Admission profile updated. Changes to sensitive documents are stored privately.'));
+        foreach (['nid_front','nid_back'] as $side) {
+            if ($request->hasFile('guardian_'.$side)) $this->storeEncryptedDocument($user, $guardianRecord, 'guardian_'.$side, $request->file('guardian_'.$side));
+        }
+        return back()->with('success', __('Admission profile and guardian contacts updated. Sensitive documents are stored privately.'));
     }
 
     public function document(StudentDocument $document): Response
