@@ -29,6 +29,7 @@ use App\Http\Controllers\WebsiteBuilderController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\InstallController;
 use App\Http\Controllers\QuizContestController;
+use App\Http\Controllers\FlashSaleController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/install', [InstallController::class, 'index'])->name('install.index');
@@ -157,6 +158,10 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         ->name('courses.lessons.complete');
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
+        Route::get('/flash-sales', [FlashSaleController::class, 'index'])->name('admin.flash-sales.index');
+        Route::post('/flash-sales', [FlashSaleController::class, 'store'])->name('admin.flash-sales.store');
+        Route::put('/flash-sales/{flashSale}', [FlashSaleController::class, 'update'])->name('admin.flash-sales.update');
+        Route::delete('/flash-sales/{flashSale}', [FlashSaleController::class, 'destroy'])->name('admin.flash-sales.destroy');
         Route::get('/contests', [QuizContestController::class, 'adminIndex'])->name('admin.contests.index');
         Route::post('/contests', [QuizContestController::class, 'store'])->middleware('throttle:10,1')->name('admin.contests.store');
         Route::post('/contests/{contest}/draw', [QuizContestController::class, 'draw'])->middleware('throttle:3,10')->name('admin.contests.draw');

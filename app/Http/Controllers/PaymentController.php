@@ -6,6 +6,7 @@ use App\Models\Course;
 use App\Models\Batch;
 use App\Models\Enrollment;
 use App\Models\Payment;
+use App\Models\FlashSale;
 use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -36,7 +37,9 @@ class PaymentController extends Controller
         ]);
         $batchId = $validatedBatch['batch_id'] ?? null;
         $batchFee = $batchId ? (float) Batch::query()->whereKey($batchId)->value('fee') : 0;
-        $amount = $batchFee > 0 ? $batchFee : (float) $course->price;
+        $baseAmount = $batchFee > 0 ? $batchFee : (float) $course->price;
+        $flashSale = FlashSale::activeForCourse($course->id, $user->id);
+        $amount = $flashSale ? $flashSale->discountedPrice($baseAmount) : $baseAmount;
 
         if ($amount <= 0) {
             $enrolled = DB::transaction(function () use ($batchId, $course, $user): bool {
@@ -56,7 +59,7 @@ class PaymentController extends Controller
             });
 
             if (! $enrolled) {
-                return back()->with('error', 'This batch has reached its enrollment capacity.');
+                return back()->with('error', 'The batch is full or this Flash Sale has ended or reached its purchase limit.');
             }
 
             return back()->with('success', 'You have enrolled in the course successfully.');
@@ -89,7 +92,7 @@ class PaymentController extends Controller
         ]);
 
         $proof = $request->file('proof');
-        $submitted = DB::transaction(function () use ($amount, $batchId, $course, $proof, $user, $validated): bool {
+        $submitted = DB::transaction(function () use ($amount, $baseAmount, $batchId, $course, $proof, $user, $validated, $flashSale): bool {
             if ($batchId) {
                 $batch = Batch::query()->lockForUpdate()->findOrFail($batchId);
                 if ($batch->status !== 'open' || ! $this->hasAvailableSeat($batch)) {
@@ -97,11 +100,20 @@ class PaymentController extends Controller
                 }
             }
 
+            if ($flashSale) {
+                $lockedSale = FlashSale::query()->lockForUpdate()->find($flashSale->id);
+                if (! $lockedSale || ! $lockedSale->isAvailableFor($user->id)) {
+                    return false;
+                }
+                $amount = $lockedSale->discountedPrice($baseAmount);
+            }
+
             $proofPath = $proof?->store('payment-proofs', 'local');
 
             Payment::create([
                 'user_id' => $user->id,
                 'course_id' => $course->id,
+                'flash_sale_id' => $flashSale?->id,
                 'batch_id' => $batchId,
                 'method' => $validated['payment_method'],
                 'amount' => $amount,

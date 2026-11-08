@@ -22,6 +22,11 @@ class Course extends Model
         'image_path',
     ];
 
+    public function flashSales(): BelongsToMany
+    {
+        return $this->belongsToMany(FlashSale::class, 'flash_sale_course')->withTimestamps();
+    }
+
     public function teacher(): BelongsTo
     {
         return $this->belongsTo(User::class, 'teacher_id');
