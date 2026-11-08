@@ -195,6 +195,7 @@
             <a href="{{ route('admin.news.index') }}"><span>📰</span><span class="nav-text">Blog & news</span></a>
             <a href="{{ route('admin.backups.index') }}"><span>💾</span><span class="nav-text">Backup & restore</span></a>
             <a href="{{ route('admin.activity-logs.index') }}"><span>📋</span><span class="nav-text">Activity logs</span></a>
+            <a href="{{ route('admin.ai-developer.index') }}" class="{{ request()->routeIs('admin.ai-developer.*') ? 'active' : '' }}"><span>🤖</span><span class="nav-text">AI Developer</span></a>
             <a href="{{ route('admin.settings.index') }}"><span>⚙️</span><span class="nav-text">Settings</span></a>
             <a href="{{ route('admin.sms-campaigns.index') }}"><span>✉️</span><span class="nav-text">SMS campaigns</span></a>
             <div class="admin-sidebar-footer">Alom’s English Center<br>Learning Management System</div>
