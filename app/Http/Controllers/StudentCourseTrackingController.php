@@ -23,7 +23,8 @@ class StudentCourseTrackingController extends Controller
         $courses = Course::where('status','published')
             ->when(! $user->isAdmin(), fn ($q) => $q->where('teacher_id',$user->id))
             ->orderBy('title')->get();
-        return view('admin.course-tracking.index', compact('sessions','courses'));
+        $storeRoute = $user->isAdmin() ? route('admin.course-tracking.store') : route('teacher.course-tracking.store');
+        return view('admin.course-tracking.index', compact('sessions','courses','storeRoute'));
     }
 
     public function store(Request $request): RedirectResponse
