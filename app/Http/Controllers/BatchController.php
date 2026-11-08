@@ -154,7 +154,7 @@ class BatchController extends Controller
             return back()->with('error', 'Move or delete this branch’s batches before deleting the branch.');
         }
 
-        if (User::where('branch_id', $branch->id)->exists()) {
+        if (User::withTrashed()->where('branch_id', $branch->id)->exists()) {
             return back()->with('error', 'Reassign this branch’s staff and students before deleting the branch.');
         }
 
