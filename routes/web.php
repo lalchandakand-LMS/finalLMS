@@ -143,7 +143,7 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         ->middleware('throttle:6,1')
         ->name('phone.verification.verify');
 
-    Route::post('/contests/{contest}/submit', [QuizContestController::class, 'submit'])->middleware(['role:student', 'throttle:5,1'])->name('contests.submit');
+    Route::post('/contests/{contest}/submit', [QuizContestController::class, 'submit'])->middleware('throttle:5,1')->name('contests.submit');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
