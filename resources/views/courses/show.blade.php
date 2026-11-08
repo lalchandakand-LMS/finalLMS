@@ -192,4 +192,20 @@
             @endauth
         </div>
     </div>
+<section class="panel" style="margin-top:22px;">
+    <div class="page-header" style="margin-bottom:10px;"><h2>{{ __('Course discussion') }}</h2><span class="badge info">{{ number_format($course->views_count) }} {{ __('views') }}</span></div>
+    @auth
+    <form method="POST" action="{{ route('courses.comments.store', $course) }}" style="margin-bottom:20px;">@csrf
+        <label>{{ __('Write a comment or question') }}<textarea name="body" minlength="2" maxlength="2000" required></textarea></label>
+        <button class="btn primary" type="submit">{{ __('Submit comment') }}</button>
+        <small class="muted">{{ __('Comments appear after admin approval.') }}</small>
+    </form>
+    @else
+    <p class="muted"><a href="{{ route('login') }}">{{ __('Log in') }}</a> {{ __('to join the discussion.') }}</p>
+    @endauth
+    @forelse($comments as $comment)
+        <div class="course-item" style="margin-bottom:10px;"><strong>{{ $comment->author?->name ?? __('User') }}</strong><small class="muted"> · {{ $comment->created_at->format('d M Y') }}</small><p style="margin-bottom:0;">{{ $comment->body }}</p></div>
+    @empty<p class="muted">{{ __('No approved comments yet.') }}</p>@endforelse
+    {{ $comments->links() }}
+</section>
 @endsection
