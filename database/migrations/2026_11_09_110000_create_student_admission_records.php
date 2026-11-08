@@ -52,7 +52,7 @@ return new class extends Migration
             $table->string('guardian_type', 24);
             $table->string('relationship', 60);
             $table->string('name', 180);
-            $table->string('mobile_number', 20);
+            $table->string('mobile_number', 20)->nullable();
             $table->string('email')->nullable();
             $table->string('occupation', 120)->nullable();
             $table->text('nid_number')->nullable();
