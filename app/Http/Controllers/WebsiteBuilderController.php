@@ -16,13 +16,30 @@ class WebsiteBuilderController extends Controller
         $sections = json_decode((string) Setting::value('website_sections', '[]'), true);
         $sections = is_array($sections) ? $sections : [];
         $media = MediaAsset::query()->where('mime_type', 'like', 'image/%')->latest()->limit(200)->get();
+        $settings = Setting::query()->pluck('value', 'key')->toArray();
+        $slides = json_decode((string) ($settings['home_slides'] ?? '[]'), true);
+        $slides = is_array($slides) ? $slides : [];
 
-        return view('admin.website-builder.index', compact('sections', 'media'));
+        return view('admin.website-builder.index', compact('sections', 'media', 'settings', 'slides'));
     }
 
     public function update(Request $request): RedirectResponse
     {
         $validated = $request->validate([
+            'site_name' => ['nullable', 'string', 'max:120'],
+            'site_logo_media_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
+            'site_favicon_media_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
+            'site_primary_color' => ['nullable', 'regex:/^#[0-9A-Fa-F]{6}$/'],
+            'home_title' => ['nullable', 'string', 'max:255'],
+            'home_subtitle' => ['nullable', 'string', 'max:500'],
+            'home_featured_title' => ['nullable', 'string', 'max:255'],
+            'home_slides' => ['nullable', 'array', 'max:3'],
+            'home_slides.*.enabled' => ['nullable', 'boolean'],
+            'home_slides.*.image_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
+            'home_slides.*.title' => ['nullable', 'string', 'max:180'],
+            'home_slides.*.subtitle' => ['nullable', 'string', 'max:500'],
+            'home_slides.*.button_label' => ['nullable', 'string', 'max:60'],
+            'home_slides.*.button_url' => ['nullable', 'string', 'max:500'],
             'sections' => ['nullable', 'array', 'max:12'],
             'sections.*.title' => ['nullable', 'string', 'max:180'],
             'sections.*.body' => ['nullable', 'string', 'max:3000'],
@@ -43,8 +60,38 @@ class WebsiteBuilderController extends Controller
             ];
         })->values()->all();
 
-        Setting::setValue('website_sections', json_encode($sections, JSON_THROW_ON_ERROR));
+        $slides = collect($validated['home_slides'] ?? [])->take(3)->map(function (array $slide): ?array {
+            $image = !empty($slide['image_id'])
+                ? MediaAsset::query()->whereKey($slide['image_id'])->where('mime_type', 'like', 'image/%')->first()
+                : null;
+            if (empty($slide['enabled']) || !$image) {
+                return null;
+            }
 
-        return redirect()->route('admin.website-builder.index')->with('success', 'Website sections saved.');
+            $buttonUrl = trim($slide['button_url'] ?? '');
+            if ($buttonUrl !== '' && !preg_match('~^(https?://|/(?!/)|#)~i', $buttonUrl)) {
+                $buttonUrl = '';
+            }
+
+            return [
+                'image_id' => $image->id,
+                'title' => trim($slide['title'] ?? ''),
+                'subtitle' => trim($slide['subtitle'] ?? ''),
+                'button_label' => trim($slide['button_label'] ?? ''),
+                'button_url' => $buttonUrl,
+                'enabled' => true,
+            ];
+        })->filter()->values()->all();
+
+        foreach (['site_name', 'site_logo_media_id', 'site_favicon_media_id', 'site_primary_color', 'home_title', 'home_subtitle', 'home_featured_title'] as $key) {
+            if (array_key_exists($key, $validated)) {
+                Setting::setValue($key, $validated[$key] ?? '');
+            }
+        }
+
+        Setting::setValue('website_sections', json_encode($sections, JSON_THROW_ON_ERROR));
+        Setting::setValue('home_slides', json_encode($slides, JSON_THROW_ON_ERROR));
+
+        return redirect()->route('admin.website-builder.index')->with('success', 'Website identity, homepage slider and layout saved.');
     }
 }
