@@ -12,7 +12,6 @@
     </a>
 @empty
     <p>No conversations yet.</p>
-@endif
 @endforelse
 </div>
 @endsection
