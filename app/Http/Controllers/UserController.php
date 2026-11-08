@@ -61,14 +61,19 @@ class UserController extends Controller
             return back()->withErrors(['branch_id' => 'Select an active branch for this staff account.']);
         }
 
-        $phoneChanged = array_key_exists('phone_number', $validated) && $user->phone_number !== $validated['phone_number'];
+        $phoneNumber = $validated['phone_number'] ?? $user->phone_number;
+        if (in_array($validated['role'], ['student', 'teacher', 'branch_manager', 'guardian', 'accountant'], true) && empty($phoneNumber)) {
+            return back()->withErrors(['phone_number' => 'A verified mobile number is required for this account role.']);
+        }
+
+        $phoneChanged = $user->phone_number !== $phoneNumber;
         $roleChanged = $user->role !== $validated['role'];
         $branchChanged = (int) $user->branch_id !== (int) ($validated['branch_id'] ?? 0);
 
         $user->update([
             'role' => $validated['role'],
             'branch_id' => in_array($validated['role'], ['branch_manager', 'accountant', 'student'], true) ? ($validated['branch_id'] ?? null) : null,
-            'phone_number' => $validated['phone_number'] ?? null,
+            'phone_number' => $phoneNumber,
         ]);
 
         if ($phoneChanged) {
