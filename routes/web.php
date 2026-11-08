@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdminSettingsController;
 use App\Http\Controllers\AdminAnalyticsController;
 use App\Http\Controllers\AdminCommentController;
+use App\Http\Controllers\AdminVisitorPopupController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\StudentDeviceAccessController;
@@ -174,6 +175,13 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
         Route::get('/analytics', [AdminAnalyticsController::class, 'index'])->name('admin.analytics.index');
+        Route::get('/visitor-popups', [AdminVisitorPopupController::class, 'index'])->name('admin.visitor-popups.index');
+        Route::get('/visitor-popups/create', [AdminVisitorPopupController::class, 'create'])->name('admin.visitor-popups.create');
+        Route::post('/visitor-popups', [AdminVisitorPopupController::class, 'store'])->name('admin.visitor-popups.store');
+        Route::get('/visitor-popups/{visitorPopup}/edit', [AdminVisitorPopupController::class, 'edit'])->name('admin.visitor-popups.edit');
+        Route::put('/visitor-popups/{visitorPopup}', [AdminVisitorPopupController::class, 'update'])->name('admin.visitor-popups.update');
+        Route::patch('/visitor-popups/{visitorPopup}/toggle', [AdminVisitorPopupController::class, 'toggle'])->name('admin.visitor-popups.toggle');
+        Route::delete('/visitor-popups/{visitorPopup}', [AdminVisitorPopupController::class, 'destroy'])->name('admin.visitor-popups.destroy');
         Route::get('/comments', [AdminCommentController::class, 'index'])->name('admin.comments.index');
         Route::put('/comments/{comment}', [AdminCommentController::class, 'update'])->name('admin.comments.update');
         Route::delete('/comments/{comment}', [AdminCommentController::class, 'destroy'])->name('admin.comments.destroy');
