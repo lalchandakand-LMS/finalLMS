@@ -3,7 +3,7 @@
 @section('content')
 <div class="page-header"><div><span class="badge info">{{ $profile->admission_number }}</span><h1>{{ __('Update admission profile') }}</h1><p>{{ __('Your referral code') }}: <strong>{{ $profile->referral_code }}</strong></p></div></div>
 @if($errors->any())<div class="flash error">{{ $errors->first() }}</div>@endif
-<div class="panel"><form method="POST" action="{{ route('student.admission.update') }}" enctype="multipart/form-data">@csrf @method('PUT') @method('PUT')
+<div class="panel"><form method="POST" action="{{ route('student.admission.update') }}" enctype="multipart/form-data">@csrf @method('PUT')
 <div class="grid grid-2">
 <label>{{ __('School / institution') }}<input name="school_name" value="{{ old('school_name',$profile->school_name) }}" required></label><label>{{ __('Class / grade') }}<input name="class_name" value="{{ old('class_name',$profile->class_name) }}" required></label><label>{{ __('School roll') }}<input name="school_roll" value="{{ old('school_roll',$profile->school_roll) }}"></label>
 <label>{{ __('Interested course') }}<select name="course_id" required>@foreach($courses as $course)<option value="{{ $course->id }}" @selected(old('course_id',$profile->interested_course_id)==$course->id)>{{ $course->title }} — ৳{{ number_format((float)$course->price,2) }}</option>@endforeach</select></label>
