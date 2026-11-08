@@ -6,11 +6,27 @@
     <div class="page-header">
         <div>
             <span class="badge info">{{ __('Branch manager') }}</span>
-            <h1 style="margin:12px 0 0;">{{ auth()->user()->branch?->name }} — {{ __('batches') }}</h1>
-            <p class="muted">{{ __('You can view batches assigned to your branch only.') }}</p>
+            <h1 style="margin:12px 0 0;">{{ $branch->name }} — {{ __('Branch dashboard') }}</h1>
+            <p class="muted">{{ __('Monitor your branch performance, teachers, students and batches from one workspace.') }}</p>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;"><a href="{{ route('branch-manager.students.index') }}" class="btn secondary">{{ __('Students') }}</a><a href="{{ route('dashboard') }}" class="btn secondary">{{ __('Dashboard') }}</a></div>
     </div>
+
+    <section class="grid grid-2" style="margin-bottom:22px;">
+        @foreach([
+            ['label' => __('Students'), 'value' => $stats['students'], 'hint' => __('Students linked to this branch')],
+            ['label' => __('Teachers'), 'value' => $stats['teachers'], 'hint' => __('Teachers assigned to this branch')],
+            ['label' => __('Total batches'), 'value' => $stats['batches'], 'hint' => __('All branch batches')],
+            ['label' => __('Open batches'), 'value' => $stats['open_batches'], 'hint' => __('Currently accepting students')],
+            ['label' => __('Active enrollments'), 'value' => $stats['active_enrollments'], 'hint' => __('Active and completed batch enrollments')],
+        ] as $stat)
+            <article class="panel" style="padding:20px;">
+                <p class="muted" style="margin:0 0 8px;">{{ $stat['label'] }}</p>
+                <strong style="font-size:28px;color:var(--primary);">{{ number_format($stat['value']) }}</strong>
+                <p class="muted" style="margin:6px 0 0;font-size:13px;">{{ $stat['hint'] }}</p>
+            </article>
+        @endforeach
+    </section>
 
     <section class="panel" style="margin-bottom:22px;">
         <h2>{{ __('Create a batch in your branch') }}</h2>
