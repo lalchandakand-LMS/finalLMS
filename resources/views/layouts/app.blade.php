@@ -52,7 +52,13 @@
             fbq('track','PageView');
         </script>
     @endif
-    @php($isAdminLayout = auth()->check() && auth()->user()->isAdmin())
+    @php
+        $isAdminLayout = auth()->check() && auth()->user()->isAdmin();
+        $isPanelLayout = auth()->check() && (
+            $isAdminLayout || auth()->user()->isTeacher() || auth()->user()->isStudent()
+            || auth()->user()->isBranchManager() || auth()->user()->isAccountant()
+        );
+    @endphp
     <style>
         :root {
             --primary: {{ preg_match('/^#[0-9A-Fa-f]{6}$/', (string) $sitePrimaryColor) ? $sitePrimaryColor : '#1546a8' }};
@@ -81,7 +87,6 @@
         .admin-sidebar a span:first-child { width:22px; text-align:center; font-size:1.05rem; }
         .admin-sidebar-footer { margin:22px 8px 0; padding:14px 10px; border-top:1px solid #ffffff25; color:#9fb3d4; font-size:.78rem; line-height:1.6; }
         .admin-shell .nav-links > a { display:none; }
-        .admin-shell .nav-links > a[href*="dashboard"], .admin-shell .nav-links > a[href*="profile"] { display:inline-flex; }
         .admin-shell .nav-links > form { display:inline-flex; }
         .admin-shell .container { max-width:none; margin-left:252px; padding:28px 30px 55px; }
         @media(max-width:900px) { .admin-sidebar { width:76px; padding:20px 9px; } .admin-sidebar-brand { justify-content:center; padding:4px 0 22px; } .admin-sidebar-brand strong,.admin-sidebar-label,.admin-sidebar a .nav-text,.admin-sidebar-footer { display:none; } .admin-sidebar a { justify-content:center; padding:12px 5px; } .admin-sidebar a span:first-child { width:auto; } .admin-shell .topbar,.admin-shell .container { margin-left:76px; } .admin-shell .nav { padding:12px 16px; } }
@@ -184,30 +189,58 @@
         <noscript><iframe src="https://www.googletagmanager.com/ns.html?id={{ urlencode($googleTagManagerId) }}" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     @endif
 
-    @if($isAdminLayout)
-        <aside class="admin-sidebar" aria-label="Admin navigation">
-            <a class="admin-sidebar-brand" href="{{ route('dashboard') }}"><span>📘</span><strong>{{ $siteName }}<br><small style="font-weight:500;color:#a9bee0;">Admin workspace</small></strong></a>
+    @if($isPanelLayout)
+        <aside class="admin-sidebar" aria-label="{{ $isAdminLayout ? 'Admin' : (auth()->user()->isTeacher() ? 'Teacher' : (auth()->user()->isStudent() ? 'Student' : (auth()->user()->isAccountant() ? 'Accountant' : 'Branch manager'))) }} navigation">
+            <a class="admin-sidebar-brand" href="{{ route('dashboard') }}"><span>📘</span><strong>{{ $siteName }}<br><small style="font-weight:500;color:#a9bee0;">{{ $isAdminLayout ? 'Admin' : (auth()->user()->isTeacher() ? 'Teacher' : (auth()->user()->isStudent() ? 'Student' : (auth()->user()->isAccountant() ? 'Accountant' : 'Branch manager'))) }} workspace</small></strong></a>
             <div class="admin-sidebar-label">Overview</div>
             <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><span>▦</span><span class="nav-text">Dashboard</span></a>
-            <div class="admin-sidebar-label">Academy</div>
-            <a href="{{ route('admin.courses.index') }}"><span>📚</span><span class="nav-text">Courses & lessons</span></a>
-            <a href="{{ route('admin.users.index') }}"><span>👥</span><span class="nav-text">Students & teachers</span></a>
-            <a href="{{ route('admin.batches.index') }}"><span>🗓️</span><span class="nav-text">Batches & branches</span></a>
-            <a href="{{ route('admin.contests.index') }}"><span>🎁</span><span class="nav-text">Quiz & lottery</span></a>
-            <a href="{{ route('live-classes.index') }}"><span>🎥</span><span class="nav-text">Live classes</span></a>
-            <div class="admin-sidebar-label">Finance</div>
-            <a href="{{ route('admin.payments.index') }}"><span>💳</span><span class="nav-text">Payments</span></a>
-            <a href="{{ route('admin.invoices.index') }}"><span>🧾</span><span class="nav-text">Invoices</span></a>
-            <a href="{{ route('admin.refunds.index') }}"><span>↩️</span><span class="nav-text">Refunds</span></a>
-            <a href="{{ route('admin.expenses.index') }}"><span>💸</span><span class="nav-text">Expenses & reports</span></a>
-            <div class="admin-sidebar-label">Website & tools</div>
-            <a href="{{ route('admin.website-builder.index') }}"><span>🖥️</span><span class="nav-text">Website builder</span></a>
-            <a href="{{ route('admin.media.index') }}"><span>🖼️</span><span class="nav-text">Media library</span></a>
-            <a href="{{ route('admin.news.index') }}"><span>📰</span><span class="nav-text">Blog & news</span></a>
-            <a href="{{ route('admin.backups.index') }}"><span>💾</span><span class="nav-text">Backup & restore</span></a>
-            <a href="{{ route('admin.activity-logs.index') }}"><span>📋</span><span class="nav-text">Activity logs</span></a>
-            <a href="{{ route('admin.settings.index') }}"><span>⚙️</span><span class="nav-text">Settings</span></a>
-            <a href="{{ route('admin.sms-campaigns.index') }}"><span>✉️</span><span class="nav-text">SMS campaigns</span></a>
+
+            @if($isAdminLayout)
+                <div class="admin-sidebar-label">Academy</div>
+                <a class="{{ request()->routeIs('admin.courses.*') ? 'active' : '' }}" href="{{ route('admin.courses.index') }}"><span>📚</span><span class="nav-text">Courses & lessons</span></a>
+                <a class="{{ request()->routeIs('admin.users.*') ? 'active' : '' }}" href="{{ route('admin.users.index') }}"><span>👥</span><span class="nav-text">Students & teachers</span></a>
+                <a class="{{ request()->routeIs('admin.batches.*') ? 'active' : '' }}" href="{{ route('admin.batches.index') }}"><span>🗓️</span><span class="nav-text">Batches & branches</span></a>
+                <a class="{{ request()->routeIs('admin.contests.*') ? 'active' : '' }}" href="{{ route('admin.contests.index') }}"><span>🎁</span><span class="nav-text">Quiz & lottery</span></a>
+                <a class="{{ request()->routeIs('live-classes.*') ? 'active' : '' }}" href="{{ route('live-classes.index') }}"><span>🎥</span><span class="nav-text">Live classes</span></a>
+                <div class="admin-sidebar-label">Finance</div>
+                <a class="{{ request()->routeIs('admin.payments.*') ? 'active' : '' }}" href="{{ route('admin.payments.index') }}"><span>💳</span><span class="nav-text">Payments</span></a>
+                <a class="{{ request()->routeIs('admin.invoices.*') ? 'active' : '' }}" href="{{ route('admin.invoices.index') }}"><span>🧾</span><span class="nav-text">Invoices</span></a>
+                <a class="{{ request()->routeIs('admin.refunds.*') ? 'active' : '' }}" href="{{ route('admin.refunds.index') }}"><span>↩️</span><span class="nav-text">Refunds</span></a>
+                <a class="{{ request()->routeIs('admin.expenses.*') ? 'active' : '' }}" href="{{ route('admin.expenses.index') }}"><span>💸</span><span class="nav-text">Expenses & reports</span></a>
+                <div class="admin-sidebar-label">Website & tools</div>
+                <a class="{{ request()->routeIs('admin.website-builder.*') ? 'active' : '' }}" href="{{ route('admin.website-builder.index') }}"><span>🖥️</span><span class="nav-text">Website builder</span></a>
+                <a class="{{ request()->routeIs('admin.media.*') ? 'active' : '' }}" href="{{ route('admin.media.index') }}"><span>🖼️</span><span class="nav-text">Media library</span></a>
+                <a class="{{ request()->routeIs('admin.news.*') ? 'active' : '' }}" href="{{ route('admin.news.index') }}"><span>📰</span><span class="nav-text">Blog & news</span></a>
+                <a class="{{ request()->routeIs('admin.backups.*') ? 'active' : '' }}" href="{{ route('admin.backups.index') }}"><span>💾</span><span class="nav-text">Backup & restore</span></a>
+                <a class="{{ request()->routeIs('admin.activity-logs.*') ? 'active' : '' }}" href="{{ route('admin.activity-logs.index') }}"><span>📋</span><span class="nav-text">Activity logs</span></a>
+                <a class="{{ request()->routeIs('admin.settings.*') ? 'active' : '' }}" href="{{ route('admin.settings.index') }}"><span>⚙️</span><span class="nav-text">Settings</span></a>
+                <a class="{{ request()->routeIs('admin.sms-campaigns.*') ? 'active' : '' }}" href="{{ route('admin.sms-campaigns.index') }}"><span>✉️</span><span class="nav-text">SMS campaigns</span></a>
+            @elseif(auth()->user()->isTeacher())
+                <div class="admin-sidebar-label">Teaching</div>
+                <a class="{{ request()->routeIs('teacher.batches.*') ? 'active' : '' }}" href="{{ route('teacher.batches.index') }}"><span>🗓️</span><span class="nav-text">My batches</span></a>
+                <a class="{{ request()->routeIs('teacher.courses.*') ? 'active' : '' }}" href="{{ route('teacher.courses.lessons.index', ['course' => 1]) }}"><span>📚</span><span class="nav-text">Course lessons</span></a>
+                <a class="{{ request()->routeIs('live-classes.*') ? 'active' : '' }}" href="{{ route('live-classes.index') }}"><span>🎥</span><span class="nav-text">Live classes</span></a>
+            @elseif(auth()->user()->isStudent())
+                <div class="admin-sidebar-label">My learning</div>
+                <a class="{{ request()->routeIs('student.courses.*') ? 'active' : '' }}" href="{{ route('student.courses.index') }}"><span>📚</span><span class="nav-text">My courses</span></a>
+                <a class="{{ request()->routeIs('student.attendance.*') ? 'active' : '' }}" href="{{ route('student.attendance.index') }}"><span>🗓️</span><span class="nav-text">Attendance</span></a>
+                <a class="{{ request()->routeIs('student.exams.*') ? 'active' : '' }}" href="{{ route('student.exams.index') }}"><span>📝</span><span class="nav-text">Exams</span></a>
+                <a class="{{ request()->routeIs('student.invoices.*') ? 'active' : '' }}" href="{{ route('student.invoices.index') }}"><span>💳</span><span class="nav-text">My fees</span></a>
+                <a class="{{ request()->routeIs('live-classes.*') ? 'active' : '' }}" href="{{ route('live-classes.index') }}"><span>🎥</span><span class="nav-text">Live classes</span></a>
+            @elseif(auth()->user()->isBranchManager())
+                <div class="admin-sidebar-label">Branch management</div>
+                <a class="{{ request()->routeIs('branch-manager.batches.*') ? 'active' : '' }}" href="{{ route('branch-manager.batches.index') }}"><span>🗓️</span><span class="nav-text">My branch batches</span></a>
+                <a class="{{ request()->routeIs('branch-manager.students.*') ? 'active' : '' }}" href="{{ route('branch-manager.students.index') }}"><span>👥</span><span class="nav-text">Branch students</span></a>
+            @elseif(auth()->user()->isAccountant())
+                <div class="admin-sidebar-label">Finance</div>
+                <a class="{{ request()->routeIs('accountant.invoices.*') ? 'active' : '' }}" href="{{ route('accountant.invoices.index') }}"><span>🧾</span><span class="nav-text">Invoices</span></a>
+                <a class="{{ request()->routeIs('accountant.refunds.*') ? 'active' : '' }}" href="{{ route('accountant.refunds.index') }}"><span>↩️</span><span class="nav-text">Refunds</span></a>
+                <a class="{{ request()->routeIs('accountant.expenses.*') ? 'active' : '' }}" href="{{ route('accountant.expenses.index') }}"><span>💸</span><span class="nav-text">Expenses</span></a>
+                <a class="{{ request()->routeIs('accountant.finance-reports.*') ? 'active' : '' }}" href="{{ route('accountant.finance-reports.index') }}"><span>📊</span><span class="nav-text">Finance reports</span></a>
+            @endif
+
+            <div class="admin-sidebar-label">Account</div>
+            <a class="{{ request()->routeIs('profile.*') ? 'active' : '' }}" href="{{ route('profile.edit') }}"><span>👤</span><span class="nav-text">My profile</span></a>
             <div class="admin-sidebar-footer">Alom’s English Center<br>Learning Management System</div>
         </aside>
     @endif
