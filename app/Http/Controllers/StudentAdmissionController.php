@@ -80,6 +80,17 @@ class StudentAdmissionController extends Controller
             'privacy_consent' => ['accepted'],
         ]);
 
+        $hasCompleteNid = false;
+        foreach (['father','mother','guardian'] as $parentType) {
+            if ($request->hasFile($parentType.'.nid_front') && $request->hasFile($parentType.'.nid_back')) {
+                $hasCompleteNid = true;
+                break;
+            }
+        }
+        if (! $hasCompleteNid) {
+            return back()->withInput()->withErrors(['father.nid_front' => __('Attach both front and back sides of at least one parent or legal guardian NID.')]);
+        }
+
         if (empty($validated['father']['mobile'] ?? null) && empty($validated['mother']['mobile'] ?? null) && empty($validated['guardian']['mobile'] ?? null)) {
             return back()->withInput()->withErrors(['guardian.mobile' => __('At least one parent or guardian mobile number is required.')]);
         }
