@@ -54,8 +54,11 @@ class StudentDeviceAccessController extends Controller
         $user = $device->user;
         $hasApprovedDevice = StudentDevice::query()
             ->where('user_id', $user->id)
-            ->where('status', 'approved')
             ->where('id', '!=', $device->id)
+            ->where(function ($query): void {
+                $query->whereNotNull('phone_verified_at')
+                    ->orWhereIn('status', ['approved', 'revoked', 'rejected', 'pending_admin_approval']);
+            })
             ->exists();
 
         $device->forceFill([
