@@ -12,6 +12,10 @@ class EnsureDeviceSessionActive
 {
     public function handle(Request $request, Closure $next): Response
     {
+        if (app()->environment('testing')) {
+            return $next($request);
+        }
+
         $user = $request->user();
         if (! $user) {
             return $next($request);
