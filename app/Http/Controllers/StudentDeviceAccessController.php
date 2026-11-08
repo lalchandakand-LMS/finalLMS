@@ -138,8 +138,13 @@ class StudentDeviceAccessController extends Controller
         }
 
         $device->forceFill(['status' => 'revoked'])->save();
+        DeviceSession::query()->where('student_device_id', $device->id)->whereNull('revoked_at')->update([
+            'revoked_at' => now(),
+            'revoke_reason' => 'Trusted device revoked by administrator',
+            'updated_at' => now(),
+        ]);
 
-        return back()->with('success', 'Device access revoked. Its next login attempt will require approval again.');
+        return back()->with('success', 'Device access revoked and its active sessions have been signed out.');
     }
 
     public function beginLogin(Request $request, SmsGateway $sms): RedirectResponse
