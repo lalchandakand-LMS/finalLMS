@@ -58,6 +58,17 @@
     </div>
 </section>
 <section class="panel" style="margin-bottom:20px;">
+    <h2>Header navigation menu</h2>
+    <p class="muted">Add up to six custom links. When saved, these replace the default public links (Home, Courses, About, Contact, FAQ and Blog) while account controls remain available.</p>
+    @for($i = 0; $i < 6; $i++)
+        @php($menuLink = old("header_links.$i", $headerLinks[$i] ?? []))
+        <div class="grid grid-2">
+            <div><label>Menu item {{ $i + 1 }} label<input name="header_links[{{ $i }}][label]" maxlength="60" value="{{ $menuLink['label'] ?? '' }}"></label></div>
+            <div><label>Menu item {{ $i + 1 }} URL<input name="header_links[{{ $i }}][url]" maxlength="500" value="{{ $menuLink['url'] ?? '' }}" placeholder="/courses"></label></div>
+        </div>
+    @endfor
+</section>
+<section class="panel" style="margin-bottom:20px;">
     <h2>Footer content & links</h2>
     <div class="grid grid-2">
         <div><label for="footer-title">Footer heading</label><input id="footer-title" name="footer_title" maxlength="120" value="{{ old('footer_title', $settings['footer_title'] ?? $settings['site_name'] ?? config('app.name')) }}"></div>
