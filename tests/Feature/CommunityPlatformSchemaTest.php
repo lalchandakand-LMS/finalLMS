@@ -1,10 +1,10 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Illuminate\\Support\\Facades\\Schema;
-use Tests\\TestCase;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
+use Tests\TestCase;
 
 class CommunityPlatformSchemaTest extends TestCase
 {
@@ -30,7 +30,7 @@ class CommunityPlatformSchemaTest extends TestCase
 
     public function test_plugin_registry_is_metadata_only_and_disabled_by_default(): void
     {
-        $id = \\Illuminate\\Support\\Facades\\DB::table('lms_plugins')->insertGetId([
+        $id = \Illuminate\Support\Facades\DB::table('lms_plugins')->insertGetId([
             'slug' => 'sample-plugin',
             'name' => 'Sample Plugin',
             'manifest' => json_encode(['capabilities' => []], JSON_THROW_ON_ERROR),
@@ -39,7 +39,7 @@ class CommunityPlatformSchemaTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $plugin = \\Illuminate\\Support\\Facades\\DB::table('lms_plugins')->find($id);
+        $plugin = \Illuminate\Support\Facades\DB::table('lms_plugins')->find($id);
 
         $this->assertSame('disabled', $plugin->status);
         $this->assertSame('sample-plugin', $plugin->slug);
