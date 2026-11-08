@@ -35,7 +35,7 @@ class WebsiteBuilderController extends Controller
     public function update(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'homepage_template' => ['required', Rule::in(array_keys(self::homepageTemplates()))],
+            'homepage_template' => ['sometimes', 'required', Rule::in(array_keys(self::homepageTemplates()))],
             'site_name' => ['nullable', 'string', 'max:120'],
             'site_logo_media_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
             'site_favicon_media_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
