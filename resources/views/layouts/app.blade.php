@@ -72,17 +72,23 @@
     @endif
     <style>
         :root {
-            --bg: #f3f6fb;
-            --panel: #ffffff;
-            --panel-alt: #eef4ff;
-            --primary: #1546a8;
-            --primary-dark: #0f2d6b;
+            --bg: {{ $themeColors['theme_background'] }};
+            --panel: {{ $themeColors['theme_surface'] }};
+            --panel-alt: {{ $themeColors['theme_surface_alt'] }};
+            --primary: {{ $themeColors['theme_primary'] }};
+            --primary-dark: {{ $themeColors['theme_primary_dark'] }};
+            --accent: {{ $themeColors['theme_accent'] }};
+            --admin-sidebar-start: {{ $themeColors['theme_sidebar_start'] }};
+            --admin-sidebar-end: {{ $themeColors['theme_sidebar_end'] }};
+            --dashboard-hero-start: {{ $themeColors['theme_hero_start'] }};
+            --dashboard-hero-middle: {{ $themeColors['theme_hero_middle'] }};
+            --dashboard-hero-end: {{ $themeColors['theme_hero_end'] }};
             --green: #1f9d61;
             --text: {{ $themeColors['theme_text'] }};
             --muted: {{ $themeColors['theme_muted'] }};
             --border: {{ $themeColors['theme_border'] }};
             --danger: #b42318;
-            --shadow: 0 14px 34px rgba(21, 70, 168, 0.12);
+            --shadow: 0 14px 34px color-mix(in srgb, var(--primary) 12%, transparent);
         }
 
         * { box-sizing: border-box; }
