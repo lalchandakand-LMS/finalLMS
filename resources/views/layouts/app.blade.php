@@ -255,6 +255,7 @@
             @endif
 
             <div class="admin-sidebar-label">Account</div>
+            <a class="{{ request()->routeIs('community.*') ? 'active' : '' }}" href="{{ route('community.index') }}"><span>🌐</span><span class="nav-text">Community</span></a>
             <a class="{{ request()->routeIs('profile.*') ? 'active' : '' }}" href="{{ route('profile.edit') }}"><span>👤</span><span class="nav-text">My profile</span></a>
             <div class="admin-sidebar-footer">Alom’s English Center<br>Learning Management System</div>
         </aside>
