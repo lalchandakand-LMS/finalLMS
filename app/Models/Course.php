@@ -24,7 +24,7 @@ class Course extends Model
 
     public function flashSales(): BelongsToMany
     {
-        return $this->belongsToMany(FlashSale::class)->withTimestamps();
+        return $this->belongsToMany(FlashSale::class, 'flash_sale_course')->withTimestamps();
     }
 
     public function teacher(): BelongsTo
