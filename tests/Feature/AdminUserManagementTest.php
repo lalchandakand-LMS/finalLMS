@@ -348,4 +348,25 @@ class AdminUserManagementTest extends TestCase
         \Illuminate\Support\Facades\Storage::disk('public')->assertExists($created->profile_photo_path);
     }
 
+
+    public function test_admin_cannot_delete_a_branch_that_has_assigned_users(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $branch = \App\Models\Branch::create([
+            'name' => 'Assigned Branch',
+            'slug' => 'assigned-branch',
+            'is_active' => true,
+        ]);
+        User::factory()->create([
+            'role' => 'teacher',
+            'branch_id' => $branch->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->delete(route('admin.branches.destroy', $branch))
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('branches', ['id' => $branch->id]);
+    }
+
 }
