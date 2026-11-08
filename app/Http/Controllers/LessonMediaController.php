@@ -33,7 +33,7 @@ class LessonMediaController extends Controller
             ? (mime_content_type($absolutePath) ?: 'video/mp4')
             : ($lesson->attachment_mime ?: 'application/pdf');
 
-        return response()->file($absolutePath, [
+        $response = response()->file($absolutePath, [
             'Content-Type' => $mime,
             'Content-Disposition' => 'inline; filename="' . ($type === 'video' ? 'lesson-video' : 'lesson-notes') . '"',
             'Cache-Control' => 'private, no-store, no-cache, must-revalidate, max-age=0',
@@ -42,5 +42,9 @@ class LessonMediaController extends Controller
             'X-Frame-Options' => 'SAMEORIGIN',
             'Referrer-Policy' => 'same-origin',
         ]);
+        $response->setPrivate();
+        $response->headers->set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
+
+        return $response;
     }
 }
