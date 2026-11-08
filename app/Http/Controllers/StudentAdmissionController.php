@@ -210,10 +210,29 @@ class StudentAdmissionController extends Controller
             'special_quota_notes' => ['nullable','string','max:1500'],
             'profile_photo' => ['nullable','image','mimes:jpg,jpeg,png','max:5120'],
             'quota_document' => ['nullable','file','mimes:jpg,jpeg,png,pdf','max:10240'],
+            'guardian_name' => ['required','string','max:180'],
+            'guardian_relationship' => ['required','string','max:60'],
+            'guardian_mobile' => ['required','string','regex:/^\+[1-9][0-9]{7,14}$/'],
+            'guardian_email' => ['nullable','email','max:255'],
+            'guardian_occupation' => ['nullable','string','max:120'],
+            'guardian_nid_number' => ['nullable','string','max:40'],
         ]);
         $course = Course::findOrFail($validated['course_id']);
+        StudentGuardian::updateOrCreate(
+            ['student_id' => $user->id, 'is_primary' => true],
+            [
+                'guardian_type' => 'guardian',
+                'relationship' => $validated['guardian_relationship'],
+                'name' => $validated['guardian_name'],
+                'mobile_number' => $validated['guardian_mobile'],
+                'email' => $validated['guardian_email'] ?? null,
+                'occupation' => $validated['guardian_occupation'] ?? null,
+                'nid_number' => $validated['guardian_nid_number'] ?? null,
+                'contact_consent' => true,
+            ]
+        );
         $profile->update([
-            ...collect($validated)->except(['course_id','profile_photo','quota_document'])->all(),
+            ...collect($validated)->except(['course_id','profile_photo','quota_document','guardian_name','guardian_relationship','guardian_mobile','guardian_email','guardian_occupation','guardian_nid_number'])->all(),
             'interested_course_id' => $course->id,
             'quoted_course_price' => $course->price,
         ]);
