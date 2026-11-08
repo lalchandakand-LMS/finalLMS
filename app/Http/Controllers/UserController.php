@@ -17,7 +17,7 @@ class UserController extends Controller
     {
         $validated = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
-            'role' => ['nullable', 'in:admin,branch_manager,accountant,teacher,student'],
+            'role' => ['nullable', 'in:admin,branch_manager,accountant,teacher,student,guardian'],
         ]);
 
         $users = User::query()
@@ -43,7 +43,7 @@ class UserController extends Controller
     public function updateRole(User $user, Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'role' => ['required', 'in:admin,branch_manager,accountant,teacher,student'],
+            'role' => ['required', 'in:admin,branch_manager,accountant,teacher,student,guardian'],
             'branch_id' => ['nullable', Rule::exists('branches', 'id')->where('is_active', true)],
             'phone_number' => ['nullable', 'string', 'regex:/^\+[1-9][0-9]{7,14}$/', Rule::unique('users', 'phone_number')->ignore($user->id)],
         ]);
