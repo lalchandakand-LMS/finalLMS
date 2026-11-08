@@ -55,7 +55,7 @@ return new class extends Migration
             $table->string('mobile_number', 20);
             $table->string('email')->nullable();
             $table->string('occupation', 120)->nullable();
-            $table->string('nid_number', 40)->nullable();
+            $table->text('nid_number')->nullable();
             $table->boolean('is_primary')->default(false);
             $table->boolean('contact_consent')->default(true);
             $table->timestamps();
