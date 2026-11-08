@@ -182,6 +182,7 @@
             <a href="{{ route('admin.courses.index') }}"><span>📚</span><span class="nav-text">Courses & lessons</span></a>
             <a href="{{ route('admin.users.index') }}"><span>👥</span><span class="nav-text">Students & teachers</span></a>
             <a href="{{ route('admin.batches.index') }}"><span>🗓️</span><span class="nav-text">Batches & branches</span></a>
+            <a href="{{ route('admin.contests.index') }}"><span>🎁</span><span class="nav-text">Quiz & lottery</span></a>
             <a href="{{ route('live-classes.index') }}"><span>🎥</span><span class="nav-text">Live classes</span></a>
             <div class="admin-sidebar-label">Finance</div>
             <a href="{{ route('admin.payments.index') }}"><span>💳</span><span class="nav-text">Payments</span></a>
@@ -213,6 +214,7 @@
                 </form>
                 <a href="/">{{ __('Home') }}</a>
                 <a href="{{ route('courses.index') }}">{{ __('Courses') }}</a>
+                <a href="{{ route('contests.index') }}">Quiz & prizes</a>
                 <a href="{{ route('pages.about') }}">{{ __('About') }}</a>
                 <a href="{{ route('pages.contact') }}">{{ __('Contact') }}</a>
                 <a href="{{ route('pages.faq') }}">{{ __('FAQ') }}</a>
