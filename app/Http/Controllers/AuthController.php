@@ -28,7 +28,7 @@ class AuthController extends Controller
             return redirect()->route('dashboard');
         }
 
-        return view('auth.register');
+        return view('auth.register', ['courses' => \\App\\Models\\Course::where('status', 'published')->orderBy('title')->get()]);
     }
 
     public function register(Request $request): RedirectResponse
