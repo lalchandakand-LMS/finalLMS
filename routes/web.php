@@ -47,7 +47,7 @@ Route::middleware('guest')->group(function () {
 });
 Route::post('/login', [StudentDeviceAccessController::class, 'beginLogin'])->middleware('throttle:5,1')->name('login.post');
 Route::get('/student-device/verify', [StudentDeviceAccessController::class, 'showVerify'])->middleware('throttle:10,1')->name('student-device.verify');
-Route::post('/student-device/verify', [StudentDeviceAccessController::class, 'verifyPhone'])->middleware('throttle:5,1')->name('student-device.verify-phone');
+Route::post('/student-device/verify', [StudentDeviceAccessController::class, 'verifyPhone'])->middleware('throttle:5,1')->name('student-device.verify-phone');\n\nRoute::get('/teacher/apply', [TeacherApplicationController::class, 'create'])->name('teacher.apply');\nRoute::post('/teacher/apply', [TeacherApplicationController::class, 'store'])->middleware('throttle:3,10')->name('teacher.apply.store');\nRoute::get('/teacher/apply/verify', [TeacherApplicationController::class, 'showVerify'])->middleware('throttle:10,1')->name('teacher.apply.verify');\nRoute::post('/teacher/apply/verify', [TeacherApplicationController::class, 'verify'])->middleware('throttle:5,10')->name('teacher.apply.verify.post');
 
 Route::get('/about', [CmsPageController::class, 'about'])->name('pages.about');
 Route::get('/contact', [CmsPageController::class, 'contact'])->name('pages.contact');
@@ -160,7 +160,7 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         ->name('courses.lessons.complete');
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
-        Route::get('/student-devices', [StudentDeviceAccessController::class, 'adminIndex'])->name('admin.student-devices.index');
+        Route::get('/student-devices', [StudentDeviceAccessController::class, 'adminIndex'])->name('admin.student-devices.index');\n        Route::get('/teacher-applications', [TeacherApplicationController::class, 'adminIndex'])->name('admin.teacher-applications.index');\n        Route::get('/teacher-applications/{application}/documents/{type}', [TeacherApplicationController::class, 'document'])->name('admin.teacher-applications.document');\n        Route::post('/teacher-applications/{application}/approve', [TeacherApplicationController::class, 'approve'])->name('admin.teacher-applications.approve');\n        Route::post('/teacher-applications/{application}/reject', [TeacherApplicationController::class, 'reject'])->name('admin.teacher-applications.reject');
         Route::post('/student-devices/{device}/approve', [StudentDeviceAccessController::class, 'approve'])->name('admin.student-devices.approve');
         Route::post('/student-devices/{device}/reject', [StudentDeviceAccessController::class, 'reject'])->name('admin.student-devices.reject');
         Route::post('/student-devices/{device}/revoke', [StudentDeviceAccessController::class, 'revoke'])->name('admin.student-devices.revoke');
