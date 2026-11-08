@@ -19,7 +19,7 @@ class User extends Authenticatable implements MustVerifyEmail
 {
     use HasFactory, MustVerifyEmailTrait, Notifiable;
 
-    protected $fillable = ['name', 'email', 'password', 'role', 'phone_number', 'sms_marketing_opt_in', 'branch_id'];
+    protected $fillable = ['name', 'email', 'password', 'role', 'phone_number', 'sms_marketing_opt_in', 'branch_id', 'account_status'];
 
     public function branch(): BelongsTo
     {
