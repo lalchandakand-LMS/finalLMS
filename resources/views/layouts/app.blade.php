@@ -221,7 +221,7 @@
                 <a href="{{ route('pages.contact') }}">{{ __('Contact') }}</a>
                 <a href="{{ route('pages.faq') }}">{{ __('FAQ') }}</a>
                 <a href="{{ route('news.index') }}">{{ __('Blog & News') }}</a>
-                @unless($isAdminLayout)
+                @if(!$isAdminLayout)
                     @php
                         $websiteHeaderLinks = \Illuminate\Support\Facades\Schema::hasTable('settings')
                             ? json_decode((string) \App\Models\Setting::value('header_links', '[]'), true)
@@ -232,7 +232,7 @@
                             <a href="{{ $websiteLink['url'] }}">{{ $websiteLink['label'] }}</a>
                         @endif
                     @endforeach
-                @endunless
+                @endif
                 @auth
                     <a href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a>
                     <a href="{{ route('profile.edit') }}">{{ __('Profile') }}</a>
@@ -297,7 +297,7 @@
 
         @yield('content')
     </main>
-    @unless($isAdminLayout)
+    @if(!$isAdminLayout)
         @php
             $websiteFooterTitle = \Illuminate\Support\Facades\Schema::hasTable('settings') ? \App\Models\Setting::value('footer_title', config('app.name')) : config('app.name');
             $websiteFooterText = \Illuminate\Support\Facades\Schema::hasTable('settings') ? \App\Models\Setting::value('footer_text', '') : '';
@@ -322,7 +322,7 @@
                 </nav>
             </div>
         </footer>
-    @endunless
+    @endif
     @if(!request()->cookie('marketing_consent'))
         <aside id="cookie-preferences" class="panel" style="position:fixed; right:20px; bottom:20px; z-index:20; max-width:440px; box-shadow:var(--shadow);">
             <strong>Cookie preferences</strong>
