@@ -23,13 +23,19 @@ class WebsiteBuilderController extends Controller
         $footerLinks = is_array($footerLinks) ? $footerLinks : [];
         $headerLinks = json_decode((string) ($settings['header_links'] ?? '[]'), true);
         $headerLinks = is_array($headerLinks) ? $headerLinks : [];
+        $templates = self::homepageTemplates();
+        $activeTemplate = (string) ($settings['homepage_template'] ?? 'academy-modern');
+        if (!array_key_exists($activeTemplate, $templates)) {
+            $activeTemplate = 'academy-modern';
+        }
 
-        return view('admin.website-builder.index', compact('sections', 'media', 'settings', 'slides', 'footerLinks', 'headerLinks'));
+        return view('admin.website-builder.index', compact('sections', 'media', 'settings', 'slides', 'footerLinks', 'headerLinks', 'templates', 'activeTemplate'));
     }
 
     public function update(Request $request): RedirectResponse
     {
         $validated = $request->validate([
+            'homepage_template' => ['required', Rule::in(array_keys(self::homepageTemplates()))],
             'site_name' => ['nullable', 'string', 'max:120'],
             'site_logo_media_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
             'site_favicon_media_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
@@ -119,7 +125,7 @@ class WebsiteBuilderController extends Controller
             return ['label' => $label, 'url' => $url];
         })->filter()->take(6)->values()->all();
 
-        foreach (['site_name', 'site_logo_media_id', 'site_favicon_media_id', 'site_primary_color', 'home_title', 'home_subtitle', 'home_featured_title', 'footer_title', 'footer_text'] as $key) {
+        foreach (['homepage_template', 'site_name', 'site_logo_media_id', 'site_favicon_media_id', 'site_primary_color', 'home_title', 'home_subtitle', 'home_featured_title', 'footer_title', 'footer_text'] as $key) {
             if (array_key_exists($key, $validated)) {
                 Setting::setValue($key, $validated[$key] ?? '');
             }
@@ -131,5 +137,27 @@ class WebsiteBuilderController extends Controller
         Setting::setValue('header_links', json_encode($headerLinks, JSON_THROW_ON_ERROR));
 
         return redirect()->route('admin.website-builder.index')->with('success', 'Website identity, homepage slider and layout saved.');
+    }
+
+    /** @return array<string, array{label: string, description: string}> */
+    public static function homepageTemplates(): array
+    {
+        return [
+            'academy-modern' => ['label' => 'Academy Modern', 'description' => 'Balanced academy layout with a clear learning-first hero.'],
+            'bold-academy' => ['label' => 'Bold Academy', 'description' => 'Large typography and high-contrast calls to action.'],
+            'minimal-learning' => ['label' => 'Minimal Learning', 'description' => 'Quiet whitespace and reduced visual decoration.'],
+            'editorial' => ['label' => 'Editorial', 'description' => 'Typography-led layout for articles and learning stories.'],
+            'gradient-studio' => ['label' => 'Gradient Studio', 'description' => 'Color-rich gradient surfaces and rounded cards.'],
+            'corporate-training' => ['label' => 'Corporate Training', 'description' => 'Structured, professional training presentation.'],
+            'playful-classroom' => ['label' => 'Playful Classroom', 'description' => 'Friendly shapes and approachable course cards.'],
+            'midnight-campus' => ['label' => 'Midnight Campus', 'description' => 'Dark campus-inspired visual treatment.'],
+            'split-screen' => ['label' => 'Split Screen', 'description' => 'Strong two-column hero and clear content separation.'],
+            'classic-institute' => ['label' => 'Classic Institute', 'description' => 'Traditional academic styling and restrained accents.'],
+            'glass-campus' => ['label' => 'Glass Campus', 'description' => 'Soft translucent panels and layered surfaces.'],
+            'vibrant-skills' => ['label' => 'Vibrant Skills', 'description' => 'Energetic accent colors for skills and bootcamps.'],
+            'focus-learning' => ['label' => 'Focus Learning', 'description' => 'Simple focused layout emphasizing course discovery.'],
+            'elegant-academy' => ['label' => 'Elegant Academy', 'description' => 'Refined typography and subtle borders.'],
+            'community-campus' => ['label' => 'Community Campus', 'description' => 'Warm community-oriented learning presentation.'],
+        ];
     }
 }
