@@ -46,6 +46,19 @@ document.addEventListener('keydown', function(e){
 });
 document.addEventListener('copy', function(e){ if(window.getSelection()?.anchorNode?.parentElement?.closest('.protected-learning-content')) e.preventDefault(); });
 document.addEventListener('dragstart', function(e){ if(e.target.closest('.protected-learning-content')) e.preventDefault(); });
+const protectedWatermarks = document.querySelectorAll('.dynamic-media-watermark');
+const watermarkSpots = [{top:'18%',left:'4%'},{top:'68%',left:'12%'},{top:'38%',left:'38%'},{top:'72%',left:'52%'},{top:'22%',left:'58%'}];
+let watermarkIndex = 0;
+window.setInterval(function(){
+    watermarkIndex = (watermarkIndex + 1) % watermarkSpots.length;
+    protectedWatermarks.forEach(function(mark){
+        const spot = watermarkSpots[watermarkIndex];
+        mark.style.top = spot.top;
+        mark.style.left = spot.left;
+        mark.style.right = '4%';
+        mark.textContent = mark.textContent.split(' · Alom')[0] + ' · Alom’s English Center · ' + new Date().toLocaleString();
+    });
+}, 7000);
 </script>
 @endpush
 @endsection
