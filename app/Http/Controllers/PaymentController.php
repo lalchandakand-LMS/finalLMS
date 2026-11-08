@@ -59,7 +59,7 @@ class PaymentController extends Controller
             });
 
             if (! $enrolled) {
-                return back()->with('error', 'This batch has reached its enrollment capacity.');
+                return back()->with('error', 'The batch is full or this Flash Sale has ended or reached its purchase limit.');
             }
 
             return back()->with('success', 'You have enrolled in the course successfully.');
@@ -92,12 +92,20 @@ class PaymentController extends Controller
         ]);
 
         $proof = $request->file('proof');
-        $submitted = DB::transaction(function () use ($amount, $batchId, $course, $proof, $user, $validated, $flashSale): bool {
+        $submitted = DB::transaction(function () use ($amount, $baseAmount, $batchId, $course, $proof, $user, $validated, $flashSale): bool {
             if ($batchId) {
                 $batch = Batch::query()->lockForUpdate()->findOrFail($batchId);
                 if ($batch->status !== 'open' || ! $this->hasAvailableSeat($batch)) {
                     return false;
                 }
+            }
+
+            if ($flashSale) {
+                $lockedSale = FlashSale::query()->lockForUpdate()->find($flashSale->id);
+                if (! $lockedSale || ! $lockedSale->isAvailableFor($user->id)) {
+                    return false;
+                }
+                $amount = $lockedSale->discountedPrice($baseAmount);
             }
 
             $proofPath = $proof?->store('payment-proofs', 'local');
