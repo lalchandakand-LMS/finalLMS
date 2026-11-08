@@ -199,7 +199,7 @@
         }
     </style>
 </head>
-<body class="{{ $isAdminLayout ? 'admin-shell' : '' }}">
+<body class="{{ $isPanelLayout ? 'admin-shell' : '' }}">
     @if($marketingConsent && $googleTagManagerId)
         <noscript><iframe src="https://www.googletagmanager.com/ns.html?id={{ urlencode($googleTagManagerId) }}" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     @endif
