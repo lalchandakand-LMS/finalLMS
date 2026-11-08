@@ -114,7 +114,7 @@ class StudentAdmissionRegistrationTest extends TestCase
             'living_type' => 'residential',
             'special_quota' => 'disability',
             'privacy_consent' => '1',
-        ])->assertSessionHasErrors(['profile_photo', 'quota_document', 'guardian.mobile']);
+        ])->assertSessionHasErrors(['profile_photo', 'quota_document', 'father.nid_front']);
     }
 
     public function test_admin_can_review_student_admission_records_and_documents_are_not_public(): void
