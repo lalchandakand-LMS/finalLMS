@@ -218,7 +218,6 @@
             @elseif(auth()->user()->isTeacher())
                 <div class="admin-sidebar-label">Teaching</div>
                 <a class="{{ request()->routeIs('teacher.batches.*') ? 'active' : '' }}" href="{{ route('teacher.batches.index') }}"><span>🗓️</span><span class="nav-text">My batches</span></a>
-                <a class="{{ request()->routeIs('teacher.courses.*') ? 'active' : '' }}" href="{{ route('teacher.courses.lessons.index', ['course' => 1]) }}"><span>📚</span><span class="nav-text">Course lessons</span></a>
                 <a class="{{ request()->routeIs('live-classes.*') ? 'active' : '' }}" href="{{ route('live-classes.index') }}"><span>🎥</span><span class="nav-text">Live classes</span></a>
             @elseif(auth()->user()->isStudent())
                 <div class="admin-sidebar-label">My learning</div>
