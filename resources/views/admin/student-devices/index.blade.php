@@ -1,13 +1,13 @@
 @extends('layouts.app')
 
-@section('title', 'Student device approvals | ' . config('app.name'))
+@section('title', 'Account device approvals | ' . config('app.name'))
 
 @section('content')
 <div class="page-header">
     <div>
         <span class="badge info">Admin only</span>
-        <h1 style="margin:12px 0 0;">Student device approvals</h1>
-        <p class="muted">Review additional-device requests after the student has verified their mobile number.</p>
+        <h1 style="margin:12px 0 0;">Account device approvals</h1>
+        <p class="muted">Review additional-device requests from students, teachers, branch staff and guardians after SMS verification.</p>
     </div>
 </div>
 
@@ -15,7 +15,7 @@
     <h2>Pending approval ({{ $requests->total() }})</h2>
     <div style="overflow-x:auto;">
         <table style="width:100%;min-width:760px;border-collapse:collapse;">
-            <thead><tr style="text-align:left;border-bottom:1px solid var(--border);"><th style="padding:10px;">Student</th><th>Device</th><th>IP address</th><th>Phone verified</th><th>Requested</th><th>Action</th></tr></thead>
+            <thead><tr style="text-align:left;border-bottom:1px solid var(--border);"><th style="padding:10px;">Account</th><th>Device</th><th>IP address</th><th>Phone verified</th><th>Requested</th><th>Action</th></tr></thead>
             <tbody>
             @forelse($requests as $device)
                 <tr style="border-bottom:1px solid var(--border);">
@@ -27,7 +27,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="6" class="muted" style="padding:18px;">No additional devices are waiting for approval.</td></tr>
+                <tr><td colspan="6" class="muted" style="padding:18px;">No additional account devices are waiting for approval.</td></tr>
             @endforelse
             </tbody>
         </table>
@@ -36,10 +36,10 @@
 </div>
 
 <div class="panel" style="margin-top:20px;">
-    <h2>Approved and past devices</h2>
+    <h2>Approved and past account devices</h2>
     <div style="overflow-x:auto;">
         <table style="width:100%;min-width:760px;border-collapse:collapse;">
-            <thead><tr style="text-align:left;border-bottom:1px solid var(--border);"><th style="padding:10px;">Student</th><th>Device</th><th>Status</th><th>Last used</th><th>Action</th></tr></thead>
+            <thead><tr style="text-align:left;border-bottom:1px solid var(--border);"><th style="padding:10px;">Account</th><th>Device</th><th>Status</th><th>Last used</th><th>Action</th></tr></thead>
             <tbody>
             @forelse($devices as $device)
                 <tr style="border-bottom:1px solid var(--border);">
