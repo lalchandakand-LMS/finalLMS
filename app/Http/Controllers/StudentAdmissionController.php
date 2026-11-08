@@ -245,9 +245,11 @@ class StudentAdmissionController extends Controller
         if ($request->filled('guardian_nid_number')) {
             $guardianData['nid_number'] = $validated['guardian_nid_number'];
         }
+        $primaryGuardian = StudentGuardian::where('student_id', $user->id)->where('is_primary', true)->first();
+        $guardianType = $primaryGuardian?->guardian_type ?? 'guardian';
         $guardianRecord = StudentGuardian::updateOrCreate(
-            ['student_id' => $user->id, 'guardian_type' => 'guardian'],
-            $guardianData + ['is_primary' => ! StudentGuardian::where('student_id', $user->id)->where('is_primary', true)->exists()]
+            ['student_id' => $user->id, 'guardian_type' => $guardianType],
+            $guardianData + ['is_primary' => true]
         );
         $profile->update([
             ...collect($validated)->except(['course_id','profile_photo','quota_document','guardian_name','guardian_relationship','guardian_mobile','guardian_email','guardian_occupation','guardian_nid_number','guardian_nid_front','guardian_nid_back'])->all(),
@@ -257,7 +259,7 @@ class StudentAdmissionController extends Controller
         if ($request->hasFile('profile_photo')) $this->storeEncryptedDocument($user, null, 'profile_photo', $request->file('profile_photo'));
         if ($request->hasFile('quota_document')) $this->storeEncryptedDocument($user, null, 'quota_evidence', $request->file('quota_document'));
         foreach (['nid_front','nid_back'] as $side) {
-            if ($request->hasFile('guardian_'.$side)) $this->storeEncryptedDocument($user, $guardianRecord, 'guardian_'.$side, $request->file('guardian_'.$side));
+            if ($request->hasFile('guardian_'.$side)) $this->storeEncryptedDocument($user, $guardianRecord, $guardianType.'_'.$side, $request->file('guardian_'.$side));
         }
         return back()->with('success', __('Admission profile and guardian contacts updated. Sensitive documents are stored privately.'));
     }
