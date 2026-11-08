@@ -52,7 +52,7 @@ class WebsiteBuilderController extends Controller
             'sections.*.body' => ['nullable', 'string', 'max:3000'],
             'sections.*.image_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
             'sections.*.button_label' => ['nullable', 'string', 'max:60'],
-            'sections.*.button_url' => ['nullable', 'url:http,https', 'max:500'],
+            'sections.*.button_url' => ['nullable', 'string', 'max:500'],
             'sections.*.enabled' => ['nullable', 'boolean'],
         ]);
 
@@ -62,7 +62,9 @@ class WebsiteBuilderController extends Controller
                 'body' => trim($section['body'] ?? ''),
                 'image_id' => $section['image_id'] ?? null,
                 'button_label' => trim($section['button_label'] ?? ''),
-                'button_url' => trim($section['button_url'] ?? ''),
+                'button_url' => preg_match('~^(https?://|/(?!/)|#)~i', trim($section['button_url'] ?? ''))
+                    ? trim($section['button_url'])
+                    : '',
                 'enabled' => (bool) ($section['enabled'] ?? false),
             ];
         })->values()->all();
