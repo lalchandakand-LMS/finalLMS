@@ -239,6 +239,7 @@ class CourseController extends Controller
         ]);
 
         $validated['is_preview'] = $request->boolean('is_preview');
+        unset($validated['attachment_file'], $validated['video_file']);
         $lesson = $course->lessons()->create($validated);
         $media = [];
         if ($request->hasFile('attachment_file')) {
@@ -295,7 +296,7 @@ class CourseController extends Controller
             'remove_video' => ['nullable', 'boolean'],
             'is_preview' => ['sometimes', 'boolean'],
         ]);
-        unset($validated['remove_attachment'], $validated['remove_video']);
+        unset($validated['remove_attachment'], $validated['remove_video'], $validated['attachment_file'], $validated['video_file']);
         $validated['is_preview'] = $request->boolean('is_preview');
         if ($request->boolean('remove_attachment') && $lesson->attachment_path) {
             Storage::disk('local')->delete($lesson->attachment_path);
