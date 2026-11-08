@@ -159,7 +159,7 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
     Route::middleware('role:admin')->prefix('admin')->group(function () {
         Route::get('/contests', [QuizContestController::class, 'adminIndex'])->name('admin.contests.index');
         Route::post('/contests', [QuizContestController::class, 'store'])->middleware('throttle:10,1')->name('admin.contests.store');
-        Route::post('/contests/{contest}/draw', [QuizContestController::class, 'draw'])->middleware('throttle:3,10')->name('admin.contests.draw');
+        Route::post('/contests/{contest}/publish-results', [QuizContestController::class, 'publishResults'])->middleware('throttle:3,10')->name('admin.contests.results.publish');
         Route::get('/invoices', [InvoiceController::class, 'adminIndex'])->name('admin.invoices.index');
         Route::get('/refunds', [InvoiceRefundController::class, 'index'])->name('admin.refunds.index');
         Route::post('/refunds', [InvoiceRefundController::class, 'store'])->name('admin.refunds.store');
