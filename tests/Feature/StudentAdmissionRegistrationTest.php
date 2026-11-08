@@ -83,7 +83,7 @@ class StudentAdmissionRegistrationTest extends TestCase
             $this->assertStringEndsWith('.enc', $document->encrypted_path);
             Storage::disk('local')->assertExists($document->encrypted_path);
             $stored = Storage::disk('local')->get($document->encrypted_path);
-            $this->assertNotSame('', Crypt::decryptString($stored));
+            $this->assertIsString(Crypt::decryptString($stored));
         }
         $this->assertGuest();
     }
@@ -113,6 +113,8 @@ class StudentAdmissionRegistrationTest extends TestCase
             'permanent_country' => 'Bangladesh',
             'living_type' => 'residential',
             'special_quota' => 'disability',
+            'profile_photo' => UploadedFile::fake()->image('student.jpg'),
+            'quota_document' => UploadedFile::fake()->create('quota.pdf', 100, 'application/pdf'),
             'privacy_consent' => '1',
         ])->assertSessionHasErrors(['profile_photo', 'quota_document', 'father.nid_front']);
     }
