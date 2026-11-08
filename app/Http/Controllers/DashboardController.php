@@ -43,6 +43,7 @@ class DashboardController extends Controller
         $recentCertificates = $recentCertificatesQuery->take(5)->get();
 
         $studentInsights = null;
+        $teacherInsights = null;
 
         if ($user->isStudent()) {
             $studentEnrollments = Enrollment::where('user_id', $user->id)
@@ -68,6 +69,29 @@ class DashboardController extends Controller
             ];
         }
 
+        if ($user->isTeacher()) {
+            $teacherBatchIds = Batch::where('teacher_id', $user->id)->pluck('id');
+
+            $teacherInsights = [
+                'assigned_courses' => Course::where('teacher_id', $user->id)->count(),
+                'total_batches' => $teacherBatchIds->count(),
+                'active_batches' => Batch::where('teacher_id', $user->id)->where('status', 'open')->count(),
+                'assignments_created' => Assignment::where('teacher_id', $user->id)->count(),
+                'pending_reviews' => AssignmentSubmission::where('status', 'submitted')
+                    ->whereHas('assignment', fn ($query) => $query->where('teacher_id', $user->id))
+                    ->count(),
+                'graded_submissions' => AssignmentSubmission::where('status', 'graded')
+                    ->whereHas('assignment', fn ($query) => $query->where('teacher_id', $user->id))
+                    ->count(),
+                'active_students' => $teacherBatchIds->isEmpty()
+                    ? 0
+                    : Enrollment::whereIn('batch_id', $teacherBatchIds)
+                        ->where('status', 'active')
+                        ->distinct('user_id')
+                        ->count('user_id'),
+            ];
+        }
+
         $stats = [
             'courses' => Course::count(),
             'students' => \App\Models\User::where('role', 'student')->count(),
@@ -75,7 +99,7 @@ class DashboardController extends Controller
             'certificates' => Certificate::count(),
         ];
 
-        return view('dashboard', compact('user', 'courses', 'enrolledCourses', 'recentCertificates', 'stats', 'announcementSlides', 'studentInsights'));
+        return view('dashboard', compact('user', 'courses', 'enrolledCourses', 'recentCertificates', 'stats', 'announcementSlides', 'studentInsights', 'teacherInsights'));
     }
 
     public function certificate(Certificate $certificate): View
