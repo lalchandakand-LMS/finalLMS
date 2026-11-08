@@ -6,7 +6,7 @@ use App\Http\Controllers\StudentDeviceAccessController;
 use App\Http\Controllers\BatchController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AssignmentController;
-use App\Http\Controllers\CourseController;
+use App\Http\Controllers\CourseController;\nuse App\Http\Controllers\LessonMediaController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\ProfileController;
@@ -68,7 +68,7 @@ Route::get('/contests/{contest}', [QuizContestController::class, 'show'])->name(
 
 Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
 Route::get('/courses/{course}', [CourseController::class, 'show'])->name('courses.show');
-Route::get('/courses/{course}/lessons/{lesson}', [CourseController::class, 'showLesson'])->name('courses.lessons.show');
+Route::get('/courses/{course}/lessons/{lesson}', [CourseController::class, 'showLesson'])->name('courses.lessons.show');\nRoute::get('/courses/{course}/lessons/{lesson}/media/{type}', [LessonMediaController::class, 'show'])->middleware('throttle:120,1')->name('courses.lessons.media');
 
 Route::middleware('auth')->group(function () {
     Route::get('/email/verify', [EmailVerificationController::class, 'notice'])->name('verification.notice');
