@@ -1,16 +1,16 @@
 <?php
 
-namespace App\\Http\\Controllers;
+namespace App\Http\Controllers;
 
-use App\\Models\\StudentDevice;
-use App\\Models\\User;
-use App\\Services\\SmsGateway;
-use Illuminate\\Http\\RedirectResponse;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Facades\\Auth;
-use Illuminate\\Support\\Facades\\Hash;
-use Illuminate\\Support\\Facades\\RateLimiter;
-use Illuminate\\View\\View;
+use App\Models\StudentDevice;
+use App\Models\User;
+use App\Services\SmsGateway;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\View\View;
 use Throwable;
 
 class StudentDeviceAccessController extends Controller
@@ -158,11 +158,12 @@ class StudentDeviceAccessController extends Controller
                 $request->session()->regenerate();
                 return redirect()->intended('/dashboard');
             }
+
             return back()->withErrors(['email' => 'The provided credentials do not match our records.'])->onlyInput('email');
         }
 
         if (! $user->phone_number) {
-            return back()->withErrors(['email' => 'Add a mobile number to your student profile through the academy administrator before signing in on a new device.'])->onlyInput('email');
+            return back()->withErrors(['email' => 'Add a mobile number to the student profile through the academy administrator before signing in.'])->onlyInput('email');
         }
 
         $deviceToken = $request->cookie('lms_student_device');
@@ -180,6 +181,7 @@ class StudentDeviceAccessController extends Controller
             $device->forceFill(['last_used_at' => now()])->save();
             Auth::login($user);
             $request->session()->regenerate();
+
             return redirect()->intended('/dashboard')
                 ->withCookie(cookie('lms_student_device', $deviceToken, 60 * 24 * 365, '/', null, true, true, false, 'lax'));
         }
