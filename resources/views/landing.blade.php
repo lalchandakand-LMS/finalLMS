@@ -9,6 +9,7 @@
         $hasUsersTable = \Illuminate\Support\Facades\Schema::hasTable('users');
         $hasCertificatesTable = \Illuminate\Support\Facades\Schema::hasTable('certificates');
 
+        $siteName = $hasSettingsTable ? \App\Models\Setting::value('site_name', config('app.name')) : config('app.name');
         $homeTitle = $hasSettingsTable ? \App\Models\Setting::value('home_title', 'Grow your skills with a complete LMS experience.') : 'Grow your skills with a complete LMS experience.';
         $homeSubtitle = $hasSettingsTable ? \App\Models\Setting::value('home_subtitle', 'Learn from expert-led courses, track your progress, enroll in structured programs, and earn certificates that help you move forward with confidence.') : 'Learn from expert-led courses, track your progress, enroll in structured programs, and earn certificates that help you move forward with confidence.';
         $homePrimaryLabel = $hasSettingsTable ? \App\Models\Setting::value('home_cta_primary', 'Browse courses') : 'Browse courses';
@@ -63,7 +64,7 @@
 
     <section class="hero">
         <div>
-            <span class="badge info">{{ config('app.name') }}</span>
+            <span class="badge info">{{ $siteName }}</span>
             <h1>{{ $homeTitle }}</h1>
             <p>{{ $homeSubtitle }}</p>
             <div class="cta-row">
