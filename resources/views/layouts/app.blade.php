@@ -53,7 +53,6 @@
             --bg: #f3f6fb;
             --panel: #ffffff;
             --panel-alt: #eef4ff;
-            --primary: #1546a8;
             --primary-dark: #0f2d6b;
             --green: #1f9d61;
             --text: #18212f;
