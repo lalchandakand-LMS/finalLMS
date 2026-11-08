@@ -31,7 +31,11 @@ class WebsiteBuilderController extends Controller
             'site_name' => ['nullable', 'string', 'max:120'],
             'site_logo_media_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
             'site_favicon_media_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
-            'site_primary_color' => ['nullable', 'string', function (string $attribute, mixed $value, \\Closure $fail): void {\n                if (!is_string($value) || strlen($value) !== 7 || $value[0] !== '#' || !ctype_xdigit(substr($value, 1))) {\n                    $fail('The '.$attribute.' must be a six-digit hex color.');\n                }\n            }],
+            'site_primary_color' => ['nullable', 'string', function (string $attribute, mixed $value, \Closure $fail): void {
+                if (!is_string($value) || strlen($value) !== 7 || $value[0] !== '#' || !ctype_xdigit(substr($value, 1))) {
+                    $fail('The '.$attribute.' must be a six-digit hex color.');
+                }
+            }],
             'home_title' => ['nullable', 'string', 'max:255'],
             'home_subtitle' => ['nullable', 'string', 'max:500'],
             'home_featured_title' => ['nullable', 'string', 'max:255'],
