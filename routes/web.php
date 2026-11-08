@@ -60,7 +60,7 @@ Route::get('/about', [CmsPageController::class, 'about'])->name('pages.about');
 Route::get('/contact', [CmsPageController::class, 'contact'])->name('pages.contact');
 Route::get('/faq', [CmsPageController::class, 'faq'])->name('pages.faq');
 Route::get('/news', [BlogController::class, 'index'])->name('news.index');
-Route::get('/news/{post:slug}', [BlogController::class, 'show'])->name('news.show');
+Route::get('/news/{post:slug}', [BlogController::class, 'show'])->name('news.show');\nRoute::post('/news/{post:slug}/comments', [CommentController::class, 'storePost'])->middleware(['auth', 'throttle:5,1'])->name('news.comments.store');\nRoute::post('/courses/{course}/comments', [CommentController::class, 'storeCourse'])->middleware(['auth', 'throttle:5,1'])->name('courses.comments.store');
 Route::post('/language', [LocaleController::class, 'update'])->middleware('throttle:20,1')->name('locale.update');
 Route::get('/payments/bkash/callback', [BkashPaymentController::class, 'callback'])->middleware('throttle:30,1')->name('payments.bkash.callback');
 
@@ -167,7 +167,7 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         ->middleware('role:student')
         ->name('courses.lessons.complete');
 
-    Route::middleware('role:admin')->prefix('admin')->group(function () {
+    Route::middleware('role:admin')->prefix('admin')->group(function () {\n        Route::get('/analytics', [AdminAnalyticsController::class, 'index'])->name('admin.analytics.index');\n        Route::get('/comments', [AdminCommentController::class, 'index'])->name('admin.comments.index');\n        Route::put('/comments/{comment}', [AdminCommentController::class, 'update'])->name('admin.comments.update');\n        Route::delete('/comments/{comment}', [AdminCommentController::class, 'destroy'])->name('admin.comments.destroy');
         Route::get('/student-devices', [StudentDeviceAccessController::class, 'adminIndex'])->name('admin.student-devices.index');
         Route::get('/teacher-applications', [TeacherApplicationController::class, 'adminIndex'])->name('admin.teacher-applications.index');
         Route::get('/teacher-applications/{application}/documents/{type}', [TeacherApplicationController::class, 'document'])->name('admin.teacher-applications.document');
