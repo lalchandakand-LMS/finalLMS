@@ -80,8 +80,8 @@ class UserController extends Controller
         if ($phoneChanged || $roleChangedAwayFromStudent) {
             StudentDevice::query()
                 ->where('user_id', $user->id)
-                ->where('status', 'approved')
-                ->update(['status' => 'revoked', 'updated_at' => now()]);
+                ->whereIn('status', ['approved', 'pending_admin_approval', 'pending_phone_verification'])
+                ->update(['status' => 'revoked', 'phone_otp_hash' => null, 'phone_otp_expires_at' => null, 'updated_at' => now()]);
         }
 
         return redirect()->route('admin.users.index')->with('success', 'User role and contact details updated successfully.');
