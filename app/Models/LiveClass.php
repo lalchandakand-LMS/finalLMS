@@ -12,6 +12,9 @@ class LiveClass extends Model
         'title',
         'description',
         'meeting_url',
+        'recording_url',
+        'recording_published_at',
+        'recording_notes',
         'starts_at',
         'ends_at',
         'status',
@@ -21,6 +24,7 @@ class LiveClass extends Model
     protected $casts = [
         'starts_at' => 'datetime',
         'ends_at' => 'datetime',
+        'recording_published_at' => 'datetime',
     ];
 
     public function batch(): BelongsTo
