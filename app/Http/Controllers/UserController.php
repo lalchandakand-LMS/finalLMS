@@ -43,7 +43,7 @@ class UserController extends Controller
     {
         $validated = $request->validate([
             'role' => ['required', 'in:admin,branch_manager,accountant,teacher,student'],
-            'branch_id' => ['nullable', Rule::exists('branches', 'id')->where('is_active', true)],
+            'branch_id' => ['nullable', Rule::exists('branches', 'id')->where('is_active', true)],\n            'phone_number' => ['nullable', 'string', 'regex:/^\\+[1-9][0-9]{7,14}$/', Rule::unique('users', 'phone_number')->ignore($user->id)],
         ]);
 
         if ($user->id === Auth::id() && $validated['role'] !== 'admin') {
@@ -58,10 +58,18 @@ class UserController extends Controller
             return back()->withErrors(['branch_id' => 'Select an active branch for this staff account.']);
         }
 
+        $phoneChanged = array_key_exists('phone_number', $validated) && $user->phone_number !== $validated['phone_number'];
+
         $user->update([
             'role' => $validated['role'],
             'branch_id' => in_array($validated['role'], ['branch_manager', 'accountant', 'student'], true) ? ($validated['branch_id'] ?? null) : null,
+            'phone_number' => $validated['phone_number'] ?? null,
         ]);
+
+        if ($phoneChanged) {
+            $user->forceFill(['phone_verified_at' => null, 'phone_verification_code' => null, 'phone_verification_expires_at' => null])->save();
+            StudentDevice::query()->where('user_id', $user->id)->where('status', 'approved')->update(['status' => 'revoked', 'updated_at' => now()]);
+        }
 
         return redirect()->route('admin.users.index')->with('success', 'User role updated successfully.');
     }
