@@ -75,6 +75,11 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
     Route::get('/live-classes', [LiveClassController::class, 'index'])->name('live-classes.index');
     Route::get('/community', [\App\Http\Controllers\CommunityController::class, 'index'])->name('community.index');
+    Route::get('/community/rooms', [\App\Http\Controllers\DiscussionRoomController::class, 'index'])->name('community.rooms.index');
+    Route::post('/community/rooms', [\App\Http\Controllers\DiscussionRoomController::class, 'store'])->middleware('throttle:5,1')->name('community.rooms.store');
+    Route::post('/community/rooms/{room}/join', [\App\Http\Controllers\DiscussionRoomController::class, 'join'])->middleware('throttle:20,1')->name('community.rooms.join');
+    Route::get('/community/rooms/{room}', [\App\Http\Controllers\DiscussionRoomController::class, 'show'])->name('community.rooms.show');
+    Route::post('/community/rooms/{room}/messages', [\App\Http\Controllers\DiscussionRoomController::class, 'message'])->middleware('throttle:20,1')->name('community.rooms.message');
     Route::post('/community/posts', [\App\Http\Controllers\CommunityController::class, 'store'])->middleware('throttle:10,1')->name('community.posts.store');
     Route::post('/community/posts/{post}/like', [\App\Http\Controllers\CommunityController::class, 'toggleLike'])->middleware('throttle:30,1')->name('community.posts.like');
     Route::post('/community/posts/{post}/comments', [\App\Http\Controllers\CommunityController::class, 'comment'])->middleware('throttle:20,1')->name('community.posts.comment');
