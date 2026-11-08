@@ -218,19 +218,19 @@ class StudentAdmissionController extends Controller
             'guardian_nid_number' => ['nullable','string','max:40'],
         ]);
         $course = Course::findOrFail($validated['course_id']);
-        StudentGuardian::updateOrCreate(
-            ['student_id' => $user->id, 'is_primary' => true],
-            [
-                'guardian_type' => 'guardian',
-                'relationship' => $validated['guardian_relationship'],
-                'name' => $validated['guardian_name'],
-                'mobile_number' => $validated['guardian_mobile'],
-                'email' => $validated['guardian_email'] ?? null,
-                'occupation' => $validated['guardian_occupation'] ?? null,
-                'nid_number' => $validated['guardian_nid_number'] ?? null,
-                'contact_consent' => true,
-            ]
-        );
+        $guardianData = [
+            'guardian_type' => 'guardian',
+            'relationship' => $validated['guardian_relationship'],
+            'name' => $validated['guardian_name'],
+            'mobile_number' => $validated['guardian_mobile'],
+            'email' => $validated['guardian_email'] ?? null,
+            'occupation' => $validated['guardian_occupation'] ?? null,
+            'contact_consent' => true,
+        ];
+        if ($request->filled('guardian_nid_number')) {
+            $guardianData['nid_number'] = $validated['guardian_nid_number'];
+        }
+        StudentGuardian::updateOrCreate(['student_id' => $user->id, 'is_primary' => true], $guardianData);
         $profile->update([
             ...collect($validated)->except(['course_id','profile_photo','quota_document','guardian_name','guardian_relationship','guardian_mobile','guardian_email','guardian_occupation','guardian_nid_number'])->all(),
             'interested_course_id' => $course->id,
