@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Course;
+use App\Models\ActivityLog;
 use App\Models\StudentAdmissionProfile;
 use App\Models\StudentCourseAttendance;
 use App\Models\StudentCourseSession;
@@ -318,7 +319,8 @@ class StudentAdmissionController extends Controller
         abort_unless($student->isStudent(), 404);
         $student->load(['admissionProfile.interestedCourse','admissionProfile.reviewer','studentGuardians.documents','admissionProfile.documents','referralsMade.referred','referralsReceived.referrer']);
         $sessions = StudentCourseAttendance::with('session.course')->where('student_id',$student->id)->latest()->take(30)->get();
-        return view('admin.admissions.show', compact('student','sessions'));
+        $activityLogs = ActivityLog::where('user_id',$student->id)->latest()->take(30)->get();
+        return view('admin.admissions.show', compact('student','sessions','activityLogs'));
     }
 
     public function approve(User $student): RedirectResponse
