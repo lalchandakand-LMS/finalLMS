@@ -380,6 +380,16 @@ class StudentAdmissionController extends Controller
 
     private function storeEncryptedDocument(User $student, ?StudentGuardian $guardian, string $type, $file): StudentDocument
     {
+        $oldDocuments = StudentDocument::query()
+            ->where('student_id', $student->id)
+            ->where('document_type', $type)
+            ->when($guardian, fn ($query) => $query->where('guardian_id', $guardian->id), fn ($query) => $query->whereNull('guardian_id'))
+            ->get();
+        foreach ($oldDocuments as $oldDocument) {
+            Storage::disk('local')->delete($oldDocument->encrypted_path);
+            $oldDocument->delete();
+        }
+
         $document = StudentDocument::create([
             'student_id' => $student->id,
             'guardian_id' => $guardian?->id,
