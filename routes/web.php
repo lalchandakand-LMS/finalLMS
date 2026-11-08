@@ -51,7 +51,7 @@ Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::middleware('guest')->group(function () {
     Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
-    Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1')->name('register.store');
+    Route::post('/register', [StudentAdmissionController::class, 'register'])->middleware('throttle:5,1')->name('register.store');
 });
 Route::post('/login', [StudentDeviceAccessController::class, 'beginLogin'])->middleware(['guest', 'throttle:5,1'])->name('login.post');
 Route::get('/student-device/verify', [StudentDeviceAccessController::class, 'showVerify'])->middleware('throttle:10,1')->name('student-device.verify');
@@ -165,7 +165,7 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
     Route::post('/contests/{contest}/submit', [QuizContestController::class, 'submit'])->middleware('throttle:5,1')->name('contests.submit');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');\n    Route::get('/profile/admission', [StudentAdmissionController::class, 'edit'])->middleware('role:student')->name('student.admission.edit');\n    Route::put('/profile/admission', [StudentAdmissionController::class, 'update'])->middleware('role:student')->name('student.admission.update');\n    Route::post('/profile/request-deletion', [StudentAdmissionController::class, 'requestDeletion'])->middleware('role:student')->name('student.profile.request-deletion');\n    Route::post('/student/referral', [StudentAdmissionController::class, 'referral'])->middleware('role:student')->name('student.referral.store');\n    Route::get('/student/documents/{document}', [StudentAdmissionController::class, 'document'])->name('student.documents.show');
     Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::get('/certificates/{certificate}', [DashboardController::class, 'certificate'])->name('certificates.show');
 
@@ -179,7 +179,7 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         Route::get('/security/sessions', [AdminDeviceSessionController::class, 'index'])->name('admin.security.sessions.index');
         Route::patch('/security/sessions/{deviceSession}/revoke', [AdminDeviceSessionController::class, 'revoke'])->name('admin.security.sessions.revoke');
         Route::post('/security/users/{user}/revoke-sessions', [AdminDeviceSessionController::class, 'revokeAllForUser'])->name('admin.security.users.revoke-sessions');
-        Route::get('/analytics', [AdminAnalyticsController::class, 'index'])->name('admin.analytics.index');
+        Route::get('/admissions', [StudentAdmissionController::class, 'adminIndex'])->name('admin.admissions.index');\n        Route::get('/admissions/{student}', [StudentAdmissionController::class, 'adminShow'])->name('admin.admissions.show');\n        Route::post('/admissions/{student}/approve', [StudentAdmissionController::class, 'approve'])->name('admin.admissions.approve');\n        Route::patch('/admissions/{student}/status', [StudentAdmissionController::class, 'setStatus'])->name('admin.admissions.status');\n        Route::delete('/admissions/{student}/personal-data', [StudentAdmissionController::class, 'anonymize'])->name('admin.admissions.anonymize');\n        Route::get('/analytics', [AdminAnalyticsController::class, 'index'])->name('admin.analytics.index');
         Route::get('/dashboard-announcements', [AdminDashboardAnnouncementController::class, 'index'])->name('admin.dashboard-announcements.index');
         Route::get('/dashboard-announcements/create', [AdminDashboardAnnouncementController::class, 'create'])->name('admin.dashboard-announcements.create');
         Route::post('/dashboard-announcements', [AdminDashboardAnnouncementController::class, 'store'])->name('admin.dashboard-announcements.store');
