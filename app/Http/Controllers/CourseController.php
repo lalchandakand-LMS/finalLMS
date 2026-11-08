@@ -199,7 +199,11 @@ class CourseController extends Controller
             ? LessonProgress::where('user_id', $user->id)->where('lesson_id', $lesson->id)->exists()
             : false;
 
-        return response()->view('student.lessons.show', compact('course', 'lesson', 'videoEmbedUrl', 'isCompleted'))\n            ->header('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0')\n            ->header('Pragma', 'no-cache')\n            ->header('X-Content-Type-Options', 'nosniff')\n            ->header('Referrer-Policy', 'same-origin');
+        return response()->view('student.lessons.show', compact('course', 'lesson', 'videoEmbedUrl', 'isCompleted'))
+            ->header('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0')
+            ->header('Pragma', 'no-cache')
+            ->header('X-Content-Type-Options', 'nosniff')
+            ->header('Referrer-Policy', 'same-origin');
     }
 
     public function completeLesson(Course $course, Lesson $lesson): RedirectResponse
