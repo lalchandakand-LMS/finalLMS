@@ -3,7 +3,7 @@
 @section('title', 'Quiz & Competition | ' . config('app.name'))
 
 @section('content')
-<div class="page-header"><div><span class="badge info">Open to everyone with an account</span><h1 style="margin:12px 0 0;">Quiz & Prize Draw</h1><p class="muted">Take part in free skill-based quizzes and compete for prizes.</p></div></div>
+<div class="page-header"><div><span class="badge info">Open to everyone with an account</span><h1 style="margin:12px 0 0;">Quiz & Competition</h1><p class="muted">Take part in free skill-based quizzes and compete for prizes.</p></div></div>
 <div class="course-list">
 @forelse($contests as $contest)
     <article class="course-item">
