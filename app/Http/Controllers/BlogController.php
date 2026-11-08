@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\BlogPost;
 use App\Models\MediaAsset;
+use App\Models\PageView;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -18,11 +19,14 @@ class BlogController extends Controller
         return view('news.index', compact('posts'));
     }
 
-    public function show(BlogPost $post): View
+    public function show(Request $request, BlogPost $post): View
     {
         abort_unless($post->status === 'published' && $post->published_at && $post->published_at->lte(now()), 404);
+        PageView::record($request, 'post', 'blog_post', $post->id);
+        $post->views_count = PageView::where('view_type', 'post')->where('viewable_id', $post->id)->count();
+        $comments = $post->comments()->with('author')->latest()->paginate(10, ['*'], 'comments_page');
         $post->load(['author', 'cover']);
-        return view('news.show', compact('post'));
+        return view('news.show', compact('post', 'comments'));
     }
 
     public function adminIndex(): View
