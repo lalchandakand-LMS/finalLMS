@@ -74,6 +74,9 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
     Route::get('/live-classes', [LiveClassController::class, 'index'])->name('live-classes.index');
+    Route::get('/support', [\App\Http\Controllers\SupportTicketController::class, 'index'])->name('support.index');
+    Route::post('/support', [\App\Http\Controllers\SupportTicketController::class, 'store'])->middleware('throttle:5,1')->name('support.store');
+    Route::patch('/support/{ticket}', [\App\Http\Controllers\SupportTicketController::class, 'update'])->middleware('role:admin')->name('support.update');
     Route::get('/community', [\App\Http\Controllers\CommunityController::class, 'index'])->name('community.index');
     Route::get('/community/messages', [\App\Http\Controllers\DirectMessageController::class, 'index'])->name('community.messages.index');
     Route::get('/community/messages/{user}', [\App\Http\Controllers\DirectMessageController::class, 'show'])->name('community.messages.show');
