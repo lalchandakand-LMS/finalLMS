@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'activity.log' => \App\Http\Middleware\LogUserActivity::class,
+            'device.session' => \App\Http\Middleware\EnsureDeviceSessionActive::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
