@@ -63,13 +63,19 @@ class CommunityController extends Controller
     {
         abort_unless($post->status === 'published' && $post->visibility === 'public', 404);
 
-        CommunityPostLike::query()->firstOrCreate([
-            'post_id' => $post->id,
-            'user_id' => $request->user()->id,
-        ])->wasRecentlyCreated || CommunityPostLike::query()
+        $like = CommunityPostLike::query()
             ->where('post_id', $post->id)
             ->where('user_id', $request->user()->id)
-            ->delete();
+            ->first();
+
+        if ($like) {
+            $like->delete();
+        } else {
+            CommunityPostLike::create([
+                'post_id' => $post->id,
+                'user_id' => $request->user()->id,
+            ]);
+        }
 
         return back();
     }
