@@ -12,7 +12,10 @@ class PageView extends Model
     public static function record(Request $request, string $type, string $modelType = 'site', int $modelId = 0): void
     {
         $sessionId = $request->hasSession() ? $request->session()->getId() : null;
-        $visitorSeed = $sessionId ?: ($request->ip().'|'.$request->userAgent());
+        $visitorSeed = $request->attributes->get('analytics_visitor_key')
+            ?: $request->cookie('aec_visitor')
+            ?: $sessionId
+            ?: bin2hex(random_bytes(32));
         $visitorHash = hash_hmac('sha256', (string) $visitorSeed, (string) config('app.key'));
 
         static::query()->insertOrIgnore([
