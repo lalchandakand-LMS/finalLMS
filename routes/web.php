@@ -170,7 +170,7 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/my/admission-profile', [StudentAdmissionController::class, 'edit'])->middleware('role:student')->name('student.admission.edit');
-    Route::post('/my/admission-profile', [StudentAdmissionController::class, 'update'])->middleware('role:student')->name('student.admission.update');
+    Route::put('/my/admission-profile', [StudentAdmissionController::class, 'update'])->middleware('role:student')->name('student.admission.update');
     Route::post('/my/admission-profile/delete-request', [StudentAdmissionController::class, 'requestDeletion'])->middleware('role:student')->name('student.admission.delete-request');
     Route::get('/student-documents/{document}', [StudentAdmissionController::class, 'document'])->name('student.documents.show');
     Route::get('/my/course-tracking', [StudentCourseTrackingController::class, 'studentIndex'])->middleware('role:student')->name('student.course-tracking.index');
