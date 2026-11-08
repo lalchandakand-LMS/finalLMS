@@ -1,12 +1,12 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use App\\Models\\CommunityPost;
-use App\\Models\\TeacherFollow;
-use App\\Models\\User;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Tests\\TestCase;
+use App\Models\CommunityPost;
+use App\Models\TeacherFollow;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class CommunityFeedTest extends TestCase
 {
