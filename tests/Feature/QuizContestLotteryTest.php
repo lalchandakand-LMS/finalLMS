@@ -66,7 +66,7 @@ class QuizContestLotteryTest extends TestCase
         $this->assertDatabaseHas('quiz_contest_entries', ['user_id' => $teacher->id, 'quiz_contest_id' => $contest->id]);
     }
 
-    public function test_admin_can_draw_winners_once_after_contest_ends(): void
+    public function test_admin_can_publish_skill_based_results_once_after_contest_ends(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
         $contest = $this->makeContest(now()->subDay(), now()->subMinute(), 2);
@@ -82,7 +82,7 @@ class QuizContestLotteryTest extends TestCase
             ]);
         }
 
-        $this->actingAs($admin)->post(route('admin.contests.draw', $contest))
+        $this->actingAs($admin)->post(route('admin.contests.results.publish', $contest))
             ->assertRedirect(route('admin.contests.index'));
 
         $this->assertDatabaseCount('quiz_contest_winners', 2);
@@ -91,7 +91,7 @@ class QuizContestLotteryTest extends TestCase
         $this->assertDatabaseCount('quiz_contest_winners', 2);
     }
 
-    public function test_lottery_cannot_be_drawn_before_the_contest_deadline(): void
+    public function test_results_cannot_be_published_before_the_contest_deadline(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
         $contest = $this->makeContest(now()->subMinute(), now()->addHour());
