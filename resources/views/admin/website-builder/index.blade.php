@@ -84,7 +84,7 @@
         [...list.querySelectorAll('[data-section-item]')].forEach((card, index) => {
             card.querySelector('.section-position').textContent = String(index + 1);
             card.querySelectorAll('[name]').forEach((field) => {
-                field.name = field.name.replace(/sections\\[\\d+\\]/, 'sections[' + index + ']');
+                field.name = field.name.replace(/sections\[\d+\]/, 'sections[' + index + ']');
             });
         });
     };
