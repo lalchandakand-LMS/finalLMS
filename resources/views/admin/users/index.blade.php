@@ -37,20 +37,20 @@
         <div style="overflow-x:auto;">
             <table style="width:100%;border-collapse:collapse;min-width:900px;">
                 <thead><tr style="text-align:left;border-bottom:1px solid var(--border);">
-                    <th style="padding:12px 10px;">{{ __('Name') }}</th><th style="padding:12px 10px;">{{ __('Email') }}</th>
+                    <th style="padding:12px 10px;">{{ __('Name') }}</th><th style="padding:12px 10px;">{{ __('Email') }}</th><th style="padding:12px 10px;">Mobile</th>
                     <th style="padding:12px 10px;">{{ __('Role') }}</th><th style="padding:12px 10px;">{{ __('Branch') }}</th>
                     <th style="padding:12px 10px;">{{ __('Courses') }}</th><th style="padding:12px 10px;">{{ __('Enrollments') }}</th><th style="padding:12px 10px;">{{ __('Action') }}</th>
                 </tr></thead>
                 <tbody>
                 @forelse($users as $user)
                     <tr style="border-bottom:1px solid var(--border);">
-                        <td style="padding:12px 10px;">{{ $user->name }}</td><td style="padding:12px 10px;">{{ $user->email }}</td>
+                        <td style="padding:12px 10px;">{{ $user->name }}</td><td style="padding:12px 10px;">{{ $user->email }}</td><td style="padding:12px 10px;">{{ $user->phone_number ?? '—' }}<br><small class="muted">{{ $user->phone_verified_at ? 'Verified' : 'Not verified' }}</small></td>
                         <td style="padding:12px 10px;"><span class="badge {{ $user->role === 'admin' ? 'info' : (in_array($user->role, ['teacher', 'branch_manager'], true) ? 'success' : 'warning') }}">{{ ucwords(str_replace('_', ' ', $user->role)) }}</span></td>
                         <td style="padding:12px 10px;">{{ $user->branch?->name ?? '—' }}</td><td style="padding:12px 10px;">{{ $user->courses_count }}</td><td style="padding:12px 10px;">{{ $user->enrollments_count }}</td>
                         <td style="padding:12px 10px;">
                             <form method="POST" action="{{ route('admin.users.updateRole', $user) }}" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
                                 @csrf
-                                <select name="role" style="width:auto;min-width:130px;">
+                                <input type="tel" name="phone_number" value="{{ $user->phone_number }}" placeholder="+8801XXXXXXXXX" pattern="\\+[1-9][0-9]{7,14}" style="width:150px;" aria-label="Student mobile number (E.164)">\n                                <select name="role" style="width:auto;min-width:130px;">
                                     @foreach(['student' => 'Student', 'branch_manager' => 'Branch Manager', 'accountant' => 'Accountant', 'teacher' => 'Teacher', 'admin' => 'Admin'] as $roleValue => $roleLabel)
                                         <option value="{{ $roleValue }}" @selected($user->role === $roleValue)>{{ __($roleLabel) }}</option>
                                     @endforeach
@@ -66,7 +66,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="7" class="muted" style="padding:18px;">{{ __('No accounts match this search.') }}</td></tr>
+                    <tr><td colspan="8" class="muted" style="padding:18px;">{{ __('No accounts match this search.') }}</td></tr>
                 @endforelse
                 </tbody>
             </table>
