@@ -195,11 +195,11 @@ class CourseController extends Controller
                 }
             }
         }
-        $isCompleted = $user && $user->isStudent()
+        $privateVideoUrl = $lesson->video_path ? route('courses.lessons.media', [$course, $lesson, 'video']) : null;\n        $privateAttachmentUrl = $lesson->attachment_path ? route('courses.lessons.media', [$course, $lesson, 'attachment']) : null;\n        $isCompleted = $user && $user->isStudent()
             ? LessonProgress::where('user_id', $user->id)->where('lesson_id', $lesson->id)->exists()
             : false;
 
-        return response()->view('student.lessons.show', compact('course', 'lesson', 'videoEmbedUrl', 'isCompleted'))
+        return response()->view('student.lessons.show', compact('course', 'lesson', 'videoEmbedUrl', 'privateVideoUrl', 'privateAttachmentUrl', 'isCompleted'))
             ->header('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0')
             ->header('Pragma', 'no-cache')
             ->header('X-Content-Type-Options', 'nosniff')
