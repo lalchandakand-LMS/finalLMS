@@ -133,7 +133,7 @@ class StudentAdmissionController extends Controller
                     'guardian_type' => $type,
                     'relationship' => $data['relationship'] ?? ucfirst($type),
                     'name' => $data['name'] ?? ucfirst($type),
-                    'mobile_number' => $data['mobile'],
+                    'mobile_number' => $data['mobile'] ?? null,
                     'email' => $data['email'] ?? null,
                     'occupation' => $data['occupation'] ?? null,
                     'nid_number' => $data['nid_number'] ?? null,
