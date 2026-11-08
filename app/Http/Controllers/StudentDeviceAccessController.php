@@ -156,6 +156,10 @@ class StudentDeviceAccessController extends Controller
 
         $user = User::query()->where('email', strtolower($validated['email']))->first();
         if (! $user || ! Hash::check($validated['password'], $user->password)) {
+        if ($user && ($user->account_status ?? 'active') !== 'active') {
+            return back()->withErrors(['email' => 'This account is inactive or unavailable. Please contact the academy administrator.'])->onlyInput('email');
+        }
+
             return back()->withErrors(['email' => 'The provided credentials do not match our records.'])->onlyInput('email');
         }
 
