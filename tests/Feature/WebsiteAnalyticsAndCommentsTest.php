@@ -23,8 +23,8 @@ class WebsiteAnalyticsAndCommentsTest extends TestCase
             'body' => 'Article text', 'status' => 'published', 'published_at' => now()->subMinute(),
         ]);
 
-        $visitorCookie = \Illuminate\Support\Str::random(48);
-        $this->withCookie('aec_visitor', encrypt($visitorCookie, false))->get(route('courses.show', $course))->assertOk();
+        $firstVisit = $this->get(route('courses.show', $course))->assertOk();
+        $visitorCookie = $firstVisit->getCookie('aec_visitor', false)->getValue();
         $this->withCookie('aec_visitor', $visitorCookie)->get(route('courses.show', $course))->assertOk();
         $this->withCookie('aec_visitor', $visitorCookie)->get(route('news.show', $post->slug))->assertOk();
 
