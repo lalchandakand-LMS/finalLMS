@@ -250,7 +250,7 @@ class StudentAdmissionController extends Controller
             $guardianData + ['is_primary' => ! StudentGuardian::where('student_id', $user->id)->where('is_primary', true)->exists()]
         );
         $profile->update([
-            ...collect($validated)->except(['course_id','profile_photo','quota_document','guardian_name','guardian_relationship','guardian_mobile','guardian_email','guardian_occupation','guardian_nid_number'])->all(),
+            ...collect($validated)->except(['course_id','profile_photo','quota_document','guardian_name','guardian_relationship','guardian_mobile','guardian_email','guardian_occupation','guardian_nid_number','guardian_nid_front','guardian_nid_back'])->all(),
             'interested_course_id' => $course->id,
             'quoted_course_price' => $course->price,
         ]);
