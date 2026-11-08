@@ -139,6 +139,25 @@
                 <a href="{{ route('courses.index') }}" class="btn secondary">{{ __('Explore catalog') }}</a></div>
             <p class="muted" style="margin:12px 0 0;">{{ __('Keep momentum going with a clear set of next actions, from enrollment to course completion.') }}</p>
         </div>
+        @if($user->isStudent() && $studentInsights)
+            <section class="panel" style="margin-bottom:20px;">
+                <div class="page-header" style="margin-bottom:14px;">
+                    <div><span class="badge info">{{ __('Student analytics') }}</span><h2 style="margin:10px 0 0;">{{ __('Your learning progress') }}</h2></div>
+                    <strong style="font-size:1.35rem;color:var(--primary);">{{ $studentInsights['progress_percent'] }}%</strong>
+                </div>
+                <div style="height:10px;background:var(--panel-alt);border-radius:999px;overflow:hidden;margin-bottom:18px;" role="progressbar" aria-label="{{ __('Course completion') }}" aria-valuenow="{{ $studentInsights['progress_percent'] }}" aria-valuemin="0" aria-valuemax="100">
+                    <div style="height:100%;width:{{ $studentInsights['progress_percent'] }}%;background:linear-gradient(90deg,var(--primary),var(--accent));border-radius:999px;"></div>
+                </div>
+                <div class="dash-summary">
+                    <div class="summary-box"><span class="muted">{{ __('Enrolled courses') }}</span><strong>{{ number_format($studentInsights['enrolled_courses']) }}</strong></div>
+                    <div class="summary-box"><span class="muted">{{ __('Lessons completed') }}</span><strong>{{ number_format($studentInsights['completed_lessons']) }} / {{ number_format($studentInsights['total_lessons']) }}</strong></div>
+                    <div class="summary-box"><span class="muted">{{ __('Assignments submitted') }}</span><strong>{{ number_format($studentInsights['assignments_submitted']) }}</strong></div>
+                    <div class="summary-box"><span class="muted">{{ __('Exams attempted') }}</span><strong>{{ number_format($studentInsights['exams_attempted']) }}</strong></div>
+                    <div class="summary-box"><span class="muted">{{ __('Attendance records') }}</span><strong>{{ number_format($studentInsights['attendance_marked']) }}</strong></div>
+                </div>
+                <p class="muted" style="margin:14px 0 0;">{{ __('Your progress is calculated from completed lessons in your active and completed enrollments.') }}</p>
+            </section>
+        @endif
     @endif
 
     <div class="grid grid-2">
