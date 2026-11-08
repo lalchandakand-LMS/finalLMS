@@ -79,6 +79,9 @@ class StudentAdmissionRecordsTest extends TestCase
         $this->assertSame('pending', $profile->admission_status);
         $this->assertSame('3500.00', $profile->quoted_course_price);
         $this->assertSame('Class 8', $profile->class_name);
+        $this->assertNotNull($profile->privacy_consent_at);
+        $this->assertDatabaseHas('student_documents',['student_id'=>$student->id,'document_type'=>'father_nid_front']);
+        $this->assertDatabaseHas('student_documents',['student_id'=>$student->id,'document_type'=>'father_nid_back']);
         $this->assertSame('active', $student->account_status);
         $this->assertDatabaseHas('student_guardians', [
             'student_id' => $student->id,
