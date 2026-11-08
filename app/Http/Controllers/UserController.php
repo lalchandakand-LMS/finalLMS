@@ -46,7 +46,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'role' => ['required', 'in:admin,branch_manager,accountant,teacher,student,guardian'],
             'branch_id' => ['nullable', Rule::exists('branches', 'id')->where('is_active', true)],
-            'phone_number' => ['nullable', 'string', 'regex:/^\+[1-9][0-9]{7,14}$/', Rule::unique('users', 'phone_number')->ignore($user->id)],
+            'phone_number' => ['required_if:role,student,teacher,branch_manager,guardian,accountant', 'nullable', 'string', 'regex:/^\+[1-9][0-9]{7,14}$/', Rule::unique('users', 'phone_number')->ignore($user->id)],
         ]);
 
         if ($user->id === Auth::id() && $validated['role'] !== 'admin') {
