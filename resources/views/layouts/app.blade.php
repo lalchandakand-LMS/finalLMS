@@ -223,8 +223,8 @@
                 <a href="{{ route('news.index') }}">{{ __('Blog & News') }}</a>
                 @unless($isAdminLayout)
                     @php
-                        $websiteHeaderLinks = \\Illuminate\\Support\\Facades\\Schema::hasTable('settings')
-                            ? json_decode((string) \\App\\Models\\Setting::value('header_links', '[]'), true)
+                        $websiteHeaderLinks = \Illuminate\Support\Facades\Schema::hasTable('settings')
+                            ? json_decode((string) \App\Models\Setting::value('header_links', '[]'), true)
                             : [];
                     @endphp
                     @foreach(is_array($websiteHeaderLinks) ? $websiteHeaderLinks : [] as $websiteLink)
@@ -299,10 +299,10 @@
     </main>
     @unless($isAdminLayout)
         @php
-            $websiteFooterTitle = \\Illuminate\\Support\\Facades\\Schema::hasTable('settings') ? \\App\\Models\\Setting::value('footer_title', config('app.name')) : config('app.name');
-            $websiteFooterText = \\Illuminate\\Support\\Facades\\Schema::hasTable('settings') ? \\App\\Models\\Setting::value('footer_text', '') : '';
-            $websiteFooterLinks = \\Illuminate\\Support\\Facades\\Schema::hasTable('settings')
-                ? json_decode((string) \\App\\Models\\Setting::value('footer_links', '[]'), true)
+            $websiteFooterTitle = \Illuminate\Support\Facades\Schema::hasTable('settings') ? \App\Models\Setting::value('footer_title', config('app.name')) : config('app.name');
+            $websiteFooterText = \Illuminate\Support\Facades\Schema::hasTable('settings') ? \App\Models\Setting::value('footer_text', '') : '';
+            $websiteFooterLinks = \Illuminate\Support\Facades\Schema::hasTable('settings')
+                ? json_decode((string) \App\Models\Setting::value('footer_links', '[]'), true)
                 : [];
         @endphp
         <footer class="container" style="padding-top:24px;padding-bottom:36px;border-top:1px solid var(--border);">
