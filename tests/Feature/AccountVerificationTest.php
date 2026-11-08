@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Models\Course;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -17,6 +19,7 @@ class AccountVerificationTest extends TestCase
     {
         Notification::fake();
 
+        $course = Course::factory()->create(['status' => 'published']);
         $this->post(route('register.store'), [
             'name' => 'New Student',
             'email' => 'new.student@example.com',
@@ -24,6 +27,25 @@ class AccountVerificationTest extends TestCase
             'password' => 'StrongPassword123!',
             'password_confirmation' => 'StrongPassword123!',
             'role' => 'admin',
+            'source_channel' => 'website',
+            'school_name' => 'Demo School',
+            'class_name' => 'Class 8',
+            'course_id' => $course->id,
+            'current_address' => 'Current address',
+            'current_post_office' => 'Current PO',
+            'current_district' => 'Dhaka',
+            'current_division' => 'Dhaka',
+            'current_country' => 'Bangladesh',
+            'permanent_address' => 'Permanent address',
+            'permanent_post_office' => 'Permanent PO',
+            'permanent_district' => 'Dhaka',
+            'permanent_division' => 'Dhaka',
+            'permanent_country' => 'Bangladesh',
+            'living_type' => 'non_residential',
+            'special_quota' => 'none',
+            'father' => ['name' => 'Father Name', 'mobile' => '+8801711111111'],
+            'profile_photo' => UploadedFile::fake()->image('student.jpg'),
+            'privacy_consent' => '1',
         ])->assertRedirect(route('login'));
 
         $student = User::where('email', 'new.student@example.com')->firstOrFail();
