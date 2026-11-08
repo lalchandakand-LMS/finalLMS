@@ -67,8 +67,8 @@ Route::get('/contact', [CmsPageController::class, 'contact'])->name('pages.conta
 Route::get('/faq', [CmsPageController::class, 'faq'])->name('pages.faq');
 Route::get('/news', [BlogController::class, 'index'])->name('news.index');
 Route::get('/news/{post:slug}', [BlogController::class, 'show'])->name('news.show');
-Route::post('/news/{post:slug}/comments', [CommentController::class, 'storePost'])->middleware(['auth', 'device.session', 'throttle:5,1'])->name('news.comments.store');
-Route::post('/courses/{course}/comments', [CommentController::class, 'storeCourse'])->middleware(['auth', 'device.session', 'throttle:5,1'])->name('courses.comments.store');
+Route::post('/news/{post:slug}/comments', [CommentController::class, 'storePost'])->middleware(['auth', 'throttle:5,1'])->name('news.comments.store');
+Route::post('/courses/{course}/comments', [CommentController::class, 'storeCourse'])->middleware(['auth', 'throttle:5,1'])->name('courses.comments.store');
 Route::post('/language', [LocaleController::class, 'update'])->middleware('throttle:20,1')->name('locale.update');
 Route::get('/payments/bkash/callback', [BkashPaymentController::class, 'callback'])->middleware('throttle:30,1')->name('payments.bkash.callback');
 
@@ -80,7 +80,7 @@ Route::get('/courses/{course}', [CourseController::class, 'show'])->name('course
 Route::get('/courses/{course}/lessons/{lesson}', [CourseController::class, 'showLesson'])->name('courses.lessons.show');
 Route::get('/courses/{course}/lessons/{lesson}/media/{type}', [LessonMediaController::class, 'show'])->middleware('throttle:120,1')->name('courses.lessons.media');
 
-Route::middleware(['auth', 'device.session'])->group(function () {
+Route::middleware('auth')->group(function () {
     Route::get('/email/verify', [EmailVerificationController::class, 'notice'])->name('verification.notice');
     Route::get('/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
         ->middleware(['signed', 'throttle:6,1'])
@@ -90,7 +90,7 @@ Route::middleware(['auth', 'device.session'])->group(function () {
         ->name('verification.send');
 });
 
-Route::middleware(['auth', 'verified', 'device.session', 'activity.log'])->group(function () {
+Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
     Route::get('/live-classes', [LiveClassController::class, 'index'])->name('live-classes.index');
     Route::get('/invoice-payments/{payment}/receipt', [InvoiceController::class, 'receipt'])
         ->middleware('role:admin,accountant')
