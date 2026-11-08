@@ -12,6 +12,7 @@
         $googleTagManagerId = $hasSettingsTable ? \App\Models\Setting::value('google_tag_manager_id') : null;
         $facebookPixelId = $hasSettingsTable ? \App\Models\Setting::value('facebook_pixel_id') : null;
         $marketingConsent = request()->cookie('marketing_consent') === 'accepted';
+        $isAdminLayout = auth()->check() && auth()->user()->isAdmin();
         $visitorPopup = null;
         if (\Illuminate\Support\Facades\Schema::hasTable('visitor_popups') && !(auth()->check() && auth()->user()->isAdmin())) {
             $visitorPopupQuery = \App\Models\VisitorPopup::currentlyActive()->with('image')
@@ -47,7 +48,6 @@
             fbq('track','PageView');
         </script>
     @endif
-    @php($isAdminLayout = auth()->check() && auth()->user()->isAdmin())
     <style>
         :root {
             --bg: #f3f6fb;
