@@ -67,7 +67,7 @@ class QuizContestController extends Controller
             ]);
         });
 
-        return redirect()->route('contests.show', $contest)->with('success', 'Your answers have been submitted. You are entered into the free prize draw.');
+        return redirect()->route('contests.show', $contest)->with('success', 'Your answers have been submitted. Your score has been recorded. Results will be ranked by score and submission time.');
     }
 
     public function adminIndex(): View
@@ -122,23 +122,23 @@ class QuizContestController extends Controller
         return redirect()->route('admin.contests.index')->with('success', 'Quiz contest published successfully.');
     }
 
-    public function draw(QuizContest $contest): RedirectResponse
+    public function publishResults(QuizContest $contest): RedirectResponse
     {
         $winnerCount = DB::transaction(function () use ($contest): int {
             $lockedContest = QuizContest::query()->lockForUpdate()->findOrFail($contest->id);
-            abort_if($lockedContest->drawn_at !== null, 409, 'The lottery has already been drawn.');
-            abort_unless($lockedContest->status === 'published' && now()->greaterThan($lockedContest->ends_at), 422, 'The contest must end before drawing winners.');
+            abort_if($lockedContest->drawn_at !== null, 409, 'The results have already been published.');
+            abort_unless($lockedContest->status === 'published' && now()->greaterThan($lockedContest->ends_at), 422, 'The contest must end before results can be published.');
 
-            $entries = $lockedContest->entries()->orderBy('id')->get();
+            $entries = $lockedContest->entries()
+                ->orderByDesc('score')
+                ->orderBy('submitted_at')
+                ->orderBy('id')
+                ->get();
             abort_if($entries->isEmpty(), 422, 'There are no participants to draw from.');
 
-            $pool = $entries->all();
-            for ($i = count($pool) - 1; $i > 0; $i--) {
-                $j = random_int(0, $i);
-                [$pool[$i], $pool[$j]] = [$pool[$j], $pool[$i]];
-            }
-
-            $selected = array_slice($pool, 0, min($lockedContest->winner_count, count($pool)));
+            // Transparent skill-based ranking: highest score, then earliest submission,
+            // then lowest entry ID as a deterministic final tie-break.
+            $selected = $entries->take(min($lockedContest->winner_count, $entries->count()));
             foreach ($selected as $index => $entry) {
                 QuizContestWinner::create([
                     'quiz_contest_id' => $lockedContest->id,
@@ -156,6 +156,6 @@ class QuizContestController extends Controller
             return count($selected);
         });
 
-        return redirect()->route('admin.contests.index')->with('success', $winnerCount.' winner(s) selected. The draw is locked and cannot be repeated.');
+        return redirect()->route('admin.contests.index')->with('success', $winnerCount.' top participant(s) published by score and submission time. Results are locked.');
     }
 }
