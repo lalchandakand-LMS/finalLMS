@@ -55,7 +55,7 @@ class StudentDeviceAccessController extends Controller
         $hasApprovedDevice = StudentDevice::query()
             ->where('user_id', $user->id)
             ->where('status', 'approved')
-            ->whereKeyNot($device->id)
+            ->where('id', '!=', $device->id)
             ->exists();
 
         $device->forceFill([
