@@ -61,6 +61,7 @@ class UserController extends Controller
         }
 
         $phoneChanged = array_key_exists('phone_number', $validated) && $user->phone_number !== $validated['phone_number'];
+        $roleChangedAwayFromStudent = $user->isStudent() && $validated['role'] !== 'student';
 
         $user->update([
             'role' => $validated['role'],
@@ -68,7 +69,7 @@ class UserController extends Controller
             'phone_number' => $validated['phone_number'] ?? null,
         ]);
 
-        if ($phoneChanged) {
+        if ($phoneChanged || $roleChangedAwayFromStudent) {
             $user->forceFill([
                 'phone_verified_at' => null,
                 'phone_verification_code' => null,
