@@ -11,6 +11,10 @@
     @include('components.dashboard-announcement-slider')
     <div class="page-header">
         <div>
+            @if($user->isStudent())
+                <a class="btn secondary" href="{{ route('student.admission.edit') }}">{{ __('Update full admission profile') }}</a>
+                <a class="btn secondary" href="{{ route('student.course-sessions.index') }}">{{ __('My course sessions') }}</a>
+            @endif
             <span class="badge info">Profile</span>
             <h1 style="margin: 12px 0 0;">{{ __('Edit profile') }}</h1>
         </div>
