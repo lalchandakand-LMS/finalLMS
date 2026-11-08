@@ -29,7 +29,7 @@ use App\Http\Controllers\BlogController;
 use App\Http\Controllers\WebsiteBuilderController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\InstallController;
-use App\Http\Controllers\QuizContestController;
+use App\Http\Controllers\QuizContestController;\nuse App\Http\Controllers\TeacherApplicationController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/install', [InstallController::class, 'index'])->name('install.index');
