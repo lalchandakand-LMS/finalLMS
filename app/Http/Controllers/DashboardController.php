@@ -10,6 +10,8 @@ use App\Models\LessonProgress;
 use App\Models\AssignmentSubmission;
 use App\Models\ExamAttempt;
 use App\Models\Attendance;
+use App\Models\Assignment;
+use App\Models\Batch;
 use App\Models\DashboardAnnouncement;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
