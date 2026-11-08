@@ -155,9 +155,6 @@
                 </div>
                 <div class="cta-row">
                     <a class="btn secondary" href="{{ route('teacher.batches.index') }}">{{ __('My batches') }}</a>
-                    @if($teacherInsights['total_batches'] > 0)
-                        <a class="btn secondary" href="{{ route('teacher.batches.assignments.index', ['batch' => $enrolledCourses->first()?->id]) }}">{{ __('Assignment workspace') }}</a>
-                    @endif
                 </div>
                 <p class="muted" style="margin:12px 0 0;">{{ __('Counts are limited to courses, batches and assignment submissions assigned to your teacher account.') }}</p>
             </section>
