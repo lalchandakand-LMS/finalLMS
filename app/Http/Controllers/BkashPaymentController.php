@@ -6,6 +6,7 @@ use App\Models\Batch;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\Payment;
+use App\Models\FlashSale;
 use App\Services\Payments\BkashCheckoutService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -43,11 +44,13 @@ class BkashPaymentController extends Controller
 
         $batchId = $validated['batch_id'] ?? null;
         $batchFee = $batchId ? (float) Batch::whereKey($batchId)->value('fee') : 0;
-        $amount = $batchFee > 0 ? $batchFee : (float) $course->price;
+        $baseAmount = $batchFee > 0 ? $batchFee : (float) $course->price;
+        $flashSale = FlashSale::activeForCourse($course->id, $user->id);
+        $amount = $flashSale ? $flashSale->discountedPrice($baseAmount) : $baseAmount;
 
         abort_if($amount <= 0, 422, 'Online checkout is not needed for a free course.');
 
-        $payment = DB::transaction(function () use ($amount, $batchId, $course, $user): Payment {
+        $payment = DB::transaction(function () use ($amount, $batchId, $course, $user, $flashSale): Payment {
             if ($batchId) {
                 $batch = Batch::query()->lockForUpdate()->findOrFail($batchId);
                 if ($batch->status !== 'open' || ! $this->hasAvailableSeat($batch)) {
@@ -58,6 +61,7 @@ class BkashPaymentController extends Controller
             return Payment::create([
                 'user_id' => $user->id,
                 'course_id' => $course->id,
+                'flash_sale_id' => $flashSale?->id,
                 'batch_id' => $batchId,
                 'method' => 'bkash',
                 'gateway_provider' => 'bkash',
