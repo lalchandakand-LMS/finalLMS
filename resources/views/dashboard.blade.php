@@ -40,6 +40,13 @@
             .aec-row:first-of-type { border-top:0; }
             .aec-row span { color:var(--muted); font-size:.88rem; }
             .aec-row strong { color:var(--primary-dark); font-size:.9rem; text-align:right; }
+            .aec-admin .aec-stat,.aec-admin .aec-link,.aec-admin .aec-panel { background:var(--panel); border-color:var(--border); color:var(--text); }
+            .aec-admin .aec-heading h2,.aec-admin .aec-panel h3,.aec-admin .aec-stat strong,.aec-admin .aec-row strong { color:var(--primary-dark); }
+            .aec-admin .aec-stat-top,.aec-admin .aec-stat small,.aec-admin .aec-row span,.aec-admin .aec-link span:last-child { color:var(--muted); }
+            .aec-admin .aec-stat-icon,.aec-admin .aec-link-icon { background:var(--panel-alt); }
+            .aec-admin .aec-link-featured { background:linear-gradient(145deg,var(--panel),var(--panel-alt)); border-color:var(--border); }
+            .aec-admin .aec-link:hover { border-color:var(--primary); }
+            .aec-admin .aec-hero-button-light { color:var(--primary-dark); }
             .aec-admin .btn { border-radius:10px; }
             @media(max-width:900px) { .aec-stats,.aec-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
             @media(max-width:600px) { .aec-hero { align-items:flex-start; padding:22px; }.aec-hero-actions { align-items:flex-start; }.aec-hero-mark { display:none; }.aec-hero-buttons { justify-content:flex-start; }.aec-stats,.aec-grid,.aec-bottom { grid-template-columns:1fr; } .aec-stat { padding:15px; } }
