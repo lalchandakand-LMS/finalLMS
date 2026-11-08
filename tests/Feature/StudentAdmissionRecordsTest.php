@@ -58,11 +58,11 @@ class StudentAdmissionRecordsTest extends TestCase
                 'mobile' => '+8801711111111',
                 'occupation' => 'Teacher',
                 'nid_number' => '1234567890',
+                'nid_front' => UploadedFile::fake()->image('father-front.jpg'),
+                'nid_back' => UploadedFile::fake()->image('father-back.jpg'),
             ],
             'privacy_consent' => '1',
             'profile_photo' => UploadedFile::fake()->image('student.jpg'),
-            'father_nid_front' => UploadedFile::fake()->image('father-front.jpg'),
-            'father_nid_back' => UploadedFile::fake()->image('father-back.jpg'),
         ];
     }
 
@@ -88,7 +88,7 @@ class StudentAdmissionRecordsTest extends TestCase
 
         $photo = StudentDocument::where('student_id',$student->id)->where('document_type','profile_photo')->firstOrFail();
         $encrypted = Storage::disk('local')->get($photo->encrypted_path);
-        $this->assertNotSame(file_get_contents($photo->encrypted_path), 'student.jpg');
+        $this->assertNotSame('student.jpg', $encrypted);
         $this->assertNotSame('1234567890', DB::table('student_guardians')->where('student_id',$student->id)->value('nid_number'));
         $this->assertNotEmpty(Crypt::decryptString($encrypted));
         $this->assertFalse(auth()->check(), 'Registration must not bypass the separate SMS device verification step.');
