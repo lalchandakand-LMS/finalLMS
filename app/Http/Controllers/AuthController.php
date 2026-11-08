@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\DeviceSession;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -55,6 +56,14 @@ class AuthController extends Controller
 
     public function logout(Request $request): RedirectResponse
     {
+        if (Auth::check()) {
+            DeviceSession::query()
+                ->where('user_id', Auth::id())
+                ->where('session_hash', hash('sha256', $request->session()->getId()))
+                ->whereNull('revoked_at')
+                ->update(['revoked_at' => now(), 'revoke_reason' => 'User logged out', 'updated_at' => now()]);
+        }
+
         Auth::logout();
 
         $request->session()->invalidate();
