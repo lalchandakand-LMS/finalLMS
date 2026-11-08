@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminSettingsController;
+use App\Http\Controllers\AiDeveloperController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BatchController;
 use App\Http\Controllers\AttendanceController;
@@ -157,6 +158,8 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         ->name('courses.lessons.complete');
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
+        Route::get('/ai-developer', [AiDeveloperController::class, 'index'])->name('admin.ai-developer.index');
+        Route::post('/ai-developer/analyze', [AiDeveloperController::class, 'analyze'])->middleware('throttle:5,1')->name('admin.ai-developer.analyze');
         Route::get('/contests', [QuizContestController::class, 'adminIndex'])->name('admin.contests.index');
         Route::post('/contests', [QuizContestController::class, 'store'])->middleware('throttle:10,1')->name('admin.contests.store');
         Route::post('/contests/{contest}/draw', [QuizContestController::class, 'draw'])->middleware('throttle:3,10')->name('admin.contests.draw');
