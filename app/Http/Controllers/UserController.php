@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Branch;
 use App\Models\StudentDevice;
+use App\Models\DeviceSession;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -61,7 +62,8 @@ class UserController extends Controller
         }
 
         $phoneChanged = array_key_exists('phone_number', $validated) && $user->phone_number !== $validated['phone_number'];
-        $roleChangedAwayFromStudent = $user->isStudent() && $validated['role'] !== 'student';
+        $roleChanged = $user->role !== $validated['role'];
+        $branchChanged = (int) $user->branch_id !== (int) ($validated['branch_id'] ?? 0);
 
         $user->update([
             'role' => $validated['role'],
@@ -77,7 +79,12 @@ class UserController extends Controller
             ])->save();
         }
 
-        if ($phoneChanged || $roleChangedAwayFromStudent) {
+        if ($phoneChanged || $roleChanged || $branchChanged) {
+            DeviceSession::query()->where('user_id', $user->id)->whereNull('revoked_at')->update([
+                'revoked_at' => now(),
+                'revoke_reason' => 'Account security details changed by administrator',
+                'updated_at' => now(),
+            ]);
             StudentDevice::query()
                 ->where('user_id', $user->id)
                 ->whereIn('status', ['approved', 'pending_admin_approval', 'pending_phone_verification'])
