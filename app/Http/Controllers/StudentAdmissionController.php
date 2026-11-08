@@ -378,62 +378,6 @@ class StudentAdmissionController extends Controller
         return redirect()->route('admin.admissions.index')->with('success', __('Personal admission data and private documents were deleted. Financial and academic records remain anonymized for audit integrity.'));
     }
 
-    public function studentSessions(Request $request): View
-    {
-        $courseIds = $request->user()->enrollments()->pluck('course_id');
-        $sessions = StudentCourseSession::with('course','batch')->whereIn('course_id',$courseIds)
-            ->whereIn('status',['scheduled','active'])->where('starts_at','>=',now()->subHours(4))
-            ->orderBy('starts_at')->paginate(20);
-        $attendance = StudentCourseAttendance::where('student_id',$request->user()->id)
-            ->whereIn('session_id',$sessions->pluck('id'))->get()->keyBy('session_id');
-        return view('student.course-sessions',compact('sessions','attendance'));
-    }
-
-    public function adminSessions(): View
-    {
-        $courses = Course::with('teacher')->orderBy('title')->get();
-        $sessions = StudentCourseSession::with(['course','batch','creator'])->latest('starts_at')->paginate(30);
-        return view('admin.admissions.sessions',compact('courses','sessions'));
-    }
-
-    public function storeSession(Request $request): RedirectResponse
-    {
-        $data=$request->validate([
-            'course_id'=>['required','exists:courses,id'],'batch_id'=>['nullable','exists:batches,id'],
-            'title'=>['required','string','max:180'],'starts_at'=>['required','date','after_or_equal:now'],
-            'ends_at'=>['required','date','after:starts_at'],
-        ]);
-        $course=Course::findOrFail($data['course_id']);
-        abort_unless($request->user()->isAdmin() || $course->teacher_id===$request->user()->id,403);
-        if(!empty($data['batch_id'])) {
-            $batch=\App\Models\Batch::findOrFail($data['batch_id']);
-            abort_unless($batch->course_id===$course->id,422);
-        }
-        StudentCourseSession::create([...$data,'created_by'=>$request->user()->id,'status'=>'scheduled']);
-        return back()->with('success',__('Course session scheduled. Students can check in during the session window.'));
-    }
-
-    public function studentCheckIn(Request $request, StudentCourseSession $session): RedirectResponse
-    {
-        abort_unless($request->user()->isStudent(),403);
-        abort_unless($request->user()->enrollments()->where('course_id',$session->course_id)->exists(),403);
-        abort_unless(in_array($session->status,['scheduled','active'],true),422);
-        abort_if(now()->lt($session->starts_at) || ($session->ends_at && now()->gt($session->ends_at)),422,__('Check-in is outside the scheduled course time.'));
-        $attendance=StudentCourseAttendance::firstOrCreate(
-            ['session_id'=>$session->id,'student_id'=>$request->user()->id],
-            ['checked_in_at'=>now(),'check_in_method'=>'student']
-        );
-        return back()->with($attendance->wasRecentlyCreated?'success':'info',$attendance->wasRecentlyCreated?__('Check-in recorded at :time',['time'=>$attendance->checked_in_at->format('h:i A')]):__('You have already checked in.'));
-    }
-
-    public function studentCheckOut(Request $request, StudentCourseAttendance $attendance): RedirectResponse
-    {
-        abort_unless($request->user()->isStudent() && $attendance->student_id===$request->user()->id,403);
-        abort_if(!$attendance->checked_in_at || $attendance->checked_out_at,422);
-        $attendance->update(['checked_out_at'=>now()]);
-        return back()->with('success',__('Check-out recorded at :time',['time'=>$attendance->checked_out_at->format('h:i A')]));
-    }
-
     private function storeEncryptedDocument(User $student, ?StudentGuardian $guardian, string $type, $file): StudentDocument
     {
         $document = StudentDocument::create([
