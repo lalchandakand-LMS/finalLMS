@@ -84,6 +84,15 @@ class BackupController extends Controller
             }
         }
 
+        if (in_array('users', $tableNames, true)) {
+            foreach ($tables['users'] as $user) {
+                $profilePath = $user['profile_photo_path'] ?? null;
+                if (is_string($profilePath) && str_starts_with($profilePath, 'profile-photos/') && Storage::disk('public')->exists($profilePath)) {
+                    $mediaFiles[$profilePath] = base64_encode(Storage::disk('public')->get($profilePath));
+                }
+            }
+        }
+
         $privateFiles = [];
         foreach (Storage::disk('local')->allFiles('assignment-submissions') as $privatePath) {
             $privateFiles[$privatePath] = base64_encode(Storage::disk('local')->get($privatePath));
