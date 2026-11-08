@@ -3,6 +3,9 @@
 @section('title', $course->title . ' | ' . config('app.name'))
 
 @section('content')
+    @php($activeFlashSale = \\App\\Models\\FlashSale::activeForCourse($course->id, auth()->id()))
+    @php($courseBasePrice = (float) $course->price)
+    @php($courseOfferPrice = $activeFlashSale ? $activeFlashSale->discountedPrice($courseBasePrice) : $courseBasePrice)
     <div class="page-header">
         <div>
             <span class="badge info">{{ __('Course') }}</span>
@@ -20,7 +23,8 @@
                 <a class="btn secondary" href="{{ route('teacher.courses.lessons.index', $course) }}">{{ __('Manage lessons') }}</a>
             @endif
             <div class="meta-row">
-                <span class="badge success">{{ __('Price:') }} BDT {{ number_format($course->price, 2) }}</span>
+                <span class="badge success">{{ __('Price:') }} BDT {{ number_format($courseOfferPrice, 2) }}</span>
+                @if($activeFlashSale)<span class="badge warning">🔥 {{ $activeFlashSale->badge }} · {{ __('Save') }} ৳{{ number_format($courseBasePrice-$courseOfferPrice,2) }}</span><del class="muted">৳{{ number_format($courseBasePrice,2) }}</del>@endif
                 <span class="badge warning">{{ __('Status:') }} {{ __(ucfirst($course->status)) }}</span>
             </div>
 
