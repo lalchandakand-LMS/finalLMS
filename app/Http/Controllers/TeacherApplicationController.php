@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\TeacherApplication;\nuse Illuminate\Auth\Events\Registered;
+use App\Models\TeacherApplication;
+use Illuminate\Auth\Events\Registered;
 use App\Models\User;
 use App\Services\SmsGateway;
 use Illuminate\Http\RedirectResponse;
@@ -107,7 +108,8 @@ class TeacherApplicationController extends Controller
             'phone_number' => $application->phone_number, 'password' => $application->password,
             'role' => 'teacher',
         ]);
-        $application->update(['status' => 'approved','reviewed_by' => $request->user()->id,'reviewed_at' => now(),'user_id' => $user->id]);\n        event(new Registered($user));
+        $application->update(['status' => 'approved','reviewed_by' => $request->user()->id,'reviewed_at' => now(),'user_id' => $user->id]);
+        event(new Registered($user));
         return back()->with('success', 'Teacher approved. A teacher account has been created; email verification is required before dashboard access.');
     }
 
