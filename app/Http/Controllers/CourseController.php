@@ -195,7 +195,9 @@ class CourseController extends Controller
                 }
             }
         }
-        $privateVideoUrl = $lesson->video_path ? route('courses.lessons.media', [$course, $lesson, 'video']) : null;\n        $privateAttachmentUrl = $lesson->attachment_path ? route('courses.lessons.media', [$course, $lesson, 'attachment']) : null;\n        $isCompleted = $user && $user->isStudent()
+        $privateVideoUrl = $lesson->video_path ? route('courses.lessons.media', [$course, $lesson, 'video']) : null;
+        $privateAttachmentUrl = $lesson->attachment_path ? route('courses.lessons.media', [$course, $lesson, 'attachment']) : null;
+        $isCompleted = $user && $user->isStudent()
             ? LessonProgress::where('user_id', $user->id)->where('lesson_id', $lesson->id)->exists()
             : false;
 
@@ -325,7 +327,9 @@ class CourseController extends Controller
         $user = Auth::user();
         abort_unless($user?->isAdmin() || ($user?->isTeacher() && $course->teacher_id === $user->id), 403);
         abort_unless($lesson->course_id === $course->id, 404);
-        if ($lesson->attachment_path) Storage::disk('local')->delete($lesson->attachment_path);\n        if ($lesson->video_path) Storage::disk('local')->delete($lesson->video_path);\n        $lesson->delete();
+        if ($lesson->attachment_path) Storage::disk('local')->delete($lesson->attachment_path);
+        if ($lesson->video_path) Storage::disk('local')->delete($lesson->video_path);
+        $lesson->delete();
         return back()->with('success', 'Lesson deleted successfully.');
     }
 
