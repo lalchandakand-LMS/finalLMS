@@ -114,6 +114,19 @@ class UserController extends Controller
         return redirect()->route('admin.users.index')->with('success', 'Account profile updated successfully.');
     }
 
+    public function trash(): View
+    {
+        $users = User::onlyTrashed()->with('branch')->latest('deleted_at')->paginate(25);
+        return view('admin.users.trash', compact('users'));
+    }
+
+    public function restore(int $userId): RedirectResponse
+    {
+        $user = User::withTrashed()->findOrFail($userId);
+        $user->restore();
+        return redirect()->route('admin.users.trash')->with('success', 'Account restored successfully.');
+    }
+
     public function destroy(User $user): RedirectResponse
     {
         if ($user->id === Auth::id()) {
