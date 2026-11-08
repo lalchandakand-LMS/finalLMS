@@ -187,6 +187,7 @@
             <div class="admin-sidebar-label">Academy</div>
             <a href="{{ route('admin.courses.index') }}"><span>📚</span><span class="nav-text">Courses & lessons</span></a>
             <a href="{{ route('admin.users.index') }}"><span>👥</span><span class="nav-text">Students & teachers</span></a>
+            <a class="{{ request()->routeIs('admin.admissions.*') ? 'active' : '' }}" href="{{ route('admin.admissions.index') }}"><span>📝</span><span class="nav-text">Student admissions</span></a>
             <a href="{{ route('admin.admissions.index') }}"><span>📝</span><span class="nav-text">Student admissions</span></a>
             <a href="{{ route('admin.course-tracking.index') }}"><span>⏱️</span><span class="nav-text">Course time tracking</span></a>
             <a class="{{ request()->routeIs('admin.teacher-applications.*') ? 'active' : '' }}" href="{{ route('admin.teacher-applications.index') }}"><span>🪪</span><span class="nav-text">Teacher KYC review</span></a>
