@@ -158,7 +158,7 @@ class WebsiteBuilderTest extends TestCase
             ->assertSee('Academy Modern')
             ->assertSee('Community Campus');
 
-        $this->assertCount(15, \\App\\Http\\Controllers\\WebsiteBuilderController::homepageTemplates());
+        $this->assertCount(15, \App\Http\Controllers\WebsiteBuilderController::homepageTemplates());
     }
 
 }
