@@ -145,7 +145,7 @@ class StudentAdmissionRecordsTest extends TestCase
             'guardian_name'=>'Updated Guardian','guardian_relationship'=>'Uncle','guardian_mobile'=>'+8801712345670',
             'guardian_email'=>'guardian@example.com','guardian_occupation'=>'Business',
         ];
-        $this->actingAs($student)->post(route('student.admission.update'),$data)->assertRedirect();
+        $this->actingAs($student)->put(route('student.admission.update'),$data)->assertRedirect();
         $this->assertSame('New School',$profile->fresh()->school_name);
         $this->assertDatabaseHas('student_guardians',['student_id'=>$student->id,'name'=>'Updated Guardian']);
         $this->actingAs($student)->post(route('student.admission.delete-request'),['confirm'=>'1'])->assertRedirect();
