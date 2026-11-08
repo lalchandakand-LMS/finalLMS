@@ -16,9 +16,9 @@
         $googleTagManagerId = $hasSettingsTable ? \App\Models\Setting::value('google_tag_manager_id') : null;
         $facebookPixelId = $hasSettingsTable ? \App\Models\Setting::value('facebook_pixel_id') : null;
         $marketingConsent = request()->cookie('marketing_consent') === 'accepted';
-        $footerTitle = $hasSettingsTable ? (\\App\\Models\\Setting::value('footer_title') ?: $siteName) : $siteName;
-        $footerText = $hasSettingsTable ? \\App\\Models\\Setting::value('footer_text', '') : '';
-        $footerLinksRaw = $hasSettingsTable ? json_decode((string) \\App\\Models\\Setting::value('footer_links', '[]'), true) : [];
+        $footerTitle = $hasSettingsTable ? (\App\Models\Setting::value('footer_title') ?: $siteName) : $siteName;
+        $footerText = $hasSettingsTable ? \App\Models\Setting::value('footer_text', '') : '';
+        $footerLinksRaw = $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('footer_links', '[]'), true) : [];
         $footerLinks = is_array($footerLinksRaw) ? $footerLinksRaw : [];
     @endphp
     @if($siteFavicon)<link rel="icon" href="{{ $siteFavicon->url }}">@endif
