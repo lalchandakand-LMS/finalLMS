@@ -33,7 +33,76 @@
             $asset = \App\Models\MediaAsset::query()->whereKey($slide['image_id'])->where('mime_type', 'like', 'image/%')->first();
             return $asset ? ['asset' => $asset, 'title' => $slide['title'] ?? '', 'subtitle' => $slide['subtitle'] ?? '', 'button_label' => $slide['button_label'] ?? '', 'button_url' => $slide['button_url'] ?? ''] : null;
         })->filter()->values();
+        $homepageTemplate = (string) ($hasSettingsTable ? \\App\\Models\\Setting::value('homepage_template', 'academy-modern') : 'academy-modern');
+        $homepageTemplate = array_key_exists($homepageTemplate, \\App\\Http\\Controllers\\WebsiteBuilderController::homepageTemplates()) ? $homepageTemplate : 'academy-modern';
     @endphp
+
+    <div class="homepage-template homepage-template--{{ $homepageTemplate }}">
+    <style>
+        .homepage-template { --template-accent: var(--primary); --template-surface: #fff; --template-radius: 20px; }
+        .homepage-template .hero { gap: clamp(20px,4vw,48px); }
+        .homepage-template .hero > div:first-child { padding: clamp(8px,2vw,22px); }
+        .homepage-template .hero h1 { letter-spacing: -.035em; }
+        .homepage-template .panel, .homepage-template .card { border-radius: var(--template-radius); }
+        .homepage-template .panel { border-color: color-mix(in srgb, var(--template-accent) 16%, #dbe2ee); }
+        .homepage-template .btn.primary { background: var(--template-accent); }
+        .homepage-template .badge.info { background: color-mix(in srgb, var(--template-accent) 12%, white); color: var(--template-accent); }
+        .homepage-template .stat { border-radius: calc(var(--template-radius) * .7); }
+        .homepage-template--academy-modern { --template-accent:#2457c5; --template-radius:20px; }
+        .homepage-template--academy-modern .hero { background:linear-gradient(135deg,#eff6ff,#fff 60%); border-radius:26px; padding:clamp(18px,3vw,32px); }
+        .homepage-template--bold-academy { --template-accent:#172554; --template-radius:10px; }
+        .homepage-template--bold-academy .hero { background:#172554; color:#fff; border-radius:10px; padding:clamp(24px,4vw,48px); }
+        .homepage-template--bold-academy .hero h1,.homepage-template--bold-academy .hero p { color:#fff; }
+        .homepage-template--minimal-learning { --template-accent:#0f766e; --template-radius:8px; }
+        .homepage-template--minimal-learning .hero { background:#f8fafc; padding:clamp(16px,3vw,30px); border-left:5px solid var(--template-accent); }
+        .homepage-template--minimal-learning .card,.homepage-template--minimal-learning .panel { box-shadow:none; }
+        .homepage-template--editorial { --template-accent:#92400e; --template-radius:4px; }
+        .homepage-template--editorial .hero { grid-template-columns:1.3fr .7fr; border-top:5px solid var(--template-accent); padding:28px 0; }
+        .homepage-template--editorial .hero h1 { font-family:Georgia,serif; font-weight:600; }
+        .homepage-template--gradient-studio { --template-accent:#7c3aed; --template-radius:26px; }
+        .homepage-template--gradient-studio .hero { background:linear-gradient(125deg,#ede9fe,#dbeafe 55%,#fce7f3); padding:clamp(20px,4vw,40px); border-radius:30px; }
+        .homepage-template--gradient-studio .card { background:linear-gradient(145deg,#fff,#f5f3ff); }
+        .homepage-template--corporate-training { --template-accent:#075985; --template-radius:6px; }
+        .homepage-template--corporate-training .hero { background:#eaf2f8; padding:28px; border-bottom:5px solid var(--template-accent); }
+        .homepage-template--corporate-training .card { border-top:3px solid var(--template-accent); }
+        .homepage-template--playful-classroom { --template-accent:#db2777; --template-radius:28px; }
+        .homepage-template--playful-classroom .hero { background:#fff1f2; border-radius:36px 12px 36px 12px; padding:28px; }
+        .homepage-template--playful-classroom .card { border:2px solid #fbcfe8; }
+        .homepage-template--midnight-campus { --template-accent:#38bdf8; --template-radius:16px; color:#e2e8f0; background:#0f172a; padding:22px; border-radius:24px; }
+        .homepage-template--midnight-campus .hero { background:#1e293b; color:#f8fafc; padding:28px; border-radius:18px; }
+        .homepage-template--midnight-campus .hero h1,.homepage-template--midnight-campus .hero p,.homepage-template--midnight-campus h2,.homepage-template--midnight-campus h3 { color:#f8fafc; }
+        .homepage-template--midnight-campus .panel,.homepage-template--midnight-campus .card,.homepage-template--midnight-campus .stat { background:#1e293b; color:#e2e8f0; border-color:#334155; }
+        .homepage-template--midnight-campus .muted { color:#cbd5e1; }
+        .homepage-template--split-screen { --template-accent:#4338ca; --template-radius:14px; }
+        .homepage-template--split-screen .hero { grid-template-columns:1fr 1fr; gap:0; background:#eef2ff; border-radius:16px; overflow:hidden; }
+        .homepage-template--split-screen .hero > div:first-child { padding:clamp(24px,4vw,46px); }
+        .homepage-template--split-screen .hero > .panel { margin:0; border:0; border-radius:0; }
+        .homepage-template--classic-institute { --template-accent:#166534; --template-radius:2px; }
+        .homepage-template--classic-institute .hero { border-top:4px double var(--template-accent); border-bottom:4px double var(--template-accent); padding:28px 8px; }
+        .homepage-template--classic-institute .hero h1 { font-family:Georgia,serif; }
+        .homepage-template--glass-campus { --template-accent:#0e7490; --template-radius:22px; }
+        .homepage-template--glass-campus .hero { background:linear-gradient(135deg,#cffafeaa,#e0f2feaa); padding:28px; border:1px solid #bae6fd; }
+        .homepage-template--glass-campus .panel,.homepage-template--glass-campus .card { background:#ffffffd9; backdrop-filter:blur(12px); border:1px solid #cbd5e1; }
+        .homepage-template--vibrant-skills { --template-accent:#ea580c; --template-radius:18px; }
+        .homepage-template--vibrant-skills .hero { background:linear-gradient(120deg,#ffedd5,#fef3c7); padding:28px; }
+        .homepage-template--vibrant-skills .stat { background:#fff7ed; border:1px solid #fed7aa; }
+        .homepage-template--focus-learning { --template-accent:#4338ca; --template-radius:12px; }
+        .homepage-template--focus-learning .hero { grid-template-columns:1fr; max-width:900px; margin-inline:auto; text-align:center; }
+        .homepage-template--focus-learning .hero .cta-row { justify-content:center; }
+        .homepage-template--focus-learning .hero .stats { max-width:650px; margin:24px auto 0; }
+        .homepage-template--elegant-academy { --template-accent:#9f1239; --template-radius:12px; }
+        .homepage-template--elegant-academy .hero { background:#fff1f2; padding:30px; border:1px solid #fecdd3; }
+        .homepage-template--elegant-academy .hero h1 { font-family:Georgia,serif; font-weight:500; }
+        .homepage-template--community-campus { --template-accent:#0f766e; --template-radius:24px; }
+        .homepage-template--community-campus .hero { background:linear-gradient(135deg,#ccfbf1,#f0fdfa); padding:30px; border-radius:32px 32px 12px 32px; }
+        .homepage-template--community-campus .card { border-bottom:4px solid #99f6e4; }
+        @media(max-width:700px) {
+            .homepage-template--editorial .hero,.homepage-template--split-screen .hero { grid-template-columns:1fr; }
+            .homepage-template--midnight-campus { padding:10px; }
+            .homepage-template--focus-learning .hero { text-align:left; }
+            .homepage-template--focus-learning .hero .cta-row { justify-content:flex-start; }
+        }
+    </style>
 
     @if($homeSlides->isNotEmpty())
         <section aria-label="{{ __('Homepage highlights') }}" style="margin-bottom:28px;">
@@ -187,5 +256,6 @@
             </section>
         @endif
     @endforeach
+    </div>
 
 @endsection
