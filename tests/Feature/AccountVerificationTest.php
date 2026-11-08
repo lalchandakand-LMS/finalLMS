@@ -43,7 +43,7 @@ class AccountVerificationTest extends TestCase
             'permanent_country' => 'Bangladesh',
             'living_type' => 'non_residential',
             'special_quota' => 'none',
-            'father' => ['name' => 'Father Name', 'mobile' => '+8801711111111'],
+            'father' => ['name' => 'Father Name', 'mobile' => '+8801711111111', 'nid_front' => UploadedFile::fake()->image('parent-front.jpg'), 'nid_back' => UploadedFile::fake()->image('parent-back.jpg')],
             'profile_photo' => UploadedFile::fake()->image('student.jpg'),
             'privacy_consent' => '1',
         ])->assertRedirect(route('login'));
