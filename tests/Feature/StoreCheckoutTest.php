@@ -90,4 +90,41 @@ class StoreCheckoutTest extends TestCase
         $this->actingAs($student)->get(route('store.download',$permission))->assertOk();
         $this->assertDatabaseHas('download_permissions',['id'=>$permission->id,'downloads_remaining'=>2,'download_count'=>1]);
     }
+
+    public function test_coupon_restrictions_discount_only_matching_product_categories(): void
+    {
+        $student = User::factory()->create(['role'=>'student']);
+        $admin = User::factory()->create(['role'=>'admin']);
+        $category = \App\Models\ProductCategory::create(['name'=>'Exam eBooks','slug'=>'exam-ebooks']);
+        $eligible = Product::create([
+            'type'=>'ebook','name'=>'IELTS Guide','slug'=>'ielts-guide','regular_price'=>1000,
+            'currency'=>'BDT','status'=>'published','published_at'=>now(),'is_downloadable'=>true,
+            'download_path'=>'private/products/ielts.pdf','created_by'=>$admin->id,
+        ]);
+        $excluded = Product::create([
+            'type'=>'ebook','name'=>'Grammar Guide','slug'=>'grammar-guide-other','regular_price'=>500,
+            'currency'=>'BDT','status'=>'published','published_at'=>now(),'is_downloadable'=>true,
+            'download_path'=>'private/products/grammar-other.pdf','created_by'=>$admin->id,
+        ]);
+        $eligible->categories()->attach($category);
+        $coupon = Coupon::create([
+            'code'=>'IELTS10','discount_type'=>'percentage','discount_value'=>10,
+            'minimum_order'=>0,'per_user_limit'=>1,'is_active'=>true,
+        ]);
+        $coupon->categories()->attach($category);
+        Setting::setValue('payment_methods', json_encode([
+            'manual'=>['enabled'=>true,'label'=>'Manual'],
+        ]));
+
+        $this->actingAs($student)->post(route('store.cart.add',$eligible))->assertRedirect();
+        $this->actingAs($student)->post(route('store.cart.add',$excluded))->assertRedirect();
+        $this->actingAs($student)->post(route('store.checkout'), [
+            'payment_method'=>'manual','payment_reference'=>'CATEGORY-COUPON-001','coupon_code'=>'IELTS10',
+        ])->assertRedirect(route('store.orders'));
+
+        $order = Order::where('payment_reference','CATEGORY-COUPON-001')->firstOrFail();
+        $this->assertSame('100.00',$order->discount_total);
+        $this->assertSame('1400.00',$order->total);
+    }
+
 }
