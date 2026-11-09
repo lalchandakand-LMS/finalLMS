@@ -35,7 +35,9 @@ class _StudentGateState extends State<StudentGate> {
   }
   @override
   Widget build(BuildContext context) {
-    if (loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     return signedIn
       ? StudentHome(api: api, onLogout: () => setState(() => signedIn = false))
       : StudentLogin(api: api, onLogin: () => setState(() => signedIn = true));
@@ -62,7 +64,7 @@ class _StudentLoginState extends State<StudentLogin> {
       await widget.api.login(email.text.trim(), password.text, 'Aloms Student App');
       widget.onLogin();
     } catch (e) { setState(() => error = e.toString()); }
-    finally { if (mounted) setState(() => busy = false); }
+    finally { if (mounted) { setState(() => busy = false); } }
   }
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -111,7 +113,7 @@ class _StudentHomeState extends State<StudentHome> {
         myCourses = results[1]['data'] as List<dynamic>? ?? [];
       });
     } catch (e) { setState(() => error = e.toString()); }
-    finally { if (mounted) setState(() => loading = false); }
+    finally { if (mounted) { setState(() => loading = false); } }
   }
   Future<void> logout() async { await widget.api.logout(); widget.onLogout(); }
   @override
@@ -193,9 +195,9 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
         enrolled = response['is_enrolled'] == true;
       });
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) { setState(() => loading = false); }
     }
   }
 
@@ -284,11 +286,11 @@ class _LessonPlayerPageState extends State<LessonPlayerPage> {
       final response = await widget.api.get(
         '/courses/${widget.slug}/lessons/${widget.lessonId}',
       );
-      if (mounted) setState(() => lesson = response['lesson'] as Map<String, dynamic>);
+      if (mounted) { setState(() => lesson = response['lesson'] as Map<String, dynamic>); }
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) { setState(() => loading = false); }
     }
   }
 
@@ -298,11 +300,11 @@ class _LessonPlayerPageState extends State<LessonPlayerPage> {
       await widget.api.post(
         '/courses/${widget.slug}/lessons/${widget.lessonId}/complete',
       );
-      if (mounted) setState(() => lesson?['is_completed'] = true);
+      if (mounted) { setState(() => lesson?['is_completed'] = true); }
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => saving = false);
+      if (mounted) { setState(() => saving = false); }
     }
   }
 
