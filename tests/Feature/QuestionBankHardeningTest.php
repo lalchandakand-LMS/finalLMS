@@ -230,6 +230,7 @@ class QuestionBankHardeningTest extends TestCase
         $this->assertSame((int) $teacher->id, (int) $exam->teacher_id);
         $this->assertDatabaseHas('exam_questions', [
             'exam_id' => $exam->id,
+            'question_bank_question_id' => $ownedQuestion->id,
             'question' => 'Select the correct past tense form?',
             'marks' => 3,
         ]);
@@ -245,7 +246,11 @@ class QuestionBankHardeningTest extends TestCase
 
         $this->assertDatabaseMissing('question_bank_questions', ['id' => $ownedQuestion->id]);
         // The exam stores an immutable snapshot and remains valid after the source bank item is removed.
-        $this->assertDatabaseHas('exam_questions', ['exam_id' => $exam->id, 'question' => 'Select the correct past tense form?']);
+        $this->assertDatabaseHas('exam_questions', [
+            'exam_id' => $exam->id,
+            'question_bank_question_id' => null,
+            'question' => 'Select the correct past tense form?',
+        ]);
     }
 
     public function test_admin_cannot_access_or_use_question_bank_items_owned_by_another_batches_teacher(): void
