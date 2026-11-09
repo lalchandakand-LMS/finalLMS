@@ -17,18 +17,18 @@
         $websiteFooterTitle = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('footer_title', config('app.name')) : config('app.name');
         $websiteFooterText = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('footer_text', '') : '';
         $websiteFooterLinks = $isPublicLayout && $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('footer_links', '[]'), true) : [];
-        $themePrimary = $isPublicLayout && $hasSettingsTable ? \\App\\Models\\Setting::value('site_primary_color', '#1546a8') : '#1546a8';
-        $themeBackground = $isPublicLayout && $hasSettingsTable ? \\App\\Models\\Setting::value('site_background_color', '#f3f6fb') : '#f3f6fb';
+        $themePrimary = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('site_primary_color', '#1546a8') : '#1546a8';
+        $themeBackground = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('site_background_color', '#f3f6fb') : '#f3f6fb';
         if (!preg_match('/^#[0-9A-Fa-f]{6}$/', (string) $themePrimary)) $themePrimary = '#1546a8';
         if (!preg_match('/^#[0-9A-Fa-f]{6}$/', (string) $themeBackground)) $themeBackground = '#f3f6fb';
-        $themeBackgroundStyle = $isPublicLayout && $hasSettingsTable ? \\App\\Models\\Setting::value('site_background_style', 'soft-gradient') : 'soft-gradient';
+        $themeBackgroundStyle = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('site_background_style', 'soft-gradient') : 'soft-gradient';
         $themeBackgrounds = ['solid' => $themeBackground, 'soft-gradient' => 'radial-gradient(circle at top left, rgba(21,70,168,0.10), transparent 30%), linear-gradient(180deg, ' . $themeBackground . ' 0%, #ffffff 100%)', 'warm-gradient' => 'radial-gradient(circle at top left, rgba(180,130,70,0.10), transparent 30%), linear-gradient(180deg, ' . $themeBackground . ' 0%, #fffdf9 100%)'];
         $themePageBackground = $themeBackgrounds[$themeBackgroundStyle] ?? $themeBackgrounds['soft-gradient'];
-        $themeFont = $isPublicLayout && $hasSettingsTable ? \\App\\Models\\Setting::value('site_font_family', 'system') : 'system';
+        $themeFont = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('site_font_family', 'system') : 'system';
         $themeFonts = ['system' => 'Arial, Helvetica, sans-serif', 'inter' => 'Inter, Arial, sans-serif', 'nunito' => 'Nunito, Arial, sans-serif', 'poppins' => 'Poppins, Arial, sans-serif', 'georgia' => 'Georgia, serif'];
         $themeFontFamily = $themeFonts[$themeFont] ?? $themeFonts['system'];
-        $themeHeadingScale = $isPublicLayout && $hasSettingsTable ? \\App\\Models\\Setting::value('site_heading_scale', '1') : '1';
-        $themeBodyScale = $isPublicLayout && $hasSettingsTable ? \\App\\Models\\Setting::value('site_body_scale', '1') : '1';
+        $themeHeadingScale = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('site_heading_scale', '1') : '1';
+        $themeBodyScale = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('site_body_scale', '1') : '1';
         if (!in_array($themeHeadingScale, ['0.9', '1', '1.1', '1.2'], true)) $themeHeadingScale = '1';
         if (!in_array($themeBodyScale, ['0.9', '1', '1.05', '1.1'], true)) $themeBodyScale = '1';
     @endphp
