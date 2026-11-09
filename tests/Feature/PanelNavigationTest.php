@@ -16,7 +16,7 @@ class PanelNavigationTest extends TestCase
             ['student', 'My learning', 'My courses'],
             ['teacher', 'Teaching tools', 'Assigned courses'],
             ['branch_manager', 'Branch management', 'Branch batches'],
-            ['accountant', 'Finance workspace', 'Invoices &amp; fees'],
+            ['accountant', 'Finance workspace', 'Invoices & fees'],
         ];
 
         foreach ($cases as [$role, $section, $link]) {
@@ -56,7 +56,7 @@ class PanelNavigationTest extends TestCase
             ->assertOk()
             ->assertSee('Admin workspace')
             ->assertSee('Academy management')
-            ->assertSee('Finance &amp; payments')
+            ->assertSee('Finance & payments')
             ->assertSee('Website & system')
             ->assertSee('Settings');
 
