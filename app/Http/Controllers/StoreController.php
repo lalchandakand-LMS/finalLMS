@@ -79,7 +79,7 @@ class StoreController extends Controller
             $lineFlashSales = [];
             foreach ($cart->items as $item) {
                 $product = $item->product;
-                abort_unless($product && $product->status === 'published' && $product->published_at && $product->published_at->lte(now()), 422, 'A product is no longer available.');
+                abort_unless($product && !$product->trashed() && $product->status === 'published' && $product->published_at && $product->published_at->lte(now()), 422, 'A product is no longer available.');
                 $regularPrice = (float) $product->regular_price;
                 $basePrice = $product->sale_price !== null && (float) $product->sale_price < $regularPrice ? (float) $product->sale_price : $regularPrice;
                 $flashSale = FlashSale::activeForProduct($product, $request->user()->id);
