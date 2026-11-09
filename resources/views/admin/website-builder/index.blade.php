@@ -29,6 +29,35 @@
     </div>
 </section>
 <section class="panel" style="margin-bottom:20px;">
+    <h2>Global design system</h2>
+    <p class="muted">Control the public website background, typography and heading scale without editing code. These settings do not change the admin workspace.</p>
+    <div class="grid grid-2">
+        <div><label for="site-background-color">Page background color</label><input id="site-background-color" name="site_background_color" type="color" value="{{ old('site_background_color', $settings['site_background_color'] ?? '#f3f6fb') }}"></div>
+        <div><label for="site-background-style">Background treatment</label><select id="site-background-style" name="site_background_style">
+            <option value="solid" @selected(old('site_background_style', $settings['site_background_style'] ?? 'soft-gradient') === 'solid')>Solid color</option>
+            <option value="soft-gradient" @selected(old('site_background_style', $settings['site_background_style'] ?? 'soft-gradient') === 'soft-gradient')>Soft blue gradient</option>
+            <option value="warm-gradient" @selected(old('site_background_style', $settings['site_background_style'] ?? 'soft-gradient') === 'warm-gradient')>Warm neutral gradient</option>
+        </select></div>
+        <div><label for="site-font-family">Website font family</label><select id="site-font-family" name="site_font_family">
+            <option value="system" @selected(old('site_font_family', $settings['site_font_family'] ?? 'system') === 'system')>System Sans</option>
+            <option value="inter" @selected(old('site_font_family', $settings['site_font_family'] ?? 'system') === 'inter')>Inter-style Sans</option>
+            <option value="nunito" @selected(old('site_font_family', $settings['site_font_family'] ?? 'system') === 'nunito')>Nunito-style Rounded</option>
+            <option value="poppins" @selected(old('site_font_family', $settings['site_font_family'] ?? 'system') === 'poppins')>Poppins-style Geometric</option>
+            <option value="georgia" @selected(old('site_font_family', $settings['site_font_family'] ?? 'system') === 'georgia')>Georgia Serif</option>
+        </select></div>
+        <div><label for="site-heading-scale">Heading size scale</label><select id="site-heading-scale" name="site_heading_scale">
+            @foreach(['0.9' => 'Compact (90%)', '1' => 'Default (100%)', '1.1' => 'Large (110%)', '1.2' => 'Extra large (120%)'] as $value => $label)
+                <option value="{{ $value }}" @selected(old('site_heading_scale', $settings['site_heading_scale'] ?? '1') === $value)>{{ $label }}</option>
+            @endforeach
+        </select></div>
+        <div><label for="site-body-scale">Body text size</label><select id="site-body-scale" name="site_body_scale">
+            @foreach(['0.9' => 'Compact (90%)', '1' => 'Default (100%)', '1.05' => 'Comfortable (105%)', '1.1' => 'Large (110%)'] as $value => $label)
+                <option value="{{ $value }}" @selected(old('site_body_scale', $settings['site_body_scale'] ?? '1') === $value)>{{ $label }}</option>
+            @endforeach
+        </select></div>
+    </div>
+</section>
+<section class="panel" style="margin-bottom:20px;">
     <h2>Homepage hero content</h2>
     <div class="grid grid-2">
         <div><label for="home-title">Main heading</label><input id="home-title" name="home_title" maxlength="255" value="{{ old('home_title', $settings['home_title'] ?? '') }}"></div>
