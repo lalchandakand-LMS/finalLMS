@@ -8,6 +8,7 @@ use App\Models\DownloadPermission;
 use App\Models\Enrollment;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class AdminOrderController extends Controller
@@ -63,6 +64,12 @@ class AdminOrderController extends Controller
         if ($result === 'invalid') return back()->with('error','An eBook file is missing. Order was not approved.');
         if ($result === 'coupon_invalid') return back()->with('error','Coupon limits changed before verification. Please reconcile this order manually.');
         return back()->with('success','Order verified; course enrollment and eBook access granted.');
+    }
+
+    public function proof(Order $order)
+    {
+        abort_unless($order->payment_proof_path && Storage::disk('local')->exists($order->payment_proof_path), 404);
+        return Storage::disk('local')->download($order->payment_proof_path, basename($order->payment_proof_path));
     }
 
     public function reject(Order $order): RedirectResponse
