@@ -15,6 +15,8 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::post('/auth/logout-all', [AuthController::class, 'logoutAll']);
         Route::get('/my/courses', [CourseController::class, 'myCourses']);
+        Route::get('/instructor/courses', [CourseController::class, 'teachingCourses']);
+        Route::get('/instructor/courses/{course:slug}/students', [CourseController::class, 'courseStudents']);
         Route::get('/courses/{course:slug}/lessons/{lesson}', [CourseController::class, 'lesson']);
     });
 });
