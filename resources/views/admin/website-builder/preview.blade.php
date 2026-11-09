@@ -13,6 +13,12 @@
     <div><span class="badge info">Unpublished preview</span><h1>Homepage draft preview</h1><p class="muted">Only administrators can see this preview. It is not visible to visitors until published.</p></div>
     <div class="cta-row"><a class="btn secondary" href="{{ route('admin.website-builder.index') }}">Back to builder</a><form method="POST" action="{{ route('admin.website-builder.publish-draft') }}">@csrf<button class="btn primary" type="submit">Publish this draft</button></form></div>
 </div>
+<div class="cta-row" style="justify-content:flex-end;margin-bottom:12px;" aria-label="Preview device size">
+    <button type="button" class="btn secondary" data-preview-size="desktop" aria-pressed="true">Desktop</button>
+    <button type="button" class="btn secondary" data-preview-size="tablet" aria-pressed="false">Tablet</button>
+    <button type="button" class="btn secondary" data-preview-size="mobile" aria-pressed="false">Mobile</button>
+</div>
+<div class="homepage-preview-frame" data-preview-frame>
 <div class="panel" style="margin-bottom:18px;">
     <div class="page-header"><div><span class="badge info">{{ str($template)->headline() }}</span><h2>{{ $draft['site_name'] ?? config('app.name') }}</h2></div><span class="muted">Preview mode · not published</span></div>
     <nav class="cta-row" aria-label="Draft navigation">@foreach($headerLinks as $link)<a class="btn secondary" href="{{ $link['url'] }}">{{ $link['label'] }}</a>@endforeach</nav>
@@ -46,4 +52,24 @@
     @endforeach
 </section>
 @endif
+</div>
+<style>
+    .homepage-preview-frame { width:100%; margin:0 auto; transition:max-width .2s ease; }
+    .homepage-preview-frame[data-size="tablet"] { max-width:820px; }
+    .homepage-preview-frame[data-size="mobile"] { max-width:390px; border:8px solid #1f2937; border-radius:28px; padding:10px; background:#f8fafc; box-shadow:0 20px 50px #0f172a24; }
+    @media(max-width:600px) { .homepage-preview-frame[data-size="mobile"] { max-width:100%; border-width:4px; border-radius:18px; } }
+</style>
+@push('scripts')
+<script>
+(() => {
+    const frame = document.querySelector('[data-preview-frame]');
+    const buttons = document.querySelectorAll('[data-preview-size]');
+    if (!frame || !buttons.length) return;
+    buttons.forEach((button) => button.addEventListener('click', () => {
+        frame.dataset.size = button.dataset.previewSize;
+        buttons.forEach((item) => item.setAttribute('aria-pressed', item === button ? 'true' : 'false'));
+    }));
+})();
+</script>
+@endpush
 @endsection
