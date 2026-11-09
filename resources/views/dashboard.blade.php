@@ -10,9 +10,9 @@
 
     @if($isAdmin)
         <style>
-            .aec-admin { --aec-navy:#102b63; --aec-blue:#1769e8; --aec-muted:#64748b; color:#14213d; }
+            .aec-admin { --aec-navy:var(--primary-dark); --aec-blue:var(--primary); --aec-muted:#64748b; color:#14213d; }
             .aec-admin * { box-sizing:border-box; }
-            .aec-hero { display:flex; justify-content:space-between; align-items:center; gap:20px; padding:28px 30px; margin-bottom:22px; border-radius:20px; color:#fff; background:linear-gradient(115deg,#0d2b68,#0759c8 65%,#2388f5); box-shadow:0 14px 32px rgba(20,83,170,.18); }
+            .aec-hero { display:flex; justify-content:space-between; align-items:center; gap:20px; padding:28px 30px; margin-bottom:22px; border-radius:20px; color:#fff; background:linear-gradient(115deg,var(--primary-dark),var(--primary) 65%,var(--primary-dark)); box-shadow:0 14px 32px rgba(20,83,170,.18); }
             .aec-hero h1 { margin:8px 0; font-size:clamp(1.45rem,3vw,2.15rem); color:#fff; }
             .aec-hero p { margin:0; color:#e2edff; }
             .aec-hero-mark { font-size:58px; opacity:.9; }
@@ -24,7 +24,7 @@
             .aec-stat { padding:18px; border:1px solid #e1eaf8; border-radius:16px; background:#fff; box-shadow:0 5px 18px rgba(15,42,90,.045); }
             .aec-stat-top { display:flex; justify-content:space-between; align-items:center; gap:8px; color:#536782; font-size:.88rem; }
             .aec-stat-icon { display:grid; place-items:center; width:40px; height:40px; border-radius:12px; background:#eaf2ff; font-size:1.25rem; }
-            .aec-stat strong { display:block; margin-top:11px; color:#102b63; font-size:1.85rem; line-height:1.1; }
+            .aec-stat strong { display:block; margin-top:11px; color:var(--primary-dark); font-size:1.85rem; line-height:1.1; }
             .aec-stat small { display:block; margin-top:6px; color:#7b8ba3; }
             .aec-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:13px; }
             .aec-link { display:flex; flex-direction:column; min-height:138px; padding:17px; border:1px solid #e1eaf8; border-radius:15px; background:#fff; color:#152b50; text-decoration:none; box-shadow:0 5px 18px rgba(15,42,90,.04); transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease; }
