@@ -158,6 +158,13 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         ->name('courses.lessons.complete');
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
+        Route::get('/products', [AdminProductController::class, 'index'])->name('admin.products.index');
+        Route::post('/products', [AdminProductController::class, 'store'])->name('admin.products.store');
+        Route::put('/products/{product}', [AdminProductController::class, 'update'])->name('admin.products.update');
+        Route::delete('/products/{product}', [AdminProductController::class, 'destroy'])->name('admin.products.destroy');
+        Route::post('/product-categories', [AdminProductController::class, 'storeCategory'])->name('admin.product-categories.store');
+        Route::put('/product-categories/{category}', [AdminProductController::class, 'updateCategory'])->name('admin.product-categories.update');
+        Route::delete('/product-categories/{category}', [AdminProductController::class, 'destroyCategory'])->name('admin.product-categories.destroy');
         Route::get('/flash-sales', [FlashSaleController::class, 'index'])->name('admin.flash-sales.index');
         Route::post('/flash-sales', [FlashSaleController::class, 'store'])->name('admin.flash-sales.store');
         Route::put('/flash-sales/{flashSale}', [FlashSaleController::class, 'update'])->name('admin.flash-sales.update');
