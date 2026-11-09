@@ -8,6 +8,16 @@
 <div style="display:flex;justify-content:space-between;gap:12px"><strong>{{ $order->order_number }}</strong><b>{{ strtoupper($order->status) }}</b></div>
 <p>{{ $order->user->name }} · {{ $order->user->email }} · {{ $order->payment_method }} · Ref: {{ $order->payment_reference }}</p>
 @if($order->payment_sender)<p>Sender account: {{ $order->payment_sender }}</p>@endif
+@foreach($order->paymentTransactions as $transaction)
+<div style="padding:10px;margin:10px 0;border:1px solid var(--border);border-radius:8px">
+<strong>{{ strtoupper($transaction->provider) }} gateway transaction</strong>
+<div>Status: {{ strtoupper($transaction->status) }} · Amount: ৳{{ number_format((float)$transaction->amount,2) }} {{ $transaction->currency }}</div>
+<div>Invoice: {{ $transaction->invoice }}</div>
+@if($transaction->gateway_payment_id)<div>Gateway Payment ID: {{ $transaction->gateway_payment_id }}</div>@endif
+@if($transaction->gateway_transaction_id)<div>Gateway TrxID: {{ $transaction->gateway_transaction_id }}</div>@endif
+@if($transaction->verified_at)<div>Verified at: {{ $transaction->verified_at->format('d M Y, h:i A') }}</div>@endif
+</div>
+@endforeach
 @if($order->payment_proof_path)<p><a href="{{ route('admin.orders.proof',$order) }}">View payment proof (private)</a></p>@endif
 <ul>@foreach($order->items as $item)<li>{{ $item->product_name }} × {{ $item->quantity }} — ৳{{ number_format((float)$item->line_total,2) }}</li>@endforeach</ul>
 <strong>Total: ৳{{ number_format((float)$order->total,2) }}</strong>
