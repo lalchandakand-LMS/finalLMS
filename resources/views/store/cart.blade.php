@@ -21,17 +21,17 @@
 <h2>Total: ৳{{ number_format($total,2) }}</h2>
 @if($cart->items->contains(fn ($item) => !$item->product || $item->product->trashed() || $item->product->status!=='published'))<p class="flash error">Remove unavailable products before placing your order.</p>@endif
 <form method="POST" enctype="multipart/form-data" action="{{ route('store.checkout') }}" class="panel" style="padding:18px;border:1px solid var(--border);border-radius:12px;max-width:540px">
-@csrf<h3>Checkout — Manual Payment Submission</h3>
+@csrf<h3>Secure Checkout</h3>
 <label>Coupon code (optional)</label><input name="coupon_code" maxlength="60" placeholder="Enter coupon code" style="display:block;width:100%;padding:10px;margin:6px 0 14px">
 <label>Payment method</label><select name="payment_method" required style="display:block;width:100%;padding:10px;margin:6px 0 14px">
 @foreach(collect(\App\Models\Setting::paymentMethods())->filter(fn($m)=>(bool)($m['enabled']??false)) as $key=>$method)
 <option value="{{ $key }}">{{ $method['label'] ?? ucfirst($key) }}</option>
 @endforeach
 </select>
-<label>Transaction ID / Reference</label><input name="payment_reference" required maxlength="120" style="display:block;width:100%;padding:10px;margin:6px 0 14px">
+<label>Transaction ID / Reference (manual payments only)</label><input name="payment_reference" maxlength="120" placeholder="Not required for bKash checkout" style="display:block;width:100%;padding:10px;margin:6px 0 14px">
 <label>Sender mobile / account (optional)</label><input name="payment_sender" maxlength="60" placeholder="01XXXXXXXXX" style="display:block;width:100%;padding:10px;margin:6px 0 14px">
 <label>Payment screenshot / receipt (optional, JPG/PNG/PDF)</label><input type="file" name="payment_proof" accept="image/jpeg,image/png,application/pdf" style="display:block;width:100%;padding:10px;margin:6px 0 14px">
-<p>Order access remains pending until an administrator verifies the payment.</p><button type="submit" class="btn btn-primary">Place order</button>
+<p>Manual payments are verified by the academy. For bKash, you will be redirected to the secure gateway after placing the order.</p><button type="submit" class="btn btn-primary">Place order</button>
 </form>
 @endif
 </div>
