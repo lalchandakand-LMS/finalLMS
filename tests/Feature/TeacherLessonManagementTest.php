@@ -61,6 +61,7 @@ class TeacherLessonManagementTest extends TestCase
     public function test_teacher_can_upload_replace_and_delete_a_lesson_video_and_thumbnail(): void
     {
         Storage::fake('public');
+        Storage::fake('local');
         $teacher = User::factory()->create(['role' => 'teacher']);
         $course = Course::factory()->create(['teacher_id' => $teacher->id, 'status' => 'published']);
 
@@ -76,7 +77,7 @@ class TeacherLessonManagementTest extends TestCase
         $lesson = $course->lessons()->firstOrFail();
         $this->assertNotEmpty($lesson->video_path);
         $this->assertNotEmpty($lesson->thumbnail_path);
-        Storage::disk('public')->assertExists($lesson->video_path);
+        Storage::disk('local')->assertExists($lesson->video_path);
         Storage::disk('public')->assertExists($lesson->thumbnail_path);
 
         $oldVideo = $lesson->video_path;
@@ -90,13 +91,13 @@ class TeacherLessonManagementTest extends TestCase
 
         $lesson->refresh();
         $this->assertNotSame($oldVideo, $lesson->video_path);
-        Storage::disk('public')->assertMissing($oldVideo);
-        Storage::disk('public')->assertExists($lesson->video_path);
+        Storage::disk('local')->assertMissing($oldVideo);
+        Storage::disk('local')->assertExists($lesson->video_path);
 
         $videoPath = $lesson->video_path;
         $thumbnailPath = $lesson->thumbnail_path;
         $this->delete(route('teacher.courses.lessons.destroy', [$course, $lesson]))->assertRedirect();
-        Storage::disk('public')->assertMissing($videoPath);
+        Storage::disk('local')->assertMissing($videoPath);
         Storage::disk('public')->assertMissing($thumbnailPath);
     }
 
