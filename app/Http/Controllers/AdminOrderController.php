@@ -54,7 +54,7 @@ class AdminOrderController extends Controller
                     ['coupon_id'=>$coupon->id,'order_id'=>$order->id],
                     ['user_id'=>$order->user_id,'discount_amount'=>$order->discount_total]
                 );
-                if (!$coupon->redemptions()->where('order_id',$order->id)->exists()) $coupon->increment('usage_count');
+                if ($redemption->wasRecentlyCreated) $coupon->increment('usage_count');
             }
             $order->update(['status'=>'completed','paid_at'=>now(),'completed_at'=>now()]);
             return 'approved';
