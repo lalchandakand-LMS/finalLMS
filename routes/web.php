@@ -179,6 +179,13 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         Route::post('/invoices', [InvoiceController::class, 'store'])->name('admin.invoices.store');
         Route::post('/invoices/{invoice}/payments', [InvoiceController::class, 'receivePayment'])->name('admin.invoices.payments.store');
         Route::get('/batches', [BatchController::class, 'index'])->name('admin.batches.index');
+        Route::get('/batches/{batch}/exams', [ExamController::class, 'teacherIndex'])->name('admin.batches.exams.index');
+        Route::post('/batches/{batch}/exams', [ExamController::class, 'store'])->middleware('throttle:10,1')->name('admin.batches.exams.store');
+        Route::get('/batches/{batch}/question-bank', [ExamController::class, 'questionBank'])->name('admin.batches.question-bank.index');
+        Route::post('/batches/{batch}/question-bank', [ExamController::class, 'storeBankQuestion'])->middleware('throttle:20,1')->name('admin.batches.question-bank.store');
+        Route::put('/batches/{batch}/question-bank/{question}', [ExamController::class, 'updateBankQuestion'])->middleware('throttle:30,1')->name('admin.batches.question-bank.update');
+        Route::delete('/batches/{batch}/question-bank/{question}', [ExamController::class, 'destroyBankQuestion'])->middleware('throttle:20,1')->name('admin.batches.question-bank.destroy');
+        Route::get('/exams/{exam}/results', [ExamController::class, 'teacherResults'])->name('admin.exams.results');
         Route::get('/batches/{batch}/attendance', [AttendanceController::class, 'index'])->name('admin.batches.attendance.index');
         Route::post('/batches/{batch}/attendance', [AttendanceController::class, 'store'])->name('admin.batches.attendance.store');
         Route::post('/branches', [BatchController::class, 'storeBranch'])->name('admin.branches.store');
