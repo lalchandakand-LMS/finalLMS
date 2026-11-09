@@ -183,6 +183,7 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         Route::put('/coupons/{coupon}', [AdminCouponController::class, 'update'])->name('admin.coupons.update');
         Route::delete('/coupons/{coupon}', [AdminCouponController::class, 'destroy'])->name('admin.coupons.destroy');
         Route::get('/orders', [AdminOrderController::class, 'index'])->name('admin.orders.index');
+        Route::get('/orders/{order}/proof', [AdminOrderController::class, 'proof'])->name('admin.orders.proof');
         Route::post('/orders/{order}/approve', [AdminOrderController::class, 'approve'])->name('admin.orders.approve');
         Route::post('/orders/{order}/reject', [AdminOrderController::class, 'reject'])->name('admin.orders.reject');
         Route::get('/products', [AdminProductController::class, 'index'])->name('admin.products.index');
