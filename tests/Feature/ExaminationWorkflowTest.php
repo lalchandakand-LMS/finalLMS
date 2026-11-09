@@ -9,6 +9,7 @@ use App\Models\Enrollment;
 use App\Models\Exam;
 use App\Models\ExamAttempt;
 use App\Models\QuestionBankQuestion;
+use App\Models\QuestionSet;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
