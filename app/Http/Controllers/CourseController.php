@@ -129,7 +129,7 @@ class CourseController extends Controller
         }
         $course->load('lessons');
         foreach ($course->lessons as $lesson) {
-            if ($lesson->video_path) Storage::disk('local')->delete($lesson->video_path);
+            if ($lesson->video_path) Storage::disk('lesson_videos')->delete($lesson->video_path);
             if ($lesson->thumbnail_path) Storage::disk('public')->delete($lesson->thumbnail_path);
         }
         $course->delete();
@@ -180,10 +180,10 @@ class CourseController extends Controller
         $isEnrolled = $user && $user->isStudent()
             && $course->enrollments()->where('user_id', $user->id)->whereIn('status', ['active', 'completed'])->exists();
         abort_unless($lesson->is_preview || $canManageCourse || $isEnrolled, 403);
-        abort_unless(Storage::disk('local')->exists($lesson->video_path), 404);
+        abort_unless(Storage::disk('lesson_videos')->exists($lesson->video_path), 404);
 
-        return response()->file(Storage::disk('local')->path($lesson->video_path), [
-            'Content-Type' => Storage::disk('local')->mimeType($lesson->video_path) ?: 'application/octet-stream',
+        return response()->file(Storage::disk('lesson_videos')->path($lesson->video_path), [
+            'Content-Type' => Storage::disk('lesson_videos')->mimeType($lesson->video_path) ?: 'application/octet-stream',
             'Cache-Control' => 'private, no-store, max-age=0',
             'X-Content-Type-Options' => 'nosniff',
         ]);
@@ -257,7 +257,7 @@ class CourseController extends Controller
         $validated['is_preview'] = $request->boolean('is_preview');
         unset($validated['video_file'], $validated['thumbnail']);
         if ($request->hasFile('video_file')) {
-            $validated['video_path'] = $request->file('video_file')->store('course-videos', 'local');
+            $validated['video_path'] = $request->file('video_file')->store('', 'lesson_videos');
             $validated['video_url'] = null;
         }
         if ($request->hasFile('thumbnail')) {
@@ -309,7 +309,7 @@ class CourseController extends Controller
         $validated['is_preview'] = $request->boolean('is_preview');
         unset($validated['video_file'], $validated['thumbnail'], $validated['remove_video'], $validated['remove_thumbnail']);
         if ($request->hasFile('video_file')) {
-            if ($lesson->video_path) Storage::disk('local')->delete($lesson->video_path);
+            if ($lesson->video_path) Storage::disk('lesson_videos')->delete($lesson->video_path);
             $validated['video_path'] = $request->file('video_file')->store('course-videos', 'public');
             $validated['video_url'] = null;
         } elseif ($request->boolean('remove_video')) {
