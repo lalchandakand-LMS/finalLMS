@@ -13,6 +13,7 @@ use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class StoreCheckoutTest extends TestCase
@@ -21,6 +22,7 @@ class StoreCheckoutTest extends TestCase
 
     public function test_student_can_checkout_and_admin_verification_grants_course_access(): void
     {
+        Storage::fake('local');
         $student = User::factory()->create(['role'=>'student']);
         $admin = User::factory()->create(['role'=>'admin']);
         $teacher = User::factory()->create(['role'=>'teacher']);
@@ -40,15 +42,18 @@ class StoreCheckoutTest extends TestCase
 
         $this->actingAs($student)->post(route('store.cart.add',$product))->assertRedirect();
         $this->actingAs($student)->post(route('store.checkout'), [
-            'payment_method'=>'manual','payment_reference'=>'ORDER-REF-001','coupon_code'=>'welcome10',
+            'payment_method'=>'manual','payment_reference'=>'ORDER-REF-001','payment_sender'=>'01700000000','payment_proof'=>UploadedFile::fake()->create('receipt.pdf',20,'application/pdf'),'coupon_code'=>'welcome10',
         ])->assertRedirect(route('store.orders'));
 
         $order = Order::where('payment_reference','ORDER-REF-001')->firstOrFail();
         $this->assertSame('pending',$order->status);
+        $this->assertSame('01700000000',$order->payment_sender);
+        Storage::disk('local')->assertExists($order->payment_proof_path);
         $this->assertSame('250.00',$order->discount_total);
         $this->assertSame('2250.00',$order->total);
         $this->assertDatabaseHas('order_items',['order_id'=>$order->id,'product_id'=>$product->id]);
 
+        $this->actingAs($admin)->get(route('admin.orders.proof',$order))->assertOk();
         $this->actingAs($admin)->post(route('admin.orders.approve',$order))->assertRedirect();
         $this->assertDatabaseHas('orders',['id'=>$order->id,'status'=>'completed']);
         $this->assertDatabaseHas('enrollments',['user_id'=>$student->id,'course_id'=>$course->id,'status'=>'active']);
