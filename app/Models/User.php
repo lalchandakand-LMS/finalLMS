@@ -30,6 +30,26 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->belongsTo(Branch::class);
     }
 
+    public function guardianLinks(): HasMany
+    {
+        return $this->hasMany(GuardianStudent::class, 'guardian_id');
+    }
+
+    public function studentGuardianLinks(): HasMany
+    {
+        return $this->hasMany(GuardianStudent::class, 'student_id');
+    }
+
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
+    public function attendances(): HasMany
+    {
+        return $this->hasMany(Attendance::class, 'student_id');
+    }
+
     public function courses(): HasMany
     {
         return $this->hasMany(Course::class, 'teacher_id');
@@ -63,6 +83,11 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isBranchManager(): bool
     {
         return $this->role === 'branch_manager';
+    }
+
+    public function isGuardian(): bool
+    {
+        return $this->role === 'guardian';
     }
 
     public function isAccountant(): bool
