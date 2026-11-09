@@ -26,14 +26,15 @@ class ExamAnswerController extends Controller
             'answers.*' => ['required', 'integer', 'between:0,3'],
         ]);
 
+        $answers = $validated['answers'] ?? [];
         $attemptQuestions = $attempt->attemptQuestions()
-            ->whereIn('exam_question_id', array_keys($validated['answers']))
+            ->whereIn('exam_question_id', array_keys($answers))
             ->get()
             ->keyBy('exam_question_id');
 
-        abort_unless($attemptQuestions->count() === count($validated['answers']), 422, 'An answer references a question outside this attempt.');
+        abort_unless($attemptQuestions->count() === count($answers), 422, 'An answer references a question outside this attempt.');
 
-        foreach (($validated['answers'] ?? []) as $questionId => $selectedOption) {
+        foreach ($answers as $questionId => $selectedOption) {
             $attempt->answers()->updateOrCreate(
                 ['exam_question_id' => $questionId],
                 ['selected_option' => $selectedOption, 'is_correct' => false, 'marks_awarded' => 0]
