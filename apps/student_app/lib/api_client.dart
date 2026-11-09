@@ -20,7 +20,7 @@ class MobileApi {
     );
     final data = _decode(response);
     final token = data['access_token'];
-    if (token is! String || token.isEmpty) throw const FormatException('Missing access token.');
+    if (token is! String || token.isEmpty) {\n      throw const FormatException('Missing access token.');\n    }
     await storage.write(key: 'mobile_access_token', value: token);
   }
 
@@ -54,7 +54,7 @@ class MobileApi {
       final message = data is Map<String, dynamic> ? (data['message']?.toString() ?? 'Request failed.') : 'Request failed.';
       throw ApiException(message);
     }
-    if (data is! Map<String, dynamic>) throw const FormatException('Unexpected API response.');
+    if (data is! Map<String, dynamic>) {\n      throw const FormatException('Unexpected API response.');\n    }
     return data;
   }
 }
