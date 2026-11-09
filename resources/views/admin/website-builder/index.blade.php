@@ -63,12 +63,25 @@
             <button type="button" class="btn secondary" data-section-preset data-title="Learning outcomes" data-body="Build confidence, strengthen communication skills and apply what you learn in real situations.">Learning outcomes</button>
             <button type="button" class="btn secondary" data-section-preset data-title="Frequently asked questions" data-body="Find answers about course access, class schedules, payments and student support.">FAQ introduction</button>
         </div>
+        <hr style="margin:16px 0;border-color:var(--border);">
+        <h4>My saved custom blocks (up to 30)</h4>
+        @forelse($customBlocks as $block)
+            <div class="card" style="display:flex;justify-content:space-between;gap:12px;align-items:center;margin:8px 0;flex-wrap:wrap;">
+                <div><strong>{{ $block['name'] ?? 'Custom block' }}</strong><div class="muted">{{ $block['title'] ?? '' }}</div></div>
+                <div class="cta-row">
+                    <button type="button" class="btn secondary" data-insert-custom-block='@json($block)'>Insert</button>
+                    <form method="POST" action="{{ route('admin.website-builder.custom-blocks.destroy') }}" onsubmit="return confirm('Delete this saved block?');">@csrf @method('DELETE')<input type="hidden" name="block_id" value="{{ $block['id'] ?? '' }}"><button type="submit" class="btn secondary">Delete</button></form>
+                </div>
+            </div>
+        @empty
+            <p class="muted">No custom blocks saved yet. Build a section below and select “Save as reusable block”.</p>
+        @endforelse
     </div>
     <div data-section-list>
     @for($i = 0; $i < 12; $i++)
         @php($section = old("sections.$i", $sections[$i] ?? []))
         <section class="card website-section-item" draggable="true" style="margin-bottom:16px;" data-section-item>
-            <div class="page-header"><h3><span class="section-position">{{ $i + 1 }}</span> · Section</h3><button type="button" class="btn secondary section-drag-handle" aria-label="Drag to reorder section" style="cursor:grab;">↕ Drag to reorder</button><label style="display:flex;gap:8px;align-items:center;"><input type="hidden" name="sections[{{ $i }}][enabled]" value="0"><input type="checkbox" name="sections[{{ $i }}][enabled]" value="1" style="width:auto;" @checked($section['enabled'] ?? false)> Enabled</label></div>
+            <div class="page-header"><h3><span class="section-position">{{ $i + 1 }}</span> · Section</h3><div class="cta-row"><button type="button" class="btn secondary" data-save-custom-block>Save as reusable block</button><button type="button" class="btn secondary section-drag-handle" aria-label="Drag to reorder section" style="cursor:grab;">↕ Drag to reorder</button></div><label style="display:flex;gap:8px;align-items:center;"><input type="hidden" name="sections[{{ $i }}][enabled]" value="0"><input type="checkbox" name="sections[{{ $i }}][enabled]" value="1" style="width:auto;" @checked($section['enabled'] ?? false)> Enabled</label></div>
             <label>Heading<input name="sections[{{ $i }}][title]" maxlength="180" value="{{ $section['title'] ?? '' }}"></label>
             <label>Text<textarea name="sections[{{ $i }}][body]" rows="3" maxlength="3000">{{ $section['body'] ?? '' }}</textarea></label>
             <label>Image<select name="sections[{{ $i }}][image_id]"><option value="">No image</option>@foreach($media as $asset)<option value="{{ $asset->id }}" @selected(($section['image_id'] ?? '') == $asset->id)>{{ $asset->original_name }}</option>@endforeach</select></label>
@@ -133,6 +146,7 @@
 (() => {
     const list = document.querySelector('[data-section-list]');
     if (!list) return;
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.content || document.querySelector('input[name="_token"]')?.value || '';
     let dragged = null;
     const refresh = () => {
         [...list.querySelectorAll('[data-section-item]')].forEach((card, index) => {
@@ -164,6 +178,53 @@
             const enabled = target.querySelector('input[type="checkbox"][name$="[enabled]"]');
             if (enabled) enabled.checked = true;
             target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+    });
+
+    const fillSection = (target, block) => {
+        const setField = (suffix, value) => {
+            const field = target.querySelector('[name$="[' + suffix + ']"]');
+            if (field) field.value = value ?? '';
+        };
+        ['title','body','button_label','button_url','background_color','text_color','spacing','layout'].forEach((key) => setField(key, block[key]));
+        const enabled = target.querySelector('input[type="checkbox"][name$="[enabled]"]');
+        if (enabled) enabled.checked = true;
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
+    document.querySelectorAll('[data-insert-custom-block]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const target = [...list.querySelectorAll('[data-section-item]')].find((card) => {
+                const title = card.querySelector('[name$="[title]"]');
+                return title && !title.value.trim();
+            });
+            if (!target) return window.alert('All 12 homepage sections are in use. Clear a section first.');
+            try { fillSection(target, JSON.parse(button.dataset.insertCustomBlock)); }
+            catch (_) { window.alert('This saved block could not be loaded.'); }
+        });
+    });
+    list.querySelectorAll('[data-save-custom-block]').forEach((button) => {
+        button.addEventListener('click', async () => {
+            const card = button.closest('[data-section-item]');
+            const value = (suffix) => card.querySelector('[name$="[' + suffix + ']"]')?.value || '';
+            const title = value('title').trim();
+            if (!title) return window.alert('Add a section heading before saving it as a reusable block.');
+            const name = window.prompt('Name this reusable block:', title);
+            if (!name || !name.trim()) return;
+            const payload = new FormData();
+            payload.append('_token', csrf);
+            payload.append('name', name.trim());
+            ['title','body','button_label','button_url','background_color','text_color','spacing','layout'].forEach((key) => payload.append(key, value(key)));
+            button.disabled = true;
+            try {
+                const response = await fetch("{{ route('admin.website-builder.custom-blocks.store') }}", {
+                    method: 'POST', body: payload, headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                });
+                if (!response.ok) throw new Error('Save failed');
+                window.location.reload();
+            } catch (_) {
+                button.disabled = false;
+                window.alert('Could not save this block. Please check your session and try again.');
+            }
         });
     });
     list.querySelectorAll('[data-section-item]').forEach((card) => {
