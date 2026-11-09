@@ -47,8 +47,9 @@
                     let saveTimer;
                     let saving = false;
                     let pending = false;
-                    const save = async () => {
-                        if (saving) { pending = true; return; }
+                    let savePromise = Promise.resolve();
+                    const save = () => {
+                        if (saving) { pending = true; return savePromise; }
                         saving = true;
                         status.textContent = 'Saving answers…';
                         const answers = {};
@@ -56,20 +57,20 @@
                             const match = key.match(/^answers\[(\d+)\]$/);
                             if (match) answers[match[1]] = value;
                         }
-                        try {
-                            const response = await fetch(form.dataset.saveUrl, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
-                                body: JSON.stringify({ answers })
-                            });
+                        savePromise = fetch(form.dataset.saveUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
+                            body: JSON.stringify({ answers })
+                        }).then(response => {
                             if (!response.ok) throw new Error('Save failed');
                             status.textContent = 'All answers saved';
-                        } catch (error) {
+                        }).catch(() => {
                             status.textContent = 'Could not save answers. Check your connection.';
-                        } finally {
+                        }).finally(() => {
                             saving = false;
-                            if (pending) { pending = false; save(); }
-                        }
+                            if (pending) { pending = false; return save(); }
+                        });
+                        return savePromise;
                     };
                     form.addEventListener('change', () => {
                         clearTimeout(saveTimer);
@@ -82,7 +83,7 @@
                         const secs = String(seconds % 60).padStart(2, '0');
                         countdown.textContent = hours + ':' + minutes + ':' + secs;
                         if (seconds === 0) {
-                            save().finally(() => form.requestSubmit());
+                            save().finally(() => form.submit());
                             return;
                         }
                         if (seconds <= 10) status.textContent = 'Time is almost over. Submitting automatically…';
