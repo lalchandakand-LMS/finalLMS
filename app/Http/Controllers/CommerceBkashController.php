@@ -22,25 +22,35 @@ class CommerceBkashController extends Controller
         abort_unless($this->isConfigured(), 503, 'bKash checkout is not configured.');
         abort_if((float) $order->total <= 0, 422, 'A zero-value order does not require online payment.');
 
-        $transaction = CommercePaymentTransaction::query()
-            ->where('order_id', $order->id)
-            ->where('provider', 'bkash')
-            ->whereIn('status', ['initiated', 'pending'])
-            ->latest()
-            ->first();
+        $transaction = DB::transaction(function () use ($order): CommercePaymentTransaction {
+            $lockedOrder = Order::query()->lockForUpdate()->findOrFail($order->id);
+            abort_unless($lockedOrder->status === 'pending' && $lockedOrder->payment_method === 'bkash', 409);
 
-        if ($transaction && $transaction->gateway_payment_id) {
+            $existing = CommercePaymentTransaction::query()
+                ->where('order_id', $lockedOrder->id)
+                ->where('provider', 'bkash')
+                ->whereIn('status', ['initiated', 'pending'])
+                ->latest()
+                ->lockForUpdate()
+                ->first();
+
+            if ($existing) {
+                return $existing;
+            }
+
+            return CommercePaymentTransaction::create([
+                'order_id' => $lockedOrder->id,
+                'provider' => 'bkash',
+                'invoice' => 'ALM-ORDER-' . $lockedOrder->order_number . '-' . Str::upper(Str::random(6)),
+                'amount' => number_format((float) $lockedOrder->total, 2, '.', ''),
+                'currency' => 'BDT',
+                'status' => 'initiated',
+            ]);
+        });
+
+        if ($transaction->gateway_payment_id) {
             return back()->with('info', 'A bKash checkout is already in progress. Complete it before retrying.');
         }
-
-        $transaction ??= CommercePaymentTransaction::create([
-            'order_id' => $order->id,
-            'provider' => 'bkash',
-            'invoice' => 'ALM-ORDER-' . $order->order_number . '-' . Str::upper(Str::random(6)),
-            'amount' => number_format((float) $order->total, 2, '.', ''),
-            'currency' => 'BDT',
-            'status' => 'initiated',
-        ]);
 
         try {
             $token = $bkash->grantToken();
