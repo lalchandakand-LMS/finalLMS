@@ -58,6 +58,8 @@ class PanelNavigationTest extends TestCase
             ->assertSee('Academy management')
             ->assertSee('Finance & payments')
             ->assertSee('Website & system')
-            ->assertSee('Custom color system');
+            ->assertSee('Settings');
+
+        $this->get(route('admin.settings.index'))->assertOk()->assertSee('Custom color system');
     }
 }
