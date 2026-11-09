@@ -49,7 +49,7 @@ class FlashSaleController extends Controller
 
     public function destroy(FlashSale $flashSale): RedirectResponse
     {
-        if ($flashSale->payments()->whereIn('status',['pending','approved'])->exists()) return back()->with('error','This campaign has payment history. Archive it instead.');
+        if ($flashSale->payments()->whereIn('status',['pending','approved'])->exists() || $flashSale->orderItems()->whereHas('order')->exists()) return back()->with('error','This campaign has payment or store order history. Archive it instead.');
         if ($flashSale->banner_path) Storage::disk('public')->delete($flashSale->banner_path);
         $flashSale->delete();
         return back()->with('success','Flash sale campaign deleted.');
