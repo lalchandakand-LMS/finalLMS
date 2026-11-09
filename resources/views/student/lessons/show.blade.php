@@ -5,7 +5,7 @@
 <div class="panel">
 @if($lesson->video_path)
     <video controls playsinline preload="metadata" style="width:100%;max-height:70vh;border-radius:12px;background:#0f172a;" @if($lesson->thumbnail_path) poster="{{ Storage::disk('public')->url($lesson->thumbnail_path) }}" @endif>
-        <source src="{{ Storage::disk('public')->url($lesson->video_path) }}" type="video/{{ strtolower(pathinfo($lesson->video_path, PATHINFO_EXTENSION)) === 'webm' ? 'webm' : (strtolower(pathinfo($lesson->video_path, PATHINFO_EXTENSION)) === 'mov' ? 'quicktime' : 'mp4') }}">
+        <source src="{{ route('courses.lessons.video', [$course, $lesson]) }}" type="video/{{ strtolower(pathinfo($lesson->video_path, PATHINFO_EXTENSION)) === 'webm' ? 'webm' : (strtolower(pathinfo($lesson->video_path, PATHINFO_EXTENSION)) === 'mov' ? 'quicktime' : 'mp4') }}">
         {{ __('Your browser does not support HTML video.') }}
     </video>
 @elseif($videoEmbedUrl)
