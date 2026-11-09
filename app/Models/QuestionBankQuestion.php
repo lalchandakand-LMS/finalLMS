@@ -16,7 +16,7 @@ class QuestionBankQuestion extends Model
         return $this->hasMany(ExamQuestion::class, 'question_bank_question_id');
     }
 
-    public function teacher(): BelongsTo
+    public function questionSets()\n    {\n        return $this->belongsToMany(QuestionSet::class, 'question_set_question')->withPivot(['position','marks_override'])->withTimestamps();\n    }\n\n    public function teacher(): BelongsTo
     {
         return $this->belongsTo(User::class, 'teacher_id');
     }
