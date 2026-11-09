@@ -266,6 +266,9 @@
                 <a class="menu-link {{ request()->routeIs('store.orders') ? 'active' : '' }}" href="{{ route('store.orders') }}"><span class="menu-icon">📦</span><span class="menu-text">My orders</span></a>
                 <a class="menu-link {{ request()->routeIs('store.cart') ? 'active' : '' }}" href="{{ route('store.cart') }}"><span class="menu-icon">🛒</span><span class="menu-text">My cart</span></a>
                 <a class="menu-link {{ request()->routeIs('live-classes.*') ? 'active' : '' }}" href="{{ route('live-classes.index') }}"><span class="menu-icon">🎥</span><span class="menu-text">Live classes</span></a>
+            @elseif(auth()->user()->isGuardian())
+                <div class="app-sidebar-section">Family workspace</div>
+                <a class="menu-link {{ request()->routeIs('guardian.*') ? 'active' : '' }}" href="{{ route('guardian.dashboard') }}"><span class="menu-icon">👨‍👩‍👧</span><span class="menu-text">My children</span></a>
             @elseif(auth()->user()->isBranchManager())
                 <div class="app-sidebar-section">Branch management</div>
                 <a class="menu-link {{ request()->routeIs('branch-manager.batches.*') ? 'active' : '' }}" href="{{ route('branch-manager.batches.index') }}"><span class="menu-icon">🗓️</span><span class="menu-text">Branch batches</span></a>
