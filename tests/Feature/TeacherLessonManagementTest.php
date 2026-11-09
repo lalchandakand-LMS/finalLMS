@@ -118,4 +118,26 @@ class TeacherLessonManagementTest extends TestCase
         $this->assertDatabaseMissing('lessons', ['course_id' => $course->id, 'title' => 'Invalid video']);
     }
 
+
+    public function test_uploaded_lesson_video_is_only_streamed_to_preview_or_authorized_course_members(): void
+    {
+        Storage::fake('local');
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $student = User::factory()->create(['role' => 'student']);
+        $outsider = User::factory()->create(['role' => 'student']);
+        $course = Course::factory()->create(['teacher_id' => $teacher->id, 'status' => 'published']);
+        $lesson = $course->lessons()->create([
+            'title' => 'Private lesson video',
+            'content' => 'Members only.',
+            'duration_minutes' => 12,
+            'order' => 1,
+            'video_path' => 'course-videos/private.mp4',
+        ]);
+        Storage::disk('local')->put($lesson->video_path, 'fake-video-bytes');
+        Enrollment::create(['user_id' => $student->id, 'course_id' => $course->id, 'status' => 'active']);
+
+        $this->actingAs($student)->get(route('courses.lessons.video', [$course, $lesson]))->assertOk();
+        $this->actingAs($outsider)->get(route('courses.lessons.video', [$course, $lesson]))->assertForbidden();
+    }
+
 }
