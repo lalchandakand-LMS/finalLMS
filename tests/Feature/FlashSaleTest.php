@@ -164,4 +164,41 @@ class FlashSaleTest extends TestCase
         $this->assertSame(1080.0, $sale->discountedPrice(1200));
     }
 
+
+    public function test_category_targeted_flash_sale_changes_the_store_product_price(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $category = \App\Models\ProductCategory::create(['name' => 'eBooks', 'slug' => 'ebooks-sale']);
+        $product = \App\Models\Product::create([
+            'type' => 'ebook',
+            'name' => 'English Grammar eBook',
+            'slug' => 'english-grammar-ebook',
+            'regular_price' => 500,
+            'currency' => 'BDT',
+            'status' => 'published',
+            'published_at' => now(),
+            'is_virtual' => true,
+            'is_downloadable' => true,
+            'download_path' => 'private/products/grammar.pdf',
+            'created_by' => $admin->id,
+        ]);
+        $product->categories()->attach($category);
+        $sale = FlashSale::create([
+            'title' => 'eBook Category Sale',
+            'badge' => 'SAVE 20%',
+            'discount_type' => 'percentage',
+            'discount_value' => 20,
+            'starts_at' => now()->subMinute(),
+            'ends_at' => now()->addDay(),
+            'status' => 'active',
+            'per_student_limit' => 1,
+            'priority' => 20,
+            'created_by' => $admin->id,
+        ]);
+        $sale->categories()->attach($category);
+
+        $this->assertSame('400.00', $product->currentPrice());
+        $this->assertSame($sale->id, \App\Models\FlashSale::activeForProduct($product)?->id);
+    }
+
 }
