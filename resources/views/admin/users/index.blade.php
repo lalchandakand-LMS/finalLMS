@@ -12,6 +12,22 @@
         <a href="{{ route('admin.courses.index') }}" class="btn secondary">{{ __('Back to courses') }}</a>
     </div>
 
+    <div class="panel" style="margin-bottom:20px">
+        <h2>{{ __('Link guardian to student') }}</h2>
+        <p class="muted">{{ __('Only an administrator can create or remove a guardian relationship. Guardians can view linked students’ learning and fee summaries.') }}</p>
+        <form method="POST" action="{{ route('admin.guardians.link') }}" class="grid grid-3">
+            @csrf
+            <div><label for="guardian_id">{{ __('Guardian account') }}</label><select id="guardian_id" name="guardian_id" required><option value="">{{ __('Select guardian') }}</option>@foreach($guardians as $guardian)<option value="{{ $guardian->id }}">{{ $guardian->name }} — {{ $guardian->email }}</option>@endforeach</select></div>
+            <div><label for="student_id">{{ __('Student account') }}</label><select id="student_id" name="student_id" required><option value="">{{ __('Select student') }}</option>@foreach($students as $student)<option value="{{ $student->id }}">{{ $student->name }} — {{ $student->email }}</option>@endforeach</select></div>
+            <div style="display:flex;align-items:end"><button class="btn primary" type="submit">{{ __('Link accounts') }}</button></div>
+        </form>
+        <div style="overflow-x:auto;margin-top:18px"><table style="width:100%;border-collapse:collapse"><thead><tr><th>{{ __('Guardian') }}</th><th>{{ __('Student') }}</th><th>{{ __('Action') }}</th></tr></thead><tbody>
+        @foreach(\App\Models\GuardianStudent::with(['guardian','student'])->latest()->limit(50)->get() as $link)
+            <tr><td>{{ $link->guardian?->name }} ({{ $link->guardian?->email }})</td><td>{{ $link->student?->name }} ({{ $link->student?->email }})</td><td><form method="POST" action="{{ route('admin.guardians.unlink', [$link->guardian_id, $link->student_id]) }}" onsubmit="return confirm('{{ __('Remove this guardian link?') }}')">@csrf @method('DELETE')<button class="btn secondary" type="submit">{{ __('Unlink') }}</button></form></td></tr>
+        @endforeach
+        </tbody></table></div>
+    </div>
+
     <div class="panel">
         <form method="GET" action="{{ route('admin.users.index') }}" class="grid grid-2" style="margin-bottom:20px;">
             <div>
@@ -22,7 +38,7 @@
                 <label for="role">{{ __('Role') }}</label>
                 <select id="role" name="role">
                     <option value="">{{ __('All roles') }}</option>
-                    @foreach(['admin' => 'Admin', 'branch_manager' => 'Branch Manager', 'accountant' => 'Accountant', 'teacher' => 'Teacher', 'student' => 'Student'] as $roleValue => $roleLabel)
+                    @foreach(['admin' => 'Admin', 'branch_manager' => 'Branch Manager', 'accountant' => 'Accountant', 'teacher' => 'Teacher', 'student' => 'Student', 'guardian' => 'Guardian'] as $roleValue => $roleLabel)
                         <option value="{{ $roleValue }}" @selected(request('role') === $roleValue)>{{ __($roleLabel) }}</option>
                     @endforeach
                 </select>
@@ -51,7 +67,7 @@
                             <form method="POST" action="{{ route('admin.users.updateRole', $user) }}" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
                                 @csrf
                                 <select name="role" style="width:auto;min-width:130px;">
-                                    @foreach(['student' => 'Student', 'branch_manager' => 'Branch Manager', 'accountant' => 'Accountant', 'teacher' => 'Teacher', 'admin' => 'Admin'] as $roleValue => $roleLabel)
+                                    @foreach(['student' => 'Student', 'guardian' => 'Guardian', 'branch_manager' => 'Branch Manager', 'accountant' => 'Accountant', 'teacher' => 'Teacher', 'admin' => 'Admin'] as $roleValue => $roleLabel)
                                         <option value="{{ $roleValue }}" @selected($user->role === $roleValue)>{{ __($roleLabel) }}</option>
                                     @endforeach
                                 </select>
