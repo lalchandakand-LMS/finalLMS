@@ -142,8 +142,200 @@ class _StudentHomeState extends State<StudentHome> {
             leading: const Icon(Icons.menu_book),
             title: Text(item['title']?.toString() ?? 'Course'),
             subtitle: Text("৳${item['price'] ?? 0}"),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => CourseDetailsPage(
+                api: widget.api,
+                slug: item['slug'].toString(),
+              ),
+            )),
           ))),
         ]),
     ),
   );
+}
+
+
+class CourseDetailsPage extends StatefulWidget {
+  const CourseDetailsPage({required this.api, required this.slug, super.key});
+  final MobileApi api;
+  final String slug;
+
+  @override
+  State<CourseDetailsPage> createState() => _CourseDetailsPageState();
+}
+
+class _CourseDetailsPageState extends State<CourseDetailsPage> {
+  Map<String, dynamic>? course;
+  List<dynamic> lessons = [];
+  bool enrolled = false;
+  bool loading = true;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  Future<void> load() async {
+    setState(() {
+      loading = true;
+      error = null;
+    });
+    try {
+      final response = await widget.api.get('/courses/${widget.slug}');
+      if (!mounted) return;
+      setState(() {
+        course = response['course'] as Map<String, dynamic>;
+        lessons = response['lessons'] as List<dynamic>? ?? [];
+        enrolled = response['is_enrolled'] == true;
+      });
+    } catch (exception) {
+      if (mounted) setState(() => error = exception.toString());
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text('Course details')),
+        body: loading
+            ? const Center(child: CircularProgressIndicator())
+            : error != null
+                ? Center(child: Text(error!))
+                : RefreshIndicator(
+                    onRefresh: load,
+                    child: ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        Text(
+                          course?['title']?.toString() ?? 'Course',
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(course?['description']?.toString() ?? ''),
+                        const SizedBox(height: 20),
+                        Text('Course curriculum', style: Theme.of(context).textTheme.titleLarge),
+                        if (lessons.isEmpty)
+                          const ListTile(title: Text('No preview lessons are available.')),
+                        ...lessons.map((item) {
+                          final lesson = item as Map<String, dynamic>;
+                          return Card(
+                            child: ListTile(
+                              leading: const Icon(Icons.play_circle_outline),
+                              title: Text(lesson['title']?.toString() ?? 'Lesson'),
+                              subtitle: Text(
+                                (lesson['duration_minutes'] ?? 0).toString() + ' minutes',
+                              ),
+                              trailing: lesson['is_preview'] == true
+                                  ? const Chip(label: Text('Preview'))
+                                  : null,
+                              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                                builder: (_) => LessonPlayerPage(
+                                  api: widget.api,
+                                  slug: widget.slug,
+                                  lessonId: lesson['id'].toString(),
+                                  enrolled: enrolled,
+                                ),
+                              )),
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+      );
+}
+
+class LessonPlayerPage extends StatefulWidget {
+  const LessonPlayerPage({
+    required this.api,
+    required this.slug,
+    required this.lessonId,
+    required this.enrolled,
+    super.key,
+  });
+  final MobileApi api;
+  final String slug;
+  final String lessonId;
+  final bool enrolled;
+
+  @override
+  State<LessonPlayerPage> createState() => _LessonPlayerPageState();
+}
+
+class _LessonPlayerPageState extends State<LessonPlayerPage> {
+  Map<String, dynamic>? lesson;
+  bool loading = true;
+  bool saving = false;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  Future<void> load() async {
+    try {
+      final response = await widget.api.get(
+        '/courses/${widget.slug}/lessons/${widget.lessonId}',
+      );
+      if (mounted) setState(() => lesson = response['lesson'] as Map<String, dynamic>);
+    } catch (exception) {
+      if (mounted) setState(() => error = exception.toString());
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> complete() async {
+    setState(() => saving = true);
+    try {
+      await widget.api.post(
+        '/courses/${widget.slug}/lessons/${widget.lessonId}/complete',
+      );
+      if (mounted) setState(() => lesson?['is_completed'] = true);
+    } catch (exception) {
+      if (mounted) setState(() => error = exception.toString());
+    } finally {
+      if (mounted) setState(() => saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: Text(lesson?['title']?.toString() ?? 'Lesson')),
+        body: loading
+            ? const Center(child: CircularProgressIndicator())
+            : error != null
+                ? Center(child: Text(error!))
+                : ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      Text(
+                        lesson?['title']?.toString() ?? 'Lesson',
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                      const SizedBox(height: 16),
+                      if ((lesson?['video_url'] ?? '').toString().isNotEmpty)
+                        SelectableText('Video: ${lesson?['video_url']}'),
+                      const SizedBox(height: 16),
+                      Text(lesson?['content']?.toString() ?? ''),
+                      if (widget.enrolled && lesson?['is_completed'] != true)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 24),
+                          child: FilledButton(
+                            onPressed: saving ? null : complete,
+                            child: saving
+                                ? const CircularProgressIndicator()
+                                : const Text('Mark lesson complete'),
+                          ),
+                        ),
+                      if (lesson?['is_completed'] == true)
+                        const Chip(label: Text('Completed')),
+                    ],
+                  ),
+      );
 }
