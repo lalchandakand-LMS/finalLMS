@@ -144,6 +144,9 @@ class WebsiteBuilderController extends Controller
             }
         }
         Setting::setValue('homepage_revisions', json_encode(array_slice($revisions, -20), JSON_THROW_ON_ERROR));
+        Setting::setValue('homepage_draft', '');
+        Setting::setValue('homepage_draft_updated_at', '');
+        Setting::setValue('homepage_draft_updated_by', '');
 
         return redirect()->route('admin.website-builder.index')->with('success', 'Homepage restored from the selected revision.');
     }
