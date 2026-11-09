@@ -88,6 +88,91 @@ class BkashPaymentFlowTest extends TestCase
         );
     }
 
+    public function test_browser_failure_callback_cannot_reject_a_payment_confirmed_completed_by_bkash(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $course = $this->paidCourse();
+        $payment = Payment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'method' => 'bkash',
+            'gateway_provider' => 'bkash',
+            'amount' => '1500.00',
+            'currency' => 'BDT',
+            'transaction_reference' => 'BKASH-LOCAL-REF-FAIL-CALLBACK',
+            'gateway_payment_id' => 'BKASH-PAY-FAIL-CALLBACK',
+            'status' => 'pending',
+        ]);
+
+        Http::fake([
+            '*/tokenized/checkout/token/grant' => Http::response(['id_token' => 'verify-token'], 200),
+            '*/tokenized/checkout/payment/status' => Http::response([
+                'transactionStatus' => 'Completed',
+                'paymentID' => 'BKASH-PAY-FAIL-CALLBACK',
+                'trxID' => 'BKASH-TRX-FAIL-CALLBACK',
+                'amount' => '1500.00',
+            ], 200),
+        ]);
+
+        $this->get(route('payments.bkash.callback', [
+            'paymentID' => 'BKASH-PAY-FAIL-CALLBACK',
+            'status' => 'failure',
+        ]))->assertRedirect(route('courses.show', $course));
+
+        $this->assertDatabaseHas('payments', [
+            'id' => $payment->id,
+            'status' => 'approved',
+            'gateway_transaction_id' => 'BKASH-TRX-FAIL-CALLBACK',
+        ]);
+        $this->assertDatabaseHas('enrollments', [
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'status' => 'active',
+        ]);
+
+        Http::assertSent(fn (Request $request) =>
+            str_ends_with($request->url(), '/tokenized/checkout/payment/status')
+            && $request['paymentID'] === 'BKASH-PAY-FAIL-CALLBACK'
+        );
+        Http::assertNotSent(fn (Request $request) =>
+            str_ends_with($request->url(), '/tokenized/checkout/execute')
+        );
+    }
+
+    public function test_unconfirmed_failure_callback_leaves_payment_pending_for_authoritative_recheck(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $course = $this->paidCourse();
+        $payment = Payment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'method' => 'bkash',
+            'gateway_provider' => 'bkash',
+            'amount' => '1500.00',
+            'currency' => 'BDT',
+            'transaction_reference' => 'BKASH-LOCAL-REF-UNCONFIRMED',
+            'gateway_payment_id' => 'BKASH-PAY-UNCONFIRMED',
+            'status' => 'pending',
+        ]);
+
+        Http::fake([
+            '*/tokenized/checkout/token/grant' => Http::response(['id_token' => 'verify-token'], 200),
+            '*/tokenized/checkout/payment/status' => Http::response([
+                'transactionStatus' => 'Initiated',
+                'paymentID' => 'BKASH-PAY-UNCONFIRMED',
+                'amount' => '1500.00',
+            ], 200),
+        ]);
+
+        $this->get(route('payments.bkash.callback', [
+            'paymentID' => 'BKASH-PAY-UNCONFIRMED',
+            'status' => 'failure',
+        ]))->assertRedirect(route('courses.show', $course));
+
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'pending']);
+        $this->assertDatabaseMissing('enrollments', ['user_id' => $student->id, 'course_id' => $course->id]);
+    }
+
     public function test_callback_with_amount_mismatch_never_activates_enrollment(): void
     {
         $student = User::factory()->create(['role' => 'student']);
