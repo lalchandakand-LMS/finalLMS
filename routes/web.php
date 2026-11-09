@@ -30,6 +30,7 @@ use App\Http\Controllers\BackupController;
 use App\Http\Controllers\InstallController;
 use App\Http\Controllers\QuizContestController;
 use App\Http\Controllers\FlashSaleController;
+use App\Http\Controllers\AdminProductController;
 use App\Http\Controllers\StoreController;
 use App\Http\Controllers\AdminOrderController;
 use App\Http\Controllers\AdminCouponController;
