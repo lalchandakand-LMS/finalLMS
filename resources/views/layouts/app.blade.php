@@ -106,7 +106,12 @@
             background: var(--site-page-background);
             color: var(--text);
         }
-        h1, h2, h3, h4, h5, h6 { font-size: calc(1em * var(--site-heading-scale)); }
+        h1 { font-size: calc(2em * var(--site-heading-scale)); }
+        h2 { font-size: calc(1.5em * var(--site-heading-scale)); }
+        h3 { font-size: calc(1.17em * var(--site-heading-scale)); }
+        h4 { font-size: calc(1em * var(--site-heading-scale)); }
+        h5 { font-size: calc(.83em * var(--site-heading-scale)); }
+        h6 { font-size: calc(.67em * var(--site-heading-scale)); }
         a { color: var(--primary); text-decoration: none; }
         .btn, .nav-links a, .nav-links button, .course-item, .panel, .card, .summary-box, .auth-box {
             transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
