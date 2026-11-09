@@ -8,7 +8,24 @@
     $sections = collect($draft['sections'] ?? [])->filter(fn ($section) => is_array($section) && !empty($section['enabled']));
     $slides = collect($draft['home_slides'] ?? [])->filter(fn ($slide) => is_array($slide) && !empty($slide['enabled']));
     $headerLinks = collect($draft['header_links'] ?? [])->filter(fn ($link) => is_array($link) && !empty($link['label']) && !empty($link['url']));
+    $previewPrimary = preg_match('/^#[0-9A-Fa-f]{6}$/', $draft['site_primary_color'] ?? '') ? $draft['site_primary_color'] : '#1546a8';
+    $previewBackground = preg_match('/^#[0-9A-Fa-f]{6}$/', $draft['site_background_color'] ?? '') ? $draft['site_background_color'] : '#f3f6fb';
+    $previewBackgrounds = ['solid' => $previewBackground, 'soft-gradient' => 'radial-gradient(circle at top left, rgba(21,70,168,0.10), transparent 30%), linear-gradient(180deg, ' . $previewBackground . ' 0%, #ffffff 100%)', 'warm-gradient' => 'radial-gradient(circle at top left, rgba(180,130,70,0.10), transparent 30%), linear-gradient(180deg, ' . $previewBackground . ' 0%, #fffdf9 100%)'];
+    $previewPageBackground = $previewBackgrounds[$draft['site_background_style'] ?? 'soft-gradient'] ?? $previewBackgrounds['soft-gradient'];
+    $previewFonts = ['system' => 'Arial, Helvetica, sans-serif', 'inter' => 'Inter, Arial, sans-serif', 'nunito' => 'Nunito, Arial, sans-serif', 'poppins' => 'Poppins, Arial, sans-serif', 'georgia' => 'Georgia, serif'];
+    $previewFontFamily = $previewFonts[$draft['site_font_family'] ?? 'system'] ?? $previewFonts['system'];
+    $previewHeadingScale = in_array($draft['site_heading_scale'] ?? '1', ['0.9', '1', '1.1', '1.2'], true) ? ($draft['site_heading_scale'] ?? '1') : '1';
+    $previewBodyScale = in_array($draft['site_body_scale'] ?? '1', ['0.9', '1', '1.05', '1.1'], true) ? ($draft['site_body_scale'] ?? '1') : '1';
 @endphp
+<style>
+    :root {
+        --primary: {{ $previewPrimary }};
+        --site-page-background: {!! $previewPageBackground !!};
+        --site-font-family: {{ $previewFontFamily }};
+        --site-heading-scale: {{ $previewHeadingScale }};
+        --site-body-scale: {{ $previewBodyScale }};
+    }
+</style>
 <div class="page-header">
     <div><span class="badge info">Unpublished preview</span><h1>Homepage draft preview</h1><p class="muted">Only administrators can see this preview. It is not visible to visitors until published.</p></div>
     <div class="cta-row"><a class="btn secondary" href="{{ route('admin.website-builder.index') }}">Back to builder</a><form method="POST" action="{{ route('admin.website-builder.publish-draft') }}">@csrf<button class="btn primary" type="submit">Publish this draft</button></form></div>
