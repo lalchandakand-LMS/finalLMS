@@ -30,6 +30,8 @@ use App\Http\Controllers\BackupController;
 use App\Http\Controllers\InstallController;
 use App\Http\Controllers\QuizContestController;
 use App\Http\Controllers\FlashSaleController;
+use App\Http\Controllers\StoreController;
+use App\Http\Controllers\AdminOrderController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/install', [InstallController::class, 'index'])->name('install.index');
@@ -58,7 +60,8 @@ Route::get('/payments/bkash/callback', [BkashPaymentController::class, 'callback
 Route::get('/contests', [QuizContestController::class, 'index'])->name('contests.index');
 Route::get('/contests/{contest}', [QuizContestController::class, 'show'])->name('contests.show');
 
-Route::get('/store', [StoreController::class, 'index'])->name('store.index');\nRoute::get('/courses', [CourseController::class, 'index'])->name('courses.index');
+Route::get('/store', [StoreController::class, 'index'])->name('store.index');
+Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
 Route::get('/courses/{course}', [CourseController::class, 'show'])->name('courses.show');
 Route::get('/courses/{course}/lessons/{lesson}', [CourseController::class, 'showLesson'])->name('courses.lessons.show');
 
@@ -72,7 +75,14 @@ Route::middleware('auth')->group(function () {
         ->name('verification.send');
 });
 
-Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {\n    Route::get('/cart', [StoreController::class, 'cart'])->name('store.cart');\n    Route::post('/cart/{product}', [StoreController::class, 'add'])->middleware('throttle:30,1')->name('store.cart.add');\n    Route::put('/cart/items/{item}', [StoreController::class, 'update'])->name('store.cart.update');\n    Route::delete('/cart/items/{item}', [StoreController::class, 'remove'])->name('store.cart.remove');\n    Route::post('/checkout', [StoreController::class, 'checkout'])->middleware('throttle:5,1')->name('store.checkout');\n    Route::get('/my/orders', [StoreController::class, 'orders'])->name('store.orders');\n    Route::get('/my/downloads/{permission}', [StoreController::class, 'download'])->middleware('throttle:10,1')->name('store.download');
+Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
+    Route::get('/cart', [StoreController::class, 'cart'])->name('store.cart');
+    Route::post('/cart/{product}', [StoreController::class, 'add'])->middleware('throttle:30,1')->name('store.cart.add');
+    Route::put('/cart/items/{item}', [StoreController::class, 'update'])->name('store.cart.update');
+    Route::delete('/cart/items/{item}', [StoreController::class, 'remove'])->name('store.cart.remove');
+    Route::post('/checkout', [StoreController::class, 'checkout'])->middleware('throttle:5,1')->name('store.checkout');
+    Route::get('/my/orders', [StoreController::class, 'orders'])->name('store.orders');
+    Route::get('/my/downloads/{permission}', [StoreController::class, 'download'])->middleware('throttle:10,1')->name('store.download');
     Route::get('/live-classes', [LiveClassController::class, 'index'])->name('live-classes.index');
     Route::get('/invoice-payments/{payment}/receipt', [InvoiceController::class, 'receipt'])
         ->middleware('role:admin,accountant')
@@ -157,7 +167,10 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {\n  
         ->middleware('role:student')
         ->name('courses.lessons.complete');
 
-    Route::middleware('role:admin')->prefix('admin')->group(function () {\n        Route::get('/orders', [AdminOrderController::class, 'index'])->name('admin.orders.index');\n        Route::post('/orders/{order}/approve', [AdminOrderController::class, 'approve'])->name('admin.orders.approve');\n        Route::post('/orders/{order}/reject', [AdminOrderController::class, 'reject'])->name('admin.orders.reject');
+    Route::middleware('role:admin')->prefix('admin')->group(function () {
+        Route::get('/orders', [AdminOrderController::class, 'index'])->name('admin.orders.index');
+        Route::post('/orders/{order}/approve', [AdminOrderController::class, 'approve'])->name('admin.orders.approve');
+        Route::post('/orders/{order}/reject', [AdminOrderController::class, 'reject'])->name('admin.orders.reject');
         Route::get('/products', [AdminProductController::class, 'index'])->name('admin.products.index');
         Route::post('/products', [AdminProductController::class, 'store'])->name('admin.products.store');
         Route::put('/products/{product}', [AdminProductController::class, 'update'])->name('admin.products.update');
