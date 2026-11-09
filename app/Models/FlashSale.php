@@ -47,7 +47,10 @@ class FlashSale extends Model
     public static function activeCampaigns(): \Illuminate\Support\Collection
     {
         return static::query()->where('status','active')->where('starts_at','<=',now())->where('ends_at','>=',now())
-            ->where(function ($query) {\n                $query->whereHas('courses', fn ($q) => $q->where('courses.status','published'))\n                    ->orWhereHas('categories.products', fn ($q) => $q->where('products.status','published')->whereNotNull('products.course_id'));\n            })
+            ->where(function ($query) {
+                $query->whereHas('courses', fn ($q) => $q->where('courses.status','published'))
+                    ->orWhereHas('categories.products', fn ($q) => $q->where('products.status','published')->whereNotNull('products.course_id'));
+            })
             ->with(['courses' => fn ($q) => $q->where('courses.status','published')->with('teacher'), 'categories.products.course.teacher'])
             ->orderByDesc('priority')->orderBy('ends_at')->get()
             ->filter(fn (self $sale) => $sale->isAvailableFor())->values();
