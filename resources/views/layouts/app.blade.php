@@ -11,7 +11,40 @@
         $googleAnalyticsId = $hasSettingsTable ? \App\Models\Setting::value('google_analytics_id') : null;
         $googleTagManagerId = $hasSettingsTable ? \App\Models\Setting::value('google_tag_manager_id') : null;
         $facebookPixelId = $hasSettingsTable ? \App\Models\Setting::value('facebook_pixel_id') : null;
-        $marketingConsent = request()->cookie('marketing_consent') === 'accepted';\n        $themePrimary = $hasSettingsTable ? \\App\\Models\\Setting::value('theme_primary', '#C2410C') : '#C2410C';\n        $themeSecondary = $hasSettingsTable ? \\App\\Models\\Setting::value('theme_secondary', '#EA580C') : '#EA580C';\n        $themeAccent = $hasSettingsTable ? \\App\\Models\\Setting::value('theme_accent', '#FED7AA') : '#FED7AA';\n        $themeSidebarStart = $hasSettingsTable ? \\App\\Models\\Setting::value('theme_sidebar_start', '#7C2D12') : '#7C2D12';\n        $themeSidebarEnd = $hasSettingsTable ? \\App\\Models\\Setting::value('theme_sidebar_end', '#431407') : '#431407';
+        $marketingConsent = request()->cookie('marketing_consent') === 'accepted';
+        $themePrimary = $hasSettingsTable ? \App\Models\Setting::value('theme_primary', '#C2410C') : '#C2410C';
+        $themeSecondary = $hasSettingsTable ? \App\Models\Setting::value('theme_secondary', '#9A3412') : '#9A3412';
+        $themeAccent = $hasSettingsTable ? \App\Models\Setting::value('theme_accent', '#FED7AA') : '#FED7AA';
+        $themeSidebarStart = $hasSettingsTable ? \App\Models\Setting::value('theme_sidebar_start', '#7C2D12') : '#7C2D12';
+        $themeSidebarEnd = $hasSettingsTable ? \App\Models\Setting::value('theme_sidebar_end', '#431407') : '#431407';
+        $isPublicLayout = !auth()->check();
+        $websiteSiteName = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('site_name', config('app.name')) : config('app.name');
+        $websitePrimary = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('site_primary_color', $themePrimary) : $themePrimary;
+        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', (string) $websitePrimary)) $websitePrimary = $themePrimary;
+        $websiteBackground = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('site_background_color', '#FFF7ED') : '#FFF7ED';
+        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', (string) $websiteBackground)) $websiteBackground = '#FFF7ED';
+        $websiteBackgroundStyle = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('site_background_style', 'soft-gradient') : 'soft-gradient';
+        $websiteBackgrounds = [
+            'solid' => $websiteBackground,
+            'soft-gradient' => 'radial-gradient(circle at top left, rgba(194,65,12,0.10), transparent 30%), linear-gradient(180deg, '.$websiteBackground.' 0%, #ffffff 100%)',
+            'warm-gradient' => 'radial-gradient(circle at top left, rgba(180,100,40,0.12), transparent 30%), linear-gradient(180deg, '.$websiteBackground.' 0%, #fffdf9 100%)',
+        ];
+        $websitePageBackground = $websiteBackgrounds[$websiteBackgroundStyle] ?? $websiteBackgrounds['soft-gradient'];
+        $websiteFontKey = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('site_font_family', 'system') : 'system';
+        $websiteFonts = ['system' => 'Arial, Helvetica, sans-serif', 'inter' => 'Inter, Arial, sans-serif', 'nunito' => 'Nunito, Arial, sans-serif', 'poppins' => 'Poppins, Arial, sans-serif', 'georgia' => 'Georgia, serif'];
+        $websiteFontFamily = $websiteFonts[$websiteFontKey] ?? $websiteFonts['system'];
+        $websiteHeadingScale = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('site_heading_scale', '1') : '1';
+        $websiteBodyScale = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('site_body_scale', '1') : '1';
+        if (!in_array($websiteHeadingScale, ['0.9', '1', '1.1', '1.2'], true)) $websiteHeadingScale = '1';
+        if (!in_array($websiteBodyScale, ['0.9', '1', '1.05', '1.1'], true)) $websiteBodyScale = '1';
+        $websiteHeaderLinks = $isPublicLayout && $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('header_links', '[]'), true) : [];
+        $websiteHeaderLinks = is_array($websiteHeaderLinks) ? array_values(array_filter($websiteHeaderLinks, fn ($link) => is_array($link) && !empty($link['label']) && !empty($link['url']) && preg_match('~^(https?://|/(?!/)|#)~i', trim($link['url'])))) : [];
+        $websiteFooterTitle = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('footer_title', $websiteSiteName) : $websiteSiteName;
+        $websiteFooterText = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('footer_text', '') : '';
+        $websiteFooterLinks = $isPublicLayout && $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('footer_links', '[]'), true) : [];
+        $websiteFooterLinks = is_array($websiteFooterLinks) ? array_values(array_filter($websiteFooterLinks, fn ($link) => is_array($link) && !empty($link['label']) && !empty($link['url']) && preg_match('~^(https?://|/(?!/)|#)~i', trim($link['url'])))) : [];
+        $websiteLogo = $isPublicLayout && $hasSettingsTable ? \App\Models\MediaAsset::query()->whereKey(\App\Models\Setting::value('site_logo_media_id'))->where('mime_type', 'like', 'image/%')->first() : null;
+        $websiteFavicon = $isPublicLayout && $hasSettingsTable ? \App\Models\MediaAsset::query()->whereKey(\App\Models\Setting::value('site_favicon_media_id'))->where('mime_type', 'like', 'image/%')->first() : null;
     @endphp
     <title>@yield('title', config('app.name'))</title>
     <meta name="description" content="{{ $seoDescription }}">
@@ -20,6 +53,7 @@
     <meta property="og:description" content="{{ $seoDescription }}">
     <meta property="og:type" content="website">
     <meta property="og:url" content="{{ request()->url() }}">
+    @if($websiteFavicon)<link rel="icon" href="{{ $websiteFavicon->url }}">@endif
     @if($marketingConsent && $googleAnalyticsId)
         <script async src="https://www.googletagmanager.com/gtag/js?id={{ urlencode($googleAnalyticsId) }}"></script>
         <script>
@@ -46,8 +80,15 @@
         :root {
             --bg: #f3f6fb;
             --panel: #ffffff;
-            --panel-alt: {{ preg_match('/^#[0-9A-Fa-f]{6}$/', $themeAccent) ? $themeAccent : '#FED7AA' }};\n            --accent: {{ preg_match('/^#[0-9A-Fa-f]{6}$/', $themeAccent) ? $themeAccent : '#FED7AA' }};\n            --sidebar-start: {{ preg_match('/^#[0-9A-Fa-f]{6}$/', $themeSidebarStart) ? $themeSidebarStart : '#7C2D12' }};\n            --sidebar-end: {{ preg_match('/^#[0-9A-Fa-f]{6}$/', $themeSidebarEnd) ? $themeSidebarEnd : '#431407' }};
-            --primary: {{ preg_match('/^#[0-9A-Fa-f]{6}$/', $themePrimary) ? $themePrimary : '#C2410C' }};
+            --panel-alt: {{ preg_match('/^#[0-9A-Fa-f]{6}$/', $themeAccent) ? $themeAccent : '#FED7AA' }};
+            --accent: {{ preg_match('/^#[0-9A-Fa-f]{6}$/', $themeAccent) ? $themeAccent : '#FED7AA' }};
+            --sidebar-start: {{ preg_match('/^#[0-9A-Fa-f]{6}$/', $themeSidebarStart) ? $themeSidebarStart : '#7C2D12' }};
+            --sidebar-end: {{ preg_match('/^#[0-9A-Fa-f]{6}$/', $themeSidebarEnd) ? $themeSidebarEnd : '#431407' }};
+            --primary: {{ preg_match('/^#[0-9A-Fa-f]{6}$/', $isPublicLayout ? $websitePrimary : $themePrimary) ? ($isPublicLayout ? $websitePrimary : $themePrimary) : '#C2410C' }};
+            --site-page-background: {!! $websitePageBackground !!};
+            --site-font-family: {{ $websiteFontFamily }};
+            --site-heading-scale: {{ $websiteHeadingScale }};
+            --site-body-scale: {{ $websiteBodyScale }};
             --primary-dark: {{ preg_match('/^#[0-9A-Fa-f]{6}$/', $themeSecondary) ? $themeSecondary : '#9A3412' }};
             --green: #1f9d61;
             --text: #18212f;
@@ -58,6 +99,8 @@
         }
 
         * { box-sizing: border-box; }
+        body:not(.app-shell) { background:var(--site-page-background); font-family:var(--site-font-family); font-size:calc(16px * var(--site-body-scale)); }
+        body:not(.app-shell) h1,body:not(.app-shell) h2,body:not(.app-shell) h3 { font-size:calc(1em * var(--site-heading-scale)); }
         
         body.app-shell { background:#f4f7fc; }
         .app-sidebar { position:fixed; inset:0 auto 0 0; z-index:40; width:268px; padding:20px 14px; overflow-y:auto; color:#dce8ff; background:linear-gradient(180deg,var(--sidebar-start),var(--sidebar-end)); box-shadow:8px 0 30px rgba(9,25,58,.12); }
@@ -290,7 +333,7 @@
             @auth
                 <button type="button" class="sidebar-toggle" aria-label="Open navigation menu" aria-controls="app-sidebar" aria-expanded="false" onclick="toggleAppSidebar()">☰</button>
             @endauth
-            <a href="/{{ auth()->check() ? 'dashboard' : '' }}" class="brand">{{ config('app.name') }}</a>
+            <a href="/{{ auth()->check() ? 'dashboard' : '' }}" class="brand">@if($websiteLogo)<img src="{{ $websiteLogo->url }}" alt="{{ $websiteSiteName }}" style="max-height:38px;max-width:150px;object-fit:contain">@else{{ auth()->check() ? config('app.name') : $websiteSiteName }}@endif</a>
             <div class="nav-links">
                 <form method="POST" action="{{ route('locale.update') }}" class="inline-form" style="display:inline-flex;gap:6px;align-items:center;">
                     @csrf
@@ -309,6 +352,7 @@
                     <a href="{{ route('pages.contact') }}">{{ __('Contact') }}</a>
                     <a href="{{ route('pages.faq') }}">{{ __('FAQ') }}</a>
                     <a href="{{ route('news.index') }}">{{ __('Blog & News') }}</a>
+                    @foreach($websiteHeaderLinks as $websiteLink)<a href="{{ $websiteLink['url'] }}">{{ $websiteLink['label'] }}</a>@endforeach
                     <a href="{{ route('login') }}">{{ __('Login') }}</a>
                     <a href="{{ route('register') }}">{{ __('Register') }}</a>
                 @endguest
@@ -333,6 +377,14 @@
 
         @yield('content')
     </main>
+    @guest
+        <footer class="container" style="padding-top:24px;padding-bottom:36px;border-top:1px solid var(--border);">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap;">
+                <div style="max-width:620px;"><strong>{{ $websiteFooterTitle }}</strong>@if($websiteFooterText !== '')<p class="muted" style="margin:8px 0 0;line-height:1.7;">{{ $websiteFooterText }}</p>@endif</div>
+                <nav aria-label="{{ __('Footer navigation') }}" style="display:flex;gap:12px;flex-wrap:wrap;">@foreach($websiteFooterLinks as $websiteLink)<a href="{{ $websiteLink['url'] }}">{{ $websiteLink['label'] }}</a>@endforeach</nav>
+            </div>
+        </footer>
+    @endguest
     @if(!request()->cookie('marketing_consent'))
         <aside id="cookie-preferences" class="panel" style="position:fixed; right:20px; bottom:20px; z-index:20; max-width:440px; box-shadow:var(--shadow);">
             <strong>Cookie preferences</strong>
