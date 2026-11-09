@@ -30,8 +30,10 @@ class WebsiteBuilderController extends Controller
         $footerLinks = is_array($footerLinks) ? $footerLinks : [];
         $headerLinks = json_decode((string) ($settings['header_links'] ?? '[]'), true);
         $headerLinks = is_array($headerLinks) ? $headerLinks : [];
-        $draft = json_decode((string) Setting::value('homepage_draft', ''), true);\n        $draft = is_array($draft) ? $draft : null;
-        $revisions = json_decode((string) Setting::value('homepage_revisions', '[]'), true);\n        $revisions = is_array($revisions) ? $revisions : [];
+        $draft = json_decode((string) Setting::value('homepage_draft', ''), true);
+        $draft = is_array($draft) ? $draft : null;
+        $revisions = json_decode((string) Setting::value('homepage_revisions', '[]'), true);
+        $revisions = is_array($revisions) ? $revisions : [];
         $templates = self::homepageTemplates();
         $activeTemplate = (string) ($settings['homepage_template'] ?? 'academy-modern');
         if (!array_key_exists($activeTemplate, $templates)) {
@@ -196,7 +198,9 @@ class WebsiteBuilderController extends Controller
             'sections.*.enabled' => ['nullable', 'boolean'],
         ]);
 
-        $this->recordHomepageRevision();\n\n        $sections = collect($validated['sections'] ?? [])->map(function (array $section): array {
+        $this->recordHomepageRevision();
+
+        $sections = collect($validated['sections'] ?? [])->map(function (array $section): array {
             return [
                 'title' => trim($section['title'] ?? ''),
                 'body' => trim($section['body'] ?? ''),
