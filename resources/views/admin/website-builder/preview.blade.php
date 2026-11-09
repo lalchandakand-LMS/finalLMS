@@ -18,12 +18,16 @@
     $previewBodyScale = in_array($draft['site_body_scale'] ?? '1', ['0.9', '1', '1.05', '1.1'], true) ? ($draft['site_body_scale'] ?? '1') : '1';
 @endphp
 <style>
-    :root {
+    .homepage-preview-frame {
         --primary: {{ $previewPrimary }};
         --site-page-background: {!! $previewPageBackground !!};
         --site-font-family: {{ $previewFontFamily }};
         --site-heading-scale: {{ $previewHeadingScale }};
         --site-body-scale: {{ $previewBodyScale }};
+        font-family: var(--site-font-family);
+        font-size: calc(16px * var(--site-body-scale));
+        background: var(--site-page-background);
+        color: var(--text);
     }
 </style>
 <div class="page-header">
