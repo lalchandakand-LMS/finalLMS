@@ -58,7 +58,7 @@ Route::get('/faq', [CmsPageController::class, 'faq'])->name('pages.faq');
 Route::get('/news', [BlogController::class, 'index'])->name('news.index');
 Route::get('/news/{post:slug}', [BlogController::class, 'show'])->name('news.show');
 Route::post('/language', [LocaleController::class, 'update'])->middleware('throttle:20,1')->name('locale.update');
-Route::get('/payments/bkash/callback', [BkashPaymentController::class, 'callback'])->middleware('throttle:30,1')->name('payments.bkash.callback');
+Route::get('/payments/bkash/callback', [BkashPaymentController::class, 'callback'])->middleware('throttle:30,1')->name('payments.bkash.callback');\nRoute::get('/store/payments/bkash/callback', [CommerceBkashController::class, 'callback'])->middleware('throttle:30,1')->name('store.payments.bkash.callback');
 
 Route::get('/contests', [QuizContestController::class, 'index'])->name('contests.index');
 Route::get('/contests/{contest}', [QuizContestController::class, 'show'])->name('contests.show');
@@ -84,7 +84,7 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
     Route::put('/cart/items/{item}', [StoreController::class, 'update'])->name('store.cart.update');
     Route::delete('/cart/items/{item}', [StoreController::class, 'remove'])->name('store.cart.remove');
     Route::post('/checkout', [StoreController::class, 'checkout'])->middleware('throttle:5,1')->name('store.checkout');
-    Route::get('/my/orders', [StoreController::class, 'orders'])->name('store.orders');
+    Route::get('/my/orders', [StoreController::class, 'orders'])->name('store.orders');\n    Route::post('/my/orders/{order}/pay/bkash', [CommerceBkashController::class, 'initiate'])->middleware('throttle:5,1')->name('store.orders.pay.bkash');
     Route::get('/my/downloads/{permission}', [StoreController::class, 'download'])->middleware('throttle:10,1')->name('store.download');
     Route::get('/live-classes', [LiveClassController::class, 'index'])->name('live-classes.index');
     Route::get('/invoice-payments/{payment}/receipt', [InvoiceController::class, 'receipt'])
