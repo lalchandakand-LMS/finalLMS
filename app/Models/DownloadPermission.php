@@ -11,5 +11,5 @@ class DownloadPermission extends Model
     protected $casts = ['expires_at' => 'datetime','revoked_at' => 'datetime'];
     public function orderItem(): BelongsTo { return $this->belongsTo(OrderItem::class); }
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
-    public function product(): BelongsTo { return $this->belongsTo(Product::class); }
+    public function product(): BelongsTo { return $this->belongsTo(Product::class)->withTrashed(); }
 }
