@@ -23,7 +23,11 @@ class WebsiteBuilderTest extends TestCase
                     'title' => 'Our learning approach',
                     'body' => '<script>alert(1)</script>Learn with confidence.',
                     'button_label' => 'Browse courses',
-                    'button_url' => 'https://example.com/courses',
+                    'button_url' => '/courses',
+                    'background_color' => '#f0f4ff',
+                    'text_color' => '#112233',
+                    'spacing' => 'airy',
+                    'layout' => 'centered',
                     'enabled' => '1',
                 ],
             ],
@@ -31,7 +35,11 @@ class WebsiteBuilderTest extends TestCase
 
         $this->assertDatabaseHas('settings', ['key' => 'website_sections']);
         Auth::logout();
-        $this->get('/')->assertOk()->assertSee('&lt;script&gt;alert(1)&lt;/script&gt;', false)->assertSee('Learn with confidence.');
+        $this->get('/')->assertOk()->assertSee('&lt;script&gt;alert(1)&lt;/script&gt;', false)->assertSee('Learn with confidence.')
+            ->assertSee('background-color:#f0f4ff', false)
+            ->assertSee('color:#112233', false)
+            ->assertSee('padding:40px', false)
+            ->assertSee('grid-template-columns:1fr;text-align:center', false);
     }
 
     public function test_admin_can_save_branding_homepage_content_and_slider_from_builder(): void
