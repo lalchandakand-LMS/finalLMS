@@ -16,7 +16,7 @@ class UserController extends Controller
     {
         $validated = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
-            'role' => ['nullable', 'in:admin,branch_manager,accountant,teacher,student'],
+            'role' => ['nullable', 'in:admin,branch_manager,accountant,teacher,student,guardian,guardian'],
         ]);
 
         $users = User::query()
@@ -35,14 +35,43 @@ class UserController extends Controller
             ->withQueryString();
 
         $branches = Branch::query()->where('is_active', true)->orderBy('name')->get();
+        $guardians = User::query()->where('role', 'guardian')->orderBy('name')->get(['id', 'name', 'email']);
+        $students = User::query()->where('role', 'student')->orderBy('name')->get(['id', 'name', 'email']);
 
-        return view('admin.users.index', compact('users', 'branches'));
+        return view('admin.users.index', compact('users', 'branches', 'guardians', 'students'));
+    }
+
+    public function linkStudent(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'guardian_id' => ['required', 'integer', Rule::exists('users', 'id')->where('role', 'guardian')],
+            'student_id' => ['required', 'integer', Rule::exists('users', 'id')->where('role', 'student')],
+        ]);
+
+        \App\Models\GuardianStudent::query()->firstOrCreate(
+            ['guardian_id' => $validated['guardian_id'], 'student_id' => $validated['student_id']],
+            ['linked_by' => Auth::id()]
+        );
+
+        return redirect()->route('admin.users.index')->with('success', 'Guardian and student linked successfully.');
+    }
+
+    public function unlinkStudent(User $guardian, User $student): RedirectResponse
+    {
+        abort_unless($guardian->isGuardian() && $student->isStudent(), 404);
+
+        \App\Models\GuardianStudent::query()
+            ->where('guardian_id', $guardian->id)
+            ->where('student_id', $student->id)
+            ->delete();
+
+        return redirect()->route('admin.users.index')->with('success', 'Guardian link removed.');
     }
 
     public function updateRole(User $user, Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'role' => ['required', 'in:admin,branch_manager,accountant,teacher,student'],
+            'role' => ['required', 'in:admin,branch_manager,accountant,teacher,student,guardian'],
             'branch_id' => ['nullable', Rule::exists('branches', 'id')->where('is_active', true)],
         ]);
 
