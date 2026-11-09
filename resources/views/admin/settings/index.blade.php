@@ -18,7 +18,7 @@
         <form method="POST" action="{{ route('admin.settings.theme.update') }}">
             @csrf
             @php
-                $themeDefaults = ['theme_primary'=>'#C2410C','theme_secondary'=>'#EA580C','theme_accent'=>'#FED7AA','theme_sidebar_start'=>'#7C2D12','theme_sidebar_end'=>'#431407'];
+                $themeDefaults = ['theme_primary'=>'#C2410C','theme_secondary'=>'#9A3412','theme_accent'=>'#FED7AA','theme_sidebar_start'=>'#7C2D12','theme_sidebar_end'=>'#431407'];
             @endphp
             <div class="grid grid-3">
                 @foreach(['theme_primary'=>'Primary orange','theme_secondary'=>'Secondary orange','theme_accent'=>'Accent highlight','theme_sidebar_start'=>'Sidebar top','theme_sidebar_end'=>'Sidebar bottom'] as $key => $label)
