@@ -242,10 +242,17 @@
     @endphp
     @foreach($builderSections as $section)
         @if(($section['enabled'] ?? false) && (trim($section['title'] ?? '') !== '' || trim($section['body'] ?? '') !== ''))
-            @php($sectionImage = !empty($section['image_id']) ? \App\Models\MediaAsset::find($section['image_id']) : null)
-            <section class="panel" style="margin-top:28px;">
-                <div class="grid grid-2" style="align-items:center;">
-                    <div>
+            @php
+                $sectionImage = !empty($section['image_id']) ? \App\Models\MediaAsset::find($section['image_id']) : null;
+                $sectionBackground = preg_match('/^#[0-9A-Fa-f]{6}$/', $section['background_color'] ?? '') ? $section['background_color'] : '#ffffff';
+                $sectionTextColor = preg_match('/^#[0-9A-Fa-f]{6}$/', $section['text_color'] ?? '') ? $section['text_color'] : '#18212f';
+                $sectionSpacing = ['compact' => '16px', 'normal' => '24px', 'airy' => '40px'][$section['spacing'] ?? 'normal'] ?? '24px';
+                $sectionLayout = in_array($section['layout'] ?? 'standard', ['standard', 'reversed', 'centered'], true) ? ($section['layout'] ?? 'standard') : 'standard';
+                $sectionGridStyle = $sectionLayout === 'centered' ? 'grid-template-columns:1fr;text-align:center;' : ($sectionLayout === 'reversed' ? 'direction:rtl;' : '');
+            @endphp
+            <section class="panel" style="margin-top:28px;background-color:{{ $sectionBackground }};color:{{ $sectionTextColor }};padding:{{ $sectionSpacing }};">
+                <div class="grid grid-2" style="align-items:center;{{ $sectionGridStyle }}">
+                    <div style="direction:ltr;text-align:{{ $sectionLayout === 'centered' ? 'center' : 'left' }};">
                         @if(!empty($section['title']))<h2>{{ $section['title'] }}</h2>@endif
                         @if(!empty($section['body']))<p style="white-space:pre-line;line-height:1.8;">{{ $section['body'] }}</p>@endif
                         @if(!empty($section['button_label']) && !empty($section['button_url']))
@@ -253,7 +260,7 @@
                         @endif
                     </div>
                     @if($sectionImage && str_starts_with($sectionImage->mime_type, 'image/'))
-                        <div><img src="{{ $sectionImage->url }}" alt="{{ $sectionImage->alt_text }}" loading="lazy" style="width:100%;max-height:340px;object-fit:cover;border-radius:14px;"></div>
+                        <div style="direction:ltr;{{ $sectionLayout === 'centered' ? 'text-align:center;' : '' }}"><img src="{{ $sectionImage->url }}" alt="{{ $sectionImage->alt_text }}" loading="lazy" style="width:100%;max-width:{{ $sectionLayout === 'centered' ? '560px' : '100%' }};max-height:340px;object-fit:cover;border-radius:14px;"></div>
                     @endif
                 </div>
             </section>
