@@ -35,7 +35,9 @@ class _InstructorGateState extends State<InstructorGate> {
   }
   @override
   Widget build(BuildContext context) {
-    if (loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     return signedIn
       ? InstructorHome(api: api, onLogout: () => setState(() => signedIn = false))
       : InstructorLogin(api: api, onLogin: () => setState(() => signedIn = true));
