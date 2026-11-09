@@ -1,11 +1,11 @@
 <?php
 
-namespace App\\Http\\Controllers;
+namespace App\Http\Controllers;
 
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\Support\\Facades\\Schema;
-use Illuminate\\Support\\Facades\\Storage;
-use Illuminate\\View\\View;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\View\View;
 use Throwable;
 
 class SystemMaintenanceController extends Controller
