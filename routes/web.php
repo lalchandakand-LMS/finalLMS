@@ -33,6 +33,7 @@ use App\Http\Controllers\FlashSaleController;
 use App\Http\Controllers\StoreController;
 use App\Http\Controllers\AdminOrderController;
 use App\Http\Controllers\AdminCouponController;
+use App\Http\Controllers\AdminQuestionSetController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/install', [InstallController::class, 'index'])->name('install.index');
@@ -172,6 +173,10 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         ->name('courses.lessons.complete');
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
+        Route::get('/question-sets', [AdminQuestionSetController::class, 'index'])->name('admin.question-sets.index');
+        Route::post('/question-sets', [AdminQuestionSetController::class, 'store'])->name('admin.question-sets.store');
+        Route::put('/question-sets/{questionSet}', [AdminQuestionSetController::class, 'update'])->name('admin.question-sets.update');
+        Route::delete('/question-sets/{questionSet}', [AdminQuestionSetController::class, 'destroy'])->name('admin.question-sets.destroy');
         Route::get('/coupons', [AdminCouponController::class, 'index'])->name('admin.coupons.index');
         Route::post('/coupons', [AdminCouponController::class, 'store'])->name('admin.coupons.store');
         Route::put('/coupons/{coupon}', [AdminCouponController::class, 'update'])->name('admin.coupons.update');
