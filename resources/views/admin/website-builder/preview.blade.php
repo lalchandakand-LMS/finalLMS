@@ -42,7 +42,12 @@
 @if($sections->isNotEmpty())
 <section class="panel"><h2>Custom homepage sections</h2>
     @foreach($sections as $section)
-        <article class="card" style="margin:14px 0;">
+        @php
+            $previewBg = preg_match('/^#[0-9A-Fa-f]{6}$/', $section['background_color'] ?? '') ? $section['background_color'] : '#ffffff';
+            $previewText = preg_match('/^#[0-9A-Fa-f]{6}$/', $section['text_color'] ?? '') ? $section['text_color'] : '#18212f';
+            $previewSpacing = ['compact' => '16px', 'normal' => '24px', 'airy' => '40px'][$section['spacing'] ?? 'normal'] ?? '24px';
+            @endphp
+        <article class="card" style="margin:14px 0;background-color:{{ $previewBg }};color:{{ $previewText }};padding:{{ $previewSpacing }};">
             @if(!empty($section['image_id']) && $media->has($section['image_id']))
                 <img src="{{ \Illuminate\Support\Facades\Storage::disk($media[$section['image_id']]->disk)->url($media[$section['image_id']]->path) }}" alt="{{ $section['title'] ?? 'Section image' }}" style="width:100%;max-width:420px;max-height:220px;object-fit:cover;border-radius:12px;">
             @endif
