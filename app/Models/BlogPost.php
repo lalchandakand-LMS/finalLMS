@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class BlogPost extends Model
 {
@@ -14,6 +15,11 @@ class BlogPost extends Model
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'author_id');
+    }
+
+    public function courseSections(): BelongsToMany
+    {
+        return $this->belongsToMany(CourseSection::class, 'course_section_blog_post')->withPivot(['position','attached_by'])->withTimestamps();
     }
 
     public function cover(): BelongsTo
