@@ -3,7 +3,7 @@
 @section('content')
 <div class="page-header">
     <div><span class="badge info">{{ __('Admin CMS') }}</span><h1>{{ __('Website Builder') }}</h1><p class="muted">Control your public website identity, homepage slider and content sections from one place.</p></div>
-    <div class="cta-row"><a href="{{ route('admin.media.index') }}" class="btn secondary">{{ __('Media Library') }}</a><a href="{{ route('landing') }}" class="btn primary" target="_blank" rel="noopener">{{ __('Preview website') }}</a></div>
+    <div class="cta-row"><a href="{{ route('admin.media.index') }}" class="btn secondary">{{ __('Media Library') }}</a><a href="{{ route('landing') }}" class="btn secondary" target="_blank" rel="noopener">{{ __('Live website') }}</a>@if($draft)<a href="{{ route('admin.website-builder.preview') }}" class="btn primary" target="_blank" rel="noopener">Preview saved draft</a>@endif</div>
 </div>
 <form method="POST" action="{{ route('admin.website-builder.update') }}">
 @csrf
@@ -94,8 +94,25 @@
         </div>
     @endfor
 </section>
-<button type="submit" class="btn primary">Save website design</button>
+<div class="cta-row"><button type="submit" class="btn secondary" formaction="{{ route('admin.website-builder.draft') }}">Save as draft</button><button type="submit" class="btn primary">Publish changes now</button></div>
 </form>
+@if($draft)
+<section class="panel" style="margin-top:20px;">
+    <div class="page-header"><div><span class="badge info">Unpublished draft</span><h2>Draft ready for review</h2><p class="muted">Saving a draft does not change the public website. Preview it, then publish when approved.</p></div><form method="POST" action="{{ route('admin.website-builder.publish-draft') }}">@csrf<button class="btn primary" type="submit">Publish saved draft</button></form></div>
+    <p class="muted">Last saved: {{ $settings['homepage_draft_updated_at'] ?? 'Recently' }}</p>
+</section>
+@endif
+@if(count($revisions))
+<section class="panel" style="margin-top:20px;">
+    <h2>Homepage revision history</h2><p class="muted">Up to 20 previous published versions are retained for rollback.</p>
+    @foreach(array_reverse($revisions) as $revision)
+        <div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:14px;margin:10px 0;flex-wrap:wrap;">
+            <div><strong>{{ $revision['label'] ?? 'Published homepage' }}</strong><div class="muted">{{ $revision['created_at'] ?? '' }}</div></div>
+            <form method="POST" action="{{ route('admin.website-builder.rollback') }}" onsubmit="return confirm('Restore this homepage revision? The current version will be retained in history.');">@csrf<input type="hidden" name="revision_id" value="{{ $revision['id'] ?? '' }}"><button type="submit" class="btn secondary">Restore this version</button></form>
+        </div>
+    @endforeach
+</section>
+@endif
 @push('scripts')
 <script>
 (() => {
