@@ -310,10 +310,10 @@ class CourseController extends Controller
         unset($validated['video_file'], $validated['thumbnail'], $validated['remove_video'], $validated['remove_thumbnail']);
         if ($request->hasFile('video_file')) {
             if ($lesson->video_path) Storage::disk('lesson_videos')->delete($lesson->video_path);
-            $validated['video_path'] = $request->file('video_file')->store('course-videos', 'public');
+            $validated['video_path'] = $request->file('video_file')->store('', 'lesson_videos');
             $validated['video_url'] = null;
         } elseif ($request->boolean('remove_video')) {
-            if ($lesson->video_path) Storage::disk('public')->delete($lesson->video_path);
+            if ($lesson->video_path) Storage::disk('lesson_videos')->delete($lesson->video_path);
             $validated['video_path'] = null;
             $validated['video_url'] = null;
         }
