@@ -64,6 +64,17 @@
                             @endif
                         @endforeach
                     </div>
+                    @foreach($course->sections as $section)
+                        @if($section->status === 'published' && $section->blogPosts->where('status','published')->isNotEmpty())
+                            <div class="course-item" style="margin-top:14px;">
+                                <h3>{{ $section->position }}. {{ $section->title }}</h3>
+                                @foreach($section->blogPosts->where('status','published')->filter(fn ($post) => $post->published_at && $post->published_at->lte(now())) as $post)
+                                    <p><a href="{{ route('news.show',$post) }}">{{ $post->title }}</a></p>
+                                    @if($post->video_url)<p><a href="{{ $post->video_url }}" target="_blank" rel="noopener noreferrer">Open lesson video</a></p>@endif
+                                @endforeach
+                            </div>
+                        @endif
+                    @endforeach
                     @unless($canViewLessons)
                         <p class="muted">{{ __('Enroll in this course to unlock the full learning path.') }}</p>
                     @endunless
