@@ -172,7 +172,7 @@ class BackupController extends Controller
             // Keep a fresh recovery point before the first destructive database operation.
             // If backup creation fails, restore is stopped and live data remains untouched.
             $safetyBackup = $this->writeBackupArchive('pre-restore-safety');
-            report(new \\RuntimeException('Safety backup created before restore: '.$safetyBackup));
+            Log::info('Safety backup created before restore.', ['backup' => $safetyBackup]);
             $backupTables = array_keys($payload['tables']);
             sort($backupTables);
             $missingTables = array_values(array_diff($currentTables, $backupTables));
