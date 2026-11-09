@@ -27,7 +27,9 @@ class _InstructorGateState extends State<InstructorGate> {
   void initState() {
     super.initState();
     api.readToken().then((token) {
-      if (!mounted) {\n        return;\n      }
+      if (!mounted) {
+        return;
+      }
       setState(() { signedIn = token != null; loading = false; });
     });
   }
