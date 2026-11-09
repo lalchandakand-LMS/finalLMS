@@ -172,15 +172,18 @@ class WebsiteBuilderTest extends TestCase
             'homepage_template' => 'midnight-campus',
             'home_title' => 'Draft headline',
             'home_subtitle' => 'Draft-only copy',
+            'header_links' => [['label' => 'Unsafe', 'url' => 'javascript:alert(1)']],
         ])->assertRedirect(route('admin.website-builder.index'));
 
         $this->assertSame('Public headline', Setting::value('home_title'));
+        $this->get(route('admin.website-builder.index'))->assertOk()->assertSee('Draft headline');
         $this->get(route('admin.website-builder.preview'))
             ->assertOk()
             ->assertSee('Draft headline')
             ->assertSee('Unpublished preview')
             ->assertSee('data-preview-size="mobile"', false)
-            ->assertSee('data-preview-size="tablet"', false);
+            ->assertSee('data-preview-size="tablet"', false)
+            ->assertDontSee('javascript:alert(1)');
 
         $this->post(route('admin.website-builder.publish-draft'))
             ->assertRedirect(route('admin.website-builder.index'));
