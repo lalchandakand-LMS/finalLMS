@@ -171,6 +171,38 @@ class WebsiteBuilderTest extends TestCase
         $this->assertCount(15, \App\Http\Controllers\WebsiteBuilderController::homepageTemplates());
     }
 
+    public function test_admin_can_customize_global_typography_and_background_theme(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($admin)->post(route('admin.website-builder.update'), [
+            'homepage_template' => 'academy-modern',
+            'site_primary_color' => '#123456',
+            'site_background_color' => '#fef3c7',
+            'site_background_style' => 'warm-gradient',
+            'site_font_family' => 'poppins',
+            'site_heading_scale' => '1.2',
+            'site_body_scale' => '1.05',
+        ])->assertRedirect(route('admin.website-builder.index'));
+        $this->assertSame('#fef3c7', Setting::value('site_background_color'));
+        $this->assertSame('warm-gradient', Setting::value('site_background_style'));
+        $this->assertSame('poppins', Setting::value('site_font_family'));
+        $this->assertSame('1.2', Setting::value('site_heading_scale'));
+        $this->assertSame('1.05', Setting::value('site_body_scale'));
+        $this->get(route('landing'))->assertOk()->assertSee('--site-page-background', false)->assertSee('Poppins, Arial, sans-serif', false);
+    }
+
+    public function test_invalid_global_theme_options_are_rejected(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($admin)->post(route('admin.website-builder.update'), [
+            'site_background_color' => 'red; background:url(javascript:alert(1))',
+            'site_background_style' => 'url-javascript',
+            'site_font_family' => 'expression',
+            'site_heading_scale' => '99',
+            'site_body_scale' => '-5',
+        ])->assertSessionHasErrors(['site_background_color', 'site_background_style', 'site_font_family', 'site_heading_scale', 'site_body_scale']);
+    }
+
     public function test_admin_can_save_preview_and_publish_a_homepage_draft(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
