@@ -61,7 +61,7 @@ class TeacherLessonManagementTest extends TestCase
     public function test_teacher_can_upload_replace_and_delete_a_lesson_video_and_thumbnail(): void
     {
         Storage::fake('public');
-        Storage::fake('local');
+        Storage::fake('lesson_videos');
         $teacher = User::factory()->create(['role' => 'teacher']);
         $course = Course::factory()->create(['teacher_id' => $teacher->id, 'status' => 'published']);
 
@@ -77,7 +77,7 @@ class TeacherLessonManagementTest extends TestCase
         $lesson = $course->lessons()->firstOrFail();
         $this->assertNotEmpty($lesson->video_path);
         $this->assertNotEmpty($lesson->thumbnail_path);
-        Storage::disk('local')->assertExists($lesson->video_path);
+        Storage::disk('lesson_videos')->assertExists($lesson->video_path);
         Storage::disk('public')->assertExists($lesson->thumbnail_path);
 
         $oldVideo = $lesson->video_path;
@@ -91,13 +91,13 @@ class TeacherLessonManagementTest extends TestCase
 
         $lesson->refresh();
         $this->assertNotSame($oldVideo, $lesson->video_path);
-        Storage::disk('local')->assertMissing($oldVideo);
-        Storage::disk('local')->assertExists($lesson->video_path);
+        Storage::disk('lesson_videos')->assertMissing($oldVideo);
+        Storage::disk('lesson_videos')->assertExists($lesson->video_path);
 
         $videoPath = $lesson->video_path;
         $thumbnailPath = $lesson->thumbnail_path;
         $this->delete(route('teacher.courses.lessons.destroy', [$course, $lesson]))->assertRedirect();
-        Storage::disk('local')->assertMissing($videoPath);
+        Storage::disk('lesson_videos')->assertMissing($videoPath);
         Storage::disk('public')->assertMissing($thumbnailPath);
     }
 
@@ -121,7 +121,7 @@ class TeacherLessonManagementTest extends TestCase
 
     public function test_uploaded_lesson_video_is_only_streamed_to_preview_or_authorized_course_members(): void
     {
-        Storage::fake('local');
+        Storage::fake('lesson_videos');
         $teacher = User::factory()->create(['role' => 'teacher']);
         $student = User::factory()->create(['role' => 'student']);
         $outsider = User::factory()->create(['role' => 'student']);
@@ -133,7 +133,7 @@ class TeacherLessonManagementTest extends TestCase
             'order' => 1,
             'video_path' => 'course-videos/private.mp4',
         ]);
-        Storage::disk('local')->put($lesson->video_path, 'fake-video-bytes');
+        Storage::disk('lesson_videos')->put($lesson->video_path, 'fake-video-bytes');
         Enrollment::create(['user_id' => $student->id, 'course_id' => $course->id, 'status' => 'active']);
 
         $this->actingAs($student)->get(route('courses.lessons.video', [$course, $lesson]))->assertOk();
