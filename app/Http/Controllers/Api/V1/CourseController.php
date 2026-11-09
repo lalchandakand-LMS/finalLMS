@@ -145,6 +145,27 @@ class CourseController extends Controller
         ]);
     }
 
+    public function completeLesson(Request $request, Course $course, Lesson $lesson): JsonResponse
+    {
+        $student = $request->user();
+        abort_unless($student->isStudent(), 403);
+        abort_unless($course->status === 'published' && $lesson->course_id === $course->id, 404);
+        abort_unless($course->enrollments()
+            ->where('user_id', $student->id)
+            ->where('status', 'active')
+            ->exists(), 403);
+
+        $progress = LessonProgress::query()->firstOrCreate(
+            ['user_id' => $student->id, 'lesson_id' => $lesson->id],
+            ['completed_at' => now()]
+        );
+
+        return response()->json([
+            'completed' => true,
+            'completed_at' => $progress->completed_at?->toIso8601String(),
+        ]);
+    }
+
     public function teachingCourses(Request $request): JsonResponse
     {
         abort_unless($request->user()->isTeacher(), 403);
