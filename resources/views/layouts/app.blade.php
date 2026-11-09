@@ -180,6 +180,7 @@
             <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><span>▦</span><span class="nav-text">Dashboard</span></a>
             <div class="admin-sidebar-label">Academy</div>
             <a href="{{ route('admin.courses.index') }}"><span>📚</span><span class="nav-text">Courses & lessons</span></a>
+            <a href="{{ route('admin.products.index') }}"><span>🛍️</span><span class="nav-text">Products & eBooks</span></a>
             <a href="{{ route('admin.flash-sales.index') }}"><span>🔥</span><span class="nav-text">Flash Sale</span></a>
             <a href="{{ route('admin.users.index') }}"><span>👥</span><span class="nav-text">Students & teachers</span></a>
             <a href="{{ route('admin.batches.index') }}"><span>🗓️</span><span class="nav-text">Batches & branches</span></a>
@@ -241,6 +242,7 @@
                         <a href="{{ route('admin.news.index') }}">{{ __('Blog & News') }}</a>
                         <a href="{{ route('admin.users.index') }}">Users</a>
                         <a href="{{ route('admin.courses.index') }}">Courses</a>
+                        <a href="{{ route('admin.products.index') }}">Products & eBooks</a>
                         <a href="{{ route('admin.flash-sales.index') }}">Flash Sale</a>
                     @endif
                     @if(auth()->user()->isBranchManager())
