@@ -242,7 +242,7 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         Route::post('/payments/{payment}/reject', [PaymentController::class, 'reject'])->name('admin.payments.reject');
         Route::get('/payments/{payment}/proof', [PaymentController::class, 'proof'])->name('admin.payments.proof');
 
-        Route::get('/backups', [BackupController::class, 'index'])->name('admin.backups.index');
+        Route::get('/system', [SystemMaintenanceController::class, 'index'])->name('admin.system.index');\n        Route::get('/backups', [BackupController::class, 'index'])->name('admin.backups.index');
         Route::post('/backups', [BackupController::class, 'create'])->name('admin.backups.create');
         Route::get('/backups/{filename}', [BackupController::class, 'download'])->name('admin.backups.download');
         Route::post('/backups/restore', [BackupController::class, 'restore'])->middleware('throttle:2,10')->name('admin.backups.restore');
