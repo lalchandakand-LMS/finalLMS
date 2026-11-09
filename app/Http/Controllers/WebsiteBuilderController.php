@@ -88,6 +88,21 @@ class WebsiteBuilderController extends Controller
             ->filter()->unique()->values();
         $media = MediaAsset::query()->whereIn('id', $imageIds)->where('mime_type', 'like', 'image/%')->get()->keyBy('id');
 
+        $isSafeUrl = fn ($url): bool => is_string($url) && (bool) preg_match('~^(https?://|/(?!/)|#)~i', trim($url));
+        $draft['header_links'] = collect($draft['header_links'] ?? [])->filter(fn ($link) => is_array($link) && $isSafeUrl($link['url'] ?? null))->values()->all();
+        $draft['home_slides'] = collect($draft['home_slides'] ?? [])->map(function ($slide) use ($isSafeUrl) {
+            if (is_array($slide) && !$isSafeUrl($slide['button_url'] ?? '')) {
+                $slide['button_url'] = '';
+            }
+            return $slide;
+        })->all();
+        $draft['sections'] = collect($draft['sections'] ?? [])->map(function ($section) use ($isSafeUrl) {
+            if (is_array($section) && !$isSafeUrl($section['button_url'] ?? '')) {
+                $section['button_url'] = '';
+            }
+            return $section;
+        })->all();
+
         return view('admin.website-builder.preview', compact('draft', 'media'));
     }
 
@@ -275,6 +290,10 @@ class WebsiteBuilderController extends Controller
         if (array_key_exists('header_links', $validated)) {
             Setting::setValue('header_links', json_encode($headerLinks, JSON_THROW_ON_ERROR));
         }
+
+        Setting::setValue('homepage_draft', '');
+        Setting::setValue('homepage_draft_updated_at', '');
+        Setting::setValue('homepage_draft_updated_by', '');
 
         return redirect()->route('admin.website-builder.index')->with('success', 'Website identity, homepage slider and layout saved.');
     }
