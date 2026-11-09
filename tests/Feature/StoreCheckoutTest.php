@@ -127,4 +127,45 @@ class StoreCheckoutTest extends TestCase
         $this->assertSame('1400.00',$order->total);
     }
 
+
+    public function test_store_order_snapshots_flash_sale_and_reserves_campaign_limit(): void
+    {
+        $admin = User::factory()->create(['role'=>'admin']);
+        $category = \App\Models\ProductCategory::create(['name'=>'Limited Offer Books','slug'=>'limited-offer-books']);
+        $product = Product::create([
+            'type'=>'ebook','name'=>'Limited English Guide','slug'=>'limited-english-guide',
+            'regular_price'=>1000,'currency'=>'BDT','status'=>'published','published_at'=>now(),
+            'is_downloadable'=>true,'download_path'=>'private/products/limited.pdf','created_by'=>$admin->id,
+        ]);
+        $product->categories()->attach($category);
+        $sale = \App\Models\FlashSale::create([
+            'title'=>'One Order Only','badge'=>'50% OFF','discount_type'=>'percentage','discount_value'=>50,
+            'starts_at'=>now()->subMinute(),'ends_at'=>now()->addDay(),'status'=>'active',
+            'max_redemptions'=>1,'per_student_limit'=>1,'priority'=>50,'created_by'=>$admin->id,
+        ]);
+        $sale->categories()->attach($category);
+        Setting::setValue('payment_methods', json_encode(['manual'=>['enabled'=>true,'label'=>'Manual']]));
+
+        $firstStudent = User::factory()->create(['role'=>'student']);
+        $this->actingAs($firstStudent)->post(route('store.cart.add',$product));
+        $this->actingAs($firstStudent)->post(route('store.checkout'), [
+            'payment_method'=>'manual','payment_reference'=>'FLASH-STORE-001',
+        ])->assertRedirect(route('store.orders'));
+        $firstOrder = Order::where('payment_reference','FLASH-STORE-001')->firstOrFail();
+        $this->assertDatabaseHas('order_items', [
+            'order_id'=>$firstOrder->id,'flash_sale_id'=>$sale->id,'discount_total'=>'500.00','line_total'=>'500.00',
+        ]);
+
+        $secondStudent = User::factory()->create(['role'=>'student']);
+        $this->actingAs($secondStudent)->post(route('store.cart.add',$product));
+        $this->actingAs($secondStudent)->post(route('store.checkout'), [
+            'payment_method'=>'manual','payment_reference'=>'FLASH-STORE-002',
+        ])->assertRedirect(route('store.orders'));
+        $secondOrder = Order::where('payment_reference','FLASH-STORE-002')->firstOrFail();
+        $this->assertSame('1000.00',$secondOrder->total);
+        $this->assertDatabaseHas('order_items', [
+            'order_id'=>$secondOrder->id,'flash_sale_id'=>null,'line_total'=>'1000.00',
+        ]);
+    }
+
 }
