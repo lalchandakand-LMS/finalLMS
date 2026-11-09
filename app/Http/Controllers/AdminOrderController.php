@@ -12,7 +12,7 @@ class AdminOrderController extends Controller
 {
     public function index(): View
     {
-        $orders = Order::with(['user','items'])->latest()->paginate(25);
+        $orders = Order::with(['user','items','paymentTransactions'])->latest()->paginate(25);
         return view('admin.orders.index', compact('orders'));
     }
 
