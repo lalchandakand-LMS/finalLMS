@@ -129,4 +129,39 @@ class FlashSaleTest extends TestCase
         $this->assertSame('1000.00', $payment->amount);
         $this->assertNull($payment->flash_sale_id);
     }
+    public function test_category_targeted_flash_sale_applies_to_linked_course_product(): void
+    {
+        $course = $this->makeCourse(1200);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $category = \\App\\Models\\ProductCategory::create(['name' => 'Spoken English', 'slug' => 'spoken-english-products']);
+        $product = \\App\\Models\\Product::create([
+            'type' => 'course',
+            'course_id' => $course->id,
+            'name' => 'Spoken English Product',
+            'slug' => 'spoken-english-product',
+            'regular_price' => 1200,
+            'currency' => 'BDT',
+            'status' => 'published',
+            'published_at' => now(),
+            'created_by' => $admin->id,
+        ]);
+        $product->categories()->attach($category);
+        $sale = FlashSale::create([
+            'title' => 'Category offer',
+            'badge' => 'SAVE 10%',
+            'discount_type' => 'percentage',
+            'discount_value' => 10,
+            'starts_at' => now()->subMinute(),
+            'ends_at' => now()->addDay(),
+            'status' => 'active',
+            'per_student_limit' => 1,
+            'priority' => 10,
+            'created_by' => $admin->id,
+        ]);
+        $sale->categories()->attach($category);
+
+        $this->assertSame($sale->id, FlashSale::activeForCourse($course->id)?->id);
+        $this->assertSame(1080.0, $sale->discountedPrice(1200));
+    }
+
 }
