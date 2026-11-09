@@ -52,7 +52,12 @@ class Course extends Model
         return $this->hasMany(Certificate::class);
     }
 
-    public function sections(): HasMany\n    {\n        return $this->hasMany(CourseSection::class)->orderBy('position');\n    }\n\n    public function lessons(): HasMany
+    public function sections(): HasMany
+    {
+        return $this->hasMany(CourseSection::class)->orderBy('position');
+    }
+
+    public function lessons(): HasMany
     {
         return $this->hasMany(Lesson::class)->orderBy('order');
     }
