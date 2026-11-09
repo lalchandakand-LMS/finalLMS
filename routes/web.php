@@ -118,6 +118,9 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
 
     Route::middleware('role:teacher')->get('/teacher/batches', [BatchController::class, 'teacherIndex'])->name('teacher.batches.index');
     Route::middleware('role:teacher')->get('/teacher/courses/{course}/lessons', [CourseController::class, 'teacherLessons'])->name('teacher.courses.lessons.index');
+    Route::middleware('role:teacher')->post('/teacher/courses/{course}/sections', [CourseController::class, 'storeSection'])->name('teacher.courses.sections.store');
+    Route::middleware('role:teacher')->put('/teacher/courses/{course}/sections/{section}', [CourseController::class, 'updateSection'])->name('teacher.courses.sections.update');
+    Route::middleware('role:teacher')->delete('/teacher/courses/{course}/sections/{section}', [CourseController::class, 'destroySection'])->name('teacher.courses.sections.destroy');
     Route::middleware('role:teacher')->post('/teacher/courses/{course}/lessons', [CourseController::class, 'storeLesson'])->name('teacher.courses.lessons.store');
     Route::middleware('role:teacher')->put('/teacher/courses/{course}/lessons/{lesson}', [CourseController::class, 'updateLesson'])->name('teacher.courses.lessons.update');
     Route::middleware('role:teacher')->delete('/teacher/courses/{course}/lessons/{lesson}', [CourseController::class, 'destroyLesson'])->name('teacher.courses.lessons.destroy');
@@ -250,6 +253,9 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         Route::put('/courses/{course}', [CourseController::class, 'update'])->name('admin.courses.update');
         Route::delete('/courses/{course}', [CourseController::class, 'destroy'])->name('admin.courses.destroy');
         Route::post('/courses/{course}/lessons', [CourseController::class, 'storeLesson'])->name('admin.courses.lessons.store');
+        Route::post('/courses/{course}/sections', [CourseController::class, 'storeSection'])->name('admin.courses.sections.store');
+        Route::put('/courses/{course}/sections/{section}', [CourseController::class, 'updateSection'])->name('admin.courses.sections.update');
+        Route::delete('/courses/{course}/sections/{section}', [CourseController::class, 'destroySection'])->name('admin.courses.sections.destroy');
         Route::get('/courses/{course}/lessons', [CourseController::class, 'teacherLessons'])->name('admin.courses.lessons.index');
         Route::put('/courses/{course}/lessons/{lesson}', [CourseController::class, 'updateLesson'])->name('admin.courses.lessons.update');
         Route::delete('/courses/{course}/lessons/{lesson}', [CourseController::class, 'destroyLesson'])->name('admin.courses.lessons.destroy');
