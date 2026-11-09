@@ -172,7 +172,7 @@ class ExamController extends Controller
     public function destroyBankQuestion(Batch $batch, QuestionBankQuestion $question): RedirectResponse
     {
         abort_unless(Auth::user()->isAdmin() || $batch->teacher_id === Auth::id(), 403);
-        abort_unless($question->teacher_id === Auth::id(), 403);
+        abort_unless((int) $question->teacher_id === (int) $batch->teacher_id, 403);
         $question->delete();
 
         return back()->with('success', 'Question deleted successfully.');
