@@ -22,7 +22,7 @@ class ExamAnswerController extends Controller
         abort_if(now()->getTimestamp() >= $deadline, 403, 'The exam submission window has closed.');
 
         $validated = $request->validate([
-            'answers' => ['required', 'array', 'max:100'],
+            'answers' => ['sometimes', 'array', 'max:100'],
             'answers.*' => ['required', 'integer', 'between:0,3'],
         ]);
 
@@ -33,13 +33,13 @@ class ExamAnswerController extends Controller
 
         abort_unless($attemptQuestions->count() === count($validated['answers']), 422, 'An answer references a question outside this attempt.');
 
-        foreach ($validated['answers'] as $questionId => $selectedOption) {
+        foreach (($validated['answers'] ?? []) as $questionId => $selectedOption) {
             $attempt->answers()->updateOrCreate(
                 ['exam_question_id' => $questionId],
                 ['selected_option' => $selectedOption, 'is_correct' => false, 'marks_awarded' => 0]
             );
         }
 
-        return response()->json(['saved' => count($validated['answers'])]);
+        return response()->json(['saved' => count($validated['answers'] ?? [])]);
     }
 }
