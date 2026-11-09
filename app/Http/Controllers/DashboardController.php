@@ -10,7 +10,7 @@ use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function index(): View
+    public function index(): View|RedirectResponse
     {
         $user = Auth::user();\n\n        if ($user->isGuardian()) {\n            return redirect()->route('guardian.dashboard');\n        }
 
