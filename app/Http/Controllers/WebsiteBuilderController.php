@@ -83,7 +83,12 @@ class WebsiteBuilderController extends Controller
         $draft = json_decode((string) Setting::value('homepage_draft', ''), true);
         abort_unless(is_array($draft), 404, 'No saved homepage draft is available.');
 
-        return view('admin.website-builder.preview', compact('draft'));
+        $imageIds = collect($draft['home_slides'] ?? [])->pluck('image_id')
+            ->merge(collect($draft['sections'] ?? [])->pluck('image_id'))
+            ->filter()->unique()->values();
+        $media = MediaAsset::query()->whereIn('id', $imageIds)->where('mime_type', 'like', 'image/%')->get()->keyBy('id');
+
+        return view('admin.website-builder.preview', compact('draft', 'media'));
     }
 
     public function publishDraft(Request $request): RedirectResponse
