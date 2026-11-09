@@ -282,7 +282,7 @@ class AssignmentWorkflowTest extends TestCase
             'teacher_id' => $teacher->id,
         ]);
 
-        $submission = \\App\\Models\\AssignmentSubmission::create([
+        $submission = \App\Models\AssignmentSubmission::create([
             'assignment_id' => $assignment->id,
             'student_id' => $student->id,
             'answer' => 'Admin grading sample.',
@@ -310,7 +310,7 @@ class AssignmentWorkflowTest extends TestCase
         Storage::fake('local');
         ['student' => $student, 'assignment' => $assignment] = $this->assignmentFixture();
         $otherTeacher = User::factory()->create(['role' => 'teacher']);
-        $submission = \\App\\Models\\AssignmentSubmission::create([
+        $submission = \App\Models\AssignmentSubmission::create([
             'assignment_id' => $assignment->id,
             'student_id' => $student->id,
             'answer' => 'Private attachment.',
@@ -330,7 +330,7 @@ class AssignmentWorkflowTest extends TestCase
     {
         Storage::fake('local');
         ['student' => $student, 'assignment' => $assignment] = $this->assignmentFixture();
-        $submission = \\App\\Models\\AssignmentSubmission::create([
+        $submission = \App\Models\AssignmentSubmission::create([
             'assignment_id' => $assignment->id,
             'student_id' => $student->id,
             'answer' => 'My private file.',
@@ -375,7 +375,7 @@ class AssignmentWorkflowTest extends TestCase
             'attachment' => UploadedFile::fake()->create('homework"'.chr(13).chr(10).'X-Injected: yes.pdf', 100, 'application/pdf'),
         ])->assertRedirect();
 
-        $submission = \\App\\Models\\AssignmentSubmission::firstOrFail();
+        $submission = \App\Models\AssignmentSubmission::firstOrFail();
         $this->assertStringNotContainsString(chr(13), $submission->attachment_name);
         $this->assertStringNotContainsString(chr(10), $submission->attachment_name);
         $this->assertStringNotContainsString('"', $submission->attachment_name);
