@@ -61,6 +61,7 @@ class ExamController extends Controller
             abort_if($selectedCount > $bankQuestions->count(), 422, 'Random question count exceeds the selected bank questions.');
 
             $selectedQuestions = $bankQuestions->shuffle()->take($selectedCount)->map(fn ($question) => [
+                'question_bank_question_id' => $question->id,
                 'question' => $question->question,
                 'options' => $question->options,
                 'correct_option' => $question->correct_option,
