@@ -54,11 +54,12 @@ class CourseController extends Controller
         $user = $request->user();
         $enrolled = $user && $user->isStudent()
             && $course->enrollments()->where('user_id', $user->id)->whereIn('status', ['active', 'completed'])->exists();
+        $isInstructor = $user && $user->isTeacher() && (int) $course->teacher_id === (int) $user->id;
         abort_unless($course->status === 'published', 404);
 
         $course->load(['teacher:id,name', 'lessons']);
         $lessons = $course->lessons
-            ->filter(fn (Lesson $lesson) => $enrolled || $lesson->is_preview)
+            ->filter(fn (Lesson $lesson) => $enrolled || $isInstructor || $lesson->is_preview)
             ->values();
 
         return response()->json([
@@ -72,6 +73,7 @@ class CourseController extends Controller
                 'content_excerpt' => mb_substr(strip_tags($lesson->content), 0, 240),
             ]),
             'is_enrolled' => (bool) $enrolled,
+            'can_manage' => (bool) $isInstructor,
         ]);
     }
 
@@ -119,7 +121,8 @@ class CourseController extends Controller
         $user = $request->user();
         $enrolled = $user && $user->isStudent()
             && $course->enrollments()->where('user_id', $user->id)->whereIn('status', ['active', 'completed'])->exists();
-        abort_unless($lesson->is_preview || $enrolled, 403);
+        $isInstructor = $user && $user->isTeacher() && (int) $course->teacher_id === (int) $user->id;
+        abort_unless($lesson->is_preview || $enrolled || $isInstructor, 403);
 
         $progress = $user?->isStudent()
             ? LessonProgress::query()->where('user_id', $user->id)->where('lesson_id', $lesson->id)->exists()
@@ -137,6 +140,50 @@ class CourseController extends Controller
                 'is_preview' => (bool) $lesson->is_preview,
                 'is_completed' => (bool) $progress,
             ],
+        ]);
+    }
+
+    public function teachingCourses(Request $request): JsonResponse
+    {
+        abort_unless($request->user()->isTeacher(), 403);
+        $courses = $request->user()->courses()
+            ->withCount(['enrollments as active_students_count' => fn ($query) => $query->whereIn('status', ['active', 'completed'])])
+            ->with('teacher:id,name')
+            ->whereIn('status', ['published', 'draft'])
+            ->latest()
+            ->paginate(20);
+
+        return response()->json([
+            'data' => $courses->getCollection()->map(fn (Course $course) => [
+                ...$this->coursePayload($course),
+                'status' => $course->status,
+                'students_count' => (int) $course->active_students_count,
+            ]),
+            'meta' => ['current_page' => $courses->currentPage(), 'last_page' => $courses->lastPage(), 'total' => $courses->total()],
+        ]);
+    }
+
+    public function courseStudents(Request $request, Course $course): JsonResponse
+    {
+        abort_unless($request->user()->isTeacher() && (int) $course->teacher_id === (int) $request->user()->id, 403);
+        $students = $course->enrollments()
+            ->whereIn('status', ['active', 'completed'])
+            ->with('user:id,name,email,phone_number')
+            ->latest()
+            ->paginate(30);
+
+        return response()->json([
+            'data' => $students->getCollection()->map(fn ($enrollment) => [
+                'enrollment_id' => $enrollment->id,
+                'status' => $enrollment->status,
+                'student' => [
+                    'id' => $enrollment->user->id,
+                    'name' => $enrollment->user->name,
+                    'email' => $enrollment->user->email,
+                    'phone_number' => $enrollment->user->phone_number,
+                ],
+            ]),
+            'meta' => ['current_page' => $students->currentPage(), 'last_page' => $students->lastPage(), 'total' => $students->total()],
         ]);
     }
 
