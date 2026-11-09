@@ -10,7 +10,7 @@
 <label>Status<select name="status" style="display:block;padding:9px"><option value="draft">Draft</option><option value="published">Published</option></select></label>
 <h4>Select questions</h4><div style="max-height:300px;overflow:auto;border:1px solid var(--border);padding:12px">
 @forelse($questions as $question)
-<label style="display:block;padding:7px 0"><input type="checkbox" name="question_ids[]" value="{{ $question->id }}"> {{ Str::limit(strip_tags($question->question),180) }} <small>· {{ $question->subject }} · {{ $question->teacher->name ?? 'Teacher' }}</small></label>
+<label style="display:block;padding:7px 0"><input type="checkbox" name="question_ids[]" value="{{ $question->id }}"> {{ \Illuminate\Support\Str::limit(strip_tags($question->question),180) }} <small>· {{ $question->subject }} · {{ $question->teacher->name ?? 'Teacher' }}</small></label>
 @empty<p>No question bank entries found.</p>@endforelse
 </div><button class="btn btn-primary" style="margin-top:12px">Create set</button>
 </form>
@@ -23,7 +23,7 @@
 <p><strong>Questions in this set:</strong> {{ $set->questions->count() }}</p>
 <div style="max-height:260px;overflow:auto;border:1px solid var(--border);padding:12px">
 @foreach($questions as $question)
-<label style="display:block;padding:6px 0"><input type="checkbox" name="question_ids[]" value="{{ $question->id }}" @checked($set->questions->contains('id',$question->id))> {{ Str::limit(strip_tags($question->question),160) }} <small>· {{ $question->subject }}</small></label>
+<label style="display:block;padding:6px 0"><input type="checkbox" name="question_ids[]" value="{{ $question->id }}" @checked($set->questions->contains('id',$question->id))> {{ \Illuminate\Support\Str::limit(strip_tags($question->question),160) }} <small>· {{ $question->subject }}</small></label>
 @endforeach
 </div><button class="btn btn-primary" style="margin-top:10px">Save set</button>
 </form>
