@@ -138,6 +138,18 @@ class TeacherLessonManagementTest extends TestCase
 
         $this->actingAs($student)->get(route('courses.lessons.video', [$course, $lesson]))->assertOk();
         $this->actingAs($outsider)->get(route('courses.lessons.video', [$course, $lesson]))->assertForbidden();
+
+        $draftCourse = Course::factory()->create(['teacher_id' => $teacher->id, 'status' => 'draft']);
+        $previewLesson = $draftCourse->lessons()->create([
+            'title' => 'Draft preview must stay private',
+            'content' => 'Not published yet.',
+            'duration_minutes' => 10,
+            'order' => 1,
+            'is_preview' => true,
+            'video_path' => 'course-videos/draft-preview.mp4',
+        ]);
+        Storage::disk('lesson_videos')->put($previewLesson->video_path, 'private-draft-bytes');
+        $this->actingAs($outsider)->get(route('courses.lessons.video', [$draftCourse, $previewLesson]))->assertNotFound();
     }
 
 }
