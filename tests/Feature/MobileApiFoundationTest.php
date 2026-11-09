@@ -164,6 +164,65 @@ class MobileApiFoundationTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_instructor_mobile_apis_only_expose_owned_courses_and_their_students(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $otherTeacher = User::factory()->create(['role' => 'teacher']);
+        $student = User::factory()->create(['role' => 'student']);
+        $ownCourse = Course::factory()->create(['teacher_id' => $teacher->id, 'title' => 'My class']);
+        $otherCourse = Course::factory()->create(['teacher_id' => $otherTeacher->id, 'title' => 'Other class']);
+        Enrollment::create(['user_id' => $student->id, 'course_id' => $ownCourse->id, 'status' => 'active']);
+        $teacher->apiTokens()->create([
+            'name' => 'Instructor app',
+            'token_hash' => hash('sha256', 'instructor-owned-token'),
+            'expires_at' => now()->addDay(),
+        ]);
+
+        $this->withToken('instructor-owned-token')->getJson('/api/v1/instructor/courses')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonFragment(['title' => 'My class'])
+            ->assertJsonMissing(['title' => 'Other class']);
+
+        $this->withToken('instructor-owned-token')
+            ->getJson('/api/v1/instructor/courses/'.$ownCourse->slug.'/students')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.student.id', $student->id);
+
+        $this->withToken('instructor-owned-token')
+            ->getJson('/api/v1/instructor/courses/'.$otherCourse->slug.'/students')
+            ->assertForbidden();
+    }
+
+    public function test_teacher_can_access_own_course_lessons_but_not_another_teachers_private_lessons(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $otherTeacher = User::factory()->create(['role' => 'teacher']);
+        $ownCourse = Course::factory()->create(['teacher_id' => $teacher->id]);
+        $otherCourse = Course::factory()->create(['teacher_id' => $otherTeacher->id]);
+        $ownLesson = $ownCourse->lessons()->create([
+            'title' => 'Own lesson', 'content' => 'Instructor lesson', 'duration_minutes' => 10, 'order' => 1,
+        ]);
+        $otherLesson = $otherCourse->lessons()->create([
+            'title' => 'Private lesson', 'content' => 'Not yours', 'duration_minutes' => 10, 'order' => 1,
+        ]);
+        $teacher->apiTokens()->create([
+            'name' => 'Instructor app',
+            'token_hash' => hash('sha256', 'teacher-lessons-token'),
+            'expires_at' => now()->addDay(),
+        ]);
+
+        $this->withToken('teacher-lessons-token')
+            ->getJson('/api/v1/courses/'.$ownCourse->slug.'/lessons/'.$ownLesson->id)
+            ->assertOk()
+            ->assertJsonPath('lesson.title', 'Own lesson');
+
+        $this->withToken('teacher-lessons-token')
+            ->getJson('/api/v1/courses/'.$otherCourse->slug.'/lessons/'.$otherLesson->id)
+            ->assertForbidden();
+    }
+
     public function test_expired_and_unknown_bearer_tokens_are_rejected(): void
     {
         $student = User::factory()->create(['role' => 'student']);
