@@ -66,11 +66,6 @@ class WebsiteBuilderController extends Controller
             'site_font_family' => ['nullable', Rule::in(['system', 'inter', 'nunito', 'poppins', 'georgia'])],
             'site_heading_scale' => ['nullable', Rule::in(['0.9', '1', '1.1', '1.2'])],
             'site_body_scale' => ['nullable', Rule::in(['0.9', '1', '1.05', '1.1'])],
-            'site_background_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'site_background_style' => ['nullable', Rule::in(['solid', 'soft-gradient', 'warm-gradient'])],
-            'site_font_family' => ['nullable', Rule::in(['system', 'inter', 'nunito', 'poppins', 'georgia'])],
-            'site_heading_scale' => ['nullable', Rule::in(['0.9', '1', '1.1', '1.2'])],
-            'site_body_scale' => ['nullable', Rule::in(['0.9', '1', '1.05', '1.1'])],
             'site_primary_color' => ['nullable', 'string', function (string $attribute, mixed $value, \Closure $fail): void {
                 if (!is_string($value) || strlen($value) !== 7 || $value[0] !== '#' || !ctype_xdigit(substr($value, 1))) {
                     $fail('The '.$attribute.' must be a six-digit hex color.');
@@ -277,6 +272,11 @@ class WebsiteBuilderController extends Controller
             'site_name' => ['nullable', 'string', 'max:120'],
             'site_logo_media_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
             'site_favicon_media_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
+            'site_background_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'site_background_style' => ['nullable', Rule::in(['solid', 'soft-gradient', 'warm-gradient'])],
+            'site_font_family' => ['nullable', Rule::in(['system', 'inter', 'nunito', 'poppins', 'georgia'])],
+            'site_heading_scale' => ['nullable', Rule::in(['0.9', '1', '1.1', '1.2'])],
+            'site_body_scale' => ['nullable', Rule::in(['0.9', '1', '1.05', '1.1'])],
             'site_primary_color' => ['nullable', 'string', function (string $attribute, mixed $value, \Closure $fail): void {
                 if (!is_string($value) || strlen($value) !== 7 || $value[0] !== '#' || !ctype_xdigit(substr($value, 1))) {
                     $fail('The '.$attribute.' must be a six-digit hex color.');
