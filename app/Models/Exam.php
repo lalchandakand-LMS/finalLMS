@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Exam extends Model
 {
-    protected $fillable = ['batch_id', 'teacher_id', 'title', 'instructions', 'starts_at', 'ends_at', 'duration_minutes', 'pass_marks', 'questions_per_attempt', 'status'];
+    protected $fillable = ['batch_id', 'teacher_id', 'question_set_id', 'title', 'instructions', 'starts_at', 'ends_at', 'duration_minutes', 'pass_marks', 'questions_per_attempt', 'status'];
 
     protected $casts = [
         'starts_at' => 'datetime',
@@ -28,7 +28,7 @@ class Exam extends Model
         return $this->belongsTo(User::class, 'teacher_id');
     }
 
-    public function questions(): HasMany
+    public function questionSet(): BelongsTo\n    {\n        return $this->belongsTo(QuestionSet::class);\n    }\n\n    public function questions(): HasMany
     {
         return $this->hasMany(ExamQuestion::class)->orderBy('position');
     }
