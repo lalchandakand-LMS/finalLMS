@@ -55,6 +55,15 @@
 </section>
 <section class="panel" style="margin-bottom:20px;">
     <div class="page-header"><div><h2>Homepage content sections</h2><p class="muted">Enable and fill up to 12 custom sections. HTML and scripts are not accepted.</p></div></div>
+    <div class="card" style="margin-bottom:16px;">
+        <h3>Reusable section block library</h3><p class="muted">Insert a ready-made content structure into the first empty section, then edit it before publishing.</p>
+        <div class="cta-row">
+            <button type="button" class="btn secondary" data-section-preset data-title="Why learn with us" data-body="Expert teachers, practical lessons and guided support help every learner make measurable progress.">Why learn with us</button>
+            <button type="button" class="btn secondary" data-section-preset data-title="Start learning today" data-body="Explore our courses, choose your learning path and take the next step with Alom’s English Center." data-button-label="Browse courses" data-button-url="/courses">Call to action</button>
+            <button type="button" class="btn secondary" data-section-preset data-title="Learning outcomes" data-body="Build confidence, strengthen communication skills and apply what you learn in real situations.">Learning outcomes</button>
+            <button type="button" class="btn secondary" data-section-preset data-title="Frequently asked questions" data-body="Find answers about course access, class schedules, payments and student support.">FAQ introduction</button>
+        </div>
+    </div>
     <div data-section-list>
     @for($i = 0; $i < 12; $i++)
         @php($section = old("sections.$i", $sections[$i] ?? []))
@@ -127,6 +136,30 @@
             });
         });
     };
+    document.querySelectorAll('[data-section-preset]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const cards = [...list.querySelectorAll('[data-section-item]')];
+            const target = cards.find((card) => {
+                const title = card.querySelector('[name$="[title]"]');
+                return title && !title.value.trim();
+            });
+            if (!target) {
+                window.alert('All 12 homepage sections are in use. Clear a section before inserting another block.');
+                return;
+            }
+            const setField = (suffix, value) => {
+                const field = target.querySelector('[name$="[' + suffix + ']"]');
+                if (field) field.value = value || '';
+            };
+            setField('title', button.dataset.title);
+            setField('body', button.dataset.body);
+            setField('button_label', button.dataset.buttonLabel);
+            setField('button_url', button.dataset.buttonUrl);
+            const enabled = target.querySelector('input[type="checkbox"][name$="[enabled]"]');
+            if (enabled) enabled.checked = true;
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+    });
     list.querySelectorAll('[data-section-item]').forEach((card) => {
         card.addEventListener('dragstart', (event) => {
             dragged = card;
