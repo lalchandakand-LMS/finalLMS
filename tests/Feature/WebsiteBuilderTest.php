@@ -161,4 +161,63 @@ class WebsiteBuilderTest extends TestCase
         $this->assertCount(15, \App\Http\Controllers\WebsiteBuilderController::homepageTemplates());
     }
 
+    public function test_admin_can_save_preview_and_publish_a_homepage_draft(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        Setting::setValue('home_title', 'Public headline');
+
+        $this->actingAs($admin)->post(route('admin.website-builder.draft'), [
+            'homepage_template' => 'midnight-campus',
+            'home_title' => 'Draft headline',
+            'home_subtitle' => 'Draft-only copy',
+        ])->assertRedirect(route('admin.website-builder.index'));
+
+        $this->assertSame('Public headline', Setting::value('home_title'));
+        $this->get(route('admin.website-builder.preview'))
+            ->assertOk()
+            ->assertSee('Draft headline')
+            ->assertSee('Unpublished preview');
+
+        $this->post(route('admin.website-builder.publish-draft'))
+            ->assertRedirect(route('admin.website-builder.index'));
+
+        $this->assertSame('Draft headline', Setting::value('home_title'));
+        $this->assertSame('midnight-campus', Setting::value('homepage_template'));
+        $this->assertDatabaseHas('settings', ['key' => 'homepage_revisions']);
+    }
+
+    public function test_admin_can_restore_a_previous_homepage_revision(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        Setting::setValue('home_title', 'Version one');
+
+        $this->actingAs($admin)->post(route('admin.website-builder.update'), [
+            'home_title' => 'Version two',
+        ])->assertRedirect(route('admin.website-builder.index'));
+
+        $this->post(route('admin.website-builder.update'), [
+            'home_title' => 'Version three',
+        ])->assertRedirect(route('admin.website-builder.index'));
+
+        $revisions = json_decode((string) Setting::value('homepage_revisions'), true);
+        $revisionToRestore = $revisions[count($revisions) - 1];
+
+        $this->post(route('admin.website-builder.rollback'), [
+            'revision_id' => $revisionToRestore['id'],
+        ])->assertRedirect(route('admin.website-builder.index'));
+
+        $this->assertSame('Version two', Setting::value('home_title'));
+    }
+
+    public function test_non_admin_cannot_save_or_preview_homepage_drafts(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+
+        $this->actingAs($student)
+            ->post(route('admin.website-builder.draft'), ['home_title' => 'No access'])
+            ->assertForbidden();
+
+        $this->get(route('admin.website-builder.preview'))->assertForbidden();
+    }
+
 }
