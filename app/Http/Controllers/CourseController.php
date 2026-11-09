@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Certificate;
+use App\Models\BlogPost;
+use App\Models\CourseSection;
 use App\Models\Course;
 use App\Models\Lesson;
 use App\Models\LessonProgress;
@@ -246,7 +248,8 @@ class CourseController extends Controller
     {
         $user = Auth::user();
         abort_unless($user?->isAdmin() || ($user?->isTeacher() && $course->teacher_id === $user->id), 403);
-        $course->load(['lessons.section', 'sections.lessons']);
+        $course->load(['lessons.section', 'sections.lessons', 'sections.blogPosts']);
+        $availablePosts = BlogPost::query()->when(!$user->isAdmin(), fn ($query) => $query->where('status','published')->whereNotNull('published_at')->where('published_at','<=',now()))->orderByDesc('published_at')->limit(300)->get();
         $students = $course->enrollments()->whereIn('status', ['active', 'completed'])->with('user')->get();
         $lessonIds = $course->lessons->pluck('id');
         $progress = LessonProgress::query()->whereIn('lesson_id', $lessonIds)
@@ -257,7 +260,7 @@ class CourseController extends Controller
             $enrollment->progress_percent = $total ? (int) round($done / $total * 100) : 0;
             $enrollment->completed_lessons_count = $done;
         });
-        return view('teacher.courses.lessons', compact('course', 'students'));
+        return view('teacher.courses.lessons', compact('course', 'students', 'availablePosts'));
     }
 
     public function updateLesson(Course $course, Lesson $lesson, Request $request): RedirectResponse
@@ -326,6 +329,35 @@ class CourseController extends Controller
         abort_unless($section->course_id === $course->id, 404);
         $section->delete();
         return back()->with('success','Section deleted; lessons remain in the course.');
+    }
+
+
+    public function attachPost(Course $course, CourseSection $section, Request $request): RedirectResponse
+    {
+        $user = Auth::user();
+        abort_unless($user?->isAdmin() || ($user?->isTeacher() && $course->teacher_id === $user->id), 403);
+        abort_unless($section->course_id === $course->id, 404);
+        $data = $request->validate([
+            'blog_post_id' => ['required','integer','exists:blog_posts,id'],
+            'position' => ['nullable','integer','min:1','max:10000'],
+        ]);
+        $post = BlogPost::findOrFail($data['blog_post_id']);
+        if (!$user->isAdmin()) {
+            abort_unless($post->status === 'published' && $post->published_at && $post->published_at->lte(now()), 403);
+        }
+        $section->blogPosts()->syncWithoutDetaching([
+            $post->id => ['position'=>$data['position'] ?? ($section->blogPosts()->count()+1),'attached_by'=>$user->id],
+        ]);
+        return back()->with('success','Content post attached to this course module.');
+    }
+
+    public function detachPost(Course $course, CourseSection $section, BlogPost $post): RedirectResponse
+    {
+        $user = Auth::user();
+        abort_unless($user?->isAdmin() || ($user?->isTeacher() && $course->teacher_id === $user->id), 403);
+        abort_unless($section->course_id === $course->id, 404);
+        $section->blogPosts()->detach($post->id);
+        return back()->with('success','Content post removed from this module; the original post remains in the library.');
     }
 
     public function complete(Course $course, Request $request): RedirectResponse
