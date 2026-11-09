@@ -72,7 +72,7 @@
             <label>Heading<input name="sections[{{ $i }}][title]" maxlength="180" value="{{ $section['title'] ?? '' }}"></label>
             <label>Text<textarea name="sections[{{ $i }}][body]" rows="3" maxlength="3000">{{ $section['body'] ?? '' }}</textarea></label>
             <label>Image<select name="sections[{{ $i }}][image_id]"><option value="">No image</option>@foreach($media as $asset)<option value="{{ $asset->id }}" @selected(($section['image_id'] ?? '') == $asset->id)>{{ $asset->original_name }}</option>@endforeach</select></label>
-            <div class="grid grid-2"><div><label>Button label<input name="sections[{{ $i }}][button_label]" maxlength="60" value="{{ $section['button_label'] ?? '' }}"></label></div><div><label>Button URL<input name="sections[{{ $i }}][button_url]" type="url" maxlength="500" value="{{ $section['button_url'] ?? '' }}"></label></div></div>
+            <div class="grid grid-2"><div><label>Button label<input name="sections[{{ $i }}][button_label]" maxlength="60" value="{{ $section['button_label'] ?? '' }}"></label></div><div><label>Button URL<input name="sections[{{ $i }}][button_url]" type="text" maxlength="500" value="{{ $section['button_url'] ?? '' }}" placeholder="/courses"></label></div></div>
             <div class="grid grid-2">
                 <div><label>Section background color<input type="color" name="sections[{{ $i }}][background_color]" value="{{ $section['background_color'] ?? '#ffffff' }}"></label></div>
                 <div><label>Text color<input type="color" name="sections[{{ $i }}][text_color]" value="{{ $section['text_color'] ?? '#18212f' }}"></label></div>
