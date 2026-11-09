@@ -69,10 +69,13 @@ class BlogController extends Controller
 
     private function validated(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'title' => ['required', 'string', 'max:180'],
             'slug' => ['nullable', 'string', 'max:200'],
             'excerpt' => ['nullable', 'string', 'max:500'],
+            'category' => ['nullable', 'string', 'max:120'],
+            'tags' => ['nullable', 'string', 'max:2000'],
+            'video_url' => ['nullable', 'url', 'max:2048'],
             'body' => ['required', 'string', 'max:100000'],
             'cover_media_id' => ['nullable', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
             'status' => ['required', 'in:draft,published'],
@@ -80,6 +83,8 @@ class BlogController extends Controller
             'seo_title' => ['nullable', 'string', 'max:255'],
             'seo_description' => ['nullable', 'string', 'max:320'],
         ]);
+        $data['tags'] = collect(explode(',', $data['tags'] ?? ''))->map(fn ($tag) => trim($tag))->filter()->unique()->take(30)->values()->all();
+        return $data;
     }
 
     private function uniqueSlug(string $value, ?int $ignoreId = null): string
