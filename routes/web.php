@@ -32,6 +32,7 @@ use App\Http\Controllers\QuizContestController;
 use App\Http\Controllers\FlashSaleController;
 use App\Http\Controllers\StoreController;
 use App\Http\Controllers\AdminOrderController;
+use App\Http\Controllers\AdminCouponController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/install', [InstallController::class, 'index'])->name('install.index');
@@ -168,6 +169,10 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         ->name('courses.lessons.complete');
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
+        Route::get('/coupons', [AdminCouponController::class, 'index'])->name('admin.coupons.index');
+        Route::post('/coupons', [AdminCouponController::class, 'store'])->name('admin.coupons.store');
+        Route::put('/coupons/{coupon}', [AdminCouponController::class, 'update'])->name('admin.coupons.update');
+        Route::delete('/coupons/{coupon}', [AdminCouponController::class, 'destroy'])->name('admin.coupons.destroy');
         Route::get('/orders', [AdminOrderController::class, 'index'])->name('admin.orders.index');
         Route::post('/orders/{order}/approve', [AdminOrderController::class, 'approve'])->name('admin.orders.approve');
         Route::post('/orders/{order}/reject', [AdminOrderController::class, 'reject'])->name('admin.orders.reject');
