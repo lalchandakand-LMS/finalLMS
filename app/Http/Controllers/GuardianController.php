@@ -12,6 +12,7 @@ class GuardianController extends Controller
     {
         $links = GuardianStudent::query()
             ->where('guardian_id', Auth::id())
+            ->whereHas('student', fn ($query) => $query->where('role', 'student'))
             ->with([
                 'student.enrollments.course',
                 'student.invoices.payments',
@@ -26,7 +27,7 @@ class GuardianController extends Controller
 
     public function show(GuardianStudent $guardianStudent): View
     {
-        abort_unless($guardianStudent->guardian_id === Auth::id(), 404);
+        abort_unless($guardianStudent->guardian_id === Auth::id() && $guardianStudent->student?->isStudent(), 404);
 
         $guardianStudent->load([
             'student.enrollments.course',
