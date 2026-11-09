@@ -36,7 +36,7 @@ class FlashSaleController extends Controller
     {
         $data = $this->validated($request);
         $image = $request->file('banner');
-        unset($data['course_ids'], $data['banner']);
+        unset($data['course_ids'], $data['category_ids'], $data['banner']);
         if ($image) {
             if ($flashSale->banner_path) Storage::disk('public')->delete($flashSale->banner_path);
             $data['banner_path'] = $image->store('flash-sales','public');
