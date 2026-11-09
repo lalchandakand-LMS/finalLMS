@@ -44,11 +44,13 @@ class Product extends Model
         return $this->hasMany(OrderItem::class);
     }
 
-    public function currentPrice(): string
+    public function currentPrice(?int $userId = null): string
     {
         $regular = (float) $this->regular_price;
         $sale = $this->sale_price === null ? null : (float) $this->sale_price;
-        return number_format($sale !== null && $sale >= 0 && $sale < $regular ? $sale : $regular, 2, '.', '');
+        $basePrice = $sale !== null && $sale >= 0 && $sale < $regular ? $sale : $regular;
+        $flashSale = FlashSale::activeForProduct($this, $userId);
+        return number_format($flashSale ? $flashSale->discountedPrice($basePrice) : $basePrice, 2, '.', '');
     }
 
     public function scopePublished($query)
