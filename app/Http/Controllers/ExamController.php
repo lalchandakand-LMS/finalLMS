@@ -250,7 +250,7 @@ class ExamController extends Controller
 
             // Freeze a shuffled question order for this attempt exactly once.
             if ($attempt->status === 'in_progress' && ! $attempt->attemptQuestions()->exists()) {
-                $questionQuery = $lockedExam->questions()->inRandomOrder();
+                $questionQuery = $lockedExam->questions()->reorder()->inRandomOrder();
                 if ($lockedExam->questions_per_attempt) {
                     $questionQuery->limit($lockedExam->questions_per_attempt);
                 }
