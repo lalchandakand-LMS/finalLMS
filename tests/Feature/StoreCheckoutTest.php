@@ -1,18 +1,18 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use App\\Models\\Cart;
-use App\\Models\\Course;
-use App\\Models\\DownloadPermission;
-use App\\Models\\Enrollment;
-use App\\Models\\Order;
-use App\\Models\\Product;
-use App\\Models\\Setting;
-use App\\Models\\User;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Illuminate\\Support\\Facades\\Storage;
-use Tests\\TestCase;
+use App\Models\Cart;
+use App\Models\Course;
+use App\Models\DownloadPermission;
+use App\Models\Enrollment;
+use App\Models\Order;
+use App\Models\Product;
+use App\Models\Setting;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
+use Tests\TestCase;
 
 class StoreCheckoutTest extends TestCase
 {
