@@ -5,7 +5,7 @@
 @section('content')
     <div class="page-header">
         <div><span class="badge info">{{ $batch->course->title }}</span><h1 style="margin:12px 0 0;">{{ $batch->title }} exams</h1></div>
-        <a href="{{ $isAdmin ? route('admin.batches.index') : route('teacher.batches.index') }}" class="btn secondary">My batches</a>
+        <a href="{{ $isAdmin ? route('admin.batches.index') : route('teacher.batches.index') }}" class="btn secondary">{{ $isAdmin ? __('All batches') : __('My batches') }}</a>
     </div>
 
     <div class="panel" style="margin-bottom:20px;">
@@ -29,7 +29,7 @@
                 @forelse($bankQuestions as $bankQuestion)
                     <label style="display:block;"><input type="checkbox" name="question_bank_ids[]" value="{{ $bankQuestion->id }}"> {{ $bankQuestion->subject ?: 'General' }} — {{ Str::limit($bankQuestion->question, 120) }} ({{ $bankQuestion->marks }} marks)</label>
                 @empty
-                    <p class="muted">Question Bank is empty. <a href="{{ route('teacher.batches.question-bank.index', $batch) }}">Add questions</a>.</p>
+                    <p class="muted">Question Bank is empty. <a href="{{ $isAdmin ? route('admin.batches.question-bank.index', $batch) : route('teacher.batches.question-bank.index', $batch) }}">Add questions</a>.</p>
                 @endforelse
             </div>
             <div id="manual-question-area">
