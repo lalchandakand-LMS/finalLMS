@@ -333,7 +333,7 @@ class CourseController extends Controller
         $user = Auth::user();
         abort_unless($user?->isAdmin() || ($user?->isTeacher() && $course->teacher_id === $user->id), 403);
         abort_unless($lesson->course_id === $course->id, 404);
-        if ($lesson->video_path) Storage::disk('public')->delete($lesson->video_path);
+        if ($lesson->video_path) Storage::disk('lesson_videos')->delete($lesson->video_path);
         if ($lesson->thumbnail_path) Storage::disk('public')->delete($lesson->thumbnail_path);
         $lesson->delete();
         return back()->with('success', 'Lesson deleted successfully.');
