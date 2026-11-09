@@ -13,10 +13,10 @@
         $facebookPixelId = $hasSettingsTable ? \App\Models\Setting::value('facebook_pixel_id') : null;
         $marketingConsent = request()->cookie('marketing_consent') === 'accepted';
         $isPublicLayout = !(auth()->check() && auth()->user()->isAdmin());
-        $websiteHeaderLinks = $isPublicLayout && $hasSettingsTable ? json_decode((string) \\App\\Models\\Setting::value('header_links', '[]'), true) : [];
-        $websiteFooterTitle = $isPublicLayout && $hasSettingsTable ? \\App\\Models\\Setting::value('footer_title', config('app.name')) : config('app.name');
-        $websiteFooterText = $isPublicLayout && $hasSettingsTable ? \\App\\Models\\Setting::value('footer_text', '') : '';
-        $websiteFooterLinks = $isPublicLayout && $hasSettingsTable ? json_decode((string) \\App\\Models\\Setting::value('footer_links', '[]'), true) : [];
+        $websiteHeaderLinks = $isPublicLayout && $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('header_links', '[]'), true) : [];
+        $websiteFooterTitle = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('footer_title', config('app.name')) : config('app.name');
+        $websiteFooterText = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('footer_text', '') : '';
+        $websiteFooterLinks = $isPublicLayout && $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('footer_links', '[]'), true) : [];
     @endphp
     <title>@yield('title', config('app.name'))</title>
     <meta name="description" content="{{ $seoDescription }}">
