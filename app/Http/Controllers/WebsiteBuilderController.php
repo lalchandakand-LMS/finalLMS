@@ -50,7 +50,7 @@ class WebsiteBuilderController extends Controller
     {
         $allowed = [
             'homepage_template', 'site_name', 'site_logo_media_id', 'site_favicon_media_id',
-            'site_primary_color', 'home_title', 'home_subtitle', 'home_featured_title',
+            'site_primary_color', 'site_background_color', 'site_background_style', 'site_font_family', 'site_heading_scale', 'site_body_scale', 'home_title', 'home_subtitle', 'home_featured_title',
             'home_slides', 'footer_title', 'footer_text', 'footer_links', 'header_links', 'sections',
         ];
         $draft = $request->only($allowed);
@@ -61,6 +61,16 @@ class WebsiteBuilderController extends Controller
             'site_name' => ['nullable', 'string', 'max:120'],
             'site_logo_media_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
             'site_favicon_media_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
+            'site_background_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'site_background_style' => ['nullable', Rule::in(['solid', 'soft-gradient', 'warm-gradient'])],
+            'site_font_family' => ['nullable', Rule::in(['system', 'inter', 'nunito', 'poppins', 'georgia'])],
+            'site_heading_scale' => ['nullable', Rule::in(['0.9', '1', '1.1', '1.2'])],
+            'site_body_scale' => ['nullable', Rule::in(['0.9', '1', '1.05', '1.1'])],
+            'site_background_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'site_background_style' => ['nullable', Rule::in(['solid', 'soft-gradient', 'warm-gradient'])],
+            'site_font_family' => ['nullable', Rule::in(['system', 'inter', 'nunito', 'poppins', 'georgia'])],
+            'site_heading_scale' => ['nullable', Rule::in(['0.9', '1', '1.1', '1.2'])],
+            'site_body_scale' => ['nullable', Rule::in(['0.9', '1', '1.05', '1.1'])],
             'site_primary_color' => ['nullable', 'string', function (string $attribute, mixed $value, \Closure $fail): void {
                 if (!is_string($value) || strlen($value) !== 7 || $value[0] !== '#' || !ctype_xdigit(substr($value, 1))) {
                     $fail('The '.$attribute.' must be a six-digit hex color.');
@@ -236,7 +246,7 @@ class WebsiteBuilderController extends Controller
     {
         return [
             'homepage_template', 'site_name', 'site_logo_media_id', 'site_favicon_media_id',
-            'site_primary_color', 'home_title', 'home_subtitle', 'home_featured_title',
+            'site_primary_color', 'site_background_color', 'site_background_style', 'site_font_family', 'site_heading_scale', 'site_body_scale', 'home_title', 'home_subtitle', 'home_featured_title',
             'home_slides', 'footer_title', 'footer_text', 'footer_links', 'header_links', 'website_sections',
         ];
     }
@@ -363,7 +373,7 @@ class WebsiteBuilderController extends Controller
             return ['label' => $label, 'url' => $url];
         })->filter()->take(6)->values()->all();
 
-        foreach (['homepage_template', 'site_name', 'site_logo_media_id', 'site_favicon_media_id', 'site_primary_color', 'home_title', 'home_subtitle', 'home_featured_title', 'footer_title', 'footer_text'] as $key) {
+        foreach (['homepage_template', 'site_name', 'site_logo_media_id', 'site_favicon_media_id', 'site_primary_color', 'site_background_color', 'site_background_style', 'site_font_family', 'site_heading_scale', 'site_body_scale', 'home_title', 'home_subtitle', 'home_featured_title', 'footer_title', 'footer_text'] as $key) {
             if (array_key_exists($key, $validated)) {
                 Setting::setValue($key, $validated[$key] ?? '');
             }
