@@ -44,6 +44,28 @@ class FlashSale extends Model
             ->first(fn (self $sale) => $sale->isAvailableFor($userId));
     }
 
+
+    public static function activeForProduct(Product $product, ?int $userId = null): ?self
+    {
+        $categoryIds = $product->categories()->pluck('product_categories.id');
+        return static::query()
+            ->where('status','active')
+            ->where('starts_at','<=',now())
+            ->where('ends_at','>=',now())
+            ->where(function ($query) use ($product, $categoryIds) {
+                if ($product->course_id) {
+                    $query->whereHas('courses', fn ($q) => $q->where('courses.id',$product->course_id));
+                    if ($categoryIds->isNotEmpty()) {
+                        $query->orWhereHas('categories', fn ($q) => $q->whereIn('product_categories.id',$categoryIds));
+                    }
+                } elseif ($categoryIds->isNotEmpty()) {
+                    $query->whereHas('categories', fn ($q) => $q->whereIn('product_categories.id',$categoryIds));
+                }
+            })
+            ->orderByDesc('priority')->orderBy('ends_at')->get()
+            ->first(fn (self $sale) => $sale->isAvailableFor($userId));
+    }
+
     public static function activeCampaigns(): \Illuminate\Support\Collection
     {
         return static::query()->where('status','active')->where('starts_at','<=',now())->where('ends_at','>=',now())
