@@ -27,7 +27,7 @@ class _StudentGateState extends State<StudentGate> {
   void initState() {
     super.initState();
     api.readToken().then((token) {
-      if (!mounted) return;
+      if (!mounted) {\n        return;\n      }
       setState(() { signedIn = token != null; loading = false; });
     });
   }
@@ -128,7 +128,7 @@ class _StudentHomeState extends State<StudentHome> {
             return Card(child: ListTile(
               title: Text(course['title']?.toString() ?? 'Course'),
               subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(progress.toString() + '% completed'),
+                Text('$progress% completed'),
                 const SizedBox(height: 6),
                 LinearProgressIndicator(value: progress.toDouble() / 100),
               ]),
@@ -139,7 +139,7 @@ class _StudentHomeState extends State<StudentHome> {
           ...catalog.map((item) => Card(child: ListTile(
             leading: const Icon(Icons.menu_book),
             title: Text(item['title']?.toString() ?? 'Course'),
-            subtitle: Text('৳' + (item['price']?.toString() ?? '0')),
+            subtitle: Text("৳${item['price'] ?? 0}"),
           ))),
         ]),
     ),
