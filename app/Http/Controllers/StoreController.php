@@ -34,7 +34,7 @@ class StoreController extends Controller
 
     public function add(Request $request, Product $product): RedirectResponse
     {
-        abort_unless($product->status === 'published', 404);
+        abort_unless($product->status === 'published' && $product->published_at && $product->published_at->lte(now()), 404);
         $data = $request->validate(['quantity' => ['nullable','integer','min:1','max:10']]);
         $cart = Cart::firstOrCreate(['user_id' => $request->user()->id]);
         $item = $cart->items()->firstOrNew(['product_id' => $product->id]);
@@ -73,7 +73,7 @@ class StoreController extends Controller
             $cart = Cart::query()->whereKey($cart->id)->lockForUpdate()->with('items.product')->firstOrFail();
             $subtotal = 0;
             foreach ($cart->items as $item) {
-                abort_unless($item->product && $item->product->status === 'published', 422, 'A product is no longer available.');
+                abort_unless($item->product && $item->product->status === 'published' && $item->product->published_at && $item->product->published_at->lte(now()), 422, 'A product is no longer available.');
                 $subtotal += (float) $item->product->currentPrice() * $item->quantity;
             }
 
