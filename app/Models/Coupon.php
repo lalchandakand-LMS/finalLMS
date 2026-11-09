@@ -21,6 +21,11 @@ class Coupon extends Model
         return $this->belongsToMany(ProductCategory::class, 'coupon_product_category')->withTimestamps();
     }
 
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
     public function redemptions(): HasMany
     {
         return $this->hasMany(CouponRedemption::class);
