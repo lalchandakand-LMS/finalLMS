@@ -1,0 +1,55 @@
+<?php
+
+namespace App\\Http\\Controllers;
+
+use App\\Models\\Order;
+use App\\Models\\DownloadPermission;
+use App\\Models\\Enrollment;
+use Illuminate\\Http\\RedirectResponse;
+use Illuminate\\Support\\Facades\\DB;
+use Illuminate\\View\\View;
+
+class AdminOrderController extends Controller
+{
+    public function index(): View
+    {
+        $orders = Order::with(['user','items'])->latest()->paginate(25);
+        return view('admin.orders.index', compact('orders'));
+    }
+
+    public function approve(Order $order): RedirectResponse
+    {
+        $result = DB::transaction(function () use ($order) {
+            $order = Order::query()->lockForUpdate()->with('items.product')->findOrFail($order->id);
+            if ($order->status !== 'pending') return 'reviewed';
+            foreach ($order->items as $item) {
+                if ($item->product_type === 'course' && $item->resource_id) {
+                    Enrollment::firstOrCreate(
+                        ['user_id'=>$order->user_id,'course_id'=>$item->resource_id],
+                        ['status'=>'active']
+                    );
+                }
+                if ($item->product_type === 'ebook' && $item->product_id) {
+                    $product = $item->product;
+                    if (!$product || !$product->is_downloadable || !$product->download_path) return 'invalid';
+                    DownloadPermission::firstOrCreate(
+                        ['order_item_id'=>$item->id],
+                        ['user_id'=>$order->user_id,'product_id'=>$product->id,'downloads_remaining'=>$product->download_limit,'expires_at'=>$product->download_expires_at]
+                    );
+                }
+            }
+            $order->update(['status'=>'completed','paid_at'=>now(),'completed_at'=>now()]);
+            return 'approved';
+        });
+        if ($result === 'reviewed') return back()->with('info','Order has already been reviewed.');
+        if ($result === 'invalid') return back()->with('error','An eBook file is missing. Order was not approved.');
+        return back()->with('success','Order verified; course enrollment and eBook access granted.');
+    }
+
+    public function reject(Order $order): RedirectResponse
+    {
+        if ($order->status !== 'pending') return back()->with('info','Only pending orders can be rejected.');
+        $order->update(['status'=>'cancelled']);
+        return back()->with('success','Order cancelled.');
+    }
+}
