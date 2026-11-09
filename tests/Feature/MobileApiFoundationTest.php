@@ -141,6 +141,38 @@ class MobileApiFoundationTest extends TestCase
             ->assertJsonPath('data.0.course.id', $course->id);
     }
 
+    public function test_course_detail_shows_only_preview_lessons_to_guests_and_full_curriculum_to_enrolled_students(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $student = User::factory()->create(['role' => 'student']);
+        $course = Course::factory()->create(['teacher_id' => $teacher->id]);
+        $preview = $course->lessons()->create([
+            'title' => 'Free preview', 'content' => 'Preview text', 'duration_minutes' => 5,
+            'order' => 1, 'is_preview' => true,
+        ]);
+        $locked = $course->lessons()->create([
+            'title' => 'Full lesson', 'content' => 'Members only', 'duration_minutes' => 20,
+            'order' => 2, 'is_preview' => false,
+        ]);
+
+        $this->getJson('/api/v1/courses/'.$course->slug)
+            ->assertOk()
+            ->assertJsonPath('lessons.0.id', $preview->id)
+            ->assertJsonMissing(['id' => $locked->id]);
+
+        Enrollment::create(['user_id' => $student->id, 'course_id' => $course->id, 'status' => 'active']);
+        $student->apiTokens()->create([
+            'name' => 'Student app',
+            'token_hash' => hash('sha256', 'enrolled-course-token'),
+            'expires_at' => now()->addDay(),
+        ]);
+
+        $this->withToken('enrolled-course-token')->getJson('/api/v1/courses/'.$course->slug)
+            ->assertOk()
+            ->assertJsonPath('is_enrolled', true)
+            ->assertJsonFragment(['id' => $locked->id, 'title' => 'Full lesson']);
+    }
+
     public function test_student_mobile_api_cannot_open_unenrolled_non_preview_lesson(): void
     {
         $student = User::factory()->create(['role' => 'student']);
