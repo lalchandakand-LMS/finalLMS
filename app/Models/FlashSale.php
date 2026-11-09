@@ -14,14 +14,22 @@ class FlashSale extends Model
 
     public function courses(): BelongsToMany { return $this->belongsToMany(Course::class, 'flash_sale_course')->withTimestamps(); }
     public function payments(): HasMany { return $this->hasMany(Payment::class); }
+    public function orderItems(): HasMany { return $this->hasMany(OrderItem::class); }
     public function categories(): BelongsToMany { return $this->belongsToMany(ProductCategory::class, 'flash_sale_product_category')->withTimestamps(); }
     public function creator(): BelongsTo { return $this->belongsTo(User::class, 'created_by'); }
 
     public function isAvailableFor(?int $userId = null): bool
     {
         if ($this->status !== 'active' || $this->starts_at->isFuture() || $this->ends_at->isPast()) return false;
-        if ($this->max_redemptions !== null && $this->payments()->whereIn('status', ['pending','approved'])->count() >= $this->max_redemptions) return false;
-        if ($userId !== null && $this->payments()->where('user_id',$userId)->whereIn('status',['pending','approved'])->count() >= $this->per_student_limit) return false;
+        $commerceUsage = $this->orderItems()->whereHas('order', fn ($q) => $q->whereIn('status',['pending','completed']));
+        $commerceCount = (clone $commerceUsage)->sum('quantity');
+        $legacyCount = $this->payments()->whereIn('status', ['pending','approved'])->count();
+        if ($this->max_redemptions !== null && $commerceCount + $legacyCount >= $this->max_redemptions) return false;
+        if ($userId !== null) {
+            $studentCommerceCount = (clone $commerceUsage)->whereHas('order', fn ($q) => $q->where('user_id',$userId))->sum('quantity');
+            $studentLegacyCount = $this->payments()->where('user_id',$userId)->whereIn('status',['pending','approved'])->count();
+            if ($studentCommerceCount + $studentLegacyCount >= $this->per_student_limit) return false;
+        }
         return true;
     }
 
