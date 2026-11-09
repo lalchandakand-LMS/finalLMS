@@ -27,6 +27,8 @@
                     <label style="display:flex;align-items:center;gap:8px;font-weight:500;"><input style="width:auto;" type="checkbox" name="course_ids[]" value="{{ $course->id }}"> {{ $course->title }} · ৳{{ number_format($course->price,2) }}</label>
                 @endforeach
             </div>
+            <p style="margin:14px 0 6px;font-weight:700;">Or target all products in categories</p>
+            <div class="grid grid-3">@foreach($categories as $category)<label style="display:flex;align-items:center;gap:8px;font-weight:500;"><input style="width:auto;" type="checkbox" name="category_ids[]" value="{{ $category->id }}"> {{ $category->name }}</label>@endforeach</div>
         </fieldset>
         <button class="btn primary" type="submit">Create Flash Sale</button>
     </form>
@@ -56,7 +58,7 @@
             <label>Description<textarea name="description">{{ $sale->description }}</textarea></label>
             <fieldset style="border:1px solid var(--border);border-radius:12px;padding:14px;margin:16px 0;"><legend>Courses in campaign</legend><div class="grid grid-3">
                 @foreach($courses as $course)<label style="display:flex;align-items:center;gap:8px;font-weight:500;"><input style="width:auto;" type="checkbox" name="course_ids[]" value="{{ $course->id }}" @checked($sale->courses->contains('id',$course->id))> {{ $course->title }}</label>@endforeach
-            </div></fieldset>
+            </div><p style="margin:14px 0 6px;font-weight:700;">Category targets</p><div class="grid grid-3">@foreach($categories as $category)<label style="display:flex;align-items:center;gap:8px;font-weight:500;"><input style="width:auto;" type="checkbox" name="category_ids[]" value="{{ $category->id }}" @checked($sale->categories->contains('id',$category->id))> {{ $category->name }}</label>@endforeach</div></fieldset>
             <button class="btn primary" type="submit">Save changes</button>
         </form>
     </details>
