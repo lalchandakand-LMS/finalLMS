@@ -23,13 +23,129 @@ class WebsiteBuilderController extends Controller
         $footerLinks = is_array($footerLinks) ? $footerLinks : [];
         $headerLinks = json_decode((string) ($settings['header_links'] ?? '[]'), true);
         $headerLinks = is_array($headerLinks) ? $headerLinks : [];
-        $templates = self::homepageTemplates();
+        $draft = json_decode((string) Setting::value('homepage_draft', ''), true);\n        $draft = is_array($draft) ? $draft : null;\n        $revisions = json_decode((string) Setting::value('homepage_revisions', '[]'), true);\n        $revisions = is_array($revisions) ? $revisions : [];\n        $templates = self::homepageTemplates();
         $activeTemplate = (string) ($settings['homepage_template'] ?? 'academy-modern');
         if (!array_key_exists($activeTemplate, $templates)) {
             $activeTemplate = 'academy-modern';
         }
 
-        return view('admin.website-builder.index', compact('sections', 'media', 'settings', 'slides', 'footerLinks', 'headerLinks', 'templates', 'activeTemplate'));
+        return view('admin.website-builder.index', compact('sections', 'media', 'settings', 'slides', 'footerLinks', 'headerLinks', 'templates', 'activeTemplate', 'draft', 'revisions'));
+    }
+
+    /**
+     * Store a validated-size draft without changing the public homepage.
+     */
+    public function saveDraft(Request $request): RedirectResponse
+    {
+        $allowed = [
+            'homepage_template', 'site_name', 'site_logo_media_id', 'site_favicon_media_id',
+            'site_primary_color', 'home_title', 'home_subtitle', 'home_featured_title',
+            'home_slides', 'footer_title', 'footer_text', 'footer_links', 'header_links', 'sections',
+        ];
+        $draft = $request->only($allowed);
+        abort_if(strlen(json_encode($draft, JSON_THROW_ON_ERROR)) > 65536, 422, 'Homepage draft is too large.');
+
+        validator($draft, [
+            'homepage_template' => ['nullable', 'string', 'max:80'],
+            'site_name' => ['nullable', 'string', 'max:120'],
+            'site_logo_media_id' => ['nullable', 'integer'],
+            'site_favicon_media_id' => ['nullable', 'integer'],
+            'site_primary_color' => ['nullable', 'string', 'max:7'],
+            'home_title' => ['nullable', 'string', 'max:255'],
+            'home_subtitle' => ['nullable', 'string', 'max:500'],
+            'home_featured_title' => ['nullable', 'string', 'max:255'],
+            'home_slides' => ['nullable', 'array', 'max:3'],
+            'footer_title' => ['nullable', 'string', 'max:120'],
+            'footer_text' => ['nullable', 'string', 'max:500'],
+            'footer_links' => ['nullable', 'array', 'max:5'],
+            'header_links' => ['nullable', 'array', 'max:6'],
+            'sections' => ['nullable', 'array', 'max:12'],
+        ])->validate();
+
+        Setting::setValue('homepage_draft', json_encode($draft, JSON_THROW_ON_ERROR));
+        Setting::setValue('homepage_draft_updated_at', now()->toIso8601String());
+        Setting::setValue('homepage_draft_updated_by', (string) $request->user()->id);
+
+        return redirect()->route('admin.website-builder.index')->with('success', 'Draft saved. The public homepage has not changed.');
+    }
+
+    public function previewDraft(): View
+    {
+        $draft = json_decode((string) Setting::value('homepage_draft', ''), true);
+        abort_unless(is_array($draft), 404, 'No saved homepage draft is available.');
+
+        return view('admin.website-builder.preview', compact('draft'));
+    }
+
+    public function publishDraft(Request $request): RedirectResponse
+    {
+        $draft = json_decode((string) Setting::value('homepage_draft', ''), true);
+        abort_unless(is_array($draft), 404, 'No saved homepage draft is available.');
+
+        $request->replace($draft);
+
+        return $this->update($request);
+    }
+
+    public function rollback(Request $request): RedirectResponse
+    {
+        $validated = $request->validate(['revision_id' => ['required', 'string', 'max:80']]);
+        $revisions = json_decode((string) Setting::value('homepage_revisions', '[]'), true);
+        $revisions = is_array($revisions) ? $revisions : [];
+        $targetIndex = collect($revisions)->search(fn ($revision) => ($revision['id'] ?? null) === $validated['revision_id']);
+        abort_if($targetIndex === false, 404, 'Homepage revision not found.');
+
+        $keys = self::homepageSettingKeys();
+        $current = [];
+        foreach ($keys as $key) {
+            $current[$key] = Setting::value($key, '');
+        }
+        $revisions[] = [
+            'id' => (string) Str::uuid(),
+            'created_at' => now()->toIso8601String(),
+            'by' => $request->user()->id,
+            'settings' => $current,
+            'label' => 'Before rollback',
+        ];
+
+        $target = $revisions[$targetIndex]['settings'] ?? [];
+        foreach ($keys as $key) {
+            if (array_key_exists($key, $target)) {
+                Setting::setValue($key, $target[$key] ?? '');
+            }
+        }
+        Setting::setValue('homepage_revisions', json_encode(array_slice($revisions, -20), JSON_THROW_ON_ERROR));
+
+        return redirect()->route('admin.website-builder.index')->with('success', 'Homepage restored from the selected revision.');
+    }
+
+    /** @return list<string> */
+    private static function homepageSettingKeys(): array
+    {
+        return [
+            'homepage_template', 'site_name', 'site_logo_media_id', 'site_favicon_media_id',
+            'site_primary_color', 'home_title', 'home_subtitle', 'home_featured_title',
+            'home_slides', 'footer_title', 'footer_text', 'footer_links', 'header_links', 'website_sections',
+        ];
+    }
+
+    private function recordHomepageRevision(): void
+    {
+        $keys = self::homepageSettingKeys();
+        $snapshot = [];
+        foreach ($keys as $key) {
+            $snapshot[$key] = Setting::value($key, '');
+        }
+        $revisions = json_decode((string) Setting::value('homepage_revisions', '[]'), true);
+        $revisions = is_array($revisions) ? $revisions : [];
+        $revisions[] = [
+            'id' => (string) Str::uuid(),
+            'created_at' => now()->toIso8601String(),
+            'by' => auth()->id(),
+            'settings' => $snapshot,
+            'label' => 'Published homepage',
+        ];
+        Setting::setValue('homepage_revisions', json_encode(array_slice($revisions, -20), JSON_THROW_ON_ERROR));
     }
 
     public function update(Request $request): RedirectResponse
@@ -71,7 +187,7 @@ class WebsiteBuilderController extends Controller
             'sections.*.enabled' => ['nullable', 'boolean'],
         ]);
 
-        $sections = collect($validated['sections'] ?? [])->map(function (array $section): array {
+        $this->recordHomepageRevision();\n\n        $sections = collect($validated['sections'] ?? [])->map(function (array $section): array {
             return [
                 'title' => trim($section['title'] ?? ''),
                 'body' => trim($section['body'] ?? ''),
