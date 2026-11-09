@@ -6,7 +6,7 @@
     <div class="page-header">
         <div>
             <span class="badge info">Teacher portal</span>
-            <h1 style="margin:12px 0 0;">{{ __('My assigned batches') }}</h1>
+            <h1 style="margin:12px 0 0;">{{ __('My teaching batches') }}</h1>
         </div>
         <a href="{{ route('dashboard') }}" class="btn secondary">Dashboard</a>
     </div>
