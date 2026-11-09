@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Cart;
+use App\Models\Coupon;
 use App\Models\Course;
 use App\Models\DownloadPermission;
 use App\Models\Enrollment;
@@ -32,7 +33,8 @@ class StoreCheckoutTest extends TestCase
             'slug'=>'spoken-english-product','regular_price'=>2500,'currency'=>'BDT',
             'status'=>'published','published_at'=>now(),'created_by'=>$admin->id,
         ]);
-        $coupon = Coupon::create(['code'=>'WELCOME10','discount_type'=>'percentage','discount_value'=>10,'minimum_order'=>1000,'per_user_limit'=>1,'is_active'=>true]);\n        Setting::setValue('payment_methods', json_encode([
+        $coupon = Coupon::create(['code'=>'WELCOME10','discount_type'=>'percentage','discount_value'=>10,'minimum_order'=>1000,'per_user_limit'=>1,'is_active'=>true]);
+        Setting::setValue('payment_methods', json_encode([
             'manual'=>['enabled'=>true,'label'=>'Manual','account'=>'012345'],
         ]));
 
@@ -42,12 +44,16 @@ class StoreCheckoutTest extends TestCase
         ])->assertRedirect(route('store.orders'));
 
         $order = Order::where('payment_reference','ORDER-REF-001')->firstOrFail();
-        $this->assertSame('pending',$order->status);\n        $this->assertSame('250.00',$order->discount_total);\n        $this->assertSame('2250.00',$order->total);
+        $this->assertSame('pending',$order->status);
+        $this->assertSame('250.00',$order->discount_total);
+        $this->assertSame('2250.00',$order->total);
         $this->assertDatabaseHas('order_items',['order_id'=>$order->id,'product_id'=>$product->id]);
 
         $this->actingAs($admin)->post(route('admin.orders.approve',$order))->assertRedirect();
         $this->assertDatabaseHas('orders',['id'=>$order->id,'status'=>'completed']);
-        $this->assertDatabaseHas('enrollments',['user_id'=>$student->id,'course_id'=>$course->id,'status'=>'active']);\n        $this->assertDatabaseHas('coupons',['id'=>$coupon->id,'usage_count'=>1]);\n        $this->assertDatabaseHas('coupon_redemptions',['coupon_id'=>$coupon->id,'order_id'=>$order->id,'user_id'=>$student->id]);
+        $this->assertDatabaseHas('enrollments',['user_id'=>$student->id,'course_id'=>$course->id,'status'=>'active']);
+        $this->assertDatabaseHas('coupons',['id'=>$coupon->id,'usage_count'=>1]);
+        $this->assertDatabaseHas('coupon_redemptions',['coupon_id'=>$coupon->id,'order_id'=>$order->id,'user_id'=>$student->id]);
     }
 
     public function test_ebook_checkout_creates_a_private_download_permission_after_admin_approval(): void
