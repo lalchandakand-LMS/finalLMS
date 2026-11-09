@@ -181,6 +181,7 @@
             <div class="admin-sidebar-label">Academy</div>
             <a href="{{ route('admin.courses.index') }}"><span>📚</span><span class="nav-text">Courses & lessons</span></a>
             <a href="{{ route('admin.products.index') }}"><span>🛍️</span><span class="nav-text">Products & eBooks</span></a>
+            <a href="{{ route('admin.orders.index') }}"><span>📦</span><span class="nav-text">Commerce Orders</span></a>
             <a href="{{ route('admin.flash-sales.index') }}"><span>🔥</span><span class="nav-text">Flash Sale</span></a>
             <a href="{{ route('admin.users.index') }}"><span>👥</span><span class="nav-text">Students & teachers</span></a>
             <a href="{{ route('admin.batches.index') }}"><span>🗓️</span><span class="nav-text">Batches & branches</span></a>
