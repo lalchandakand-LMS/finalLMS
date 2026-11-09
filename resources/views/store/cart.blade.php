@@ -12,7 +12,7 @@
 <div class="panel" style="padding:16px;border:1px solid var(--border);border-radius:12px;display:flex;justify-content:space-between;gap:15px;align-items:center">
 <div><strong>{{ $item->product->name }}</strong><div>৳{{ number_format((float)$item->product->currentPrice(),2) }} each</div></div>
 <div style="display:flex;gap:8px;align-items:center">
-<form method="POST" action="{{ route('store.cart.update',$item) }}">@csrf @method('PUT')<input type="number" name="quantity" min="1" max="10" value="{{ $item->quantity }}" style="width:70px"><button type="submit">Update</button></form>
+<form method="POST" enctype="multipart/form-data" action="{{ route('store.cart.update',$item) }}">@csrf @method('PUT')<input type="number" name="quantity" min="1" max="10" value="{{ $item->quantity }}" style="width:70px"><button type="submit">Update</button></form>
 <form method="POST" action="{{ route('store.cart.remove',$item) }}">@csrf @method('DELETE')<button type="submit">Remove</button></form>
 <strong>৳{{ number_format($line,2) }}</strong>
 </div></div>
@@ -28,6 +28,8 @@
 @endforeach
 </select>
 <label>Transaction ID / Reference</label><input name="payment_reference" required maxlength="120" style="display:block;width:100%;padding:10px;margin:6px 0 14px">
+<label>Sender mobile / account (optional)</label><input name="payment_sender" maxlength="60" placeholder="01XXXXXXXXX" style="display:block;width:100%;padding:10px;margin:6px 0 14px">
+<label>Payment screenshot / receipt (optional, JPG/PNG/PDF)</label><input type="file" name="payment_proof" accept="image/jpeg,image/png,application/pdf" style="display:block;width:100%;padding:10px;margin:6px 0 14px">
 <p>Order access remains pending until an administrator verifies the payment.</p><button type="submit" class="btn btn-primary">Place order</button>
 </form>
 @endif
