@@ -11,6 +11,27 @@
         <a href="{{ route('dashboard') }}" class="btn secondary">{{ __('Back to dashboard') }}</a>
     </div>
 
+    <div class="panel" style="max-width:980px;margin:0 auto 20px">
+        <span class="badge info">{{ __('Brand appearance') }}</span>
+        <h2>{{ __('Custom color system') }}</h2>
+        <p class="muted">{{ __('Set the platform-wide brand colors. Changes apply to admin, guardian, student, teacher, branch and finance panels.') }}</p>
+        <form method="POST" action="{{ route('admin.settings.theme.update') }}">
+            @csrf
+            @php
+                $themeDefaults = ['theme_primary'=>'#C2410C','theme_secondary'=>'#EA580C','theme_accent'=>'#FED7AA','theme_sidebar_start'=>'#7C2D12','theme_sidebar_end'=>'#431407'];
+            @endphp
+            <div class="grid grid-3">
+                @foreach(['theme_primary'=>'Primary orange','theme_secondary'=>'Secondary orange','theme_accent'=>'Accent highlight','theme_sidebar_start'=>'Sidebar top','theme_sidebar_end'=>'Sidebar bottom'] as $key => $label)
+                    <div><label for="{{ $key }}">{{ __($label) }}</label><div style="display:flex;gap:10px;align-items:center"><input id="{{ $key }}" type="color" name="{{ $key }}" value="{{ old($key, $settings[$key] ?? $themeDefaults[$key]) }}" style="width:58px;height:44px;padding:3px"><input aria-label="{{ __($label) }} hex value" value="{{ old($key, $settings[$key] ?? $themeDefaults[$key]) }}" readonly style="max-width:130px"></div></div>
+                @endforeach
+            </div>
+            <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:16px">
+                <button type="submit" class="btn primary">{{ __('Save brand colors') }}</button>
+                <span class="muted">{{ __('Use dark enough primary colors for readable white button text. Hex colors only.') }}</span>
+            </div>
+        </form>
+    </div>
+
     <div class="panel" style="max-width: 980px; margin: 0 auto;">
         <form method="POST" action="{{ route('admin.settings.update') }}">
             @csrf
