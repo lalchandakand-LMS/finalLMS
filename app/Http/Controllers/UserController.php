@@ -16,7 +16,7 @@ class UserController extends Controller
     {
         $validated = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
-            'role' => ['nullable', 'in:admin,branch_manager,accountant,teacher,student,guardian,guardian'],
+            'role' => ['nullable', 'in:admin,branch_manager,accountant,teacher,student,guardian'],
         ]);
 
         $users = User::query()
