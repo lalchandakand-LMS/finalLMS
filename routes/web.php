@@ -123,6 +123,8 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
     Route::middleware('role:teacher')->post('/teacher/courses/{course}/sections', [CourseController::class, 'storeSection'])->name('teacher.courses.sections.store');
     Route::middleware('role:teacher')->put('/teacher/courses/{course}/sections/{section}', [CourseController::class, 'updateSection'])->name('teacher.courses.sections.update');
     Route::middleware('role:teacher')->delete('/teacher/courses/{course}/sections/{section}', [CourseController::class, 'destroySection'])->name('teacher.courses.sections.destroy');
+    Route::middleware('role:teacher')->post('/teacher/courses/{course}/sections/{section}/posts', [CourseController::class, 'attachPost'])->name('teacher.courses.sections.posts.attach');
+    Route::middleware('role:teacher')->delete('/teacher/courses/{course}/sections/{section}/posts/{post}', [CourseController::class, 'detachPost'])->name('teacher.courses.sections.posts.detach');
     Route::middleware('role:teacher')->post('/teacher/courses/{course}/lessons', [CourseController::class, 'storeLesson'])->name('teacher.courses.lessons.store');
     Route::middleware('role:teacher')->put('/teacher/courses/{course}/lessons/{lesson}', [CourseController::class, 'updateLesson'])->name('teacher.courses.lessons.update');
     Route::middleware('role:teacher')->delete('/teacher/courses/{course}/lessons/{lesson}', [CourseController::class, 'destroyLesson'])->name('teacher.courses.lessons.destroy');
@@ -263,6 +265,8 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         Route::post('/courses/{course}/sections', [CourseController::class, 'storeSection'])->name('admin.courses.sections.store');
         Route::put('/courses/{course}/sections/{section}', [CourseController::class, 'updateSection'])->name('admin.courses.sections.update');
         Route::delete('/courses/{course}/sections/{section}', [CourseController::class, 'destroySection'])->name('admin.courses.sections.destroy');
+        Route::post('/courses/{course}/sections/{section}/posts', [CourseController::class, 'attachPost'])->name('admin.courses.sections.posts.attach');
+        Route::delete('/courses/{course}/sections/{section}/posts/{post}', [CourseController::class, 'detachPost'])->name('admin.courses.sections.posts.detach');
         Route::get('/courses/{course}/lessons', [CourseController::class, 'teacherLessons'])->name('admin.courses.lessons.index');
         Route::put('/courses/{course}/lessons/{lesson}', [CourseController::class, 'updateLesson'])->name('admin.courses.lessons.update');
         Route::delete('/courses/{course}/lessons/{lesson}', [CourseController::class, 'destroyLesson'])->name('admin.courses.lessons.destroy');
