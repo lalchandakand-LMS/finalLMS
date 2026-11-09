@@ -31,7 +31,7 @@ class AdminSettingsController extends Controller
 
         foreach (['theme_primary', 'theme_secondary', 'theme_sidebar_start', 'theme_sidebar_end'] as $key) {
             if ($this->whiteContrastRatio($validated[$key]) < 4.5) {
-                throw \\Illuminate\\Validation\\ValidationException::withMessages([$key => 'Choose a darker color so white navigation and button text remains readable (WCAG AA).']);
+                throw \Illuminate\Validation\ValidationException::withMessages([$key => 'Choose a darker color so white navigation and button text remains readable (WCAG AA).']);
             }
         }
 
