@@ -258,6 +258,130 @@ class AssignmentWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_admin_can_manage_batch_assignments_and_grade_on_behalf_of_the_assigned_teacher(): void
+    {
+        ['teacher' => $teacher, 'student' => $student, 'batch' => $batch, 'assignment' => $assignment] = $this->assignmentFixture();
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->get(route('admin.batches.assignments.index', $batch))
+            ->assertOk();
+
+        $this->actingAs($admin)
+            ->post(route('admin.batches.assignments.store', $batch), [
+                'title' => 'Admin-created assignment',
+                'instructions' => 'Complete the admin-managed task.',
+                'due_at' => now()->addDays(2)->format('Y-m-d H:i:s'),
+                'max_marks' => 20,
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('assignments', [
+            'batch_id' => $batch->id,
+            'title' => 'Admin-created assignment',
+            'teacher_id' => $teacher->id,
+        ]);
+
+        $submission = \\App\\Models\\AssignmentSubmission::create([
+            'assignment_id' => $assignment->id,
+            'student_id' => $student->id,
+            'answer' => 'Admin grading sample.',
+            'submitted_at' => now(),
+            'status' => 'submitted',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.assignments.grade', [$assignment, $submission]), [
+                'score' => 9,
+                'feedback' => 'Reviewed by administration.',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('assignment_submissions', [
+            'id' => $submission->id,
+            'score' => '9.00',
+            'graded_by' => $admin->id,
+            'status' => 'graded',
+        ]);
+    }
+
+    public function test_teacher_cannot_download_submission_from_another_teachers_batch(): void
+    {
+        Storage::fake('local');
+        ['student' => $student, 'assignment' => $assignment] = $this->assignmentFixture();
+        $otherTeacher = User::factory()->create(['role' => 'teacher']);
+        $submission = \\App\\Models\\AssignmentSubmission::create([
+            'assignment_id' => $assignment->id,
+            'student_id' => $student->id,
+            'answer' => 'Private attachment.',
+            'submitted_at' => now(),
+            'status' => 'submitted',
+            'attachment_path' => 'assignment-submissions/'.$assignment->id.'/private.pdf',
+            'attachment_name' => 'private.pdf',
+        ]);
+        Storage::disk('local')->put($submission->attachment_path, 'private');
+
+        $this->actingAs($otherTeacher)
+            ->get(route('assignment-submissions.attachment', $submission))
+            ->assertForbidden();
+    }
+
+    public function test_student_cannot_download_submission_after_enrollment_is_deactivated(): void
+    {
+        Storage::fake('local');
+        ['student' => $student, 'assignment' => $assignment] = $this->assignmentFixture();
+        $submission = \\App\\Models\\AssignmentSubmission::create([
+            'assignment_id' => $assignment->id,
+            'student_id' => $student->id,
+            'answer' => 'My private file.',
+            'submitted_at' => now(),
+            'status' => 'submitted',
+            'attachment_path' => 'assignment-submissions/'.$assignment->id.'/private.pdf',
+            'attachment_name' => 'private.pdf',
+        ]);
+        Storage::disk('local')->put($submission->attachment_path, 'private');
+        Enrollment::where('batch_id', $assignment->batch_id)
+            ->where('user_id', $student->id)
+            ->update(['status' => 'cancelled']);
+
+        $this->actingAs($student)
+            ->get(route('assignment-submissions.attachment', $submission))
+            ->assertForbidden();
+    }
+
+    public function test_closed_assignment_rejects_submissions_without_creating_records_or_orphan_files(): void
+    {
+        Storage::fake('local');
+        ['student' => $student, 'assignment' => $assignment] = $this->assignmentFixture();
+        $assignment->update(['status' => 'closed']);
+
+        $this->actingAs($student)
+            ->post(route('student.assignments.submit', $assignment), [
+                'answer' => 'Should not be accepted.',
+                'attachment' => UploadedFile::fake()->create('homework.pdf', 100, 'application/pdf'),
+            ])
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseCount('assignment_submissions', 0);
+        $this->assertSame([], Storage::disk('local')->allFiles('assignment-submissions/'.$assignment->id));
+    }
+
+    public function test_submission_filename_is_sanitized_before_being_used_as_download_name(): void
+    {
+        Storage::fake('local');
+        ['student' => $student, 'assignment' => $assignment] = $this->assignmentFixture();
+
+        $this->actingAs($student)->post(route('student.assignments.submit', $assignment), [
+            'attachment' => UploadedFile::fake()->create('homework"\r\nX-Injected: yes.pdf', 100, 'application/pdf'),
+        ])->assertRedirect();
+
+        $submission = \\App\\Models\\AssignmentSubmission::firstOrFail();
+        $this->assertStringNotContainsString("\\r", $submission->attachment_name);
+        $this->assertStringNotContainsString("\\n", $submission->attachment_name);
+        $this->assertStringNotContainsString('"', $submission->attachment_name);
+        $this->assertStringEndsWith('.pdf', $submission->attachment_name);
+    }
+
     /**
      * Build an isolated teacher, student, batch and published assignment.
      *
