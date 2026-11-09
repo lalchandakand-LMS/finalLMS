@@ -59,7 +59,8 @@ Route::get('/faq', [CmsPageController::class, 'faq'])->name('pages.faq');
 Route::get('/news', [BlogController::class, 'index'])->name('news.index');
 Route::get('/news/{post:slug}', [BlogController::class, 'show'])->name('news.show');
 Route::post('/language', [LocaleController::class, 'update'])->middleware('throttle:20,1')->name('locale.update');
-Route::get('/payments/bkash/callback', [BkashPaymentController::class, 'callback'])->middleware('throttle:30,1')->name('payments.bkash.callback');\nRoute::get('/store/payments/bkash/callback', [CommerceBkashController::class, 'callback'])->middleware('throttle:30,1')->name('store.payments.bkash.callback');
+Route::get('/payments/bkash/callback', [BkashPaymentController::class, 'callback'])->middleware('throttle:30,1')->name('payments.bkash.callback');
+Route::get('/store/payments/bkash/callback', [CommerceBkashController::class, 'callback'])->middleware('throttle:30,1')->name('store.payments.bkash.callback');
 
 Route::get('/contests', [QuizContestController::class, 'index'])->name('contests.index');
 Route::get('/contests/{contest}', [QuizContestController::class, 'show'])->name('contests.show');
