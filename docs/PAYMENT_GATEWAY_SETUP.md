@@ -19,7 +19,7 @@ The LMS uses the server-side bKash Tokenized Checkout flow. API credentials must
 5. Clear Laravel's cached configuration after changing environment variables.
 6. Run a sandbox payment and confirm the server-side payment-status query reports the same payment ID, BDT amount, completed status, and transaction ID before granting enrollment.
 
-The callback redirect is not proof of payment. The application executes and queries the transaction server-to-server, checks the amount and payment reference, and only then activates the enrollment. Failed or cancelled checkouts do not grant access. A successful payment with a now-full batch is flagged for manual refund/reassignment.
+The callback redirect is not proof of payment. Course checkout and store/order checkout each execute and query the transaction server-to-server. Store orders are recorded in a separate commerce payment ledger; the application checks payment ID, invoice/order reference, BDT currency, exact amount and terminal completed status before transactionally granting course enrollment or protected eBook download access. Failed or cancelled checkouts do not grant access. A successful payment with a now-full batch is flagged for manual refund/reassignment.
 
 Switch to the live base URL and live credentials only after bKash merchant approval and sandbox acceptance. Keep TLS verification enabled.
 
