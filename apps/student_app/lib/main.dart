@@ -230,7 +230,7 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                               leading: const Icon(Icons.play_circle_outline),
                               title: Text(lesson['title']?.toString() ?? 'Lesson'),
                               subtitle: Text(
-                                (lesson['duration_minutes'] ?? 0).toString() + ' minutes',
+                                '${lesson['duration_minutes'] ?? 0} minutes',
                               ),
                               trailing: lesson['is_preview'] == true
                                   ? const Chip(label: Text('Preview'))
