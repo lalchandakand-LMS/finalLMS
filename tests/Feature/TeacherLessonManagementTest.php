@@ -8,6 +8,8 @@ use App\Models\Enrollment;
 use App\Models\LessonProgress;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class TeacherLessonManagementTest extends TestCase
