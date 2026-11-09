@@ -75,21 +75,21 @@ class MobileApiFoundationTest extends TestCase
         $student = User::factory()->create(['role' => 'student']);
         $first = $student->apiTokens()->create([
             'name' => 'Phone',
-            'token_hash' => hash('sha256', 'first-device-token'),
+            'token_hash' => hash('sha256', 'first-device-token-0123456789012345678901234567890123456789'),
             'expires_at' => now()->addDay(),
         ]);
         $student->apiTokens()->create([
             'name' => 'Tablet',
-            'token_hash' => hash('sha256', 'second-device-token'),
+            'token_hash' => hash('sha256', 'second-device-token-0123456789012345678901234567890123456789'),
             'expires_at' => now()->addDay(),
         ]);
 
-        $this->withToken('first-device-token')->postJson('/api/v1/auth/logout-all')
+        $this->withToken('first-device-token-0123456789012345678901234567890123456789')->postJson('/api/v1/auth/logout-all')
             ->assertOk();
 
         $this->assertDatabaseCount('api_tokens', 2);
         $this->assertNotNull($first->fresh()->revoked_at);
-        $this->withToken('second-device-token')->getJson('/api/v1/auth/me')->assertUnauthorized();
+        $this->withToken('second-device-token-0123456789012345678901234567890123456789')->getJson('/api/v1/auth/me')->assertUnauthorized();
     }
 
     public function test_mobile_course_catalog_only_returns_published_courses_and_supports_search(): void
@@ -130,11 +130,11 @@ class MobileApiFoundationTest extends TestCase
         LessonProgress::create(['user_id' => $student->id, 'lesson_id' => $lesson->id, 'completed_at' => now()]);
         $token = $student->apiTokens()->create([
             'name' => 'Student app',
-            'token_hash' => hash('sha256', 'student-course-token'),
+            'token_hash' => hash('sha256', 'student-course-token-0123456789012345678901234567890123456789'),
             'expires_at' => now()->addDay(),
         ]);
 
-        $this->withToken('student-course-token')->getJson('/api/v1/my/courses')
+        $this->withToken('student-course-token-0123456789012345678901234567890123456789')->getJson('/api/v1/my/courses')
             ->assertOk()
             ->assertJsonPath('meta.total', 1)
             ->assertJsonPath('data.0.progress_percent', 100)
@@ -163,11 +163,11 @@ class MobileApiFoundationTest extends TestCase
         Enrollment::create(['user_id' => $student->id, 'course_id' => $course->id, 'status' => 'active']);
         $student->apiTokens()->create([
             'name' => 'Student app',
-            'token_hash' => hash('sha256', 'enrolled-course-token'),
+            'token_hash' => hash('sha256', 'enrolled-course-token-0123456789012345678901234567890123456789'),
             'expires_at' => now()->addDay(),
         ]);
 
-        $this->withToken('enrolled-course-token')->getJson('/api/v1/courses/'.$course->slug)
+        $this->withToken('enrolled-course-token-0123456789012345678901234567890123456789')->getJson('/api/v1/courses/'.$course->slug)
             ->assertOk()
             ->assertJsonPath('is_enrolled', true)
             ->assertJsonFragment(['id' => $locked->id, 'title' => 'Full lesson']);
@@ -187,11 +187,11 @@ class MobileApiFoundationTest extends TestCase
         ]);
         $student->apiTokens()->create([
             'name' => 'Student app',
-            'token_hash' => hash('sha256', 'locked-lesson-token'),
+            'token_hash' => hash('sha256', 'locked-lesson-token-0123456789012345678901234567890123456789'),
             'expires_at' => now()->addDay(),
         ]);
 
-        $this->withToken('locked-lesson-token')
+        $this->withToken('locked-lesson-token-0123456789012345678901234567890123456789')
             ->getJson('/api/v1/courses/'.$course->slug.'/lessons/'.$lesson->id)
             ->assertForbidden();
     }
@@ -206,23 +206,23 @@ class MobileApiFoundationTest extends TestCase
         Enrollment::create(['user_id' => $student->id, 'course_id' => $ownCourse->id, 'status' => 'active']);
         $teacher->apiTokens()->create([
             'name' => 'Instructor app',
-            'token_hash' => hash('sha256', 'instructor-owned-token'),
+            'token_hash' => hash('sha256', 'instructor-owned-token-0123456789012345678901234567890123456789'),
             'expires_at' => now()->addDay(),
         ]);
 
-        $this->withToken('instructor-owned-token')->getJson('/api/v1/instructor/courses')
+        $this->withToken('instructor-owned-token-0123456789012345678901234567890123456789')->getJson('/api/v1/instructor/courses')
             ->assertOk()
             ->assertJsonPath('meta.total', 1)
             ->assertJsonFragment(['title' => 'My class'])
             ->assertJsonMissing(['title' => 'Other class']);
 
-        $this->withToken('instructor-owned-token')
+        $this->withToken('instructor-owned-token-0123456789012345678901234567890123456789')
             ->getJson('/api/v1/instructor/courses/'.$ownCourse->slug.'/students')
             ->assertOk()
             ->assertJsonPath('meta.total', 1)
             ->assertJsonPath('data.0.student.id', $student->id);
 
-        $this->withToken('instructor-owned-token')
+        $this->withToken('instructor-owned-token-0123456789012345678901234567890123456789')
             ->getJson('/api/v1/instructor/courses/'.$otherCourse->slug.'/students')
             ->assertForbidden();
     }
@@ -241,16 +241,16 @@ class MobileApiFoundationTest extends TestCase
         ]);
         $teacher->apiTokens()->create([
             'name' => 'Instructor app',
-            'token_hash' => hash('sha256', 'teacher-lessons-token'),
+            'token_hash' => hash('sha256', 'teacher-lessons-token-0123456789012345678901234567890123456789'),
             'expires_at' => now()->addDay(),
         ]);
 
-        $this->withToken('teacher-lessons-token')
+        $this->withToken('teacher-lessons-token-0123456789012345678901234567890123456789')
             ->getJson('/api/v1/courses/'.$ownCourse->slug.'/lessons/'.$ownLesson->id)
             ->assertOk()
             ->assertJsonPath('lesson.title', 'Own lesson');
 
-        $this->withToken('teacher-lessons-token')
+        $this->withToken('teacher-lessons-token-0123456789012345678901234567890123456789')
             ->getJson('/api/v1/courses/'.$otherCourse->slug.'/lessons/'.$otherLesson->id)
             ->assertForbidden();
     }
@@ -260,11 +260,11 @@ class MobileApiFoundationTest extends TestCase
         $student = User::factory()->create(['role' => 'student']);
         $student->apiTokens()->create([
             'name' => 'Expired device',
-            'token_hash' => hash('sha256', 'expired-device-token'),
+            'token_hash' => hash('sha256', 'expired-device-token-0123456789012345678901234567890123456789'),
             'expires_at' => now()->subMinute(),
         ]);
 
-        $this->withToken('expired-device-token')->getJson('/api/v1/auth/me')->assertUnauthorized();
-        $this->withToken('not-a-valid-token')->getJson('/api/v1/auth/me')->assertUnauthorized();
+        $this->withToken('expired-device-token-0123456789012345678901234567890123456789')->getJson('/api/v1/auth/me')->assertUnauthorized();
+        $this->withToken('not-a-valid-token-0123456789012345678901234567890123456789')->getJson('/api/v1/auth/me')->assertUnauthorized();
     }
 }
