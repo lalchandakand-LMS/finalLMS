@@ -7,6 +7,7 @@ use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class WebsiteBuilderController extends Controller
@@ -17,13 +18,21 @@ class WebsiteBuilderController extends Controller
         $sections = is_array($sections) ? $sections : [];
         $media = MediaAsset::query()->where('mime_type', 'like', 'image/%')->latest()->limit(200)->get();
         $settings = Setting::query()->pluck('value', 'key')->toArray();
+        $draft = json_decode((string) Setting::value('homepage_draft', ''), true);
+        $draft = is_array($draft) ? $draft : null;
+        if ($draft !== null) {
+            $settings = array_merge($settings, $draft);
+            $sections = is_array($draft['sections'] ?? null) ? $draft['sections'] : $sections;
+        }
         $slides = json_decode((string) ($settings['home_slides'] ?? '[]'), true);
         $slides = is_array($slides) ? $slides : [];
         $footerLinks = json_decode((string) ($settings['footer_links'] ?? '[]'), true);
         $footerLinks = is_array($footerLinks) ? $footerLinks : [];
         $headerLinks = json_decode((string) ($settings['header_links'] ?? '[]'), true);
         $headerLinks = is_array($headerLinks) ? $headerLinks : [];
-        $draft = json_decode((string) Setting::value('homepage_draft', ''), true);\n        $draft = is_array($draft) ? $draft : null;\n        $revisions = json_decode((string) Setting::value('homepage_revisions', '[]'), true);\n        $revisions = is_array($revisions) ? $revisions : [];\n        $templates = self::homepageTemplates();
+        $draft = json_decode((string) Setting::value('homepage_draft', ''), true);\n        $draft = is_array($draft) ? $draft : null;
+        $revisions = json_decode((string) Setting::value('homepage_revisions', '[]'), true);\n        $revisions = is_array($revisions) ? $revisions : [];
+        $templates = self::homepageTemplates();
         $activeTemplate = (string) ($settings['homepage_template'] ?? 'academy-modern');
         if (!array_key_exists($activeTemplate, $templates)) {
             $activeTemplate = 'academy-modern';
