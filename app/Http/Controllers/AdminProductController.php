@@ -142,7 +142,7 @@ class AdminProductController extends Controller
             'category_ids' => ['nullable','array'],
             'category_ids.*' => ['integer','distinct','exists:product_categories,id'],
             'image' => ['nullable','image','mimes:jpg,jpeg,png,webp','max:5120'],
-            'download_file' => [$request->input('type') === 'ebook' && !$product ? 'required' : 'nullable','file','mimes:pdf','max:51200'],
+            'download_file' => [$request->input('type') === 'ebook' && (!$product || !$product->download_path) ? 'required' : 'nullable','file','mimes:pdf','max:51200'],
             'download_limit' => ['nullable','integer','min:1','max:1000'],
         ];
         $data = $request->validate($rules);
