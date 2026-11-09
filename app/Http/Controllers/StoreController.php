@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\DownloadPermission;
+use App\Models\FlashSale;
 use App\Models\Enrollment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -74,9 +75,22 @@ class StoreController extends Controller
         $order = DB::transaction(function () use ($cart, $request, $data) {
             $cart = Cart::query()->whereKey($cart->id)->lockForUpdate()->with('items.product')->firstOrFail();
             $subtotal = 0;
+            $linePrices = [];
+            $lineFlashSales = [];
             foreach ($cart->items as $item) {
-                abort_unless($item->product && $item->product->status === 'published' && $item->product->published_at && $item->product->published_at->lte(now()), 422, 'A product is no longer available.');
-                $subtotal += (float) $item->product->currentPrice($request->user()->id) * $item->quantity;
+                $product = $item->product;
+                abort_unless($product && $product->status === 'published' && $product->published_at && $product->published_at->lte(now()), 422, 'A product is no longer available.');
+                $regularPrice = (float) $product->regular_price;
+                $basePrice = $product->sale_price !== null && (float) $product->sale_price < $regularPrice ? (float) $product->sale_price : $regularPrice;
+                $flashSale = FlashSale::activeForProduct($product, $request->user()->id);
+                if ($flashSale) {
+                    $lockedSale = FlashSale::query()->lockForUpdate()->find($flashSale->id);
+                    $flashSale = $lockedSale && $lockedSale->isAvailableFor($request->user()->id) ? $lockedSale : null;
+                }
+                $price = $flashSale ? $flashSale->discountedPrice($basePrice) : $basePrice;
+                $linePrices[$product->id] = $price;
+                $lineFlashSales[$product->id] = $flashSale?->id;
+                $subtotal += $price * $item->quantity;
             }
 
             $coupon = null;
@@ -84,7 +98,7 @@ class StoreController extends Controller
             if (!empty($data['coupon_code'])) {
                 $coupon = Coupon::query()->where('code', strtoupper(trim($data['coupon_code'])))->lockForUpdate()->first();
                 abort_unless($coupon && $coupon->isAvailableFor($request->user()->id, $subtotal), 422, 'This coupon is invalid, expired, or its usage limit has been reached.');
-                $eligibleSubtotal = $coupon->eligibleSubtotal($cart->items, $request->user()->id);
+                $eligibleSubtotal = $coupon->eligibleSubtotal($cart->items, $request->user()->id, $linePrices);
                 abort_if($eligibleSubtotal <= 0, 422, 'This coupon does not apply to products in your cart.');
                 $discount = $coupon->calculateDiscount($eligibleSubtotal);
             }
@@ -113,18 +127,18 @@ class StoreController extends Controller
             foreach ($cart->items as $item) {
                 $product = $item->product;
                 $regularPrice = (float) $product->regular_price;
-                $productSalePrice = $product->sale_price !== null && (float) $product->sale_price < $regularPrice ? (float) $product->sale_price : $regularPrice;
-                $price = (float) $product->currentPrice($request->user()->id);
+                $price = (float) $linePrices[$product->id];
                 $lineTotal = $price * $item->quantity;
                 $order->items()->create([
                     'product_id' => $product->id,
+                    'flash_sale_id' => $lineFlashSales[$product->id] ?? null,
                     'product_type' => $product->type,
                     'resource_id' => $product->course_id,
                     'product_name' => $product->name,
                     'product_sku' => $product->sku,
                     'quantity' => $item->quantity,
                     'regular_price' => $regularPrice,
-                    'discount_total' => round(max(0, $productSalePrice - $price) * $item->quantity, 2),
+                    'discount_total' => round(max(0, $regularPrice - $price) * $item->quantity, 2),
                     'line_total' => $lineTotal,
                     'product_snapshot' => ['slug' => $product->slug, 'downloadable' => (bool) $product->is_downloadable],
                 ]);
