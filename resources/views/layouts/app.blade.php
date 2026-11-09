@@ -100,7 +100,7 @@
 
         * { box-sizing: border-box; }
         body:not(.app-shell) { background:var(--site-page-background); font-family:var(--site-font-family); font-size:calc(16px * var(--site-body-scale)); }
-        body:not(.app-shell) h1,body:not(.app-shell) h2,body:not(.app-shell) h3 { font-size:calc(1em * var(--site-heading-scale)); }
+        body:not(.app-shell) h1 { font-size:calc(clamp(2rem,2.8vw,3.2rem) * var(--site-heading-scale)); }\n        body:not(.app-shell) h2 { font-size:calc(clamp(1.4rem,2.2vw,2.1rem) * var(--site-heading-scale)); }\n        body:not(.app-shell) h3 { font-size:calc(1.2em * var(--site-heading-scale)); }
         
         body.app-shell { background:#f4f7fc; }
         .app-sidebar { position:fixed; inset:0 auto 0 0; z-index:40; width:268px; padding:20px 14px; overflow-y:auto; color:#dce8ff; background:linear-gradient(180deg,var(--sidebar-start),var(--sidebar-end)); box-shadow:8px 0 30px rgba(9,25,58,.12); }
