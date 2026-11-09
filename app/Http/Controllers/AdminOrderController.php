@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\CouponRedemption;
 use App\Models\DownloadPermission;
 use App\Models\Enrollment;
 use Illuminate\Http\RedirectResponse;
@@ -22,6 +23,10 @@ class AdminOrderController extends Controller
         $result = DB::transaction(function () use ($order) {
             $order = Order::query()->lockForUpdate()->with('items.product')->findOrFail($order->id);
             if ($order->status !== 'pending') return 'reviewed';
+            if ($order->coupon_id) {
+                $coupon = \App\Models\Coupon::query()->lockForUpdate()->find($order->coupon_id);
+                if (!$coupon || !$coupon->isAvailableFor($order->user_id, (float) $order->subtotal)) return 'coupon_invalid';
+            }
             foreach ($order->items as $item) {
                 if ($item->product_type === 'ebook' && (!$item->product || !$item->product->is_downloadable || !$item->product->download_path)) {
                     return 'invalid';
@@ -43,11 +48,20 @@ class AdminOrderController extends Controller
                     );
                 }
             }
+            if ($order->coupon_id) {
+                $coupon = \App\Models\Coupon::query()->lockForUpdate()->findOrFail($order->coupon_id);
+                CouponRedemption::firstOrCreate(
+                    ['coupon_id'=>$coupon->id,'order_id'=>$order->id],
+                    ['user_id'=>$order->user_id,'discount_amount'=>$order->discount_total]
+                );
+                if (!$coupon->redemptions()->where('order_id',$order->id)->exists()) $coupon->increment('usage_count');
+            }
             $order->update(['status'=>'completed','paid_at'=>now(),'completed_at'=>now()]);
             return 'approved';
         });
         if ($result === 'reviewed') return back()->with('info','Order has already been reviewed.');
         if ($result === 'invalid') return back()->with('error','An eBook file is missing. Order was not approved.');
+        if ($result === 'coupon_invalid') return back()->with('error','Coupon limits changed before verification. Please reconcile this order manually.');
         return back()->with('success','Order verified; course enrollment and eBook access granted.');
     }
 
