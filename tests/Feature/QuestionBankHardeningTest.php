@@ -253,6 +253,52 @@ class QuestionBankHardeningTest extends TestCase
         ]);
     }
 
+    public function test_exam_can_combine_manual_questions_with_random_question_bank_selections(): void
+    {
+        [$teacher, , $batch] = $this->makeBatchWithStudent();
+        $bankQuestion = QuestionBankQuestion::create([
+            'teacher_id' => $teacher->id,
+            'subject' => 'Vocabulary',
+            'category' => 'Meaning',
+            'difficulty' => 'easy',
+            'question' => 'Bank-sourced question?',
+            'options' => ['A', 'B', 'C', 'D'],
+            'correct_option' => 1,
+            'marks' => 2,
+        ]);
+
+        $this->actingAs($teacher)
+            ->post(route('teacher.batches.exams.store', $batch), [
+                'title' => 'Mixed source exam',
+                'starts_at' => now()->addHour()->format('Y-m-d H:i:s'),
+                'ends_at' => now()->addHours(2)->format('Y-m-d H:i:s'),
+                'duration_minutes' => 30,
+                'pass_marks' => 2,
+                'questions' => [[
+                    'question' => 'Manually authored question?',
+                    'options' => ['One', 'Two', 'Three', 'Four'],
+                    'correct_option' => 0,
+                    'marks' => 1,
+                ]],
+                'question_bank_ids' => [$bankQuestion->id],
+                'random_question_count' => 1,
+            ])
+            ->assertRedirect();
+
+        $exam = Exam::where('title', 'Mixed source exam')->firstOrFail();
+        $this->assertDatabaseHas('exam_questions', [
+            'exam_id' => $exam->id,
+            'question' => 'Manually authored question?',
+            'question_bank_question_id' => null,
+        ]);
+        $this->assertDatabaseHas('exam_questions', [
+            'exam_id' => $exam->id,
+            'question' => 'Bank-sourced question?',
+            'question_bank_question_id' => $bankQuestion->id,
+        ]);
+        $this->assertSame(2, $exam->questions()->count());
+    }
+
     public function test_admin_cannot_access_or_use_question_bank_items_owned_by_another_batches_teacher(): void
     {
         [$teacher, , $batch] = $this->makeBatchWithStudent();
