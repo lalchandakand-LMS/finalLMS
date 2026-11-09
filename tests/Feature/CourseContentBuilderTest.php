@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Course;
+use App\Models\BlogPost;
 use App\Models\Lesson;
 use App\Models\QuestionBankQuestion;
 use App\Models\QuestionSet;
@@ -84,4 +85,43 @@ class CourseContentBuilderTest extends TestCase
             'position'=>1,
         ]);
     }
+
+    public function test_teacher_can_attach_and_detach_existing_content_posts_from_course_sections(): void
+    {
+        $teacher = User::factory()->create(['role'=>'teacher']);
+        $course = $this->courseFor($teacher);
+        $section = $course->sections()->create([
+            'title'=>'Module 1','description'=>'Reading materials','position'=>1,'status'=>'published',
+        ]);
+        $post = BlogPost::create([
+            'author_id'=>$teacher->id,
+            'title'=>'Grammar Reading Notes',
+            'slug'=>'grammar-reading-notes',
+            'excerpt'=>'A short reading resource',
+            'body'=>'Full learning resource content',
+            'status'=>'published',
+            'published_at'=>now(),
+            'seo_title'=>'Grammar Reading Notes',
+            'seo_description'=>'Grammar resource',
+        ]);
+
+        $this->actingAs($teacher)->post(route('teacher.courses.sections.posts.attach',[$course,$section]), [
+            'blog_post_id'=>$post->id,
+            'position'=>1,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('course_section_blog_post', [
+            'course_section_id'=>$section->id,
+            'blog_post_id'=>$post->id,
+            'attached_by'=>$teacher->id,
+        ]);
+
+        $this->actingAs($teacher)->delete(route('teacher.courses.sections.posts.detach',[$course,$section,$post]))->assertRedirect();
+        $this->assertDatabaseMissing('course_section_blog_post', [
+            'course_section_id'=>$section->id,
+            'blog_post_id'=>$post->id,
+        ]);
+        $this->assertDatabaseHas('blog_posts',['id'=>$post->id]);
+    }
+
 }
