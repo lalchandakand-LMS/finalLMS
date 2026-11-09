@@ -11,7 +11,7 @@
         $googleAnalyticsId = $hasSettingsTable ? \App\Models\Setting::value('google_analytics_id') : null;
         $googleTagManagerId = $hasSettingsTable ? \App\Models\Setting::value('google_tag_manager_id') : null;
         $facebookPixelId = $hasSettingsTable ? \App\Models\Setting::value('facebook_pixel_id') : null;
-        $marketingConsent = request()->cookie('marketing_consent') === 'accepted';
+        $marketingConsent = request()->cookie('marketing_consent') === 'accepted';\n        $themePrimary = $hasSettingsTable ? \\App\\Models\\Setting::value('theme_primary', '#C2410C') : '#C2410C';\n        $themeSecondary = $hasSettingsTable ? \\App\\Models\\Setting::value('theme_secondary', '#EA580C') : '#EA580C';\n        $themeAccent = $hasSettingsTable ? \\App\\Models\\Setting::value('theme_accent', '#FED7AA') : '#FED7AA';\n        $themeSidebarStart = $hasSettingsTable ? \\App\\Models\\Setting::value('theme_sidebar_start', '#7C2D12') : '#7C2D12';\n        $themeSidebarEnd = $hasSettingsTable ? \\App\\Models\\Setting::value('theme_sidebar_end', '#431407') : '#431407';
     @endphp
     <title>@yield('title', config('app.name'))</title>
     <meta name="description" content="{{ $seoDescription }}">
@@ -46,9 +46,9 @@
         :root {
             --bg: #f3f6fb;
             --panel: #ffffff;
-            --panel-alt: #eef4ff;
-            --primary: #1546a8;
-            --primary-dark: #0f2d6b;
+            --panel-alt: {{ preg_match('/^#[0-9A-Fa-f]{6}$/', $themeAccent) ? $themeAccent : '#FED7AA' }};\n            --accent: {{ preg_match('/^#[0-9A-Fa-f]{6}$/', $themeAccent) ? $themeAccent : '#FED7AA' }};\n            --sidebar-start: {{ preg_match('/^#[0-9A-Fa-f]{6}$/', $themeSidebarStart) ? $themeSidebarStart : '#7C2D12' }};\n            --sidebar-end: {{ preg_match('/^#[0-9A-Fa-f]{6}$/', $themeSidebarEnd) ? $themeSidebarEnd : '#431407' }};
+            --primary: {{ preg_match('/^#[0-9A-Fa-f]{6}$/', $themePrimary) ? $themePrimary : '#C2410C' }};
+            --primary-dark: {{ preg_match('/^#[0-9A-Fa-f]{6}$/', $themeSecondary) ? $themeSecondary : '#9A3412' }};
             --green: #1f9d61;
             --text: #18212f;
             --muted: #5b6576;
@@ -60,13 +60,13 @@
         * { box-sizing: border-box; }
         
         body.app-shell { background:#f4f7fc; }
-        .app-sidebar { position:fixed; inset:0 auto 0 0; z-index:40; width:268px; padding:20px 14px; overflow-y:auto; color:#dce8ff; background:linear-gradient(180deg,#102b63,#0b1d42); box-shadow:8px 0 30px rgba(9,25,58,.12); }
+        .app-sidebar { position:fixed; inset:0 auto 0 0; z-index:40; width:268px; padding:20px 14px; overflow-y:auto; color:#dce8ff; background:linear-gradient(180deg,var(--sidebar-start),var(--sidebar-end)); box-shadow:8px 0 30px rgba(9,25,58,.12); }
         .app-sidebar-brand { display:flex; align-items:center; gap:11px; padding:6px 10px 20px; color:#fff; font-weight:800; text-decoration:none; border-bottom:1px solid #ffffff20; }
         .brand-mark { display:grid; place-items:center; flex:0 0 40px; width:40px; height:40px; border-radius:12px; background:#ffffff1c; }
         .brand-copy small { color:#a9bee0; font-size:.73rem; font-weight:500; }
         .app-sidebar-section { margin:19px 10px 7px; color:#91a9d0; font-size:.66rem; font-weight:800; letter-spacing:.14em; text-transform:uppercase; }
         .app-sidebar a.menu-link { display:flex; align-items:center; gap:12px; min-height:41px; padding:9px 11px; margin:3px 0; border-radius:10px; color:#dbe7ff; font-size:.86rem; font-weight:600; text-decoration:none; }
-        .app-sidebar a.menu-link:hover,.app-sidebar a.menu-link.active { color:#fff; background:linear-gradient(90deg,#2b61b8aa,#ffffff18); }
+        .app-sidebar a.menu-link:hover,.app-sidebar a.menu-link.active { color:#fff; background:linear-gradient(90deg,var(--primary),#ffffff24); }
         .app-sidebar a.menu-link.active { box-shadow:inset 3px 0 #83b5ff; }
         .menu-icon { display:grid; place-items:center; flex:0 0 23px; width:23px; font-size:1.03rem; }
         .app-sidebar-footer { margin:22px 8px 0; padding:14px 10px 4px; border-top:1px solid #ffffff25; color:#9fb3d4; font-size:.75rem; line-height:1.6; }
