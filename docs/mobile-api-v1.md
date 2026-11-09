@@ -29,6 +29,7 @@ Revokes every active mobile token for the authenticated user.
 - `GET /courses/{course_slug}`: course details and curriculum; non-enrolled users only receive preview lessons.
 - `GET /my/courses`: authenticated student's active/completed enrollments with lesson completion progress.
 - `GET /courses/{course_slug}/lessons/{lesson_id}`: lesson content only for an enrolled student or a preview lesson.
+- `POST /courses/{course_slug}/lessons/{lesson_id}/complete`: mark an owned lesson complete; requires an active enrollment and is idempotent.
 
 ## Instructor endpoints
 
