@@ -141,7 +141,7 @@ class CourseController extends Controller
         $canManageCourse = $user && ($user->isAdmin() || ($user->isTeacher() && $course->teacher_id === $user->id));
         abort_unless($course->status === 'published' || $canManageCourse, 404);
 
-        $course->load('teacher', 'enrollments.user', 'lessons');
+        $course->load('teacher', 'enrollments.user', 'lessons', 'sections.blogPosts');
 
         $enrollment = null;
         if (Auth::check()) {
