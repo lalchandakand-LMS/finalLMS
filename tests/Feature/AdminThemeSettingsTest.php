@@ -16,18 +16,18 @@ class AdminThemeSettingsTest extends TestCase
         $admin = User::factory()->create(['role' => 'admin']);
 
         $this->actingAs($admin)->post(route('admin.settings.theme.update'), [
-            'theme_primary' => '#D97706',
+            'theme_primary' => '#C2410C',
             'theme_secondary' => '#9A3412',
             'theme_accent' => '#FED7AA',
             'theme_sidebar_start' => '#7C2D12',
             'theme_sidebar_end' => '#431407',
         ])->assertRedirect(route('admin.settings.index'));
 
-        $this->assertDatabaseHas('settings', ['key' => 'theme_primary', 'value' => '#D97706']);
+        $this->assertDatabaseHas('settings', ['key' => 'theme_primary', 'value' => '#C2410C']);
 
         $this->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('--primary: #D97706', false)
+            ->assertSee('--primary: #C2410C', false)
             ->assertSee('--sidebar-start: #7C2D12', false);
     }
 
@@ -55,7 +55,7 @@ class AdminThemeSettingsTest extends TestCase
 
         $this->actingAs($student)
             ->post(route('admin.settings.theme.update'), [
-                'theme_primary' => '#D97706',
+                'theme_primary' => '#C2410C',
                 'theme_secondary' => '#9A3412',
                 'theme_accent' => '#FED7AA',
                 'theme_sidebar_start' => '#7C2D12',
