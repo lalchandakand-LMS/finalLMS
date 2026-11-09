@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Coupon;
+use App\Models\Product;
+use App\Models\ProductCategory;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -13,8 +15,8 @@ class AdminCouponController extends Controller
     public function index(): View
     {
         $coupons = Coupon::with(['products','categories'])->withCount('redemptions')->latest()->paginate(25);
-        $products = \\App\\Models\\Product::published()->orderBy('name')->get();
-        $categories = \\App\\Models\\ProductCategory::where('is_active',true)->orderBy('name')->get();
+        $products = Product::published()->orderBy('name')->get();
+        $categories = ProductCategory::where('is_active',true)->orderBy('name')->get();
         return view('admin.coupons.index', compact('coupons','products','categories'));
     }
 
