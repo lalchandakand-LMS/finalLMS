@@ -227,10 +227,20 @@ class CourseController extends Controller
             'duration_minutes' => ['required', 'integer', 'min:1', 'max:600'],
             'order' => ['required', 'integer', 'min:1'],
             'video_url' => ['nullable', 'url', 'max:2048', 'regex:/^https:\/\/(?:www\.)?(?:youtube\.com|youtu\.be|youtube-nocookie\.com|vimeo\.com)(?:\/|$)/i'],
+            'video_file' => ['nullable', 'file', 'mimes:mp4,m4v,mov,webm', 'max:524288'],
+            'thumbnail' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'is_preview' => ['sometimes', 'boolean'],
         ]);
 
         $validated['is_preview'] = $request->boolean('is_preview');
+        unset($validated['video_file'], $validated['thumbnail']);
+        if ($request->hasFile('video_file')) {
+            $validated['video_path'] = $request->file('video_file')->store('course-videos', 'public');
+            $validated['video_url'] = null;
+        }
+        if ($request->hasFile('thumbnail')) {
+            $validated['thumbnail_path'] = $request->file('thumbnail')->store('course-thumbnails', 'public');
+        }
         $course->lessons()->create($validated);
 
         return $user->isTeacher()
@@ -268,9 +278,30 @@ class CourseController extends Controller
             'duration_minutes' => ['required', 'integer', 'min:1', 'max:600'],
             'order' => ['required', 'integer', 'min:1'],
             'video_url' => ['nullable', 'url', 'max:2048', 'regex:/^https:\/\/(?:www\.)?(?:youtube\.com|youtu\.be|youtube-nocookie\.com|vimeo\.com)(?:\/|$)/i'],
+            'video_file' => ['nullable', 'file', 'mimes:mp4,m4v,mov,webm', 'max:524288'],
+            'thumbnail' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'remove_video' => ['sometimes', 'boolean'],
+            'remove_thumbnail' => ['sometimes', 'boolean'],
             'is_preview' => ['sometimes', 'boolean'],
         ]);
         $validated['is_preview'] = $request->boolean('is_preview');
+        unset($validated['video_file'], $validated['thumbnail'], $validated['remove_video'], $validated['remove_thumbnail']);
+        if ($request->hasFile('video_file')) {
+            if ($lesson->video_path) Storage::disk('public')->delete($lesson->video_path);
+            $validated['video_path'] = $request->file('video_file')->store('course-videos', 'public');
+            $validated['video_url'] = null;
+        } elseif ($request->boolean('remove_video')) {
+            if ($lesson->video_path) Storage::disk('public')->delete($lesson->video_path);
+            $validated['video_path'] = null;
+            $validated['video_url'] = null;
+        }
+        if ($request->hasFile('thumbnail')) {
+            if ($lesson->thumbnail_path) Storage::disk('public')->delete($lesson->thumbnail_path);
+            $validated['thumbnail_path'] = $request->file('thumbnail')->store('course-thumbnails', 'public');
+        } elseif ($request->boolean('remove_thumbnail')) {
+            if ($lesson->thumbnail_path) Storage::disk('public')->delete($lesson->thumbnail_path);
+            $validated['thumbnail_path'] = null;
+        }
         $lesson->update($validated);
         return back()->with('success', 'Lesson updated successfully.');
     }
@@ -280,6 +311,8 @@ class CourseController extends Controller
         $user = Auth::user();
         abort_unless($user?->isAdmin() || ($user?->isTeacher() && $course->teacher_id === $user->id), 403);
         abort_unless($lesson->course_id === $course->id, 404);
+        if ($lesson->video_path) Storage::disk('public')->delete($lesson->video_path);
+        if ($lesson->thumbnail_path) Storage::disk('public')->delete($lesson->thumbnail_path);
         $lesson->delete();
         return back()->with('success', 'Lesson deleted successfully.');
     }
