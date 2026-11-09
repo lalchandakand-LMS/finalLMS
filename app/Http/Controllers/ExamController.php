@@ -20,9 +20,10 @@ class ExamController extends Controller
     {
         abort_unless(Auth::user()->isAdmin() || $batch->teacher_id === Auth::id(), 403);
         $exams = $batch->exams()->withCount(['questions', 'attempts'])->latest()->get();
-        $bankQuestions = QuestionBankQuestion::where('teacher_id', Auth::id())->latest()->get();
+        $bankQuestions = QuestionBankQuestion::where('teacher_id', $batch->teacher_id)->latest()->get();
+        $isAdmin = Auth::user()->isAdmin();
 
-        return view('teacher.exams.index', compact('batch', 'exams', 'bankQuestions'));
+        return view('teacher.exams.index', compact('batch', 'exams', 'bankQuestions', 'isAdmin'));
     }
 
     public function store(Batch $batch, Request $request): RedirectResponse
@@ -51,7 +52,7 @@ class ExamController extends Controller
         if (! empty($validated['question_bank_ids'])) {
             $bankQuestions = QuestionBankQuestion::query()
                 ->whereIn('id', $validated['question_bank_ids'])
-                ->where('teacher_id', Auth::id())
+                ->where('teacher_id', $batch->teacher_id)
                 ->inRandomOrder()
                 ->get();
 
@@ -76,7 +77,7 @@ class ExamController extends Controller
 
         DB::transaction(function () use ($batch, $validated, $selectedQuestions) {
             $exam = $batch->exams()->create([
-                'teacher_id' => Auth::id(),
+                'teacher_id' => $batch->teacher_id,
                 'title' => $validated['title'],
                 'instructions' => $validated['instructions'] ?? null,
                 'starts_at' => $validated['starts_at'],
@@ -104,7 +105,8 @@ class ExamController extends Controller
             'category' => ['nullable', 'string', 'max:80'],
             'difficulty' => ['nullable', 'in:easy,medium,hard'],
         ]);
-        $query = QuestionBankQuestion::where('teacher_id', Auth::id())
+        $ownerId = $batch->teacher_id;
+        $query = QuestionBankQuestion::where('teacher_id', $ownerId)
             ->when($filters['subject'] ?? null, fn ($builder, string $subject) => $builder->where('subject', $subject))
             ->when($filters['category'] ?? null, fn ($builder, string $category) => $builder->where('category', $category))
             ->when($filters['difficulty'] ?? null, fn ($builder, string $difficulty) => $builder->where('difficulty', $difficulty))
@@ -116,14 +118,16 @@ class ExamController extends Controller
                 }
             });
         $questions = $query->latest()->paginate(25)->withQueryString();
-        $subjects = QuestionBankQuestion::where('teacher_id', Auth::id())
+        $subjects = QuestionBankQuestion::where('teacher_id', $ownerId)
             ->whereNotNull('subject')->where('subject', '<>', '')
             ->select('subject')->distinct()->orderBy('subject')->pluck('subject');
-        $categories = QuestionBankQuestion::where('teacher_id', Auth::id())
+        $categories = QuestionBankQuestion::where('teacher_id', $ownerId)
             ->whereNotNull('category')->where('category', '<>', '')
             ->select('category')->distinct()->orderBy('category')->pluck('category');
 
-        return view('teacher.exams.question-bank', compact('batch', 'questions', 'subjects', 'categories'));
+        $isAdmin = Auth::user()->isAdmin();
+
+        return view('teacher.exams.question-bank', compact('batch', 'questions', 'subjects', 'categories', 'isAdmin'));
     }
 
     public function storeBankQuestion(Batch $batch, Request $request): RedirectResponse
@@ -140,7 +144,7 @@ class ExamController extends Controller
             'marks' => ['required', 'integer', 'min:1', 'max:100'],
         ]);
 
-        QuestionBankQuestion::create([...$validated, 'teacher_id' => Auth::id()]);
+        QuestionBankQuestion::create([...$validated, 'teacher_id' => $batch->teacher_id]);
 
         return back()->with('success', 'Question added to your question bank.');
     }
@@ -149,7 +153,7 @@ class ExamController extends Controller
     public function updateBankQuestion(Batch $batch, QuestionBankQuestion $question, Request $request): RedirectResponse
     {
         abort_unless(Auth::user()->isAdmin() || $batch->teacher_id === Auth::id(), 403);
-        abort_unless($question->teacher_id === Auth::id(), 403);
+        abort_unless((int) $question->teacher_id === (int) $batch->teacher_id, 403);
         $validated = $request->validate([
             'subject' => ['nullable', 'string', 'max:120'],
             'category' => ['nullable', 'string', 'max:80'],
@@ -184,7 +188,9 @@ class ExamController extends Controller
             ->latest('submitted_at')
             ->paginate(30);
 
-        return view('teacher.exams.results', compact('exam', 'attempts'));
+        $isAdmin = Auth::user()->isAdmin();
+
+        return view('teacher.exams.results', compact('exam', 'attempts', 'isAdmin'));
     }
 
     public function studentExams(): View
