@@ -188,6 +188,7 @@ class WebsiteBuilderTest extends TestCase
         $this->assertSame('poppins', Setting::value('site_font_family'));
         $this->assertSame('1.2', Setting::value('site_heading_scale'));
         $this->assertSame('1.05', Setting::value('site_body_scale'));
+        auth()->logout();
         $this->get(route('landing'))->assertOk()->assertSee('--site-page-background', false)->assertSee('Poppins, Arial, sans-serif', false);
     }
 
