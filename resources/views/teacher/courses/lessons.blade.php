@@ -26,6 +26,34 @@
             <button class="btn primary">Save section</button>
         </form>
         <form method="POST" action="{{ route($sectionRoutePrefix . '.destroy', [$course,$section]) }}" style="margin-top:8px;">@csrf @method('DELETE')<button class="btn">Delete section (lessons stay)</button></form>
+        <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+            <h4>Content Library Posts</h4>
+            @forelse($section->blogPosts as $post)
+                <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;padding:6px 0">
+                    <span>{{ $post->title }} <small>· {{ $post->status }}</small></span>
+                    <form method="POST" action="{{ route($sectionRoutePrefix . '.posts.detach', [$course,$section,$post]) }}">@csrf @method('DELETE')<button class="btn">Remove from module</button></form>
+                </div>
+            @empty
+                <p class="muted">No content posts attached to this module.</p>
+            @endforelse
+            @if($availablePosts->isNotEmpty())
+                <form method="POST" action="{{ route($sectionRoutePrefix . '.posts.attach', [$course,$section]) }}" class="grid grid-2" style="margin-top:10px">
+                    @csrf
+                    <label>Attach existing post
+                        <select name="blog_post_id" required>
+                            <option value="">Select a post</option>
+                            @foreach($availablePosts as $post)
+                                <option value="{{ $post->id }}">{{ $post->title }} · {{ ucfirst($post->status) }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+                    <label>Display position<input type="number" name="position" min="1" value="{{ $section->blogPosts->count()+1 }}"></label>
+                    <button class="btn primary">Attach post</button>
+                </form>
+            @else
+                <p class="muted">No eligible posts in the content library yet. Admin can publish a post from Content / News first.</p>
+            @endif
+        </div>
     </details>
     @endforeach
 </div>
