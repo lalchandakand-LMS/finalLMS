@@ -45,6 +45,8 @@
                     if (!form || !countdown || !status) return;
                     const csrf = form.querySelector('input[name=_token]').value;
                     let saveTimer;
+                    let countdownTimer;
+                    let submitted = false;
                     let saving = false;
                     let pending = false;
                     let savePromise = Promise.resolve();
@@ -82,14 +84,16 @@
                         const minutes = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
                         const secs = String(seconds % 60).padStart(2, '0');
                         countdown.textContent = hours + ':' + minutes + ':' + secs;
-                        if (seconds === 0) {
+                        if (seconds === 0 && !submitted) {
+                            submitted = true;
+                            clearInterval(countdownTimer);
                             save().finally(() => form.submit());
                             return;
                         }
                         if (seconds <= 10) status.textContent = 'Time is almost over. Submitting automatically…';
                     };
                     tick();
-                    setInterval(tick, 1000);
+                    countdownTimer = setInterval(tick, 1000);
                 })();
             </script>
         @elseif($exam->status === 'published' && now()->between($exam->starts_at, $exam->ends_at))
