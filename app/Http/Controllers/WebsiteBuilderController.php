@@ -88,6 +88,10 @@ class WebsiteBuilderController extends Controller
             'sections.*.image_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
             'sections.*.button_label' => ['nullable', 'string', 'max:60'],
             'sections.*.button_url' => ['nullable', 'string', 'max:500'],
+            'sections.*.background_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'sections.*.text_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'sections.*.spacing' => ['nullable', Rule::in(['compact', 'normal', 'airy'])],
+            'sections.*.layout' => ['nullable', Rule::in(['standard', 'reversed', 'centered'])],
             'sections.*.enabled' => ['nullable', 'boolean'],
         ])->validate();
 
@@ -236,6 +240,10 @@ class WebsiteBuilderController extends Controller
             'sections.*.image_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
             'sections.*.button_label' => ['nullable', 'string', 'max:60'],
             'sections.*.button_url' => ['nullable', 'string', 'max:500'],
+            'sections.*.background_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'sections.*.text_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'sections.*.spacing' => ['nullable', Rule::in(['compact', 'normal', 'airy'])],
+            'sections.*.layout' => ['nullable', Rule::in(['standard', 'reversed', 'centered'])],
             'sections.*.enabled' => ['nullable', 'boolean'],
         ]);
 
@@ -250,6 +258,10 @@ class WebsiteBuilderController extends Controller
                 'button_url' => preg_match('~^(https?://|/(?!/)|#)~i', trim($section['button_url'] ?? ''))
                     ? trim($section['button_url'])
                     : '',
+                'background_color' => preg_match('/^#[0-9A-Fa-f]{6}$/', $section['background_color'] ?? '') ? $section['background_color'] : '#ffffff',
+                'text_color' => preg_match('/^#[0-9A-Fa-f]{6}$/', $section['text_color'] ?? '') ? $section['text_color'] : '#18212f',
+                'spacing' => in_array($section['spacing'] ?? 'normal', ['compact', 'normal', 'airy'], true) ? ($section['spacing'] ?? 'normal') : 'normal',
+                'layout' => in_array($section['layout'] ?? 'standard', ['standard', 'reversed', 'centered'], true) ? ($section['layout'] ?? 'standard') : 'standard',
                 'enabled' => (bool) ($section['enabled'] ?? false),
             ];
         })->values()->all();
