@@ -29,11 +29,26 @@ class AdminSettingsController extends Controller
             'theme_sidebar_end' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
         ]);
 
+        foreach (['theme_primary', 'theme_secondary', 'theme_sidebar_start', 'theme_sidebar_end'] as $key) {
+            if ($this->whiteContrastRatio($validated[$key]) < 4.5) {
+                throw \\Illuminate\\Validation\\ValidationException::withMessages([$key => 'Choose a darker color so white navigation and button text remains readable (WCAG AA).']);
+            }
+        }
+
         foreach ($validated as $key => $value) {
             Setting::setValue($key, strtoupper($value));
         }
 
         return redirect()->route('admin.settings.index')->with('success', 'Brand colors updated successfully.');
+    }
+
+    private function whiteContrastRatio(string $hex): float
+    {
+        $rgb = array_map(fn ($part) => hexdec($part) / 255, str_split(ltrim($hex, '#'), 2));
+        $linear = array_map(fn ($channel) => $channel <= 0.04045 ? $channel / 12.92 : (($channel + 0.055) / 1.055) ** 2.4, $rgb);
+        $luminance = 0.2126 * $linear[0] + 0.7152 * $linear[1] + 0.0722 * $linear[2];
+
+        return 1.05 / ($luminance + 0.05);
     }
 
     public function update(Request $request): RedirectResponse
