@@ -7,12 +7,17 @@ use App\Models\Course;
 use App\Models\Enrollment;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
+use Illuminate\Http\RedirectResponse;
 
 class DashboardController extends Controller
 {
     public function index(): View|RedirectResponse
     {
-        $user = Auth::user();\n\n        if ($user->isGuardian()) {\n            return redirect()->route('guardian.dashboard');\n        }
+        $user = Auth::user();
+
+        if ($user->isGuardian()) {
+            return redirect()->route('guardian.dashboard');
+        }
 
         $courses = Course::with('teacher')->where('status', 'published')->latest()->get();
         $enrolledCourses = $user->isTeacher()
