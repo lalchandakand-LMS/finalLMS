@@ -175,6 +175,7 @@ class WebsiteBuilderController extends Controller
 
         $isSafeUrl = fn ($url): bool => is_string($url) && (bool) preg_match('~^(https?://|/(?!/)|#)~i', trim($url));
         $draft['header_links'] = collect($draft['header_links'] ?? [])->filter(fn ($link) => is_array($link) && $isSafeUrl($link['url'] ?? null))->values()->all();
+        $draft['footer_links'] = collect($draft['footer_links'] ?? [])->filter(fn ($link) => is_array($link) && $isSafeUrl($link['url'] ?? null))->values()->all();
         $draft['home_slides'] = collect($draft['home_slides'] ?? [])->map(function ($slide) use ($isSafeUrl) {
             if (is_array($slide) && !$isSafeUrl($slide['button_url'] ?? '')) {
                 $slide['button_url'] = '';
