@@ -167,6 +167,23 @@ class CourseController extends Controller
         return view('courses.show', compact('course', 'enrollment', 'payment', 'paymentMethods', 'batches', 'canViewLessons', 'lessonProgress'));
     }
 
+    public function streamLessonVideo(Course $course, Lesson $lesson): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    {
+        abort_unless($lesson->course_id === $course->id && $lesson->video_path, 404);
+        $user = Auth::user();
+        $canManageCourse = $user && ($user->isAdmin() || ($user->isTeacher() && $course->teacher_id === $user->id));
+        $isEnrolled = $user && $user->isStudent()
+            && $course->enrollments()->where('user_id', $user->id)->whereIn('status', ['active', 'completed'])->exists();
+        abort_unless($lesson->is_preview || $canManageCourse || $isEnrolled, 403);
+        abort_unless(Storage::disk('local')->exists($lesson->video_path), 404);
+
+        return response()->file(Storage::disk('local')->path($lesson->video_path), [
+            'Content-Type' => Storage::disk('local')->mimeType($lesson->video_path) ?: 'application/octet-stream',
+            'Cache-Control' => 'private, no-store, max-age=0',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
     public function showLesson(Course $course, Lesson $lesson): View
     {
         abort_unless($lesson->course_id === $course->id, 404);
@@ -235,7 +252,7 @@ class CourseController extends Controller
         $validated['is_preview'] = $request->boolean('is_preview');
         unset($validated['video_file'], $validated['thumbnail']);
         if ($request->hasFile('video_file')) {
-            $validated['video_path'] = $request->file('video_file')->store('course-videos', 'public');
+            $validated['video_path'] = $request->file('video_file')->store('course-videos', 'local');
             $validated['video_url'] = null;
         }
         if ($request->hasFile('thumbnail')) {
@@ -287,7 +304,7 @@ class CourseController extends Controller
         $validated['is_preview'] = $request->boolean('is_preview');
         unset($validated['video_file'], $validated['thumbnail'], $validated['remove_video'], $validated['remove_thumbnail']);
         if ($request->hasFile('video_file')) {
-            if ($lesson->video_path) Storage::disk('public')->delete($lesson->video_path);
+            if ($lesson->video_path) Storage::disk('local')->delete($lesson->video_path);
             $validated['video_path'] = $request->file('video_file')->store('course-videos', 'public');
             $validated['video_url'] = null;
         } elseif ($request->boolean('remove_video')) {
