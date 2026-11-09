@@ -48,6 +48,7 @@ class FlashSale extends Model
     public static function activeForProduct(Product $product, ?int $userId = null): ?self
     {
         $categoryIds = $product->categories()->pluck('product_categories.id');
+        if (!$product->course_id && $categoryIds->isEmpty()) return null;
         return static::query()
             ->where('status','active')
             ->where('starts_at','<=',now())
