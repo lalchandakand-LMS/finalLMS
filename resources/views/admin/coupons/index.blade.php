@@ -14,6 +14,14 @@
 <label>Ends at<input name="ends_at" type="datetime-local" style="display:block;width:100%;padding:9px"></label>
 <label>Total uses<input name="usage_limit" type="number" min="1" placeholder="Unlimited" style="display:block;width:100%;padding:9px"></label>
 <label>Uses per student<input name="per_user_limit" type="number" min="1" value="1" required style="display:block;width:100%;padding:9px"></label>
+</div>
+<h4>Eligible products (leave empty for all products)</h4>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;max-height:180px;overflow:auto">
+@foreach($products as $product)<label><input type="checkbox" name="product_ids[]" value="{{ $product->id }}"> {{ $product->name }}</label>@endforeach
+</div>
+<h4>Eligible categories (optional)</h4>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;max-height:140px;overflow:auto">
+@foreach($categories as $category)<label><input type="checkbox" name="category_ids[]" value="{{ $category->id }}"> {{ $category->name }}</label>@endforeach
 </div><input type="hidden" name="is_active" value="1"><button class="btn btn-primary" style="margin-top:12px">Create coupon</button>
 </form>
 @foreach($coupons as $coupon)
@@ -29,6 +37,14 @@
 <label>Usage limit<input name="usage_limit" type="number" min="1" value="{{ $coupon->usage_limit }}" style="width:100%;padding:8px"></label>
 <label>Per student<input name="per_user_limit" type="number" min="1" value="{{ $coupon->per_user_limit }}" required style="width:100%;padding:8px"></label>
 <label>Status<select name="is_active" style="width:100%;padding:8px"><option value="1" @selected($coupon->is_active)>Active</option><option value="0" @selected(!$coupon->is_active)>Inactive</option></select></label>
+</div>
+<h4>Eligible products (empty = all products)</h4>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;max-height:180px;overflow:auto">
+@foreach($products as $product)<label><input type="checkbox" name="product_ids[]" value="{{ $product->id }}" @checked($coupon->products->contains('id',$product->id))> {{ $product->name }}</label>@endforeach
+</div>
+<h4>Eligible categories</h4>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;max-height:140px;overflow:auto">
+@foreach($categories as $category)<label><input type="checkbox" name="category_ids[]" value="{{ $category->id }}" @checked($coupon->categories->contains('id',$category->id))> {{ $category->name }}</label>@endforeach
 </div><p>Used {{ $coupon->usage_count }} / {{ $coupon->usage_limit ?? '∞' }} · {{ $coupon->redemptions_count }} verified orders</p><button class="btn btn-primary">Save changes</button>
 </form>
 <form method="POST" action="{{ route('admin.coupons.destroy',$coupon) }}" style="margin-top:8px">@csrf @method('DELETE')<button class="btn">Delete / deactivate</button></form>
