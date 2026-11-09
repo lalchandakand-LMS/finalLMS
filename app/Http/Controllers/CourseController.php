@@ -246,7 +246,7 @@ class CourseController extends Controller
     {
         $user = Auth::user();
         abort_unless($user?->isAdmin() || ($user?->isTeacher() && $course->teacher_id === $user->id), 403);
-        $course->load('lessons');
+        $course->load(['lessons.section', 'sections.lessons']);
         $students = $course->enrollments()->whereIn('status', ['active', 'completed'])->with('user')->get();
         $lessonIds = $course->lessons->pluck('id');
         $progress = LessonProgress::query()->whereIn('lesson_id', $lessonIds)
@@ -266,6 +266,7 @@ class CourseController extends Controller
         abort_unless($user?->isAdmin() || ($user?->isTeacher() && $course->teacher_id === $user->id), 403);
         abort_unless($lesson->course_id === $course->id, 404);
         $validated = $request->validate([
+            'section_id' => ['nullable', 'integer', 'exists:course_sections,id'],
             'title' => ['required', 'string', 'max:255'],
             'content' => ['required', 'string'],
             'duration_minutes' => ['required', 'integer', 'min:1', 'max:600'],
