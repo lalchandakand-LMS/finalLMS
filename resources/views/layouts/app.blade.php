@@ -183,6 +183,7 @@
             <a href="{{ route('admin.products.index') }}"><span>🛍️</span><span class="nav-text">Products & eBooks</span></a>
             <a href="{{ route('admin.orders.index') }}"><span>📦</span><span class="nav-text">Commerce Orders</span></a>
             <a href="{{ route('admin.coupons.index') }}"><span>🏷️</span><span class="nav-text">Coupons</span></a>
+            <a href="{{ route('admin.question-sets.index') }}"><span>📝</span><span class="nav-text">Question Sets</span></a>
             <a href="{{ route('admin.flash-sales.index') }}"><span>🔥</span><span class="nav-text">Flash Sale</span></a>
             <a href="{{ route('admin.users.index') }}"><span>👥</span><span class="nav-text">Students & teachers</span></a>
             <a href="{{ route('admin.batches.index') }}"><span>🗓️</span><span class="nav-text">Batches & branches</span></a>
