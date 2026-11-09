@@ -19,6 +19,23 @@ class AdminSettingsController extends Controller
         return view('admin.settings.index', compact('settings', 'paymentMethods', 'mediaAssets'));
     }
 
+    public function updateTheme(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'theme_primary' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'theme_secondary' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'theme_accent' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'theme_sidebar_start' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'theme_sidebar_end' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+        ]);
+
+        foreach ($validated as $key => $value) {
+            Setting::setValue($key, strtoupper($value));
+        }
+
+        return redirect()->route('admin.settings.index')->with('success', 'Brand colors updated successfully.');
+    }
+
     public function update(Request $request): RedirectResponse
     {
         $validated = $request->validate([
