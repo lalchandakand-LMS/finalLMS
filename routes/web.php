@@ -29,6 +29,7 @@ use App\Http\Controllers\MediaLibraryController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\WebsiteBuilderController;
 use App\Http\Controllers\BackupController;
+use App\Http\Controllers\SystemMaintenanceController;
 use App\Http\Controllers\InstallController;
 use App\Http\Controllers\QuizContestController;
 use App\Http\Controllers\FlashSaleController;
@@ -242,7 +243,8 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         Route::post('/payments/{payment}/reject', [PaymentController::class, 'reject'])->name('admin.payments.reject');
         Route::get('/payments/{payment}/proof', [PaymentController::class, 'proof'])->name('admin.payments.proof');
 
-        Route::get('/system', [SystemMaintenanceController::class, 'index'])->name('admin.system.index');\n        Route::get('/backups', [BackupController::class, 'index'])->name('admin.backups.index');
+        Route::get('/system', [SystemMaintenanceController::class, 'index'])->name('admin.system.index');
+        Route::get('/backups', [BackupController::class, 'index'])->name('admin.backups.index');
         Route::post('/backups', [BackupController::class, 'create'])->name('admin.backups.create');
         Route::get('/backups/{filename}', [BackupController::class, 'download'])->name('admin.backups.download');
         Route::post('/backups/restore', [BackupController::class, 'restore'])->middleware('throttle:2,10')->name('admin.backups.restore');
