@@ -127,6 +127,11 @@ class CourseController extends Controller
         if ($course->image_path) {
             Storage::disk('public')->delete($course->image_path);
         }
+        $course->load('lessons');
+        foreach ($course->lessons as $lesson) {
+            if ($lesson->video_path) Storage::disk('local')->delete($lesson->video_path);
+            if ($lesson->thumbnail_path) Storage::disk('public')->delete($lesson->thumbnail_path);
+        }
         $course->delete();
 
         return redirect()->route('admin.courses.index')->with('success', 'Course deleted successfully.');
