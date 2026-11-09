@@ -36,6 +36,21 @@ class MobileApi {
     return _decode(response);
   }
 
+  Future<Map<String, dynamic>> post(String path) async {
+    final token = await readToken();
+    if (token == null) {
+      throw const ApiException('Please sign in again.');
+    }
+    final response = await client.post(
+      Uri.parse('$baseUrl$path'),
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+    return _decode(response);
+  }
+
   Future<void> logout() async {
     final token = await readToken();
     if (token != null) {
