@@ -4,13 +4,24 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Coupon extends Model
 {
     protected $fillable = ['code','discount_type','discount_value','minimum_order','starts_at','ends_at','usage_limit','per_user_limit','usage_count','is_active'];
     protected $casts = ['discount_value'=>'decimal:2','minimum_order'=>'decimal:2','starts_at'=>'datetime','ends_at'=>'datetime','is_active'=>'boolean'];
 
-    public function products(): BelongsToMany\n    {\n        return $this->belongsToMany(Product::class, 'coupon_product')->withTimestamps();\n    }\n\n    public function categories(): BelongsToMany\n    {\n        return $this->belongsToMany(ProductCategory::class, 'coupon_product_category')->withTimestamps();\n    }\n\n    public function redemptions(): HasMany
+    public function products(): BelongsToMany
+    {
+        return $this->belongsToMany(Product::class, 'coupon_product')->withTimestamps();
+    }
+
+    public function categories(): BelongsToMany
+    {
+        return $this->belongsToMany(ProductCategory::class, 'coupon_product_category')->withTimestamps();
+    }
+
+    public function redemptions(): HasMany
     {
         return $this->hasMany(CouponRedemption::class);
     }
@@ -24,7 +35,25 @@ class Coupon extends Model
         return true;
     }
 
-    public function eligibleSubtotal(iterable $items, ?int $userId = null): float\n    {\n        $productIds = $this->products()->pluck('products.id');\n        $categoryIds = $this->categories()->pluck('product_categories.id');\n        if ($productIds->isEmpty() && $categoryIds->isEmpty()) {\n            return collect($items)->sum(fn ($item) => (float) $item->product->currentPrice($userId) * $item->quantity);\n        }\n        $eligible = 0.0;\n        foreach ($items as $item) {\n            $product = $item->product;\n            if (!$product) continue;\n            $matches = $productIds->contains($product->id)\n                || ($categoryIds->isNotEmpty() && $product->categories()->whereIn('product_categories.id', $categoryIds)->exists());\n            if ($matches) $eligible += (float) $product->currentPrice($userId) * $item->quantity;\n        }\n        return round($eligible, 2);\n    }\n\n    public function calculateDiscount(float $subtotal): float
+    public function eligibleSubtotal(iterable $items, ?int $userId = null): float
+    {
+        $productIds = $this->products()->pluck('products.id');
+        $categoryIds = $this->categories()->pluck('product_categories.id');
+        if ($productIds->isEmpty() && $categoryIds->isEmpty()) {
+            return collect($items)->sum(fn ($item) => (float) $item->product->currentPrice($userId) * $item->quantity);
+        }
+        $eligible = 0.0;
+        foreach ($items as $item) {
+            $product = $item->product;
+            if (!$product) continue;
+            $matches = $productIds->contains($product->id)
+                || ($categoryIds->isNotEmpty() && $product->categories()->whereIn('product_categories.id', $categoryIds)->exists());
+            if ($matches) $eligible += (float) $product->currentPrice($userId) * $item->quantity;
+        }
+        return round($eligible, 2);
+    }
+
+    public function calculateDiscount(float $subtotal): float
     {
         $amount = $this->discount_type === 'percentage'
             ? $subtotal * ((float)$this->discount_value / 100)
