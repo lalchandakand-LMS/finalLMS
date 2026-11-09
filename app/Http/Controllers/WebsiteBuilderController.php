@@ -55,20 +55,40 @@ class WebsiteBuilderController extends Controller
         abort_if(strlen(json_encode($draft, JSON_THROW_ON_ERROR)) > 65536, 422, 'Homepage draft is too large.');
 
         validator($draft, [
-            'homepage_template' => ['nullable', 'string', 'max:80'],
+            'homepage_template' => ['nullable', 'string', Rule::in(array_keys(self::homepageTemplates()))],
             'site_name' => ['nullable', 'string', 'max:120'],
-            'site_logo_media_id' => ['nullable', 'integer'],
-            'site_favicon_media_id' => ['nullable', 'integer'],
-            'site_primary_color' => ['nullable', 'string', 'max:7'],
+            'site_logo_media_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
+            'site_favicon_media_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
+            'site_primary_color' => ['nullable', 'string', function (string $attribute, mixed $value, Closure $fail): void {
+                if (!is_string($value) || strlen($value) !== 7 || $value[0] !== '#' || !ctype_xdigit(substr($value, 1))) {
+                    $fail('The '.$attribute.' must be a six-digit hex color.');
+                }
+            }],
             'home_title' => ['nullable', 'string', 'max:255'],
             'home_subtitle' => ['nullable', 'string', 'max:500'],
             'home_featured_title' => ['nullable', 'string', 'max:255'],
             'home_slides' => ['nullable', 'array', 'max:3'],
+            'home_slides.*.enabled' => ['nullable', 'boolean'],
+            'home_slides.*.image_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
+            'home_slides.*.title' => ['nullable', 'string', 'max:180'],
+            'home_slides.*.subtitle' => ['nullable', 'string', 'max:500'],
+            'home_slides.*.button_label' => ['nullable', 'string', 'max:60'],
+            'home_slides.*.button_url' => ['nullable', 'string', 'max:500'],
             'footer_title' => ['nullable', 'string', 'max:120'],
             'footer_text' => ['nullable', 'string', 'max:500'],
             'footer_links' => ['nullable', 'array', 'max:5'],
+            'footer_links.*.label' => ['nullable', 'string', 'max:60'],
+            'footer_links.*.url' => ['nullable', 'string', 'max:500'],
             'header_links' => ['nullable', 'array', 'max:6'],
+            'header_links.*.label' => ['nullable', 'string', 'max:60'],
+            'header_links.*.url' => ['nullable', 'string', 'max:500'],
             'sections' => ['nullable', 'array', 'max:12'],
+            'sections.*.title' => ['nullable', 'string', 'max:180'],
+            'sections.*.body' => ['nullable', 'string', 'max:3000'],
+            'sections.*.image_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
+            'sections.*.button_label' => ['nullable', 'string', 'max:60'],
+            'sections.*.button_url' => ['nullable', 'string', 'max:500'],
+            'sections.*.enabled' => ['nullable', 'boolean'],
         ])->validate();
 
         Setting::setValue('homepage_draft', json_encode($draft, JSON_THROW_ON_ERROR));
