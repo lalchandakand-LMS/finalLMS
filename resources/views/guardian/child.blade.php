@@ -37,7 +37,7 @@
         <h2>{{ __('Fee & invoice summary') }}</h2>
         <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th>{{ __('Invoice') }}</th><th>{{ __('Due date') }}</th><th>{{ __('Amount') }}</th><th>{{ __('Status') }}</th><th>{{ __('Paid') }}</th></tr></thead><tbody>
         @forelse($student->invoices as $invoice)
-            <tr><td>{{ $invoice->invoice_number }}</td><td>{{ $invoice->due_date?->format('d M Y') ?? '—' }}</td><td>৳{{ number_format((float)$invoice->amount,2) }}</td><td>{{ ucfirst($invoice->status) }}</td><td>৳{{ number_format((float)$invoice->payments->where('status','completed')->sum('amount'),2) }}</td></tr>
+            <tr><td>{{ $invoice->invoice_number }}</td><td>{{ $invoice->due_date?->format('d M Y') ?? '—' }}</td><td>৳{{ number_format((float)$invoice->amount,2) }}</td><td>{{ ucfirst($invoice->status) }}</td><td>৳{{ number_format((float)$invoice->payments->sum('amount'),2) }}</td></tr>
         @empty
             <tr><td colspan="5" class="muted">{{ __('No invoices found.') }}</td></tr>
         @endforelse
