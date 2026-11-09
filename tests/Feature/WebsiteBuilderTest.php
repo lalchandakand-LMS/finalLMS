@@ -214,6 +214,12 @@ class WebsiteBuilderTest extends TestCase
             'home_title' => 'Draft headline',
             'home_subtitle' => 'Draft-only copy',
             'header_links' => [['label' => 'Unsafe', 'url' => 'javascript:alert(1)']],
+            'footer_title' => 'Draft footer title',
+            'footer_text' => 'Draft footer message',
+            'footer_links' => [
+                ['label' => 'Help centre', 'url' => '/support'],
+                ['label' => 'Unsafe footer', 'url' => 'javascript:alert(2)'],
+            ],
         ])->assertRedirect(route('admin.website-builder.index'));
 
         $this->assertSame('Public headline', Setting::value('home_title'));
@@ -222,9 +228,13 @@ class WebsiteBuilderTest extends TestCase
             ->assertOk()
             ->assertSee('Draft headline')
             ->assertSee('Unpublished preview')
+            ->assertSee('Draft footer title')
+            ->assertSee('Draft footer message')
+            ->assertSee('Help centre')
             ->assertSee('data-preview-size="mobile"', false)
             ->assertSee('data-preview-size="tablet"', false)
-            ->assertDontSee('javascript:alert(1)');
+            ->assertDontSee('javascript:alert(1)')
+            ->assertDontSee('javascript:alert(2)');
 
         $this->post(route('admin.website-builder.publish-draft'))
             ->assertRedirect(route('admin.website-builder.index'));
