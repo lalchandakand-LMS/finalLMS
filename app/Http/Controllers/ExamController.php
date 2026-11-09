@@ -8,6 +8,7 @@ use App\Models\ExamAttempt;
 use App\Models\ExamAnswer;
 use App\Models\Enrollment;
 use App\Models\QuestionBankQuestion;
+use App\Models\QuestionSet;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -20,7 +21,11 @@ class ExamController extends Controller
     {
         abort_unless(Auth::user()->isAdmin() || $batch->teacher_id === Auth::id(), 403);
         $exams = $batch->exams()->withCount(['questions', 'attempts'])->latest()->get();
-        $bankQuestions = QuestionBankQuestion::where('teacher_id', Auth::id())->latest()->get();\n        $questionSets = QuestionSet::withCount('questions')->where('status','published')->where(function ($query) {\n            if (Auth::user()->isAdmin()) return;\n            $query->where('created_by', Auth::id())->orWhereDoesntHave('questions', fn ($q) => $q->where('teacher_id','<>',Auth::id()));\n        })->orderBy('title')->get();
+        $bankQuestions = QuestionBankQuestion::where('teacher_id', Auth::id())->latest()->get();
+        $questionSets = QuestionSet::withCount('questions')->where('status','published')->where(function ($query) {
+            if (Auth::user()->isAdmin()) return;
+            $query->where('created_by', Auth::id())->orWhereDoesntHave('questions', fn ($q) => $q->where('teacher_id','<>',Auth::id()));
+        })->orderBy('title')->get();
 
         return view('teacher.exams.index', compact('batch', 'exams', 'bankQuestions', 'questionSets'));
     }
@@ -37,7 +42,8 @@ class ExamController extends Controller
             'pass_marks' => ['required', 'integer', 'min:0'],
             'questions_per_attempt' => ['nullable', 'integer', 'min:1', 'max:100'],
             'questions' => ['nullable', 'array', 'min:1', 'max:100'],
-            'question_set_id' => ['nullable','integer','exists:question_sets,id'],\n            'question_bank_ids' => ['nullable', 'array', 'min:1', 'max:500'],
+            'question_set_id' => ['nullable','integer','exists:question_sets,id'],
+            'question_bank_ids' => ['nullable', 'array', 'min:1', 'max:500'],
             'question_bank_ids.*' => ['integer', 'distinct', 'exists:question_bank_questions,id'],
             'random_question_count' => ['nullable', 'integer', 'min:1', 'max:100'],
             'questions.*.question' => ['required', 'string', 'max:3000'],
@@ -47,7 +53,18 @@ class ExamController extends Controller
             'questions.*.marks' => ['required', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $selectedQuestions = collect($validated['questions'] ?? []);\n        $selectedSet = null;\n        if (!empty($validated['question_set_id'])) {\n            $selectedSet = QuestionSet::with('questions')->where('status','published')->findOrFail($validated['question_set_id']);\n            abort_unless(Auth::user()->isAdmin() || $selectedSet->created_by === Auth::id() || $selectedSet->questions->every(fn ($q) => $q->teacher_id === Auth::id()), 403, 'This question set contains questions you cannot use.');\n            abort_if(!empty($validated['question_bank_ids']) || !empty($validated['questions']), 422, 'Choose only one question source.');\n            $selectedQuestions = $selectedSet->questions->map(fn ($question) => [\n                'question'=>$question->question, 'options'=>$question->options,\n                'correct_option'=>$question->correct_option,\n                'marks'=>$question->pivot->marks_override ?? $question->marks,\n            ]);\n        }
+        $selectedQuestions = collect($validated['questions'] ?? []);
+        $selectedSet = null;
+        if (!empty($validated['question_set_id'])) {
+            $selectedSet = QuestionSet::with('questions')->where('status','published')->findOrFail($validated['question_set_id']);
+            abort_unless(Auth::user()->isAdmin() || $selectedSet->created_by === Auth::id() || $selectedSet->questions->every(fn ($q) => $q->teacher_id === Auth::id()), 403, 'This question set contains questions you cannot use.');
+            abort_if(!empty($validated['question_bank_ids']) || !empty($validated['questions']), 422, 'Choose only one question source.');
+            $selectedQuestions = $selectedSet->questions->map(fn ($question) => [
+                'question'=>$question->question, 'options'=>$question->options,
+                'correct_option'=>$question->correct_option,
+                'marks'=>$question->pivot->marks_override ?? $question->marks,
+            ]);
+        }
         if (! empty($validated['question_bank_ids'])) {
             $bankQuestions = QuestionBankQuestion::query()
                 ->whereIn('id', $validated['question_bank_ids'])
@@ -77,6 +94,7 @@ class ExamController extends Controller
         DB::transaction(function () use ($batch, $validated, $selectedQuestions, $selectedSet) {
             $exam = $batch->exams()->create([
                 'teacher_id' => Auth::id(),
+                'question_set_id' => $selectedSet?->id,
                 'title' => $validated['title'],
                 'instructions' => $validated['instructions'] ?? null,
                 'starts_at' => $validated['starts_at'],
