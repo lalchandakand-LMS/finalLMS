@@ -38,7 +38,7 @@ class ExamController extends Controller
             'pass_marks' => ['required', 'integer', 'min:0'],
             'questions_per_attempt' => ['nullable', 'integer', 'min:1', 'max:100'],
             'questions' => ['nullable', 'array', 'min:1', 'max:100'],
-            'question_bank_ids' => ['nullable', 'array', 'min:1', 'max:500'],
+            'question_bank_ids' => ['nullable', 'array', 'min:1', 'max:100'],
             'question_bank_ids.*' => ['integer', 'distinct', 'exists:question_bank_questions,id'],
             'random_question_count' => ['nullable', 'integer', 'min:1', 'max:100'],
             'questions.*.question' => ['required', 'string', 'max:3000'],
@@ -60,13 +60,15 @@ class ExamController extends Controller
             $selectedCount = $validated['random_question_count'] ?? $bankQuestions->count();
             abort_if($selectedCount > $bankQuestions->count(), 422, 'Random question count exceeds the selected bank questions.');
 
-            $selectedQuestions = $bankQuestions->shuffle()->take($selectedCount)->map(fn ($question) => [
+            $bankSelections = $bankQuestions->shuffle()->take($selectedCount)->map(fn ($question) => [
                 'question_bank_question_id' => $question->id,
                 'question' => $question->question,
                 'options' => $question->options,
                 'correct_option' => $question->correct_option,
                 'marks' => $question->marks,
             ]);
+            // Preserve manually authored questions when a teacher combines both sources.
+            $selectedQuestions = $selectedQuestions->concat($bankSelections)->values();
         }
 
         abort_if($selectedQuestions->isEmpty(), 422, 'Add questions or select questions from your question bank.');
