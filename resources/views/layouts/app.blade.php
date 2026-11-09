@@ -12,6 +12,11 @@
         $googleTagManagerId = $hasSettingsTable ? \App\Models\Setting::value('google_tag_manager_id') : null;
         $facebookPixelId = $hasSettingsTable ? \App\Models\Setting::value('facebook_pixel_id') : null;
         $marketingConsent = request()->cookie('marketing_consent') === 'accepted';
+        $isPublicLayout = !(auth()->check() && auth()->user()->isAdmin());
+        $websiteHeaderLinks = $isPublicLayout && $hasSettingsTable ? json_decode((string) \\App\\Models\\Setting::value('header_links', '[]'), true) : [];
+        $websiteFooterTitle = $isPublicLayout && $hasSettingsTable ? \\App\\Models\\Setting::value('footer_title', config('app.name')) : config('app.name');
+        $websiteFooterText = $isPublicLayout && $hasSettingsTable ? \\App\\Models\\Setting::value('footer_text', '') : '';
+        $websiteFooterLinks = $isPublicLayout && $hasSettingsTable ? json_decode((string) \\App\\Models\\Setting::value('footer_links', '[]'), true) : [];
     @endphp
     <title>@yield('title', config('app.name'))</title>
     <meta name="description" content="{{ $seoDescription }}">
@@ -221,11 +226,7 @@
                 <a href="{{ route('pages.contact') }}">{{ __('Contact') }}</a>
                 <a href="{{ route('pages.faq') }}">{{ __('FAQ') }}</a>
                 <a href="{{ route('news.index') }}">{{ __('Blog & News') }}</a>
-                @php
-                    $websiteHeaderLinks = !$isAdminLayout && \Illuminate\Support\Facades\Schema::hasTable('settings')
-                        ? json_decode((string) \App\Models\Setting::value('header_links', '[]'), true)
-                        : [];
-                    @endphp
+                
                     @foreach(is_array($websiteHeaderLinks) ? $websiteHeaderLinks : [] as $websiteLink)
                         @if(is_array($websiteLink) && !empty($websiteLink['label']) && !empty($websiteLink['url']))
                             <a href="{{ $websiteLink['url'] }}">{{ $websiteLink['label'] }}</a>
@@ -295,13 +296,7 @@
 
         @yield('content')
     </main>
-    @php
-        $websiteFooterTitle = !$isAdminLayout && \Illuminate\Support\Facades\Schema::hasTable('settings') ? \App\Models\Setting::value('footer_title', config('app.name')) : config('app.name');
-        $websiteFooterText = !$isAdminLayout && \Illuminate\Support\Facades\Schema::hasTable('settings') ? \App\Models\Setting::value('footer_text', '') : '';
-        $websiteFooterLinks = !$isAdminLayout && \Illuminate\Support\Facades\Schema::hasTable('settings')
-            ? json_decode((string) \App\Models\Setting::value('footer_links', '[]'), true)
-            : [];
-    @endphp
+    
         <footer class="container" style="display:{{ $isAdminLayout ? 'none' : 'block' }};padding-top:24px;padding-bottom:36px;border-top:1px solid var(--border);">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap;">
                 <div style="max-width:620px;">
