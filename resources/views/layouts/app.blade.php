@@ -273,14 +273,14 @@
             <a class="menu-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><span class="menu-icon">▦</span><span class="menu-text">Dashboard</span></a>
             @if(auth()->user()->isAdmin())
                 <div class="app-sidebar-section">Academy management</div>
-                <a class="menu-link {{ request()->routeIs('admin.courses.*') ? 'active' : '' }}" href="{{ route('admin.courses.index') }}"><span class="menu-icon">📚</span><span class="menu-text">Courses & lessons</span></a>
-                <a class="menu-link {{ request()->routeIs('admin.products.*') ? 'active' : '' }}" href="{{ route('admin.products.index') }}"><span class="menu-icon">🛍️</span><span class="menu-text">Products & eBooks</span></a>
+                <a class="menu-link {{ request()->routeIs('admin.courses.*') ? 'active' : '' }}" href="{{ route('admin.courses.index') }}"><span class="menu-icon">📚</span><span class="menu-text">Courses &amp; lessons</span></a>
+                <a class="menu-link {{ request()->routeIs('admin.products.*') ? 'active' : '' }}" href="{{ route('admin.products.index') }}"><span class="menu-icon">🛍️</span><span class="menu-text">Products &amp; eBooks</span></a>
                 <a class="menu-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}" href="{{ route('admin.orders.index') }}"><span class="menu-icon">📦</span><span class="menu-text">Commerce orders</span></a>
                 <a class="menu-link {{ request()->routeIs('admin.coupons.*') ? 'active' : '' }}" href="{{ route('admin.coupons.index') }}"><span class="menu-icon">🏷️</span><span class="menu-text">Coupons</span></a>
                 <a class="menu-link {{ request()->routeIs('admin.flash-sales.*') ? 'active' : '' }}" href="{{ route('admin.flash-sales.index') }}"><span class="menu-icon">🔥</span><span class="menu-text">Flash sales</span></a>
                 <a class="menu-link {{ request()->routeIs('admin.question-sets.*') ? 'active' : '' }}" href="{{ route('admin.question-sets.index') }}"><span class="menu-icon">📝</span><span class="menu-text">Question sets</span></a>
-                <a class="menu-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}" href="{{ route('admin.users.index') }}"><span class="menu-icon">👥</span><span class="menu-text">Students & teachers</span></a>
-                <a class="menu-link {{ request()->routeIs('admin.batches.*','admin.branches.*') ? 'active' : '' }}" href="{{ route('admin.batches.index') }}"><span class="menu-icon">🗓️</span><span class="menu-text">Batches & branches</span></a>
+                <a class="menu-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}" href="{{ route('admin.users.index') }}"><span class="menu-icon">👥</span><span class="menu-text">Students &amp; teachers</span></a>
+                <a class="menu-link {{ request()->routeIs('admin.batches.*','admin.branches.*') ? 'active' : '' }}" href="{{ route('admin.batches.index') }}"><span class="menu-icon">🗓️</span><span class="menu-text">Batches &amp; branches</span></a>
                 <a class="menu-link {{ request()->routeIs('admin.contests.*') ? 'active' : '' }}" href="{{ route('admin.contests.index') }}"><span class="menu-icon">🎁</span><span class="menu-text">Quiz & contests</span></a>
                 <a class="menu-link {{ request()->routeIs('live-classes.*') ? 'active' : '' }}" href="{{ route('live-classes.index') }}"><span class="menu-icon">🎥</span><span class="menu-text">Live classes</span></a>
                 <div class="app-sidebar-section">Finance &amp; payments</div>
@@ -289,7 +289,7 @@
                 <a class="menu-link {{ request()->routeIs('admin.refunds.*') ? 'active' : '' }}" href="{{ route('admin.refunds.index') }}"><span class="menu-icon">↩️</span><span class="menu-text">Refunds</span></a>
                 <a class="menu-link {{ request()->routeIs('admin.expenses.*') ? 'active' : '' }}" href="{{ route('admin.expenses.index') }}"><span class="menu-icon">💸</span><span class="menu-text">Expenses</span></a>
                 <a class="menu-link {{ request()->routeIs('admin.finance-reports.*') ? 'active' : '' }}" href="{{ route('admin.finance-reports.index') }}"><span class="menu-icon">📊</span><span class="menu-text">Finance reports</span></a>
-                <div class="app-sidebar-section">Website & system</div>
+                <div class="app-sidebar-section">Website &amp; system</div>
                 <a class="menu-link {{ request()->routeIs('admin.website-builder.*') ? 'active' : '' }}" href="{{ route('admin.website-builder.index') }}"><span class="menu-icon">🖥️</span><span class="menu-text">Website builder</span></a>
                 <a class="menu-link {{ request()->routeIs('admin.media.*') ? 'active' : '' }}" href="{{ route('admin.media.index') }}"><span class="menu-icon">🖼️</span><span class="menu-text">Media library</span></a>
                 <a class="menu-link {{ request()->routeIs('admin.news.*') ? 'active' : '' }}" href="{{ route('admin.news.index') }}"><span class="menu-icon">📰</span><span class="menu-text">Blog & news</span></a>
@@ -306,7 +306,7 @@
                 <div class="app-sidebar-section">My learning</div>
                 <a class="menu-link {{ request()->routeIs('student.courses.*') ? 'active' : '' }}" href="{{ route('student.courses.index') }}"><span class="menu-icon">📚</span><span class="menu-text">My courses</span></a>
                 <a class="menu-link {{ request()->routeIs('student.attendance.*') ? 'active' : '' }}" href="{{ route('student.attendance.index') }}"><span class="menu-icon">📅</span><span class="menu-text">Attendance</span></a>
-                <a class="menu-link {{ request()->routeIs('student.exams.*') ? 'active' : '' }}" href="{{ route('student.exams.index') }}"><span class="menu-icon">📝</span><span class="menu-text">Exams & results</span></a>
+                <a class="menu-link {{ request()->routeIs('student.exams.*') ? 'active' : '' }}" href="{{ route('student.exams.index') }}"><span class="menu-icon">📝</span><span class="menu-text">Exams &amp; results</span></a>
                 <a class="menu-link {{ request()->routeIs('student.invoices.*') ? 'active' : '' }}" href="{{ route('student.invoices.index') }}"><span class="menu-icon">🧾</span><span class="menu-text">My fees</span></a>
                 <a class="menu-link {{ request()->routeIs('store.orders') ? 'active' : '' }}" href="{{ route('store.orders') }}"><span class="menu-icon">📦</span><span class="menu-text">My orders</span></a>
                 <a class="menu-link {{ request()->routeIs('store.cart') ? 'active' : '' }}" href="{{ route('store.cart') }}"><span class="menu-icon">🛒</span><span class="menu-text">My cart</span></a>
