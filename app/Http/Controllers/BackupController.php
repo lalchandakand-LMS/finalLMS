@@ -66,11 +66,25 @@ class BackupController extends Controller
 
     public function create(): RedirectResponse
     {
+        $filename = $this->writeBackupArchive('manual');
+
+        return redirect()->route('admin.backups.index')->with('success', 'Database and uploaded media backup created: '.$filename);
+    }
+
+    /**
+     * Create a signed, private recovery point before any destructive restore.
+     * The archive is stored on the local private disk, never under public storage.
+     */
+    private function writeBackupArchive(string $kind): string
+    {
         $tableNames = $this->backupTableNames();
         sort($tableNames);
         $tables = [];
+        $schema = [];
+
         foreach ($tableNames as $table) {
             $tables[$table] = DB::table($table)->get()->map(fn ($row) => (array) $row)->all();
+            $schema[$table] = Schema::getColumnListing($table);
         }
 
         $mediaFiles = [];
@@ -91,7 +105,9 @@ class BackupController extends Controller
 
         $payload = json_encode([
             'format_version' => 1,
+            'backup_kind' => $kind,
             'created_at' => now()->toIso8601String(),
+            'schema_fingerprint' => hash('sha256', json_encode($schema, JSON_THROW_ON_ERROR)),
             'tables' => $tables,
             'public_media' => $mediaFiles,
             'private_files' => $privateFiles,
@@ -103,10 +119,14 @@ class BackupController extends Controller
             'signature' => $signature,
         ], JSON_THROW_ON_ERROR), 9);
 
+        if (! is_string($archive)) {
+            throw new RuntimeException('Unable to compress the backup archive.');
+        }
+
         $filename = 'aloms-lms-backup-'.now()->format('Ymd-His').'-'.Str::lower(Str::random(5)).'.json.gz';
         Storage::disk('local')->put('backups/'.$filename, $archive);
 
-        return redirect()->route('admin.backups.index')->with('success', 'Database and uploaded media backup created.');
+        return $filename;
     }
 
     public function download(string $filename)
@@ -148,9 +168,22 @@ class BackupController extends Controller
 
             $currentTables = $this->backupTableNames();
             sort($currentTables);
+
+            // Keep a fresh recovery point before the first destructive database operation.
+            // If backup creation fails, restore is stopped and live data remains untouched.
+            $safetyBackup = $this->writeBackupArchive('pre-restore-safety');
+            report(new \\RuntimeException('Safety backup created before restore: '.$safetyBackup));
             $backupTables = array_keys($payload['tables']);
             sort($backupTables);
             $missingTables = array_values(array_diff($currentTables, $backupTables));
+            if (isset($payload['schema_fingerprint'])) {
+                $currentSchema = [];
+                foreach ($currentTables as $table) {
+                    $currentSchema[$table] = Schema::getColumnListing($table);
+                }
+                $fingerprint = hash('sha256', json_encode($currentSchema, JSON_THROW_ON_ERROR));
+                abort_unless(hash_equals($fingerprint, (string) $payload['schema_fingerprint']), 422, 'Backup schema does not match this installed LMS version. Restore was stopped to protect current data.');
+            }
             abort_unless($missingTables === [], 422, 'This backup does not contain every table required by the installed LMS version. Update or downgrade the application before restoring.');
 
             $mediaToRestore = [];
