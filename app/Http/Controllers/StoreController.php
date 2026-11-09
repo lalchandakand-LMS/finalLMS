@@ -76,7 +76,7 @@ class StoreController extends Controller
             $subtotal = 0;
             foreach ($cart->items as $item) {
                 abort_unless($item->product && $item->product->status === 'published' && $item->product->published_at && $item->product->published_at->lte(now()), 422, 'A product is no longer available.');
-                $subtotal += (float) $item->product->currentPrice() * $item->quantity;
+                $subtotal += (float) $item->product->currentPrice($request->user()->id) * $item->quantity;
             }
 
             $coupon = null;
@@ -110,7 +110,9 @@ class StoreController extends Controller
 
             foreach ($cart->items as $item) {
                 $product = $item->product;
-                $price = (float) $product->currentPrice();
+                $regularPrice = (float) $product->regular_price;
+                $productSalePrice = $product->sale_price !== null && (float) $product->sale_price < $regularPrice ? (float) $product->sale_price : $regularPrice;
+                $price = (float) $product->currentPrice($request->user()->id);
                 $lineTotal = $price * $item->quantity;
                 $order->items()->create([
                     'product_id' => $product->id,
@@ -119,8 +121,8 @@ class StoreController extends Controller
                     'product_name' => $product->name,
                     'product_sku' => $product->sku,
                     'quantity' => $item->quantity,
-                    'regular_price' => $price,
-                    'discount_total' => 0,
+                    'regular_price' => $regularPrice,
+                    'discount_total' => round(max(0, $productSalePrice - $price) * $item->quantity, 2),
                     'line_total' => $lineTotal,
                     'product_snapshot' => ['slug' => $product->slug, 'downloadable' => (bool) $product->is_downloadable],
                 ]);
