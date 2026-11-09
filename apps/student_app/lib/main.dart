@@ -184,7 +184,9 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
     });
     try {
       final response = await widget.api.get('/courses/${widget.slug}');
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         course = response['course'] as Map<String, dynamic>;
         lessons = response['lessons'] as List<dynamic>? ?? [];
