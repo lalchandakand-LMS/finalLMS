@@ -156,6 +156,98 @@ class QuestionBankHardeningTest extends TestCase
         $this->assertCount(2, $secondAttempt->attemptQuestions);
     }
 
+    public function test_admin_can_manage_assigned_teachers_question_bank_and_create_exam_from_it(): void
+    {
+        [$teacher, , $batch] = $this->makeBatchWithStudent();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $ownedQuestion = QuestionBankQuestion::create([
+            'teacher_id' => $teacher->id,
+            'subject' => 'Grammar',
+            'category' => 'Tenses',
+            'difficulty' => 'easy',
+            'question' => 'Admin-managed past tense question?',
+            'options' => ['go', 'went', 'gone', 'going'],
+            'correct_option' => 1,
+            'marks' => 2,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.batches.question-bank.index', $batch))
+            ->assertOk()
+            ->assertSee('Admin-managed past tense question?');
+
+        $this->actingAs($admin)
+            ->post(route('admin.batches.question-bank.store', $batch), [
+                'subject' => 'Vocabulary',
+                'category' => 'Word meaning',
+                'difficulty' => 'medium',
+                'question' => 'Meaning of diligent?',
+                'options' => ['lazy', 'hardworking', 'careless', 'slow'],
+                'correct_option' => 1,
+                'marks' => 1,
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('question_bank_questions', [
+            'teacher_id' => $teacher->id,
+            'question' => 'Meaning of diligent?',
+        ]);
+
+        $this->actingAs($admin)
+            ->put(route('admin.batches.question-bank.update', [$batch, $ownedQuestion]), [
+                'subject' => 'Grammar',
+                'category' => 'Past tense',
+                'difficulty' => 'hard',
+                'question' => 'Select the correct past tense form?',
+                'options' => ['go', 'went', 'gone', 'going'],
+                'correct_option' => 1,
+                'marks' => 3,
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('question_bank_questions', [
+            'id' => $ownedQuestion->id,
+            'teacher_id' => $teacher->id,
+            'category' => 'Past tense',
+            'difficulty' => 'hard',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.batches.exams.store', $batch), [
+                'title' => 'Admin Question Bank Exam',
+                'instructions' => 'Generated from the assigned teacher question bank.',
+                'starts_at' => now()->addHour()->format('Y-m-d H:i:s'),
+                'ends_at' => now()->addHours(2)->format('Y-m-d H:i:s'),
+                'duration_minutes' => 30,
+                'pass_marks' => 3,
+                'question_bank_ids' => [$ownedQuestion->id],
+                'random_question_count' => 1,
+                'questions_per_attempt' => 1,
+            ])
+            ->assertRedirect();
+
+        $exam = Exam::where('title', 'Admin Question Bank Exam')->firstOrFail();
+        $this->assertSame((int) $teacher->id, (int) $exam->teacher_id);
+        $this->assertDatabaseHas('exam_questions', [
+            'exam_id' => $exam->id,
+            'question' => 'Select the correct past tense form?',
+            'marks' => 3,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.batches.exams.index', $batch))
+            ->assertOk()
+            ->assertSee('Admin Question Bank Exam');
+
+        $this->actingAs($admin)
+            ->delete(route('admin.batches.question-bank.destroy', [$batch, $ownedQuestion]))
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('question_bank_questions', ['id' => $ownedQuestion->id]);
+        // The exam stores an immutable snapshot and remains valid after the source bank item is removed.
+        $this->assertDatabaseHas('exam_questions', ['exam_id' => $exam->id, 'question' => 'Select the correct past tense form?']);
+    }
+
     private function makeBatchWithStudent(): array
     {
         $teacher = User::factory()->create(['role' => 'teacher']);
