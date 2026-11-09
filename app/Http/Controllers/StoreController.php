@@ -66,7 +66,7 @@ class StoreController extends Controller
             ->filter(fn ($method) => (bool) ($method['enabled'] ?? false))->keys()->all();
         $data = $request->validate([
             'payment_method' => ['required', Rule::in($methods)],
-            'payment_reference' => ['required', 'string', 'max:120', Rule::unique('orders', 'payment_reference')],
+            'payment_reference' => ['nullable', 'required_unless:payment_method,bkash', 'string', 'max:120', Rule::unique('orders', 'payment_reference')],
             'payment_sender' => ['nullable', 'string', 'max:60'],
             'payment_proof' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
             'coupon_code' => ['nullable', 'string', 'max:60'],
@@ -110,7 +110,7 @@ class StoreController extends Controller
                 'coupon_id' => $coupon?->id,
                 'status' => 'pending',
                 'payment_method' => $data['payment_method'],
-                'payment_reference' => $data['payment_reference'],
+                'payment_reference' => $data['payment_reference'] ?? ('ONLINE-' . Str::upper(Str::random(24))),
                 'payment_sender' => $data['payment_sender'] ?? null,
                 'payment_proof_path' => $proofPath,
                 'currency' => 'BDT',
@@ -147,12 +147,12 @@ class StoreController extends Controller
             return $order;
         });
 
-        return redirect()->route('store.orders')->with('success', 'Order ' . $order->order_number . ' submitted. Access is granted after payment verification.');
+        return redirect()->route('store.orders')->with('success', 'Order ' . $order->order_number . ' submitted. Complete payment from My Orders to receive access.');
     }
 
     public function orders(Request $request): View
     {
-        $orders = Order::with('items')->where('user_id',$request->user()->id)->latest()->paginate(15);
+        $orders = Order::with(['items','paymentTransactions'])->where('user_id',$request->user()->id)->latest()->paginate(15);
         return view('store.orders', compact('orders'));
     }
 
