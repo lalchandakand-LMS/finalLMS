@@ -8,7 +8,7 @@ Route::prefix('v1')->group(function (): void {
     Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
 
     Route::get('/courses', [CourseController::class, 'index'])->middleware('throttle:60,1');
-    Route::get('/courses/{course:slug}', [CourseController::class, 'show'])->middleware('throttle:60,1');
+    Route::get('/courses/{course:slug}', [CourseController::class, 'show'])->middleware(['api.token:optional', 'throttle:60,1']);
 
     Route::middleware(['api.token', 'throttle:120,1'])->group(function (): void {
         Route::get('/auth/me', [AuthController::class, 'me']);
