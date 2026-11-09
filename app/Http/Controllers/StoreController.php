@@ -58,46 +58,72 @@ class StoreController extends Controller
 
     public function checkout(Request $request): RedirectResponse
     {
-        $cart = Cart::with('items.product')->where('user_id',$request->user()->id)->firstOrFail();
+        $cart = Cart::with('items.product')->where('user_id', $request->user()->id)->firstOrFail();
         abort_if($cart->items->isEmpty(), 422, 'Your cart is empty.');
-        $methods = collect(\App\Models\Setting::paymentMethods())->filter(fn ($method) => (bool)($method['enabled'] ?? false))->keys()->all();
+        $methods = collect(\App\Models\Setting::paymentMethods())
+            ->filter(fn ($method) => (bool) ($method['enabled'] ?? false))->keys()->all();
         $data = $request->validate([
             'payment_method' => ['required', Rule::in($methods)],
-            'payment_reference' => ['required','string','max:120',Rule::unique('orders','payment_reference')],\n            'coupon_code' => ['nullable','string','max:60'],
+            'payment_reference' => ['required', 'string', 'max:120', Rule::unique('orders', 'payment_reference')],
+            'coupon_code' => ['nullable', 'string', 'max:60'],
         ]);
-        $order = DB::transaction(function () use ($cart,$request,$data) {
+
+        $order = DB::transaction(function () use ($cart, $request, $data) {
             $cart = Cart::query()->whereKey($cart->id)->lockForUpdate()->with('items.product')->firstOrFail();
             $subtotal = 0;
             foreach ($cart->items as $item) {
                 abort_unless($item->product && $item->product->status === 'published', 422, 'A product is no longer available.');
-                $subtotal += (float)$item->product->currentPrice() * $item->quantity;
+                $subtotal += (float) $item->product->currentPrice() * $item->quantity;
             }
-            $coupon = null;\n            $discount = 0;\n            if (!empty($data['coupon_code'])) {\n                $coupon = Coupon::query()->where('code',strtoupper(trim($data['coupon_code'])))->lockForUpdate()->first();\n                abort_unless($coupon && $coupon->isAvailableFor($request->user()->id, $subtotal), 422, 'This coupon is invalid, expired, or its usage limit has been reached.');\n                $discount = $coupon->calculateDiscount($subtotal);\n            }\n            $order = Order::create([
-                'order_number' => 'ALM-'.now()->format('ymd').'-'.Str::upper(Str::random(8)),
+
+            $coupon = null;
+            $discount = 0;
+            if (!empty($data['coupon_code'])) {
+                $coupon = Coupon::query()->where('code', strtoupper(trim($data['coupon_code'])))->lockForUpdate()->first();
+                abort_unless($coupon && $coupon->isAvailableFor($request->user()->id, $subtotal), 422, 'This coupon is invalid, expired, or its usage limit has been reached.');
+                $discount = $coupon->calculateDiscount($subtotal);
+            }
+
+            $order = Order::create([
+                'order_number' => 'ALM-' . now()->format('ymd') . '-' . Str::upper(Str::random(8)),
                 'user_id' => $request->user()->id,
+                'coupon_id' => $coupon?->id,
                 'status' => 'pending',
                 'payment_method' => $data['payment_method'],
                 'payment_reference' => $data['payment_reference'],
                 'currency' => 'BDT',
                 'subtotal' => $subtotal,
-                'total' => $subtotal,
-                'customer_snapshot' => ['name'=>$request->user()->name,'email'=>$request->user()->email,'phone'=>$request->user()->phone ?? null],
+                'discount_total' => $discount,
+                'total' => max(0, $subtotal - $discount),
+                'customer_snapshot' => [
+                    'name' => $request->user()->name,
+                    'email' => $request->user()->email,
+                    'phone' => $request->user()->phone ?? null,
+                ],
             ]);
+
             foreach ($cart->items as $item) {
                 $product = $item->product;
-                $price = (float)$product->currentPrice();
+                $price = (float) $product->currentPrice();
+                $lineTotal = $price * $item->quantity;
                 $order->items()->create([
-                    'product_id'=>$product->id,'product_type'=>$product->type,
-                    'resource_id'=>$product->course_id,'product_name'=>$product->name,
-                    'product_sku'=>$product->sku,'quantity'=>$item->quantity,
-                    'regular_price'=>$price,'discount_total'=>0,'line_total'=>$price*$item->quantity,
-                    'product_snapshot'=>['slug'=>$product->slug,'downloadable'=>(bool)$product->is_downloadable],
+                    'product_id' => $product->id,
+                    'product_type' => $product->type,
+                    'resource_id' => $product->course_id,
+                    'product_name' => $product->name,
+                    'product_sku' => $product->sku,
+                    'quantity' => $item->quantity,
+                    'regular_price' => $price,
+                    'discount_total' => 0,
+                    'line_total' => $lineTotal,
+                    'product_snapshot' => ['slug' => $product->slug, 'downloadable' => (bool) $product->is_downloadable],
                 ]);
             }
             $cart->items()->delete();
             return $order;
         });
-        return redirect()->route('store.orders')->with('success','Order '.$order->order_number.' submitted. Access is granted after payment verification.');
+
+        return redirect()->route('store.orders')->with('success', 'Order ' . $order->order_number . ' submitted. Access is granted after payment verification.');
     }
 
     public function orders(Request $request): View
