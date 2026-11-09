@@ -124,6 +124,11 @@ class CommerceBkashCheckoutTest extends TestCase
             'status' => 'active',
         ]);
 
+        $this->actingAs($admin)->get(route('admin.orders.index'))
+            ->assertOk()
+            ->assertSee('COMMERCE-BKASH-TRX-001')
+            ->assertSee('VERIFIED');
+
         // Replayed callbacks must not create duplicate enrollments or coupon/download side effects.
         $this->get($callback)->assertRedirect(route('store.orders'));
         $this->assertSame(1, Enrollment::where('user_id', $student->id)->where('course_id', $course->id)->count());
