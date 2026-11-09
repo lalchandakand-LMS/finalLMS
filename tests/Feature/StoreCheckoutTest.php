@@ -83,6 +83,7 @@ class StoreCheckoutTest extends TestCase
         ])->assertRedirect(route('store.orders'));
 
         $order = Order::where('payment_reference','EBOOK-REF-001')->firstOrFail();
+        $product->delete(); // Archiving a catalog item must not revoke a completed purchase.
         $this->actingAs($admin)->post(route('admin.orders.approve',$order))->assertRedirect();
         $permission = DownloadPermission::where('user_id',$student->id)->firstOrFail();
         $this->assertSame(3,$permission->downloads_remaining);
