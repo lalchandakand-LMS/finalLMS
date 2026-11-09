@@ -156,7 +156,9 @@ class WebsiteBuilderTest extends TestCase
             ->assertOk()
             ->assertSee('15 designs')
             ->assertSee('Academy Modern')
-            ->assertSee('Community Campus');
+            ->assertSee('Community Campus')
+            ->assertSee('Reusable section block library')
+            ->assertSee('Call to action');
 
         $this->assertCount(15, \App\Http\Controllers\WebsiteBuilderController::homepageTemplates());
     }
@@ -176,7 +178,9 @@ class WebsiteBuilderTest extends TestCase
         $this->get(route('admin.website-builder.preview'))
             ->assertOk()
             ->assertSee('Draft headline')
-            ->assertSee('Unpublished preview');
+            ->assertSee('Unpublished preview')
+            ->assertSee('data-preview-size="mobile"', false)
+            ->assertSee('data-preview-size="tablet"', false);
 
         $this->post(route('admin.website-builder.publish-draft'))
             ->assertRedirect(route('admin.website-builder.index'));
