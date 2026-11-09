@@ -23,7 +23,24 @@
                 <label>{{ __('Pass marks') }}<input type="number" name="pass_marks" min="0" value="0" required></label>
                 <label>{{ __('Questions per student attempt (optional)') }}<input type="number" name="questions_per_attempt" min="1" max="100" placeholder="{{ __('Leave blank to use all questions') }}"></label>
             </div>
-            <label><input type="checkbox" id="use-question-bank"> {{ __('Select random questions from my Question Bank') }}</label>
+            <label>{{ __('Question source') }}
+                <select id="question-source" name="question_source">
+                    <option value="manual">Create questions manually</option>
+                    <option value="bank">Random questions from Question Bank</option>
+                    <option value="set">Use a reusable Question Set</option>
+                </select>
+            </label>
+            <div id="question-set-area" hidden>
+                <label>{{ __('Published Question Set') }}
+                    <select name="question_set_id" id="question-set-select">
+                        <option value="">Select a question set</option>
+                        @foreach($questionSets as $questionSet)
+                            <option value="{{ $questionSet->id }}">{{ $questionSet->title }} ({{ $questionSet->questions_count }} questions)</option>
+                        @endforeach
+                    </select>
+                </label>
+                @if($questionSets->isEmpty())<p class="muted">No reusable question sets are available. Create one from the Admin Question Sets page.</p>@endif
+            </div>
             <div id="question-bank-area" hidden>
                 <label>{{ __('Number of random questions') }}<input type="number" name="random_question_count" min="1" max="100" value="10"></label>
                 @forelse($bankQuestions as $bankQuestion)
@@ -75,18 +92,21 @@
 (() => {
     const container = document.getElementById('exam-questions');
     const button = document.getElementById('add-exam-question');
-    const bankToggle = document.getElementById('use-question-bank');
+    const source = document.getElementById('question-source');
     const bankArea = document.getElementById('question-bank-area');
+    const setArea = document.getElementById('question-set-area');
     const manualArea = document.getElementById('manual-question-area');
     const syncQuestionMode = () => {
-        const useBank = bankToggle.checked;
-        bankArea.hidden = !useBank;
-        manualArea.hidden = useBank;
-        manualArea.querySelectorAll('input, textarea, select').forEach(field => field.disabled = useBank);
-        button.hidden = useBank;
-        bankArea.querySelectorAll('input').forEach(field => field.disabled = !useBank);
+        const mode = source.value;
+        bankArea.hidden = mode !== 'bank';
+        setArea.hidden = mode !== 'set';
+        manualArea.hidden = mode !== 'manual';
+        manualArea.querySelectorAll('input, textarea, select').forEach(field => field.disabled = mode !== 'manual');
+        button.hidden = mode !== 'manual';
+        bankArea.querySelectorAll('input').forEach(field => field.disabled = mode !== 'bank');
+        setArea.querySelectorAll('select').forEach(field => field.disabled = mode !== 'set');
     };
-    bankToggle.addEventListener('change', syncQuestionMode);
+    source.addEventListener('change', syncQuestionMode);
     syncQuestionMode();
     if (!container || !button) return;
     button.addEventListener('click', () => {
