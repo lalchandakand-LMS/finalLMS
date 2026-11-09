@@ -103,6 +103,7 @@ class CourseController extends Controller
     public function update(Request $request, Course $course): RedirectResponse
     {
         $validated = $request->validate([
+            'section_id' => ['nullable', 'integer', 'exists:course_sections,id'],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
             'teacher_id' => ['required', 'exists:users,id'],
@@ -222,6 +223,7 @@ class CourseController extends Controller
         abort_unless($user?->isAdmin() || ($user?->isTeacher() && $course->teacher_id === $user->id), 403);
 
         $validated = $request->validate([
+            'section_id' => ['nullable', 'integer', 'exists:course_sections,id'],
             'title' => ['required', 'string', 'max:255'],
             'content' => ['required', 'string'],
             'duration_minutes' => ['required', 'integer', 'min:1', 'max:600'],
@@ -230,6 +232,7 @@ class CourseController extends Controller
             'is_preview' => ['sometimes', 'boolean'],
         ]);
 
+        if (!empty($validated['section_id'])) abort_unless($course->sections()->whereKey($validated['section_id'])->exists(), 422);
         $validated['is_preview'] = $request->boolean('is_preview');
         $course->lessons()->create($validated);
 
@@ -270,6 +273,7 @@ class CourseController extends Controller
             'video_url' => ['nullable', 'url', 'max:2048', 'regex:/^https:\/\/(?:www\.)?(?:youtube\.com|youtu\.be|youtube-nocookie\.com|vimeo\.com)(?:\/|$)/i'],
             'is_preview' => ['sometimes', 'boolean'],
         ]);
+        if (!empty($validated['section_id'])) abort_unless($course->sections()->whereKey($validated['section_id'])->exists(), 422);
         $validated['is_preview'] = $request->boolean('is_preview');
         $lesson->update($validated);
         return back()->with('success', 'Lesson updated successfully.');
@@ -282,6 +286,45 @@ class CourseController extends Controller
         abort_unless($lesson->course_id === $course->id, 404);
         $lesson->delete();
         return back()->with('success', 'Lesson deleted successfully.');
+    }
+
+
+    public function storeSection(Course $course, Request $request): RedirectResponse
+    {
+        $user = Auth::user();
+        abort_unless($user?->isAdmin() || ($user?->isTeacher() && $course->teacher_id === $user->id), 403);
+        $data = $request->validate([
+            'title' => ['required','string','max:180'],
+            'description' => ['nullable','string','max:2000'],
+            'position' => ['required','integer','min:1','max:10000'],
+            'status' => ['required','in:draft,published'],
+        ]);
+        $course->sections()->create($data);
+        return back()->with('success','Course section created.');
+    }
+
+    public function updateSection(Course $course, \App\Models\CourseSection $section, Request $request): RedirectResponse
+    {
+        $user = Auth::user();
+        abort_unless($user?->isAdmin() || ($user?->isTeacher() && $course->teacher_id === $user->id), 403);
+        abort_unless($section->course_id === $course->id, 404);
+        $data = $request->validate([
+            'title' => ['required','string','max:180'],
+            'description' => ['nullable','string','max:2000'],
+            'position' => ['required','integer','min:1','max:10000'],
+            'status' => ['required','in:draft,published'],
+        ]);
+        $section->update($data);
+        return back()->with('success','Course section updated.');
+    }
+
+    public function destroySection(Course $course, \App\Models\CourseSection $section): RedirectResponse
+    {
+        $user = Auth::user();
+        abort_unless($user?->isAdmin() || ($user?->isTeacher() && $course->teacher_id === $user->id), 403);
+        abort_unless($section->course_id === $course->id, 404);
+        $section->delete();
+        return back()->with('success','Section deleted; lessons remain in the course.');
     }
 
     public function complete(Course $course, Request $request): RedirectResponse
