@@ -14,6 +14,7 @@ class FlashSale extends Model
 
     public function courses(): BelongsToMany { return $this->belongsToMany(Course::class, 'flash_sale_course')->withTimestamps(); }
     public function payments(): HasMany { return $this->hasMany(Payment::class); }
+    public function categories(): BelongsToMany { return $this->belongsToMany(ProductCategory::class, 'flash_sale_product_category')->withTimestamps(); }
     public function creator(): BelongsTo { return $this->belongsTo(User::class, 'created_by'); }
 
     public function isAvailableFor(?int $userId = null): bool
@@ -35,7 +36,10 @@ class FlashSale extends Model
     public static function activeForCourse(int $courseId, ?int $userId = null): ?self
     {
         return static::query()->where('status','active')->where('starts_at','<=',now())->where('ends_at','>=',now())
-            ->whereHas('courses', fn ($q) => $q->where('courses.id',$courseId))
+            ->where(function ($query) use ($courseId) {
+                $query->whereHas('courses', fn ($q) => $q->where('courses.id',$courseId))
+                    ->orWhereHas('categories.products', fn ($q) => $q->where('products.course_id',$courseId));
+            })
             ->orderByDesc('priority')->orderBy('ends_at')->get()
             ->first(fn (self $sale) => $sale->isAvailableFor($userId));
     }
