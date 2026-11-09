@@ -52,10 +52,11 @@ class CourseController extends Controller
     public function show(Request $request, Course $course): JsonResponse
     {
         $user = $request->user();
+        $isInstructor = $user && $user->isTeacher() && (int) $course->teacher_id === (int) $user->id;
+        abort_unless($course->status === 'published' || $isInstructor, 404);
         $enrolled = $user && $user->isStudent()
             && $course->enrollments()->where('user_id', $user->id)->whereIn('status', ['active', 'completed'])->exists();
-        $isInstructor = $user && $user->isTeacher() && (int) $course->teacher_id === (int) $user->id;
-        abort_unless($course->status === 'published', 404);
+        abort_unless($course->status === 'published' || $isInstructor, 404);
 
         $course->load(['teacher:id,name', 'lessons']);
         $lessons = $course->lessons
@@ -117,11 +118,12 @@ class CourseController extends Controller
 
     public function lesson(Request $request, Course $course, Lesson $lesson): JsonResponse
     {
-        abort_unless($lesson->course_id === $course->id && $course->status === 'published', 404);
+        abort_unless($lesson->course_id === $course->id, 404);
         $user = $request->user();
+        $isInstructor = $user && $user->isTeacher() && (int) $course->teacher_id === (int) $user->id;
+        abort_unless($course->status === 'published' || $isInstructor, 404);
         $enrolled = $user && $user->isStudent()
             && $course->enrollments()->where('user_id', $user->id)->whereIn('status', ['active', 'completed'])->exists();
-        $isInstructor = $user && $user->isTeacher() && (int) $course->teacher_id === (int) $user->id;
         abort_unless($lesson->is_preview || $enrolled || $isInstructor, 403);
 
         $progress = $user?->isStudent()
