@@ -30,7 +30,7 @@ class SystemMaintenanceController extends Controller
             'Application storage' => storage_path(),
             'Framework cache' => storage_path('framework/cache'),
             'Bootstrap cache' => base_path('bootstrap/cache'),
-            'Private backup directory' => storage_path('app/backups'),
+            'Private backup directory' => Storage::disk('local')->path('backups'),
         ] as $label => $path) {
             $exists = is_dir($path);
             $writable = $exists ? is_writable($path) : is_writable(dirname($path));
