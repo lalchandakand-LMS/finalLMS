@@ -66,6 +66,8 @@ class StoreController extends Controller
         $data = $request->validate([
             'payment_method' => ['required', Rule::in($methods)],
             'payment_reference' => ['required', 'string', 'max:120', Rule::unique('orders', 'payment_reference')],
+            'payment_sender' => ['nullable', 'string', 'max:60'],
+            'payment_proof' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
             'coupon_code' => ['nullable', 'string', 'max:60'],
         ]);
 
@@ -85,6 +87,7 @@ class StoreController extends Controller
                 $discount = $coupon->calculateDiscount($subtotal);
             }
 
+            $proofPath = $request->file('payment_proof')?->store('private/order-payment-proofs', 'local');
             $order = Order::create([
                 'order_number' => 'ALM-' . now()->format('ymd') . '-' . Str::upper(Str::random(8)),
                 'user_id' => $request->user()->id,
@@ -92,6 +95,8 @@ class StoreController extends Controller
                 'status' => 'pending',
                 'payment_method' => $data['payment_method'],
                 'payment_reference' => $data['payment_reference'],
+                'payment_sender' => $data['payment_sender'] ?? null,
+                'payment_proof_path' => $proofPath,
                 'currency' => 'BDT',
                 'subtotal' => $subtotal,
                 'discount_total' => $discount,
