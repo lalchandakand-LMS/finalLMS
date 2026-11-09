@@ -89,7 +89,7 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
     Route::get('/my/orders', [StoreController::class, 'orders'])->name('store.orders');
     Route::post('/my/orders/{order}/pay/bkash', [CommerceBkashController::class, 'initiate'])->middleware('throttle:5,1')->name('store.orders.pay.bkash');
     Route::get('/my/downloads/{permission}', [StoreController::class, 'download'])->middleware('throttle:10,1')->name('store.download');
-    Route::get('/live-classes', [LiveClassController::class, 'index'])->name('live-classes.index');
+    Route::get('/live-classes', [LiveClassController::class, 'index'])->name('live-classes.index');\n    Route::middleware('role:guardian')->group(function () {\n        Route::get('/guardian', [GuardianController::class, 'index'])->name('guardian.dashboard');\n        Route::get('/guardian/children/{guardianStudent}', [GuardianController::class, 'show'])->name('guardian.children.show');\n    });
     Route::get('/invoice-payments/{payment}/receipt', [InvoiceController::class, 'receipt'])
         ->middleware('role:admin,accountant')
         ->name('invoice-payments.receipt');
@@ -255,7 +255,7 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         Route::get('/settings', [AdminSettingsController::class, 'index'])->name('admin.settings.index');
         Route::post('/settings', [AdminSettingsController::class, 'update'])->name('admin.settings.update');
 
-        Route::get('/users', [UserController::class, 'index'])->name('admin.users.index');
+        Route::get('/users', [UserController::class, 'index'])->name('admin.users.index');\n        Route::post('/guardians/link', [UserController::class, 'linkStudent'])->name('admin.guardians.link');\n        Route::delete('/guardians/{guardian}/{student}', [UserController::class, 'unlinkStudent'])->name('admin.guardians.unlink');
         Route::post('/users/{user}/role', [UserController::class, 'updateRole'])->name('admin.users.updateRole');
 
         Route::get('/courses', [CourseController::class, 'adminIndex'])->name('admin.courses.index');
