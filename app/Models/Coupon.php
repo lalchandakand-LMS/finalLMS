@@ -35,12 +35,12 @@ class Coupon extends Model
         return true;
     }
 
-    public function eligibleSubtotal(iterable $items, ?int $userId = null): float
+    public function eligibleSubtotal(iterable $items, ?int $userId = null, array $prices = []): float
     {
         $productIds = $this->products()->pluck('products.id');
         $categoryIds = $this->categories()->pluck('product_categories.id');
         if ($productIds->isEmpty() && $categoryIds->isEmpty()) {
-            return collect($items)->sum(fn ($item) => (float) $item->product->currentPrice($userId) * $item->quantity);
+            return collect($items)->sum(fn ($item) => (float) ($prices[$item->product_id] ?? $item->product->currentPrice($userId)) * $item->quantity);
         }
         $eligible = 0.0;
         foreach ($items as $item) {
@@ -48,7 +48,7 @@ class Coupon extends Model
             if (!$product) continue;
             $matches = $productIds->contains($product->id)
                 || ($categoryIds->isNotEmpty() && $product->categories()->whereIn('product_categories.id', $categoryIds)->exists());
-            if ($matches) $eligible += (float) $product->currentPrice($userId) * $item->quantity;
+            if ($matches) $eligible += (float) ($prices[$product->id] ?? $product->currentPrice($userId)) * $item->quantity;
         }
         return round($eligible, 2);
     }
