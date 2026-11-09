@@ -255,6 +255,31 @@ class MobileApiFoundationTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_enrolled_student_can_complete_lesson_through_mobile_api_idempotently(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $course = Course::factory()->create(['teacher_id' => $teacher->id]);
+        $lesson = $course->lessons()->create([
+            'title' => 'Complete from app', 'content' => 'Lesson', 'duration_minutes' => 10, 'order' => 1,
+        ]);
+        Enrollment::create(['user_id' => $student->id, 'course_id' => $course->id, 'status' => 'active']);
+        $student->apiTokens()->create([
+            'name' => 'Student app',
+            'token_hash' => hash('sha256', 'mobile-completion-token-0123456789012345678901234567890123456789'),
+            'expires_at' => now()->addDay(),
+        ]);
+        $url = '/api/v1/courses/'.$course->slug.'/lessons/'.$lesson->id.'/complete';
+
+        $this->withToken('mobile-completion-token-0123456789012345678901234567890123456789')
+            ->postJson($url)->assertOk()->assertJsonPath('completed', true);
+        $this->withToken('mobile-completion-token-0123456789012345678901234567890123456789')
+            ->postJson($url)->assertOk()->assertJsonPath('completed', true);
+
+        $this->assertDatabaseCount('lesson_progress', 1);
+        $this->assertDatabaseHas('lesson_progress', ['user_id' => $student->id, 'lesson_id' => $lesson->id]);
+    }
+
     public function test_expired_and_unknown_bearer_tokens_are_rejected(): void
     {
         $student = User::factory()->create(['role' => 'student']);
