@@ -9,9 +9,12 @@ use Symfony\\Component\\HttpFoundation\\Response;
 
 class AuthenticateApiToken
 {
-    public function handle(Request $request, Closure $next): Response
+    public function handle(Request $request, Closure $next, string $mode = 'required'): Response
     {
         $plainTextToken = $request->bearerToken();
+        if ($plainTextToken === null && $mode === 'optional') {
+            return $next($request);
+        }
         if (! is_string($plainTextToken) || strlen($plainTextToken) < 40 || strlen($plainTextToken) > 128) {
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
