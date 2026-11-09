@@ -133,8 +133,8 @@ class FlashSaleTest extends TestCase
     {
         $course = $this->makeCourse(1200);
         $admin = User::factory()->create(['role' => 'admin']);
-        $category = \\App\\Models\\ProductCategory::create(['name' => 'Spoken English', 'slug' => 'spoken-english-products']);
-        $product = \\App\\Models\\Product::create([
+        $category = \App\Models\ProductCategory::create(['name' => 'Spoken English', 'slug' => 'spoken-english-products']);
+        $product = \App\Models\Product::create([
             'type' => 'course',
             'course_id' => $course->id,
             'name' => 'Spoken English Product',
