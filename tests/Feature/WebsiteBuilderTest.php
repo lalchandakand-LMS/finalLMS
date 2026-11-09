@@ -235,4 +235,48 @@ class WebsiteBuilderTest extends TestCase
         $this->get(route('admin.website-builder.preview'))->assertForbidden();
     }
 
+
+    public function test_admin_can_save_insert_and_delete_custom_homepage_blocks(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->post(route('admin.website-builder.custom-blocks.store'), [
+            'name' => 'Blue CTA',
+            'title' => 'Join our next batch',
+            'body' => 'Practical English lessons.',
+            'button_label' => 'View courses',
+            'button_url' => '/courses',
+            'background_color' => '#123456',
+            'text_color' => '#ffffff',
+            'spacing' => 'airy',
+            'layout' => 'centered',
+        ])->assertRedirect(route('admin.website-builder.index'));
+
+        $blocks = json_decode((string) Setting::value('homepage_custom_blocks'), true);
+        $this->assertCount(1, $blocks);
+        $this->assertSame('Blue CTA', $blocks[0]['name']);
+        $this->assertSame('/courses', $blocks[0]['button_url']);
+
+        $this->actingAs($admin)->get(route('admin.website-builder.index'))
+            ->assertOk()
+            ->assertSee('My saved custom blocks')
+            ->assertSee('Blue CTA')
+            ->assertSee('data-insert-custom-block');
+
+        $this->actingAs($admin)->delete(route('admin.website-builder.custom-blocks.destroy'), [
+            'block_id' => $blocks[0]['id'],
+        ])->assertRedirect(route('admin.website-builder.index'));
+
+        $this->assertSame([], json_decode((string) Setting::value('homepage_custom_blocks'), true));
+    }
+
+    public function test_non_admin_cannot_manage_custom_homepage_blocks(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+
+        $this->actingAs($student)->post(route('admin.website-builder.custom-blocks.store'), [
+            'name' => 'No access', 'title' => 'No access',
+        ])->assertForbidden();
+    }
+
 }
