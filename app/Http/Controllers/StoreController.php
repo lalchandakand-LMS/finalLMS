@@ -84,7 +84,9 @@ class StoreController extends Controller
             if (!empty($data['coupon_code'])) {
                 $coupon = Coupon::query()->where('code', strtoupper(trim($data['coupon_code'])))->lockForUpdate()->first();
                 abort_unless($coupon && $coupon->isAvailableFor($request->user()->id, $subtotal), 422, 'This coupon is invalid, expired, or its usage limit has been reached.');
-                $discount = $coupon->calculateDiscount($subtotal);
+                $eligibleSubtotal = $coupon->eligibleSubtotal($cart->items, $request->user()->id);
+                abort_if($eligibleSubtotal <= 0, 422, 'This coupon does not apply to products in your cart.');
+                $discount = $coupon->calculateDiscount($eligibleSubtotal);
             }
 
             $proofPath = $request->file('payment_proof')?->store('private/order-payment-proofs', 'local');
