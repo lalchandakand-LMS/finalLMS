@@ -281,7 +281,7 @@
                 <a class="menu-link {{ request()->routeIs('admin.batches.*','admin.branches.*') ? 'active' : '' }}" href="{{ route('admin.batches.index') }}"><span class="menu-icon">🗓️</span><span class="menu-text">Batches & branches</span></a>
                 <a class="menu-link {{ request()->routeIs('admin.contests.*') ? 'active' : '' }}" href="{{ route('admin.contests.index') }}"><span class="menu-icon">🎁</span><span class="menu-text">Quiz & contests</span></a>
                 <a class="menu-link {{ request()->routeIs('live-classes.*') ? 'active' : '' }}" href="{{ route('live-classes.index') }}"><span class="menu-icon">🎥</span><span class="menu-text">Live classes</span></a>
-                <div class="app-sidebar-section">Finance & payments</div>
+                <div class="app-sidebar-section">Finance &amp; payments</div>
                 <a class="menu-link {{ request()->routeIs('admin.payments.*') ? 'active' : '' }}" href="{{ route('admin.payments.index') }}"><span class="menu-icon">💳</span><span class="menu-text">Payments</span></a>
                 <a class="menu-link {{ request()->routeIs('admin.invoices.*') ? 'active' : '' }}" href="{{ route('admin.invoices.index') }}"><span class="menu-icon">🧾</span><span class="menu-text">Invoices</span></a>
                 <a class="menu-link {{ request()->routeIs('admin.refunds.*') ? 'active' : '' }}" href="{{ route('admin.refunds.index') }}"><span class="menu-icon">↩️</span><span class="menu-text">Refunds</span></a>
@@ -318,7 +318,7 @@
                 <a class="menu-link {{ request()->routeIs('branch-manager.students.*') ? 'active' : '' }}" href="{{ route('branch-manager.students.index') }}"><span class="menu-icon">👥</span><span class="menu-text">Branch students</span></a>
             @elseif(auth()->user()->isAccountant())
                 <div class="app-sidebar-section">Finance workspace</div>
-                <a class="menu-link {{ request()->routeIs('accountant.invoices.*') ? 'active' : '' }}" href="{{ route('accountant.invoices.index') }}"><span class="menu-icon">🧾</span><span class="menu-text">Invoices & fees</span></a>
+                <a class="menu-link {{ request()->routeIs('accountant.invoices.*') ? 'active' : '' }}" href="{{ route('accountant.invoices.index') }}"><span class="menu-icon">🧾</span><span class="menu-text">Invoices &amp; fees</span></a>
                 <a class="menu-link {{ request()->routeIs('accountant.refunds.*') ? 'active' : '' }}" href="{{ route('accountant.refunds.index') }}"><span class="menu-icon">↩️</span><span class="menu-text">Refunds</span></a>
                 <a class="menu-link {{ request()->routeIs('accountant.expenses.*') ? 'active' : '' }}" href="{{ route('accountant.expenses.index') }}"><span class="menu-icon">💸</span><span class="menu-text">Expenses</span></a>
                 <a class="menu-link {{ request()->routeIs('accountant.finance-reports.*') ? 'active' : '' }}" href="{{ route('accountant.finance-reports.index') }}"><span class="menu-icon">📊</span><span class="menu-text">Finance reports</span></a>
