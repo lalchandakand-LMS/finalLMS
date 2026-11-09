@@ -99,7 +99,7 @@
                 <div><strong>{{ $block['name'] ?? 'Custom block' }}</strong><div class="muted">{{ $block['title'] ?? '' }}</div></div>
                 <div class="cta-row">
                     <button type="button" class="btn secondary" data-insert-custom-block='@json($block)'>Insert</button>
-                    <form method="POST" action="{{ route('admin.website-builder.custom-blocks.destroy') }}" onsubmit="return confirm('Delete this saved block?');">@csrf @method('DELETE')<input type="hidden" name="block_id" value="{{ $block['id'] ?? '' }}"><button type="submit" class="btn secondary">Delete</button></form>
+                    <button type="button" class="btn secondary" data-delete-custom-block data-block-id="{{ $block['id'] ?? '' }}">Delete</button>
                 </div>
             </div>
         @empty
@@ -253,6 +253,26 @@
             } catch (_) {
                 button.disabled = false;
                 window.alert('Could not save this block. Please check your session and try again.');
+            }
+        });
+    });
+    document.querySelectorAll('[data-delete-custom-block]').forEach((button) => {
+        button.addEventListener('click', async () => {
+            if (!window.confirm('Delete this saved block?')) return;
+            const payload = new FormData();
+            payload.append('_token', csrf);
+            payload.append('_method', 'DELETE');
+            payload.append('block_id', button.dataset.blockId || '');
+            button.disabled = true;
+            try {
+                const response = await fetch("{{ route('admin.website-builder.custom-blocks.destroy') }}", {
+                    method: 'POST', body: payload, headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                });
+                if (!response.ok) throw new Error('Delete failed');
+                window.location.reload();
+            } catch (_) {
+                button.disabled = false;
+                window.alert('Could not delete this block. Please check your session and try again.');
             }
         });
     });
