@@ -30,8 +30,6 @@ class WebsiteBuilderController extends Controller
         $footerLinks = is_array($footerLinks) ? $footerLinks : [];
         $headerLinks = json_decode((string) ($settings['header_links'] ?? '[]'), true);
         $headerLinks = is_array($headerLinks) ? $headerLinks : [];
-        $draft = json_decode((string) Setting::value('homepage_draft', ''), true);
-        $draft = is_array($draft) ? $draft : null;
         $revisions = json_decode((string) Setting::value('homepage_revisions', '[]'), true);
         $revisions = is_array($revisions) ? $revisions : [];
         $templates = self::homepageTemplates();
