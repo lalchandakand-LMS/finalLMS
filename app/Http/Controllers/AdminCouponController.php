@@ -48,9 +48,9 @@ class AdminCouponController extends Controller
 
     public function destroy(Coupon $coupon): RedirectResponse
     {
-        if ($coupon->redemptions()->exists()) {
+        if ($coupon->redemptions()->exists() || $coupon->orders()->exists()) {
             $coupon->update(['is_active'=>false]);
-            return back()->with('success','Coupon has order history and was deactivated.');
+            return back()->with('success','Coupon has order or redemption history and was deactivated.');
         }
         $coupon->delete();
         return back()->with('success','Coupon deleted.');
