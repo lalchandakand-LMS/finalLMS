@@ -69,6 +69,12 @@ class BackupRestoreTest extends TestCase
 
         $this->assertDatabaseMissing('users', ['email' => 'temporary@example.test']);
         $this->assertDatabaseHas('users', ['id' => $admin->id, 'email' => $admin->email]);
+
+        // A separately stored recovery point must exist before a restore replaces data.
+        $archives = Storage::disk('local')->files('backups');
+        $this->assertCount(2, $archives);
+        $safetyArchives = array_filter($archives, fn (string $file) => str_contains($file, 'aloms-lms-backup-'));
+        $this->assertCount(2, $safetyArchives);
     }
 
     public function test_non_admin_cannot_open_backup_management(): void
