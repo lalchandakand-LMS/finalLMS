@@ -1,20 +1,20 @@
 <?php
 
-namespace App\\Http\\Controllers;
+namespace App\Http\Controllers;
 
-use App\\Models\\Assignment;
-use App\\Models\\AssignmentSubmission;
-use App\\Models\\Batch;
-use App\\Models\\Enrollment;
-use Illuminate\\Http\\RedirectResponse;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Facades\\Auth;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\Support\\Facades\\Storage;
-use Illuminate\\Support\\Str;
-use Illuminate\\Validation\\ValidationException;
-use Symfony\\Component\\HttpFoundation\\StreamedResponse;
-use Illuminate\\View\\View;
+use App\Models\Assignment;
+use App\Models\AssignmentSubmission;
+use App\Models\Batch;
+use App\Models\Enrollment;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+use Illuminate\View\View;
 use Throwable;
 
 class AssignmentController extends Controller
@@ -74,7 +74,6 @@ class AssignmentController extends Controller
     public function submit(Assignment $assignment, Request $request): RedirectResponse
     {
         abort_unless(Auth::user()->isStudent(), 403);
-
         $this->authorizeActiveEnrollment($assignment);
 
         $validated = $request->validate([
@@ -275,8 +274,8 @@ class AssignmentController extends Controller
 
     private function safeOriginalFilename(string $filename): string
     {
-        $filename = basename(str_replace('\\\\', '/', $filename));
-        $filename = preg_replace('/[\\x00-\\x1F\\x7F"<>]/u', '_', $filename) ?: 'assignment-submission';
+        $filename = basename(str_replace('\\', '/', $filename));
+        $filename = preg_replace('/[\x00-\x1F\x7F"<>]/u', '_', $filename) ?: 'assignment-submission';
 
         return Str::limit(trim($filename), 180, '');
     }
