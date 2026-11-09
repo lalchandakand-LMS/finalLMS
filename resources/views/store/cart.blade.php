@@ -8,18 +8,18 @@
 @php($total=0)
 <div style="display:grid;gap:12px">
 @foreach($cart->items as $item)
-@php($line=(float)$item->product->currentPrice()*$item->quantity) @php($total+=$line)
+@php($line=(float)$item->product->currentPrice(auth()->id())*$item->quantity) @php($total+=$line)
 <div class="panel" style="padding:16px;border:1px solid var(--border);border-radius:12px;display:flex;justify-content:space-between;gap:15px;align-items:center">
-<div><strong>{{ $item->product->name }}</strong><div>৳{{ number_format((float)$item->product->currentPrice(),2) }} each</div></div>
+<div><strong>{{ $item->product->name }}</strong><div>৳{{ number_format((float)$item->product->currentPrice(auth()->id()),2) }} each</div></div>
 <div style="display:flex;gap:8px;align-items:center">
-<form method="POST" enctype="multipart/form-data" action="{{ route('store.cart.update',$item) }}">@csrf @method('PUT')<input type="number" name="quantity" min="1" max="10" value="{{ $item->quantity }}" style="width:70px"><button type="submit">Update</button></form>
+<form method="POST" action="{{ route('store.cart.update',$item) }}">@csrf @method('PUT')<input type="number" name="quantity" min="1" max="10" value="{{ $item->quantity }}" style="width:70px"><button type="submit">Update</button></form>
 <form method="POST" action="{{ route('store.cart.remove',$item) }}">@csrf @method('DELETE')<button type="submit">Remove</button></form>
 <strong>৳{{ number_format($line,2) }}</strong>
 </div></div>
 @endforeach
 </div>
 <h2>Total: ৳{{ number_format($total,2) }}</h2>
-<form method="POST" action="{{ route('store.checkout') }}" class="panel" style="padding:18px;border:1px solid var(--border);border-radius:12px;max-width:540px">
+<form method="POST" enctype="multipart/form-data" action="{{ route('store.checkout') }}" class="panel" style="padding:18px;border:1px solid var(--border);border-radius:12px;max-width:540px">
 @csrf<h3>Checkout — Manual Payment Submission</h3>
 <label>Coupon code (optional)</label><input name="coupon_code" maxlength="60" placeholder="Enter coupon code" style="display:block;width:100%;padding:10px;margin:6px 0 14px">
 <label>Payment method</label><select name="payment_method" required style="display:block;width:100%;padding:10px;margin:6px 0 14px">
