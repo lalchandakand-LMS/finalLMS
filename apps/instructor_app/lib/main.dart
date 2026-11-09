@@ -27,7 +27,7 @@ class _InstructorGateState extends State<InstructorGate> {
   void initState() {
     super.initState();
     api.readToken().then((token) {
-      if (!mounted) return;
+      if (!mounted) {\n        return;\n      }
       setState(() { signedIn = token != null; loading = false; });
     });
   }
@@ -115,7 +115,7 @@ class _InstructorHomeState extends State<InstructorHome> {
       showModalBottomSheet<void>(context: context, builder: (context) => SafeArea(child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text('Students — ' + course['title'].toString(), style: Theme.of(context).textTheme.titleLarge),
+          Text('Students — ${course['title']}', style: Theme.of(context).textTheme.titleLarge),
           ...students.map((item) {
             final student = item['student'] as Map<String, dynamic>;
             return ListTile(title: Text(student['name']?.toString() ?? 'Student'), subtitle: Text(student['email']?.toString() ?? ''));
@@ -144,7 +144,7 @@ class _InstructorHomeState extends State<InstructorHome> {
             return Card(child: ListTile(
               leading: const Icon(Icons.menu_book),
               title: Text(course['title']?.toString() ?? 'Course'),
-              subtitle: Text((course['students_count'] ?? 0).toString() + ' enrolled students · ' + (course['status'] ?? '').toString()),
+              subtitle: Text("${course['students_count'] ?? 0} enrolled students · ${course['status'] ?? ''}"),
               trailing: const Icon(Icons.people_outline),
               onTap: () => showStudents(course),
             ));
