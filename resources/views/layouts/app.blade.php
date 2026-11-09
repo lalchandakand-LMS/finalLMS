@@ -298,7 +298,7 @@
             @elseif(auth()->user()->isTeacher())
                 <div class="app-sidebar-section">Teaching tools</div>
                 <a class="menu-link {{ request()->routeIs('teacher.batches.*') ? 'active' : '' }}" href="{{ route('teacher.batches.index') }}"><span class="menu-icon">🗓️</span><span class="menu-text">My batches</span></a>
-                <a class="menu-link {{ request()->routeIs('teacher.courses.*') ? 'active' : '' }}" href="{{ route('teacher.batches.index') }}"><span class="menu-icon">📚</span><span class="menu-text">My courses & lessons</span></a>
+                <a class="menu-link {{ request()->routeIs('teacher.courses.*') ? 'active' : '' }}" href="{{ route('dashboard') }}"><span class="menu-icon">📚</span><span class="menu-text">Assigned courses</span></a>
                 <a class="menu-link {{ request()->routeIs('live-classes.*') ? 'active' : '' }}" href="{{ route('live-classes.index') }}"><span class="menu-icon">🎥</span><span class="menu-text">Live classes</span></a>
             @elseif(auth()->user()->isStudent())
                 <div class="app-sidebar-section">My learning</div>
