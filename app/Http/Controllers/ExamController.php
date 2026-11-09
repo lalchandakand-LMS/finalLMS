@@ -306,7 +306,7 @@ class ExamController extends Controller
                 $exam->ends_at->getTimestamp(),
                 $lockedAttempt->started_at->copy()->addMinutes($exam->duration_minutes)->getTimestamp()
             );
-            abort_if(now()->getTimestamp() > $deadline, 403, 'The exam submission window has closed.');
+            // A short transport grace prevents a valid timer-triggered submission from failing due to network latency.\n            abort_if(now()->getTimestamp() > $deadline + 15, 403, 'The exam submission window has closed.');
 
             $validated = $request->validate([
                 'answers' => ['sometimes', 'array'],
