@@ -53,6 +53,7 @@ class StoreCheckoutTest extends TestCase
         $this->assertSame('2250.00',$order->total);
         $this->assertDatabaseHas('order_items',['order_id'=>$order->id,'product_id'=>$product->id]);
 
+        Enrollment::create(['user_id'=>$student->id,'course_id'=>$course->id,'status'=>'pending']);
         $this->actingAs($admin)->get(route('admin.orders.proof',$order))->assertOk();
         $this->actingAs($admin)->post(route('admin.orders.approve',$order))->assertRedirect();
         $this->assertDatabaseHas('orders',['id'=>$order->id,'status'=>'completed']);
