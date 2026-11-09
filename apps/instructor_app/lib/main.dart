@@ -111,8 +111,10 @@ class _InstructorHomeState extends State<InstructorHome> {
   }
   Future<void> showStudents(Map<String, dynamic> course) async {
     try {
-      final response = await widget.api.get('/instructor/courses/' + course['slug'].toString() + '/students');
-      if (!mounted) return;
+      final response = await widget.api.get("/instructor/courses/${course['slug']}/students");
+      if (!mounted) {
+        return;
+      }
       final students = response['data'] as List<dynamic>? ?? [];
       showModalBottomSheet<void>(context: context, builder: (context) => SafeArea(child: ListView(
         padding: const EdgeInsets.all(16),
@@ -126,7 +128,9 @@ class _InstructorHomeState extends State<InstructorHome> {
         ],
       )));
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
