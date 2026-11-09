@@ -177,6 +177,7 @@ class CourseController extends Controller
         abort_unless($lesson->course_id === $course->id && $lesson->video_path, 404);
         $user = Auth::user();
         $canManageCourse = $user && ($user->isAdmin() || ($user->isTeacher() && $course->teacher_id === $user->id));
+        abort_unless($course->status === 'published' || $canManageCourse, 404);
         $isEnrolled = $user && $user->isStudent()
             && $course->enrollments()->where('user_id', $user->id)->whereIn('status', ['active', 'completed'])->exists();
         abort_unless($lesson->is_preview || $canManageCourse || $isEnrolled, 403);
