@@ -8,6 +8,7 @@
     $sections = collect($draft['sections'] ?? [])->filter(fn ($section) => is_array($section) && !empty($section['enabled']));
     $slides = collect($draft['home_slides'] ?? [])->filter(fn ($slide) => is_array($slide) && !empty($slide['enabled']));
     $headerLinks = collect($draft['header_links'] ?? [])->filter(fn ($link) => is_array($link) && !empty($link['label']) && !empty($link['url']));
+    $footerLinks = collect($draft['footer_links'] ?? [])->filter(fn ($link) => is_array($link) && !empty($link['label']) && !empty($link['url']));
     $previewPrimary = preg_match('/^#[0-9A-Fa-f]{6}$/', $draft['site_primary_color'] ?? '') ? $draft['site_primary_color'] : '#1546a8';
     $previewBackground = preg_match('/^#[0-9A-Fa-f]{6}$/', $draft['site_background_color'] ?? '') ? $draft['site_background_color'] : '#f3f6fb';
     $previewBackgrounds = ['solid' => $previewBackground, 'soft-gradient' => 'radial-gradient(circle at top left, rgba(21,70,168,0.10), transparent 30%), linear-gradient(180deg, ' . $previewBackground . ' 0%, #ffffff 100%)', 'warm-gradient' => 'radial-gradient(circle at top left, rgba(180,130,70,0.10), transparent 30%), linear-gradient(180deg, ' . $previewBackground . ' 0%, #fffdf9 100%)'];
@@ -78,8 +79,15 @@
     @endforeach
 </section>
 @endif
+<footer class="panel homepage-preview-footer" aria-label="Draft footer">
+    <h2>{{ $draft['footer_title'] ?? ($draft['site_name'] ?? config('app.name')) }}</h2>
+    @if(!empty($draft['footer_text']))<p>{{ $draft['footer_text'] }}</p>@endif
+    @if($footerLinks->isNotEmpty())<nav class="cta-row" aria-label="Draft footer navigation">@foreach($footerLinks as $link)<a href="{{ $link['url'] }}">{{ $link['label'] }}</a>@endforeach</nav>@endif
+</footer>
 </div>
 <style>
+    .homepage-preview-footer { margin-top:20px; padding:clamp(18px,3vw,30px); }
+    .homepage-preview-footer nav { display:flex; flex-wrap:wrap; gap:14px; }
     .homepage-preview-frame { width:100%; margin:0 auto; transition:max-width .2s ease; --preview-accent:#2457c5; --preview-radius:20px; }
     .homepage-preview-frame .hero { border-radius:var(--preview-radius); padding:clamp(18px,3vw,32px); }
     .homepage-preview-frame .panel,.homepage-preview-frame .card { border-radius:var(--preview-radius); }
