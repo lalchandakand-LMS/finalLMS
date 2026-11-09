@@ -333,13 +333,10 @@ class ExamController extends Controller
                 $awarded = $correct ? $question->marks : 0;
                 $totalScore += $awarded;
 
-                ExamAnswer::create([
-                    'exam_attempt_id' => $lockedAttempt->id,
-                    'exam_question_id' => $question->id,
-                    'selected_option' => $selected,
-                    'is_correct' => $correct,
-                    'marks_awarded' => $awarded,
-                ]);
+                $lockedAttempt->answers()->updateOrCreate(
+                    ['exam_question_id' => $question->id],
+                    ['selected_option' => $selected, 'is_correct' => $correct, 'marks_awarded' => $awarded]
+                );
             }
 
             $lockedAttempt->update([
