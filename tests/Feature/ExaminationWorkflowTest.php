@@ -480,14 +480,18 @@ class ExaminationWorkflowTest extends TestCase
             'exam_id' => $exam->id, 'question' => 'Owned?', 'options' => ['A', 'B', 'C', 'D'],
             'correct_option' => 0, 'marks' => 1, 'position' => 1,
         ]);
+        $otherExam = Exam::create([
+            'batch_id' => $batch->id, 'teacher_id' => $teacher->id, 'title' => 'Different exam',
+            'starts_at' => now()->subMinute(), 'ends_at' => now()->addHour(),
+            'duration_minutes' => 30, 'pass_marks' => 0, 'status' => 'published',
+        ]);
         $foreignQuestion = ExamQuestion::create([
-            'exam_id' => $exam->id, 'question' => 'Not assigned?', 'options' => ['A', 'B', 'C', 'D'],
-            'correct_option' => 0, 'marks' => 1, 'position' => 2,
+            'exam_id' => $otherExam->id, 'question' => 'Not assigned?', 'options' => ['A', 'B', 'C', 'D'],
+            'correct_option' => 0, 'marks' => 1, 'position' => 1,
         ]);
 
         $this->actingAs($student)->post(route('student.exams.start', $exam))->assertRedirect();
         $attempt = ExamAttempt::where('exam_id', $exam->id)->where('student_id', $student->id)->firstOrFail();
-        $attempt->attemptQuestions()->where('exam_question_id', $foreignQuestion->id)->delete();
 
         $this->postJson(route('student.exams.answers.save', $attempt), [
             'answers' => [$foreignQuestion->id => 0],
