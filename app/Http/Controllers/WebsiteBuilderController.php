@@ -24,11 +24,11 @@ class WebsiteBuilderController extends Controller
             $settings = array_merge($settings, $draft);
             $sections = is_array($draft['sections'] ?? null) ? $draft['sections'] : $sections;
         }
-        $slides = json_decode((string) ($settings['home_slides'] ?? '[]'), true);
+        $slides = is_array($draft['home_slides'] ?? null) ? $draft['home_slides'] : json_decode((string) ($settings['home_slides'] ?? '[]'), true);
         $slides = is_array($slides) ? $slides : [];
-        $footerLinks = json_decode((string) ($settings['footer_links'] ?? '[]'), true);
+        $footerLinks = is_array($draft['footer_links'] ?? null) ? $draft['footer_links'] : json_decode((string) ($settings['footer_links'] ?? '[]'), true);
         $footerLinks = is_array($footerLinks) ? $footerLinks : [];
-        $headerLinks = json_decode((string) ($settings['header_links'] ?? '[]'), true);
+        $headerLinks = is_array($draft['header_links'] ?? null) ? $draft['header_links'] : json_decode((string) ($settings['header_links'] ?? '[]'), true);
         $headerLinks = is_array($headerLinks) ? $headerLinks : [];
         $revisions = json_decode((string) Setting::value('homepage_revisions', '[]'), true);
         $revisions = is_array($revisions) ? $revisions : [];
