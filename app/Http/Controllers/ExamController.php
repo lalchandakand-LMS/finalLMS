@@ -309,7 +309,7 @@ class ExamController extends Controller
             abort_if(now()->getTimestamp() > $deadline, 403, 'The exam submission window has closed.');
 
             $validated = $request->validate([
-                'answers' => ['required', 'array'],
+                'answers' => ['sometimes', 'array'],
                 'answers.*' => ['required', 'integer', 'between:0,3'],
             ]);
 
@@ -317,18 +317,19 @@ class ExamController extends Controller
                 ->pluck('exam_question_id')
                 ->map(fn ($id) => (string) $id)
                 ->all();
-            $submittedIds = array_map('strval', array_keys($validated['answers']));
+            $submittedAnswers = $validated['answers'] ?? [];
+            $submittedIds = array_map('strval', array_keys($submittedAnswers));
             abort_unless(count(array_diff($submittedIds, $questionIds)) === 0, 422);
 
             $totalScore = 0;
 
             foreach ($attemptQuestions as $attemptQuestion) {
                 $question = $attemptQuestion->question;
-                if (! $question || ! array_key_exists((string) $question->id, $validated['answers'])) {
+                if (! $question || ! array_key_exists((string) $question->id, $submittedAnswers)) {
                     continue;
                 }
 
-                $selected = (int) $validated['answers'][(string) $question->id];
+                $selected = (int) $submittedAnswers[(string) $question->id];
                 $correct = $selected === $question->correct_option;
                 $awarded = $correct ? $question->marks : 0;
                 $totalScore += $awarded;
