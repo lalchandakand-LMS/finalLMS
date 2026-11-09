@@ -23,6 +23,11 @@ class AdminDashboardControlCenterTest extends TestCase
             ->assertSee('Users')
             ->assertSee('Courses')
             ->assertSee('Settings')
-            ->assertSee('Analytics');
+            ->assertSee('Analytics')
+            ->assertSee('app-sidebar')
+            ->assertSee('sidebar-toggle')
+            ->assertSee('Admin workspace')
+            ->assertSee('Commerce orders')
+            ->assertSee('Website builder');
     }
 }
