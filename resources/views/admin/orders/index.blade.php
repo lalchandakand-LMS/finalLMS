@@ -7,6 +7,8 @@
 <section class="panel" style="padding:18px;margin:14px 0;border:1px solid var(--border);border-radius:12px;background:var(--panel)">
 <div style="display:flex;justify-content:space-between;gap:12px"><strong>{{ $order->order_number }}</strong><b>{{ strtoupper($order->status) }}</b></div>
 <p>{{ $order->user->name }} · {{ $order->user->email }} · {{ $order->payment_method }} · Ref: {{ $order->payment_reference }}</p>
+@if($order->payment_sender)<p>Sender account: {{ $order->payment_sender }}</p>@endif
+@if($order->payment_proof_path)<p><a href="{{ route('admin.orders.proof',$order) }}">View payment proof (private)</a></p>@endif
 <ul>@foreach($order->items as $item)<li>{{ $item->product_name }} × {{ $item->quantity }} — ৳{{ number_format((float)$item->line_total,2) }}</li>@endforeach</ul>
 <strong>Total: ৳{{ number_format((float)$order->total,2) }}</strong>
 @if($order->status==='pending')
