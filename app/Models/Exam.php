@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\QuestionSet;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -28,7 +29,12 @@ class Exam extends Model
         return $this->belongsTo(User::class, 'teacher_id');
     }
 
-    public function questionSet(): BelongsTo\n    {\n        return $this->belongsTo(QuestionSet::class);\n    }\n\n    public function questions(): HasMany
+    public function questionSet(): BelongsTo
+    {
+        return $this->belongsTo(QuestionSet::class);
+    }
+
+    public function questions(): HasMany
     {
         return $this->hasMany(ExamQuestion::class)->orderBy('position');
     }
