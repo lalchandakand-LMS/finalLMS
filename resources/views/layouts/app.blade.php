@@ -41,7 +41,7 @@
             fbq('track','PageView');
         </script>
     @endif
-    @php($isAdminLayout = auth()->check() && auth()->user()->isAdmin())
+    @php($hasAppSidebar = auth()->check())
     <style>
         :root {
             --bg: #f3f6fb;
@@ -58,6 +58,52 @@
         }
 
         * { box-sizing: border-box; }
+        
+        body.app-shell { background:#f4f7fc; }
+        .app-sidebar { position:fixed; inset:0 auto 0 0; z-index:40; width:268px; padding:20px 14px; overflow-y:auto; color:#dce8ff; background:linear-gradient(180deg,#102b63,#0b1d42); box-shadow:8px 0 30px rgba(9,25,58,.12); }
+        .app-sidebar-brand { display:flex; align-items:center; gap:11px; padding:6px 10px 20px; color:#fff; font-weight:800; text-decoration:none; border-bottom:1px solid #ffffff20; }
+        .brand-mark { display:grid; place-items:center; flex:0 0 40px; width:40px; height:40px; border-radius:12px; background:#ffffff1c; }
+        .brand-copy small { color:#a9bee0; font-size:.73rem; font-weight:500; }
+        .app-sidebar-section { margin:19px 10px 7px; color:#91a9d0; font-size:.66rem; font-weight:800; letter-spacing:.14em; text-transform:uppercase; }
+        .app-sidebar a.menu-link { display:flex; align-items:center; gap:12px; min-height:41px; padding:9px 11px; margin:3px 0; border-radius:10px; color:#dbe7ff; font-size:.86rem; font-weight:600; text-decoration:none; }
+        .app-sidebar a.menu-link:hover,.app-sidebar a.menu-link.active { color:#fff; background:linear-gradient(90deg,#2b61b8aa,#ffffff18); }
+        .app-sidebar a.menu-link.active { box-shadow:inset 3px 0 #83b5ff; }
+        .menu-icon { display:grid; place-items:center; flex:0 0 23px; width:23px; font-size:1.03rem; }
+        .app-sidebar-footer { margin:22px 8px 0; padding:14px 10px 4px; border-top:1px solid #ffffff25; color:#9fb3d4; font-size:.75rem; line-height:1.6; }
+        .app-shell .topbar { position:relative; top:auto; margin-left:268px; }
+        .app-shell .nav { max-width:none; padding:13px 26px; gap:16px; }
+        .app-shell .nav .brand { font-size:1.08rem; }
+        .app-shell .nav-links { gap:8px; }
+        .app-shell .nav-links > a { display:none; }
+        .app-shell .nav-links > form { display:inline-flex; }
+        .app-shell .container { max-width:none; margin-left:268px; padding:28px 30px 55px; }
+        .sidebar-toggle { display:none; border:1px solid var(--border); background:#fff; color:var(--primary-dark); border-radius:10px; width:40px; height:40px; font-size:1.25rem; cursor:pointer; }
+        .sidebar-overlay { display:none; }
+        @media(max-width:900px) {
+            .app-sidebar { width:76px; padding:18px 8px; }
+            .app-sidebar-brand { justify-content:center; padding:5px 0 18px; }
+            .brand-copy,.app-sidebar-section,.app-sidebar a.menu-link .menu-text,.app-sidebar-footer { display:none; }
+            .app-sidebar a.menu-link { justify-content:center; padding:11px 4px; }
+            .menu-icon { flex-basis:auto; }
+            .app-shell .topbar,.app-shell .container { margin-left:76px; }
+            .app-shell .nav { padding:11px 14px; }
+            .app-shell .container { padding:22px 18px 45px; }
+        }
+        @media(max-width:600px) {
+            .app-sidebar { width:270px; transform:translateX(-102%); transition:transform .24s ease; padding:18px 14px; }
+            .app-sidebar.is-open { transform:translateX(0); }
+            .app-sidebar.is-open .brand-copy,.app-sidebar.is-open .app-sidebar-section,.app-sidebar.is-open a.menu-link .menu-text,.app-sidebar.is-open .app-sidebar-footer { display:block; }
+            .app-sidebar.is-open a.menu-link { justify-content:flex-start; padding:9px 11px; }
+            .app-sidebar.is-open .menu-icon { flex-basis:23px; }
+            .sidebar-overlay.is-visible { display:block; position:fixed; inset:0; z-index:35; background:rgba(8,20,42,.48); }
+            .app-shell .topbar,.app-shell .container { margin-left:0; }
+            .app-shell .nav { flex-direction:row; align-items:center; padding:10px 12px; }
+            .app-shell .nav .brand { font-size:.92rem; }
+            .app-shell .nav-links { width:auto; margin-left:auto; }
+            .app-shell .nav-links label { display:none; }
+            .app-shell .container { padding:18px 12px 40px; }
+            .sidebar-toggle { display:inline-grid; place-items:center; flex:0 0 40px; }
+        }
         body.admin-shell { background:#f5f7fb; }
         .admin-shell .topbar { margin-left:252px; }
         .admin-shell .nav { max-width:none; padding:14px 26px; }
@@ -173,40 +219,74 @@
         <noscript><iframe src="https://www.googletagmanager.com/ns.html?id={{ urlencode($googleTagManagerId) }}" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     @endif
 
-    @if($isAdminLayout)
-        <aside class="admin-sidebar" aria-label="Admin navigation">
-            <a class="admin-sidebar-brand" href="{{ route('dashboard') }}"><span>📘</span><strong>Alom’s English Center<br><small style="font-weight:500;color:#a9bee0;">Admin workspace</small></strong></a>
-            <div class="admin-sidebar-label">Overview</div>
-            <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><span>▦</span><span class="nav-text">Dashboard</span></a>
-            <div class="admin-sidebar-label">Academy</div>
-            <a href="{{ route('admin.courses.index') }}"><span>📚</span><span class="nav-text">Courses & lessons</span></a>
-            <a href="{{ route('admin.products.index') }}"><span>🛍️</span><span class="nav-text">Products & eBooks</span></a>
-            <a href="{{ route('admin.orders.index') }}"><span>📦</span><span class="nav-text">Commerce Orders</span></a>
-            <a href="{{ route('admin.coupons.index') }}"><span>🏷️</span><span class="nav-text">Coupons</span></a>
-            <a href="{{ route('admin.question-sets.index') }}"><span>📝</span><span class="nav-text">Question Sets</span></a>
-            <a href="{{ route('admin.flash-sales.index') }}"><span>🔥</span><span class="nav-text">Flash Sale</span></a>
-            <a href="{{ route('admin.users.index') }}"><span>👥</span><span class="nav-text">Students & teachers</span></a>
-            <a href="{{ route('admin.batches.index') }}"><span>🗓️</span><span class="nav-text">Batches & branches</span></a>
-            <a href="{{ route('admin.contests.index') }}"><span>🎁</span><span class="nav-text">Quiz & lottery</span></a>
-            <a href="{{ route('live-classes.index') }}"><span>🎥</span><span class="nav-text">Live classes</span></a>
-            <div class="admin-sidebar-label">Finance</div>
-            <a href="{{ route('admin.payments.index') }}"><span>💳</span><span class="nav-text">Payments</span></a>
-            <a href="{{ route('admin.invoices.index') }}"><span>🧾</span><span class="nav-text">Invoices</span></a>
-            <a href="{{ route('admin.refunds.index') }}"><span>↩️</span><span class="nav-text">Refunds</span></a>
-            <a href="{{ route('admin.expenses.index') }}"><span>💸</span><span class="nav-text">Expenses & reports</span></a>
-            <div class="admin-sidebar-label">Website & tools</div>
-            <a href="{{ route('admin.website-builder.index') }}"><span>🖥️</span><span class="nav-text">Website builder</span></a>
-            <a href="{{ route('admin.media.index') }}"><span>🖼️</span><span class="nav-text">Media library</span></a>
-            <a href="{{ route('admin.news.index') }}"><span>📰</span><span class="nav-text">Blog & news</span></a>
-            <a href="{{ route('admin.backups.index') }}"><span>💾</span><span class="nav-text">Backup & restore</span></a>
-            <a href="{{ route('admin.activity-logs.index') }}"><span>📋</span><span class="nav-text">Activity logs</span></a>
-            <a href="{{ route('admin.settings.index') }}"><span>⚙️</span><span class="nav-text">Settings</span></a>
-            <a href="{{ route('admin.sms-campaigns.index') }}"><span>✉️</span><span class="nav-text">SMS campaigns</span></a>
-            <div class="admin-sidebar-footer">Alom’s English Center<br>Learning Management System</div>
+
+    @auth
+        <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleAppSidebar(false)"></div>
+        <aside class="app-sidebar" id="app-sidebar" aria-label="Main navigation">
+            <a class="app-sidebar-brand" href="{{ route('dashboard') }}"><span class="brand-mark">📘</span><span class="brand-copy">Alom’s English Center<br><small>{{ auth()->user()->isAdmin() ? 'Admin workspace' : (auth()->user()->isTeacher() ? 'Teacher workspace' : (auth()->user()->isStudent() ? 'Student learning' : (auth()->user()->isBranchManager() ? 'Branch workspace' : 'Finance workspace'))) }}</small></span></a>
+            <div class="app-sidebar-section">Workspace</div>
+            <a class="menu-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><span class="menu-icon">▦</span><span class="menu-text">Dashboard</span></a>
+            @if(auth()->user()->isAdmin())
+                <div class="app-sidebar-section">Academy management</div>
+                <a class="menu-link {{ request()->routeIs('admin.courses.*') ? 'active' : '' }}" href="{{ route('admin.courses.index') }}"><span class="menu-icon">📚</span><span class="menu-text">Courses & lessons</span></a>
+                <a class="menu-link {{ request()->routeIs('admin.products.*') ? 'active' : '' }}" href="{{ route('admin.products.index') }}"><span class="menu-icon">🛍️</span><span class="menu-text">Products & eBooks</span></a>
+                <a class="menu-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}" href="{{ route('admin.orders.index') }}"><span class="menu-icon">📦</span><span class="menu-text">Commerce orders</span></a>
+                <a class="menu-link {{ request()->routeIs('admin.coupons.*') ? 'active' : '' }}" href="{{ route('admin.coupons.index') }}"><span class="menu-icon">🏷️</span><span class="menu-text">Coupons</span></a>
+                <a class="menu-link {{ request()->routeIs('admin.flash-sales.*') ? 'active' : '' }}" href="{{ route('admin.flash-sales.index') }}"><span class="menu-icon">🔥</span><span class="menu-text">Flash sales</span></a>
+                <a class="menu-link {{ request()->routeIs('admin.question-sets.*') ? 'active' : '' }}" href="{{ route('admin.question-sets.index') }}"><span class="menu-icon">📝</span><span class="menu-text">Question sets</span></a>
+                <a class="menu-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}" href="{{ route('admin.users.index') }}"><span class="menu-icon">👥</span><span class="menu-text">Students & teachers</span></a>
+                <a class="menu-link {{ request()->routeIs('admin.batches.*','admin.branches.*') ? 'active' : '' }}" href="{{ route('admin.batches.index') }}"><span class="menu-icon">🗓️</span><span class="menu-text">Batches & branches</span></a>
+                <a class="menu-link {{ request()->routeIs('admin.contests.*') ? 'active' : '' }}" href="{{ route('admin.contests.index') }}"><span class="menu-icon">🎁</span><span class="menu-text">Quiz & contests</span></a>
+                <a class="menu-link {{ request()->routeIs('live-classes.*') ? 'active' : '' }}" href="{{ route('live-classes.index') }}"><span class="menu-icon">🎥</span><span class="menu-text">Live classes</span></a>
+                <div class="app-sidebar-section">Finance & payments</div>
+                <a class="menu-link {{ request()->routeIs('admin.payments.*') ? 'active' : '' }}" href="{{ route('admin.payments.index') }}"><span class="menu-icon">💳</span><span class="menu-text">Payments</span></a>
+                <a class="menu-link {{ request()->routeIs('admin.invoices.*') ? 'active' : '' }}" href="{{ route('admin.invoices.index') }}"><span class="menu-icon">🧾</span><span class="menu-text">Invoices</span></a>
+                <a class="menu-link {{ request()->routeIs('admin.refunds.*') ? 'active' : '' }}" href="{{ route('admin.refunds.index') }}"><span class="menu-icon">↩️</span><span class="menu-text">Refunds</span></a>
+                <a class="menu-link {{ request()->routeIs('admin.expenses.*') ? 'active' : '' }}" href="{{ route('admin.expenses.index') }}"><span class="menu-icon">💸</span><span class="menu-text">Expenses</span></a>
+                <a class="menu-link {{ request()->routeIs('admin.finance-reports.*') ? 'active' : '' }}" href="{{ route('admin.finance-reports.index') }}"><span class="menu-icon">📊</span><span class="menu-text">Finance reports</span></a>
+                <div class="app-sidebar-section">Website & system</div>
+                <a class="menu-link {{ request()->routeIs('admin.website-builder.*') ? 'active' : '' }}" href="{{ route('admin.website-builder.index') }}"><span class="menu-icon">🖥️</span><span class="menu-text">Website builder</span></a>
+                <a class="menu-link {{ request()->routeIs('admin.media.*') ? 'active' : '' }}" href="{{ route('admin.media.index') }}"><span class="menu-icon">🖼️</span><span class="menu-text">Media library</span></a>
+                <a class="menu-link {{ request()->routeIs('admin.news.*') ? 'active' : '' }}" href="{{ route('admin.news.index') }}"><span class="menu-icon">📰</span><span class="menu-text">Blog & news</span></a>
+                <a class="menu-link {{ request()->routeIs('admin.backups.*') ? 'active' : '' }}" href="{{ route('admin.backups.index') }}"><span class="menu-icon">💾</span><span class="menu-text">Backup & restore</span></a>
+                <a class="menu-link {{ request()->routeIs('admin.activity-logs.*') ? 'active' : '' }}" href="{{ route('admin.activity-logs.index') }}"><span class="menu-icon">📋</span><span class="menu-text">Activity logs</span></a>
+                <a class="menu-link {{ request()->routeIs('admin.sms-campaigns.*') ? 'active' : '' }}" href="{{ route('admin.sms-campaigns.index') }}"><span class="menu-icon">✉️</span><span class="menu-text">SMS campaigns</span></a>
+                <a class="menu-link {{ request()->routeIs('admin.settings.*') ? 'active' : '' }}" href="{{ route('admin.settings.index') }}"><span class="menu-icon">⚙️</span><span class="menu-text">Settings</span></a>
+            @elseif(auth()->user()->isTeacher())
+                <div class="app-sidebar-section">Teaching tools</div>
+                <a class="menu-link {{ request()->routeIs('teacher.batches.*') ? 'active' : '' }}" href="{{ route('teacher.batches.index') }}"><span class="menu-icon">🗓️</span><span class="menu-text">My batches</span></a>
+                <a class="menu-link {{ request()->routeIs('teacher.courses.*') ? 'active' : '' }}" href="{{ route('teacher.batches.index') }}"><span class="menu-icon">📚</span><span class="menu-text">My courses & lessons</span></a>
+                <a class="menu-link {{ request()->routeIs('live-classes.*') ? 'active' : '' }}" href="{{ route('live-classes.index') }}"><span class="menu-icon">🎥</span><span class="menu-text">Live classes</span></a>
+            @elseif(auth()->user()->isStudent())
+                <div class="app-sidebar-section">My learning</div>
+                <a class="menu-link {{ request()->routeIs('student.courses.*') ? 'active' : '' }}" href="{{ route('student.courses.index') }}"><span class="menu-icon">📚</span><span class="menu-text">My courses</span></a>
+                <a class="menu-link {{ request()->routeIs('student.attendance.*') ? 'active' : '' }}" href="{{ route('student.attendance.index') }}"><span class="menu-icon">📅</span><span class="menu-text">Attendance</span></a>
+                <a class="menu-link {{ request()->routeIs('student.exams.*') ? 'active' : '' }}" href="{{ route('student.exams.index') }}"><span class="menu-icon">📝</span><span class="menu-text">Exams & results</span></a>
+                <a class="menu-link {{ request()->routeIs('student.invoices.*') ? 'active' : '' }}" href="{{ route('student.invoices.index') }}"><span class="menu-icon">🧾</span><span class="menu-text">My fees</span></a>
+                <a class="menu-link {{ request()->routeIs('store.orders') ? 'active' : '' }}" href="{{ route('store.orders') }}"><span class="menu-icon">📦</span><span class="menu-text">My orders</span></a>
+                <a class="menu-link {{ request()->routeIs('store.cart') ? 'active' : '' }}" href="{{ route('store.cart') }}"><span class="menu-icon">🛒</span><span class="menu-text">My cart</span></a>
+                <a class="menu-link {{ request()->routeIs('live-classes.*') ? 'active' : '' }}" href="{{ route('live-classes.index') }}"><span class="menu-icon">🎥</span><span class="menu-text">Live classes</span></a>
+            @elseif(auth()->user()->isBranchManager())
+                <div class="app-sidebar-section">Branch management</div>
+                <a class="menu-link {{ request()->routeIs('branch-manager.batches.*') ? 'active' : '' }}" href="{{ route('branch-manager.batches.index') }}"><span class="menu-icon">🗓️</span><span class="menu-text">Branch batches</span></a>
+                <a class="menu-link {{ request()->routeIs('branch-manager.students.*') ? 'active' : '' }}" href="{{ route('branch-manager.students.index') }}"><span class="menu-icon">👥</span><span class="menu-text">Branch students</span></a>
+            @elseif(auth()->user()->isAccountant())
+                <div class="app-sidebar-section">Finance workspace</div>
+                <a class="menu-link {{ request()->routeIs('accountant.invoices.*') ? 'active' : '' }}" href="{{ route('accountant.invoices.index') }}"><span class="menu-icon">🧾</span><span class="menu-text">Invoices & fees</span></a>
+                <a class="menu-link {{ request()->routeIs('accountant.refunds.*') ? 'active' : '' }}" href="{{ route('accountant.refunds.index') }}"><span class="menu-icon">↩️</span><span class="menu-text">Refunds</span></a>
+                <a class="menu-link {{ request()->routeIs('accountant.expenses.*') ? 'active' : '' }}" href="{{ route('accountant.expenses.index') }}"><span class="menu-icon">💸</span><span class="menu-text">Expenses</span></a>
+                <a class="menu-link {{ request()->routeIs('accountant.finance-reports.*') ? 'active' : '' }}" href="{{ route('accountant.finance-reports.index') }}"><span class="menu-icon">📊</span><span class="menu-text">Finance reports</span></a>
+            @endif
+            <div class="app-sidebar-section">Account</div>
+            <a class="menu-link {{ request()->routeIs('profile.*') ? 'active' : '' }}" href="{{ route('profile.edit') }}"><span class="menu-icon">👤</span><span class="menu-text">My profile</span></a>
+            <div class="app-sidebar-footer">Alom’s English Center<br>Learning Management System</div>
         </aside>
-    @endif
+    @endauth
     <header class="topbar">
         <nav class="nav">
+            @auth
+                <button type="button" class="sidebar-toggle" aria-label="Open navigation menu" aria-controls="app-sidebar" aria-expanded="false" onclick="toggleAppSidebar()">☰</button>
+            @endauth
             <a href="/{{ auth()->check() ? 'dashboard' : '' }}" class="brand">{{ config('app.name') }}</a>
             <div class="nav-links">
                 <form method="POST" action="{{ route('locale.update') }}" class="inline-form" style="display:inline-flex;gap:6px;align-items:center;">
@@ -217,6 +297,7 @@
                         <option value="bn" @selected(app()->getLocale() === 'bn')>{{ __('Bangla') }}</option>
                     </select>
                 </form>
+                @guest
                 <a href="/">{{ __('Home') }}</a>
                 <a href="{{ route('courses.index') }}">{{ __('Courses') }}</a>
                 @if(\Illuminate\Support\Facades\Schema::hasTable('flash_sales') && \App\Models\FlashSale::activeCampaigns()->isNotEmpty())<a href="{{ route('landing') }}#flash-sale">🔥 {{ __('Flash Sale') }}</a>@endif
@@ -272,6 +353,10 @@
                 @else
                     <a href="{{ route('login') }}">{{ __('Login') }}</a>
                     <a href="{{ route('register') }}">{{ __('Register') }}</a>
+                @endguest
+                @auth
+                    <a href="{{ route('profile.edit') }}">Profile</a>
+                    <form method="POST" action="{{ route('logout') }}" class="inline-form">@csrf<button type="submit">Logout</button></form>
                 @endauth
             </div>
         </nav>
@@ -303,6 +388,17 @@
         <button type="button" class="btn secondary" style="position:fixed; right:16px; bottom:16px; z-index:20;" onclick="saveMarketingConsent('')">Cookie settings</button>
     @endif
     <script>
+        function toggleAppSidebar(force) {
+            const sidebar = document.getElementById('app-sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            const button = document.querySelector('.sidebar-toggle');
+            if (!sidebar || !overlay) return;
+            const open = typeof force === 'boolean' ? force : !sidebar.classList.contains('is-open');
+            sidebar.classList.toggle('is-open', open);
+            overlay.classList.toggle('is-visible', open);
+            if (button) button.setAttribute('aria-expanded', open ? 'true' : 'false');
+            document.body.style.overflow = open && window.matchMedia('(max-width: 600px)').matches ? 'hidden' : '';
+        }
         function saveMarketingConsent(choice) {
             const secure = window.location.protocol === 'https:' ? '; Secure' : '';
             const value = choice ? `marketing_consent=${choice}; Max-Age=15552000` : 'marketing_consent=; Max-Age=0';
