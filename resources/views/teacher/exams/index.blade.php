@@ -5,14 +5,14 @@
 @section('content')
     <div class="page-header">
         <div><span class="badge info">{{ $batch->course->title }}</span><h1 style="margin:12px 0 0;">{{ $batch->title }} exams</h1></div>
-        <a href="{{ route('teacher.batches.index') }}" class="btn secondary">My batches</a>
+        <a href="{{ $isAdmin ? route('admin.batches.index') : route('teacher.batches.index') }}" class="btn secondary">My batches</a>
     </div>
 
     <div class="panel" style="margin-bottom:20px;">
         <h2 style="margin-top:0;">{{ __('Create multiple-choice exam') }}</h2>
-        <p><a class="btn secondary" href="{{ route('teacher.batches.question-bank.index', $batch) }}">{{ __('Manage Question Bank') }}</a></p>
+        <p><a class="btn secondary" href="{{ $isAdmin ? route('admin.batches.question-bank.index', $batch) : route('teacher.batches.question-bank.index', $batch) }}">{{ __('Manage Question Bank') }}</a></p>
         <p class="muted">Add one or more questions. Each question has four options and one correct answer. Marks are awarded automatically.</p>
-        <form method="POST" action="{{ route('teacher.batches.exams.store', $batch) }}">
+        <form method="POST" action="{{ $isAdmin ? route('admin.batches.exams.store', $batch) : route('teacher.batches.exams.store', $batch) }}">
             @csrf
             <label>{{ __('Exam title') }}<input name="title" maxlength="180" required></label>
             <label>{{ __('Instructions') }}<textarea name="instructions" maxlength="5000"></textarea></label>
@@ -62,7 +62,7 @@
                 <h2>{{ $exam->title }}</h2>
                 <p class="muted">{{ $exam->questions_count }} questions · {{ $exam->attempts_count }} attempts · {{ $exam->duration_minutes }} minutes</p>
                 <p class="muted">{{ $exam->starts_at->format('M j, Y H:i') }} – {{ $exam->ends_at->format('M j, Y H:i') }}</p>
-                <a class="btn secondary" href="{{ route('teacher.exams.results', $exam) }}">{{ __('View results') }}</a>
+                <a class="btn secondary" href="{{ $isAdmin ? route('admin.exams.results', $exam) : route('teacher.exams.results', $exam) }}">{{ __('View results') }}</a>
             </article>
         @empty
             <div class="panel"><p class="muted">{{ __('No exams have been published for this batch.') }}</p></div>
