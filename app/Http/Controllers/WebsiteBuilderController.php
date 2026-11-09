@@ -32,13 +32,15 @@ class WebsiteBuilderController extends Controller
         $headerLinks = is_array($headerLinks) ? $headerLinks : [];
         $revisions = json_decode((string) Setting::value('homepage_revisions', '[]'), true);
         $revisions = is_array($revisions) ? $revisions : [];
+        $customBlocks = json_decode((string) Setting::value('homepage_custom_blocks', '[]'), true);
+        $customBlocks = is_array($customBlocks) ? $customBlocks : [];
         $templates = self::homepageTemplates();
         $activeTemplate = (string) ($settings['homepage_template'] ?? 'academy-modern');
         if (!array_key_exists($activeTemplate, $templates)) {
             $activeTemplate = 'academy-modern';
         }
 
-        return view('admin.website-builder.index', compact('sections', 'media', 'settings', 'slides', 'footerLinks', 'headerLinks', 'templates', 'activeTemplate', 'draft', 'revisions'));
+        return view('admin.website-builder.index', compact('sections', 'media', 'settings', 'slides', 'footerLinks', 'headerLinks', 'templates', 'activeTemplate', 'draft', 'revisions', 'customBlocks'));
     }
 
     /**
@@ -100,6 +102,60 @@ class WebsiteBuilderController extends Controller
         Setting::setValue('homepage_draft_updated_by', (string) $request->user()->id);
 
         return redirect()->route('admin.website-builder.index')->with('success', 'Draft saved. The public homepage has not changed.');
+    }
+
+
+    /**
+     * Save a reusable, admin-authored homepage section block.
+     */
+    public function saveCustomBlock(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:80'],
+            'title' => ['required', 'string', 'max:180'],
+            'body' => ['nullable', 'string', 'max:3000'],
+            'button_label' => ['nullable', 'string', 'max:60'],
+            'button_url' => ['nullable', 'string', 'max:500'],
+            'background_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'text_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'spacing' => ['nullable', Rule::in(['compact', 'normal', 'airy'])],
+            'layout' => ['nullable', Rule::in(['standard', 'reversed', 'centered'])],
+        ]);
+
+        $url = trim($validated['button_url'] ?? '');
+        if ($url !== '' && !preg_match('~^(https?://|/(?!/)|#)~i', $url)) {
+            $url = '';
+        }
+
+        $blocks = json_decode((string) Setting::value('homepage_custom_blocks', '[]'), true);
+        $blocks = is_array($blocks) ? $blocks : [];
+        $blocks[] = [
+            'id' => (string) Str::uuid(),
+            'name' => trim($validated['name']),
+            'title' => trim($validated['title']),
+            'body' => trim($validated['body'] ?? ''),
+            'button_label' => trim($validated['button_label'] ?? ''),
+            'button_url' => $url,
+            'background_color' => $validated['background_color'] ?? '#ffffff',
+            'text_color' => $validated['text_color'] ?? '#18212f',
+            'spacing' => $validated['spacing'] ?? 'normal',
+            'layout' => $validated['layout'] ?? 'standard',
+        ];
+
+        Setting::setValue('homepage_custom_blocks', json_encode(array_slice($blocks, -30), JSON_THROW_ON_ERROR));
+
+        return redirect()->route('admin.website-builder.index')->with('success', 'Reusable homepage block saved to your custom library.');
+    }
+
+    public function deleteCustomBlock(Request $request): RedirectResponse
+    {
+        $validated = $request->validate(['block_id' => ['required', 'string', 'max:80']]);
+        $blocks = json_decode((string) Setting::value('homepage_custom_blocks', '[]'), true);
+        $blocks = is_array($blocks) ? $blocks : [];
+        $blocks = array_values(array_filter($blocks, fn ($block) => ($block['id'] ?? null) !== $validated['block_id']));
+        Setting::setValue('homepage_custom_blocks', json_encode($blocks, JSON_THROW_ON_ERROR));
+
+        return redirect()->route('admin.website-builder.index')->with('success', 'Custom block deleted.');
     }
 
     public function previewDraft(): View
