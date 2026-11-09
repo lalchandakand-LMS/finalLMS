@@ -211,6 +211,8 @@ class ExamController extends Controller
     public function studentIndex(Exam $exam): View
     {
         $this->ensureEnrolled($exam);
+        // Draft exams must not be discoverable through a guessed URL.
+        abort_unless($exam->status === 'published', 404);
         $attempt = $exam->attempts()->where('student_id', Auth::id())->with('attemptQuestions.question')->first();
         $exam->load('batch.course');
 
