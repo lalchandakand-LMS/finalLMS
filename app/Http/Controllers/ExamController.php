@@ -139,7 +139,7 @@ class ExamController extends Controller
             'difficulty' => ['sometimes', 'in:easy,medium,hard'],
             'question' => ['required', 'string', 'max:3000'],
             'options' => ['required', 'array', 'size:4'],
-            'options.*' => ['required', 'string', 'max:500'],
+            'options.*' => ['required', 'string', 'max:500', 'distinct'],
             'correct_option' => ['required', 'integer', 'between:0,3'],
             'marks' => ['required', 'integer', 'min:1', 'max:100'],
         ]);
@@ -160,7 +160,7 @@ class ExamController extends Controller
             'difficulty' => ['sometimes', 'in:easy,medium,hard'],
             'question' => ['required', 'string', 'max:3000'],
             'options' => ['required', 'array', 'size:4'],
-            'options.*' => ['required', 'string', 'max:500'],
+            'options.*' => ['required', 'string', 'max:500', 'distinct'],
             'correct_option' => ['required', 'integer', 'between:0,3'],
             'marks' => ['required', 'integer', 'min:1', 'max:100'],
         ]);
