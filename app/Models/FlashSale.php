@@ -22,11 +22,11 @@ class FlashSale extends Model
     {
         if ($this->status !== 'active' || $this->starts_at->isFuture() || $this->ends_at->isPast()) return false;
         $commerceUsage = $this->orderItems()->whereHas('order', fn ($q) => $q->whereIn('status',['pending','completed']));
-        $commerceCount = (clone $commerceUsage)->sum('quantity');
+        $commerceCount = (clone $commerceUsage)->pluck('order_id')->unique()->count();
         $legacyCount = $this->payments()->whereIn('status', ['pending','approved'])->count();
         if ($this->max_redemptions !== null && $commerceCount + $legacyCount >= $this->max_redemptions) return false;
         if ($userId !== null) {
-            $studentCommerceCount = (clone $commerceUsage)->whereHas('order', fn ($q) => $q->where('user_id',$userId))->sum('quantity');
+            $studentCommerceCount = (clone $commerceUsage)->whereHas('order', fn ($q) => $q->where('user_id',$userId))->pluck('order_id')->unique()->count();
             $studentLegacyCount = $this->payments()->where('user_id',$userId)->whereIn('status',['pending','approved'])->count();
             if ($studentCommerceCount + $studentLegacyCount >= $this->per_student_limit) return false;
         }
