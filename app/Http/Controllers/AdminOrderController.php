@@ -37,10 +37,14 @@ class AdminOrderController extends Controller
             }
             foreach ($order->items as $item) {
                 if ($item->product_type === 'course' && $item->resource_id) {
-                    Enrollment::firstOrCreate(
-                        ['user_id'=>$order->user_id,'course_id'=>$item->resource_id],
-                        ['status'=>'active']
-                    );
+                    $enrollment = Enrollment::firstOrNew([
+                        'user_id'=>$order->user_id,
+                        'course_id'=>$item->resource_id,
+                    ]);
+                    if (!$enrollment->exists || !in_array($enrollment->status, ['active','completed'], true)) {
+                        $enrollment->status = 'active';
+                        $enrollment->save();
+                    }
                 }
                 if ($item->product_type === 'ebook' && $item->product_id) {
                     $product = $item->product;
