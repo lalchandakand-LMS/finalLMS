@@ -248,6 +248,79 @@ class QuestionBankHardeningTest extends TestCase
         $this->assertDatabaseHas('exam_questions', ['exam_id' => $exam->id, 'question' => 'Select the correct past tense form?']);
     }
 
+    public function test_admin_cannot_access_or_use_question_bank_items_owned_by_another_batches_teacher(): void
+    {
+        [$teacher, , $batch] = $this->makeBatchWithStudent();
+        $otherTeacher = User::factory()->create(['role' => 'teacher']);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $foreignQuestion = QuestionBankQuestion::create([
+            'teacher_id' => $otherTeacher->id,
+            'subject' => 'Private',
+            'category' => 'Restricted',
+            'difficulty' => 'hard',
+            'question' => 'Question belonging to another teacher?',
+            'options' => ['A', 'B', 'C', 'D'],
+            'correct_option' => 0,
+            'marks' => 1,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.batches.question-bank.index', $batch))
+            ->assertOk()
+            ->assertDontSee('Question belonging to another teacher?');
+
+        $this->actingAs($admin)
+            ->put(route('admin.batches.question-bank.update', [$batch, $foreignQuestion]), [
+                'subject' => 'Changed',
+                'category' => 'Changed',
+                'difficulty' => 'easy',
+                'question' => 'Attempted takeover?',
+                'options' => ['A', 'B', 'C', 'D'],
+                'correct_option' => 0,
+                'marks' => 1,
+            ])
+            ->assertForbidden();
+
+        $this->delete(route('admin.batches.question-bank.destroy', [$batch, $foreignQuestion]))
+            ->assertForbidden();
+
+        $this->post(route('admin.batches.exams.store', $batch), [
+            'title' => 'Foreign question exam',
+            'starts_at' => now()->addHour()->format('Y-m-d H:i:s'),
+            'ends_at' => now()->addHours(2)->format('Y-m-d H:i:s'),
+            'duration_minutes' => 30,
+            'pass_marks' => 0,
+            'question_bank_ids' => [$foreignQuestion->id],
+            'random_question_count' => 1,
+        ])->assertForbidden();
+
+        $this->assertDatabaseHas('question_bank_questions', [
+            'id' => $foreignQuestion->id,
+            'teacher_id' => $otherTeacher->id,
+            'question' => 'Question belonging to another teacher?',
+        ]);
+        $this->assertDatabaseCount('exams', 0);
+        $this->assertSame((int) $teacher->id, (int) $batch->teacher_id);
+    }
+
+    public function test_question_bank_rejects_duplicate_mcq_options(): void
+    {
+        [$teacher, , $batch] = $this->makeBatchWithStudent();
+
+        $this->actingAs($teacher)
+            ->from(route('teacher.batches.question-bank.index', $batch))
+            ->post(route('teacher.batches.question-bank.store', $batch), [
+                'subject' => 'Grammar',
+                'question' => 'Duplicate choices?',
+                'options' => ['Same', 'Same', 'Other', 'Last'],
+                'correct_option' => 0,
+                'marks' => 1,
+            ])
+            ->assertSessionHasErrors('options.1');
+
+        $this->assertDatabaseCount('question_bank_questions', 0);
+    }
+
     private function makeBatchWithStudent(): array
     {
         $teacher = User::factory()->create(['role' => 'teacher']);
