@@ -1,20 +1,20 @@
 <?php
 
-namespace App\\Http\\Controllers;
+namespace App\Http\Controllers;
 
-use App\\Models\\Cart;
-use App\\Models\\Order;
-use App\\Models\\OrderItem;
-use App\\Models\\Product;
-use App\\Models\\DownloadPermission;
-use App\\Models\\Enrollment;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\Support\\Str;
-use Illuminate\\Validation\\Rule;
-use Illuminate\\View\\View;
-use Illuminate\\Http\\RedirectResponse;
-use Illuminate\\Support\\Facades\\Storage;
+use App\Models\Cart;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\Product;
+use App\Models\DownloadPermission;
+use App\Models\Enrollment;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Illuminate\View\View;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Storage;
 
 class StoreController extends Controller
 {
@@ -45,14 +45,14 @@ class StoreController extends Controller
     public function update(Request $request, int $item): RedirectResponse
     {
         $data = $request->validate(['quantity' => ['required','integer','min:1','max:10']]);
-        $cartItem = \\App\\Models\\CartItem::query()->whereHas('cart', fn ($q) => $q->where('user_id',$request->user()->id))->findOrFail($item);
+        $cartItem = \App\Models\CartItem::query()->whereHas('cart', fn ($q) => $q->where('user_id',$request->user()->id))->findOrFail($item);
         $cartItem->update($data);
         return back()->with('success', 'Cart updated.');
     }
 
     public function remove(Request $request, int $item): RedirectResponse
     {
-        \\App\\Models\\CartItem::query()->whereHas('cart', fn ($q) => $q->where('user_id',$request->user()->id))->findOrFail($item)->delete();
+        \App\Models\CartItem::query()->whereHas('cart', fn ($q) => $q->where('user_id',$request->user()->id))->findOrFail($item)->delete();
         return back()->with('success', 'Item removed.');
     }
 
@@ -60,7 +60,7 @@ class StoreController extends Controller
     {
         $cart = Cart::with('items.product')->where('user_id',$request->user()->id)->firstOrFail();
         abort_if($cart->items->isEmpty(), 422, 'Your cart is empty.');
-        $methods = collect(\\App\\Models\\Setting::paymentMethods())->filter(fn ($method) => (bool)($method['enabled'] ?? false))->keys()->all();
+        $methods = collect(\App\Models\Setting::paymentMethods())->filter(fn ($method) => (bool)($method['enabled'] ?? false))->keys()->all();
         $data = $request->validate([
             'payment_method' => ['required', Rule::in($methods)],
             'payment_reference' => ['required','string','max:120',Rule::unique('orders','payment_reference')],
