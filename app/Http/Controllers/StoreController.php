@@ -63,7 +63,7 @@ class StoreController extends Controller
         $methods = collect(\App\Models\Setting::paymentMethods())->filter(fn ($method) => (bool)($method['enabled'] ?? false))->keys()->all();
         $data = $request->validate([
             'payment_method' => ['required', Rule::in($methods)],
-            'payment_reference' => ['required','string','max:120',Rule::unique('orders','payment_reference')],
+            'payment_reference' => ['required','string','max:120',Rule::unique('orders','payment_reference')],\n            'coupon_code' => ['nullable','string','max:60'],
         ]);
         $order = DB::transaction(function () use ($cart,$request,$data) {
             $cart = Cart::query()->whereKey($cart->id)->lockForUpdate()->with('items.product')->firstOrFail();
@@ -72,7 +72,7 @@ class StoreController extends Controller
                 abort_unless($item->product && $item->product->status === 'published', 422, 'A product is no longer available.');
                 $subtotal += (float)$item->product->currentPrice() * $item->quantity;
             }
-            $order = Order::create([
+            $coupon = null;\n            $discount = 0;\n            if (!empty($data['coupon_code'])) {\n                $coupon = Coupon::query()->where('code',strtoupper(trim($data['coupon_code'])))->lockForUpdate()->first();\n                abort_unless($coupon && $coupon->isAvailableFor($request->user()->id, $subtotal), 422, 'This coupon is invalid, expired, or its usage limit has been reached.');\n                $discount = $coupon->calculateDiscount($subtotal);\n            }\n            $order = Order::create([
                 'order_number' => 'ALM-'.now()->format('ymd').'-'.Str::upper(Str::random(8)),
                 'user_id' => $request->user()->id,
                 'status' => 'pending',
