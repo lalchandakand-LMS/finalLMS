@@ -50,7 +50,7 @@ class AdminOrderController extends Controller
             }
             if ($order->coupon_id) {
                 $coupon = \App\Models\Coupon::query()->lockForUpdate()->findOrFail($order->coupon_id);
-                CouponRedemption::firstOrCreate(
+                $redemption = CouponRedemption::firstOrCreate(
                     ['coupon_id'=>$coupon->id,'order_id'=>$order->id],
                     ['user_id'=>$order->user_id,'discount_amount'=>$order->discount_total]
                 );
