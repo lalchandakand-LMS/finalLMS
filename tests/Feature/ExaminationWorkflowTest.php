@@ -388,6 +388,25 @@ class ExaminationWorkflowTest extends TestCase
         $this->assertDatabaseCount('exam_answers', 1);
     }
 
+    public function test_enrolled_student_cannot_open_a_draft_exam_by_guessing_its_url(): void
+    {
+        [$teacher, $student, $batch] = $this->makeBatchWithStudent();
+        $exam = Exam::create([
+            'batch_id' => $batch->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Private draft exam',
+            'starts_at' => now()->addHour(),
+            'ends_at' => now()->addHours(2),
+            'duration_minutes' => 30,
+            'pass_marks' => 0,
+            'status' => 'draft',
+        ]);
+
+        $this->actingAs($student)
+            ->get(route('student.exams.show', $exam))
+            ->assertNotFound();
+    }
+
     private function makeBatchWithStudent(bool $enroll = true): array
     {
         $teacher = User::factory()->create(['role' => 'teacher']);
