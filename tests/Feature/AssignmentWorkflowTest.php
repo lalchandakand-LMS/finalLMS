@@ -372,12 +372,12 @@ class AssignmentWorkflowTest extends TestCase
         ['student' => $student, 'assignment' => $assignment] = $this->assignmentFixture();
 
         $this->actingAs($student)->post(route('student.assignments.submit', $assignment), [
-            'attachment' => UploadedFile::fake()->create('homework"\r\nX-Injected: yes.pdf', 100, 'application/pdf'),
+            'attachment' => UploadedFile::fake()->create('homework"'.chr(13).chr(10).'X-Injected: yes.pdf', 100, 'application/pdf'),
         ])->assertRedirect();
 
         $submission = \\App\\Models\\AssignmentSubmission::firstOrFail();
-        $this->assertStringNotContainsString("\\r", $submission->attachment_name);
-        $this->assertStringNotContainsString("\\n", $submission->attachment_name);
+        $this->assertStringNotContainsString(chr(13), $submission->attachment_name);
+        $this->assertStringNotContainsString(chr(10), $submission->attachment_name);
         $this->assertStringNotContainsString('"', $submission->attachment_name);
         $this->assertStringEndsWith('.pdf', $submission->attachment_name);
     }
