@@ -23,6 +23,11 @@ class AdminOrderController extends Controller
             $order = Order::query()->lockForUpdate()->with('items.product')->findOrFail($order->id);
             if ($order->status !== 'pending') return 'reviewed';
             foreach ($order->items as $item) {
+                if ($item->product_type === 'ebook' && (!$item->product || !$item->product->is_downloadable || !$item->product->download_path)) {
+                    return 'invalid';
+                }
+            }
+            foreach ($order->items as $item) {
                 if ($item->product_type === 'course' && $item->resource_id) {
                     Enrollment::firstOrCreate(
                         ['user_id'=>$order->user_id,'course_id'=>$item->resource_id],
