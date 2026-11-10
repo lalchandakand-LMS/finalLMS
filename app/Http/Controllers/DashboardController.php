@@ -13,6 +13,9 @@ class DashboardController extends Controller
     public function index(): View
     {
         $user = Auth::user();
+        if ($user->isGuardian()) {
+            return redirect()->route('guardian.dashboard');
+        }
 
         $courses = Course::with('teacher')->where('status', 'published')->latest()->get();
         $enrolledCourses = $user->isTeacher()
