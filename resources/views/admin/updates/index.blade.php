@@ -56,6 +56,7 @@
                 <p><small class="muted">{{ __('Private staging directory') }}: <code>{{ $preparation->release_path }}</code></small></p>
                 <p><small class="muted">{{ __('Extracted at') }}: {{ $preparation->staged_at?->format('d M Y H:i') }}</small></p>
                 <div class="flash info">{{ __('This release is isolated in private staging only. It has not been activated or installed.') }}</div>
+                <a class="btn secondary" style="display:inline-block;margin-top:12px;" href="{{ route('admin.updates.preflight', $preparation) }}">{{ __('Run read-only preflight') }}</a>
             @endif
         </div>
     @endif
