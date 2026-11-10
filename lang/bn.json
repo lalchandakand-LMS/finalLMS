@@ -681,5 +681,9 @@
     "Price: low to high": "কম দাম থেকে বেশি",
     "Price: high to low": "বেশি দাম থেকে কম",
     "Title, description or tag": "শিরোনাম, বিবরণ বা ট্যাগ",
-    "No courses match your filters. Try changing your search criteria.": "আপনার ফিল্টারের সঙ্গে কোনো কোর্স মেলেনি। সার্চের শর্ত পরিবর্তন করে দেখুন।"
+    "No courses match your filters. Try changing your search criteria.": "আপনার ফিল্টারের সঙ্গে কোনো কোর্স মেলেনি। সার্চের শর্ত পরিবর্তন করে দেখুন।",
+    "Category image": "ক্যাটাগরির ছবি",
+    "Watch lesson video": "লেসনের ভিডিও দেখুন",
+    "Tags": "ট্যাগ",
+    "Course category": "কোর্স ক্যাটাগরি"
 }
