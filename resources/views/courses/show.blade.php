@@ -1,6 +1,8 @@
 @extends('layouts.app')
 
-@section('title', $course->title . ' | ' . config('app.name'))
+@section('title', ($course->seo_title ?: $course->title) . ' | ' . config('app.name'))
+@section('seo_title', $course->seo_title ?: $course->title)
+@section('seo_description', $course->seo_description ?: ($course->short_description ?: \\Illuminate\\Support\\Str::limit(strip_tags($course->description), 160)))
 
 @section('content')
     @php($activeFlashSale = \App\Models\FlashSale::activeForCourse($course->id, auth()->id()))
@@ -16,7 +18,11 @@
     <div class="grid grid-2">
         <div class="panel">
             <p class="muted">{{ __('Instructor:') }} {{ $course->teacher?->name ?? __('N/A') }}</p>
+            @if($course->short_description)<p class="muted">{{ $course->short_description }}</p>@endif
             <p>{{ $course->description }}</p>
+            @if($course->categories->isNotEmpty())<div class="meta-row">@foreach($course->categories as $category)<span class="badge info">{{ $category->name }}</span>@endforeach</div>@endif
+            @if($course->learning_outcomes)<h3>{{ __('What you will learn') }}</h3><p>{{ $course->learning_outcomes }}</p>@endif
+            @if($course->requirements)<h3>{{ __('Requirements') }}</h3><p>{{ $course->requirements }}</p>@endif
             @if(auth()->check() && auth()->user()->isAdmin())
                 <a class="btn secondary" href="{{ route('admin.courses.lessons.index', $course) }}">{{ __('Manage lessons') }}</a>
             @elseif(auth()->check() && auth()->user()->isTeacher() && $course->teacher_id === auth()->id())
