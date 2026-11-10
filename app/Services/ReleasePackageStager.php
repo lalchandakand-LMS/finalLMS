@@ -298,7 +298,7 @@ class ReleasePackageStager
             }
             $preparation->update([
                 'status' => 'expired',
-                'message' => 'The verified package expired and was removed from private staging storage.',
+                'message' => 'The prepared release expired and its package and extracted files were removed from private staging storage.',
             ]);
         }
     }
