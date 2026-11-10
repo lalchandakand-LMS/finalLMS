@@ -8,6 +8,7 @@ use App\Models\SystemUpdatePreflight;
 use App\Models\User;
 use App\Services\ReleaseManifestChecker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -252,6 +253,7 @@ class AdminUpdateCenterTest extends TestCase
 
     public function test_admin_can_run_activation_preflight_and_it_blocks_until_verified_backup_exists(): void
     {
+        $this->withoutMiddleware(ThrottleRequests::class);
         $packageBytes = $this->createReleasePackage([
             'artisan' => "<?php echo 'artisan';",
             'public/index.php' => "<?php echo 'public';",
