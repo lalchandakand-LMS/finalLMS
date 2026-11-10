@@ -163,7 +163,8 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         Route::post('/updates/check', [AdminUpdateController::class, 'check'])->middleware('throttle:3,10')->name('admin.updates.check');
         Route::post('/updates/prepare', [AdminUpdateController::class, 'prepare'])->middleware('throttle:1,10')->name('admin.updates.prepare');
         Route::post('/updates/{preparation}/extract', [AdminUpdateController::class, 'extract'])->middleware('throttle:2,10')->name('admin.updates.extract');
-        Route::post('/updates/{preparation}/preflight', [AdminUpdateController::class, 'preflight'])->middleware('throttle:3,10')->name('admin.updates.preflight');
+        Route::post('/updates/{preparation}/backup', [AdminUpdateController::class, 'createBackup'])->middleware('throttle:3,10')->name('admin.updates.backup');
+        Route::post('/updates/{preparation}/preflight', [AdminUpdateController::class, 'preflight'])->middleware('throttle:4,10')->name('admin.updates.preflight');
         Route::get('/flash-sales', [FlashSaleController::class, 'index'])->name('admin.flash-sales.index');
         Route::post('/flash-sales', [FlashSaleController::class, 'store'])->name('admin.flash-sales.store');
         Route::put('/flash-sales/{flashSale}', [FlashSaleController::class, 'update'])->name('admin.flash-sales.update');
