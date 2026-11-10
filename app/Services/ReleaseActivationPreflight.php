@@ -157,9 +157,9 @@ class ReleaseActivationPreflight
             $enoughDisk ? 'pass' : 'warning',
             ['required_bytes' => $requiredBytes, 'free_bytes' => is_numeric($freeBytes) ? (int) $freeBytes : null]);
 
-        $this->add($checks, 'symlink_support', function_exists('symlink'),
+        $this->add($checks, 'symlink_support', false,
             function_exists('symlink')
-                ? 'PHP exposes symlink support, but cPanel filesystem policy has not been tested.'
+                ? 'PHP exposes the symlink function, but actual cPanel filesystem policy has not been tested.'
                 : 'PHP symlink support is unavailable; an explicitly tested directory-swap strategy is required.',
             'warning');
 
