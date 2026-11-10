@@ -221,3 +221,29 @@ Before reporting completion:
 
 You are continuing the existing Alom's English Center LMS repository, not starting a new project. First read README.md, docs/AI_STUDIO_HANDOFF.md, docs/PROJECT_STATUS.md and docs/DECISION_LOG.md, then inspect the actual Laravel 12 codebase, migrations, routes, models, policies, tests, GitHub branches and open PRs. Do not invent completed features based on documentation. Preserve the existing Laravel/PHP 8.3+/MySQL application and existing data; do not replace it with Node/Express or generate a disconnected demo. Follow the five-panel architecture: unified Admin (no separate Super Admin), separate branch-scoped Branch Panel, Teacher, Student and Guardian. Guardian must only see verified linked children. For each requested task, identify existing code to reuse, state the implementation plan and acceptance tests, make focused changes on a feature branch, add security and regression tests, run exact-head CI/CodeQL, and update the project status, decision log and relevant README/module docs with commit SHA and evidence. Distinguish implemented, tested, blocked and planned work. Never expose secrets, weaken authorization, trust client-side payment success, publish private files, merge PRs or deploy production without explicit owner approval. Continue from the highest-priority unfinished item in docs/PROJECT_STATUS.md and report any missing context instead of guessing.
 
+
+
+## 12. Live continuation notes — 2026-11-10
+
+- A live GitHub recheck found open, unmerged PRs #65, #66, #67, #68, #69, #71, #72, #74, #75 and #77. Their exact-head Laravel CI/CodeQL checks (and Flutter CI for #71) were successful at the time of the recheck. See `docs/PROJECT_STATUS.md` for exact SHAs and details.
+- Passing CI is not merge approval or staging/production acceptance. Several older PRs are stacked on feature branches rather than `main`; map dependencies and test the combined branch before any integration.
+- GitHub reported PR #47 and #46 as not mergeable at this snapshot; investigate conflicts on their feature branches before considering integration.
+- The current `main` tree snapshot has no Guardian model, guardian-student relationship migration, Guardian controller or Guardian panel route. Guardian remains a major implementation gap, even though the five-panel architecture is approved.
+- Issue #40's checked boxes are not proof of delivery. Verify each feature in source, tests and provider acceptance; correct stale checkboxes/status when evidence is missing.
+- The current Branch Manager code is only a foundation. Verify a complete branch operations experience and enforce branch scoping at every query and mutation.
+- Keep the project handoff/status/decision records synchronized. Record exact commit SHA, changed paths, checks, unresolved risks and merge/deploy state after each meaningful change.
+
+### Guardian implementation acceptance checklist
+
+Before calling Guardian complete, implement and test all of the following:
+
+1. Admin-controlled guardian invitation/linking with verified relationship evidence and auditable creation, approval, revocation and history.
+2. A guardian may have multiple linked students; relationship records must not be inferred from matching phone/email alone.
+3. Guardian dashboard lists only linked children and provides an explicit child switcher.
+4. Read-only linked-child pages for attendance, results, learning progress, fees/invoices, notices and permitted communications.
+5. A single reusable server-side authorization/query scope used by every Guardian controller, API, search, export, notification and private download.
+6. Negative tests for unrelated student IDs, guessed URLs, forged form values, API requests, file downloads, exports and notification subscriptions.
+7. Tests for revoked relationships, duplicate links, inactive students/guardians, multiple children and concurrent relationship changes.
+8. Bangla/English strings, responsive views, privacy-safe empty/error states and audit events.
+
+Do not expose sensitive student records to a guardian until the relationship is verified and active. Guardian should not be able to change grades, attendance, payments, enrollment or other academic/financial records.
