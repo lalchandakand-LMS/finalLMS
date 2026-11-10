@@ -37,7 +37,7 @@ return [
     'lms_updates' => [
         'enabled' => (bool) env('LMS_UPDATES_ENABLED', false),
         'manifest_url' => env('LMS_UPDATES_MANIFEST_URL'),
-        'public_key_path' => env('LMS_UPDATES_PUBLIC_KEY_PATH'),
+        'public_key_path' => env('LMS_UPDATES_PUBLIC_KEY_PATH', storage_path('app/secure/release-public.pem')),
         'channel' => env('LMS_UPDATES_CHANNEL', 'stable'),
         'current_version' => env('LMS_VERSION', '0.0.0'),
     ],
