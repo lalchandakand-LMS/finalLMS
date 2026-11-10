@@ -282,7 +282,7 @@ class AdminUpdateCenterTest extends TestCase
         $this->get(route('admin.updates.index'))
             ->assertOk()
             ->assertSee('Latest activation preflight')
-            ->assertSee('verified_pre_activation_backup');
+            ->assertSee('Verified pre activation backup');
         $this->assertDatabaseHas('system_update_preparations', [
             'id' => $preparation->id,
             'status' => 'staged',
