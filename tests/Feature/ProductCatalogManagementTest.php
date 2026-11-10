@@ -5,9 +5,10 @@ namespace Tests\Feature;
 use App\Models\Course;
 use App\Models\Product;
 use App\Models\ProductCategory;
+use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -140,7 +141,7 @@ class ProductCatalogManagementTest extends TestCase
             'published_at' => now(),
             'created_by' => $admin->id,
         ]);
-        $order = \\App\\Models\\Order::create([
+        $order = Order::create([
             'order_number' => 'ALM-PRODUCT-TYPE-LOCK-001',
             'user_id' => $student->id,
             'status' => 'completed',
@@ -149,7 +150,7 @@ class ProductCatalogManagementTest extends TestCase
             'discount_total' => 0,
             'total' => 500,
         ]);
-        \\App\\Models\\OrderItem::create([
+        OrderItem::create([
             'order_id' => $order->id,
             'product_id' => $product->id,
             'product_type' => 'ebook',
