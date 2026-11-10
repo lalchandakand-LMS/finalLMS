@@ -646,5 +646,12 @@
     "Commit": "কমিট",
     "Manifest SHA-256": "ম্যানিফেস্ট SHA-256",
     "View release notes": "রিলিজ নোট দেখুন",
-    "No update checks have been performed yet.": "এখনো কোনো আপডেট পরীক্ষা করা হয়নি।"
+    "No update checks have been performed yet.": "এখনো কোনো আপডেট পরীক্ষা করা হয়নি।",
+    "Download and verify release package": "রিলিজ প্যাকেজ ডাউনলোড ও যাচাই করুন",
+    "Preparing a release downloads the signed package to private server storage and validates its checksum and archive contents. It does not install code, run migrations or change the live site.": "রিলিজ প্রস্তুত করলে স্বাক্ষরিত প্যাকেজটি সার্ভারের ব্যক্তিগত স্টোরেজে ডাউনলোড হয় এবং চেকসাম ও আর্কাইভ যাচাই করা হয়। এতে কোড ইনস্টল, মাইগ্রেশন বা লাইভ সাইটে কোনো পরিবর্তন হয় না।",
+    "Latest prepared package": "সর্বশেষ প্রস্তুত প্যাকেজ",
+    "Status": "অবস্থা",
+    "Size": "আকার",
+    "Expires": "মেয়াদ শেষ",
+    "Package SHA-256": "প্যাকেজ SHA-256"
 }
