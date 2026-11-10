@@ -685,5 +685,8 @@
     "Join now": "এখনই যোগ দিন",
     "Student login": "শিক্ষার্থী লগইন",
     "Open dashboard": "ড্যাশবোর্ড খুলুন",
-    "Choose language": "ভাষা নির্বাচন করুন"
+    "Choose language": "ভাষা নির্বাচন করুন",
+    "Run activation readiness preflight": "অ্যাক্টিভেশন প্রস্তুতি যাচাই চালান",
+    "Latest activation preflight": "সর্বশেষ অ্যাক্টিভেশন প্রস্তুতি যাচাই",
+    "Pending migrations requiring review": "পর্যালোচনার জন্য অপেক্ষমাণ মাইগ্রেশন"
 }
