@@ -204,8 +204,16 @@ class ReleasePackageStager
                     || preg_match('/\.sqlite(?:$|\/)/i', $normalized)
                     || str_starts_with($normalized, 'public/uploads/')
                     || str_starts_with($normalized, 'public/storage/')
-                    || ($root === 'storage' && basename($normalized) !== '.gitignore')
-                    || (str_starts_with($normalized, 'bootstrap/cache/') && basename($normalized) !== '.gitignore')) {
+                    || ($root === 'storage' && (
+                        ($directoryEntry && ! in_array($normalized, [
+                            'storage', 'storage/app', 'storage/app/private', 'storage/app/public',
+                            'storage/framework', 'storage/framework/cache', 'storage/framework/cache/data',
+                            'storage/framework/sessions', 'storage/framework/testing', 'storage/framework/views',
+                            'storage/logs',
+                        ], true))
+                        || (! $directoryEntry && basename($normalized) !== '.gitignore')
+                    ))
+                    || (str_starts_with($normalized, 'bootstrap/cache/') && ! $directoryEntry && basename($normalized) !== '.gitignore')) {
                     throw new RuntimeException('The release archive contains runtime, secret, private or development data.');
                 }
 
