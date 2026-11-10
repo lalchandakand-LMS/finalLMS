@@ -42,6 +42,11 @@ class Payment extends Model
         return $this->belongsTo(Course::class);
     }
 
+    public function batch(): BelongsTo
+    {
+        return $this->belongsTo(Batch::class);
+    }
+
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by');
