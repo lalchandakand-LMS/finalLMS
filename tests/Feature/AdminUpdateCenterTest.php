@@ -277,9 +277,9 @@ class AdminUpdateCenterTest extends TestCase
         $this->assertCount(1, Storage::disk('local')->files('backups'));
 
         $backupResponse = $this->actingAs($admin)->post(route('admin.updates.backup', $preparation));
-        $backupResponse->assertRedirect(route('admin.updates.index'))
-            ->assertSessionMissing('error')
-            ->assertSessionHas('success', 'The current application code snapshot and a recent HMAC-verified database/media backup are tied to this staged release. No code was activated.');
+        $backupResponse->assertRedirect(route('admin.updates.index'));
+        $this->assertFalse(session()->has('error'), (string) session()->get('error'));
+        $backupResponse->assertSessionHas('success', 'The current application code snapshot and a recent HMAC-verified database/media backup are tied to this staged release. No code was activated.');
 
         $backup = SystemUpdateBackup::query()->where('preparation_id', $preparation->id)->firstOrFail();
         $this->assertSame('verified', $backup->status);
