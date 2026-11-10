@@ -114,26 +114,33 @@ class CommerceBkashController extends Controller
             );
         }
 
-        if ($callbackStatus !== 'success') {
-            DB::transaction(function () use ($transaction): void {
-                $locked = CommercePaymentTransaction::query()->lockForUpdate()->findOrFail($transaction->id);
-                if ($locked->status !== 'verified') {
-                    $locked->update(['status' => 'failed']);
-                }
-            });
-            return redirect()->route('store.orders')->with('error', 'The bKash payment was not completed. You may retry from My Orders.');
-        }
-
         try {
             $token = $bkash->grantToken();
-            try {
-                $bkash->executePayment($token, $paymentId);
-            } catch (Throwable) {
-                // Query status is authoritative if execute was already processed.
+            if ($callbackStatus === 'success') {
+                try {
+                    $bkash->executePayment($token, $paymentId);
+                } catch (Throwable) {
+                    // Query status is authoritative if execute was already processed.
+                }
             }
+            // Never trust the browser callback status: a cancelled/forged return can
+            // arrive after the gateway has actually completed the charge.
             $verified = $bkash->queryPayment($token, $paymentId);
 
             $verifiedStatus = strtolower((string) ($verified['transactionStatus'] ?? ''));
+            if ($verifiedStatus !== 'completed') {
+                if (in_array($verifiedStatus, ['failed', 'cancelled', 'canceled', 'expired'], true)) {
+                    DB::transaction(function () use ($transaction): void {
+                        $locked = CommercePaymentTransaction::query()->lockForUpdate()->findOrFail($transaction->id);
+                        if (in_array($locked->status, ['initiated', 'pending'], true)) {
+                            $locked->update(['status' => 'failed']);
+                        }
+                    });
+                    return redirect()->route('store.orders')->with('error', 'The bKash payment was not completed. You may retry from My Orders.');
+                }
+
+                return redirect()->route('store.orders')->with('warning', 'bKash is still processing this payment. Do not pay again; check My Orders shortly.');
+            }
             $verifiedPaymentId = (string) ($verified['paymentID'] ?? '');
             $amount = round((float) ($verified['amount'] ?? -1), 2);
             $currency = strtoupper((string) ($verified['currency'] ?? 'BDT'));
@@ -143,7 +150,10 @@ class CommerceBkashController extends Controller
             if ($verifiedStatus !== 'completed'
                 || $verifiedPaymentId !== $paymentId
                 || $amount !== round((float) $transaction->amount, 2)
+                || $amount !== round((float) $order->total, 2)
                 || $currency !== 'BDT'
+                || strtoupper((string) $transaction->currency) !== 'BDT'
+                || strtoupper((string) $order->currency) !== 'BDT'
                 || $invoice !== $transaction->invoice
                 || !is_string($trxId) || $trxId === '') {
                 throw new \RuntimeException('bKash verification did not match the local order transaction.');
