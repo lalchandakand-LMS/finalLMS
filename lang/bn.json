@@ -671,5 +671,15 @@
     "Category deleted; courses and content posts were preserved.": "ক্যাটাগরি মুছে ফেলা হয়েছে; কোর্স ও কনটেন্ট পোস্ট অক্ষত রাখা হয়েছে।",
     "Course archived because learning or payment history exists; records were preserved.": "শিক্ষার্থী বা পেমেন্টের ইতিহাস থাকায় কোর্সটি আর্কাইভ করা হয়েছে; রেকর্ড সংরক্ষিত আছে।",
     "What you will learn": "আপনি যা শিখবেন",
-    "Requirements": "প্রয়োজনীয়তা"
+    "Requirements": "প্রয়োজনীয়তা",
+    "courses found": "কোর্স পাওয়া গেছে",
+    "All languages": "সব ভাষা",
+    "Minimum price": "সর্বনিম্ন মূল্য",
+    "Maximum price": "সর্বোচ্চ মূল্য",
+    "Sort by": "সাজানোর ধরন",
+    "Latest": "সর্বশেষ",
+    "Price: low to high": "কম দাম থেকে বেশি",
+    "Price: high to low": "বেশি দাম থেকে কম",
+    "Title, description or tag": "শিরোনাম, বিবরণ বা ট্যাগ",
+    "No courses match your filters. Try changing your search criteria.": "আপনার ফিল্টারের সঙ্গে কোনো কোর্স মেলেনি। সার্চের শর্ত পরিবর্তন করে দেখুন।"
 }
