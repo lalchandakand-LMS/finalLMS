@@ -28,6 +28,7 @@ class AdminUpdateCenterTest extends TestCase
     protected function tearDown(): void
     {
         Storage::disk('local')->deleteDirectory('updates');
+        Storage::disk('local')->deleteDirectory('backups');
 
         if ($this->publicKeyPath && is_file($this->publicKeyPath)) {
             @unlink($this->publicKeyPath);
