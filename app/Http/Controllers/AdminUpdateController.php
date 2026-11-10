@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\SystemUpdateBackup;
 use App\Models\SystemUpdateCheck;
 use App\Models\SystemUpdatePreparation;
 use App\Models\SystemUpdatePreflight;
 use App\Services\ReleaseActivationPreflight;
 use App\Services\ReleaseManifestChecker;
+use App\Services\UpdateBackupCoordinator;
 use App\Services\ReleasePackageStager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -28,6 +30,7 @@ class AdminUpdateController extends Controller
             'currentVersion' => (string) config('services.lms_updates.current_version', '0.0.0'),
             'updatesEnabled' => (bool) config('services.lms_updates.enabled', false),
             'preparation' => SystemUpdatePreparation::query()->with('preparedBy:id,name')->latest()->first(),
+            'backup' => SystemUpdateBackup::query()->where('preparation_id', SystemUpdatePreparation::query()->latest()->value('id'))->latest()->first(),
             'preflight' => SystemUpdatePreflight::query()->where('preparation_id', SystemUpdatePreparation::query()->latest()->value('id'))->latest('checked_at')->first(),
         ]);
     }
@@ -123,6 +126,26 @@ class AdminUpdateController extends Controller
             $message = $exception instanceof RuntimeException
                 ? $exception->getMessage()
                 : 'The activation preflight could not be completed. No application files or database records were changed.';
+
+            return redirect()->route('admin.updates.index')->with('error', $message);
+        }
+    }
+
+    public function createBackup(SystemUpdatePreparation $preparation, UpdateBackupCoordinator $coordinator): RedirectResponse
+    {
+        try {
+            $backup = $coordinator->create($preparation, auth()->user());
+
+            return redirect()->route('admin.updates.index')
+                ->with('success', $backup->message);
+        } catch (Throwable $exception) {
+            if (! $exception instanceof RuntimeException) {
+                report($exception);
+            }
+
+            $message = $exception instanceof RuntimeException
+                ? $exception->getMessage()
+                : 'The pre-activation backup could not be verified. No application files were activated.';
 
             return redirect()->route('admin.updates.index')->with('error', $message);
         }

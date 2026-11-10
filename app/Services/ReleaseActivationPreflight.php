@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\SystemUpdateBackup;
 use App\Models\SystemUpdatePreparation;
 use App\Models\SystemUpdatePreflight;
 use App\Models\User;
@@ -13,6 +14,10 @@ use Throwable;
 
 class ReleaseActivationPreflight
 {
+    public function __construct(private readonly UpdateBackupCoordinator $backupCoordinator)
+    {
+    }
+
     public function run(SystemUpdatePreparation $preparation, User $admin): SystemUpdatePreflight
     {
         $preparation->refresh();
@@ -173,9 +178,19 @@ class ReleaseActivationPreflight
                 : 'PHP symlink support is unavailable; an explicitly tested directory-swap strategy is required.',
             'warning');
 
-        // The current backup module covers database and selected media, not a complete code-release snapshot.
-        $this->add($checks, 'verified_pre_activation_backup', false,
-            'Activation is blocked: a complete code snapshot plus a verified database/media backup must be created and tied to this update before code can be switched.');
+        $backup = SystemUpdateBackup::query()
+            ->where('preparation_id', $preparation->id)
+            ->where('status', 'verified')
+            ->latest()
+            ->first();
+        $backupReady = $backup !== null && $this->backupCoordinator->verify($backup);
+        $this->add($checks, 'verified_pre_activation_backup', $backupReady,
+            $backupReady
+                ? 'A current code snapshot and HMAC-verified database/media backup are tied to this staged release.'
+                : 'Activation is blocked: create a current code snapshot and tie it to a complete HMAC-verified database/media backup.');
+
+        $this->add($checks, 'activation_runner', false,
+            'Automatic code activation and controlled migration execution are not implemented. This preflight is read-only and cannot activate the release.');
 
         $blocked = collect($checks)->contains(fn (array $check) => $check['status'] === 'blocked');
         $warning = collect($checks)->contains(fn (array $check) => $check['status'] === 'warning');

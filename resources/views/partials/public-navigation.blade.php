@@ -22,6 +22,11 @@
             <a href="{{ route('contests.index') }}"><span class="menu-icon">✦</span>{{ __('Quiz & prizes') }}</a>
             <a href="{{ route('live-classes.index') }}"><span class="menu-icon">◉</span>{{ __('Live classes') }}</a>
             <a href="{{ route('news.index') }}"><span class="menu-icon">▧</span>{{ __('Blog & news') }}</a>
+            @foreach(is_array($websiteHeaderLinks ?? null) ? $websiteHeaderLinks : [] as $websiteLink)
+                @if(is_array($websiteLink) && !empty($websiteLink['label']) && !empty($websiteLink['url']))
+                    <a href="{{ $websiteLink['url'] }}"><span class="menu-icon">↗</span>{{ $websiteLink['label'] }}</a>
+                @endif
+            @endforeach
             <div class="public-drawer-section">{{ __('About the center') }}</div>
             <a href="{{ route('pages.about') }}"><span class="menu-icon">ⓘ</span>{{ __('About us') }}</a>
             <a href="{{ route('pages.contact') }}"><span class="menu-icon">✉</span>{{ __('Contact') }}</a>

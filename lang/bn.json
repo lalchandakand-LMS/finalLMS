@@ -688,5 +688,12 @@
     "Choose language": "ভাষা নির্বাচন করুন",
     "Run activation readiness preflight": "অ্যাক্টিভেশন প্রস্তুতি যাচাই চালান",
     "Latest activation preflight": "সর্বশেষ অ্যাক্টিভেশন প্রস্তুতি যাচাই",
-    "Pending migrations requiring review": "পর্যালোচনার জন্য অপেক্ষমাণ মাইগ্রেশন"
+    "Pending migrations requiring review": "পর্যালোচনার জন্য অপেক্ষমাণ মাইগ্রেশন",
+    "Create a fresh database and media backup first, then tie it to this release with a private code snapshot.": "প্রথমে ডাটাবেস ও মিডিয়ার নতুন ব্যাকআপ তৈরি করুন, এরপর প্রাইভেট কোড স্ন্যাপশটের মাধ্যমে সেটি এই রিলিজের সঙ্গে যুক্ত করুন।",
+    "Open Backups": "ব্যাকআপ খুলুন",
+    "Create and verify pre-activation backup": "অ্যাক্টিভেশনের আগে ব্যাকআপ তৈরি ও যাচাই করুন",
+    "Verified pre-activation backup": "যাচাইকৃত প্রি-অ্যাক্টিভেশন ব্যাকআপ",
+    "Backup expires": "ব্যাকআপের মেয়াদ শেষ",
+    "Code snapshot SHA-256": "কোড স্ন্যাপশট SHA-256",
+    "Database/media backup SHA-256": "ডাটাবেস/মিডিয়া ব্যাকআপ SHA-256"
 }

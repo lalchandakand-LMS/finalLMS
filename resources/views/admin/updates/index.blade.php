@@ -56,6 +56,23 @@
                 <p><small class="muted">{{ __('Private staging directory') }}: <code>{{ $preparation->release_path }}</code></small></p>
                 <p><small class="muted">{{ __('Extracted at') }}: {{ $preparation->staged_at?->format('d M Y H:i') }}</small></p>
                 <div class="flash info">{{ __('This release is isolated in private staging only. It has not been activated or installed.') }}</div>
+                <p class="muted">{{ __('Create a fresh database and media backup first, then tie it to this release with a private code snapshot.') }}
+                    <a href="{{ route('admin.backups.index') }}">{{ __('Open Backups') }}</a>
+                </p>
+                <form method="POST" action="{{ route('admin.updates.backup', $preparation) }}" style="margin-top:12px;">
+                    @csrf
+                    <button class="btn secondary" type="submit">{{ __('Create and verify pre-activation backup') }}</button>
+                </form>
+                @if($backup && $backup->preparation_id === $preparation->id)
+                    <div class="course-item" style="margin-top:12px;">
+                        <strong>{{ __('Verified pre-activation backup') }}</strong>
+                        <span class="badge {{ $backup->status === 'verified' && $backup->expires_at?->isFuture() ? 'success' : 'error' }}">{{ ucfirst($backup->status) }}</span>
+                        <p class="muted">{{ $backup->message }}</p>
+                        <small class="muted">{{ __('Backup expires') }}: {{ $backup->expires_at?->format('d M Y H:i') }}</small>
+                        <p><small class="muted">{{ __('Code snapshot SHA-256') }}: <code>{{ $backup->code_snapshot_sha256 }}</code></small></p>
+                        <p><small class="muted">{{ __('Database/media backup SHA-256') }}: <code>{{ $backup->database_backup_sha256 }}</code></small></p>
+                    </div>
+                @endif
                 <form method="POST" action="{{ route('admin.updates.preflight', $preparation) }}" style="margin-top:12px;">
                     @csrf
                     <button class="btn secondary" type="submit">{{ __('Run activation readiness preflight') }}</button>
