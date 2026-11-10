@@ -158,8 +158,13 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         ->middleware('role:student')
         ->name('courses.lessons.complete');
 
+    Route::middleware('role:guardian')->get('/guardian/dashboard', [GuardianDashboardController::class, 'index'])->name('guardian.dashboard');
+
     Route::middleware('role:admin')->prefix('admin')->group(function () {
         Route::get('/updates', [AdminUpdateController::class, 'index'])->name('admin.updates.index');
+        Route::get('/guardians', [GuardianRelationshipController::class, 'index'])->name('admin.guardians.index');
+        Route::post('/guardians/links', [GuardianRelationshipController::class, 'store'])->middleware('throttle:10,1')->name('admin.guardians.links.store');
+        Route::post('/guardians/links/{link}/revoke', [GuardianRelationshipController::class, 'revoke'])->name('admin.guardians.links.revoke');
         Route::post('/updates/check', [AdminUpdateController::class, 'check'])->middleware('throttle:3,10')->name('admin.updates.check');
         Route::post('/updates/prepare', [AdminUpdateController::class, 'prepare'])->middleware('throttle:1,10')->name('admin.updates.prepare');
         Route::get('/flash-sales', [FlashSaleController::class, 'index'])->name('admin.flash-sales.index');
