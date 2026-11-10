@@ -19,6 +19,7 @@ return new class extends Migration
             $table->foreignId('verified_by')->nullable()->constrained('users')->nullOnDelete();
             $table->string('verification_method', 32)->nullable();
             $table->timestamp('rejected_at')->nullable();
+            $table->timestamp('revoked_at')->nullable();
             $table->timestamps();
 
             $table->unique(['guardian_user_id', 'student_user_id']);
