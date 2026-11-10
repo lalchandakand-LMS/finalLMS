@@ -38,7 +38,7 @@
                         </form>
                     </td>
                 </tr>
-                <tr><td colspan="5" style="padding:14px 10px 22px;">
+                <tr><td colspan="6" style="padding:14px 10px 22px;">
                     <div style="background:#f8faff;border:1px solid var(--border);border-radius:12px;padding:14px;">
                         <strong>{{ __('Add lesson') }}</strong>
                         <form method="POST" action="{{ route('admin.courses.lessons.store', $course) }}" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:12px;">
