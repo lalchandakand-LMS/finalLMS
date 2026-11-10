@@ -51,7 +51,12 @@ class AdminUpdateCenterTest extends TestCase
             ->post(route('admin.updates.check'))
             ->assertForbidden();
 
+        $this->actingAs($student)
+            ->post(route('admin.updates.prepare'))
+            ->assertForbidden();
+
         $this->assertDatabaseCount('system_update_checks', 0);
+        $this->assertDatabaseCount('system_update_preparations', 0);
     }
 
     public function test_disabled_update_check_is_recorded_without_downloading_any_package(): void
