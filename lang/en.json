@@ -424,5 +424,15 @@
     "Course management": "Course management",
     "Create course": "Create course",
     "Edit course": "Edit course",
-    "Save course": "Save course"
+    "Save course": "Save course",
+    "courses found": "courses found",
+    "All languages": "All languages",
+    "Minimum price": "Minimum price",
+    "Maximum price": "Maximum price",
+    "Sort by": "Sort by",
+    "Latest": "Latest",
+    "Price: low to high": "Price: low to high",
+    "Price: high to low": "Price: high to low",
+    "Title, description or tag": "Title, description or tag",
+    "No courses match your filters. Try changing your search criteria.": "No courses match your filters. Try changing your search criteria."
 }
