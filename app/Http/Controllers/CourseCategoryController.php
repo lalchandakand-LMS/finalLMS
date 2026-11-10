@@ -24,6 +24,8 @@ class CourseCategoryController extends Controller
     {
         $data = $this->validated($request);
         $data['slug'] = $this->uniqueSlug($data['slug'] ?: $data['name']);
+        unset($data['image']);
+        if ($request->hasFile('image')) $data['image_path'] = $request->file('image')->store('course-categories', 'public');
         CourseCategory::create($data);
 
         return back()->with('success', 'Course category created.');
@@ -33,7 +35,12 @@ class CourseCategoryController extends Controller
     {
         $data = $this->validated($request, $category);
         $data['slug'] = $this->uniqueSlug($data['slug'] ?: $data['name'], $category->id);
+        unset($data['image']);
+        $oldImagePath = $category->image_path;
+        $newImagePath = $request->file('image')?->store('course-categories', 'public');
+        if ($newImagePath) $data['image_path'] = $newImagePath;
         $category->update($data);
+        if ($newImagePath && $oldImagePath && $oldImagePath !== $newImagePath) Storage::disk('public')->delete($oldImagePath);
 
         return back()->with('success', 'Course category updated.');
     }
@@ -42,10 +49,12 @@ class CourseCategoryController extends Controller
     {
         DB::transaction(function () use ($category): void {
             $category->courses()->detach();
+            $category->posts()->update(['category' => null]);
             $category->posts()->detach();
             $category->delete();
         });
 
+        if ($category->image_path) Storage::disk('public')->delete($category->image_path);
         return back()->with('success', 'Category deleted; courses and content posts were preserved.');
     }
 
@@ -59,6 +68,7 @@ class CourseCategoryController extends Controller
             'seo_description' => ['nullable', 'string', 'max:320'],
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:100000'],
             'is_active' => ['nullable', 'boolean'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ]);
         $data['is_active'] = $request->boolean('is_active');
         $data['sort_order'] = (int) ($data['sort_order'] ?? 0);
