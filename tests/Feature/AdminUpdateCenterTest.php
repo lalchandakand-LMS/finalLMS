@@ -2,11 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\BackupController;
+use App\Models\SystemUpdateBackup;
 use App\Models\SystemUpdateCheck;
 use App\Models\SystemUpdatePreparation;
 use App\Models\SystemUpdatePreflight;
 use App\Models\User;
 use App\Services\ReleaseManifestChecker;
+use App\Services\UpdateBackupCoordinator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Http;
@@ -249,6 +252,103 @@ class AdminUpdateCenterTest extends TestCase
 
         $this->assertDatabaseCount('system_update_preparations', 0);
         $this->assertSame([], Storage::disk('local')->allFiles('updates/staging'));
+    }
+
+    public function test_admin_can_create_and_verify_code_snapshot_with_recent_database_media_backup(): void
+    {
+        $this->withoutMiddleware(ThrottleRequests::class);
+        $packageBytes = $this->createReleasePackage([
+            'artisan' => "<?php echo 'artisan';",
+            'public/index.php' => "<?php echo 'public';",
+            'vendor/autoload.php' => "<?php echo 'vendor';",
+            'VERSION' => "1.0.1\n",
+            'storage/.gitignore' => '',
+            'bootstrap/cache/.gitignore' => '',
+        ]);
+        $this->configureSignedRelease(packageBytes: $packageBytes, migrationDigest: hash('sha256', ''));
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->post(route('admin.updates.prepare'));
+        $preparation = SystemUpdatePreparation::query()->firstOrFail();
+        $this->actingAs($admin)->post(route('admin.updates.extract', $preparation));
+
+        app(BackupController::class)->create();
+
+        $this->actingAs($admin)
+            ->post(route('admin.updates.backup', $preparation))
+            ->assertRedirect(route('admin.updates.index'))
+            ->assertSessionHas('success');
+
+        $backup = SystemUpdateBackup::query()->where('preparation_id', $preparation->id)->firstOrFail();
+        $this->assertSame('verified', $backup->status);
+        $this->assertTrue(Storage::disk('local')->exists($backup->code_snapshot_path));
+        $this->assertTrue(Storage::disk('local')->exists($backup->database_backup_path));
+        $this->assertTrue(app(UpdateBackupCoordinator::class)->verify($backup));
+
+        $archive = new ZipArchive();
+        $this->assertTrue($archive->open(Storage::disk('local')->path($backup->code_snapshot_path)) === true);
+        $this->assertNotFalse($archive->locateName('VERSION'));
+        $this->assertNotFalse($archive->locateName('artisan'));
+        $this->assertFalse($archive->locateName('.env') !== false);
+        $this->assertFalse($archive->locateName('storage/app/private') !== false);
+        $archive->close();
+
+        $this->get(route('admin.updates.index'))
+            ->assertOk()
+            ->assertSee('Verified pre-activation backup');
+    }
+
+    public function test_admin_cannot_create_update_backup_without_a_recent_verified_database_media_backup(): void
+    {
+        $this->withoutMiddleware(ThrottleRequests::class);
+        $packageBytes = $this->createReleasePackage([
+            'artisan' => "<?php echo 'artisan';",
+            'public/index.php' => "<?php echo 'public';",
+            'vendor/autoload.php' => "<?php echo 'vendor';",
+            'VERSION' => "1.0.1\n",
+            'storage/.gitignore' => '',
+            'bootstrap/cache/.gitignore' => '',
+        ]);
+        $this->configureSignedRelease(packageBytes: $packageBytes, migrationDigest: hash('sha256', ''));
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->post(route('admin.updates.prepare'));
+        $preparation = SystemUpdatePreparation::query()->firstOrFail();
+        $this->actingAs($admin)->post(route('admin.updates.extract', $preparation));
+
+        $this->actingAs($admin)
+            ->post(route('admin.updates.backup', $preparation))
+            ->assertRedirect(route('admin.updates.index'))
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseCount('system_update_backups', 0);
+        $this->assertSame([], Storage::disk('local')->allFiles('updates/backups'));
+    }
+
+    public function test_non_admin_cannot_create_pre_activation_update_backup(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $preparation = SystemUpdatePreparation::create([
+            'prepared_by' => $admin->id,
+            'version' => '1.0.1',
+            'package_sha256' => str_repeat('a', 64),
+            'manifest_sha256' => str_repeat('b', 64),
+            'migration_set_sha256' => hash('sha256', ''),
+            'package_path' => 'updates/staging/test.zip',
+            'release_path' => 'updates/releases/test',
+            'file_size' => 100,
+            'status' => 'staged',
+            'message' => 'Test staged package.',
+            'expires_at' => now()->addHour(),
+            'staged_at' => now(),
+        ]);
+
+        $this->actingAs($student)
+            ->post(route('admin.updates.backup', $preparation))
+            ->assertForbidden();
+
+        $this->assertDatabaseCount('system_update_backups', 0);
     }
 
     public function test_admin_can_run_activation_preflight_and_it_blocks_until_verified_backup_exists(): void
