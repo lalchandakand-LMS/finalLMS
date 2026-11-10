@@ -45,6 +45,25 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Certificate::class);
     }
 
+    public function guardianLinks(): HasMany
+    {
+        return $this->hasMany(GuardianStudentLink::class, 'guardian_id');
+    }
+
+    public function guardianStudents(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'guardian_student_links', 'guardian_id', 'student_id')
+            ->wherePivot('status', 'approved')
+            ->withPivot(['relationship', 'status', 'verified_at']);
+    }
+
+    public function guardians(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'guardian_student_links', 'student_id', 'guardian_id')
+            ->wherePivot('status', 'approved')
+            ->withPivot(['relationship', 'status', 'verified_at']);
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
@@ -53,6 +72,11 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isTeacher(): bool
     {
         return $this->role === 'teacher';
+    }
+
+    public function isGuardian(): bool
+    {
+        return $this->role === 'guardian';
     }
 
     public function isStudent(): bool
