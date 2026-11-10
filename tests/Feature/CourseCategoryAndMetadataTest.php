@@ -218,4 +218,40 @@ class CourseCategoryAndMetadataTest extends TestCase
         $this->assertDatabaseMissing('blog_post_course_category', ['blog_post_id' => $post->id, 'course_category_id' => $category->id]);
     }
 
+    public function test_deleting_content_post_attached_to_curriculum_archives_it_without_detaching_it(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $course = Course::create([
+            'teacher_id' => $teacher->id,
+            'title' => 'Course With Shared Lesson',
+            'slug' => 'course-with-shared-lesson',
+            'description' => 'Course description.',
+            'price' => 1000,
+            'status' => 'published',
+        ]);
+        $section = $course->sections()->create([
+            'title' => 'Module One',
+            'position' => 1,
+            'status' => 'published',
+        ]);
+        $post = BlogPost::create([
+            'author_id' => $admin->id,
+            'title' => 'Shared Lesson Content',
+            'slug' => 'shared-lesson-content',
+            'body' => 'Lesson content.',
+            'status' => 'published',
+            'published_at' => now(),
+        ]);
+        $section->blogPosts()->attach($post->id, ['position' => 1, 'attached_by' => $teacher->id]);
+
+        $this->actingAs($admin)->delete(route('admin.news.destroy', $post))->assertRedirect();
+
+        $this->assertDatabaseHas('blog_posts', ['id' => $post->id, 'status' => 'archived', 'published_at' => null]);
+        $this->assertDatabaseHas('course_section_blog_post', [
+            'course_section_id' => $section->id,
+            'blog_post_id' => $post->id,
+        ]);
+    }
+
 }
