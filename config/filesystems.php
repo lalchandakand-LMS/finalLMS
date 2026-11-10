@@ -38,6 +38,14 @@ return [
             'report' => false,
         ],
 
+        'lesson_videos' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private/course-videos'),
+            'serve' => false,
+            'throw' => true,
+            'report' => false,
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
