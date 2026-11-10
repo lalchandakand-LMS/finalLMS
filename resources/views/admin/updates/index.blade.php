@@ -28,7 +28,7 @@
         </div>
     @endif
     <div class="flash info" style="margin-top:16px;">
-        {{ __('Preparing a release downloads the signed package to private server storage and validates its checksum and archive contents. It does not install code, run migrations or change the live site.') }}
+        {{ __('After verification, you can extract the release into an isolated private staging directory. This does not activate or install code, run migrations or change the live site.') }}
     </div>
     @php($latestCheck = $checks->first())
     @if($updatesEnabled && $latestCheck && $latestCheck->status === 'available' && (!$preparation || $preparation->version !== $latestCheck->target_version || $preparation->status !== 'verified' || !$preparation->expires_at || $preparation->expires_at->isPast()))
@@ -47,6 +47,16 @@
                 · {{ __('Expires') }}: {{ $preparation->expires_at?->format('d M Y H:i') }}
             </small>
             <p><small class="muted">{{ __('Package SHA-256') }}: <code>{{ $preparation->package_sha256 }}</code></small></p>
+            @if($preparation->status === 'verified' && $preparation->expires_at && $preparation->expires_at->isFuture())
+                <form method="POST" action="{{ route('admin.updates.extract', $preparation) }}" style="margin-top:12px;">
+                    @csrf
+                    <button class="btn secondary" type="submit">{{ __('Extract to private staging') }}</button>
+                </form>
+            @elseif($preparation->status === 'staged' && $preparation->release_path)
+                <p><small class="muted">{{ __('Private staging directory') }}: <code>{{ $preparation->release_path }}</code></small></p>
+                <p><small class="muted">{{ __('Extracted at') }}: {{ $preparation->staged_at?->format('d M Y H:i') }}</small></p>
+                <div class="flash info">{{ __('This release is isolated in private staging only. It has not been activated or installed.') }}</div>
+            @endif
         </div>
     @endif
 </div>
