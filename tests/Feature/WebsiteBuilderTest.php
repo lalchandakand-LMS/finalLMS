@@ -322,4 +322,51 @@ class WebsiteBuilderTest extends TestCase
         ])->assertForbidden();
     }
 
+    public function test_homepage_slider_supports_eight_slides_and_admin_carousel_controls(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $assets = collect(range(1, 8))->map(fn ($i) => MediaAsset::create([
+            'uploaded_by' => $admin->id, 'disk' => 'public', 'path' => "media/slide-{$i}.jpg",
+            'original_name' => "slide-{$i}.jpg", 'mime_type' => 'image/jpeg', 'size' => 100,
+        ]));
+
+        $payload = [
+            'home_slides' => $assets->map(fn ($asset, $i) => [
+                'enabled' => '1', 'image_id' => $asset->id, 'title' => "Slide ".($i + 1),
+                'subtitle' => 'Homepage announcement', 'button_label' => 'Explore', 'button_url' => '/courses',
+            ])->all(),
+            'home_slider_autoplay' => '1', 'home_slider_interval' => '8000',
+            'home_slider_arrows' => '1', 'home_slider_dots' => '1', 'home_slider_pause_hover' => '1',
+            'home_slider_height' => '600', 'home_slider_mobile_height' => '340', 'home_slider_overlay' => '70',
+        ];
+
+        $this->actingAs($admin)->post(route('admin.website-builder.update'), $payload)
+            ->assertRedirect(route('admin.website-builder.index'));
+
+        $this->assertCount(8, json_decode((string) Setting::value('home_slides'), true));
+        $this->assertSame('8000', Setting::value('home_slider_interval'));
+        $this->assertSame('600', Setting::value('home_slider_height'));
+        $this->assertSame('340', Setting::value('home_slider_mobile_height'));
+        $this->assertSame('70', Setting::value('home_slider_overlay'));
+
+        auth()->logout();
+        $this->get(route('landing'))->assertOk()
+            ->assertSee('data-home-carousel', false)
+            ->assertSee('data-carousel-prev', false)
+            ->assertSee('data-carousel-dot="7"', false)
+            ->assertSee('Slide 8')
+            ->assertSee('--carousel-mobile-height:340px', false);
+    }
+
+    public function test_homepage_slider_rejects_out_of_range_carousel_settings(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($admin)->post(route('admin.website-builder.update'), [
+            'home_slider_interval' => '100', 'home_slider_height' => '9999',
+            'home_slider_mobile_height' => '100', 'home_slider_overlay' => '120',
+        ])->assertSessionHasErrors([
+            'home_slider_interval', 'home_slider_height', 'home_slider_mobile_height', 'home_slider_overlay',
+        ]);
+    }
+
 }
