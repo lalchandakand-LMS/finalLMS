@@ -161,6 +161,7 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
     Route::middleware('role:admin')->prefix('admin')->group(function () {
         Route::get('/updates', [AdminUpdateController::class, 'index'])->name('admin.updates.index');
         Route::post('/updates/check', [AdminUpdateController::class, 'check'])->middleware('throttle:3,10')->name('admin.updates.check');
+        Route::post('/updates/prepare', [AdminUpdateController::class, 'prepare'])->middleware('throttle:1,10')->name('admin.updates.prepare');
         Route::get('/flash-sales', [FlashSaleController::class, 'index'])->name('admin.flash-sales.index');
         Route::post('/flash-sales', [FlashSaleController::class, 'store'])->name('admin.flash-sales.store');
         Route::put('/flash-sales/{flashSale}', [FlashSaleController::class, 'update'])->name('admin.flash-sales.update');

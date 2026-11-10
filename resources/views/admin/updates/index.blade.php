@@ -28,8 +28,27 @@
         </div>
     @endif
     <div class="flash info" style="margin-top:16px;">
-        {{ __('This screen currently verifies signed release metadata only. It does not download, install, migrate or replace application files. The in-app installer and rollback will be enabled only after security and cPanel staging acceptance.') }}
+        {{ __('Preparing a release downloads the signed package to private server storage and validates its checksum and archive contents. It does not install code, run migrations or change the live site.') }}
     </div>
+    @php($latestCheck = $checks->first())
+    @if($latestCheck && $latestCheck->status === 'available' && (!$preparation || $preparation->version !== $latestCheck->target_version || $preparation->status !== 'verified' || !$preparation->expires_at || $preparation->expires_at->isPast()))
+        <form method="POST" action="{{ route('admin.updates.prepare') }}" style="margin-top:16px;">
+            @csrf
+            <button class="btn secondary" type="submit">{{ __('Download and verify release package') }}</button>
+        </form>
+    @endif
+    @if($preparation)
+        <div class="course-item" style="margin-top:16px;">
+            <strong>{{ __('Latest prepared package') }}: {{ $preparation->version }}</strong>
+            <p class="muted">{{ $preparation->message }}</p>
+            <small class="muted">
+                {{ __('Preparation status') }}: {{ $preparation->expires_at?->isPast() ? __('Expired') : ucfirst($preparation->status) }}
+                · {{ __('Size') }}: {{ number_format($preparation->file_size / 1024 / 1024, 2) }} MB
+                · {{ __('Expires') }}: {{ $preparation->expires_at?->format('d M Y H:i') }}
+            </small>
+            <p><small class="muted">{{ __('Package SHA-256') }}: <code>{{ $preparation->package_sha256 }}</code></small></p>
+        </div>
+    @endif
 </div>
 
 <div class="panel">

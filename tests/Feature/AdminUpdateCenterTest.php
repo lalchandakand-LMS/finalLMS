@@ -3,12 +3,15 @@
 namespace Tests\Feature;
 
 use App\Models\SystemUpdateCheck;
+use App\Models\SystemUpdatePreparation;
 use App\Models\User;
 use App\Services\ReleaseManifestChecker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use Tests\TestCase;
+use ZipArchive;
 
 class AdminUpdateCenterTest extends TestCase
 {
@@ -48,7 +51,13 @@ class AdminUpdateCenterTest extends TestCase
             ->post(route('admin.updates.check'))
             ->assertForbidden();
 
+        $otherStudent = User::factory()->create(['role' => 'student']);
+        $this->actingAs($otherStudent)
+            ->post(route('admin.updates.prepare'))
+            ->assertForbidden();
+
         $this->assertDatabaseCount('system_update_checks', 0);
+        $this->assertDatabaseCount('system_update_preparations', 0);
     }
 
     public function test_disabled_update_check_is_recorded_without_downloading_any_package(): void
@@ -122,7 +131,47 @@ class AdminUpdateCenterTest extends TestCase
         }
     }
 
-    private function configureSignedRelease(?string $signatureOverride = null, string $version = '1.0.1', bool $redirectToUntrustedHost = false): void
+    public function test_admin_can_stage_a_signed_package_after_hash_and_migration_digest_validation(): void
+    {
+        $zipPath = tempnam(sys_get_temp_dir(), 'aloms-release-package-');
+        $this->assertIsString($zipPath);
+        $zip = new ZipArchive();
+        $this->assertTrue($zip->open($zipPath, ZipArchive::OVERWRITE) === true);
+
+        $migrationPath = 'database/migrations/2026_11_10_130000_test_update.php';
+        $migrationContents = "<?php return new class extends \\Illuminate\\Database\\Migrations\\Migration {};\n";
+        foreach ([
+            'artisan' => "<?php echo 'artisan';",
+            'public/index.php' => "<?php echo 'public';",
+            'vendor/autoload.php' => "<?php echo 'vendor';",
+            'VERSION' => "1.0.1\n",
+            $migrationPath => $migrationContents,
+            'storage/.gitignore' => '',
+            'bootstrap/cache/.gitignore' => '',
+        ] as $path => $contents) {
+            $this->assertTrue($zip->addFromString($path, $contents));
+        }
+        $this->assertTrue($zip->close());
+        $packageBytes = file_get_contents($zipPath);
+        $this->assertIsString($packageBytes);
+        @unlink($zipPath);
+
+        $migrationDigest = hash('sha256', hash('sha256', $migrationContents).'  '.$migrationPath."\n");
+        $this->configureSignedRelease(packageBytes: $packageBytes, migrationDigest: $migrationDigest);
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.updates.prepare'))
+            ->assertRedirect(route('admin.updates.index'))
+            ->assertSessionHas('success');
+
+        $preparation = SystemUpdatePreparation::query()->firstOrFail();
+        $this->assertSame('verified', $preparation->status);
+        $this->assertSame(hash('sha256', $packageBytes), $preparation->package_sha256);
+        $this->assertTrue(Storage::disk('local')->exists($preparation->package_path));
+    }
+
+    private function configureSignedRelease(?string $signatureOverride = null, string $version = '1.0.1', bool $redirectToUntrustedHost = false, ?string $packageBytes = null, ?string $migrationDigest = null): void
     {
         $privateKey = openssl_pkey_new([
             'private_key_type' => OPENSSL_KEYTYPE_RSA,
@@ -150,8 +199,8 @@ class AdminUpdateCenterTest extends TestCase
             'laravel_major' => 12,
             'required_extensions' => ['openssl', 'pdo_mysql'],
             'package_file' => 'AlomsEnglishCenter-cpanel.zip',
-            'package_sha256' => str_repeat('b', 64),
-            'migration_set_sha256' => str_repeat('c', 64),
+            'package_sha256' => hash('sha256', $packageBytes ?? ''),
+            'migration_set_sha256' => $migrationDigest ?? str_repeat('c', 64),
             'signing_public_key_sha256' => $fingerprint,
             'published_at' => '2026-11-10T00:00:00Z',
             'artifact_url' => 'https://github.com/lalchandakand-LMS/finalLMS/releases/download/v'.$version.'/AlomsEnglishCenter-cpanel.zip',
@@ -164,10 +213,14 @@ class AdminUpdateCenterTest extends TestCase
         $manifestResponse = $redirectToUntrustedHost
             ? Http::response('', 302, ['Location' => 'http://127.0.0.1/private'])
             : Http::response($manifestBytes, 200);
-        Http::fake([
+        $fakeResponses = [
             $manifestUrl => $manifestResponse,
             $signatureUrl => Http::response($signatureOverride ?? $signature, 200),
-        ]);
+        ];
+        if ($packageBytes !== null) {
+            $fakeResponses[$manifest['artifact_url']] = Http::response($packageBytes, 200);
+        }
+        Http::fake($fakeResponses);
 
         config([
             'services.lms_updates.enabled' => true,

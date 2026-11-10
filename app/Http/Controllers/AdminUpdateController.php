@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\SystemUpdateCheck;
+use App\Models\SystemUpdatePreparation;
 use App\Services\ReleaseManifestChecker;
+use App\Services\ReleasePackageStager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 use RuntimeException;
@@ -23,6 +25,7 @@ class AdminUpdateController extends Controller
             'checks' => $checks,
             'currentVersion' => (string) config('services.lms_updates.current_version', '0.0.0'),
             'updatesEnabled' => (bool) config('services.lms_updates.enabled', false),
+            'preparation' => SystemUpdatePreparation::query()->with('preparedBy:id,name')->latest()->first(),
         ]);
     }
 
@@ -64,4 +67,23 @@ class AdminUpdateController extends Controller
         return redirect()->route('admin.updates.index')
             ->with($result['status'] === 'failed' ? 'error' : 'success', $result['message']);
     }
+    public function prepare(ReleasePackageStager $stager): RedirectResponse
+    {
+        try {
+            $preparation = $stager->prepare(auth()->user());
+
+            return redirect()->route('admin.updates.index')->with('success', $preparation->message);
+        } catch (Throwable $exception) {
+            if (! $exception instanceof RuntimeException) {
+                report($exception);
+            }
+
+            $message = $exception instanceof RuntimeException
+                ? $exception->getMessage()
+                : 'The release package could not be prepared. Review the server log; no application files were changed.';
+
+            return redirect()->route('admin.updates.index')->with('error', $message);
+        }
+    }
+
 }

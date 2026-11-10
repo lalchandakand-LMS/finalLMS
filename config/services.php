@@ -40,6 +40,7 @@ return [
         'public_key_path' => env('LMS_UPDATES_PUBLIC_KEY_PATH', storage_path('app/secure/release-public.pem')),
         'channel' => env('LMS_UPDATES_CHANNEL', 'stable'),
         'current_version' => env('LMS_VERSION') ?: (is_file(base_path('VERSION')) ? trim((string) file_get_contents(base_path('VERSION'))) : '0.0.0'),
+        'max_package_bytes' => (int) env('LMS_UPDATE_MAX_PACKAGE_BYTES', 536870912),
     ],
 
     'postmark' => [

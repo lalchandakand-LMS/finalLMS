@@ -4,7 +4,7 @@ This guide covers a fresh Laravel 12 installation on PHP 8.3+ with MySQL/MariaDB
 
 ## Requirements
 
-- PHP 8.3 with `bcmath`, `ctype`, `fileinfo`, `mbstring`, `openssl`, `pdo_mysql`, `tokenizer`, and `xml` enabled
+- PHP 8.3 with `bcmath`, `ctype`, `fileinfo`, `mbstring`, `openssl`, `pdo_mysql`, `tokenizer`, `xml`, and `zip` enabled
 - A new, empty MySQL/MariaDB database and database user with full privileges on that database
 - HTTPS enabled for the domain
 - Writable `storage`, `bootstrap/cache`, and application-root directories during installation
