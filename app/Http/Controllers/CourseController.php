@@ -108,7 +108,7 @@ class CourseController extends Controller
         $categoryIds = $validated['category_ids'] ?? [];
         unset($validated['category_ids'], $validated['image']);
         $validated['tags'] = $this->normalizeTags($request->input('tags'));
-        $validated['short_description'] = $validated['short_description'] ?: Str::limit(trim(strip_tags($validated['description'])), 240);
+        $validated['short_description'] = ($validated['short_description'] ?? '') ?: Str::limit(trim(strip_tags($validated['description'])), 240);
         $validated['slug'] = $this->uniqueCourseSlug($validated['title']);
 
         $newImagePath = $request->file('image')?->store('courses', 'public');
@@ -120,7 +120,7 @@ class CourseController extends Controller
                 $course->categories()->sync($categoryIds);
                 return $course;
             });
-        } catch (\\Throwable $exception) {
+        } catch (\Throwable $exception) {
             if ($newImagePath) Storage::disk('public')->delete($newImagePath);
             throw $exception;
         }
@@ -134,7 +134,7 @@ class CourseController extends Controller
         $categoryIds = $validated['category_ids'] ?? [];
         unset($validated['category_ids'], $validated['image']);
         $validated['tags'] = $this->normalizeTags($request->input('tags'));
-        $validated['short_description'] = $validated['short_description'] ?: Str::limit(trim(strip_tags($validated['description'])), 240);
+        $validated['short_description'] = ($validated['short_description'] ?? '') ?: Str::limit(trim(strip_tags($validated['description'])), 240);
         $validated['slug'] = $this->uniqueCourseSlug($validated['title'], $course->id);
 
         $oldImagePath = $course->image_path;
@@ -146,7 +146,7 @@ class CourseController extends Controller
                 $course->update($validated);
                 $course->categories()->sync($categoryIds);
             });
-        } catch (\\Throwable $exception) {
+        } catch (\Throwable $exception) {
             if ($newImagePath) Storage::disk('public')->delete($newImagePath);
             throw $exception;
         }
@@ -234,7 +234,7 @@ class CourseController extends Controller
         $canManageCourse = $user && ($user->isAdmin() || ($user->isTeacher() && $course->teacher_id === $user->id));
         abort_unless($course->status === 'published' || $canManageCourse, 404);
 
-        $course->load('teacher', 'enrollments.user', 'lessons', 'sections.blogPosts');
+        $course->load('teacher', 'categories', 'enrollments.user', 'lessons', 'sections.blogPosts');
 
         $enrollment = null;
         if (Auth::check()) {
