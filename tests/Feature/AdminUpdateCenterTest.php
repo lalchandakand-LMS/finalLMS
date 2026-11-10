@@ -173,6 +173,7 @@ class AdminUpdateCenterTest extends TestCase
         $preparation = SystemUpdatePreparation::query()->firstOrFail();
         $this->assertSame('verified', $preparation->status);
         $this->assertSame(hash('sha256', $packageBytes), $preparation->package_sha256);
+        $this->assertSame($migrationDigest, $preparation->migration_set_sha256);
         $this->assertTrue(Storage::disk('local')->exists($preparation->package_path));
     }
 
