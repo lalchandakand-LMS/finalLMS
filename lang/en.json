@@ -403,5 +403,12 @@
     "Choose language": "Choose language",
     "Run activation readiness preflight": "Run activation readiness preflight",
     "Latest activation preflight": "Latest activation preflight",
-    "Pending migrations requiring review": "Pending migrations requiring review"
+    "Pending migrations requiring review": "Pending migrations requiring review",
+    "Create a fresh database and media backup first, then tie it to this release with a private code snapshot.": "Create a fresh database and media backup first, then tie it to this release with a private code snapshot.",
+    "Open Backups": "Open Backups",
+    "Create and verify pre-activation backup": "Create and verify pre-activation backup",
+    "Verified pre-activation backup": "Verified pre-activation backup",
+    "Backup expires": "Backup expires",
+    "Code snapshot SHA-256": "Code snapshot SHA-256",
+    "Database/media backup SHA-256": "Database/media backup SHA-256"
 }
