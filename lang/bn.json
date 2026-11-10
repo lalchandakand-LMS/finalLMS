@@ -654,5 +654,6 @@
     "Size": "আকার",
     "Expires": "মেয়াদ শেষ",
     "Package SHA-256": "প্যাকেজ SHA-256",
+    "Preparation status": "প্রস্তুতির অবস্থা",
     "Expired": "মেয়াদ শেষ"
 }
