@@ -112,6 +112,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/cpanel-package" dist
+          VERSION="${GITHUB_REF_NAME#v}"
+          printf '%s\\n' "$VERSION" > VERSION
           rsync -a \
             --exclude='database/*.sqlite' \
             --exclude='storage/logs/*' \
@@ -124,7 +126,7 @@ jobs:
             --exclude='node_modules' \
             --exclude='.git' \
             --exclude='dist' \
-            app artisan bootstrap config database deployment public resources routes storage vendor composer.json composer.lock README.md \
+            app artisan bootstrap config database deployment public resources routes storage vendor composer.json composer.lock README.md VERSION \
             "$RUNNER_TEMP/cpanel-package/"
           (cd "$RUNNER_TEMP/cpanel-package" && zip -qr "$GITHUB_WORKSPACE/dist/AlomsEnglishCenter-cpanel.zip" .)
           unzip -t dist/AlomsEnglishCenter-cpanel.zip
