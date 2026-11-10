@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminSettingsController;
+use App\Http\Controllers\AdminUpdateController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BatchController;
 use App\Http\Controllers\AttendanceController;
