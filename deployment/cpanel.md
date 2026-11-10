@@ -49,3 +49,7 @@ The `Laravel CI` workflow creates the `AlomsEnglishCenter-cpanel.zip` artifact o
 ## Known Deployment Gaps
 
 The web installer and installation gate are implemented in code, but still require a successful GitHub CI run and a real cPanel staging installation. Automated scheduled off-site backups and disaster recovery are not yet implemented. The bKash Tokenized Checkout adapter now performs server-side token, execute, and payment-status verification. It remains disabled until the academy supplies official merchant credentials, configures the registered callback URL, and completes sandbox and production verification. Nagad and SSLCommerz direct API integrations are not implemented; Nagad remains configuration-only until official merchant documentation and credentials are supplied. Do not advertise automatic Nagad or SSLCommerz payment processing. The cPanel guide has not been exercised on an actual cPanel account.
+
+## Post-launch application updates
+
+The long-term update design and acceptance criteria are documented in [Admin Update Center and Safe Release System](../docs/ADMIN_UPDATE_SYSTEM.md). This is an approved requirement, not a claim that the updater is already implemented. Until the signed release/update workflow is implemented and accepted on cPanel staging, deploy reviewed release ZIPs using the manual backup-and-release procedure; do not install arbitrary packages or overwrite the live application in place.
