@@ -47,10 +47,10 @@
         $websiteFavicon = $isPublicLayout && $hasSettingsTable ? \App\Models\MediaAsset::query()->whereKey(\App\Models\Setting::value('site_favicon_media_id'))->where('mime_type', 'like', 'image/%')->first() : null;
     @endphp
     <title>@yield('title', config('app.name'))</title>
-    <meta name="description" content="{{ $seoDescription }}">
+    <meta name="description" content="@yield('seo_description', $seoDescription)">
     <meta name="keywords" content="{{ $seoKeywords }}">
-    <meta property="og:title" content="{{ $seoTitle }}">
-    <meta property="og:description" content="{{ $seoDescription }}">
+    <meta property="og:title" content="@yield('seo_title', $seoTitle)">
+    <meta property="og:description" content="@yield('seo_description', $seoDescription)">
     <meta property="og:type" content="website">
     <meta property="og:url" content="{{ request()->url() }}">
     @if($websiteFavicon)<link rel="icon" href="{{ $websiteFavicon->url }}">@endif
