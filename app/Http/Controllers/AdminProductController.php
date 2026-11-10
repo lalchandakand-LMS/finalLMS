@@ -56,9 +56,10 @@ class AdminProductController extends Controller
         unset($data['category_ids'], $data['image'], $data['download_file']);
         $data['slug'] = $this->uniqueSlug($data['name'], $product->id);
 
+        $obsoleteImagePath = null;
         if ($image) {
             $newPath = $image->store('products', 'public');
-            if ($product->image_path) Storage::disk('public')->delete($product->image_path);
+            $obsoleteImagePath = $product->image_path;
             $data['image_path'] = $newPath;
         }
         $obsoleteDownloadPath = null;
@@ -79,7 +80,11 @@ class AdminProductController extends Controller
 
         $product->update($data);
         $product->categories()->sync($request->input('category_ids', []));
-        // Delete replaced/retired private files only after the database update succeeds.
+        // Retire old files only after the database update succeeds, so a failed update
+        // never leaves the product pointing at a file that has already been deleted.
+        if ($obsoleteImagePath && $obsoleteImagePath !== $product->image_path) {
+            Storage::disk('public')->delete($obsoleteImagePath);
+        }
         if ($obsoleteDownloadPath && $obsoleteDownloadPath !== $product->download_path) {
             Storage::disk('local')->delete($obsoleteDownloadPath);
         }
