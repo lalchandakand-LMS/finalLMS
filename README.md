@@ -62,7 +62,7 @@ To continue this repository in ChatGPT, Google AI Studio, or with another develo
 
 **Current panel decision:** five operational panels — one unified Admin Panel (no separate Super Admin), a separate branch-scoped Branch Panel, Teacher Panel, Student Panel and Guardian Panel. Older issue descriptions may conflict; follow the latest owner decision recorded in the Decision Log.
 
-When code changes, update the handoff/status/decision documents in the same PR where practical. Record branch, PR, exact commit SHA, files changed, tests and CI evidence, known limitations, next step, and whether changes are merged or deployed. Documentation is not proof of implementation: always inspect source and fresh test results. Do not merge or deploy production without explicit owner approval.
+When code changes, update the handoff/status/decision documents in the same PR where practical. Record branch, PR, exact commit SHA, files changed, tests and CI evidence, known limitations, next step, and whether changes are merged or deployed. Documentation is not proof of implementation: always inspect source and fresh test results. The owner has authorized autonomous feature-branch/PR work and safe merges to main when the complete diff is reviewed, exact-head CI/CodeQL pass, dependencies/conflicts are checked, and the change is safe. Do not ask again for routine PR merge approval. Production deployment, live payment activation, and irreversible production data migrations remain separate safety gates: proceed only when the scope, backup, rollback path, and target environment are verifiably safe; otherwise stop and report the specific blocker.
 
 ## First production administrator
 
