@@ -39,27 +39,14 @@ class ReleaseManifestChecker
             throw new RuntimeException('The release public key must be stored outside the public web root.');
         }
 
-        $manifestResponse = Http::connectTimeout(5)->timeout(15)->withOptions([
-            'allow_redirects' => ['max' => 3, 'strict' => true],
-        ])->get($manifestUrl)->throw();
+        $manifestBytes = $this->fetchTrustedAsset($manifestUrl, 262144);
 
-        $manifestBytes = $manifestResponse->body();
-        if ($manifestBytes === '' || strlen($manifestBytes) > 262144) {
-            throw new RuntimeException('The release manifest is empty or exceeds the permitted size.');
-        }
-
-        $signatureUrl = preg_replace('/release-manifest\.json$/', 'release-manifest.sig', $manifestUrl);
+        $signatureUrl = preg_replace('/release-manifest\\.json$/', 'release-manifest.sig', $manifestUrl);
         if (! is_string($signatureUrl) || $signatureUrl === $manifestUrl) {
             throw new RuntimeException('The release signature URL could not be derived safely.');
         }
 
-        $signature = Http::connectTimeout(5)->timeout(15)->withOptions([
-            'allow_redirects' => ['max' => 3, 'strict' => true],
-        ])->get($signatureUrl)->throw()->body();
-
-        if ($signature === '' || strlen($signature) > 8192) {
-            throw new RuntimeException('The release signature is empty or invalid.');
-        }
+        $signature = $this->fetchTrustedAsset($signatureUrl, 8192);
 
         $publicPem = file_get_contents($realKeyPath);
         if (! is_string($publicPem) || $publicPem === '') {
@@ -183,4 +170,47 @@ class ReleaseManifestChecker
             throw new RuntimeException('The release package URL is not the expected trusted GitHub release asset.');
         }
     }
+    private function fetchTrustedAsset(string $url, int $maximumBytes): string
+    {
+        $allowedHosts = [
+            'github.com',
+            'objects.githubusercontent.com',
+            'release-assets.githubusercontent.com',
+        ];
+
+        for ($redirect = 0; $redirect <= 3; $redirect++) {
+            $response = Http::connectTimeout(5)->timeout(15)->withoutRedirecting()->get($url);
+
+            if ($response->status() >= 300 && $response->status() < 400) {
+                $location = $response->header('Location');
+                $parts = is_string($location) ? parse_url($location) : false;
+                if (! is_array($parts)
+                    || ($parts['scheme'] ?? null) !== 'https'
+                    || ! in_array(strtolower((string) ($parts['host'] ?? '')), $allowedHosts, true)
+                    || isset($parts['user'])
+                    || isset($parts['pass'])
+                    || (isset($parts['port']) && $parts['port'] !== 443)) {
+                    throw new RuntimeException('The release asset redirected to an untrusted destination.');
+                }
+
+                if ($redirect === 3) {
+                    throw new RuntimeException('The release asset exceeded the permitted redirect count.');
+                }
+
+                $url = $location;
+                continue;
+            }
+
+            $response->throw();
+            $body = $response->body();
+            if ($body === '' || strlen($body) > $maximumBytes) {
+                throw new RuntimeException('A release metadata asset is empty or exceeds the permitted size.');
+            }
+
+            return $body;
+        }
+
+        throw new RuntimeException('The release asset could not be retrieved safely.');
+    }
+
 }
