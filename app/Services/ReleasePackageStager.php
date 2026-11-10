@@ -250,7 +250,10 @@ class ReleasePackageStager
                     throw new RuntimeException('The release archive contains a file outside the approved application directories.');
                 }
 
-                if (in_array('.git', $segments, true)
+                if ((str_starts_with($normalized, 'public/')
+                        && preg_match('/\\.(?:php[0-9]*|phtml|phar|cgi|pl|sh|exe|dll|so)$/i', $normalized)
+                        && $normalized !== 'public/index.php')
+                    || in_array('.git', $segments, true)
                     || in_array('.github', $segments, true)
                     || in_array('tests', $segments, true)
                     || in_array('node_modules', $segments, true)
