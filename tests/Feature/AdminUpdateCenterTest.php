@@ -307,6 +307,13 @@ class AdminUpdateCenterTest extends TestCase
         $activationCheck = collect($report->checks)->firstWhere('key', 'activation_runner');
         $this->assertSame('pass', $backupCheck['status']);
         $this->assertSame('blocked', $activationCheck['status']);
+
+        Storage::disk('local')->put($backup->database_backup_path, 'tampered-backup');
+        $this->assertFalse(app(UpdateBackupCoordinator::class)->verify($backup));
+        $this->actingAs($admin)->post(route('admin.updates.preflight', $preparation));
+        $tamperedReport = SystemUpdatePreflight::query()->where('preparation_id', $preparation->id)->latest('checked_at')->firstOrFail();
+        $tamperedBackupCheck = collect($tamperedReport->checks)->firstWhere('key', 'verified_pre_activation_backup');
+        $this->assertSame('blocked', $tamperedBackupCheck['status']);
     }
 
     public function test_admin_cannot_create_update_backup_without_a_recent_verified_database_media_backup(): void
