@@ -42,7 +42,7 @@
             <strong>{{ __('Latest prepared package') }}: {{ $preparation->version }}</strong>
             <p class="muted">{{ $preparation->message }}</p>
             <small class="muted">
-                {{ __('Status') }}: {{ ucfirst($preparation->status) }}
+                {{ __('Preparation status') }}: {{ ucfirst($preparation->status) }}
                 · {{ __('Size') }}: {{ number_format($preparation->file_size / 1024 / 1024, 2) }} MB
                 · {{ __('Expires') }}: {{ $preparation->expires_at?->format('d M Y H:i') }}
             </small>
