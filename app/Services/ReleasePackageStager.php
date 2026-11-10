@@ -279,9 +279,15 @@ class ReleasePackageStager
                 $opsys = 0;
                 $attributes = 0;
                 if ($archive->getExternalAttributesIndex($index, $opsys, $attributes)
-                    && $opsys === ZipArchive::OPSYS_UNIX
-                    && (($attributes >> 16) & 0170000) === 0120000) {
-                    throw new RuntimeException('The release archive contains a symbolic link.');
+                    && $opsys === ZipArchive::OPSYS_UNIX) {
+                    $unixMode = ($attributes >> 16) & 0177777;
+                    $fileType = $unixMode & 0170000;
+                    if (($fileType !== 0 && ! in_array($fileType, [0100000, 0040000], true))
+                        || ($unixMode & 07000) !== 0
+                        || ($directoryEntry && $fileType === 0100000)
+                        || (! $directoryEntry && $fileType === 0040000)) {
+                        throw new RuntimeException('The release archive contains a symbolic link or unsupported special file type.');
+                    }
                 }
 
                 $entrySize = (int) ($entry['size'] ?? 0);
