@@ -62,6 +62,7 @@ Route::get('/contests/{contest}', [QuizContestController::class, 'show'])->name(
 Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
 Route::get('/courses/{course}', [CourseController::class, 'show'])->name('courses.show');
 Route::get('/courses/{course}/lessons/{lesson}', [CourseController::class, 'showLesson'])->name('courses.lessons.show');
+Route::get('/courses/{course}/lessons/{lesson}/video', [CourseController::class, 'streamLessonVideo'])->name('courses.lessons.video');
 
 Route::middleware('auth')->group(function () {
     Route::get('/email/verify', [EmailVerificationController::class, 'notice'])->name('verification.notice');
