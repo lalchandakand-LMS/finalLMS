@@ -229,6 +229,29 @@ class AdminUpdateCenterTest extends TestCase
         $this->assertSame([], Storage::disk('local')->allFiles('updates/staging'));
     }
 
+    public function test_admin_cannot_stage_an_archive_with_unexpected_public_executable_files(): void
+    {
+        $packageBytes = $this->createReleasePackage([
+            'artisan' => "<?php echo 'artisan';",
+            'public/index.php' => "<?php echo 'public';",
+            'public/shell.php' => "<?php echo 'unexpected';",
+            'vendor/autoload.php' => "<?php echo 'vendor';",
+            'VERSION' => "1.0.1\n",
+            'storage/.gitignore' => '',
+            'bootstrap/cache/.gitignore' => '',
+        ]);
+        $this->configureSignedRelease(packageBytes: $packageBytes, migrationDigest: hash('sha256', ''));
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.updates.prepare'))
+            ->assertRedirect(route('admin.updates.index'))
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseCount('system_update_preparations', 0);
+        $this->assertSame([], Storage::disk('local')->allFiles('updates/staging'));
+    }
+
     public function test_admin_cannot_stage_an_archive_with_path_traversal_entries(): void
     {
         $packageBytes = $this->createReleasePackage([
