@@ -64,7 +64,7 @@ class CourseController extends Controller
 
     public function adminIndex(Request $request): View
     {
-        $query = Course::with(['teacher', 'categories'])
+        $query = Course::with(['teacher', 'categories', 'lessons'])
             ->withCount(['enrollments', 'lessons'])
             ->latest();
 
