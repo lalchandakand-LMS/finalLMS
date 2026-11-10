@@ -138,7 +138,7 @@ class CourseController extends Controller
         return redirect()->route('admin.courses.index')->with('success', 'Course deleted successfully.');
     }
 
-        public function show(Course $course): View
+    public function show(Course $course): View
     {
         $user = Auth::user();
         $canManageCourse = $user && ($user->isAdmin() || ($user->isTeacher() && $course->teacher_id === $user->id));
@@ -288,7 +288,7 @@ class CourseController extends Controller
             : redirect()->route('admin.courses.index')->with('success', 'Lesson added successfully.');
     }
 
-        public function teacherLessons(Course $course): View
+    public function teacherLessons(Course $course): View
     {
         $user = Auth::user();
         abort_unless($user?->isAdmin() || ($user?->isTeacher() && $course->teacher_id === $user->id), 403);
@@ -369,7 +369,7 @@ class CourseController extends Controller
         return back()->with('success', 'Lesson updated successfully.');
     }
 
-        public function destroyLesson(Course $course, Lesson $lesson): RedirectResponse
+    public function destroyLesson(Course $course, Lesson $lesson): RedirectResponse
     {
         $user = Auth::user();
         abort_unless($user?->isAdmin() || ($user?->isTeacher() && $course->teacher_id === $user->id), 403);
@@ -385,7 +385,7 @@ class CourseController extends Controller
         return back()->with('success', 'Lesson deleted successfully.');
     }
 
-        public function complete(Course $course, Request $request): RedirectResponse
+    public function complete(Course $course, Request $request): RedirectResponse
     {
         $user = Auth::user();
         $studentId = (int) ($request->input('student_id') ?? $user->id);
