@@ -79,13 +79,18 @@ class UpdateBackupCoordinator
             }
 
             $codeHash = hash_file('sha256', $codeReal);
-            if (! is_string($codeHash) || ! hash_equals($backup->code_snapshot_sha256, $codeHash)) {
+            $codeSize = filesize($codeReal);
+            if (! is_string($codeHash)
+                || ! is_int($codeSize)
+                || $codeSize !== (int) $backup->code_snapshot_size
+                || ! hash_equals($backup->code_snapshot_sha256, $codeHash)) {
                 return false;
             }
 
             $database = $this->verifyDatabaseBackup($backup->database_backup_path);
             return hash_equals($backup->database_backup_sha256, $database['sha256'])
-                && $database['created_at']->equalTo($backup->database_backup_created_at);
+                && $database['created_at']->equalTo($backup->database_backup_created_at)
+                && $database['created_at']->greaterThanOrEqualTo(now()->subDay());
         } catch (Throwable) {
             return false;
         }
