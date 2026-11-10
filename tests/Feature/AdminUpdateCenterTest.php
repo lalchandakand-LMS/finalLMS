@@ -194,8 +194,8 @@ class AdminUpdateCenterTest extends TestCase
             'artisan' => "<?php echo 'artisan';",
             'public/index.php' => "<?php echo 'public';",
             'vendor/autoload.php' => "<?php echo 'vendor';",
-            'VERSION' => "1.0.1\\n",
-            'deployment/.env.production' => "APP_KEY=secret\\n",
+            'VERSION' => "1.0.1\n",
+            'deployment/.env.production' => "APP_KEY=secret\n",
             'storage/.gitignore' => '',
             'bootstrap/cache/.gitignore' => '',
         ]);
