@@ -51,7 +51,8 @@ class AdminUpdateCenterTest extends TestCase
             ->post(route('admin.updates.check'))
             ->assertForbidden();
 
-        $this->actingAs($student)
+        $otherStudent = User::factory()->create(['role' => 'student']);
+        $this->actingAs($otherStudent)
             ->post(route('admin.updates.prepare'))
             ->assertForbidden();
 
