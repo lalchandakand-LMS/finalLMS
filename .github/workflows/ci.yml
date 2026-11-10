@@ -105,7 +105,7 @@ jobs:
           (cd "$RUNNER_TEMP/cpanel-package" && zip -qr "$GITHUB_WORKSPACE/dist/AlomsEnglishCenter-cpanel.zip" .)
           unzip -t dist/AlomsEnglishCenter-cpanel.zip
           unzip -Z1 dist/AlomsEnglishCenter-cpanel.zip > "$RUNNER_TEMP/cpanel-files.txt"
-          ! grep -Eq '(^|/)(\.env|database\.sqlite|laravel\.log|\.git)(/|$)' "$RUNNER_TEMP/cpanel-files.txt"
+          if grep -Eq '(^|/)(\.env|database\.sqlite|laravel\.log|\.git)(/|$)' "$RUNNER_TEMP/cpanel-files.txt"; then echo "Forbidden runtime or secret file found in release package."; exit 1; fi
           grep -Fxq 'public/index.php' "$RUNNER_TEMP/cpanel-files.txt"
           grep -Fxq 'vendor/autoload.php' "$RUNNER_TEMP/cpanel-files.txt"
           grep -Fxq 'deployment/.env.example' "$RUNNER_TEMP/cpanel-files.txt"
