@@ -17,6 +17,7 @@ class GuardianStudentLink extends Model
         'verified_by',
         'verification_method',
         'rejected_at',
+        'revoked_at',
     ];
 
     protected function casts(): array
@@ -25,6 +26,7 @@ class GuardianStudentLink extends Model
             'requested_at' => 'datetime',
             'verified_at' => 'datetime',
             'rejected_at' => 'datetime',
+            'revoked_at' => 'datetime',
         ];
     }
 
