@@ -120,4 +120,60 @@ class ProductCatalogManagementTest extends TestCase
         Storage::disk('local')->assertMissing('private/products/retired.pdf');
     }
 
+    public function test_product_type_cannot_change_after_it_has_order_history(): void
+    {
+        Storage::fake('local');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $course = $this->makeCourse();
+        Storage::disk('local')->put('private/products/purchased.pdf', 'purchased ebook');
+
+        $product = Product::create([
+            'type' => 'ebook',
+            'name' => 'Purchased Workbook',
+            'slug' => 'purchased-workbook',
+            'regular_price' => 500,
+            'currency' => 'BDT',
+            'is_downloadable' => true,
+            'download_path' => 'private/products/purchased.pdf',
+            'status' => 'published',
+            'published_at' => now(),
+            'created_by' => $admin->id,
+        ]);
+        $order = \\App\\Models\\Order::create([
+            'order_number' => 'ALM-PRODUCT-TYPE-LOCK-001',
+            'user_id' => $student->id,
+            'status' => 'completed',
+            'currency' => 'BDT',
+            'subtotal' => 500,
+            'discount_total' => 0,
+            'total' => 500,
+        ]);
+        \\App\\Models\\OrderItem::create([
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'product_type' => 'ebook',
+            'product_name' => $product->name,
+            'quantity' => 1,
+            'regular_price' => 500,
+            'discount_total' => 0,
+            'line_total' => 500,
+        ]);
+
+        $this->actingAs($admin)->from(route('admin.products.index'))
+            ->put(route('admin.products.update', $product), [
+                'type' => 'course',
+                'course_id' => $course->id,
+                'name' => 'Purchased Workbook',
+                'regular_price' => '500.00',
+                'currency' => 'BDT',
+                'status' => 'published',
+            ])
+            ->assertRedirect(route('admin.products.index'))
+            ->assertSessionHasErrors('type');
+
+        $this->assertSame('ebook', $product->fresh()->type);
+        Storage::disk('local')->assertExists('private/products/purchased.pdf');
+    }
+
 }
