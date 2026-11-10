@@ -143,7 +143,7 @@ These checks prove the named automated jobs passed for those commits. They do **
 
 ### Updated immediate work order
 
-1. Reconcile and safely integrate the existing green PR stacks in dependency order, after full diff/review and exact-head combined CI. Do not merge without owner approval.
+1. Reconcile and safely integrate the existing green PR stacks in dependency order, after full diff/review and exact-head combined CI. Owner has pre-authorized safe PR merges; do not ask for routine merge approval. Merge only after complete review, exact-head checks and dependency/conflict validation.
 2. Complete the Guardian panel as a focused feature: verified guardian-student relationship, multiple children, safe child switcher, read-only linked-child views, server-side isolation and negative IDOR tests across each sensitive route/API/export/download/notification.
 3. Finish the Student course-learning workflow and Teacher workflow, verifying private lesson media, progress/resume and access boundaries.
 4. Complete Branch Panel operations and branch isolation tests; keep one unified Admin.
@@ -153,3 +153,12 @@ These checks prove the named automated jobs passed for those commits. They do **
 ### Explicit unverified items
 
 No real cPanel staging install, production deployment, official bKash/Nagad/SSLCommerz merchant acceptance, Zoom/Jitsi provider API acceptance, Flutter store release, or end-to-end guardian workflow is evidenced by this GitHub snapshot.
+
+### Live update-system work — 2026-11-10
+
+- PR #78 (Admin Update Center specification) was merged to main as 1bf77fb534fff77d2662724416ee9aafde35cb79. The spec is in docs/ADMIN_UPDATE_SYSTEM.md; it distinguishes no-code content updates from signed application releases and records security/recovery acceptance gates.
+- PR #79 (first signed-release workflow attempt) was closed as superseded after actionlint/ShellCheck found an unsafe ! grep shell guard. The issue was fixed on a clean branch; no failed attempt was merged.
+- PR #80 is the current signed release pipeline PR: https://github.com/lalchandakand-LMS/finalLMS/pull/80. It adds a tag-triggered PHP 8.3/Laravel 12 release build, exact-tag MySQL-backed tests, SHA-256 package manifest, RSA detached signature, fail-closed signing secret check, public-key fingerprint and release setup guide. Its exact-head CI/CodeQL were still running at the last recorded check; re-fetch before reporting final status.
+- The release signing key secret RELEASE_SIGNING_PRIVATE_KEY is not configured/verified in repository settings through the available integration. A repository owner must provision it securely before a tagged signed release can run. Never put the private key in Git, chat or production cPanel.
+- The release workflow publishes signed artifacts only. The Admin Update Center, production public-key pinning, staged package activation, migration orchestration, rollback and real cPanel staging acceptance are not yet implemented.
+- Current immediate update-system sequence: finish PR #80 checks and merge safely; provision signing key securely; implement public-key-pinned manifest verification and Admin-only update status/preflight; implement staged activation and health checks; implement recovery/rollback; then rehearse install/upgrade/rollback on isolated cPanel staging.
