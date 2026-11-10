@@ -6,6 +6,7 @@ use App\Models\CourseCategory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -49,7 +50,9 @@ class CourseCategoryController extends Controller
     {
         DB::transaction(function () use ($category): void {
             $category->courses()->detach();
-            $category->posts()->update(['category' => null]);
+            $category->posts()->get()->each(function ($post): void {
+                $post->forceFill(['category' => null])->save();
+            });
             $category->posts()->detach();
             $category->delete();
         });
