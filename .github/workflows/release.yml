@@ -13,8 +13,62 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  test:
+    name: Verify exact tagged source before release
+    runs-on: ubuntu-24.04
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: aloms_lms_release_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: bcmath, ctype, fileinfo, mbstring, openssl, pdo_mysql, tokenizer, xml
+          coverage: none
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: npm
+      - run: composer validate --strict
+      - run: composer install --no-interaction --prefer-dist
+      - run: npm ci
+      - run: cp deployment/.env.example .env
+      - run: php artisan key:generate --force
+      - name: Run migrations
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: aloms_lms_release_test
+          DB_USERNAME: root
+          DB_PASSWORD: root
+        run: php artisan migrate:fresh --force
+      - name: Run automated tests
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: aloms_lms_release_test
+          DB_USERNAME: root
+          DB_PASSWORD: root
+        run: vendor/bin/phpunit
+      - run: php artisan route:list
+      - run: npm run build
+
   release:
     name: Build, sign and publish immutable cPanel release
+    needs: test
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout tagged source
