@@ -31,7 +31,7 @@
         {{ __('After verification, you can extract the release into an isolated private staging directory. This does not activate or install code, run migrations or change the live site.') }}
     </div>
     @php($latestCheck = $checks->first())
-    @if($updatesEnabled && $latestCheck && $latestCheck->status === 'available' && (!$preparation || $preparation->version !== $latestCheck->target_version || $preparation->status !== 'verified' || !$preparation->expires_at || $preparation->expires_at->isPast()))
+    @if($updatesEnabled && $latestCheck && $latestCheck->status === 'available' && (!$preparation || $preparation->version !== $latestCheck->target_version || !in_array($preparation->status, ['verified', 'staged'], true) || !$preparation->expires_at || $preparation->expires_at->isPast()))
         <form method="POST" action="{{ route('admin.updates.prepare') }}" style="margin-top:16px;">
             @csrf
             <button class="btn secondary" type="submit">{{ __('Download and verify release package') }}</button>
