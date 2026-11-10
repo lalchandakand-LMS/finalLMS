@@ -30,7 +30,7 @@ class CourseController extends Controller
             'level' => ['nullable', 'string', 'max:40'],
             'language' => ['nullable', 'string', 'max:40'],
             'min_price' => ['nullable', 'numeric', 'min:0', 'max:999999999'],
-            'max_price' => ['nullable', 'numeric', 'min:0', 'max:999999999', 'gte:min_price'],
+            'max_price' => ['nullable', 'numeric', 'min:0', 'max:999999999'],
             'sort' => ['nullable', 'in:latest,price_low,price_high,title'],
         ]);
 
