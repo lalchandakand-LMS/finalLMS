@@ -410,5 +410,12 @@
     "Verified pre-activation backup": "Verified pre-activation backup",
     "Backup expires": "Backup expires",
     "Code snapshot SHA-256": "Code snapshot SHA-256",
-    "Database/media backup SHA-256": "Database/media backup SHA-256"
+    "Database/media backup SHA-256": "Database/media backup SHA-256",
+    "Or upload video (MP4, M4V, MOV, WebM; max 512 MB)": "Or upload video (MP4, M4V, MOV, WebM; max 512 MB)",
+    "Video thumbnail": "Video thumbnail",
+    "Replace/upload video (MP4, M4V, MOV, WebM; max 512 MB)": "Replace/upload video (MP4, M4V, MOV, WebM; max 512 MB)",
+    "Replace thumbnail": "Replace thumbnail",
+    "Remove uploaded video": "Remove uploaded video",
+    "Remove thumbnail": "Remove thumbnail",
+    "Your browser does not support HTML video.": "Your browser does not support HTML video."
 }
