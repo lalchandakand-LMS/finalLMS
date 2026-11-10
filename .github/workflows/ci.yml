@@ -82,6 +82,8 @@ jobs:
       - run: composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
       - run: php artisan key:generate --force
       - run: php artisan config:cache
+      - name: Verify packaged LMS version marker
+        run: EXPECTED_VERSION="$(tr -d '\\r\\n' < VERSION)" php .github/scripts/assert-release-version.php
       - run: php artisan view:cache
       - run: npm ci
       - run: npm run build
