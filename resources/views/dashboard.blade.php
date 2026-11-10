@@ -70,6 +70,7 @@
             <section class="aec-grid">
                 <a class="aec-link" href="{{ route('admin.courses.index') }}"><span class="aec-link-icon">📚</span><strong>{{ __('Courses & lessons') }}</strong><span>{{ __('Create courses and manage learning content') }}</span></a>
                 <a class="aec-link" href="{{ route('admin.users.index') }}"><span class="aec-link-icon">👥</span><strong>{{ __('Users & roles') }}</strong><span>{{ __('Manage student, teacher and staff accounts') }}</span></a>
+                <a class="aec-link" href="{{ route('admin.guardians.index') }}"><span class="aec-link-icon">👨‍👩‍👧</span><strong>{{ __('Guardian relationships') }}</strong><span>{{ __('Verify guardian access to linked student records') }}</span></a>
                 <a class="aec-link" href="{{ route('admin.batches.index') }}"><span class="aec-link-icon">🗓️</span><strong>{{ __('Batches & branches') }}</strong><span>{{ __('Organize classes, batches and branches') }}</span></a>
                 <a class="aec-link" href="{{ route('admin.payments.index') }}"><span class="aec-link-icon">💳</span><strong>{{ __('Payments') }}</strong><span>{{ __('Review submitted course payments') }}</span></a>
                 <a class="aec-link" href="{{ route('live-classes.index') }}"><span class="aec-link-icon">🎥</span><strong>{{ __('Live classes') }}</strong><span>{{ __('View scheduled online classes') }}</span></a>
