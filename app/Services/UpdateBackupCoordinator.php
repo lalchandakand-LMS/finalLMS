@@ -178,6 +178,38 @@ class UpdateBackupCoordinator
             }
         }
 
+        foreach ($payload['public_media'] as $mediaPath => $encoded) {
+            if (! is_string($mediaPath)
+                || ! str_starts_with($mediaPath, 'media/')
+                || str_contains($mediaPath, '..')
+                || str_contains($mediaPath, '\\\\')
+                || ! is_string($encoded)
+                || base64_decode($encoded, true) === false) {
+                throw new RuntimeException('The database/media backup contains an unsafe or damaged public media file.');
+            }
+        }
+
+        foreach ($payload['private_files'] as $privatePath => $encoded) {
+            if (! is_string($privatePath)
+                || ! str_starts_with($privatePath, 'assignment-submissions/')
+                || str_contains($privatePath, '..')
+                || str_contains($privatePath, '\\\\')
+                || ! is_string($encoded)
+                || base64_decode($encoded, true) === false) {
+                throw new RuntimeException('The database/media backup contains an unsafe or damaged private file.');
+            }
+        }
+
+        foreach (($payload['tables']['media_assets'] ?? []) as $asset) {
+            if (! is_array($asset)) {
+                throw new RuntimeException('The database/media backup contains an invalid media asset record.');
+            }
+            $mediaPath = (string) ($asset['path'] ?? '');
+            if ($mediaPath !== '' && ! array_key_exists($mediaPath, $payload['public_media'])) {
+                throw new RuntimeException('A media asset record is missing its corresponding uploaded file from the backup.');
+            }
+        }
+
         $sha256 = hash_file('sha256', $real);
         if (! is_string($sha256)) {
             throw new RuntimeException('The database/media backup SHA-256 could not be calculated.');
