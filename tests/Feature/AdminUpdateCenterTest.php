@@ -275,6 +275,7 @@ class AdminUpdateCenterTest extends TestCase
 
         app(BackupController::class)->create();
         $this->assertCount(1, Storage::disk('local')->files('backups'));
+        config(['services.lms_updates.current_version' => trim((string) file_get_contents(base_path('VERSION')))]);
 
         $backupResponse = $this->actingAs($admin)->post(route('admin.updates.backup', $preparation));
         $backupResponse->assertRedirect(route('admin.updates.index'));
