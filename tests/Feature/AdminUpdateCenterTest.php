@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\ReleaseManifestChecker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use Tests\TestCase;
@@ -28,6 +29,15 @@ class AdminUpdateCenterTest extends TestCase
         }
 
         parent::tearDown();
+    }
+
+    public function test_update_preparation_schema_contains_all_private_staging_fields(): void
+    {
+        $this->assertTrue(Schema::hasColumns('system_update_preparations', [
+            'migration_set_sha256',
+            'release_path',
+            'staged_at',
+        ]));
     }
 
     public function test_admin_can_open_the_system_update_center(): void
@@ -210,6 +220,33 @@ class AdminUpdateCenterTest extends TestCase
         $this->assertFalse(Storage::disk('local')->exists($preparation->release_path.'/.env'));
         $this->assertTrue(Storage::disk('local')->exists($preparation->package_path));
         $this->assertSame(0600, fileperms(Storage::disk('local')->path($preparation->release_path.'/VERSION')) & 0777);
+    }
+
+    public function test_admin_cannot_stage_a_package_with_a_mismatched_migration_set_digest(): void
+    {
+        $migrationPath = 'database/migrations/2026_11_10_140001_test_release_migration.php';
+        $packageBytes = $this->createReleasePackage([
+            'artisan' => "<?php echo 'artisan';",
+            'public/index.php' => "<?php echo 'public';",
+            'vendor/autoload.php' => "<?php echo 'vendor';",
+            'VERSION' => "1.0.1\n",
+            $migrationPath => "<?php return new class {};\n",
+            'storage/.gitignore' => '',
+            'bootstrap/cache/.gitignore' => '',
+        ]);
+        $this->configureSignedRelease(
+            packageBytes: $packageBytes,
+            migrationDigest: str_repeat('0', 64)
+        );
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.updates.prepare'))
+            ->assertRedirect(route('admin.updates.index'))
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseCount('system_update_preparations', 0);
+        $this->assertSame([], Storage::disk('local')->allFiles('updates/staging'));
     }
 
     public function test_non_admin_cannot_extract_a_verified_release(): void
