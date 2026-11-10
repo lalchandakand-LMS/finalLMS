@@ -105,4 +105,12 @@ class AdminUpdateController extends Controller
         }
     }
 
+    public function preflight(SystemUpdatePreparation $preparation, ReleasePreflightChecker $checker): View
+    {
+        return view('admin.updates.preflight', [
+            'preparation' => $preparation,
+            'preflight' => $checker->inspect($preparation),
+        ]);
+    }
+
 }
