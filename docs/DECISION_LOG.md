@@ -66,7 +66,7 @@ This file records decisions that should not be casually reversed by a developer 
 - Successful code and docs should be committed to the project branch; never rely only on chat memory.
 - Add migrations, authorization, validation, tests, bilingual strings and deployment notes with features.
 - Verify CI/CodeQL on the exact final commit SHA.
-- No merge to protected main, production deployment, live payment activation or app-store release without explicit owner approval.
+- The owner pre-authorizes autonomous feature-branch/PR work and safe PR merges to main when full diff review, exact-head CI/CodeQL, dependency/conflict checks and risk review pass; do not ask for routine merge approval. Production deployment, live payment activation, irreversible production data migrations and app-store releases still require verified backups, rollback/recovery readiness and applicable release safeguards.
 - Never call a feature complete based only on UI/menu/table/syntax; require complete user workflow, authorization, automated tests and relevant staging/provider acceptance.
 
 ## D-011 — AI handoff and project memory
@@ -74,3 +74,15 @@ This file records decisions that should not be casually reversed by a developer 
 - Every meaningful change must record: date, branch, PR, commit SHA, files/modules touched, behavior changed, tests run/results, known limitations, next task and merge/deployment status.
 - AI agents must read these files and inspect actual source before coding. They must not invent implementation or CI status.
 - Preserve a dated history; do not erase previous decisions without recording why they changed.
+
+
+## D-012 — Post-launch content and application updates
+- Routine website/LMS content and configuration (courses, lessons, homepage, pricing, flash sales, eBooks, notices, translations and supported settings) must be maintainable by Admin through existing no-code modules.
+- Application-code updates must use a trusted, versioned, signed release from the CI pipeline, not arbitrary ZIP uploads or arbitrary URLs.
+- The Admin Update Center must show release notes, compatibility/preflight, backup, progress, audit history, health checks and safe recovery; only unified Admin may use it.
+- Preserve .env, credentials, student records, private media and uploaded files. Use backward-compatible migrations and tested staged activation/rollback.
+- The specification is recorded in docs/ADMIN_UPDATE_SYSTEM.md. Do not call the updater complete until its implementation and cPanel staging acceptance pass.
+
+## D-013 — Autonomous repository workflow authorization
+- Owner authorizes autonomous feature-branch/PR implementation and safe merges to main after complete review and exact-head checks pass; no repeated approval request is needed for routine merges.
+- Production deployment and irreversible live-data operations remain subject to demonstrable backup, rollback and environment safety gates.
