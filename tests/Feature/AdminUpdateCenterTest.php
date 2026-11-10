@@ -43,7 +43,7 @@ class AdminUpdateCenterTest extends TestCase
 
     public function test_non_admin_roles_cannot_open_or_check_system_updates(): void
     {
-        $this->withoutMiddleware(\\Illuminate\\Routing\\Middleware\\ThrottleRequests::class);
+        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
 
         foreach (['student', 'teacher', 'branch_manager', 'accountant', 'guardian'] as $role) {
             $user = User::factory()->create(['role' => $role]);
