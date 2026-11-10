@@ -56,6 +56,30 @@
                 <p><small class="muted">{{ __('Private staging directory') }}: <code>{{ $preparation->release_path }}</code></small></p>
                 <p><small class="muted">{{ __('Extracted at') }}: {{ $preparation->staged_at?->format('d M Y H:i') }}</small></p>
                 <div class="flash info">{{ __('This release is isolated in private staging only. It has not been activated or installed.') }}</div>
+                <form method="POST" action="{{ route('admin.updates.preflight', $preparation) }}" style="margin-top:12px;">
+                    @csrf
+                    <button class="btn secondary" type="submit">{{ __('Run activation readiness preflight') }}</button>
+                </form>
+                @if($preflight && $preflight->preparation_id === $preparation->id)
+                    <div class="panel" style="margin-top:16px;">
+                        <strong>{{ __('Latest activation preflight') }}</strong>
+                        <span class="badge {{ $preflight->status === 'blocked' ? 'error' : ($preflight->status === 'warning' ? 'warning' : 'success') }}">{{ ucfirst($preflight->status) }}</span>
+                        <p class="muted">{{ $preflight->summary }}</p>
+                        <small class="muted">{{ __('Checked') }}: {{ $preflight->checked_at?->format('d M Y H:i') }}</small>
+                        @foreach(($preflight->checks ?? []) as $item)
+                            <div class="course-item" style="margin-top:8px;">
+                                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                                    <strong>{{ str_replace('_', ' ', ucfirst($item['key'] ?? 'check')) }}</strong>
+                                    <span class="badge {{ ($item['status'] ?? '') === 'blocked' ? 'error' : ((($item['status'] ?? '') === 'warning') ? 'warning' : 'success') }}">{{ ucfirst($item['status'] ?? 'unknown') }}</span>
+                                </div>
+                                <p class="muted">{{ $item['message'] ?? '' }}</p>
+                                @if(!empty($item['details']['names']))
+                                    <small class="muted">{{ __('Pending migrations requiring review') }}: <code>{{ implode(', ', $item['details']['names']) }}</code></small>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
             @endif
         </div>
     @endif
