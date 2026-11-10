@@ -178,9 +178,14 @@ class UpdateBackupCoordinator
             }
         }
 
+        $sha256 = hash_file('sha256', $real);
+        if (! is_string($sha256)) {
+            throw new RuntimeException('The database/media backup SHA-256 could not be calculated.');
+        }
+
         return [
             'path' => $relativePath,
-            'sha256' => hash_file('sha256', $real),
+            'sha256' => $sha256,
             'created_at' => $createdAt,
             'size' => $size,
         ];
@@ -226,8 +231,14 @@ class UpdateBackupCoordinator
 
         $realDirectory = realpath($directory);
         if ($realDirectory === false
+            || is_link($directory)
             || ! str_starts_with($realDirectory, rtrim($privateRoot, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR)) {
             throw new RuntimeException('The code snapshot destination resolves outside private storage.');
+        }
+
+        $freeBytes = @disk_free_space($privateRoot);
+        if ((! is_float($freeBytes) && ! is_int($freeBytes)) || $freeBytes < 268435456) {
+            throw new RuntimeException('At least 256 MB of measurable free private storage is required before creating a code snapshot.');
         }
 
         $archive = new ZipArchive();
@@ -271,7 +282,7 @@ class UpdateBackupCoordinator
 
                 $totalBytes += $size;
                 $fileCount++;
-                if ($fileCount > 50000 || $totalBytes > 2147483648) {
+                if ($fileCount > 50000 || $totalBytes > 2147483648 || $totalBytes > $freeBytes - 134217728) {
                     throw new RuntimeException('The current application exceeds the permitted code snapshot file or size limit.');
                 }
 
