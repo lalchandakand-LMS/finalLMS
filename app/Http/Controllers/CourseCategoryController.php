@@ -24,7 +24,7 @@ class CourseCategoryController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validated($request);
-        $data['slug'] = $this->uniqueSlug($data['slug'] ?: $data['name']);
+        $data['slug'] = $this->uniqueSlug(($data['slug'] ?? '') ?: $data['name']);
         unset($data['image']);
         $newImagePath = $request->file('image')?->store('course-categories', 'public');
         if ($newImagePath) $data['image_path'] = $newImagePath;
@@ -41,7 +41,7 @@ class CourseCategoryController extends Controller
     public function update(Request $request, CourseCategory $category): RedirectResponse
     {
         $data = $this->validated($request, $category);
-        $data['slug'] = $this->uniqueSlug($data['slug'] ?: $data['name'], $category->id);
+        $data['slug'] = $this->uniqueSlug(($data['slug'] ?? '') ?: $data['name'], $category->id);
         unset($data['image']);
         $oldImagePath = $category->image_path;
         $newImagePath = $request->file('image')?->store('course-categories', 'public');
