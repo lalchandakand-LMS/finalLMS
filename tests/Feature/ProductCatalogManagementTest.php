@@ -7,6 +7,8 @@ use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class ProductCatalogManagementTest extends TestCase
@@ -84,4 +86,38 @@ class ProductCatalogManagementTest extends TestCase
         $this->assertDatabaseHas('products', ['id' => $product->id, 'name' => 'Course product']);
         $this->assertDatabaseMissing('product_category_product', ['product_id' => $product->id, 'product_category_id' => $category->id]);
     }
+    public function test_switching_an_unpurchased_ebook_to_a_course_removes_the_retired_private_pdf_after_update(): void
+    {
+        Storage::fake('local');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $course = $this->makeCourse();
+        Storage::disk('local')->put('private/products/retired.pdf', 'private ebook');
+
+        $product = Product::create([
+            'type' => 'ebook',
+            'name' => 'Old Workbook',
+            'slug' => 'old-workbook',
+            'regular_price' => 500,
+            'currency' => 'BDT',
+            'is_downloadable' => true,
+            'download_path' => 'private/products/retired.pdf',
+            'status' => 'draft',
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->put(route('admin.products.update', $product), [
+            'type' => 'course',
+            'course_id' => $course->id,
+            'name' => 'Spoken English Course',
+            'regular_price' => '1200.00',
+            'currency' => 'BDT',
+            'status' => 'draft',
+        ])->assertRedirect();
+
+        $product->refresh();
+        $this->assertSame('course', $product->type);
+        $this->assertNull($product->download_path);
+        Storage::disk('local')->assertMissing('private/products/retired.pdf');
+    }
+
 }
