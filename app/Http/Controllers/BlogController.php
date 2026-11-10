@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BlogPost;
+use App\Models\CourseCategory;
 use App\Models\MediaAsset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -34,7 +35,7 @@ class BlogController extends Controller
     public function create(): View
     {
         $media = MediaAsset::where('mime_type', 'like', 'image/%')->latest()->limit(200)->get();
-        return view('admin.news.form', ['post' => new BlogPost(), 'media' => $media]);
+        return view('admin.news.form', ['post' => new BlogPost(), 'media' => $media, 'categories' => CourseCategory::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get()]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -42,22 +43,30 @@ class BlogController extends Controller
         $validated = $this->validated($request);
         $validated['author_id'] = $request->user()->id;
         $validated['slug'] = $this->uniqueSlug(($validated['slug'] ?? '') ?: $validated['title']);
+        $categoryIds = $validated['category_ids'] ?? [];
+        unset($validated['category_ids']);
+        $validated['category'] = CourseCategory::whereIn('id', $categoryIds)->orderBy('sort_order')->value('name');
         $validated['published_at'] = $validated['status'] === 'published' ? ($validated['published_at'] ?? now()) : null;
-        BlogPost::create($validated);
+        $post = BlogPost::create($validated);
+        $post->categories()->sync($categoryIds);
         return redirect()->route('admin.news.index')->with('success', 'Article saved.');
     }
 
     public function edit(BlogPost $post): View
     {
-        return view('admin.news.form', ['post' => $post, 'media' => MediaAsset::latest()->limit(200)->get()]);
+        return view('admin.news.form', ['post' => $post->load('categories'), 'media' => MediaAsset::where('mime_type', 'like', 'image/%')->latest()->limit(200)->get(), 'categories' => CourseCategory::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get()]);
     }
 
     public function update(Request $request, BlogPost $post): RedirectResponse
     {
         $validated = $this->validated($request);
         $validated['slug'] = $this->uniqueSlug($validated['slug'] ?: $validated['title'], $post->id);
+        $categoryIds = $validated['category_ids'] ?? [];
+        unset($validated['category_ids']);
+        $validated['category'] = CourseCategory::whereIn('id', $categoryIds)->orderBy('sort_order')->value('name');
         $validated['published_at'] = $validated['status'] === 'published' ? ($validated['published_at'] ?? $post->published_at ?? now()) : null;
         $post->update($validated);
+        $post->categories()->sync($categoryIds);
         return redirect()->route('admin.news.index')->with('success', 'Article updated.');
     }
 
@@ -73,9 +82,10 @@ class BlogController extends Controller
             'title' => ['required', 'string', 'max:180'],
             'slug' => ['nullable', 'string', 'max:200'],
             'excerpt' => ['nullable', 'string', 'max:500'],
-            'category' => ['nullable', 'string', 'max:120'],
+            'category_ids' => ['nullable', 'array'],
+            'category_ids.*' => ['integer', 'distinct', Rule::exists('course_categories', 'id')->where('is_active', true)],
             'tags' => ['nullable', 'string', 'max:2000'],
-            'video_url' => ['nullable', 'url', 'max:2048'],
+            'video_url' => ['nullable', 'url', 'max:2048', 'regex:/^https:\/\/(?:www\.)?(?:youtube\.com|youtu\.be|youtube-nocookie\.com|vimeo\.com)(?:\/|$)/i'],
             'body' => ['required', 'string', 'max:100000'],
             'cover_media_id' => ['nullable', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
             'status' => ['required', 'in:draft,published'],
