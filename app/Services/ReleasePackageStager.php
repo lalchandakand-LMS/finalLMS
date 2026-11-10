@@ -19,6 +19,7 @@ class ReleasePackageStager
 
     public function prepare(User $admin): SystemUpdatePreparation
     {
+        $this->expireStalePreparations();
         $release = $this->manifestChecker->check();
         if (! $release['available']) {
             throw new RuntimeException('There is no newer signed release to prepare.');
@@ -88,6 +89,24 @@ class ReleasePackageStager
         } catch (Throwable $exception) {
             $disk->delete($relativePath);
             throw $exception;
+        }
+    }
+
+    private function expireStalePreparations(): void
+    {
+        $disk = Storage::disk('local');
+        $expired = SystemUpdatePreparation::query()
+            ->where('status', 'verified')
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '<=', now())
+            ->get();
+
+        foreach ($expired as $preparation) {
+            $disk->delete($preparation->package_path);
+            $preparation->update([
+                'status' => 'expired',
+                'message' => 'The verified package expired and was removed from private staging storage.',
+            ]);
         }
     }
 
