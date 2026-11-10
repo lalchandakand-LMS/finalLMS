@@ -107,10 +107,15 @@ class GuardianController extends Controller
                 ->limit(10)
                 ->get();
 
-            $unpaidAmount = (float) Invoice::query()
+            $unpaidAmount = Invoice::query()
                 ->where('user_id', $selectedStudent->id)
                 ->whereIn('status', ['unpaid', 'partial', 'overdue'])
-                ->sum('amount');
+                ->withSum('payments', 'amount')
+                ->get()
+                ->sum(fn (Invoice $invoice): float => max(
+                    0,
+                    (float) $invoice->amount - (float) ($invoice->payments_sum_amount ?? 0)
+                ));
 
             $courseIds = $enrollments->pluck('course_id')->filter()->unique()->values();
             if ($courseIds->isNotEmpty()) {
