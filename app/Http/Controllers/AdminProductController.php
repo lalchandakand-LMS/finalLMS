@@ -9,6 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class AdminProductController extends Controller
@@ -60,15 +61,17 @@ class AdminProductController extends Controller
             if ($product->image_path) Storage::disk('public')->delete($product->image_path);
             $data['image_path'] = $newPath;
         }
+        $obsoleteDownloadPath = null;
         if ($data['type'] === 'ebook') {
             $data['is_downloadable'] = true;
             if ($pdf) {
-                $newPath = $pdf->store('private/products');
-                if ($product->download_path) Storage::disk('local')->delete($product->download_path);
+                $newPath = $pdf->store('private/products', 'local');
+                $obsoleteDownloadPath = $product->download_path;
                 $data['download_path'] = $newPath;
             }
         } else {
             $data['is_downloadable'] = false;
+            $obsoleteDownloadPath = $product->download_path;
             $data['download_path'] = null;
         }
         if ($data['status'] === 'published' && !$product->published_at) $data['published_at'] = now();
@@ -76,6 +79,10 @@ class AdminProductController extends Controller
 
         $product->update($data);
         $product->categories()->sync($request->input('category_ids', []));
+        // Delete replaced/retired private files only after the database update succeeds.
+        if ($obsoleteDownloadPath && $obsoleteDownloadPath !== $product->download_path) {
+            Storage::disk('local')->delete($obsoleteDownloadPath);
+        }
 
         return back()->with('success', 'Product updated successfully.');
     }
@@ -128,7 +135,7 @@ class AdminProductController extends Controller
     private function validated(Request $request, ?Product $product = null): array
     {
         $rules = [
-            'type' => ['required','in:course,ebook'],
+            'type' => ['required', Rule::in($product && $product->orderItems()->exists() ? [$product->type] : ['course', 'ebook'])],
             'course_id' => ['nullable','required_if:type,course','exists:courses,id'],
             'name' => ['required','string','max:180'],
             'sku' => ['nullable','string','max:80','unique:products,sku'.($product ? ','.$product->id : '')],
