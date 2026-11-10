@@ -274,6 +274,7 @@ class AdminUpdateCenterTest extends TestCase
         $this->actingAs($admin)->post(route('admin.updates.extract', $preparation));
 
         app(BackupController::class)->create();
+        $this->assertCount(1, Storage::disk('local')->files('backups'));
 
         $backupResponse = $this->actingAs($admin)->post(route('admin.updates.backup', $preparation));
         $backupResponse->assertRedirect(route('admin.updates.index'))
