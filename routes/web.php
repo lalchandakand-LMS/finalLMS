@@ -31,6 +31,8 @@ use App\Http\Controllers\BackupController;
 use App\Http\Controllers\InstallController;
 use App\Http\Controllers\QuizContestController;
 use App\Http\Controllers\FlashSaleController;
+use App\Http\Controllers\GuardianController;
+use App\Http\Controllers\StudentGuardianController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/install', [InstallController::class, 'index'])->name('install.index');
@@ -112,6 +114,23 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
     Route::middleware('role:teacher')->put('/teacher/courses/{course}/lessons/{lesson}', [CourseController::class, 'updateLesson'])->name('teacher.courses.lessons.update');
     Route::middleware('role:teacher')->delete('/teacher/courses/{course}/lessons/{lesson}', [CourseController::class, 'destroyLesson'])->name('teacher.courses.lessons.destroy');
     Route::middleware('role:student')->get('/my/attendance', [AttendanceController::class, 'studentIndex'])->name('student.attendance.index');
+
+    Route::middleware('role:guardian')->group(function () {
+        Route::get('/guardian/dashboard', [GuardianController::class, 'index'])->name('guardian.dashboard');
+        Route::post('/guardian/link-requests', [GuardianController::class, 'requestLink'])
+            ->middleware('throttle:5,10')
+            ->name('guardian.link-requests.store');
+    });
+
+    Route::middleware('role:student')->group(function () {
+        Route::get('/my/guardian-requests', [StudentGuardianController::class, 'index'])->name('student.guardian-requests.index');
+        Route::post('/my/guardian-requests/{link}/respond', [StudentGuardianController::class, 'respond'])
+            ->middleware('throttle:10,10')
+            ->name('student.guardian-requests.respond');
+        Route::post('/my/guardians/{link}/revoke', [StudentGuardianController::class, 'revoke'])
+            ->middleware('throttle:5,10')
+            ->name('student.guardians.revoke');
+    });
     Route::middleware('role:teacher')->group(function () {
         Route::get('/teacher/batches/{batch}/attendance', [AttendanceController::class, 'index'])->name('teacher.batches.attendance.index');
         Route::post('/teacher/batches/{batch}/attendance', [AttendanceController::class, 'store'])->name('teacher.batches.attendance.store');
