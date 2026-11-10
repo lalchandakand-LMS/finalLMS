@@ -31,7 +31,7 @@
         {{ __('Preparing a release downloads the signed package to private server storage and validates its checksum and archive contents. It does not install code, run migrations or change the live site.') }}
     </div>
     @php($latestCheck = $checks->first())
-    @if($latestCheck && $latestCheck->status === 'available' && (!$preparation || $preparation->version !== $latestCheck->target_version || $preparation->status !== 'verified'))
+    @if($latestCheck && $latestCheck->status === 'available' && (!$preparation || $preparation->version !== $latestCheck->target_version || $preparation->status !== 'verified' || !$preparation->expires_at || $preparation->expires_at->isPast()))
         <form method="POST" action="{{ route('admin.updates.prepare') }}" style="margin-top:16px;">
             @csrf
             <button class="btn secondary" type="submit">{{ __('Download and verify release package') }}</button>
