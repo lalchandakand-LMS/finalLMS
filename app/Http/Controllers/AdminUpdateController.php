@@ -86,4 +86,23 @@ class AdminUpdateController extends Controller
         }
     }
 
+    public function extract(SystemUpdatePreparation $preparation, ReleasePackageStager $stager): RedirectResponse
+    {
+        try {
+            $preparation = $stager->extract($preparation);
+
+            return redirect()->route('admin.updates.index')->with('success', $preparation->message);
+        } catch (Throwable $exception) {
+            if (! $exception instanceof RuntimeException) {
+                report($exception);
+            }
+
+            $message = $exception instanceof RuntimeException
+                ? $exception->getMessage()
+                : 'The release could not be extracted safely. No live application files were changed.';
+
+            return redirect()->route('admin.updates.index')->with('error', $message);
+        }
+    }
+
 }
