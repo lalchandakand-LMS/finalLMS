@@ -139,4 +139,83 @@ class CourseCategoryAndMetadataTest extends TestCase
         $this->assertDatabaseHas('courses', ['slug' => 'same-course-title']);
         $this->assertDatabaseHas('courses', ['slug' => 'same-course-title-2']);
     }
+    public function test_public_catalog_filters_by_managed_category_and_only_shows_published_courses(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $grammar = CourseCategory::create(['name' => 'Grammar', 'slug' => 'grammar', 'is_active' => true]);
+        $speaking = CourseCategory::create(['name' => 'Speaking', 'slug' => 'speaking', 'is_active' => true]);
+
+        $grammarCourse = Course::create([
+            'teacher_id' => $teacher->id,
+            'title' => 'Grammar Foundation',
+            'slug' => 'grammar-foundation',
+            'short_description' => 'Build grammar skills.',
+            'description' => 'Grammar course.',
+            'price' => 1000,
+            'status' => 'published',
+            'level' => 'Beginner',
+            'language' => 'English',
+            'tags' => ['grammar'],
+        ]);
+        $grammarCourse->categories()->attach($grammar->id);
+
+        $speakingCourse = Course::create([
+            'teacher_id' => $teacher->id,
+            'title' => 'Speaking Practice',
+            'slug' => 'speaking-practice',
+            'description' => 'Speaking course.',
+            'price' => 2000,
+            'status' => 'published',
+        ]);
+        $speakingCourse->categories()->attach($speaking->id);
+
+        Course::create([
+            'teacher_id' => $teacher->id,
+            'title' => 'Hidden Draft',
+            'slug' => 'hidden-draft',
+            'description' => 'Draft course.',
+            'price' => 0,
+            'status' => 'draft',
+        ]);
+
+        $this->get(route('courses.index', ['category' => 'grammar', 'level' => 'Beginner']))
+            ->assertOk()
+            ->assertSee('Grammar Foundation')
+            ->assertDontSee('Speaking Practice')
+            ->assertDontSee('Hidden Draft');
+    }
+
+    public function test_deleting_category_detaches_links_without_deleting_courses_or_posts(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $category = CourseCategory::create(['name' => 'General English', 'slug' => 'general-english', 'is_active' => true]);
+        $course = Course::create([
+            'teacher_id' => $teacher->id,
+            'title' => 'General Course',
+            'slug' => 'general-course',
+            'description' => 'Keep this course.',
+            'price' => 500,
+            'status' => 'draft',
+        ]);
+        $course->categories()->attach($category->id);
+        $post = BlogPost::create([
+            'author_id' => $admin->id,
+            'title' => 'General Lesson',
+            'slug' => 'general-lesson',
+            'body' => 'Keep this post.',
+            'status' => 'draft',
+        ]);
+        $post->categories()->attach($category->id);
+
+        $this->actingAs($admin)->delete(route('admin.course-categories.destroy', $category))
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('courses', ['id' => $course->id]);
+        $this->assertDatabaseHas('blog_posts', ['id' => $post->id]);
+        $this->assertDatabaseMissing('course_categories', ['id' => $category->id]);
+        $this->assertDatabaseMissing('course_category_course', ['course_id' => $course->id, 'course_category_id' => $category->id]);
+        $this->assertDatabaseMissing('blog_post_course_category', ['blog_post_id' => $post->id, 'course_category_id' => $category->id]);
+    }
+
 }
