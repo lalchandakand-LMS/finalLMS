@@ -22,11 +22,47 @@ use Illuminate\Validation\Rule;
 
 class CourseController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $courses = Course::with(['teacher', 'categories'])->where('status', 'published')->latest()->paginate(12)->withQueryString();
+        $filters = $request->validate([
+            'q' => ['nullable', 'string', 'max:120'],
+            'category' => ['nullable', 'string', 'max:150'],
+            'level' => ['nullable', 'string', 'max:40'],
+            'language' => ['nullable', 'string', 'max:40'],
+            'min_price' => ['nullable', 'numeric', 'min:0', 'max:999999999'],
+            'max_price' => ['nullable', 'numeric', 'min:0', 'max:999999999', 'gte:min_price'],
+            'sort' => ['nullable', 'in:latest,price_low,price_high,title'],
+        ]);
 
-        return view('courses.index', compact('courses'));
+        $query = Course::with(['teacher', 'categories'])->where('status', 'published');
+        if (!empty($filters['q'])) {
+            $term = trim($filters['q']);
+            $query->where(fn ($builder) => $builder
+                ->where('title', 'like', '%'.$term.'%')
+                ->orWhere('short_description', 'like', '%'.$term.'%')
+                ->orWhere('description', 'like', '%'.$term.'%')
+                ->orWhereJsonContains('tags', $term));
+        }
+        if (!empty($filters['category'])) {
+            $query->whereHas('categories', fn ($builder) => $builder
+                ->where('slug', $filters['category'])->where('is_active', true));
+        }
+        if (!empty($filters['level'])) $query->where('level', $filters['level']);
+        if (!empty($filters['language'])) $query->where('language', $filters['language']);
+        if (isset($filters['min_price'])) $query->where('price', '>=', $filters['min_price']);
+        if (isset($filters['max_price'])) $query->where('price', '<=', $filters['max_price']);
+
+        match ($filters['sort'] ?? 'latest') {
+            'price_low' => $query->orderBy('price')->orderByDesc('created_at'),
+            'price_high' => $query->orderByDesc('price')->orderByDesc('created_at'),
+            'title' => $query->orderBy('title'),
+            default => $query->latest(),
+        };
+
+        $courses = $query->paginate(12)->withQueryString();
+        $categories = CourseCategory::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get();
+
+        return view('courses.index', compact('courses', 'categories', 'filters'));
     }
 
     public function myCourses(): View
