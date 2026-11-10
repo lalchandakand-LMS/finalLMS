@@ -26,8 +26,14 @@ class CourseCategoryController extends Controller
         $data = $this->validated($request);
         $data['slug'] = $this->uniqueSlug($data['slug'] ?: $data['name']);
         unset($data['image']);
-        if ($request->hasFile('image')) $data['image_path'] = $request->file('image')->store('course-categories', 'public');
-        CourseCategory::create($data);
+        $newImagePath = $request->file('image')?->store('course-categories', 'public');
+        if ($newImagePath) $data['image_path'] = $newImagePath;
+        try {
+            DB::transaction(fn () => CourseCategory::create($data));
+        } catch (\\Throwable $exception) {
+            if ($newImagePath) Storage::disk('public')->delete($newImagePath);
+            throw $exception;
+        }
 
         return back()->with('success', 'Course category created.');
     }
@@ -40,7 +46,12 @@ class CourseCategoryController extends Controller
         $oldImagePath = $category->image_path;
         $newImagePath = $request->file('image')?->store('course-categories', 'public');
         if ($newImagePath) $data['image_path'] = $newImagePath;
-        $category->update($data);
+        try {
+            DB::transaction(fn () => $category->update($data));
+        } catch (\\Throwable $exception) {
+            if ($newImagePath) Storage::disk('public')->delete($newImagePath);
+            throw $exception;
+        }
         if ($newImagePath && $oldImagePath && $oldImagePath !== $newImagePath) Storage::disk('public')->delete($oldImagePath);
 
         return back()->with('success', 'Course category updated.');
@@ -50,8 +61,11 @@ class CourseCategoryController extends Controller
     {
         DB::transaction(function () use ($category): void {
             $category->courses()->detach();
-            $category->posts()->get()->each(function ($post): void {
-                $post->forceFill(['category' => null])->save();
+            $category->posts()->get()->each(function ($post) use ($category): void {
+                $remainingCategory = $post->categories()
+                    ->where('course_categories.id', '!=', $category->id)
+                    ->orderBy('sort_order')->first();
+                $post->forceFill(['category' => $remainingCategory?->name])->save();
             });
             $category->posts()->detach();
             $category->delete();
