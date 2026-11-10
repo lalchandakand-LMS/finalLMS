@@ -653,5 +653,6 @@
     "Status": "অবস্থা",
     "Size": "আকার",
     "Expires": "মেয়াদ শেষ",
-    "Package SHA-256": "প্যাকেজ SHA-256"
+    "Package SHA-256": "প্যাকেজ SHA-256",
+    "Expired": "মেয়াদ শেষ"
 }
