@@ -98,6 +98,23 @@ class AdminUpdateCenterTest extends TestCase
         }
     }
 
+    public function test_release_manifest_redirect_to_untrusted_host_is_rejected(): void
+    {
+        $this->configureSignedRelease();
+        Http::fake([
+            'https://github.com/lalchandakand-LMS/finalLMS/releases/latest/download/release-manifest.json' => Http::response('', 302, [
+                'Location' => 'http://127.0.0.1/private',
+            ]),
+        ]);
+
+        try {
+            app(ReleaseManifestChecker::class)->check();
+            $this->fail('A redirect to an untrusted host must be rejected.');
+        } catch (RuntimeException $exception) {
+            $this->assertStringContainsString('untrusted destination', $exception->getMessage());
+        }
+    }
+
     private function configureSignedRelease(?string $signatureOverride = null): void
     {
         $privateKey = openssl_pkey_new([
