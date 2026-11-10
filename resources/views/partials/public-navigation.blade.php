@@ -16,6 +16,18 @@
         <div class="public-drawer-links">
             <a href="{{ route('landing') }}"><span class="menu-icon">⌂</span>{{ __('Home') }}</a>
             <a href="{{ route('courses.index') }}"><span class="menu-icon">▤</span>{{ __('All courses') }}</a>
+            @if(is_array($websiteHeaderLinks ?? null))
+                @foreach($websiteHeaderLinks as $headerLink)
+                    @php
+                        $customMenuLabel = trim((string) ($headerLink['label'] ?? ''));
+                        $customMenuUrl = trim((string) ($headerLink['url'] ?? ''));
+                        $customMenuUrlIsSafe = preg_match('/^(https?:\\/\\/|\\/(?!\\/))/i', $customMenuUrl) === 1;
+                    @endphp
+                    @if($customMenuLabel !== '' && $customMenuUrlIsSafe)
+                        <a href="{{ $customMenuUrl }}"><span class="menu-icon">↗</span>{{ $customMenuLabel }}</a>
+                    @endif
+                @endforeach
+            @endif
             @if(\Illuminate\Support\Facades\Schema::hasTable('flash_sales') && \App\Models\FlashSale::activeCampaigns()->isNotEmpty())
                 <a href="{{ route('landing') }}#flash-sale"><span class="menu-icon">🔥</span>{{ __('Flash Sale') }}</a>
             @endif
