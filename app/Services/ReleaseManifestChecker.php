@@ -91,7 +91,11 @@ class ReleaseManifestChecker
             throw new RuntimeException('The installed LMS version is not a valid semantic version.');
         }
 
-        $available = version_compare($manifest['version'], $currentVersion, '>');
+        $versionComparison = version_compare($manifest['version'], $currentVersion);
+        if ($versionComparison < 0) {
+            throw new RuntimeException('The configured release channel points to an older version. Downgrades are blocked.');
+        }
+        $available = $versionComparison > 0;
         $details = [
             'version' => $manifest['version'],
             'release_channel' => $manifest['release_channel'],
