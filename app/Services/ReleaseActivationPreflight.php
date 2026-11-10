@@ -105,6 +105,16 @@ class ReleaseActivationPreflight
         }
 
         try {
+            $driver = DB::connection()->getDriverName();
+            $this->add($checks, 'database_driver', $driver === 'mysql',
+                $driver === 'mysql'
+                    ? 'The configured database driver is MySQL.'
+                    : 'The production LMS update workflow requires MySQL/MariaDB; the configured database driver is '.$driver.'.');
+        } catch (Throwable) {
+            $this->add($checks, 'database_driver', false, 'The configured database driver could not be determined.');
+        }
+
+        try {
             if (Schema::hasTable('migrations')) {
                 $ran = array_fill_keys(DB::table('migrations')->pluck('migration')->all(), true);
                 $migrationDirectory = $releaseRoot !== false ? $releaseRoot.'/database/migrations' : '';
