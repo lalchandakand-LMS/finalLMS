@@ -98,6 +98,18 @@ class AdminUpdateCenterTest extends TestCase
         }
     }
 
+    public function test_release_manifest_older_than_installed_version_is_rejected(): void
+    {
+        $this->configureSignedRelease(version: '0.9.9');
+
+        try {
+            app(ReleaseManifestChecker::class)->check();
+            $this->fail('A release channel must not permit a downgrade.');
+        } catch (RuntimeException $exception) {
+            $this->assertStringContainsString('Downgrades are blocked', $exception->getMessage());
+        }
+    }
+
     public function test_release_manifest_redirect_to_untrusted_host_is_rejected(): void
     {
         $this->configureSignedRelease();
@@ -115,7 +127,7 @@ class AdminUpdateCenterTest extends TestCase
         }
     }
 
-    private function configureSignedRelease(?string $signatureOverride = null): void
+    private function configureSignedRelease(?string $signatureOverride = null, string $version = '1.0.1'): void
     {
         $privateKey = openssl_pkey_new([
             'private_key_type' => OPENSSL_KEYTYPE_RSA,
@@ -136,7 +148,7 @@ class AdminUpdateCenterTest extends TestCase
 
         $manifest = [
             'product' => 'aloms-english-center-lms',
-            'version' => '1.0.1',
+            'version' => $version,
             'release_channel' => 'stable',
             'git_commit' => str_repeat('a', 40),
             'minimum_php' => '8.3.0',
@@ -147,7 +159,7 @@ class AdminUpdateCenterTest extends TestCase
             'migration_set_sha256' => str_repeat('c', 64),
             'signing_public_key_sha256' => $fingerprint,
             'published_at' => '2026-11-10T00:00:00Z',
-            'artifact_url' => 'https://github.com/lalchandakand-LMS/finalLMS/releases/download/v1.0.1/AlomsEnglishCenter-cpanel.zip',
+            'artifact_url' => 'https://github.com/lalchandakand-LMS/finalLMS/releases/download/v'.$version.'/AlomsEnglishCenter-cpanel.zip',
         ];
         $manifestBytes = json_encode($manifest, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
         openssl_sign($manifestBytes, $signature, $privateKey, OPENSSL_ALGO_SHA256);
