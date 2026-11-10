@@ -49,7 +49,7 @@ class ReleasePackageStager
                 throw new RuntimeException('The downloaded package SHA-256 does not match the signed release manifest.');
             }
 
-            $this->validateArchive($absolutePath, $version);
+            $actualMigrationDigest = $this->validateArchive($absolutePath, $version);\n            if (! hash_equals($details['migration_set_sha256'], $actualMigrationDigest)) {\n                throw new RuntimeException('The package migration set does not match the signed release manifest.');\n            }
             $fileSize = filesize($absolutePath);
             if (! is_int($fileSize) || $fileSize < 1 || $fileSize > $maxBytes) {
                 throw new RuntimeException('The verified release package has an invalid file size.');
@@ -97,9 +97,27 @@ class ReleasePackageStager
         ];
 
         for ($redirect = 0; $redirect <= 3; $redirect++) {
-            $response = Http::connectTimeout(5)->timeout(120)->withoutRedirecting()->get($url);
+            $response = Http::connectTimeout(5)
+                ->timeout(180)
+                ->withoutRedirecting()
+                ->withOptions([
+                    'sink' => $destination,
+                    'on_headers' => static function ($response) use ($maxBytes): void {
+                        $length = $response->getHeaderLine('Content-Length');
+                        if ($length !== '' && ctype_digit($length) && (int) $length > $maxBytes) {
+                            throw new RuntimeException('The release package exceeds the configured maximum download size.');
+                        }
+                    },
+                    'progress' => static function ($downloadTotal, $downloadedBytes) use ($maxBytes): void {
+                        if ($downloadedBytes > $maxBytes || ($downloadTotal > 0 && $downloadTotal > $maxBytes)) {
+                            throw new RuntimeException('The release package exceeds the configured maximum download size.');
+                        }
+                    },
+                ])
+                ->get($url);
 
             if ($response->status() >= 300 && $response->status() < 400) {
+                @unlink($destination);
                 $location = $response->header('Location');
                 $parts = is_string($location) ? parse_url($location) : false;
                 if (! is_array($parts)
@@ -120,18 +138,9 @@ class ReleasePackageStager
             }
 
             $response->throw();
-            $contentLength = $response->header('Content-Length');
-            if (is_string($contentLength) && ctype_digit($contentLength) && (int) $contentLength > $maxBytes) {
-                throw new RuntimeException('The release package exceeds the configured maximum download size.');
-            }
-
-            $body = $response->body();
-            if ($body === '' || strlen($body) > $maxBytes) {
+            $fileSize = is_file($destination) ? filesize($destination) : false;
+            if (! is_int($fileSize) || $fileSize < 1 || $fileSize > $maxBytes) {
                 throw new RuntimeException('The release package is empty or exceeds the configured maximum download size.');
-            }
-
-            if (file_put_contents($destination, $body, LOCK_EX) === false) {
-                throw new RuntimeException('The release package could not be written to private staging storage.');
             }
 
             return;
@@ -140,7 +149,7 @@ class ReleasePackageStager
         throw new RuntimeException('The release package could not be downloaded safely.');
     }
 
-    private function validateArchive(string $path, string $expectedVersion): void
+    private function validateArchive(string $path, string $expectedVersion): string
     {
         $archive = new ZipArchive();
         $opened = $archive->open($path);
@@ -165,7 +174,7 @@ class ReleasePackageStager
                 'vendor/autoload.php' => false,
                 'VERSION' => false,
             ];
-            $totalBytes = 0;
+            $totalBytes = 0;\n            $migrationHashes = [];
 
             for ($index = 0; $index < $archive->numFiles; $index++) {
                 $entry = $archive->statIndex($index);
@@ -237,6 +246,14 @@ class ReleasePackageStager
                 if (! $directoryEntry && array_key_exists($normalized, $required)) {
                     $required[$normalized] = true;
                 }
+
+                if (! $directoryEntry && str_starts_with($normalized, 'database/migrations/') && str_ends_with($normalized, '.php')) {
+                    $contents = $archive->getFromIndex($index);
+                    if (! is_string($contents)) {
+                        throw new RuntimeException('A migration file in the release archive could not be read.');
+                    }
+                    $migrationHashes[$normalized] = hash('sha256', $contents);
+                }
             }
 
             if (in_array(false, $required, true)) {
@@ -247,6 +264,14 @@ class ReleasePackageStager
             if (! is_string($versionContents) || trim($versionContents) !== $expectedVersion) {
                 throw new RuntimeException('The package version marker does not match the signed release manifest.');
             }
+
+            ksort($migrationHashes, SORT_STRING);
+            $migrationLines = [];
+            foreach ($migrationHashes as $migrationPath => $migrationHash) {
+                $migrationLines[] = $migrationHash.'  '.$migrationPath;
+            }
+
+            return hash('sha256', implode("\\n", $migrationLines).($migrationLines === [] ? '' : "\\n"));
         } finally {
             $archive->close();
         }
