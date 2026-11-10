@@ -42,6 +42,14 @@ class ReleasePackageStager
             throw new RuntimeException('The private update staging directory could not be created.');
         }
 
+        $privateRoot = realpath($disk->path(''));
+        $realDirectory = realpath($directory);
+        if ($privateRoot === false
+            || $realDirectory === false
+            || ! str_starts_with($realDirectory, rtrim($privateRoot, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR)) {
+            throw new RuntimeException('The private update staging path resolves outside Laravel private storage.');
+        }
+
         try {
             $this->downloadPackage($details['artifact_url'], $absolutePath, $maxBytes);
 
