@@ -171,7 +171,47 @@ class AdminUpdateCenterTest extends TestCase
         $this->assertTrue(Storage::disk('local')->exists($preparation->package_path));
     }
 
-    private function configureSignedRelease(?string $signatureOverride = null, string $version = '1.0.1', bool $redirectToUntrustedHost = false, ?string $packageBytes = null, ?string $migrationDigest = null): void
+    public function test_admin_cannot_stage_a_package_redirected_to_an_untrusted_host(): void
+    {
+        $this->configureSignedRelease(
+            packageBytes: 'not-used-because-redirect-is-rejected',
+            packageRedirectToUntrustedHost: true
+        );
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.updates.prepare'))
+            ->assertRedirect(route('admin.updates.index'))
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseCount('system_update_preparations', 0);
+        $this->assertSame([], Storage::disk('local')->allFiles('updates/staging'));
+    }
+
+    public function test_admin_cannot_stage_an_archive_containing_environment_secrets(): void
+    {
+        $packageBytes = $this->createReleasePackage([
+            'artisan' => "<?php echo 'artisan';",
+            'public/index.php' => "<?php echo 'public';",
+            'vendor/autoload.php' => "<?php echo 'vendor';",
+            'VERSION' => "1.0.1\\n",
+            'deployment/.env.production' => "APP_KEY=secret\\n",
+            'storage/.gitignore' => '',
+            'bootstrap/cache/.gitignore' => '',
+        ]);
+        $this->configureSignedRelease(packageBytes: $packageBytes, migrationDigest: hash('sha256', ''));
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.updates.prepare'))
+            ->assertRedirect(route('admin.updates.index'))
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseCount('system_update_preparations', 0);
+        $this->assertSame([], Storage::disk('local')->allFiles('updates/staging'));
+    }
+
+    private function configureSignedRelease(?string $signatureOverride = null, string $version = '1.0.1', bool $redirectToUntrustedHost = false, ?string $packageBytes = null, ?string $migrationDigest = null, bool $packageRedirectToUntrustedHost = false): void
     {
         $privateKey = openssl_pkey_new([
             'private_key_type' => OPENSSL_KEYTYPE_RSA,
@@ -218,7 +258,9 @@ class AdminUpdateCenterTest extends TestCase
             $signatureUrl => Http::response($signatureOverride ?? $signature, 200),
         ];
         if ($packageBytes !== null) {
-            $fakeResponses[$manifest['artifact_url']] = Http::response($packageBytes, 200);
+            $fakeResponses[$manifest['artifact_url']] = $packageRedirectToUntrustedHost
+                ? Http::response('', 302, ['Location' => 'http://127.0.0.1/private'])
+                : Http::response($packageBytes, 200);
         }
         Http::fake($fakeResponses);
 
@@ -230,4 +272,23 @@ class AdminUpdateCenterTest extends TestCase
             'services.lms_updates.current_version' => '1.0.0',
         ]);
     }
+    private function createReleasePackage(array $files): string
+    {
+        $path = tempnam(sys_get_temp_dir(), 'aloms-release-package-');
+        $this->assertIsString($path);
+        $archive = new ZipArchive();
+        $this->assertTrue($archive->open($path, ZipArchive::OVERWRITE) === true);
+
+        foreach ($files as $name => $contents) {
+            $this->assertTrue($archive->addFromString($name, $contents));
+        }
+
+        $this->assertTrue($archive->close());
+        $bytes = file_get_contents($path);
+        @unlink($path);
+        $this->assertIsString($bytes);
+
+        return $bytes;
+    }
+
 }
