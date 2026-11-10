@@ -34,6 +34,14 @@ return [
     |
     */
 
+    'lms_updates' => [
+        'enabled' => (bool) env('LMS_UPDATES_ENABLED', false),
+        'manifest_url' => env('LMS_UPDATES_MANIFEST_URL'),
+        'public_key_path' => env('LMS_UPDATES_PUBLIC_KEY_PATH'),
+        'channel' => env('LMS_UPDATES_CHANNEL', 'stable'),
+        'current_version' => env('LMS_VERSION', '0.0.0'),
+    ],
+
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],
