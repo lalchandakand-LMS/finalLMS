@@ -106,7 +106,7 @@ jobs:
           composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
           php artisan key:generate --force
           php artisan config:cache
-          EXPECTED_VERSION="$VERSION" php -r 'require "vendor/autoload.php"; $app = require "bootstrap/app.php"; $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap(); if (config("services.lms_updates.current_version") !== getenv("EXPECTED_VERSION")) { fwrite(STDERR, "Cached LMS version does not match the release tag.\n"); exit(1); }'
+          EXPECTED_VERSION="$VERSION" php .github/scripts/assert-release-version.php
           php artisan view:cache
           npm ci
           npm run build
