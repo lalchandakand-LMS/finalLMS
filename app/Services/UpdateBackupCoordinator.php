@@ -182,7 +182,7 @@ class UpdateBackupCoordinator
             if (! is_string($mediaPath)
                 || ! str_starts_with($mediaPath, 'media/')
                 || str_contains($mediaPath, '..')
-                || str_contains($mediaPath, '\\\\')
+                || str_contains($mediaPath, '\\')
                 || ! is_string($encoded)
                 || base64_decode($encoded, true) === false) {
                 throw new RuntimeException('The database/media backup contains an unsafe or damaged public media file.');
@@ -193,7 +193,7 @@ class UpdateBackupCoordinator
             if (! is_string($privatePath)
                 || ! str_starts_with($privatePath, 'assignment-submissions/')
                 || str_contains($privatePath, '..')
-                || str_contains($privatePath, '\\\\')
+                || str_contains($privatePath, '\\')
                 || ! is_string($encoded)
                 || base64_decode($encoded, true) === false) {
                 throw new RuntimeException('The database/media backup contains an unsafe or damaged private file.');
