@@ -52,6 +52,18 @@ The local/testing seeder creates `admin@lms.test`, `teacher@lms.test`, and `stud
 
 This remains an actively developed LMS and is not yet a fully validated commercial release. Remaining work includes complete Bangla translation coverage across every screen, richer drag-and-drop page design and reusable page templates, deeper branch-scoped enrollment, transfer, and teacher-assignment workflows beyond the current student-to-branch assignment, official bKash/Nagad/SSLCommerz API integration with verified callbacks, automated scheduled off-site backups and tested disaster recovery, and real cPanel staging validation of the installer and deployment process. The current backup/restore feature is administrator-triggered and should be tested on a staging database before production use. Activity logging covers successful authenticated write requests; it is not yet a full audit trail for reads, login attempts, failed actions, or field-level changes. SMS/email delivery requires real provider credentials.
 
+## AI developer handoff and project memory
+
+To continue this repository in ChatGPT, Google AI Studio, or with another developer, read these project records first:
+
+1. [AI Studio Handoff](docs/AI_STUDIO_HANDOFF.md) — complete product context, technical architecture, module scope, security rules and copy/paste continuation instructions.
+2. [Project Status](docs/PROJECT_STATUS.md) — current known workstreams, priorities, blockers and release status.
+3. [Owner Decision Log](docs/DECISION_LOG.md) — approved product decisions and architecture rules.
+
+**Current panel decision:** five operational panels — one unified Admin Panel (no separate Super Admin), a separate branch-scoped Branch Panel, Teacher Panel, Student Panel and Guardian Panel. Older issue descriptions may conflict; follow the latest owner decision recorded in the Decision Log.
+
+When code changes, update the handoff/status/decision documents in the same PR where practical. Record branch, PR, exact commit SHA, files changed, tests and CI evidence, known limitations, next step, and whether changes are merged or deployed. Documentation is not proof of implementation: always inspect source and fresh test results. The owner has authorized autonomous feature-branch/PR work and safe merges to main when the complete diff is reviewed, exact-head CI/CodeQL pass, dependencies/conflicts are checked, and the change is safe. Do not ask again for routine PR merge approval. Production deployment, live payment activation, and irreversible production data migrations remain separate safety gates: proceed only when the scope, backup, rollback path, and target environment are verifiably safe; otherwise stop and report the specific blocker.
+
 ## First production administrator
 
 Student registration only creates student accounts. After configuring the production database, create and verify the first admin through Tinker using a unique password:
