@@ -275,7 +275,7 @@ class ReleasePackageStager
                 $migrationLines[] = $migrationHash.'  '.$migrationPath;
             }
 
-            return hash('sha256', implode("\\n", $migrationLines).($migrationLines === [] ? '' : "\\n"));
+            return hash('sha256', implode("\n", $migrationLines).($migrationLines === [] ? '' : "\n"));
         } finally {
             $archive->close();
         }
