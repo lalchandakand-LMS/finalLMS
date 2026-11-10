@@ -314,6 +314,15 @@ class UpdateBackupCoordinator
         $relative = ltrim(str_replace('\\', '/', $relative), '/');
         $segments = explode('/', $relative);
         $root = $segments[0] ?? '';
+        $allowedRoots = [
+            'app', 'artisan', 'bootstrap', 'config', 'database', 'deployment',
+            'public', 'resources', 'routes', 'vendor', 'composer.json',
+            'composer.lock', 'README.md', 'VERSION',
+        ];
+
+        if (! in_array($root, $allowedRoots, true)) {
+            return true;
+        }
 
         if (in_array($root, ['.git', '.github', 'node_modules', 'tests', 'storage', 'vendor-bin', 'dist', 'coverage'], true)) {
             return true;
@@ -332,7 +341,8 @@ class UpdateBackupCoordinator
             return true;
         }
 
-        if (preg_match('/\.(?:pem|key|p12|pfx|sqlite|log)$/i', $relative)
+        if (in_array(strtolower(basename($relative)), ['auth.json', '.npmrc', '.pypirc', 'credentials.json'], true)
+            || preg_match('/\.(?:pem|key|p12|pfx|sqlite|log)$/i', $relative)
             || str_contains(strtolower($relative), '/laravel.log')) {
             return true;
         }
