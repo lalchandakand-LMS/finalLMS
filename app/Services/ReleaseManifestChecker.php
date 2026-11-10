@@ -183,7 +183,23 @@ class ReleaseManifestChecker
         ];
 
         for ($redirect = 0; $redirect <= 3; $redirect++) {
-            $response = Http::connectTimeout(5)->timeout(15)->withoutRedirecting()->get($url);
+            $response = Http::connectTimeout(5)
+                ->timeout(15)
+                ->withoutRedirecting()
+                ->withOptions([
+                    'on_headers' => static function ($response) use ($maximumBytes): void {
+                        $length = $response->getHeaderLine('Content-Length');
+                        if ($length !== '' && ctype_digit($length) && (int) $length > $maximumBytes) {
+                            throw new RuntimeException('A release metadata asset exceeds the permitted size.');
+                        }
+                    },
+                    'progress' => static function ($downloadTotal, $downloadedBytes) use ($maximumBytes): void {
+                        if ($downloadedBytes > $maximumBytes || ($downloadTotal > 0 && $downloadTotal > $maximumBytes)) {
+                            throw new RuntimeException('A release metadata asset exceeds the permitted size.');
+                        }
+                    },
+                ])
+                ->get($url);
 
             if ($response->status() >= 300 && $response->status() < 400) {
                 $location = $response->header('Location');

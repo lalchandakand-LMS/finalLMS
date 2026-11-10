@@ -6,7 +6,6 @@ use App\Models\SystemUpdatePreparation;
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use RuntimeException;
 use Throwable;
 use ZipArchive;
@@ -34,12 +33,20 @@ class ReleasePackageStager
         $expectedHash = $details['package_sha256'];
         $maxBytes = max(1048576, (int) config('services.lms_updates.max_package_bytes', 104857600));
         $disk = Storage::disk('local');
-        $relativePath = 'updates/staging/'.$version.'-'.Str::uuid().'.zip';
+        $relativePath = 'updates/staging/'.$version.'-'.bin2hex(random_bytes(16)).'.zip';
         $absolutePath = $disk->path($relativePath);
         $directory = dirname($absolutePath);
 
         if (! is_dir($directory) && ! mkdir($directory, 0700, true) && ! is_dir($directory)) {
             throw new RuntimeException('The private update staging directory could not be created.');
+        }
+
+        $privateRoot = realpath($disk->path(''));
+        $realDirectory = realpath($directory);
+        if ($privateRoot === false
+            || $realDirectory === false
+            || ! str_starts_with($realDirectory, rtrim($privateRoot, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR)) {
+            throw new RuntimeException('The private update staging path resolves outside Laravel private storage.');
         }
 
         try {
@@ -190,6 +197,8 @@ class ReleasePackageStager
                 'composer.lock', 'README.md', 'VERSION',
             ];
             $seen = [];
+            $entryKinds = [];
+            $pathHasDescendants = [];
             $required = [
                 'artisan' => false,
                 'public/index.php' => false,
@@ -213,7 +222,7 @@ class ReleasePackageStager
                 $directoryEntry = str_ends_with($name, '/');
                 $normalized = rtrim($name, '/');
                 $segments = explode('/', $normalized);
-                if ($normalized === '' || in_array('.', $segments, true) || in_array('..', $segments, true)) {
+                if ($normalized === '' || in_array('', $segments, true) || in_array('.', $segments, true) || in_array('..', $segments, true)) {
                     throw new RuntimeException('The release archive contains a path traversal entry.');
                 }
 
@@ -222,17 +231,34 @@ class ReleasePackageStager
                 }
                 $seen[$normalized] = true;
 
+                $parent = '';
+                foreach (array_slice($segments, 0, -1) as $segment) {
+                    $parent = $parent === '' ? $segment : $parent.'/'.$segment;
+                    if (($entryKinds[$parent] ?? null) === 'file') {
+                        throw new RuntimeException('The release archive contains a file used as a parent directory.');
+                    }
+                    $pathHasDescendants[$parent] = true;
+                }
+                if (! $directoryEntry && ! empty($pathHasDescendants[$normalized])) {
+                    throw new RuntimeException('The release archive contains a file that conflicts with nested paths.');
+                }
+                $entryKinds[$normalized] = $directoryEntry ? 'directory' : 'file';
+
                 $root = $segments[0];
                 if (! in_array($root, $allowedRoots, true)) {
                     throw new RuntimeException('The release archive contains a file outside the approved application directories.');
                 }
 
-                if (in_array('.git', $segments, true)
+                if ((str_starts_with($normalized, 'public/')
+                        && preg_match('/\\.(?:php[0-9]*|phtml|phar|cgi|pl|sh|exe|dll|so)$/i', $normalized)
+                        && $normalized !== 'public/index.php')
+                    || in_array('.git', $segments, true)
                     || in_array('.github', $segments, true)
                     || in_array('tests', $segments, true)
                     || in_array('node_modules', $segments, true)
                     || in_array('vendor-bin', $segments, true)
-                    || preg_match('/(^|\/)\.env$/', $normalized)
+                    || (preg_match('/(^|\/)\.env(?:\.|$)/i', $normalized) && $normalized !== 'deployment/.env.example')
+                    || preg_match('/\.(?:pem|key|p12|pfx)$/i', $normalized)
                     || preg_match('/\.sqlite(?:$|\/)/i', $normalized)
                     || str_starts_with($normalized, 'public/uploads/')
                     || str_starts_with($normalized, 'public/storage/')
@@ -252,9 +278,15 @@ class ReleasePackageStager
                 $opsys = 0;
                 $attributes = 0;
                 if ($archive->getExternalAttributesIndex($index, $opsys, $attributes)
-                    && $opsys === ZipArchive::OPSYS_UNIX
-                    && (($attributes >> 16) & 0170000) === 0120000) {
-                    throw new RuntimeException('The release archive contains a symbolic link.');
+                    && $opsys === ZipArchive::OPSYS_UNIX) {
+                    $unixMode = ($attributes >> 16) & 0177777;
+                    $fileType = $unixMode & 0170000;
+                    if (($fileType !== 0 && ! in_array($fileType, [0100000, 0040000], true))
+                        || ($unixMode & 07000) !== 0
+                        || ($directoryEntry && $fileType === 0100000)
+                        || (! $directoryEntry && $fileType === 0040000)) {
+                        throw new RuntimeException('The release archive contains a symbolic link or unsupported special file type.');
+                    }
                 }
 
                 $entrySize = (int) ($entry['size'] ?? 0);

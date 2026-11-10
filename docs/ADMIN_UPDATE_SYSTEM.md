@@ -1,6 +1,6 @@
 # Admin Update Center and Safe Release System
 
-**Status:** Approved product requirement; implementation is not yet complete.
+**Status:** Partially implemented; safe package preparation is available, but code installation and rollback are not implemented.
 **Target:** Laravel 12 / PHP 8.3+ on cPanel shared hosting (Web Host BD).
 **Owner decision:** The live LMS must be maintainable and updatable after launch without manually replacing the whole website for every routine improvement.
 
@@ -121,16 +121,18 @@ Release gates: CI green on exact release SHA; CodeQL/security review; package si
 
 ## 10. Current implementation assessment
 
-The repository currently has a secure fresh-install flow, cPanel deployment guidance, a database/media backup feature and automated CI package assembly. However, no production-grade signed release manifest, trusted package verification, Admin Update Center, atomic release activation, upgrade orchestrator or tested code rollback was found in the current main tree at the time this requirement was recorded.
+The repository now includes a signed release-manifest pipeline and Admin-only release checks. The Admin Update Center can verify signed metadata, record check history, download a newer release to private local storage, verify the package SHA-256 and signed migration-set digest, and reject unsafe archive paths, secret/runtime files, symlinks, oversized entries and untrusted redirects. Prepared packages have a 24-hour expiry; expired files are marked and removed from private staging storage when the next package-preparation action runs.
 
-Therefore this requirement is **not complete**. The existing backup feature is not a substitute for a release/update system. Build this as a dedicated feature in phases and do not expose an unsafe partial updater in production.
+The following are still **not implemented**: backup orchestration tied to an update, complete preflight/impact report, staged extraction, maintenance/lock orchestration, atomic or cPanel-safe code activation, migration execution policy, health checks, durable progress logs for installation, tested code rollback and cPanel staging acceptance. The package preparation step does not install or extract code and does not modify the live application.
+
+The requirement is therefore **not complete**. Do not enable code installation or advertise one-click updates until the remaining phases and real cPanel staging/recovery rehearsal have passed.
 
 ## 11. Delivery phases
 
-- **Phase 1 — Release foundation:** immutable CI release artifacts, version manifest, signing/verification tooling, release notes and package allow-list.
-- **Phase 2 — Admin Update Center:** status, preflight, release details, backup confirmation, progress, logs, audit history and Admin-only authorization.
-- **Phase 3 — Safe installer/activation:** staged extraction, persistent storage separation, lock, maintenance mode, activation and health checks.
-- **Phase 4 — Recovery:** tested code rollback, migration compatibility strategy, failure recovery and cPanel CLI/cron fallback.
-- **Phase 5 — Acceptance:** upgrade-from-previous-version CI matrix, security tests, cPanel staging rehearsal, restore/rollback drill and documented production runbook.
+- **Phase 1 — Release foundation:** implemented in code (immutable CI release artifacts, signed manifest, version marker, package allow-list and trusted manifest verification). Still requires owner-managed signing-key provisioning and a published signed release.
+- **Phase 2 — Admin Update Center:** partially implemented (Admin-only status/check history and private package download/verification). Full preflight, backup confirmation, impact report, persistent install progress/logs and complete audit details remain.
+- **Phase 3 — Safe installer/activation:** not implemented (staged extraction, persistent storage separation, lock, maintenance mode, activation and health checks).
+- **Phase 4 — Recovery:** not implemented (tested code rollback, migration compatibility strategy, failure recovery and cPanel CLI/cron fallback).
+- **Phase 5 — Acceptance:** not complete (upgrade-from-previous-version CI matrix, security tests, cPanel staging rehearsal, restore/rollback drill and documented production runbook).
 
 Do not mark the system complete until all five phases and the cPanel staging acceptance have passed.

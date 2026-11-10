@@ -88,7 +88,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: bcmath, ctype, fileinfo, mbstring, openssl, pdo_mysql, tokenizer, xml
+          extensions: bcmath, ctype, fileinfo, mbstring, openssl, pdo_mysql, tokenizer, xml, zip
           coverage: none
 
       - name: Set up Node
@@ -100,10 +100,13 @@ jobs:
       - name: Install production dependencies and build assets
         run: |
           set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          printf '%s\n' "$VERSION" > VERSION
           cp deployment/.env.example .env
           composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
           php artisan key:generate --force
           php artisan config:cache
+          EXPECTED_VERSION="$VERSION" php .github/scripts/assert-release-version.php
           php artisan view:cache
           npm ci
           npm run build
