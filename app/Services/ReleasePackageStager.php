@@ -6,7 +6,6 @@ use App\Models\SystemUpdatePreparation;
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use RuntimeException;
 use Throwable;
 use ZipArchive;
@@ -34,7 +33,7 @@ class ReleasePackageStager
         $expectedHash = $details['package_sha256'];
         $maxBytes = max(1048576, (int) config('services.lms_updates.max_package_bytes', 104857600));
         $disk = Storage::disk('local');
-        $relativePath = 'updates/staging/'.$version.'-'.Str::uuid().'.zip';
+        $relativePath = 'updates/staging/'.$version.'-'.bin2hex(random_bytes(16)).'.zip';
         $absolutePath = $disk->path($relativePath);
         $directory = dirname($absolutePath);
 
