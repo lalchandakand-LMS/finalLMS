@@ -42,7 +42,7 @@ class UserController extends Controller
     public function updateRole(User $user, Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'role' => ['required', 'in:admin,branch_manager,accountant,teacher,student'],
+            'role' => ['required', 'in:admin,branch_manager,accountant,teacher,student,guardian'],
             'branch_id' => ['nullable', Rule::exists('branches', 'id')->where('is_active', true)],
         ]);
 
