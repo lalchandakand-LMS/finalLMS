@@ -101,7 +101,7 @@ jobs:
         run: |
           set -euo pipefail
           VERSION="${GITHUB_REF_NAME#v}"
-          printf '%s\\n' "$VERSION" > VERSION
+          printf '%s\n' "$VERSION" > VERSION
           cp deployment/.env.example .env
           composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
           php artisan key:generate --force
