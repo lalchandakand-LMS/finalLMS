@@ -295,6 +295,39 @@ class AdminUpdateCenterTest extends TestCase
         $this->assertFalse(Storage::disk('local')->exists($packagePath));
     }
 
+    public function test_expired_staged_release_removes_both_package_and_extracted_tree(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $packagePath = 'updates/staging/expired-staged.zip';
+        $releasePath = 'updates/releases/expired-staged';
+        Storage::disk('local')->put($packagePath, 'expired-package');
+        Storage::disk('local')->put($releasePath.'/VERSION', "1.0.1\n");
+        $preparation = SystemUpdatePreparation::create([
+            'prepared_by' => $admin->id,
+            'version' => '1.0.1',
+            'package_sha256' => str_repeat('a', 64),
+            'manifest_sha256' => str_repeat('b', 64),
+            'migration_set_sha256' => hash('sha256', ''),
+            'package_path' => $packagePath,
+            'release_path' => $releasePath,
+            'file_size' => 14,
+            'status' => 'staged',
+            'message' => 'Expired staged release.',
+            'expires_at' => now()->subMinute(),
+            'staged_at' => now()->subHour(),
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.updates.extract', $preparation))
+            ->assertRedirect(route('admin.updates.index'))
+            ->assertSessionHas('error');
+
+        $preparation->refresh();
+        $this->assertSame('expired', $preparation->status);
+        $this->assertFalse(Storage::disk('local')->exists($packagePath));
+        $this->assertFalse(Storage::disk('local')->exists($releasePath.'/VERSION'));
+    }
+
     public function test_admin_cannot_stage_a_package_redirected_to_an_untrusted_host(): void
     {
         $this->configureSignedRelease(
