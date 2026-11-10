@@ -162,7 +162,7 @@ The following is the intended full product. Some areas have partial implementati
 
 Check current GitHub state before acting; these are pointers, not guaranteed live statuses.
 
-- [PR #76 — README roadmap / Guardian documentation](https://github.com/lalchandakand-LMS/finalLMS/pull/76) — documentation-only handoff work.
+- [PR #81 — durable AI Studio handoff and project memory](https://github.com/lalchandakand-LMS/finalLMS/pull/81) — current documentation handoff PR; supersedes stale PR #77.
 - [PR #75 — uploaded ZIP security audit](https://github.com/lalchandakand-LMS/finalLMS/pull/75).
 - [PR #74 — Course Content Studio / digital products](https://github.com/lalchandakand-LMS/finalLMS/pull/74); [Issue #73 — detailed course/content/flash-sale/question-set/PDF scope](https://github.com/lalchandakand-LMS/finalLMS/issues/73).
 - [PR #72 — advanced lesson video management](https://github.com/lalchandakand-LMS/finalLMS/pull/72).
@@ -172,6 +172,8 @@ Check current GitHub state before acting; these are pointers, not guaranteed liv
 - [PR #67 — assignment workflow](https://github.com/lalchandakand-LMS/finalLMS/pull/67).
 - [PR #66 — bKash callback verification](https://github.com/lalchandakand-LMS/finalLMS/pull/66).
 - [PR #65 — 15 homepage presets and visual builder](https://github.com/lalchandakand-LMS/finalLMS/pull/65).
+- [PR #78 — Admin Update Center specification](https://github.com/lalchandakand-LMS/finalLMS/pull/78) — merged to main.
+- [PR #80 — signed immutable release pipeline](https://github.com/lalchandakand-LMS/finalLMS/pull/80) — merged to main; release signing key provisioning is still required.
 - [Issue #40 — owner-approved broad feature scope](https://github.com/lalchandakand-LMS/finalLMS/issues/40).
 - [Issue #41 — homepage, mobile apps and full course experience](https://github.com/lalchandakand-LMS/finalLMS/issues/41).
 - [Issue #38 — older four-portal architecture proposal](https://github.com/lalchandakand-LMS/finalLMS/issues/38). Its portal count conflicts with the later explicit five-panel decision; follow the current Decision Log and reconcile the issue text.
@@ -247,3 +249,17 @@ Before calling Guardian complete, implement and test all of the following:
 8. Bangla/English strings, responsive views, privacy-safe empty/error states and audit events.
 
 Do not expose sensitive student records to a guardian until the relationship is verified and active. Guardian should not be able to change grades, attendance, payments, enrollment or other academic/financial records.
+
+### Admin Update Center acceptance checklist
+
+1. Pin a trusted public-key fingerprint outside the downloaded release package and verify every signed manifest before trusting its metadata.
+2. Enforce product identity, semantic-version ordering, stable channel, PHP/Laravel compatibility, required extensions, package digest, migration-set digest and allow-listed HTTPS release host.
+3. Reject invalid signatures, hash mismatches, downgrade attempts, malformed manifests, path traversal, symlinks, duplicate archive paths, oversized packages and attempts to overwrite environment/runtime/user data.
+4. Admin-only routes and APIs must have server-side role checks, CSRF, rate limiting, password re-authentication for apply/rollback, lock protection and durable audit records.
+5. Show release notes, preflight checks, backup verification, migration impact, persistent progress, health checks and a clear failure state.
+6. Stage releases outside the public root; keep .env, uploads, private lesson files, assignment submissions, logs and backups in persistent protected storage.
+7. Use backward-compatible additive migrations. Never auto-run destructive schema/data operations or blindly restore an old database over new user activity.
+8. Test interrupted downloads, malicious archives, disk exhaustion, permission failures, partial extraction, failed migrations, failed health checks, concurrent update requests and recovery from an unavailable admin UI.
+9. Verify the exact release and rollback on isolated Web Host BD cPanel staging before production acceptance.
+
+PR #80 supplies the signed artifact pipeline only. The Admin Update Center and installer/activation/recovery stages remain incomplete until these acceptance checks pass.
