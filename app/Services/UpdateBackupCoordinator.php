@@ -309,6 +309,34 @@ class UpdateBackupCoordinator
             throw $exception;
         }
 
+        $verificationArchive = new ZipArchive();
+        if ($verificationArchive->open($absolutePath) !== true) {
+            @unlink($absolutePath);
+            throw new RuntimeException('The completed code snapshot ZIP could not be reopened for verification.');
+        }
+        try {
+            foreach (array_keys($required) as $requiredFile) {
+                if ($verificationArchive->locateName($requiredFile) === false) {
+                    throw new RuntimeException('The completed code snapshot is missing a required application file.');
+                }
+            }
+            $archivedVersion = $verificationArchive->getFromName('VERSION');
+            if (! is_string($archivedVersion) || trim($archivedVersion) !== $version) {
+                throw new RuntimeException('The completed code snapshot version marker failed verification.');
+            }
+            if ($verificationArchive->locateName('.env') !== false
+                || $verificationArchive->locateName('storage/app/private') !== false
+                || $verificationArchive->locateName('public/uploads') !== false
+                || $verificationArchive->locateName('public/storage') !== false) {
+                throw new RuntimeException('The completed code snapshot contains an excluded secret or runtime path.');
+            }
+        } catch (Throwable $exception) {
+            $verificationArchive->close();
+            @unlink($absolutePath);
+            throw $exception;
+        }
+        $verificationArchive->close();
+
         $hash = hash_file('sha256', $absolutePath);
         $fileSize = filesize($absolutePath);
         if (! is_string($hash) || ! is_int($fileSize) || $fileSize < 1) {
