@@ -67,8 +67,18 @@
 </section>
 <section class="panel" style="margin-bottom:20px;">
     <h2>Homepage slider</h2>
-    <p class="muted">Add up to three image slides. Upload images in Media Library before selecting them.</p>
-    @for($i = 0; $i < 3; $i++)
+    <p class="muted">Build an accessible, responsive hero carousel with up to eight slides. Choose autoplay, timing, controls and image overlay. Upload images in Media Library before selecting them.</p>
+    <div class="grid grid-2">
+        <label>Autoplay<select name="home_slider_autoplay"><option value="1" @selected(old('home_slider_autoplay', $settings['home_slider_autoplay'] ?? '1') == '1')>Enabled</option><option value="0" @selected(old('home_slider_autoplay', $settings['home_slider_autoplay'] ?? '1') == '0')>Disabled</option></select></label>
+        <label>Slide interval<select name="home_slider_interval">@foreach([3000 => '3 seconds', 4000 => '4 seconds', 5000 => '5 seconds', 6000 => '6 seconds', 8000 => '8 seconds', 10000 => '10 seconds', 12000 => '12 seconds'] as $ms => $label)<option value="{{ $ms }}" @selected((int) old('home_slider_interval', $settings['home_slider_interval'] ?? 5000) === $ms)>{{ $label }}</option>@endforeach</select></label>
+        <label>Navigation arrows<select name="home_slider_arrows"><option value="1" @selected(old('home_slider_arrows', $settings['home_slider_arrows'] ?? '1') == '1')>Show</option><option value="0" @selected(old('home_slider_arrows', $settings['home_slider_arrows'] ?? '1') == '0')>Hide</option></select></label>
+        <label>Pagination dots<select name="home_slider_dots"><option value="1" @selected(old('home_slider_dots', $settings['home_slider_dots'] ?? '1') == '1')>Show</option><option value="0" @selected(old('home_slider_dots', $settings['home_slider_dots'] ?? '1') == '0')>Hide</option></select></label>
+        <label>Pause when hovered<select name="home_slider_pause_hover"><option value="1" @selected(old('home_slider_pause_hover', $settings['home_slider_pause_hover'] ?? '1') == '1')>Yes</option><option value="0" @selected(old('home_slider_pause_hover', $settings['home_slider_pause_hover'] ?? '1') == '0')>No</option></select></label>
+        <label>Desktop slider height<select name="home_slider_height">@foreach([360,420,480,540,600,660,720] as $height)<option value="{{ $height }}" @selected((int) old('home_slider_height', $settings['home_slider_height'] ?? 480) === $height)>{{ $height }} px</option>@endforeach</select></label>
+        <label>Mobile slider height<select name="home_slider_mobile_height">@foreach([220,260,300,340,380,420,460,520] as $height)<option value="{{ $height }}" @selected((int) old('home_slider_mobile_height', $settings['home_slider_mobile_height'] ?? 300) === $height)>{{ $height }} px</option>@endforeach</select></label>
+        <label>Image overlay strength<select name="home_slider_overlay">@foreach([20,30,40,50,60,70,80,90] as $opacity)<option value="{{ $opacity }}" @selected((int) old('home_slider_overlay', $settings['home_slider_overlay'] ?? 60) === $opacity)>{{ $opacity }}%</option>@endforeach</select></label>
+    </div>
+    @for($i = 0; $i < 8; $i++)
         @php($slide = old("home_slides.$i", $slides[$i] ?? []))
         <section class="card" style="margin-bottom:14px;">
             <div class="page-header"><h3>Slide {{ $i + 1 }}</h3><label style="display:flex;gap:8px;align-items:center;"><input type="hidden" name="home_slides[{{ $i }}][enabled]" value="0"><input type="checkbox" name="home_slides[{{ $i }}][enabled]" value="1" style="width:auto;" @checked($slide['enabled'] ?? false)> Enabled</label></div>
