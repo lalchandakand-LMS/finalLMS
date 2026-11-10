@@ -42,7 +42,7 @@ For an existing deployment, back up files and database first, follow the migrati
 
 - Run route checks and smoke tests before opening enrollment. Set up database backups and monitor application logs.
 - Keep the packaged `VERSION` file with the deployed code. Leave `LMS_VERSION` empty to read the installed version from this marker; the signed release workflow stamps it from the immutable version tag.
-- Signed update checks remain disabled by default. The read-only Admin Update Center requires an independently verified RSA public key stored outside the public web root before `LMS_UPDATES_ENABLED=true` is set. It checks signed release metadata only; it does not install code or run migrations.
+- Signed update checks remain disabled by default. The Admin Update Center requires an independently verified RSA public key stored outside the public web root before `LMS_UPDATES_ENABLED=true` is set. It can verify signed release metadata, download and checksum-validate a release package, and extract it into isolated private staging. It does not activate or install code, run migrations, or provide rollback.
 
 ## Release Artifact
 
@@ -54,4 +54,4 @@ The web installer and installation gate are implemented in code, but still requi
 
 ## Post-launch application updates
 
-The long-term update design and acceptance criteria are documented in [Admin Update Center and Safe Release System](../docs/ADMIN_UPDATE_SYSTEM.md). This is an approved requirement, not a claim that the updater is already implemented. Until the signed release/update workflow is implemented and accepted on cPanel staging, deploy reviewed release ZIPs using the manual backup-and-release procedure; do not install arbitrary packages or overwrite the live application in place.
+The long-term update design and acceptance criteria are documented in [Admin Update Center and Safe Release System](../docs/ADMIN_UPDATE_SYSTEM.md). The current Admin Update Center verifies signed metadata and packages and can extract them into isolated private staging, but it cannot activate a release, run migrations, or roll back code. Until activation/recovery are implemented and accepted on cPanel staging, deploy reviewed release ZIPs using the manual backup-and-release procedure; do not install arbitrary packages or overwrite the live application in place.
