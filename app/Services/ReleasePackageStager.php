@@ -177,7 +177,8 @@ class ReleasePackageStager
                 'vendor/autoload.php' => false,
                 'VERSION' => false,
             ];
-            $totalBytes = 0;\n            $migrationHashes = [];
+            $totalBytes = 0;
+            $migrationHashes = [];
 
             for ($index = 0; $index < $archive->numFiles; $index++) {
                 $entry = $archive->statIndex($index);
