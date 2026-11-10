@@ -41,20 +41,21 @@ class AdminUpdateCenterTest extends TestCase
 
     public function test_non_admin_roles_cannot_open_or_check_system_updates(): void
     {
-        $student = User::factory()->create(['role' => 'student']);
+        foreach (['student', 'teacher', 'branch_manager', 'accountant', 'guardian'] as $role) {
+            $user = User::factory()->create(['role' => $role]);
 
-        $this->actingAs($student)
-            ->get(route('admin.updates.index'))
-            ->assertForbidden();
+            $this->actingAs($user)
+                ->get(route('admin.updates.index'))
+                ->assertForbidden();
 
-        $this->actingAs($student)
-            ->post(route('admin.updates.check'))
-            ->assertForbidden();
+            $this->actingAs($user)
+                ->post(route('admin.updates.check'))
+                ->assertForbidden();
 
-        $otherStudent = User::factory()->create(['role' => 'student']);
-        $this->actingAs($otherStudent)
-            ->post(route('admin.updates.prepare'))
-            ->assertForbidden();
+            $this->actingAs($user)
+                ->post(route('admin.updates.prepare'))
+                ->assertForbidden();
+        }
 
         $this->assertDatabaseCount('system_update_checks', 0);
         $this->assertDatabaseCount('system_update_preparations', 0);
