@@ -59,7 +59,12 @@ class ReleasePreflightChecker
 
         $packageAbsolute = $disk->path($preparation->package_path);
         $packageRealPath = realpath($packageAbsolute);
-        $packageHash = $packageRealPath && is_file($packageRealPath) ? hash_file('sha256', $packageRealPath) : false;
+        $packageIsPrivate = $privateRoot !== false
+            && $packageRealPath !== false
+            && ! is_link($packageAbsolute)
+            && is_file($packageRealPath)
+            && str_starts_with($packageRealPath, rtrim($privateRoot, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR);
+        $packageHash = $packageIsPrivate ? hash_file('sha256', $packageRealPath) : false;
         $packageMatches = is_string($packageHash) && hash_equals($preparation->package_sha256, $packageHash);
         $add(
             'package_integrity',
