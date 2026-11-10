@@ -130,7 +130,7 @@ The requirement is therefore **not complete**. Do not enable code installation o
 ## 11. Delivery phases
 
 - **Phase 1 — Release foundation:** implemented in code (immutable CI release artifacts, signed manifest, version marker, package allow-list and trusted manifest verification). Still requires owner-managed signing-key provisioning and a published signed release.
-- **Phase 2 — Admin Update Center:** partially implemented (Admin-only status/check history and private package download/verification). Full preflight, backup confirmation, impact report, persistent install progress/logs and complete audit details remain.
+- **Phase 2 — Admin Update Center:** partially implemented (Admin-only status/check history, private package download/verification and a durable read-only activation-readiness preflight). Complete impact/backup preflight, verified backup orchestration, persistent install progress/logs and complete audit details remain.
 - **Phase 3 — Safe installer/activation:** partially implemented (verified packages can be extracted into isolated private storage with restrictive permissions and disk-space checks). Persistent shared-storage wiring, update lock, maintenance mode, code activation and health checks remain unimplemented.
 - **Phase 4 — Recovery:** not implemented (tested code rollback, migration compatibility strategy, failure recovery and cPanel CLI/cron fallback).
 - **Phase 5 — Acceptance:** not complete (upgrade-from-previous-version CI matrix, security tests, cPanel staging rehearsal, restore/rollback drill and documented production runbook).
