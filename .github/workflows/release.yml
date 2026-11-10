@@ -34,7 +34,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: bcmath, ctype, fileinfo, mbstring, openssl, pdo_mysql, tokenizer, xml
+          extensions: bcmath, ctype, fileinfo, mbstring, openssl, pdo_mysql, tokenizer, xml, zip
           coverage: none
       - uses: actions/setup-node@v5
         with:
@@ -169,7 +169,7 @@ jobs:
               git_commit: $commit,
               minimum_php: "8.3.0",
               laravel_major: 12,
-              required_extensions: ["bcmath","ctype","fileinfo","mbstring","openssl","pdo_mysql","tokenizer","xml"],
+              required_extensions: ["bcmath","ctype","fileinfo","mbstring","openssl","pdo_mysql","tokenizer","xml","zip"],
               package_file: $package,
               package_sha256: $sha,
               migration_set_sha256: $migration_sha,
