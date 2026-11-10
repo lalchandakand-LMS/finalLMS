@@ -190,6 +190,8 @@ class ReleasePackageStager
                 'composer.lock', 'README.md', 'VERSION',
             ];
             $seen = [];
+            $entryKinds = [];
+            $pathHasDescendants = [];
             $required = [
                 'artisan' => false,
                 'public/index.php' => false,
@@ -213,7 +215,7 @@ class ReleasePackageStager
                 $directoryEntry = str_ends_with($name, '/');
                 $normalized = rtrim($name, '/');
                 $segments = explode('/', $normalized);
-                if ($normalized === '' || in_array('.', $segments, true) || in_array('..', $segments, true)) {
+                if ($normalized === '' || in_array('', $segments, true) || in_array('.', $segments, true) || in_array('..', $segments, true)) {
                     throw new RuntimeException('The release archive contains a path traversal entry.');
                 }
 
@@ -221,6 +223,19 @@ class ReleasePackageStager
                     throw new RuntimeException('The release archive contains duplicate paths.');
                 }
                 $seen[$normalized] = true;
+
+                $parent = '';
+                foreach (array_slice($segments, 0, -1) as $segment) {
+                    $parent = $parent === '' ? $segment : $parent.'/'.$segment;
+                    if (($entryKinds[$parent] ?? null) === 'file') {
+                        throw new RuntimeException('The release archive contains a file used as a parent directory.');
+                    }
+                    $pathHasDescendants[$parent] = true;
+                }
+                if (! $directoryEntry && ! empty($pathHasDescendants[$normalized])) {
+                    throw new RuntimeException('The release archive contains a file that conflicts with nested paths.');
+                }
+                $entryKinds[$normalized] = $directoryEntry ? 'directory' : 'file';
 
                 $root = $segments[0];
                 if (! in_array($root, $allowedRoots, true)) {
@@ -232,7 +247,8 @@ class ReleasePackageStager
                     || in_array('tests', $segments, true)
                     || in_array('node_modules', $segments, true)
                     || in_array('vendor-bin', $segments, true)
-                    || preg_match('/(^|\/)\.env$/', $normalized)
+                    || (preg_match('/(^|\/)\.env(?:\.|$)/i', $normalized) && $normalized !== 'deployment/.env.example')
+                    || preg_match('/\.(?:pem|key|p12|pfx)$/i', $normalized)
                     || preg_match('/\.sqlite(?:$|\/)/i', $normalized)
                     || str_starts_with($normalized, 'public/uploads/')
                     || str_starts_with($normalized, 'public/storage/')
