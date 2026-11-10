@@ -296,6 +296,17 @@ class AdminUpdateCenterTest extends TestCase
         $this->get(route('admin.updates.index'))
             ->assertOk()
             ->assertSee('Verified pre-activation backup');
+
+        $this->actingAs($admin)
+            ->post(route('admin.updates.preflight', $preparation))
+            ->assertRedirect(route('admin.updates.index'))
+            ->assertSessionHas('error');
+
+        $report = SystemUpdatePreflight::query()->where('preparation_id', $preparation->id)->latest('checked_at')->firstOrFail();
+        $backupCheck = collect($report->checks)->firstWhere('key', 'verified_pre_activation_backup');
+        $activationCheck = collect($report->checks)->firstWhere('key', 'activation_runner');
+        $this->assertSame('pass', $backupCheck['status']);
+        $this->assertSame('blocked', $activationCheck['status']);
     }
 
     public function test_admin_cannot_create_update_backup_without_a_recent_verified_database_media_backup(): void
