@@ -118,6 +118,14 @@ class ReleasePackageStager
             throw new RuntimeException('Only a current, verified package can be extracted to private staging.');
         }
 
+        if (! preg_match('/^\\d+\\.\\d+\\.\\d+$/', $preparation->version)) {
+            throw new RuntimeException('The prepared release version is not a valid semantic version.');
+        }
+
+        if (! class_exists(ZipArchive::class)) {
+            throw new RuntimeException('The PHP zip extension is required before a release can be extracted.');
+        }
+
         if (! is_string($preparation->migration_set_sha256) || $preparation->migration_set_sha256 === '') {
             throw new RuntimeException('This prepared package predates migration-digest tracking. Download and verify it again before extraction.');
         }
