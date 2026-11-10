@@ -45,6 +45,21 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Certificate::class);
     }
 
+    public function guardianStudentLinks(): HasMany
+    {
+        return $this->hasMany(GuardianStudentLink::class, 'guardian_user_id');
+    }
+
+    public function studentGuardianLinks(): HasMany
+    {
+        return $this->hasMany(GuardianStudentLink::class, 'student_user_id');
+    }
+
+    public function isGuardian(): bool
+    {
+        return $this->role === 'guardian';
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
