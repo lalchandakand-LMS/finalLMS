@@ -325,6 +325,9 @@ class UpdateBackupCoordinator
         $relative = ltrim(str_replace('\\', '/', $relative), '/');
         $segments = explode('/', $relative);
         $root = $segments[0] ?? '';
+        if (array_intersect($segments, ['.git', '.github', 'node_modules', 'tests', 'vendor-bin']) !== []) {
+            return true;
+        }
         $allowedRoots = [
             'app', 'artisan', 'bootstrap', 'config', 'database', 'deployment',
             'public', 'resources', 'routes', 'vendor', 'composer.json',
