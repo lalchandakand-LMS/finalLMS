@@ -6,6 +6,7 @@ use App\Http\Controllers\BatchController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\CourseController;
+use App\Http\Controllers\CourseCategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GuardianController;
 use App\Http\Controllers\EmailVerificationController;
@@ -273,6 +274,11 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         Route::post('/guardians/link', [UserController::class, 'linkStudent'])->name('admin.guardians.link');
         Route::delete('/guardians/{guardian}/{student}', [UserController::class, 'unlinkStudent'])->name('admin.guardians.unlink');
         Route::post('/users/{user}/role', [UserController::class, 'updateRole'])->name('admin.users.updateRole');
+
+        Route::get('/course-categories', [CourseCategoryController::class, 'index'])->name('admin.course-categories.index');
+        Route::post('/course-categories', [CourseCategoryController::class, 'store'])->name('admin.course-categories.store');
+        Route::put('/course-categories/{category}', [CourseCategoryController::class, 'update'])->name('admin.course-categories.update');
+        Route::delete('/course-categories/{category}', [CourseCategoryController::class, 'destroy'])->name('admin.course-categories.destroy');
 
         Route::get('/courses', [CourseController::class, 'adminIndex'])->name('admin.courses.index');
         Route::get('/courses/create', [CourseController::class, 'create'])->name('admin.courses.create');
