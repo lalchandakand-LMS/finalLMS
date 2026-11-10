@@ -100,7 +100,7 @@ jobs:
             --exclude='node_modules' \
             --exclude='.git' \
             --exclude='dist' \
-            app artisan bootstrap config database deployment public resources routes storage vendor composer.json composer.lock README.md \
+            app artisan bootstrap config database deployment public resources routes storage vendor composer.json composer.lock README.md VERSION \
             "$RUNNER_TEMP/cpanel-package/"
           (cd "$RUNNER_TEMP/cpanel-package" && zip -qr "$GITHUB_WORKSPACE/dist/AlomsEnglishCenter-cpanel.zip" .)
           unzip -t dist/AlomsEnglishCenter-cpanel.zip
@@ -108,6 +108,7 @@ jobs:
           if grep -Eq '(^|/)(\.env|database\.sqlite|laravel\.log|\.git)(/|$)' "$RUNNER_TEMP/cpanel-files.txt"; then echo "Forbidden runtime or secret file found in release package."; exit 1; fi
           grep -Fxq 'public/index.php' "$RUNNER_TEMP/cpanel-files.txt"
           grep -Fxq 'vendor/autoload.php' "$RUNNER_TEMP/cpanel-files.txt"
+          grep -Fxq 'VERSION' "$RUNNER_TEMP/cpanel-files.txt"
           grep -Fxq 'deployment/.env.example' "$RUNNER_TEMP/cpanel-files.txt"
       - uses: actions/upload-artifact@v7
         with:
