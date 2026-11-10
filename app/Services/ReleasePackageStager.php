@@ -49,7 +49,10 @@ class ReleasePackageStager
                 throw new RuntimeException('The downloaded package SHA-256 does not match the signed release manifest.');
             }
 
-            $actualMigrationDigest = $this->validateArchive($absolutePath, $version);\n            if (! hash_equals($details['migration_set_sha256'], $actualMigrationDigest)) {\n                throw new RuntimeException('The package migration set does not match the signed release manifest.');\n            }
+            $actualMigrationDigest = $this->validateArchive($absolutePath, $version);
+            if (! hash_equals($details['migration_set_sha256'], $actualMigrationDigest)) {
+                throw new RuntimeException('The package migration set does not match the signed release manifest.');
+            }
             $fileSize = filesize($absolutePath);
             if (! is_int($fileSize) || $fileSize < 1 || $fileSize > $maxBytes) {
                 throw new RuntimeException('The verified release package has an invalid file size.');
