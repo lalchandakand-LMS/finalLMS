@@ -173,6 +173,14 @@ class ReleasePackageStager
             throw new RuntimeException('The release extraction path is not a safe private directory.');
         }
 
+        $realReleaseDirectory = realpath($releaseAbsolute);
+        if ($realReleaseDirectory === false
+            || ! str_starts_with($realReleaseDirectory, rtrim($privateRoot, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR)) {
+            $disk->deleteDirectory($releasePath);
+            throw new RuntimeException('The extracted release directory resolves outside private storage.');
+        }
+        $releaseAbsolute = $realReleaseDirectory;
+
         try {
             $archive = new ZipArchive();
             if ($archive->open($realPackage) !== true) {
