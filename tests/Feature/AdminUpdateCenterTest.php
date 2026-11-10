@@ -279,6 +279,10 @@ class AdminUpdateCenterTest extends TestCase
         $this->assertSame('blocked', $report->status);
         $backupCheck = collect($report->checks)->firstWhere('key', 'verified_pre_activation_backup');
         $this->assertSame('blocked', $backupCheck['status']);
+        $this->get(route('admin.updates.index'))
+            ->assertOk()
+            ->assertSee('Latest activation preflight')
+            ->assertSee('verified_pre_activation_backup');
         $this->assertDatabaseHas('system_update_preparations', [
             'id' => $preparation->id,
             'status' => 'staged',
