@@ -17,6 +17,11 @@ class BlogPost extends Model
         return $this->belongsTo(User::class, 'author_id');
     }
 
+    public function categories(): BelongsToMany
+    {
+        return $this->belongsToMany(CourseCategory::class, 'blog_post_course_category')->withTimestamps();
+    }
+
     public function courseSections(): BelongsToMany
     {
         return $this->belongsToMany(CourseSection::class, 'course_section_blog_post')->withPivot(['position','attached_by'])->withTimestamps();
