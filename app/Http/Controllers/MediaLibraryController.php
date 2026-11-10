@@ -54,6 +54,9 @@ class MediaLibraryController extends Controller
             fn ($slide) => is_array($slide) && (int) ($slide['image_id'] ?? 0) === $media->id
         );
         abort_if($usedBySlider, 422, 'This file is used by a homepage slider slide.');
+        $usedAsBranding = (int) Setting::value('site_logo_media_id', 0) === $media->id
+            || (int) Setting::value('site_favicon_media_id', 0) === $media->id;
+        abort_if($usedAsBranding, 422, 'This file is currently used as the website logo or favicon.');
         Storage::disk($media->disk)->delete($media->path);
         $media->delete();
         return back()->with('success', 'Media deleted.');

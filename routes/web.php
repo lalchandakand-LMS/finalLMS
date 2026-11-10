@@ -209,6 +209,12 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         Route::post('/backups/restore', [BackupController::class, 'restore'])->middleware('throttle:2,10')->name('admin.backups.restore');
         Route::get('/website-builder', [WebsiteBuilderController::class, 'index'])->name('admin.website-builder.index');
         Route::post('/website-builder', [WebsiteBuilderController::class, 'update'])->name('admin.website-builder.update');
+        Route::post('/website-builder/draft', [WebsiteBuilderController::class, 'saveDraft'])->name('admin.website-builder.draft');
+        Route::get('/website-builder/preview', [WebsiteBuilderController::class, 'previewDraft'])->name('admin.website-builder.preview');
+        Route::post('/website-builder/publish-draft', [WebsiteBuilderController::class, 'publishDraft'])->name('admin.website-builder.publish-draft');
+        Route::post('/website-builder/rollback', [WebsiteBuilderController::class, 'rollback'])->name('admin.website-builder.rollback');
+        Route::post('/website-builder/custom-blocks', [WebsiteBuilderController::class, 'saveCustomBlock'])->name('admin.website-builder.custom-blocks.store');
+        Route::delete('/website-builder/custom-blocks', [WebsiteBuilderController::class, 'deleteCustomBlock'])->name('admin.website-builder.custom-blocks.destroy');
         Route::get('/media', [MediaLibraryController::class, 'index'])->name('admin.media.index');
         Route::post('/media', [MediaLibraryController::class, 'store'])->name('admin.media.store');
         Route::delete('/media/{media}', [MediaLibraryController::class, 'destroy'])->name('admin.media.destroy');
