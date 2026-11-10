@@ -72,6 +72,12 @@ class BlogController extends Controller
 
     public function destroy(BlogPost $post): RedirectResponse
     {
+        if ($post->courseSections()->exists()) {
+            $post->update(['status' => 'archived', 'published_at' => null]);
+            return back()->with('success', 'Content post was archived because it is attached to a course curriculum.');
+        }
+
+        $post->categories()->detach();
         $post->delete();
         return back()->with('success', 'Article deleted.');
     }
@@ -88,7 +94,7 @@ class BlogController extends Controller
             'video_url' => ['nullable', 'url', 'max:2048', 'regex:/^https:\/\/(?:www\.)?(?:youtube\.com|youtu\.be|youtube-nocookie\.com|vimeo\.com)(?:\/|$)/i'],
             'body' => ['required', 'string', 'max:100000'],
             'cover_media_id' => ['nullable', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
-            'status' => ['required', 'in:draft,published'],
+            'status' => ['required', 'in:draft,published,archived'],
             'published_at' => ['nullable', 'date'],
             'seo_title' => ['nullable', 'string', 'max:255'],
             'seo_description' => ['nullable', 'string', 'max:320'],
