@@ -30,6 +30,15 @@ class AdminUpdateCenterTest extends TestCase
         parent::tearDown();
     }
 
+    public function test_update_preparation_schema_contains_all_private_staging_fields(): void
+    {
+        $this->assertTrue(Schema::hasColumns('system_update_preparations', [
+            'migration_set_sha256',
+            'release_path',
+            'staged_at',
+        ]));
+    }
+
     public function test_admin_can_open_the_system_update_center(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
