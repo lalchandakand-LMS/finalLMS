@@ -6,6 +6,9 @@ use App\Models\SystemUpdatePreparation;
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use FilesystemIterator;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
 use RuntimeException;
 use Throwable;
 use ZipArchive;
@@ -69,12 +72,15 @@ class ReleasePackageStager
             @chmod($absolutePath, 0600);
 
             $olderPreparations = SystemUpdatePreparation::query()
-                ->where('status', 'verified')
+                ->whereIn('status', ['verified', 'staged'])
                 ->get();
 
             foreach ($olderPreparations as $older) {
                 if ($older->package_path !== $relativePath) {
                     $disk->delete($older->package_path);
+                    if ($older->release_path) {
+                        $disk->deleteDirectory($older->release_path);
+                    }
                     $older->update([
                         'status' => 'superseded',
                         'message' => 'A newer verified package replaced this staged release.',
@@ -87,6 +93,7 @@ class ReleasePackageStager
                 'version' => $version,
                 'package_sha256' => $actualHash,
                 'manifest_sha256' => $release['manifest_sha256'],
+                'migration_set_sha256' => $actualMigrationDigest,
                 'package_path' => $relativePath,
                 'file_size' => $fileSize,
                 'status' => 'verified',
@@ -99,20 +106,207 @@ class ReleasePackageStager
         }
     }
 
+
+    public function extract(SystemUpdatePreparation $preparation): SystemUpdatePreparation
+    {
+        $this->expireStalePreparations();
+        $preparation->refresh();
+
+        if ($preparation->status !== 'verified'
+            || ! $preparation->expires_at
+            || $preparation->expires_at->isPast()) {
+            throw new RuntimeException('Only a current, verified package can be extracted to private staging.');
+        }
+
+        if (! preg_match('/^\\d+\\.\\d+\\.\\d+$/', $preparation->version)) {
+            throw new RuntimeException('The prepared release version is not a valid semantic version.');
+        }
+
+        if (! class_exists(ZipArchive::class)) {
+            throw new RuntimeException('The PHP zip extension is required before a release can be extracted.');
+        }
+
+        if (! is_string($preparation->migration_set_sha256) || $preparation->migration_set_sha256 === '') {
+            throw new RuntimeException('This prepared package predates migration-digest tracking. Download and verify it again before extraction.');
+        }
+
+        $disk = Storage::disk('local');
+        $privateRoot = realpath($disk->path(''));
+        $packageAbsolute = $disk->path($preparation->package_path);
+        $realPackage = realpath($packageAbsolute);
+
+        if ($privateRoot === false
+            || $realPackage === false
+            || is_link($packageAbsolute)
+            || ! is_file($realPackage)
+            || ! str_starts_with($realPackage, rtrim($privateRoot, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR)) {
+            throw new RuntimeException('The verified package is missing or no longer resides in private storage.');
+        }
+
+        $actualHash = hash_file('sha256', $realPackage);
+        if (! is_string($actualHash) || ! hash_equals($preparation->package_sha256, $actualHash)) {
+            throw new RuntimeException('The staged package changed after verification. Download and verify it again.');
+        }
+
+        $actualMigrationDigest = $this->validateArchive($realPackage, $preparation->version);
+        if (! hash_equals($preparation->migration_set_sha256, $actualMigrationDigest)) {
+            throw new RuntimeException('The package migration set no longer matches its verified digest.');
+        }
+
+        $fileSize = filesize($realPackage);
+        $uncompressedBytes = $this->archiveUncompressedSize($realPackage);
+        $availableBytes = disk_free_space($privateRoot);
+        $requiredBytes = $uncompressedBytes + (is_int($fileSize) ? $fileSize : 0) + 67108864;
+
+        if (! is_int($fileSize)
+            || $availableBytes === false
+            || $availableBytes < $requiredBytes) {
+            throw new RuntimeException('There is not enough measurable free disk space to extract this release safely.');
+        }
+
+        $releasePath = 'updates/releases/'.$preparation->version.'-'.bin2hex(random_bytes(16));
+        $releaseAbsolute = $disk->path($releasePath);
+        $releaseParent = dirname($releaseAbsolute);
+
+        if (! is_dir($releaseParent) && ! mkdir($releaseParent, 0700, true) && ! is_dir($releaseParent)) {
+            throw new RuntimeException('The private release staging directory could not be created.');
+        }
+
+        $realParent = realpath($releaseParent);
+        if ($realParent === false
+            || ! str_starts_with($realParent, rtrim($privateRoot, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR)
+            || file_exists($releaseAbsolute)
+            || is_link($releaseAbsolute)
+            || ! mkdir($releaseAbsolute, 0700)) {
+            throw new RuntimeException('The release extraction path is not a safe private directory.');
+        }
+
+        $realReleaseDirectory = realpath($releaseAbsolute);
+        if ($realReleaseDirectory === false
+            || ! str_starts_with($realReleaseDirectory, rtrim($privateRoot, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR)) {
+            $disk->deleteDirectory($releasePath);
+            throw new RuntimeException('The extracted release directory resolves outside private storage.');
+        }
+        $releaseAbsolute = $realReleaseDirectory;
+
+        try {
+            $archive = new ZipArchive();
+            if ($archive->open($realPackage) !== true) {
+                throw new RuntimeException('The verified release archive could not be reopened.');
+            }
+
+            try {
+                if (! $archive->extractTo($releaseAbsolute)) {
+                    throw new RuntimeException('The release archive could not be extracted to private staging.');
+                }
+            } finally {
+                $archive->close();
+            }
+
+            $this->secureExtractedTree($releaseAbsolute);
+
+            foreach (['artisan', 'public/index.php', 'vendor/autoload.php', 'VERSION'] as $requiredFile) {
+                if (! is_file($releaseAbsolute.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, $requiredFile))) {
+                    throw new RuntimeException('The extracted release is missing a required application file.');
+                }
+            }
+
+            $versionContents = file_get_contents($releaseAbsolute.DIRECTORY_SEPARATOR.'VERSION');
+            if (! is_string($versionContents) || trim($versionContents) !== $preparation->version) {
+                throw new RuntimeException('The extracted release version marker does not match the verified version.');
+            }
+
+            $preparation->update([
+                'status' => 'staged',
+                'release_path' => $releasePath,
+                'staged_at' => now(),
+                'message' => 'The verified release has been extracted into isolated private staging. It has not been activated or installed.',
+            ]);
+
+            return $preparation->refresh();
+        } catch (Throwable $exception) {
+            $disk->deleteDirectory($releasePath);
+            throw $exception;
+        }
+    }
+
+    private function archiveUncompressedSize(string $path): int
+    {
+        $archive = new ZipArchive();
+        if ($archive->open($path) !== true) {
+            throw new RuntimeException('The verified release archive could not be inspected for disk-space requirements.');
+        }
+
+        try {
+            $totalBytes = 0;
+            for ($index = 0; $index < $archive->numFiles; $index++) {
+                $entry = $archive->statIndex($index);
+                if (! is_array($entry) || ! is_numeric($entry['size'] ?? null)) {
+                    throw new RuntimeException('The release archive contains an unreadable size entry.');
+                }
+
+                $totalBytes += (int) $entry['size'];
+                if ($totalBytes > 2147483648) {
+                    throw new RuntimeException('The release archive exceeds the permitted total uncompressed size.');
+                }
+            }
+
+            return $totalBytes;
+        } finally {
+            $archive->close();
+        }
+    }
+
+    private function secureExtractedTree(string $root): void
+    {
+        $realRoot = realpath($root);
+        if ($realRoot === false || is_link($root)) {
+            throw new RuntimeException('The extracted release directory is not a real private directory.');
+        }
+
+        @chmod($realRoot, 0700);
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($realRoot, FilesystemIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::SELF_FIRST
+        );
+
+        foreach ($iterator as $entry) {
+            $path = $entry->getPathname();
+            if ($entry->isLink()) {
+                throw new RuntimeException('The extracted release contains a symbolic link.');
+            }
+
+            if ($entry->isDir()) {
+                if (! @chmod($path, 0700)) {
+                    throw new RuntimeException('A private release directory permission could not be secured.');
+                }
+            } elseif ($entry->isFile()) {
+                if (! @chmod($path, 0600)) {
+                    throw new RuntimeException('A private release file permission could not be secured.');
+                }
+            } else {
+                throw new RuntimeException('The extracted release contains an unsupported filesystem entry.');
+            }
+        }
+    }
+
     private function expireStalePreparations(): void
     {
         $disk = Storage::disk('local');
         $expired = SystemUpdatePreparation::query()
-            ->where('status', 'verified')
+            ->whereIn('status', ['verified', 'staged'])
             ->whereNotNull('expires_at')
             ->where('expires_at', '<=', now())
             ->get();
 
         foreach ($expired as $preparation) {
             $disk->delete($preparation->package_path);
+            if ($preparation->release_path) {
+                $disk->deleteDirectory($preparation->release_path);
+            }
             $preparation->update([
                 'status' => 'expired',
-                'message' => 'The verified package expired and was removed from private staging storage.',
+                'message' => 'The prepared release expired and its package and extracted files were removed from private staging storage.',
             ]);
         }
     }

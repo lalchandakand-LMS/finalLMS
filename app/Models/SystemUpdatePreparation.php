@@ -12,11 +12,14 @@ class SystemUpdatePreparation extends Model
         'version',
         'package_sha256',
         'manifest_sha256',
+        'migration_set_sha256',
         'package_path',
+        'release_path',
         'file_size',
         'status',
         'message',
         'expires_at',
+        'staged_at',
     ];
 
     protected function casts(): array
@@ -24,6 +27,7 @@ class SystemUpdatePreparation extends Model
         return [
             'file_size' => 'integer',
             'expires_at' => 'datetime',
+            'staged_at' => 'datetime',
         ];
     }
 

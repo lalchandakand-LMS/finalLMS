@@ -21,7 +21,7 @@ class AdminUpdateCenterTest extends TestCase
 
     protected function tearDown(): void
     {
-        Storage::disk('local')->deleteDirectory('updates/staging');
+        Storage::disk('local')->deleteDirectory('updates');
 
         if ($this->publicKeyPath && is_file($this->publicKeyPath)) {
             @unlink($this->publicKeyPath);
@@ -173,7 +173,159 @@ class AdminUpdateCenterTest extends TestCase
         $preparation = SystemUpdatePreparation::query()->firstOrFail();
         $this->assertSame('verified', $preparation->status);
         $this->assertSame(hash('sha256', $packageBytes), $preparation->package_sha256);
+        $this->assertSame($migrationDigest, $preparation->migration_set_sha256);
         $this->assertTrue(Storage::disk('local')->exists($preparation->package_path));
+    }
+
+    public function test_admin_can_extract_verified_release_into_private_staging_without_installing_it(): void
+    {
+        $packageBytes = $this->createReleasePackage([
+            'artisan' => "<?php echo 'artisan';",
+            'public/index.php' => "<?php echo 'public';",
+            'vendor/autoload.php' => "<?php echo 'vendor';",
+            'VERSION' => "1.0.1\n",
+            'storage/.gitignore' => '',
+            'bootstrap/cache/.gitignore' => '',
+        ]);
+        $this->configureSignedRelease(packageBytes: $packageBytes, migrationDigest: hash('sha256', ''));
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.updates.prepare'))
+            ->assertRedirect(route('admin.updates.index'))
+            ->assertSessionHas('success');
+
+        $preparation = SystemUpdatePreparation::query()->firstOrFail();
+        $this->actingAs($admin)
+            ->post(route('admin.updates.extract', $preparation))
+            ->assertRedirect(route('admin.updates.index'))
+            ->assertSessionHas('success');
+
+        $preparation->refresh();
+        $this->assertSame('staged', $preparation->status);
+        $this->assertNotNull($preparation->staged_at);
+        $this->assertNotNull($preparation->release_path);
+        $this->assertTrue(Storage::disk('local')->exists($preparation->release_path.'/VERSION'));
+        $this->assertTrue(Storage::disk('local')->exists($preparation->release_path.'/public/index.php'));
+        $this->assertFalse(Storage::disk('local')->exists($preparation->release_path.'/.env'));
+        $this->assertTrue(Storage::disk('local')->exists($preparation->package_path));
+        $this->assertSame(0600, fileperms(Storage::disk('local')->path($preparation->release_path.'/VERSION')) & 0777);
+    }
+
+    public function test_non_admin_cannot_extract_a_verified_release(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $preparation = SystemUpdatePreparation::create([
+            'prepared_by' => $admin->id,
+            'version' => '1.0.1',
+            'package_sha256' => str_repeat('a', 64),
+            'manifest_sha256' => str_repeat('b', 64),
+            'migration_set_sha256' => hash('sha256', ''),
+            'package_path' => 'updates/staging/test.zip',
+            'file_size' => 100,
+            'status' => 'verified',
+            'message' => 'Test package.',
+            'expires_at' => now()->addHour(),
+        ]);
+
+        $this->actingAs($student)
+            ->post(route('admin.updates.extract', $preparation))
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('system_update_preparations', [
+            'id' => $preparation->id,
+            'status' => 'verified',
+        ]);
+    }
+
+    public function test_extraction_rejects_a_package_modified_after_verification(): void
+    {
+        $packageBytes = $this->createReleasePackage([
+            'artisan' => "<?php echo 'artisan';",
+            'public/index.php' => "<?php echo 'public';",
+            'vendor/autoload.php' => "<?php echo 'vendor';",
+            'VERSION' => "1.0.1\n",
+            'storage/.gitignore' => '',
+            'bootstrap/cache/.gitignore' => '',
+        ]);
+        $this->configureSignedRelease(packageBytes: $packageBytes, migrationDigest: hash('sha256', ''));
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->post(route('admin.updates.prepare'));
+        $preparation = SystemUpdatePreparation::query()->firstOrFail();
+        Storage::disk('local')->put($preparation->package_path, 'tampered-after-verification');
+
+        $this->actingAs($admin)
+            ->post(route('admin.updates.extract', $preparation))
+            ->assertRedirect(route('admin.updates.index'))
+            ->assertSessionHas('error');
+
+        $preparation->refresh();
+        $this->assertSame('verified', $preparation->status);
+        $this->assertNull($preparation->release_path);
+        $this->assertSame([], Storage::disk('local')->allFiles('updates/releases'));
+    }
+
+    public function test_expired_verified_package_is_removed_and_cannot_be_extracted(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $packagePath = 'updates/staging/expired.zip';
+        Storage::disk('local')->put($packagePath, 'expired');
+        $preparation = SystemUpdatePreparation::create([
+            'prepared_by' => $admin->id,
+            'version' => '1.0.1',
+            'package_sha256' => str_repeat('a', 64),
+            'manifest_sha256' => str_repeat('b', 64),
+            'migration_set_sha256' => hash('sha256', ''),
+            'package_path' => $packagePath,
+            'file_size' => 7,
+            'status' => 'verified',
+            'message' => 'Expired test package.',
+            'expires_at' => now()->subMinute(),
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.updates.extract', $preparation))
+            ->assertRedirect(route('admin.updates.index'))
+            ->assertSessionHas('error');
+
+        $preparation->refresh();
+        $this->assertSame('expired', $preparation->status);
+        $this->assertFalse(Storage::disk('local')->exists($packagePath));
+    }
+
+    public function test_expired_staged_release_removes_both_package_and_extracted_tree(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $packagePath = 'updates/staging/expired-staged.zip';
+        $releasePath = 'updates/releases/expired-staged';
+        Storage::disk('local')->put($packagePath, 'expired-package');
+        Storage::disk('local')->put($releasePath.'/VERSION', "1.0.1\n");
+        $preparation = SystemUpdatePreparation::create([
+            'prepared_by' => $admin->id,
+            'version' => '1.0.1',
+            'package_sha256' => str_repeat('a', 64),
+            'manifest_sha256' => str_repeat('b', 64),
+            'migration_set_sha256' => hash('sha256', ''),
+            'package_path' => $packagePath,
+            'release_path' => $releasePath,
+            'file_size' => 14,
+            'status' => 'staged',
+            'message' => 'Expired staged release.',
+            'expires_at' => now()->subMinute(),
+            'staged_at' => now()->subHour(),
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.updates.extract', $preparation))
+            ->assertRedirect(route('admin.updates.index'))
+            ->assertSessionHas('error');
+
+        $preparation->refresh();
+        $this->assertSame('expired', $preparation->status);
+        $this->assertFalse(Storage::disk('local')->exists($packagePath));
+        $this->assertFalse(Storage::disk('local')->exists($releasePath.'/VERSION'));
     }
 
     public function test_admin_cannot_stage_a_package_redirected_to_an_untrusted_host(): void
