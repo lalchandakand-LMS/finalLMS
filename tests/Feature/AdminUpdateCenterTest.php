@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\SystemUpdateCheck;
 use App\Models\SystemUpdatePreparation;
+use App\Models\SystemUpdatePreflight;
 use App\Models\User;
 use App\Services\ReleaseManifestChecker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -247,6 +248,67 @@ class AdminUpdateCenterTest extends TestCase
 
         $this->assertDatabaseCount('system_update_preparations', 0);
         $this->assertSame([], Storage::disk('local')->allFiles('updates/staging'));
+    }
+
+    public function test_admin_can_run_activation_preflight_and_it_blocks_until_verified_backup_exists(): void
+    {
+        $packageBytes = $this->createReleasePackage([
+            'artisan' => "<?php echo 'artisan';",
+            'public/index.php' => "<?php echo 'public';",
+            'vendor/autoload.php' => "<?php echo 'vendor';",
+            'VERSION' => "1.0.1\n",
+            'storage/.gitignore' => '',
+            'bootstrap/cache/.gitignore' => '',
+        ]);
+        $this->configureSignedRelease(packageBytes: $packageBytes, migrationDigest: hash('sha256', ''));
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->post(route('admin.updates.prepare'));
+        $preparation = SystemUpdatePreparation::query()->firstOrFail();
+        $this->actingAs($admin)->post(route('admin.updates.extract', $preparation));
+
+        $preparation->refresh();
+        $this->assertSame('staged', $preparation->status);
+
+        $this->actingAs($admin)
+            ->post(route('admin.updates.preflight', $preparation))
+            ->assertRedirect(route('admin.updates.index'))
+            ->assertSessionHas('error');
+
+        $report = SystemUpdatePreflight::query()->where('preparation_id', $preparation->id)->latest('checked_at')->firstOrFail();
+        $this->assertSame('blocked', $report->status);
+        $backupCheck = collect($report->checks)->firstWhere('key', 'verified_pre_activation_backup');
+        $this->assertSame('blocked', $backupCheck['status']);
+        $this->assertDatabaseHas('system_update_preparations', [
+            'id' => $preparation->id,
+            'status' => 'staged',
+        ]);
+    }
+
+    public function test_non_admin_cannot_run_activation_preflight(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $preparation = SystemUpdatePreparation::create([
+            'prepared_by' => $admin->id,
+            'version' => '1.0.1',
+            'package_sha256' => str_repeat('a', 64),
+            'manifest_sha256' => str_repeat('b', 64),
+            'migration_set_sha256' => hash('sha256', ''),
+            'package_path' => 'updates/staging/test.zip',
+            'release_path' => 'updates/releases/test',
+            'file_size' => 100,
+            'status' => 'staged',
+            'message' => 'Test staged package.',
+            'expires_at' => now()->addHour(),
+            'staged_at' => now(),
+        ]);
+
+        $this->actingAs($student)
+            ->post(route('admin.updates.preflight', $preparation))
+            ->assertForbidden();
+
+        $this->assertDatabaseCount('system_update_preflights', 0);
     }
 
     public function test_non_admin_cannot_extract_a_verified_release(): void
