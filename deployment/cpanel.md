@@ -41,6 +41,8 @@ For an existing deployment, back up files and database first, follow the migrati
   ```
 
 - Run route checks and smoke tests before opening enrollment. Set up database backups and monitor application logs.
+- Keep the packaged `VERSION` file with the deployed code. Leave `LMS_VERSION` empty to read the installed version from this marker; the signed release workflow stamps it from the immutable version tag.
+- Signed update checks remain disabled by default. The read-only Admin Update Center requires an independently verified RSA public key stored outside the public web root before `LMS_UPDATES_ENABLED=true` is set. It checks signed release metadata only; it does not install code or run migrations.
 
 ## Release Artifact
 
