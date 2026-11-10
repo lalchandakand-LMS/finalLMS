@@ -51,7 +51,7 @@ class WebsiteBuilderController extends Controller
         $allowed = [
             'homepage_template', 'site_name', 'site_logo_media_id', 'site_favicon_media_id',
             'site_primary_color', 'site_background_color', 'site_background_style', 'site_font_family', 'site_heading_scale', 'site_body_scale', 'home_title', 'home_subtitle', 'home_featured_title',
-            'home_slides', 'footer_title', 'footer_text', 'footer_links', 'header_links', 'sections',
+            'home_slides', 'home_slider_autoplay', 'home_slider_interval', 'home_slider_arrows', 'home_slider_dots', 'home_slider_pause_hover', 'home_slider_height', 'home_slider_mobile_height', 'home_slider_overlay', 'footer_title', 'footer_text', 'footer_links', 'header_links', 'sections',
         ];
         $draft = $request->only($allowed);
         abort_if(strlen(json_encode($draft, JSON_THROW_ON_ERROR)) > 65536, 422, 'Homepage draft is too large.');
@@ -74,7 +74,15 @@ class WebsiteBuilderController extends Controller
             'home_title' => ['nullable', 'string', 'max:255'],
             'home_subtitle' => ['nullable', 'string', 'max:500'],
             'home_featured_title' => ['nullable', 'string', 'max:255'],
-            'home_slides' => ['nullable', 'array', 'max:3'],
+            'home_slides' => ['nullable', 'array', 'max:8'],
+            'home_slider_autoplay' => ['nullable', 'boolean'],
+            'home_slider_interval' => ['nullable', 'integer', 'min:3000', 'max:12000'],
+            'home_slider_arrows' => ['nullable', 'boolean'],
+            'home_slider_dots' => ['nullable', 'boolean'],
+            'home_slider_pause_hover' => ['nullable', 'boolean'],
+            'home_slider_height' => ['nullable', 'integer', 'min:320', 'max:720'],
+            'home_slider_mobile_height' => ['nullable', 'integer', 'min:220', 'max:520'],
+            'home_slider_overlay' => ['nullable', 'integer', 'min:20', 'max:90'],
             'home_slides.*.enabled' => ['nullable', 'boolean'],
             'home_slides.*.image_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
             'home_slides.*.title' => ['nullable', 'string', 'max:180'],
@@ -243,7 +251,7 @@ class WebsiteBuilderController extends Controller
         return [
             'homepage_template', 'site_name', 'site_logo_media_id', 'site_favicon_media_id',
             'site_primary_color', 'site_background_color', 'site_background_style', 'site_font_family', 'site_heading_scale', 'site_body_scale', 'home_title', 'home_subtitle', 'home_featured_title',
-            'home_slides', 'footer_title', 'footer_text', 'footer_links', 'header_links', 'website_sections',
+            'home_slides', 'home_slider_autoplay', 'home_slider_interval', 'home_slider_arrows', 'home_slider_dots', 'home_slider_pause_hover', 'home_slider_height', 'home_slider_mobile_height', 'home_slider_overlay', 'footer_title', 'footer_text', 'footer_links', 'header_links', 'website_sections',
         ];
     }
 
@@ -286,7 +294,15 @@ class WebsiteBuilderController extends Controller
             'home_title' => ['nullable', 'string', 'max:255'],
             'home_subtitle' => ['nullable', 'string', 'max:500'],
             'home_featured_title' => ['nullable', 'string', 'max:255'],
-            'home_slides' => ['nullable', 'array', 'max:3'],
+            'home_slides' => ['nullable', 'array', 'max:8'],
+            'home_slider_autoplay' => ['nullable', 'boolean'],
+            'home_slider_interval' => ['nullable', 'integer', 'min:3000', 'max:12000'],
+            'home_slider_arrows' => ['nullable', 'boolean'],
+            'home_slider_dots' => ['nullable', 'boolean'],
+            'home_slider_pause_hover' => ['nullable', 'boolean'],
+            'home_slider_height' => ['nullable', 'integer', 'min:320', 'max:720'],
+            'home_slider_mobile_height' => ['nullable', 'integer', 'min:220', 'max:520'],
+            'home_slider_overlay' => ['nullable', 'integer', 'min:20', 'max:90'],
             'home_slides.*.enabled' => ['nullable', 'boolean'],
             'home_slides.*.image_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
             'home_slides.*.title' => ['nullable', 'string', 'max:180'],
@@ -333,7 +349,7 @@ class WebsiteBuilderController extends Controller
             ];
         })->values()->all();
 
-        $slides = collect($validated['home_slides'] ?? [])->take(3)->map(function (array $slide): ?array {
+        $slides = collect($validated['home_slides'] ?? [])->take(8)->map(function (array $slide): ?array {
             $image = !empty($slide['image_id'])
                 ? MediaAsset::query()->whereKey($slide['image_id'])->where('mime_type', 'like', 'image/%')->first()
                 : null;
@@ -374,7 +390,7 @@ class WebsiteBuilderController extends Controller
             return ['label' => $label, 'url' => $url];
         })->filter()->take(6)->values()->all();
 
-        foreach (['homepage_template', 'site_name', 'site_logo_media_id', 'site_favicon_media_id', 'site_primary_color', 'site_background_color', 'site_background_style', 'site_font_family', 'site_heading_scale', 'site_body_scale', 'home_title', 'home_subtitle', 'home_featured_title', 'footer_title', 'footer_text'] as $key) {
+        foreach (['homepage_template', 'site_name', 'site_logo_media_id', 'site_favicon_media_id', 'site_primary_color', 'site_background_color', 'site_background_style', 'site_font_family', 'site_heading_scale', 'site_body_scale', 'home_title', 'home_subtitle', 'home_featured_title', 'home_slider_autoplay', 'home_slider_interval', 'home_slider_arrows', 'home_slider_dots', 'home_slider_pause_hover', 'home_slider_height', 'home_slider_mobile_height', 'home_slider_overlay', 'footer_title', 'footer_text'] as $key) {
             if (array_key_exists($key, $validated)) {
                 Setting::setValue($key, $validated[$key] ?? '');
             }
