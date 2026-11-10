@@ -218,8 +218,9 @@ class UpdateBackupCoordinator
 
         $versionPath = $root.DIRECTORY_SEPARATOR.'VERSION';
         $version = is_file($versionPath) ? trim((string) file_get_contents($versionPath)) : '';
-        if (! preg_match('/^\d+\.\d+\.\d+$/', $version)) {
-            throw new RuntimeException('The current application VERSION marker is missing or invalid; a code snapshot cannot be trusted.');
+        $configuredVersion = (string) config('services.lms_updates.current_version', '0.0.0');
+        if (! preg_match('/^\d+\.\d+\.\d+$/', $version) || $version !== $configuredVersion) {
+            throw new RuntimeException('The current application VERSION marker is missing, invalid or does not match the installed LMS version; a code snapshot cannot be trusted.');
         }
 
         $relativePath = 'updates/backups/code-'.$version.'-'.bin2hex(random_bytes(12)).'.zip';
