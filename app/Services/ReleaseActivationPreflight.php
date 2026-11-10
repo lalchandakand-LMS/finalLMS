@@ -53,8 +53,16 @@ class ReleaseActivationPreflight
         $publicRoot = realpath(public_path());
         $this->add($checks, 'application_root', $baseRoot !== false && is_dir($baseRoot),
             'The current Laravel application root must be resolvable.');
+        if ($baseRoot !== false) {
+            $this->add($checks, 'application_root_writable', is_writable($baseRoot),
+                'The current application root must be writable by the PHP process for a future cPanel release swap.');
+        }
         $this->add($checks, 'public_root', $publicRoot !== false && is_dir($publicRoot),
             'The current public document root must be resolvable.');
+        if ($publicRoot !== false) {
+            $this->add($checks, 'public_root_writable', is_writable($publicRoot),
+                'The public document root must be writable by the PHP process for a future controlled release swap.');
+        }
 
         if ($baseRoot !== false && $publicRoot !== false) {
             $publicInsideApp = str_starts_with($publicRoot, rtrim($baseRoot, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR);
@@ -96,8 +104,8 @@ class ReleaseActivationPreflight
             $this->add($checks, 'database_connection', false, 'The configured database connection failed its read-only health query.');
         }
 
-        if (Schema::hasTable('migrations')) {
-            try {
+        try {
+            if (Schema::hasTable('migrations')) {
                 $ran = array_fill_keys(DB::table('migrations')->pluck('migration')->all(), true);
                 $migrationDirectory = $releaseRoot !== false ? $releaseRoot.'/database/migrations' : '';
                 $files = $migrationDirectory !== '' && is_dir($migrationDirectory)
@@ -117,11 +125,11 @@ class ReleaseActivationPreflight
                         : 'The staged release contains pending migrations that require independent review before any activation.',
                     $pending === [] ? 'pass' : 'warning',
                     ['count' => count($pending), 'names' => array_slice($pending, 0, 100)]);
-            } catch (Throwable) {
-                $this->add($checks, 'pending_migrations', false, 'Pending migration status could not be read safely.');
+            } else {
+                $this->add($checks, 'pending_migrations', false, 'The current database does not have a Laravel migrations table.');
             }
-        } else {
-            $this->add($checks, 'pending_migrations', false, 'The current database does not have a Laravel migrations table.');
+        } catch (Throwable) {
+            $this->add($checks, 'pending_migrations', false, 'Pending migration status could not be read safely.');
         }
 
         if ($baseRoot !== false && $privateRoot !== false) {
