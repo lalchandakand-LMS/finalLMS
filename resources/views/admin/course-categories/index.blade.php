@@ -10,7 +10,7 @@
 
 <div class="panel" style="margin-bottom:20px;">
     <h2>{{ __('Create category') }}</h2>
-    <form method="POST" action="{{ route('admin.course-categories.store') }}">
+    <form method="POST" enctype="multipart/form-data" action="{{ route('admin.course-categories.store') }}">
         @csrf
         <div class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">
             <label>{{ __('Category name') }}<input name="name" maxlength="120" required></label>
@@ -18,6 +18,7 @@
             <label>{{ __('Sort order') }}<input type="number" name="sort_order" min="0" max="100000" value="0"></label>
             <label>{{ __('SEO title') }}<input name="seo_title" maxlength="255"></label>
             <label style="grid-column:1/-1;">{{ __('Description') }}<textarea name="description" rows="2" maxlength="5000"></textarea></label>
+            <label>{{ __('Category image') }}<input type="file" name="image" accept="image/jpeg,image/png,image/webp"></label>
             <label style="grid-column:1/-1;">{{ __('SEO description') }}<textarea name="seo_description" rows="2" maxlength="320"></textarea></label>
             <label><input type="checkbox" name="is_active" value="1" checked> {{ __('Active') }}</label>
         </div>
@@ -34,7 +35,7 @@
                 <tr style="border-top:1px solid var(--border);">
                     <td style="padding:12px 10px;min-width:220px;">
                         <strong>{{ $category->name }}</strong><div class="muted">{{ $category->slug }}</div>
-                        <form method="POST" action="{{ route('admin.course-categories.update', $category) }}" style="margin-top:8px;display:grid;gap:6px;">
+                        <form method="POST" enctype="multipart/form-data" action="{{ route('admin.course-categories.update', $category) }}" style="margin-top:8px;display:grid;gap:6px;">
                             @csrf @method('PUT')
                             <input name="name" value="{{ $category->name }}" maxlength="120" required>
                             <input name="slug" value="{{ $category->slug }}" maxlength="150">
@@ -42,6 +43,7 @@
                             <textarea name="description" rows="2">{{ $category->description }}</textarea>
                             <input name="seo_title" value="{{ $category->seo_title }}" placeholder="{{ __('SEO title') }}">
                             <textarea name="seo_description" rows="2" maxlength="320" placeholder="{{ __('SEO description') }}">{{ $category->seo_description }}</textarea>
+                            <input type="file" name="image" accept="image/jpeg,image/png,image/webp" aria-label="{{ __('Category image') }}">
                             <label><input type="checkbox" name="is_active" value="1" @checked($category->is_active)> {{ __('Active') }}</label>
                             <button class="btn secondary">{{ __('Save changes') }}</button>
                         </form>
