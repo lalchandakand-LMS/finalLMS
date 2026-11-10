@@ -21,6 +21,9 @@ class ReleaseManifestChecker
 
         $manifestUrl = (string) ($settings['manifest_url'] ?? '');
         $keyPath = (string) ($settings['public_key_path'] ?? '');
+        if ($keyPath !== '' && ! str_starts_with($keyPath, DIRECTORY_SEPARATOR)) {
+            $keyPath = base_path($keyPath);
+        }
 
         if (! $this->isTrustedManifestUrl($manifestUrl)) {
             throw new RuntimeException('The configured release manifest URL is not an approved HTTPS GitHub release URL.');
@@ -155,7 +158,7 @@ class ReleaseManifestChecker
             || ! is_string($manifest['package_sha256']) || ! preg_match('/^[a-f0-9]{64}$/', $manifest['package_sha256'])
             || ! is_string($manifest['migration_set_sha256']) || ! preg_match('/^[a-f0-9]{64}$/', $manifest['migration_set_sha256'])
             || ! is_string($manifest['signing_public_key_sha256']) || ! hash_equals($fingerprint, $manifest['signing_public_key_sha256'])
-            || ! is_string($manifest['minimum_php']) || ! is_int($manifest['laravel_major'])
+            || ! is_string($manifest['minimum_php']) || ! preg_match('/^\\d+\\.\\d+\\.\\d+$/', $manifest['minimum_php']) || ! is_int($manifest['laravel_major'])
             || ! is_array($manifest['required_extensions']) || ! is_string($manifest['published_at'])) {
             throw new RuntimeException('The signed release manifest contains invalid or incompatible metadata.');
         }
