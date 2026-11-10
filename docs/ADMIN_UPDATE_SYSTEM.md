@@ -121,7 +121,7 @@ Release gates: CI green on exact release SHA; CodeQL/security review; package si
 
 ## 10. Current implementation assessment
 
-The repository now includes a signed release-manifest pipeline and Admin-only release checks. The Admin Update Center can verify signed metadata, record check history, download a newer release to private local storage, verify the package SHA-256 and signed migration-set digest, and reject unsafe archive paths, secret/runtime files, symlinks, oversized entries and untrusted redirects. Prepared packages expire and are removed from staging storage.
+The repository now includes a signed release-manifest pipeline and Admin-only release checks. The Admin Update Center can verify signed metadata, record check history, download a newer release to private local storage, verify the package SHA-256 and signed migration-set digest, and reject unsafe archive paths, secret/runtime files, symlinks, oversized entries and untrusted redirects. Prepared packages have a 24-hour expiry; expired files are marked and removed from private staging storage when the next package-preparation action runs.
 
 The following are still **not implemented**: backup orchestration tied to an update, complete preflight/impact report, staged extraction, maintenance/lock orchestration, atomic or cPanel-safe code activation, migration execution policy, health checks, durable progress logs for installation, tested code rollback and cPanel staging acceptance. The package preparation step does not install or extract code and does not modify the live application.
 
