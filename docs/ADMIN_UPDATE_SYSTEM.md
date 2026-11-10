@@ -1,6 +1,6 @@
 # Admin Update Center and Safe Release System
 
-**Status:** Partially implemented; safe package preparation is available, but code installation and rollback are not implemented.
+**Status:** Partially implemented; signed package verification and isolated private extraction are available, but code activation and rollback are not implemented.
 **Target:** Laravel 12 / PHP 8.3+ on cPanel shared hosting (Web Host BD).
 **Owner decision:** The live LMS must be maintainable and updatable after launch without manually replacing the whole website for every routine improvement.
 
@@ -121,9 +121,9 @@ Release gates: CI green on exact release SHA; CodeQL/security review; package si
 
 ## 10. Current implementation assessment
 
-The repository now includes a signed release-manifest pipeline and Admin-only release checks. The Admin Update Center can verify signed metadata, record check history, download a newer release to private local storage, verify the package SHA-256 and signed migration-set digest, and reject unsafe archive paths, secret/runtime files, symlinks, oversized entries and untrusted redirects. Prepared packages have a 24-hour expiry; expired files are marked and removed from private staging storage when the next package-preparation action runs.
+The repository now includes a signed release-manifest pipeline and Admin-only release checks. The Admin Update Center can verify signed metadata, record check history, download a newer release to private local storage, verify the package SHA-256 and signed migration-set digest, reject unsafe archive paths, secret/runtime files, symlinks, special file types, oversized entries and untrusted redirects, and extract a verified package into an isolated private release directory with restrictive file permissions. Prepared and extracted packages have a 24-hour expiry; expired files are marked and removed from private staging storage when the next package-preparation or extraction action runs.
 
-The following are still **not implemented**: backup orchestration tied to an update, complete preflight/impact report, staged extraction, maintenance/lock orchestration, atomic or cPanel-safe code activation, migration execution policy, health checks, durable progress logs for installation, tested code rollback and cPanel staging acceptance. The package preparation step does not install or extract code and does not modify the live application.
+The following are still **not implemented**: backup orchestration tied to an update, complete preflight/impact report, maintenance/lock orchestration, atomic or cPanel-safe code activation, migration execution policy, health checks, durable progress logs for installation, tested code rollback and cPanel staging acceptance. Package extraction is isolated under private storage only; it does not install, execute or activate code, run migrations, or modify the live application.
 
 The requirement is therefore **not complete**. Do not enable code installation or advertise one-click updates until the remaining phases and real cPanel staging/recovery rehearsal have passed.
 
@@ -131,7 +131,7 @@ The requirement is therefore **not complete**. Do not enable code installation o
 
 - **Phase 1 — Release foundation:** implemented in code (immutable CI release artifacts, signed manifest, version marker, package allow-list and trusted manifest verification). Still requires owner-managed signing-key provisioning and a published signed release.
 - **Phase 2 — Admin Update Center:** partially implemented (Admin-only status/check history and private package download/verification). Full preflight, backup confirmation, impact report, persistent install progress/logs and complete audit details remain.
-- **Phase 3 — Safe installer/activation:** not implemented (staged extraction, persistent storage separation, lock, maintenance mode, activation and health checks).
+- **Phase 3 — Safe installer/activation:** partially implemented (verified packages can be extracted into isolated private storage with restrictive permissions and disk-space checks). Persistent shared-storage wiring, update lock, maintenance mode, code activation and health checks remain unimplemented.
 - **Phase 4 — Recovery:** not implemented (tested code rollback, migration compatibility strategy, failure recovery and cPanel CLI/cron fallback).
 - **Phase 5 — Acceptance:** not complete (upgrade-from-previous-version CI matrix, security tests, cPanel staging rehearsal, restore/rollback drill and documented production runbook).
 
