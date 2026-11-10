@@ -30,7 +30,7 @@ class CourseCategoryController extends Controller
         if ($newImagePath) $data['image_path'] = $newImagePath;
         try {
             DB::transaction(fn () => CourseCategory::create($data));
-        } catch (\\Throwable $exception) {
+        } catch (\Throwable $exception) {
             if ($newImagePath) Storage::disk('public')->delete($newImagePath);
             throw $exception;
         }
@@ -48,7 +48,7 @@ class CourseCategoryController extends Controller
         if ($newImagePath) $data['image_path'] = $newImagePath;
         try {
             DB::transaction(fn () => $category->update($data));
-        } catch (\\Throwable $exception) {
+        } catch (\Throwable $exception) {
             if ($newImagePath) Storage::disk('public')->delete($newImagePath);
             throw $exception;
         }
