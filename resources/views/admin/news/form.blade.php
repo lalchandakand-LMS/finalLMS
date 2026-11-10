@@ -6,7 +6,11 @@
 <label>{{ __('Title') }}<input name="title" maxlength="180" value="{{ old('title', $post->title) }}" required></label>
 <label>{{ __('URL slug (optional)') }}<input name="slug" maxlength="200" value="{{ old('slug', $post->slug) }}"></label>
 <label>{{ __('Short summary') }}<textarea name="excerpt" rows="3" maxlength="500">{{ old('excerpt', $post->excerpt) }}</textarea></label>
-<label>Course / Post category<input name="category" maxlength="120" value="{{ old('category', $post->category) }}" placeholder="Spoken English, Grammar, IELTS..."></label>
+<label>{{ __('Course categories') }}<select name="category_ids[]" multiple size="5" style="min-height:120px;">
+@foreach($categories as $category)
+<option value="{{ $category->id }}" @selected(in_array($category->id, old('category_ids', $post->categories->pluck('id')->all())))>{{ $category->name }}</option>
+@endforeach
+</select><small class="muted">{{ __('Select one or more categories created in Course Categories.') }}</small></label>
 <label>Tags (comma separated)<input name="tags" maxlength="2000" value="{{ old('tags', is_array($post->tags) ? implode(', ', $post->tags) : '') }}" placeholder="speaking, grammar, vocabulary"></label>
 <label>Video URL (YouTube / Vimeo)<input type="url" name="video_url" maxlength="2048" value="{{ old('video_url', $post->video_url) }}"></label>
 <label>{{ __('Article body') }}<textarea name="body" rows="16" maxlength="100000" required>{{ old('body', $post->body) }}</textarea></label>
