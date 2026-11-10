@@ -106,9 +106,11 @@ class CommerceBkashCheckoutTest extends TestCase
         $this->assertSame('pending', $transaction->status);
         $this->assertDatabaseMissing('enrollments', ['user_id' => $student->id, 'course_id' => $course->id]);
 
+        // The browser may return a failure/cancel status even after the provider
+        // completed the charge; the server-side payment-status query is authoritative.
         $callback = route('store.payments.bkash.callback', [
             'paymentID' => 'COMMERCE-BKASH-PAY-001',
-            'status' => 'success',
+            'status' => 'failure',
         ]);
         $this->get($callback)->assertRedirect(route('store.orders'));
 
