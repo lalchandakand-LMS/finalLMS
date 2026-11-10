@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\SystemUpdateCheck;
 use App\Models\SystemUpdatePreparation;
+use App\Models\SystemUpdatePreflight;
+use App\Services\ReleaseActivationPreflight;
 use App\Services\ReleaseManifestChecker;
 use App\Services\ReleasePackageStager;
 use Illuminate\Http\RedirectResponse;
@@ -26,6 +28,7 @@ class AdminUpdateController extends Controller
             'currentVersion' => (string) config('services.lms_updates.current_version', '0.0.0'),
             'updatesEnabled' => (bool) config('services.lms_updates.enabled', false),
             'preparation' => SystemUpdatePreparation::query()->with('preparedBy:id,name')->latest()->first(),
+            'preflight' => SystemUpdatePreflight::query()->where('preparation_id', SystemUpdatePreparation::query()->latest()->value('id'))->latest('checked_at')->first(),
         ]);
     }
 
@@ -100,6 +103,26 @@ class AdminUpdateController extends Controller
             $message = $exception instanceof RuntimeException
                 ? $exception->getMessage()
                 : 'The release could not be extracted safely. No live application files were changed.';
+
+            return redirect()->route('admin.updates.index')->with('error', $message);
+        }
+    }
+
+    public function preflight(SystemUpdatePreparation $preparation, ReleaseActivationPreflight $preflight): RedirectResponse
+    {
+        try {
+            $report = $preflight->run($preparation, auth()->user());
+
+            return redirect()->route('admin.updates.index')
+                ->with($report->status === 'blocked' ? 'error' : 'success', $report->summary);
+        } catch (Throwable $exception) {
+            if (! $exception instanceof RuntimeException) {
+                report($exception);
+            }
+
+            $message = $exception instanceof RuntimeException
+                ? $exception->getMessage()
+                : 'The activation preflight could not be completed. No application files or database records were changed.';
 
             return redirect()->route('admin.updates.index')->with('error', $message);
         }
