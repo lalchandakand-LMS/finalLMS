@@ -112,12 +112,7 @@ class AdminUpdateCenterTest extends TestCase
 
     public function test_release_manifest_redirect_to_untrusted_host_is_rejected(): void
     {
-        $this->configureSignedRelease();
-        Http::fake([
-            'https://github.com/lalchandakand-LMS/finalLMS/releases/latest/download/release-manifest.json' => Http::response('', 302, [
-                'Location' => 'http://127.0.0.1/private',
-            ]),
-        ]);
+        $this->configureSignedRelease(redirectToUntrustedHost: true);
 
         try {
             app(ReleaseManifestChecker::class)->check();
@@ -127,7 +122,7 @@ class AdminUpdateCenterTest extends TestCase
         }
     }
 
-    private function configureSignedRelease(?string $signatureOverride = null, string $version = '1.0.1'): void
+    private function configureSignedRelease(?string $signatureOverride = null, string $version = '1.0.1', bool $redirectToUntrustedHost = false): void
     {
         $privateKey = openssl_pkey_new([
             'private_key_type' => OPENSSL_KEYTYPE_RSA,
@@ -166,8 +161,11 @@ class AdminUpdateCenterTest extends TestCase
 
         $manifestUrl = 'https://github.com/lalchandakand-LMS/finalLMS/releases/latest/download/release-manifest.json';
         $signatureUrl = 'https://github.com/lalchandakand-LMS/finalLMS/releases/latest/download/release-manifest.sig';
+        $manifestResponse = $redirectToUntrustedHost
+            ? Http::response('', 302, ['Location' => 'http://127.0.0.1/private'])
+            : Http::response($manifestBytes, 200);
         Http::fake([
-            $manifestUrl => Http::response($manifestBytes, 200),
+            $manifestUrl => $manifestResponse,
             $signatureUrl => Http::response($signatureOverride ?? $signature, 200),
         ]);
 
