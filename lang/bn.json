@@ -69,7 +69,7 @@
     "URL slug (optional)": "URL স্লাগ (ঐচ্ছিক)",
     "No cover": "কভার ছবি নেই",
     "No image": "কোনো ছবি নেই",
-    "Status": "অবস্থা",
+    "Preparation status": "প্রস্তুতির অবস্থা",
     "Section": "সেকশন",
     "Configure up to 12 homepage sections. HTML and scripts are not accepted.": "হোমপেজে সর্বোচ্চ ১২টি সেকশন সাজান। HTML বা স্ক্রিপ্ট গ্রহণ করা হয় না।",
     "Backup archive (.json.gz)": "ব্যাকআপ ফাইল (.json.gz)",
