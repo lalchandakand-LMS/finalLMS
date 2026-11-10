@@ -107,3 +107,49 @@ The current main README lists a number of foundations as implemented: registrati
 3. Continue the homepage builder and course learning workflows in focused PRs.
 4. Start Guardian implementation only against the five-panel architecture and strict relationship/privacy acceptance tests.
 5. Do not merge or deploy without explicit owner approval.
+
+
+## Live GitHub recheck — 2026-11-10 (latest snapshot)
+
+This section supersedes older status statements above where they conflict. Snapshot was fetched from GitHub on 2026-11-10; re-fetch before the next release decision.
+
+### Open PRs and exact-head CI evidence
+
+All PRs below were fetched as open and unmerged. The listed workflow conclusions belong to the exact PR head SHA returned by GitHub during this recheck:
+
+| PR | Current head SHA | State | Exact-head checks |
+|---|---|---|---|
+| [#65 Homepage Builder](https://github.com/lalchandakand-LMS/finalLMS/pull/65) | `3f98f7c9fbc137a7bb2fed956054c128b2f7e662` | Open, ready for review, mergeable | Laravel CI success; CodeQL success |
+| [#74 Course Content Studio/eBook foundation](https://github.com/lalchandakand-LMS/finalLMS/pull/74) | `9111c10fe8dac2572b7ec213d208adfbce585195` | Open, draft, mergeable | Laravel CI success; CodeQL success |
+| [#72 Lesson video management](https://github.com/lalchandakand-LMS/finalLMS/pull/72) | `a0bb34f71caf0b084486ff6fcd2d88bcec168a71` | Open, draft, mergeable | Laravel CI success; CodeQL success |
+| [#71 Flutter app foundations](https://github.com/lalchandakand-LMS/finalLMS/pull/71) | `3dc2bf61500d9c81053c362b77d963e53281e95b` | Open, draft, mergeable | Flutter mobile apps CI success; Laravel CI success |
+| [#69 Exam autosave/resume](https://github.com/lalchandakand-LMS/finalLMS/pull/69) | `4d90ee0ecaa81555e8333d950f0281838e8f833f` | Open, draft, mergeable | Laravel CI success |
+| [#68 Question bank/exam integrity](https://github.com/lalchandakand-LMS/finalLMS/pull/68) | `e40c781b13730bfef58e1930911e274d6c7c3cea` | Open, draft, mergeable | Laravel CI success; CodeQL success |
+| [#67 Assignment workflow](https://github.com/lalchandakand-LMS/finalLMS/pull/67) | `0d1b4f43e4ce933310152cf59b797f0e6dbeee8f` | Open, draft, mergeable | Laravel CI success; CodeQL success |
+| [#66 bKash callback verification](https://github.com/lalchandakand-LMS/finalLMS/pull/66) | `1ad7009cb2aa6d17b1e893d233b676aa0fdef8b0` | Open, draft, mergeable | Laravel CI success; CodeQL success |
+| [#77 AI handoff documentation](https://github.com/lalchandakand-LMS/finalLMS/pull/77) | `5296a720f6ffe1bb68ee6887dc7a1b2160f321fa` | Open, draft, mergeable | Laravel CI and package build success; CodeQL success |
+| [#75 Uploaded ZIP security audit](https://github.com/lalchandakand-LMS/finalLMS/pull/75) | `4482c2ea1e55538fd9394a74eb6f62c9a1e3bb50` | Open, draft, mergeable | Laravel CI success; CodeQL success |
+
+These checks prove the named automated jobs passed for those commits. They do **not** prove review approval, integration with main, staging acceptance, provider sandbox acceptance, or production readiness.
+
+### Integration and dependency risks discovered
+
+- Several open PRs target other feature branches rather than `main`, including #69, #60, #59, #58, #57, #56, #55, #54, #53, #52, #51, #50, #49, #48, #45, #44, #43 and #42. They are stacked work, not independent mainline releases. Before merging any stack, map the full base/head dependency chain and validate the combined result; do not merge a child branch before its required parent is integrated.
+- PRs #47 and #46 were open but GitHub reported `mergeable=false` at this snapshot. Resolve/rebase conflicts only on their feature branches after reviewing changed files; do not force-push or rewrite unrelated history.
+- PR #77 is still a draft and has not been merged. The handoff docs are therefore not yet on main.
+- The current `main` tree snapshot contains no Guardian model, guardian relationship migration, Guardian controller or Guardian panel route. Treat Guardian as not yet implemented on main; do not mark the fifth panel complete based on the architecture documents alone.
+- The current main tree includes a Branch model, branch-manager role and branch-scoped routes/tests. That is a branch-manager foundation, not proof of a fully complete Branch Panel with all operations and granular permissions.
+- Issue #40 has feature checklist items marked [x], but those checkboxes are not acceptance evidence. Verify each feature against actual code, tests and provider acceptance before calling it complete.
+
+### Updated immediate work order
+
+1. Reconcile and safely integrate the existing green PR stacks in dependency order, after full diff/review and exact-head combined CI. Do not merge without owner approval.
+2. Complete the Guardian panel as a focused feature: verified guardian-student relationship, multiple children, safe child switcher, read-only linked-child views, server-side isolation and negative IDOR tests across each sensitive route/API/export/download/notification.
+3. Finish the Student course-learning workflow and Teacher workflow, verifying private lesson media, progress/resume and access boundaries.
+4. Complete Branch Panel operations and branch isolation tests; keep one unified Admin.
+5. Finish admissions, payment reconciliation, eBook entitlement, live-provider integrations, full Bangla translations and Flutter end-to-end flows.
+6. Establish isolated cPanel staging (subdomain + separate DB) and test install/upgrade/backup/restore there before any production change.
+
+### Explicit unverified items
+
+No real cPanel staging install, production deployment, official bKash/Nagad/SSLCommerz merchant acceptance, Zoom/Jitsi provider API acceptance, Flutter store release, or end-to-end guardian workflow is evidenced by this GitHub snapshot.
