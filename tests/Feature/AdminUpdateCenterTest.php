@@ -177,6 +177,61 @@ class AdminUpdateCenterTest extends TestCase
         $this->assertTrue(Storage::disk('local')->exists($preparation->package_path));
     }
 
+    public function test_admin_can_view_read_only_preflight_for_a_private_staged_release(): void
+    {
+        $packageBytes = $this->createReleasePackage([
+            'artisan' => "<?php echo 'artisan';",
+            'public/index.php' => "<?php echo 'public';",
+            'vendor/autoload.php' => "<?php echo 'vendor';",
+            'VERSION' => "1.0.1\n",
+            'storage/.gitignore' => '',
+            'bootstrap/cache/.gitignore' => '',
+        ]);
+        $this->configureSignedRelease(packageBytes: $packageBytes, migrationDigest: hash('sha256', ''));
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->post(route('admin.updates.prepare'));
+        $preparation = SystemUpdatePreparation::query()->firstOrFail();
+        $this->actingAs($admin)->post(route('admin.updates.extract', $preparation));
+
+        $migrationsBefore = DB::table('migrations')->count();
+        $this->actingAs($admin)
+            ->get(route('admin.updates.preflight', $preparation))
+            ->assertOk()
+            ->assertSee('Release preflight')
+            ->assertSee('Live activation is not available')
+            ->assertSee('Pre-update backup')
+            ->assertSee('Review required');
+
+        $this->assertSame($migrationsBefore, DB::table('migrations')->count());
+        $preparation->refresh();
+        $this->assertSame('staged', $preparation->status);
+    }
+
+    public function test_non_admin_cannot_view_release_preflight(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $preparation = SystemUpdatePreparation::create([
+            'prepared_by' => $admin->id,
+            'version' => '1.0.1',
+            'package_sha256' => str_repeat('a', 64),
+            'manifest_sha256' => str_repeat('b', 64),
+            'migration_set_sha256' => hash('sha256', ''),
+            'package_path' => 'updates/staging/private.zip',
+            'file_size' => 100,
+            'status' => 'staged',
+            'message' => 'Test staged release.',
+            'expires_at' => now()->addHour(),
+            'release_path' => 'updates/releases/private',
+            'staged_at' => now(),
+        ]);
+
+        $this->actingAs($student)
+            ->get(route('admin.updates.preflight', $preparation))
+            ->assertForbidden();
+    }
+
     public function test_admin_can_extract_verified_release_into_private_staging_without_installing_it(): void
     {
         $packageBytes = $this->createReleasePackage([
