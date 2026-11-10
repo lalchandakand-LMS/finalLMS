@@ -211,7 +211,84 @@ class AdminUpdateCenterTest extends TestCase
         $this->assertSame([], Storage::disk('local')->allFiles('updates/staging'));
     }
 
-    private function configureSignedRelease(?string $signatureOverride = null, string $version = '1.0.1', bool $redirectToUntrustedHost = false, ?string $packageBytes = null, ?string $migrationDigest = null, bool $packageRedirectToUntrustedHost = false): void
+    public function test_admin_cannot_stage_a_package_with_a_mismatched_sha256(): void
+    {
+        $this->configureSignedRelease(
+            packageBytes: 'tampered-package-bytes',
+            packageHashOverride: str_repeat('0', 64)
+        );
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.updates.prepare'))
+            ->assertRedirect(route('admin.updates.index'))
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseCount('system_update_preparations', 0);
+        $this->assertSame([], Storage::disk('local')->allFiles('updates/staging'));
+    }
+
+    public function test_admin_cannot_stage_an_archive_with_path_traversal_entries(): void
+    {
+        $packageBytes = $this->createReleasePackage([
+            'artisan' => "<?php echo 'artisan';",
+            'public/index.php' => "<?php echo 'public';",
+            'vendor/autoload.php' => "<?php echo 'vendor';",
+            'VERSION' => "1.0.1\n",
+            '../.env' => 'APP_KEY=secret',
+        ]);
+        $this->configureSignedRelease(packageBytes: $packageBytes, migrationDigest: hash('sha256', ''));
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.updates.prepare'))
+            ->assertRedirect(route('admin.updates.index'))
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseCount('system_update_preparations', 0);
+        $this->assertSame([], Storage::disk('local')->allFiles('updates/staging'));
+    }
+
+    public function test_admin_cannot_stage_an_archive_with_symbolic_links(): void
+    {
+        $path = tempnam(sys_get_temp_dir(), 'aloms-release-symlink-');
+        $this->assertIsString($path);
+        $archive = new ZipArchive();
+        $this->assertTrue($archive->open($path, ZipArchive::OVERWRITE) === true);
+        foreach ([
+            'artisan' => "<?php echo 'artisan';",
+            'public/index.php' => "<?php echo 'public';",
+            'vendor/autoload.php' => "<?php echo 'vendor';",
+            'VERSION' => "1.0.1\n",
+            'storage/.gitignore' => '',
+            'bootstrap/cache/.gitignore' => '',
+            'app/unsafe-link' => '../../.env',
+        ] as $name => $contents) {
+            $this->assertTrue($archive->addFromString($name, $contents));
+        }
+        $this->assertTrue($archive->setExternalAttributesName(
+            'app/unsafe-link',
+            ZipArchive::OPSYS_UNIX,
+            (0120000 | 0777) << 16
+        ));
+        $this->assertTrue($archive->close());
+        $packageBytes = file_get_contents($path);
+        @unlink($path);
+        $this->assertIsString($packageBytes);
+
+        $this->configureSignedRelease(packageBytes: $packageBytes, migrationDigest: hash('sha256', ''));
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.updates.prepare'))
+            ->assertRedirect(route('admin.updates.index'))
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseCount('system_update_preparations', 0);
+        $this->assertSame([], Storage::disk('local')->allFiles('updates/staging'));
+    }
+
+    private function configureSignedRelease(?string $signatureOverride = null, string $version = '1.0.1', bool $redirectToUntrustedHost = false, ?string $packageBytes = null, ?string $migrationDigest = null, bool $packageRedirectToUntrustedHost = false, ?string $packageHashOverride = null): void
     {
         $privateKey = openssl_pkey_new([
             'private_key_type' => OPENSSL_KEYTYPE_RSA,
@@ -239,7 +316,7 @@ class AdminUpdateCenterTest extends TestCase
             'laravel_major' => 12,
             'required_extensions' => ['openssl', 'pdo_mysql'],
             'package_file' => 'AlomsEnglishCenter-cpanel.zip',
-            'package_sha256' => hash('sha256', $packageBytes ?? ''),
+            'package_sha256' => $packageHashOverride ?? hash('sha256', $packageBytes ?? ''),
             'migration_set_sha256' => $migrationDigest ?? str_repeat('c', 64),
             'signing_public_key_sha256' => $fingerprint,
             'published_at' => '2026-11-10T00:00:00Z',
