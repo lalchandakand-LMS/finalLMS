@@ -688,5 +688,12 @@
     "Choose language": "ভাষা নির্বাচন করুন",
     "Run activation readiness preflight": "অ্যাক্টিভেশন প্রস্তুতি যাচাই চালান",
     "Latest activation preflight": "সর্বশেষ অ্যাক্টিভেশন প্রস্তুতি যাচাই",
-    "Pending migrations requiring review": "পর্যালোচনার জন্য অপেক্ষমাণ মাইগ্রেশন"
+    "Pending migrations requiring review": "পর্যালোচনার জন্য অপেক্ষমাণ মাইগ্রেশন",
+    "Or upload video (MP4, M4V, MOV, WebM; max 512 MB)": "অথবা ভিডিও আপলোড করুন (MP4, M4V, MOV, WebM; সর্বোচ্চ ৫১২ MB)",
+    "Video thumbnail": "ভিডিও থাম্বনেইল",
+    "Replace/upload video (MP4, M4V, MOV, WebM; max 512 MB)": "ভিডিও পরিবর্তন/আপলোড করুন (MP4, M4V, MOV, WebM; সর্বোচ্চ ৫১২ MB)",
+    "Replace thumbnail": "থাম্বনেইল পরিবর্তন করুন",
+    "Remove uploaded video": "আপলোড করা ভিডিও মুছুন",
+    "Remove thumbnail": "থাম্বনেইল মুছুন",
+    "Your browser does not support HTML video.": "আপনার ব্রাউজার HTML ভিডিও সমর্থন করে না।"
 }
