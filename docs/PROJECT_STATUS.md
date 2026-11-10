@@ -156,9 +156,21 @@ No real cPanel staging install, production deployment, official bKash/Nagad/SSLC
 
 ### Live update-system work — 2026-11-10
 
-- PR #78 (Admin Update Center specification) was merged to main as 1bf77fb534fff77d2662724416ee9aafde35cb79. The spec is in docs/ADMIN_UPDATE_SYSTEM.md; it distinguishes no-code content updates from signed application releases and records security/recovery acceptance gates.
-- PR #79 (first signed-release workflow attempt) was closed as superseded after actionlint/ShellCheck found an unsafe ! grep shell guard. The issue was fixed on a clean branch; no failed attempt was merged.
-- PR #80 (signed immutable release pipeline) was merged to main as ce3224862b9fcb917d83bf997b69eb00dac126cc after exact-head Laravel CI (test and package jobs) and CodeQL all passed. It adds a tag-triggered PHP 8.3/Laravel 12 release build, exact-tag MySQL-backed tests, SHA-256 package manifest, RSA detached signature, fail-closed signing secret check, public-key fingerprint and release setup guide.
-- The release signing key secret RELEASE_SIGNING_PRIVATE_KEY is not configured/verified in repository settings through the available integration. A repository owner must provision it securely before a tagged signed release can run. Never put the private key in Git, chat or production cPanel.
-- The release workflow publishes signed artifacts only. The Admin Update Center, production public-key pinning, staged package activation, migration orchestration, rollback and real cPanel staging acceptance are not yet implemented.
-- Current immediate update-system sequence: provision the signing key securely; implement public-key-pinned manifest verification and Admin-only update status/preflight; implement staged activation and health checks; implement recovery/rollback; then rehearse install/upgrade/rollback on isolated cPanel staging.
+The secure Admin Update Center has progressed beyond the initial design specification. The following implementation PRs are merged into `main`:
+
+- PR #78 — Admin Update Center and safe-release specification (merge `1bf77fb534fff77d2662724416ee9aafde35cb79`).
+- PR #80 — immutable, signed release pipeline (merge `ce3224862b9fcb917d83bf997b69eb00dac126cc`); release artifacts are built from immutable version tags and include a SHA-256 manifest plus RSA detached signature.
+- PR #86 — Admin-only signed manifest checker, version compatibility checks, release history, pinned RSA public-key fingerprint, trusted asset URL checks and downgrade rejection (merge `11fe5d21302394357c3130636dacaa6e4eb61e60`).
+- PR #87 — signed package download, SHA-256 verification, migration-set digest verification and private staging metadata (merge `6d9978cf171142126645a5e2a1d5e01ceab46bb8`).
+- PR #88 — ZIP archive hardening against path traversal, duplicate/conflicting paths, secrets/runtime files, public executable payloads, symlinks and special files (merge `a3162ca3c675bd68a1219e73c7e47c50b86ae2e0`).
+- PR #90 — extraction of verified packages into an isolated private release directory with restrictive permissions, disk-space checks and expiry cleanup; this does not activate code (merge `dfe0261b730740875577c87449a3c9720f52826b`).
+- PR #91 — feature test confirming the private staging schema contains the metadata fields used by the package stager (merge `a00662edeb4ae67d1221a3574908a73cf6245cef`).
+
+The latest PR #91 exact-head MySQL migration/test job, package build, and CodeQL checks passed. PR #87's exact-head Laravel CI and CodeQL also passed; PR #88 and PR #90 were merged after their CI checks. See each PR's Actions runs for the exact commit evidence.
+
+**Current capability:** Admin can check signed release metadata, see update history, download a signed package, validate its signature-derived metadata/checksum/migration digest and archive structure, and extract the package into isolated private storage. Expired staging artifacts are cleaned up when the preparation/extraction workflow runs.
+
+**Still not implemented:** automated pre-activation backup orchestration, full environment/impact preflight, persistent shared-storage wiring, update lock/maintenance orchestration, production code activation, controlled migration execution, post-activation health checks, durable installation progress logs, tested code rollback, and real cPanel staging acceptance.
+
+The release signing private key and public-key fingerprint still require secure owner provisioning/verification. Do not enable signed checks until the public key is installed outside the web root and its fingerprint independently verified. Do not deploy or run an update on `alomsenglishcenter.com` yet. The cPanel deployment guide remains explicit that manual backup/release procedures are required until activation/recovery and staging acceptance pass.
+
