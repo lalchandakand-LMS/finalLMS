@@ -343,6 +343,10 @@ class UpdateBackupCoordinator
             return true;
         }
 
+        if ($relative === 'vendor/bin' || str_starts_with($relative, 'vendor/bin/')) {
+            return true;
+        }
+
         if (str_starts_with($relative, 'bootstrap/cache/')) {
             return true;
         }
