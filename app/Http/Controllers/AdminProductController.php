@@ -35,7 +35,7 @@ class AdminProductController extends Controller
         if ($image) $data['image_path'] = $image->store('products', 'public');
         if ($data['type'] === 'ebook') {
             $data['is_downloadable'] = true;
-            $data['download_path'] = $pdf->store('private/products');
+            $data['download_path'] = $pdf->store('private/products', 'local');
         } else {
             $data['is_downloadable'] = false;
             $data['download_path'] = null;
