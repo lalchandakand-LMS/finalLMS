@@ -275,10 +275,10 @@ class AdminUpdateCenterTest extends TestCase
 
         app(BackupController::class)->create();
 
-        $this->actingAs($admin)
-            ->post(route('admin.updates.backup', $preparation))
-            ->assertRedirect(route('admin.updates.index'))
-            ->assertSessionHas('success');
+        $backupResponse = $this->actingAs($admin)->post(route('admin.updates.backup', $preparation));
+        $backupResponse->assertRedirect(route('admin.updates.index'))
+            ->assertSessionMissing('error')
+            ->assertSessionHas('success', 'The current application code snapshot and a recent HMAC-verified database/media backup are tied to this staged release. No code was activated.');
 
         $backup = SystemUpdateBackup::query()->where('preparation_id', $preparation->id)->firstOrFail();
         $this->assertSame('verified', $backup->status);
