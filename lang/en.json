@@ -400,5 +400,8 @@
     "Join now": "Join now",
     "Student login": "Student login",
     "Open dashboard": "Open dashboard",
-    "Choose language": "Choose language"
+    "Choose language": "Choose language",
+    "Run activation readiness preflight": "Run activation readiness preflight",
+    "Latest activation preflight": "Latest activation preflight",
+    "Pending migrations requiring review": "Pending migrations requiring review"
 }
