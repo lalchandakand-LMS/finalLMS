@@ -170,7 +170,7 @@ class CourseController extends Controller
         return view('courses.show', compact('course', 'enrollment', 'payment', 'paymentMethods', 'batches', 'canViewLessons', 'lessonProgress'));
     }
 
-    public function streamLessonVideo(Course $course, Lesson $lesson): \\Symfony\\Component\\HttpFoundation\\BinaryFileResponse
+    public function streamLessonVideo(Course $course, Lesson $lesson): \Symfony\Component\HttpFoundation\BinaryFileResponse
     {
         abort_unless($lesson->course_id === $course->id && $lesson->video_path, 404);
         $user = Auth::user();
@@ -247,7 +247,7 @@ class CourseController extends Controller
             'content' => ['required', 'string'],
             'duration_minutes' => ['required', 'integer', 'min:1', 'max:600'],
             'order' => ['required', 'integer', 'min:1'],
-            'video_url' => ['nullable', 'url', 'max:2048', 'regex:/^https:\\/\\/(?:www\\.)?(?:youtube\\.com|youtu\\.be|youtube-nocookie\\.com|vimeo\\.com)(?:\\/|$)/i'],
+            'video_url' => ['nullable', 'url', 'max:2048', 'regex:/^https:\/\/(?:www\.)?(?:youtube\.com|youtu\.be|youtube-nocookie\.com|vimeo\.com)(?:\/|$)/i'],
             'video_file' => ['nullable', 'file', 'mimes:mp4,m4v,mov,webm', 'max:524288'],
             'thumbnail' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'is_preview' => ['sometimes', 'boolean'],
@@ -266,7 +266,7 @@ class CourseController extends Controller
         }
         try {
             $course->lessons()->create($validated);
-        } catch (\\Throwable $exception) {
+        } catch (\Throwable $exception) {
             if ($videoPath) Storage::disk('lesson_videos')->delete($videoPath);
             if ($thumbnailPath) Storage::disk('public')->delete($thumbnailPath);
             throw $exception;
@@ -306,7 +306,7 @@ class CourseController extends Controller
             'content' => ['required', 'string'],
             'duration_minutes' => ['required', 'integer', 'min:1', 'max:600'],
             'order' => ['required', 'integer', 'min:1'],
-            'video_url' => ['nullable', 'url', 'max:2048', 'regex:/^https:\\/\\/(?:www\\.)?(?:youtube\\.com|youtu\\.be|youtube-nocookie\\.com|vimeo\\.com)(?:\\/|$)/i'],
+            'video_url' => ['nullable', 'url', 'max:2048', 'regex:/^https:\/\/(?:www\.)?(?:youtube\.com|youtu\.be|youtube-nocookie\.com|vimeo\.com)(?:\/|$)/i'],
             'video_file' => ['nullable', 'file', 'mimes:mp4,m4v,mov,webm', 'max:524288'],
             'thumbnail' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'remove_video' => ['sometimes', 'boolean'],
@@ -339,7 +339,7 @@ class CourseController extends Controller
         }
         try {
             $lesson->update($validated);
-        } catch (\\Throwable $exception) {
+        } catch (\Throwable $exception) {
             if ($newVideoPath) Storage::disk('lesson_videos')->delete($newVideoPath);
             if ($newThumbnailPath) Storage::disk('public')->delete($newThumbnailPath);
             throw $exception;
