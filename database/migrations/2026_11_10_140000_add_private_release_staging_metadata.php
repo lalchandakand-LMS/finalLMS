@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('system_update_preparations', function (Blueprint $table) {
-            $table->char('migration_set_sha256', 64)->after('manifest_sha256');
+            $table->char('migration_set_sha256', 64)->nullable()->after('manifest_sha256');
             $table->string('release_path', 255)->nullable()->after('package_path');
             $table->timestamp('staged_at')->nullable()->after('expires_at');
         });
