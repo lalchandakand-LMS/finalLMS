@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -175,6 +176,61 @@ class ProductCatalogManagementTest extends TestCase
 
         $this->assertSame('ebook', $product->fresh()->type);
         Storage::disk('local')->assertExists('private/products/purchased.pdf');
+    }
+
+    public function test_admin_cannot_replace_an_ebook_file_after_it_has_been_purchased(): void
+    {
+        Storage::fake('local');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        Storage::disk('local')->put('private/products/original.pdf', 'original purchased content');
+
+        $product = Product::create([
+            'type' => 'ebook',
+            'name' => 'Purchased Workbook',
+            'slug' => 'purchased-workbook-file-lock',
+            'regular_price' => 500,
+            'currency' => 'BDT',
+            'is_downloadable' => true,
+            'download_path' => 'private/products/original.pdf',
+            'status' => 'published',
+            'published_at' => now(),
+            'created_by' => $admin->id,
+        ]);
+        $order = Order::create([
+            'order_number' => 'ALM-EBOOK-FILE-LOCK-001',
+            'user_id' => $student->id,
+            'status' => 'completed',
+            'currency' => 'BDT',
+            'subtotal' => 500,
+            'discount_total' => 0,
+            'total' => 500,
+        ]);
+        OrderItem::create([
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'product_type' => 'ebook',
+            'product_name' => $product->name,
+            'quantity' => 1,
+            'regular_price' => 500,
+            'discount_total' => 0,
+            'line_total' => 500,
+        ]);
+
+        $this->actingAs($admin)->from(route('admin.products.index'))
+            ->put(route('admin.products.update', $product), [
+                'type' => 'ebook',
+                'name' => 'Purchased Workbook',
+                'regular_price' => '500.00',
+                'currency' => 'BDT',
+                'status' => 'published',
+                'download_file' => UploadedFile::fake()->create('replacement.pdf', 10, 'application/pdf'),
+            ])
+            ->assertRedirect(route('admin.products.index'))
+            ->assertSessionHasErrors('download_file');
+
+        $this->assertSame('private/products/original.pdf', $product->fresh()->download_path);
+        Storage::disk('local')->assertExists('private/products/original.pdf');
     }
 
 }
