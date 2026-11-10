@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminSettingsController;
+use App\Http\Controllers\AdminUpdateController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BatchController;
 use App\Http\Controllers\AttendanceController;
@@ -158,6 +159,8 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         ->name('courses.lessons.complete');
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
+        Route::get('/updates', [AdminUpdateController::class, 'index'])->name('admin.updates.index');
+        Route::post('/updates/check', [AdminUpdateController::class, 'check'])->middleware('throttle:3,10')->name('admin.updates.check');
         Route::get('/flash-sales', [FlashSaleController::class, 'index'])->name('admin.flash-sales.index');
         Route::post('/flash-sales', [FlashSaleController::class, 'store'])->name('admin.flash-sales.store');
         Route::put('/flash-sales/{flashSale}', [FlashSaleController::class, 'update'])->name('admin.flash-sales.update');
