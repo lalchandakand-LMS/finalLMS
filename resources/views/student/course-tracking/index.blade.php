@@ -1,0 +1,8 @@
+@extends('layouts.app')
+@section('title', __('My course attendance'))
+@section('content')
+<div class="page-header"><div><span class="badge info">{{ __('Student portal') }}</span><h1>{{ __('Course time tracking') }}</h1><p class="muted">{{ __('Check in when you arrive and check out when your class ends. Your time records are visible to the academy.') }}</p></div></div>
+<div class="panel"><div style="overflow-x:auto"><table style="width:100%;min-width:720px"><thead><tr><th>{{ __('Course / session') }}</th><th>{{ __('Scheduled time') }}</th><th>{{ __('Check-in') }}</th><th>{{ __('Check-out') }}</th><th>{{ __('Action') }}</th></tr></thead><tbody>
+@forelse($sessions as $session)@php($attendance=$session->attendances->first())<tr style="border-top:1px solid var(--border)"><td>{{ $session->course?->title }}<br><small>{{ $session->title }}</small></td><td>{{ $session->starts_at->format('d M Y H:i') }}<br>{{ $session->ends_at?->format('H:i') }}</td><td>{{ $attendance?->checked_in_at?->format('H:i') ?? '—' }}</td><td>{{ $attendance?->checked_out_at?->format('H:i') ?? '—' }}</td><td>@if(!$attendance)<form method="POST" action="{{ route('student.course-tracking.check-in',$session) }}">@csrf<button class="btn primary">{{ __('Check in') }}</button></form>@elseif(!$attendance->checked_out_at)<form method="POST" action="{{ route('student.course-tracking.check-out',$session) }}">@csrf<button class="btn secondary">{{ __('Check out') }}</button></form>@else<span class="badge success">{{ __('Completed') }}</span>@endif</td></tr>@empty<tr><td colspan="5">{{ __('No recent sessions found for your enrolled courses.') }}</td></tr>@endforelse
+</tbody></table></div>{{ $sessions->links() }}</div>
+@endsection

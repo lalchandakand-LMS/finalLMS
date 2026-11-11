@@ -50,7 +50,7 @@
                         <td style="padding:12px 10px;">
                             <form method="POST" action="{{ route('admin.users.updateRole', $user) }}" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
                                 @csrf
-                                <input type="tel" name="phone_number" value="{{ $user->phone_number }}" placeholder="+8801XXXXXXXXX" pattern="[+][1-9][0-9]{7,14}" style="width:150px;" aria-label="Student mobile number (E.164)">
+                                <input type="tel" name="phone_number" value="{{ $user->phone_number }}" placeholder="+8801XXXXXXXXX" pattern="[+][1-9][0-9]{7,14}" style="width:150px;" aria-label="Mobile number required for SMS login verification (E.164)">
                                 <select name="role" style="width:auto;min-width:130px;">
                                     @foreach(['student' => 'Student', 'branch_manager' => 'Branch Manager', 'accountant' => 'Accountant', 'teacher' => 'Teacher', 'guardian' => 'Guardian', 'admin' => 'Admin'] as $roleValue => $roleLabel)
                                         <option value="{{ $roleValue }}" @selected($user->role === $roleValue)>{{ __($roleLabel) }}</option>

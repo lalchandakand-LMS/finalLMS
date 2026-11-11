@@ -12,9 +12,10 @@
         $googleTagManagerId = $hasSettingsTable ? \App\Models\Setting::value('google_tag_manager_id') : null;
         $facebookPixelId = $hasSettingsTable ? \App\Models\Setting::value('facebook_pixel_id') : null;
         $marketingConsent = request()->cookie('marketing_consent') === 'accepted';
+        $isAdminLayout = auth()->check() && auth()->user()->isAdmin();
         $visitorPopup = null;
-        if (\\Illuminate\\Support\\Facades\\Schema::hasTable('visitor_popups') && !(auth()->check() && auth()->user()->isAdmin())) {
-            $visitorPopupQuery = \\App\\Models\\VisitorPopup::currentlyActive()->with('image')
+        if (\Illuminate\Support\Facades\Schema::hasTable('visitor_popups') && !(auth()->check() && auth()->user()->isAdmin())) {
+            $visitorPopupQuery = \App\Models\VisitorPopup::currentlyActive()->with('image')
                 ->where(function ($query) { $query->where('audience', 'all')->orWhere('audience', auth()->check() ? 'members' : 'guests'); });
             $visitorPopup = $visitorPopupQuery->orderByDesc('priority')->latest()->first();
         }
@@ -47,7 +48,6 @@
             fbq('track','PageView');
         </script>
     @endif
-    @php($isAdminLayout = auth()->check() && auth()->user()->isAdmin())
     <style>
         :root {
             --bg: #f3f6fb;
@@ -187,8 +187,13 @@
             <div class="admin-sidebar-label">Academy</div>
             <a href="{{ route('admin.courses.index') }}"><span>📚</span><span class="nav-text">Courses & lessons</span></a>
             <a href="{{ route('admin.users.index') }}"><span>👥</span><span class="nav-text">Students & teachers</span></a>
+            <a class="{{ request()->routeIs('admin.admissions.*') ? 'active' : '' }}" href="{{ route('admin.admissions.index') }}"><span>📝</span><span class="nav-text">Student admissions</span></a>
+            <a class="{{ request()->routeIs('admin.course-tracking.index') ? 'active' : '' }}" href="{{ route('admin.course-tracking.index') }}"><span>⏱️</span><span class="nav-text">Course sessions</span></a>
+            <a href="{{ route('admin.admissions.index') }}"><span>📝</span><span class="nav-text">Student admissions</span></a>
+            <a href="{{ route('admin.course-tracking.index') }}"><span>⏱️</span><span class="nav-text">Course time tracking</span></a>
             <a class="{{ request()->routeIs('admin.teacher-applications.*') ? 'active' : '' }}" href="{{ route('admin.teacher-applications.index') }}"><span>🪪</span><span class="nav-text">Teacher KYC review</span></a>
             <a class="{{ request()->routeIs('admin.student-devices.*') ? 'active' : '' }}" href="{{ route('admin.student-devices.index') }}"><span>📱</span><span class="nav-text">Device approvals</span></a>
+            <a class="{{ request()->routeIs('admin.security.sessions.*') ? 'active' : '' }}" href="{{ route('admin.security.sessions.index') }}"><span>🔐</span><span class="nav-text">Devices & active logins</span></a>
             <a href="{{ route('admin.batches.index') }}"><span>🗓️</span><span class="nav-text">Batches & branches</span></a>
             <a href="{{ route('admin.contests.index') }}"><span>🎁</span><span class="nav-text">Quiz & lottery</span></a>
             <a href="{{ route('live-classes.index') }}"><span>🎥</span><span class="nav-text">Live classes</span></a>
@@ -263,8 +268,11 @@
                     @endif
                     @if(auth()->user()->isTeacher())
                         <a href="{{ route('teacher.batches.index') }}">My batches</a>
+                        <a href="{{ route('teacher.course-tracking.index') }}">{{ __('Course time tracking') }}</a>
                     @endif
                     @if(auth()->user()->isStudent())
+                        <a href="{{ route('student.admission.edit') }}">{{ __('Admission profile') }}</a>
+                        <a href="{{ route('student.course-tracking.index') }}">{{ __('Course check-in/out') }}</a>
                         <a href="{{ route('student.attendance.index') }}">Attendance</a>
                     <a href="{{ route('student.exams.index') }}">Exams</a>
                         <a href="{{ route('student.invoices.index') }}">My fees</a>
@@ -315,7 +323,7 @@
             window.location.reload();
         }
     </script>
-    @if($visitorPopup)
+    <?php if ($visitorPopup): ?>
         @php
             $popupButtonUrl = $visitorPopup->popup_type === 'registration'
                 ? (auth()->check() ? route('dashboard') : route('register'))
@@ -330,11 +338,25 @@
                     <img src="{{ $visitorPopup->image->url }}" alt="{{ $visitorPopup->title }}" style="display:block;width:100%;max-height:290px;object-fit:cover;">
                 @endif
                 <div style="padding:26px;">
-                    @if($visitorPopup->popup_type === 'ad')<span class="badge warning">{{ __('Advertisement') }}</span>@elseif($visitorPopup->popup_type === 'registration')<span class="badge success">{{ __('Join us') }}</span>@else<span class="badge info">{{ ucfirst($visitorPopup->popup_type) }}</span>@endif
+                    @if($visitorPopup->popup_type === 'ad')
+                        <span class="badge warning">{{ __('Advertisement') }}</span>
+                    @elseif($visitorPopup->popup_type === 'registration')
+                        <span class="badge success">{{ __('Join us') }}</span>
+                    @else
+                        <span class="badge info">{{ ucfirst($visitorPopup->popup_type) }}</span>
+                    @endif
                     <h2 id="visitor-promo-title" style="margin:12px 0;color:#14213d;">{{ $visitorPopup->title }}</h2>
                     <p id="visitor-promo-description" style="white-space:pre-line;line-height:1.7;color:#4b5563;">{{ $visitorPopup->body }}</p>
                     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;">
-                        @if($popupButtonUrl)<a class="btn primary" href="{{ $popupButtonUrl }}" @if($popupIsExternal) target="_blank" rel="sponsored noopener noreferrer" @elseif($visitorPopup->popup_type === 'ad') rel="sponsored noopener" @endif>{{ $popupButtonLabel }}</a>@endif
+                        @if($popupButtonUrl)
+                            @if($popupIsExternal)
+                                <a class="btn primary" href="{{ $popupButtonUrl }}" target="_blank" rel="sponsored noopener noreferrer">{{ $popupButtonLabel }}</a>
+                            @elseif($visitorPopup->popup_type === 'ad')
+                                <a class="btn primary" href="{{ $popupButtonUrl }}" rel="sponsored noopener">{{ $popupButtonLabel }}</a>
+                            @else
+                                <a class="btn primary" href="{{ $popupButtonUrl }}">{{ $popupButtonLabel }}</a>
+                            @endif
+                        @endif
                         <button id="visitor-promo-dismiss" type="button" class="btn secondary">{{ __('Maybe later') }}</button>
                     </div>
                 </div>
@@ -379,7 +401,7 @@
                 }, Math.max(0, Math.min(60, Number(overlay.dataset.delay || 0))) * 1000);
             })();
         </script>
-    @endif
+    <?php endif; ?>
     @stack('scripts')
 </body>
 </html>

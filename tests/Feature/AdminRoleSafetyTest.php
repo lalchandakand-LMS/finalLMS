@@ -62,6 +62,7 @@ class AdminRoleSafetyTest extends TestCase
             ->post(route('admin.users.updateRole', $staff), [
                 'role' => 'branch_manager',
                 'branch_id' => $branch->id,
+                'phone_number' => '+8801712345678',
             ])
             ->assertRedirect(route('admin.users.index'));
 
@@ -115,6 +116,7 @@ class AdminRoleSafetyTest extends TestCase
         $this->post(route('admin.users.updateRole', $staff), [
             'role' => 'accountant',
             'branch_id' => $branch->id,
+            'phone_number' => '+8801712345680',
         ])->assertRedirect(route('admin.users.index'));
 
         $this->assertDatabaseHas('users', [

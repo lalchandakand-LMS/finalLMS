@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Branch;
 use App\Models\StudentDevice;
+use App\Models\DeviceSession;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -45,7 +46,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'role' => ['required', 'in:admin,branch_manager,accountant,teacher,student,guardian'],
             'branch_id' => ['nullable', Rule::exists('branches', 'id')->where('is_active', true)],
-            'phone_number' => ['nullable', 'string', 'regex:/^\+[1-9][0-9]{7,14}$/', Rule::unique('users', 'phone_number')->ignore($user->id)],
+            'phone_number' => ['sometimes', 'nullable', 'string', 'regex:/^\\+[1-9][0-9]{7,14}$/', Rule::unique('users', 'phone_number')->ignore($user->id)],
         ]);
 
         if ($user->id === Auth::id() && $validated['role'] !== 'admin') {
@@ -60,13 +61,19 @@ class UserController extends Controller
             return back()->withErrors(['branch_id' => 'Select an active branch for this staff account.']);
         }
 
-        $phoneChanged = array_key_exists('phone_number', $validated) && $user->phone_number !== $validated['phone_number'];
-        $roleChangedAwayFromStudent = $user->isStudent() && $validated['role'] !== 'student';
+        $phoneNumber = $validated['phone_number'] ?? $user->phone_number;
+        if (in_array($validated['role'], ['student', 'teacher', 'branch_manager', 'guardian', 'accountant'], true) && empty($phoneNumber)) {
+            return back()->withErrors(['phone_number' => 'A verified mobile number is required for this account role.']);
+        }
+
+        $phoneChanged = $user->phone_number !== $phoneNumber;
+        $roleChanged = $user->role !== $validated['role'];
+        $branchChanged = (int) $user->branch_id !== (int) ($validated['branch_id'] ?? 0);
 
         $user->update([
             'role' => $validated['role'],
             'branch_id' => in_array($validated['role'], ['branch_manager', 'accountant', 'student'], true) ? ($validated['branch_id'] ?? null) : null,
-            'phone_number' => $validated['phone_number'] ?? null,
+            'phone_number' => $phoneNumber,
         ]);
 
         if ($phoneChanged) {
@@ -77,7 +84,12 @@ class UserController extends Controller
             ])->save();
         }
 
-        if ($phoneChanged || $roleChangedAwayFromStudent) {
+        if ($phoneChanged || $roleChanged || $branchChanged) {
+            DeviceSession::query()->where('user_id', $user->id)->whereNull('revoked_at')->update([
+                'revoked_at' => now(),
+                'revoke_reason' => 'Account security details changed by administrator',
+                'updated_at' => now(),
+            ]);
             StudentDevice::query()
                 ->where('user_id', $user->id)
                 ->whereIn('status', ['approved', 'pending_admin_approval', 'pending_phone_verification'])

@@ -5,6 +5,7 @@ use App\Http\Controllers\AdminAnalyticsController;
 use App\Http\Controllers\AdminCommentController;
 use App\Http\Controllers\AdminVisitorPopupController;
 use App\Http\Controllers\AdminDashboardAnnouncementController;
+use App\Http\Controllers\AdminDeviceSessionController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\StudentDeviceAccessController;
@@ -37,6 +38,8 @@ use App\Http\Controllers\BackupController;
 use App\Http\Controllers\InstallController;
 use App\Http\Controllers\QuizContestController;
 use App\Http\Controllers\TeacherApplicationController;
+use App\Http\Controllers\StudentAdmissionController;
+use App\Http\Controllers\StudentCourseTrackingController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/install', [InstallController::class, 'index'])->name('install.index');
@@ -50,9 +53,9 @@ Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::middleware('guest')->group(function () {
     Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
-    Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1')->name('register.store');
+    Route::post('/register', [StudentAdmissionController::class, 'register'])->middleware('throttle:5,1')->name('register.store');
 });
-Route::post('/login', [StudentDeviceAccessController::class, 'beginLogin'])->middleware('throttle:5,1')->name('login.post');
+Route::post('/login', [StudentDeviceAccessController::class, 'beginLogin'])->middleware(['guest', 'throttle:5,1'])->name('login.post');
 Route::get('/student-device/verify', [StudentDeviceAccessController::class, 'showVerify'])->middleware('throttle:10,1')->name('student-device.verify');
 Route::post('/student-device/verify', [StudentDeviceAccessController::class, 'verifyPhone'])->middleware('throttle:5,1')->name('student-device.verify-phone');
 
@@ -122,6 +125,8 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         ->middleware('role:teacher,admin')
         ->name('live-classes.destroy');
 
+    Route::middleware('role:teacher')->get('/teacher/course-tracking', [StudentCourseTrackingController::class, 'index'])->name('teacher.course-tracking.index');
+    Route::middleware('role:teacher')->post('/teacher/course-tracking', [StudentCourseTrackingController::class, 'store'])->name('teacher.course-tracking.store');
     Route::middleware('role:teacher')->get('/teacher/batches', [BatchController::class, 'teacherIndex'])->name('teacher.batches.index');
     Route::middleware('role:teacher')->get('/teacher/courses/{course}/lessons', [CourseController::class, 'teacherLessons'])->name('teacher.courses.lessons.index');
     Route::middleware('role:teacher')->post('/teacher/courses/{course}/lessons', [CourseController::class, 'storeLesson'])->name('teacher.courses.lessons.store');
@@ -164,6 +169,13 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
     Route::post('/contests/{contest}/submit', [QuizContestController::class, 'submit'])->middleware('throttle:5,1')->name('contests.submit');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/my/admission-profile', [StudentAdmissionController::class, 'edit'])->middleware('role:student')->name('student.admission.edit');
+    Route::put('/my/admission-profile', [StudentAdmissionController::class, 'update'])->middleware('role:student')->name('student.admission.update');
+    Route::post('/my/admission-profile/delete-request', [StudentAdmissionController::class, 'requestDeletion'])->middleware('role:student')->name('student.admission.delete-request');
+    Route::get('/student-documents/{document}', [StudentAdmissionController::class, 'document'])->middleware('throttle:30,1')->name('student.documents.show');
+    Route::get('/my/course-tracking', [StudentCourseTrackingController::class, 'studentIndex'])->middleware('role:student')->name('student.course-tracking.index');
+    Route::post('/my/course-tracking/{session}/check-in', [StudentCourseTrackingController::class, 'checkIn'])->middleware('role:student')->name('student.course-tracking.check-in');
+    Route::post('/my/course-tracking/{session}/check-out', [StudentCourseTrackingController::class, 'checkOut'])->middleware('role:student')->name('student.course-tracking.check-out');
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::get('/certificates/{certificate}', [DashboardController::class, 'certificate'])->name('certificates.show');
@@ -175,6 +187,18 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         ->name('courses.lessons.complete');
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
+        Route::get('/admissions', [StudentAdmissionController::class, 'adminIndex'])->name('admin.admissions.index');
+
+        Route::get('/security/sessions', [AdminDeviceSessionController::class, 'index'])->name('admin.security.sessions.index');
+        Route::patch('/security/sessions/{deviceSession}/revoke', [AdminDeviceSessionController::class, 'revoke'])->name('admin.security.sessions.revoke');
+        Route::post('/security/users/{user}/revoke-sessions', [AdminDeviceSessionController::class, 'revokeAllForUser'])->name('admin.security.users.revoke-sessions');
+        Route::get('/admissions/{student}', [StudentAdmissionController::class, 'adminShow'])->name('admin.admissions.show');
+        Route::post('/admissions/{student}/approve', [StudentAdmissionController::class, 'approve'])->name('admin.admissions.approve');
+        Route::post('/admissions/{student}/reject', [StudentAdmissionController::class, 'reject'])->name('admin.admissions.reject');
+        Route::patch('/admissions/{student}/status', [StudentAdmissionController::class, 'setStatus'])->name('admin.admissions.status');
+        Route::post('/admissions/{student}/anonymize', [StudentAdmissionController::class, 'anonymize'])->name('admin.admissions.anonymize');
+        Route::get('/course-tracking', [StudentCourseTrackingController::class, 'index'])->name('admin.course-tracking.index');
+        Route::post('/course-tracking', [StudentCourseTrackingController::class, 'store'])->name('admin.course-tracking.store');
         Route::get('/analytics', [AdminAnalyticsController::class, 'index'])->name('admin.analytics.index');
         Route::get('/dashboard-announcements', [AdminDashboardAnnouncementController::class, 'index'])->name('admin.dashboard-announcements.index');
         Route::get('/dashboard-announcements/create', [AdminDashboardAnnouncementController::class, 'create'])->name('admin.dashboard-announcements.create');

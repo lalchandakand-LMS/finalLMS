@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\StudentDevice;
+use App\Models\DeviceSession;
 use App\Models\User;
 use App\Services\SmsGateway;
 use Illuminate\Http\RedirectResponse;
@@ -41,7 +42,7 @@ class StudentDeviceAccessController extends Controller
             return redirect()->route('login')->with('error', 'The verification request expired. Please sign in again.');
         }
 
-        $key = 'student-device-otp:'.$device->id;
+        $key = 'trusted-device-otp:'.$device->id;
         if (RateLimiter::tooManyAttempts($key, 5)) {
             return back()->with('error', 'Too many incorrect codes. Please sign in again later.');
         }
@@ -52,22 +53,18 @@ class StudentDeviceAccessController extends Controller
         }
 
         $user = $device->user;
-        $hasApprovedDevice = StudentDevice::query()
+        $hasPriorDevice = StudentDevice::query()
             ->where('user_id', $user->id)
             ->where('id', '!=', $device->id)
-            ->where(function ($query): void {
-                $query->whereNotNull('phone_verified_at')
-                    ->orWhereIn('status', ['approved', 'revoked', 'rejected', 'pending_admin_approval']);
-            })
             ->exists();
 
         $device->forceFill([
             'phone_otp_hash' => null,
             'phone_otp_expires_at' => null,
             'phone_verified_at' => now(),
-            'status' => $hasApprovedDevice ? 'pending_admin_approval' : 'approved',
-            'approved_at' => $hasApprovedDevice ? null : now(),
-            'last_used_at' => $hasApprovedDevice ? null : now(),
+            'status' => $hasPriorDevice ? 'pending_admin_approval' : 'approved',
+            'approved_at' => $hasPriorDevice ? null : now(),
+            'last_used_at' => $hasPriorDevice ? null : now(),
         ])->save();
 
         if (! $user->phone_verified_at) {
@@ -76,13 +73,14 @@ class StudentDeviceAccessController extends Controller
 
         RateLimiter::clear($key);
 
-        if ($hasApprovedDevice) {
+        if ($hasPriorDevice) {
             $request->session()->forget('student_device_request_id');
             return redirect()->route('login')->with('warning', 'Mobile number verified. This is an additional device, so an administrator must approve it before you can sign in.');
         }
 
         Auth::login($user);
         $request->session()->regenerate();
+        DeviceSession::register($request, $user, $device);
         $request->session()->forget('student_device_request_id');
 
         return redirect()->intended('/dashboard')->with('success', 'Mobile number verified and this device is now trusted.');
@@ -140,8 +138,13 @@ class StudentDeviceAccessController extends Controller
         }
 
         $device->forceFill(['status' => 'revoked'])->save();
+        DeviceSession::query()->where('student_device_id', $device->id)->whereNull('revoked_at')->update([
+            'revoked_at' => now(),
+            'revoke_reason' => 'Trusted device revoked by administrator',
+            'updated_at' => now(),
+        ]);
 
-        return back()->with('success', 'Device access revoked. Its next login attempt will require approval again.');
+        return back()->with('success', 'Device access revoked and its active sessions have been signed out.');
     }
 
     public function beginLogin(Request $request, SmsGateway $sms): RedirectResponse
@@ -151,25 +154,28 @@ class StudentDeviceAccessController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        $user = User::query()->where('email', $validated['email'])->first();
+        $user = User::query()->where('email', strtolower($validated['email']))->first();
         if (! $user || ! Hash::check($validated['password'], $user->password)) {
             return back()->withErrors(['email' => 'The provided credentials do not match our records.'])->onlyInput('email');
         }
 
-        if (! $user->isStudent()) {
-            if (Auth::attempt(['email' => $validated['email'], 'password' => $validated['password']])) {
-                $request->session()->regenerate();
-                return redirect()->intended('/dashboard');
-            }
+        if (($user->account_status ?? 'active') !== 'active') {
+            return back()->withErrors(['email' => 'This account is inactive or unavailable. Please contact the academy administrator.'])->onlyInput('email');
+        }
 
-            return back()->withErrors(['email' => 'The provided credentials do not match our records.'])->onlyInput('email');
+        // Keep administrator recovery available while enforcing SMS MFA for all academy-facing roles.
+        if ($user->isAdmin()) {
+            Auth::login($user);
+            $request->session()->regenerate();
+            DeviceSession::register($request, $user);
+            return redirect()->intended('/dashboard');
         }
 
         if (! $user->phone_number) {
-            return back()->withErrors(['email' => 'Add a mobile number to the student profile through the academy administrator before signing in.'])->onlyInput('email');
+            return back()->withErrors(['email' => 'A verified mobile number is required for secure login. Please contact the academy administrator to add one.'])->onlyInput('email');
         }
 
-        $deviceToken = $request->cookie('lms_student_device');
+        $deviceToken = $request->cookie('lms_trusted_device') ?: $request->cookie('lms_student_device');
         if (! is_string($deviceToken) || ! preg_match('/^[a-f0-9]{64}$/', $deviceToken)) {
             $deviceToken = bin2hex(random_bytes(32));
         }
@@ -180,17 +186,18 @@ class StudentDeviceAccessController extends Controller
             ->where('device_hash', $deviceHash)
             ->first();
 
-        if ($device?->status === 'approved') {
+        if ($device?->status === 'approved' && $device->phone_verified_at) {
             $device->forceFill(['last_used_at' => now()])->save();
             Auth::login($user);
             $request->session()->regenerate();
+            DeviceSession::register($request, $user, $device);
 
             return redirect()->intended('/dashboard')
-                ->withCookie(cookie('lms_student_device', $deviceToken, 60 * 24 * 365, '/', null, true, true, false, 'lax'));
+                ->withCookie(cookie('lms_trusted_device', $deviceToken, 60 * 24 * 365, '/', null, true, true, false, 'lax'));
         }
 
         if (! $sms->isConfigured()) {
-            return back()->withErrors(['email' => 'Student device verification needs the academy SMS service. Please contact the administrator.'])->onlyInput('email');
+            return back()->withErrors(['email' => 'Secure login verification needs the academy SMS service. Please contact the administrator.'])->onlyInput('email');
         }
 
         $otp = (string) random_int(100000, 999999);
@@ -211,7 +218,7 @@ class StudentDeviceAccessController extends Controller
         );
 
         try {
-            $sms->send($user->phone_number, "Alom's English Center: Your new-device login verification code is {$otp}. It expires in 10 minutes.");
+            $sms->send($user->phone_number, "Alom's English Center: Your secure login verification code is {$otp}. It expires in 10 minutes.");
         } catch (Throwable $exception) {
             $device->forceFill([
                 'status' => 'sms_failed',
@@ -225,7 +232,7 @@ class StudentDeviceAccessController extends Controller
         $request->session()->put('student_device_request_id', $device->id);
 
         return redirect()->route('student-device.verify')
-            ->withCookie(cookie('lms_student_device', $deviceToken, 60 * 24 * 365, '/', null, true, true, false, 'lax'));
+            ->withCookie(cookie('lms_trusted_device', $deviceToken, 60 * 24 * 365, '/', null, true, true, false, 'lax'));
     }
 
     private function deviceName(?string $userAgent): string
