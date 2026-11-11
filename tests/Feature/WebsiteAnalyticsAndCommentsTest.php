@@ -28,9 +28,9 @@ class WebsiteAnalyticsAndCommentsTest extends TestCase
         $this->withCookie('aec_visitor', $visitorCookie)->get(route('courses.show', $course))->assertOk();
         $this->withCookie('aec_visitor', $visitorCookie)->get(route('news.show', $post->slug))->assertOk();
 
-        $this->assertGreaterThanOrEqual(1, \\App\\Models\\PageView::where('view_type', 'site')->count());
-        $this->assertGreaterThanOrEqual(1, \\App\\Models\\PageView::where('view_type', 'course')->where('viewable_id', $course->id)->count());
-        $this->assertGreaterThanOrEqual(1, \\App\\Models\\PageView::where('view_type', 'post')->where('viewable_id', $post->id)->count());
+        $this->assertGreaterThanOrEqual(1, \App\Models\PageView::where('view_type', 'site')->count());
+        $this->assertGreaterThanOrEqual(1, \App\Models\PageView::where('view_type', 'course')->where('viewable_id', $course->id)->count());
+        $this->assertGreaterThanOrEqual(1, \App\Models\PageView::where('view_type', 'post')->where('viewable_id', $post->id)->count());
         $this->assertDatabaseHas('page_views', ['view_type' => 'course', 'viewable_id' => $course->id]);
         $this->assertDatabaseHas('page_views', ['view_type' => 'post', 'viewable_id' => $post->id]);
     }
