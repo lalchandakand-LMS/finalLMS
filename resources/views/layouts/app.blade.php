@@ -11,6 +11,28 @@
         $googleAnalyticsId = $hasSettingsTable ? \App\Models\Setting::value('google_analytics_id') : null;
         $googleTagManagerId = $hasSettingsTable ? \App\Models\Setting::value('google_tag_manager_id') : null;
         $facebookPixelId = $hasSettingsTable ? \App\Models\Setting::value('facebook_pixel_id') : null;
+
+        $themeDefaults = [
+            'theme_primary' => '#1769e8',
+            'theme_primary_dark' => '#0b2253',
+            'theme_accent' => '#268cf5',
+            'theme_background' => '#f3f6fb',
+            'theme_surface' => '#ffffff',
+            'theme_surface_alt' => '#eef4ff',
+            'theme_text' => '#18212f',
+            'theme_muted' => '#5b6576',
+            'theme_border' => '#dfe7f6',
+            'theme_sidebar_start' => '#102b63',
+            'theme_sidebar_end' => '#0b1d42',
+            'theme_hero_start' => '#0b2253',
+            'theme_hero_middle' => '#0759c8',
+            'theme_hero_end' => '#268cf5',
+        ];
+        $themeColors = [];
+        foreach ($themeDefaults as $themeKey => $themeDefault) {
+            $savedColor = $hasSettingsTable ? (string) \App\Models\Setting::value($themeKey, $themeDefault) : $themeDefault;
+            $themeColors[$themeKey] = preg_match('/^#[0-9a-fA-F]{6}$/', $savedColor) ? $savedColor : $themeDefault;
+        }
         $marketingConsent = request()->cookie('marketing_consent') === 'accepted';
         $isAdminLayout = auth()->check() && auth()->user()->isAdmin();
         $visitorPopup = null;
@@ -50,24 +72,30 @@
     @endif
     <style>
         :root {
-            --bg: #f3f6fb;
-            --panel: #ffffff;
-            --panel-alt: #eef4ff;
-            --primary: #1546a8;
-            --primary-dark: #0f2d6b;
+            --bg: {{ $themeColors['theme_background'] }};
+            --panel: {{ $themeColors['theme_surface'] }};
+            --panel-alt: {{ $themeColors['theme_surface_alt'] }};
+            --primary: {{ $themeColors['theme_primary'] }};
+            --primary-dark: {{ $themeColors['theme_primary_dark'] }};
+            --accent: {{ $themeColors['theme_accent'] }};
+            --admin-sidebar-start: {{ $themeColors['theme_sidebar_start'] }};
+            --admin-sidebar-end: {{ $themeColors['theme_sidebar_end'] }};
+            --dashboard-hero-start: {{ $themeColors['theme_hero_start'] }};
+            --dashboard-hero-middle: {{ $themeColors['theme_hero_middle'] }};
+            --dashboard-hero-end: {{ $themeColors['theme_hero_end'] }};
             --green: #1f9d61;
-            --text: #18212f;
-            --muted: #5b6576;
-            --border: #dfe7f6;
+            --text: {{ $themeColors['theme_text'] }};
+            --muted: {{ $themeColors['theme_muted'] }};
+            --border: {{ $themeColors['theme_border'] }};
             --danger: #b42318;
-            --shadow: 0 14px 34px rgba(21, 70, 168, 0.12);
+            --shadow: 0 14px 34px color-mix(in srgb, var(--primary) 12%, transparent);
         }
 
         * { box-sizing: border-box; }
-        body.admin-shell { background:#f5f7fb; }
+        body.admin-shell { background:var(--bg); }
         .admin-shell .topbar { margin-left:252px; }
         .admin-shell .nav { max-width:none; padding:14px 26px; }
-        .admin-sidebar { position:fixed; inset:0 auto 0 0; z-index:30; width:252px; padding:24px 15px; overflow-y:auto; color:#dbe7ff; background:linear-gradient(180deg,#102b63,#0b1d42); }
+        .admin-sidebar { position:fixed; inset:0 auto 0 0; z-index:30; width:252px; padding:24px 15px; overflow-y:auto; color:#dbe7ff; background:linear-gradient(180deg,var(--admin-sidebar-start),var(--admin-sidebar-end)); }
         .admin-sidebar-brand { display:flex; align-items:center; gap:11px; padding:4px 10px 24px; color:#fff; font-weight:800; font-size:1rem; line-height:1.35; }
         .admin-sidebar-brand span:first-child { display:grid; place-items:center; width:39px; height:39px; border-radius:12px; background:#ffffff1c; font-size:1.2rem; }
         .admin-sidebar-label { margin:15px 10px 8px; color:#91a9d0; font-size:.68rem; font-weight:800; letter-spacing:.13em; text-transform:uppercase; }
@@ -86,8 +114,8 @@
             margin: 0;
             font-family: Arial, Helvetica, sans-serif;
             background:
-                radial-gradient(circle at top left, rgba(21,70,168,0.12), transparent 28%),
-                linear-gradient(180deg, #eef5ff 0%, #f9fbff 100%);
+                radial-gradient(circle at top left, color-mix(in srgb, var(--primary) 12%, transparent), transparent 28%),
+                linear-gradient(180deg, var(--panel-alt) 0%, var(--bg) 100%);
             color: var(--text);
         }
         a { color: var(--primary); text-decoration: none; }
@@ -99,7 +127,7 @@
             box-shadow: 0 18px 32px rgba(16, 36, 78, 0.08);
         }
         .topbar {
-            background: rgba(255,255,255,0.95);
+            background: color-mix(in srgb, var(--panel) 95%, transparent);
             border-bottom: 1px solid var(--border);
             position: sticky; top: 0; z-index: 10;
             backdrop-filter: blur(8px);
@@ -112,21 +140,21 @@
         }
         .nav-links { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
         .nav-links a, .nav-links button {
-            border: 1px solid var(--border); background: #fff; border-radius: 10px; padding: 9px 14px; color: var(--text); font-weight: 600; cursor: pointer;
+            border: 1px solid var(--border); background: var(--panel); border-radius: 10px; padding: 9px 14px; color: var(--text); font-weight: 600; cursor: pointer;
         }
         .nav-links a:hover, .nav-links button:hover { background: var(--panel-alt); border-color: var(--primary); }
         .nav-links button { background: var(--primary); color: white; border-color: var(--primary); }
         .container { max-width: 1200px; margin: 0 auto; padding: 30px 24px 60px; }
         .hero {
-            display: grid; grid-template-columns: 1.3fr 0.9fr; gap: 30px; background: linear-gradient(135deg, rgba(255,255,255,0.98), rgba(238,244,255,0.95)); border: 1px solid var(--border); border-radius: 24px; padding: 36px; box-shadow: var(--shadow);
+            display: grid; grid-template-columns: 1.3fr 0.9fr; gap: 30px; background: linear-gradient(135deg, var(--panel), var(--panel-alt)); border: 1px solid var(--border); border-radius: 24px; padding: 36px; box-shadow: var(--shadow);
         }
         .hero h1 { font-size: clamp(2rem, 2.8vw, 3.2rem); margin: 0 0 14px; color: var(--primary-dark); }
         .hero p { color: var(--muted); line-height: 1.7; margin: 0 0 24px; }
         .cta-row { display: flex; gap: 12px; flex-wrap: wrap; }
         .btn { display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; padding: 12px 18px; font-weight: 700; border: 1px solid transparent; cursor: pointer; }
         .btn:hover, .nav-links a:hover, .nav-links button:hover { transform: translateY(-1px); }
-        .btn.primary { background: var(--primary); color: white; box-shadow: 0 10px 18px rgba(21,70,168,0.18); }
-        .btn.secondary { background: #fff; border-color: var(--border); color: var(--text); }
+        .btn.primary { background: var(--primary); color: white; box-shadow: 0 10px 18px color-mix(in srgb, var(--primary) 18%, transparent); }
+        .btn.secondary { background: var(--panel); border-color: var(--border); color: var(--text); }
         .stats { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; margin-top: 22px; }
         .stat { background: var(--panel-alt); border: 1px solid var(--border); border-radius: 18px; padding: 18px; }
         .stat strong { display: block; font-size: 1.6rem; }
@@ -139,23 +167,23 @@
         .card { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 18px; }
         .card h3 { margin-top: 0; }
         .course-list { display: grid; gap: 16px; }
-        .course-item { border: 1px solid var(--border); border-radius: 16px; padding: 18px; background: #fff; }
+        .course-item { border: 1px solid var(--border); border-radius: 16px; padding: 18px; background: var(--panel); }
         .badge { display: inline-block; padding: 6px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 700; }
         .badge.success { background: rgba(31,157,97,0.12); color: var(--green); }
         .badge.warning { background: rgba(255,167,38,0.12); color: #a25a00; }
         .badge.info { background: rgba(21,70,168,0.12); color: var(--primary); }
         .muted { color: var(--muted); }
         .dash-summary { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 16px; margin-bottom: 24px; }
-        .summary-box { background: #fff; border: 1px solid var(--border); border-radius: 18px; padding: 20px; }
+        .summary-box { background: var(--panel); border: 1px solid var(--border); border-radius: 18px; padding: 20px; }
         .summary-box strong { display: block; font-size: 1.7rem; }
         form { display: block; }
         label { display: block; margin-bottom: 10px; font-weight: 700; }
         input, select, textarea {
-            width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); font-size: 1rem; background: #fff; font-family: inherit;
+            width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); font-size: 1rem; background: var(--panel); font-family: inherit;
         }
         textarea { resize: vertical; min-height: 140px; }
         .auth-box {
-            max-width: 480px; margin: 40px auto; background: #fff; border:1px solid var(--border); border-radius:20px; padding: 30px; box-shadow: var(--shadow);
+            max-width: 480px; margin: 40px auto; background: var(--panel); border:1px solid var(--border); border-radius:20px; padding: 30px; box-shadow: var(--shadow);
         }
         .error { color: var(--danger); font-weight: 700; margin-top: 12px; }
         .flash { margin-bottom: 20px; padding: 12px 14px; border-radius: 10px; }
@@ -330,7 +358,7 @@
             $popupIsExternal = $popupButtonUrl && str_starts_with($popupButtonUrl, 'https://') && !str_starts_with($popupButtonUrl, url('/'));
         @endphp
         <div id="visitor-promo-overlay" role="dialog" aria-modal="true" aria-labelledby="visitor-promo-title" aria-describedby="visitor-promo-description" data-popup-id="{{ $visitorPopup->id }}" data-frequency="{{ $visitorPopup->frequency }}" data-delay="{{ $visitorPopup->delay_seconds }}" hidden style="position:fixed;inset:0;z-index:1000;background:rgba(8,18,40,.72);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:18px;">
-            <section style="position:relative;width:min(620px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:20px;box-shadow:0 28px 90px rgba(0,0,0,.35);">
+            <section style="position:relative;width:min(620px,100%);max-height:90vh;overflow:auto;background:var(--panel);border-radius:20px;box-shadow:0 28px 90px rgba(0,0,0,.35);">
                 <button id="visitor-promo-close" type="button" aria-label="{{ __('Close popup') }}" style="position:absolute;right:12px;top:12px;z-index:2;border:0;border-radius:50%;width:40px;height:40px;background:rgba(15,23,42,.82);color:#fff;font-size:25px;cursor:pointer;">&times;</button>
                 @if($visitorPopup->image)
                     <img src="{{ $visitorPopup->image->url }}" alt="{{ $visitorPopup->title }}" style="display:block;width:100%;max-height:290px;object-fit:cover;">
