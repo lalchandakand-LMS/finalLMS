@@ -695,5 +695,12 @@
     "Verified pre-activation backup": "যাচাইকৃত প্রি-অ্যাক্টিভেশন ব্যাকআপ",
     "Backup expires": "ব্যাকআপের মেয়াদ শেষ",
     "Code snapshot SHA-256": "কোড স্ন্যাপশট SHA-256",
-    "Database/media backup SHA-256": "ডাটাবেস/মিডিয়া ব্যাকআপ SHA-256"
+    "Database/media backup SHA-256": "ডাটাবেস/মিডিয়া ব্যাকআপ SHA-256",
+    "Or upload video (MP4, M4V, MOV, WebM; max 512 MB)": "অথবা ভিডিও আপলোড করুন (MP4, M4V, MOV, WebM; সর্বোচ্চ ৫১২ MB)",
+    "Video thumbnail": "ভিডিও থাম্বনেইল",
+    "Replace/upload video (MP4, M4V, MOV, WebM; max 512 MB)": "ভিডিও পরিবর্তন/আপলোড করুন (MP4, M4V, MOV, WebM; সর্বোচ্চ ৫১২ MB)",
+    "Replace thumbnail": "থাম্বনেইল পরিবর্তন করুন",
+    "Remove uploaded video": "আপলোড করা ভিডিও মুছুন",
+    "Remove thumbnail": "থাম্বনেইল মুছুন",
+    "Your browser does not support HTML video.": "আপনার ব্রাউজার HTML ভিডিও সমর্থন করে না।"
 }
