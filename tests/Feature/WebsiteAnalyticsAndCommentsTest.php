@@ -17,6 +17,8 @@ class WebsiteAnalyticsAndCommentsTest extends TestCase
 
     public function test_public_course_and_post_views_are_counted_once_per_session_per_day(): void
     {
+        // Keep this test focused on visitor de-duplication, not Laravel cookie encryption.
+        $this->withoutMiddleware(\Illuminate\Cookie\Middleware\EncryptCookies::class);
         $teacher = User::factory()->create(['role' => 'teacher']);
         $author = User::factory()->create(['role' => 'admin']);
         $course = Course::factory()->create(['teacher_id' => $teacher->id, 'status' => 'published']);
