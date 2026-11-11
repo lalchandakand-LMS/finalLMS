@@ -46,7 +46,7 @@
             <li>Show errors without exposing provider credentials.</li>
         </ul>
         <div class="badge warning">Read-only diagnostic mode</div>
-        <p class="muted" style="margin-top:12px;">This release does not yet edit repository files or deploy updates. GitHub branch-based patch creation, diff review and automated test feedback are the next gated development stage. Never apply an AI suggestion directly to the live website.</p>
+        <p class="muted" style="margin-top:12px;">If the server administrator enables repository context, this workspace can read only explicitly allow-listed source files in read-only mode. It never writes to GitHub, creates commits, merges, or deploys. Branch-based patch creation, diff review and automated test feedback remain a separate future stage with mandatory human approval. Never apply an AI suggestion directly to the live website.</p>
     </section>
 </div>
 
