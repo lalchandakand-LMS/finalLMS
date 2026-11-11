@@ -16,6 +16,7 @@ use App\Http\Controllers\SmsCampaignController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\LiveClassController;
 use App\Http\Controllers\ExamController;
+use App\Http\Controllers\ExamAnswerController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\FinanceReportController;
 use App\Http\Controllers\ExpenseController;
@@ -134,6 +135,7 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         Route::get('/my/exams', [ExamController::class, 'studentExams'])->name('student.exams.index');
         Route::get('/exams/{exam}', [ExamController::class, 'studentIndex'])->name('student.exams.show');
         Route::post('/exams/{exam}/start', [ExamController::class, 'start'])->name('student.exams.start');
+        Route::post('/exam-attempts/{attempt}/answers', [ExamAnswerController::class, 'save'])->middleware('throttle:120,1')->name('student.exams.answers.save');
         Route::post('/exam-attempts/{attempt}/submit', [ExamController::class, 'submit'])->name('student.exams.submit');
         Route::post('/assignments/{assignment}/submit', [AssignmentController::class, 'submit'])->name('student.assignments.submit');
     });
