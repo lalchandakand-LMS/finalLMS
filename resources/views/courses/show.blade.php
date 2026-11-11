@@ -23,6 +23,23 @@
                 <span class="badge success">{{ __('Price:') }} BDT {{ number_format($course->price, 2) }}</span>
                 <span class="badge warning">{{ __('Status:') }} {{ __(ucfirst($course->status)) }}</span>
             </div>
+            @auth
+                @if(auth()->user()->isStudent())
+                    @if($isWishlisted)
+                        <form method="POST" action="{{ route('student.wishlist.destroy', $course) }}" style="margin-top:14px;">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn secondary">{{ __('Remove from wishlist') }}</button>
+                            <a class="btn secondary" href="{{ route('student.wishlist.index') }}">{{ __('View wishlist') }}</a>
+                        </form>
+                    @else
+                        <form method="POST" action="{{ route('student.wishlist.store', $course) }}" style="margin-top:14px;">
+                            @csrf
+                            <button type="submit" class="btn secondary">{{ __('Add to wishlist') }} ♡</button>
+                        </form>
+                    @endif
+                @endif
+            @endauth
 
             <div style="margin-top: 28px;">
                 <h2 style="margin-top:0;">{{ __('Learning path') }}</h2>

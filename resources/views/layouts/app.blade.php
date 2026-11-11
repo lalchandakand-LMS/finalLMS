@@ -238,6 +238,7 @@
             @elseif(auth()->user()->isStudent())
                 <div class="admin-sidebar-label">My learning</div>
                 <a class="{{ request()->routeIs('student.courses.*') ? 'active' : '' }}" href="{{ route('student.courses.index') }}"><span>📚</span><span class="nav-text">My courses</span></a>
+                <a class="{{ request()->routeIs('student.wishlist.*') ? 'active' : '' }}" href="{{ route('student.wishlist.index') }}"><span>♡</span><span class="nav-text">Wishlist</span></a>
                 <a class="{{ request()->routeIs('student.attendance.*') ? 'active' : '' }}" href="{{ route('student.attendance.index') }}"><span>🗓️</span><span class="nav-text">Attendance</span></a>
                 <a class="{{ request()->routeIs('student.exams.*') ? 'active' : '' }}" href="{{ route('student.exams.index') }}"><span>📝</span><span class="nav-text">Exams</span></a>
                 <a class="{{ request()->routeIs('student.invoices.*') ? 'active' : '' }}" href="{{ route('student.invoices.index') }}"><span>💳</span><span class="nav-text">My fees</span></a>

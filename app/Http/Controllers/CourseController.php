@@ -11,6 +11,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
@@ -140,6 +141,11 @@ class CourseController extends Controller
 
         $course->load('teacher', 'enrollments.user', 'lessons');
 
+        $isWishlisted = $user?->isStudent() && DB::table('course_wishlists')
+            ->where('user_id', $user->id)
+            ->where('course_id', $course->id)
+            ->exists();
+
         $enrollment = null;
         if (Auth::check()) {
             $enrollment = $course->enrollments()->where('user_id', Auth::id())->first();
@@ -164,7 +170,7 @@ class CourseController extends Controller
             ->orderBy('starts_at')
             ->get();
 
-        return view('courses.show', compact('course', 'enrollment', 'payment', 'paymentMethods', 'batches', 'canViewLessons', 'lessonProgress'));
+        return view('courses.show', compact('course', 'enrollment', 'payment', 'paymentMethods', 'batches', 'canViewLessons', 'lessonProgress', 'isWishlisted'));
     }
 
     public function showLesson(Course $course, Lesson $lesson): View
