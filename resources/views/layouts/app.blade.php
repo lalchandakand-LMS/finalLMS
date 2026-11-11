@@ -322,6 +322,8 @@
                 : ($visitorPopup->button_url ? (str_starts_with($visitorPopup->button_url, '/') ? url($visitorPopup->button_url) : $visitorPopup->button_url) : null);
             $popupButtonLabel = $visitorPopup->button_label ?: ($visitorPopup->popup_type === 'registration' ? __('Register now') : __('Learn more'));
             $popupIsExternal = $popupButtonUrl && str_starts_with($popupButtonUrl, 'https://') && !str_starts_with($popupButtonUrl, url('/'));
+            $popupBadgeClass = $visitorPopup->popup_type === 'ad' ? 'warning' : ($visitorPopup->popup_type === 'registration' ? 'success' : 'info');
+            $popupBadgeLabel = $visitorPopup->popup_type === 'ad' ? __('Advertisement') : ($visitorPopup->popup_type === 'registration' ? __('Join us') : ucfirst($visitorPopup->popup_type));
         @endphp
         <div id="visitor-promo-overlay" role="dialog" aria-modal="true" aria-labelledby="visitor-promo-title" aria-describedby="visitor-promo-description" data-popup-id="{{ $visitorPopup->id }}" data-frequency="{{ $visitorPopup->frequency }}" data-delay="{{ $visitorPopup->delay_seconds }}" hidden style="position:fixed;inset:0;z-index:1000;background:rgba(8,18,40,.72);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:18px;">
             <section style="position:relative;width:min(620px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:20px;box-shadow:0 28px 90px rgba(0,0,0,.35);">
@@ -330,7 +332,7 @@
                     <img src="{{ $visitorPopup->image->url }}" alt="{{ $visitorPopup->title }}" style="display:block;width:100%;max-height:290px;object-fit:cover;">
                 @endif
                 <div style="padding:26px;">
-                    @if($visitorPopup->popup_type === 'ad')<span class="badge warning">{{ __('Advertisement') }}</span>@elseif($visitorPopup->popup_type === 'registration')<span class="badge success">{{ __('Join us') }}</span>@else<span class="badge info">{{ ucfirst($visitorPopup->popup_type) }}</span>@endif
+                    <span class="badge {{ $popupBadgeClass }}">{{ $popupBadgeLabel }}</span>
                     <h2 id="visitor-promo-title" style="margin:12px 0;color:#14213d;">{{ $visitorPopup->title }}</h2>
                     <p id="visitor-promo-description" style="white-space:pre-line;line-height:1.7;color:#4b5563;">{{ $visitorPopup->body }}</p>
                     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;">
