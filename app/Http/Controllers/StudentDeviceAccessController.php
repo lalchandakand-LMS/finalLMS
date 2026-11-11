@@ -159,6 +159,10 @@ class StudentDeviceAccessController extends Controller
             return back()->withErrors(['email' => 'The provided credentials do not match our records.'])->onlyInput('email');
         }
 
+        if (($user->account_status ?? 'active') !== 'active') {
+            return back()->withErrors(['email' => 'This account is inactive or unavailable. Please contact the academy administrator.'])->onlyInput('email');
+        }
+
         // Keep administrator recovery available while enforcing SMS MFA for all academy-facing roles.
         if ($user->isAdmin()) {
             Auth::login($user);

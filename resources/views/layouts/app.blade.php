@@ -12,6 +12,7 @@
         $googleTagManagerId = $hasSettingsTable ? \App\Models\Setting::value('google_tag_manager_id') : null;
         $facebookPixelId = $hasSettingsTable ? \App\Models\Setting::value('facebook_pixel_id') : null;
         $marketingConsent = request()->cookie('marketing_consent') === 'accepted';
+        $isAdminLayout = auth()->check() && auth()->user()->isAdmin();
         $visitorPopup = null;
         if (\Illuminate\Support\Facades\Schema::hasTable('visitor_popups') && !(auth()->check() && auth()->user()->isAdmin())) {
             $visitorPopupQuery = \App\Models\VisitorPopup::currentlyActive()->with('image')
@@ -47,7 +48,6 @@
             fbq('track','PageView');
         </script>
     @endif
-    @php($isAdminLayout = auth()->check() && auth()->user()->isAdmin())
     <style>
         :root {
             --bg: #f3f6fb;
@@ -187,6 +187,10 @@
             <div class="admin-sidebar-label">Academy</div>
             <a href="{{ route('admin.courses.index') }}"><span>📚</span><span class="nav-text">Courses & lessons</span></a>
             <a href="{{ route('admin.users.index') }}"><span>👥</span><span class="nav-text">Students & teachers</span></a>
+            <a class="{{ request()->routeIs('admin.admissions.*') ? 'active' : '' }}" href="{{ route('admin.admissions.index') }}"><span>📝</span><span class="nav-text">Student admissions</span></a>
+            <a class="{{ request()->routeIs('admin.course-tracking.index') ? 'active' : '' }}" href="{{ route('admin.course-tracking.index') }}"><span>⏱️</span><span class="nav-text">Course sessions</span></a>
+            <a href="{{ route('admin.admissions.index') }}"><span>📝</span><span class="nav-text">Student admissions</span></a>
+            <a href="{{ route('admin.course-tracking.index') }}"><span>⏱️</span><span class="nav-text">Course time tracking</span></a>
             <a class="{{ request()->routeIs('admin.teacher-applications.*') ? 'active' : '' }}" href="{{ route('admin.teacher-applications.index') }}"><span>🪪</span><span class="nav-text">Teacher KYC review</span></a>
             <a class="{{ request()->routeIs('admin.student-devices.*') ? 'active' : '' }}" href="{{ route('admin.student-devices.index') }}"><span>📱</span><span class="nav-text">Device approvals</span></a>
             <a class="{{ request()->routeIs('admin.security.sessions.*') ? 'active' : '' }}" href="{{ route('admin.security.sessions.index') }}"><span>🔐</span><span class="nav-text">Devices & active logins</span></a>
@@ -264,8 +268,11 @@
                     @endif
                     @if(auth()->user()->isTeacher())
                         <a href="{{ route('teacher.batches.index') }}">My batches</a>
+                        <a href="{{ route('teacher.course-tracking.index') }}">{{ __('Course time tracking') }}</a>
                     @endif
                     @if(auth()->user()->isStudent())
+                        <a href="{{ route('student.admission.edit') }}">{{ __('Admission profile') }}</a>
+                        <a href="{{ route('student.course-tracking.index') }}">{{ __('Course check-in/out') }}</a>
                         <a href="{{ route('student.attendance.index') }}">Attendance</a>
                     <a href="{{ route('student.exams.index') }}">Exams</a>
                         <a href="{{ route('student.invoices.index') }}">My fees</a>
@@ -316,7 +323,7 @@
             window.location.reload();
         }
     </script>
-    @if($visitorPopup)
+    <?php if ($visitorPopup): ?>
         @php
             $popupButtonUrl = $visitorPopup->popup_type === 'registration'
                 ? (auth()->check() ? route('dashboard') : route('register'))
@@ -394,7 +401,7 @@
                 }, Math.max(0, Math.min(60, Number(overlay.dataset.delay || 0))) * 1000);
             })();
         </script>
-    @endif
+    <?php endif; ?>
     @stack('scripts')
 </body>
 </html>

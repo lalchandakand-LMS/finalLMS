@@ -25,7 +25,7 @@ class AllRoleDeviceSecurityTest extends TestCase
 
     public function test_teacher_branch_manager_and_guardian_need_sms_otp_on_a_new_device(): void
     {
-        foreach (['teacher', 'branch_manager', 'guardian', 'accountant'] as $role) {
+        foreach (['teacher', 'branch_manager', 'guardian', 'accountant'] as $index => $role) {
             $code = null;
             Http::fake(function ($request) use (&$code) {
                 preg_match('/code is ([0-9]{6})/', $request['Body'], $matches);
@@ -39,13 +39,13 @@ class AllRoleDeviceSecurityTest extends TestCase
                 'phone_number' => '+88017'.random_int(10000000, 99999999),
             ]);
 
-            $this->post(route('login.post'), ['email' => $user->email, 'password' => 'password'])
+            $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.'.($index + 10)])->post(route('login.post'), ['email' => $user->email, 'password' => 'password'])
                 ->assertRedirect(route('student-device.verify'));
             $device = StudentDevice::where('user_id', $user->id)->firstOrFail();
             $this->assertSame('pending_phone_verification', $device->status);
             $this->assertNotNull($code);
 
-            $this->post(route('student-device.verify-phone'), ['code' => $code])
+            $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.'.($index + 10)])->post(route('student-device.verify-phone'), ['code' => $code])
                 ->assertRedirect('/dashboard');
 
             $this->assertAuthenticatedAs($user);
