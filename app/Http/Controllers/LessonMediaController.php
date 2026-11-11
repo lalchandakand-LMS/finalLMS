@@ -33,14 +33,23 @@ class LessonMediaController extends Controller
             ? (mime_content_type($absolutePath) ?: 'video/mp4')
             : ($lesson->attachment_mime ?: 'application/pdf');
 
-        return response()->file($absolutePath, [
+        $response = response()->file($absolutePath, [
             'Content-Type' => $mime,
             'Content-Disposition' => 'inline; filename="' . ($type === 'video' ? 'lesson-video' : 'lesson-notes') . '"',
-            'Cache-Control' => 'private, no-store, no-cache, must-revalidate, max-age=0',
             'Pragma' => 'no-cache',
             'X-Content-Type-Options' => 'nosniff',
             'X-Frame-Options' => 'SAMEORIGIN',
             'Referrer-Policy' => 'same-origin',
         ]);
+
+        // BinaryFileResponse may mark file responses public during preparation;
+        // explicitly force private caching for enrolled course media.
+        $response->setPrivate();
+        $response->headers->addCacheControlDirective('no-store');
+        $response->headers->addCacheControlDirective('no-cache');
+        $response->headers->addCacheControlDirective('must-revalidate');
+        $response->headers->set('max-age', '0');
+
+        return $response;
     }
 }
