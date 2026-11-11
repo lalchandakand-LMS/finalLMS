@@ -84,6 +84,15 @@ class BackupController extends Controller
             }
         }
 
+        if (in_array('users', $tableNames, true)) {
+            foreach ($tables['users'] as $user) {
+                $profilePath = $user['profile_photo_path'] ?? null;
+                if (is_string($profilePath) && str_starts_with($profilePath, 'profile-photos/') && Storage::disk('public')->exists($profilePath)) {
+                    $mediaFiles[$profilePath] = base64_encode(Storage::disk('public')->get($profilePath));
+                }
+            }
+        }
+
         $privateFiles = [];
         foreach (Storage::disk('local')->allFiles('assignment-submissions') as $privatePath) {
             $privateFiles[$privatePath] = base64_encode(Storage::disk('local')->get($privatePath));
@@ -155,7 +164,7 @@ class BackupController extends Controller
 
             $mediaToRestore = [];
             foreach (($payload['public_media'] ?? []) as $mediaPath => $encoded) {
-                abort_unless(is_string($mediaPath) && str_starts_with($mediaPath, 'media/') && ! Str::contains($mediaPath, ['..', '\\']), 422, 'Unsafe media path in backup.');
+                abort_unless(is_string($mediaPath) && (str_starts_with($mediaPath, 'media/') || str_starts_with($mediaPath, 'profile-photos/')) && ! Str::contains($mediaPath, ['..', '\\']), 422, 'Unsafe media path in backup.');
                 $contents = base64_decode($encoded, true);
                 abort_unless(is_string($contents), 422, 'A media file in this backup is damaged.');
                 $mediaToRestore[$mediaPath] = $contents;
