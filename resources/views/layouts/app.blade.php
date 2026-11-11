@@ -314,7 +314,7 @@
             window.location.reload();
         }
     </script>
-    @isset($visitorPopup)
+    @php if (isset($visitorPopup)): @endphp
         @php
             $popupButtonUrl = $visitorPopup->popup_type === 'registration'
                 ? (auth()->check() ? route('dashboard') : route('register'))
@@ -382,7 +382,7 @@
                 }, Math.max(0, Math.min(60, Number(overlay.dataset.delay || 0))) * 1000);
             })();
         </script>
-    @endisset
+    @php endif; @endphp
     @stack('scripts')
 </body>
 </html>
