@@ -5,6 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Certificate;
 use App\Models\Course;
 use App\Models\Enrollment;
+use App\Models\Lesson;
+use App\Models\LessonProgress;
+use App\Models\AssignmentSubmission;
+use App\Models\ExamAttempt;
+use App\Models\Attendance;
 use App\Models\DashboardAnnouncement;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
@@ -37,6 +42,32 @@ class DashboardController extends Controller
 
         $recentCertificates = $recentCertificatesQuery->take(5)->get();
 
+        $studentInsights = null;
+
+        if ($user->isStudent()) {
+            $studentEnrollments = Enrollment::where('user_id', $user->id)
+                ->whereIn('status', ['active', 'completed'])
+                ->get(['course_id']);
+            $studentCourseIds = $studentEnrollments->pluck('course_id')->unique()->values();
+
+            $totalLessons = $studentCourseIds->isEmpty()
+                ? 0
+                : Lesson::whereIn('course_id', $studentCourseIds)->count();
+            $completedLessons = LessonProgress::where('user_id', $user->id)
+                ->whereHas('lesson', fn ($query) => $query->whereIn('course_id', $studentCourseIds))
+                ->count();
+
+            $studentInsights = [
+                'enrolled_courses' => $studentEnrollments->count(),
+                'total_lessons' => $totalLessons,
+                'completed_lessons' => $completedLessons,
+                'progress_percent' => $totalLessons > 0 ? (int) round(($completedLessons / $totalLessons) * 100) : 0,
+                'assignments_submitted' => AssignmentSubmission::where('student_id', $user->id)->count(),
+                'exams_attempted' => ExamAttempt::where('student_id', $user->id)->count(),
+                'attendance_marked' => Attendance::where('student_id', $user->id)->count(),
+            ];
+        }
+
         $stats = [
             'courses' => Course::count(),
             'students' => \App\Models\User::where('role', 'student')->count(),
@@ -44,7 +75,7 @@ class DashboardController extends Controller
             'certificates' => Certificate::count(),
         ];
 
-        return view('dashboard', compact('user', 'courses', 'enrolledCourses', 'recentCertificates', 'stats', 'announcementSlides'));
+        return view('dashboard', compact('user', 'courses', 'enrolledCourses', 'recentCertificates', 'stats', 'announcementSlides', 'studentInsights'));
     }
 
     public function certificate(Certificate $certificate): View
