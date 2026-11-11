@@ -19,6 +19,11 @@ class Lesson extends Model
         'order',
         'is_preview',
         'video_url',
+        'attachment_path',
+        'attachment_name',
+        'attachment_mime',
+        'video_path',
+        'video_name',
     ];
 
     public function course(): BelongsTo
