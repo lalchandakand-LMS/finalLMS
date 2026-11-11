@@ -9,6 +9,7 @@ use App\Models\LessonProgress;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Response;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -167,7 +168,7 @@ class CourseController extends Controller
         return view('courses.show', compact('course', 'enrollment', 'payment', 'paymentMethods', 'batches', 'canViewLessons', 'lessonProgress'));
     }
 
-    public function showLesson(Course $course, Lesson $lesson): View
+    public function showLesson(Course $course, Lesson $lesson): Response
     {
         abort_unless($lesson->course_id === $course->id, 404);
         $user = Auth::user();
