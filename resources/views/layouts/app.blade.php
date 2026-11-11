@@ -334,7 +334,9 @@
                     <h2 id="visitor-promo-title" style="margin:12px 0;color:#14213d;">{{ $visitorPopup->title }}</h2>
                     <p id="visitor-promo-description" style="white-space:pre-line;line-height:1.7;color:#4b5563;">{{ $visitorPopup->body }}</p>
                     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;">
-                        @if($popupButtonUrl)<a class="btn primary" href="{{ $popupButtonUrl }}" @if($popupIsExternal) target="_blank" rel="sponsored noopener noreferrer" @elseif($visitorPopup->popup_type === 'ad') rel="sponsored noopener" @endif>{{ $popupButtonLabel }}</a>@endif
+                        @if($popupButtonUrl)
+                            <a class="btn primary" href="{{ $popupButtonUrl }}" target="{{ $popupIsExternal ? '_blank' : '_self' }}" rel="{{ $popupIsExternal || $visitorPopup->popup_type === 'ad' ? 'sponsored noopener noreferrer' : 'noopener noreferrer' }}">{{ $popupButtonLabel }}</a>
+                        @endif
                         <button id="visitor-promo-dismiss" type="button" class="btn secondary">{{ __('Maybe later') }}</button>
                     </div>
                 </div>
