@@ -231,7 +231,7 @@
                 <a href="{{ route('pages.contact') }}">{{ __('Contact') }}</a>
                 <a href="{{ route('pages.faq') }}">{{ __('FAQ') }}</a>
                 <a href="{{ route('news.index') }}">{{ __('Blog & News') }}</a>
-                @auth
+                @if(auth()->check())
                     <a href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a>
                     <a href="{{ route('profile.edit') }}">{{ __('Profile') }}</a>
                     <a href="{{ route('live-classes.index') }}">{{ __('Live classes') }}</a>
@@ -277,7 +277,7 @@
                     <a href="{{ route('login') }}">{{ __('Login') }}</a>
                     <a href="{{ route('register') }}">{{ __('Register') }}</a>
                     <a href="{{ route('teacher.apply') }}">Teacher apply</a>
-                @endauth
+                @endif
             </div>
         </nav>
     </header>
