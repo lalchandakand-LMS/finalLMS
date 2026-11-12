@@ -23,7 +23,7 @@
 @if($order->status==='completed')
 @foreach($order->items as $item)
 @if($item->product_type==='ebook')
-@php($permission=\App\Models\DownloadPermission::where('order_item_id',$item->id)->where('user_id',auth()->id())->first())
+@php($permission=$item->downloadPermissions->firstWhere('user_id', auth()->id()))
 @if($permission && !$permission->revoked_at)
     <p><a class="btn secondary" href="{{ route('store.reader',$permission) }}" target="_blank" rel="noopener">Read {{ $item->product_name }} online</a> <a class="btn secondary" href="{{ route('store.download',$permission) }}">Download PDF</a></p>
 @elseif($permission && $permission->revoked_at)

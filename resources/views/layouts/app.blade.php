@@ -279,6 +279,13 @@
     <header class="topbar">
         <nav class="nav">
             <a href="/{{ auth()->check() ? 'dashboard' : '' }}" class="brand">{{ config('app.name') }}</a>
+            <a href="{{ route('store.index') }}" class="btn secondary" style="margin-left:10px;">Digital Store</a>
+            @auth
+                @if(auth()->user()->isStudent())
+                    <a href="{{ route('store.cart') }}" class="btn secondary">Cart</a>
+                    <a href="{{ route('store.orders') }}" class="btn secondary">My Orders</a>
+                @endif
+            @endauth
             @if($isAdminLayout)
             <div class="nav-links">
                 <form method="POST" action="{{ route('locale.update') }}" class="inline-form" style="display:inline-flex;gap:6px;align-items:center;">

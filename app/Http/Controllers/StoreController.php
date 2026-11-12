@@ -205,7 +205,7 @@ class StoreController extends Controller
 
     public function orders(Request $request): View
     {
-        $orders = Order::with(['items', 'paymentTransactions'])->where('user_id', $request->user()->id)->latest()->paginate(15);
+        $orders = Order::with(['items.downloadPermissions', 'paymentTransactions'])->where('user_id', $request->user()->id)->latest()->paginate(15);
         return view('store.orders', compact('orders'));
     }
 
