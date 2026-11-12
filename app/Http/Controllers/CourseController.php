@@ -124,16 +124,14 @@ class CourseController extends Controller
 
     public function destroy(Course $course): RedirectResponse
     {
-        if ($course->image_path) {
-            Storage::disk('public')->delete($course->image_path);
-        }
         $course->load('lessons');
-        foreach ($course->lessons as $lesson) {
-            if ($lesson->video_path) Storage::disk('lesson_videos')->delete($lesson->video_path);
-            if ($lesson->thumbnail_path) Storage::disk('public')->delete($lesson->thumbnail_path);
-        }
+        $videoPaths = $course->lessons->pluck('video_path')->filter()->all();
+        $thumbnailPaths = $course->lessons->pluck('thumbnail_path')->filter()->all();
+        $imagePath = $course->image_path;
         $course->delete();
-
+        if ($imagePath) Storage::disk('public')->delete($imagePath);
+        foreach ($videoPaths as $path) Storage::disk('lesson_videos')->delete($path);
+        foreach ($thumbnailPaths as $path) Storage::disk('public')->delete($path);
         return redirect()->route('admin.courses.index')->with('success', 'Course deleted successfully.');
     }
 
@@ -182,11 +180,11 @@ class CourseController extends Controller
             && $course->enrollments()->where('user_id', $user->id)->whereIn('status', ['active', 'completed'])->exists();
         abort_unless($lesson->is_preview || $canManageCourse || $isEnrolled, 403);
         abort_unless(Storage::disk('lesson_videos')->exists($lesson->video_path), 404);
-
         return response()->file(Storage::disk('lesson_videos')->path($lesson->video_path), [
             'Content-Type' => Storage::disk('lesson_videos')->mimeType($lesson->video_path) ?: 'application/octet-stream',
             'Cache-Control' => 'private, no-store, max-age=0',
             'X-Content-Type-Options' => 'nosniff',
+            'Accept-Ranges' => 'bytes',
         ]);
     }
 
@@ -254,17 +252,25 @@ class CourseController extends Controller
             'thumbnail' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'is_preview' => ['sometimes', 'boolean'],
         ]);
-
         $validated['is_preview'] = $request->boolean('is_preview');
         unset($validated['video_file'], $validated['thumbnail']);
+        $videoPath = $thumbnailPath = null;
         if ($request->hasFile('video_file')) {
-            $validated['video_path'] = $request->file('video_file')->store('', 'lesson_videos');
+            $videoPath = $request->file('video_file')->store('', 'lesson_videos');
+            $validated['video_path'] = $videoPath;
             $validated['video_url'] = null;
         }
         if ($request->hasFile('thumbnail')) {
-            $validated['thumbnail_path'] = $request->file('thumbnail')->store('course-thumbnails', 'public');
+            $thumbnailPath = $request->file('thumbnail')->store('course-thumbnails', 'public');
+            $validated['thumbnail_path'] = $thumbnailPath;
         }
-        $course->lessons()->create($validated);
+        try {
+            $course->lessons()->create($validated);
+        } catch (\Throwable $exception) {
+            if ($videoPath) Storage::disk('lesson_videos')->delete($videoPath);
+            if ($thumbnailPath) Storage::disk('public')->delete($thumbnailPath);
+            throw $exception;
+        }
 
         return $user->isTeacher()
             ? redirect()->route('teacher.courses.lessons.index', $course)->with('success', 'Lesson added successfully.')
@@ -309,33 +315,37 @@ class CourseController extends Controller
         ]);
         $validated['is_preview'] = $request->boolean('is_preview');
         unset($validated['video_file'], $validated['thumbnail'], $validated['remove_video'], $validated['remove_thumbnail']);
-
-        $oldVideoPath = null;
-        $oldThumbnailPath = null;
-
+        $newVideoPath = $newThumbnailPath = $oldVideoPath = $oldThumbnailPath = null;
         if ($request->hasFile('video_file')) {
-            $validated['video_path'] = $request->file('video_file')->store('', 'lesson_videos');
+            $newVideoPath = $request->file('video_file')->store('', 'lesson_videos');
+            $validated['video_path'] = $newVideoPath;
             $validated['video_url'] = null;
             $oldVideoPath = $lesson->video_path;
         } elseif ($request->boolean('remove_video')) {
             $validated['video_path'] = null;
             $validated['video_url'] = null;
             $oldVideoPath = $lesson->video_path;
+        } elseif ($request->filled('video_url')) {
+            $validated['video_path'] = null;
+            $oldVideoPath = $lesson->video_path;
         }
-
         if ($request->hasFile('thumbnail')) {
-            $validated['thumbnail_path'] = $request->file('thumbnail')->store('course-thumbnails', 'public');
+            $newThumbnailPath = $request->file('thumbnail')->store('course-thumbnails', 'public');
+            $validated['thumbnail_path'] = $newThumbnailPath;
             $oldThumbnailPath = $lesson->thumbnail_path;
         } elseif ($request->boolean('remove_thumbnail')) {
             $validated['thumbnail_path'] = null;
             $oldThumbnailPath = $lesson->thumbnail_path;
         }
-
-        $lesson->update($validated);
-
+        try {
+            $lesson->update($validated);
+        } catch (\Throwable $exception) {
+            if ($newVideoPath) Storage::disk('lesson_videos')->delete($newVideoPath);
+            if ($newThumbnailPath) Storage::disk('public')->delete($newThumbnailPath);
+            throw $exception;
+        }
         if ($oldVideoPath) Storage::disk('lesson_videos')->delete($oldVideoPath);
         if ($oldThumbnailPath) Storage::disk('public')->delete($oldThumbnailPath);
-
         return back()->with('success', 'Lesson updated successfully.');
     }
 
@@ -344,9 +354,11 @@ class CourseController extends Controller
         $user = Auth::user();
         abort_unless($user?->isAdmin() || ($user?->isTeacher() && $course->teacher_id === $user->id), 403);
         abort_unless($lesson->course_id === $course->id, 404);
-        if ($lesson->video_path) Storage::disk('lesson_videos')->delete($lesson->video_path);
-        if ($lesson->thumbnail_path) Storage::disk('public')->delete($lesson->thumbnail_path);
+        $videoPath = $lesson->video_path;
+        $thumbnailPath = $lesson->thumbnail_path;
         $lesson->delete();
+        if ($videoPath) Storage::disk('lesson_videos')->delete($videoPath);
+        if ($thumbnailPath) Storage::disk('public')->delete($thumbnailPath);
         return back()->with('success', 'Lesson deleted successfully.');
     }
 
