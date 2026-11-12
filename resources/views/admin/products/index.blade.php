@@ -14,12 +14,17 @@
             <label>SKU<input name="sku" maxlength="80"></label>
             <label>Short description<textarea name="short_description" maxlength="500" rows="2"></textarea></label>
             <label>Full description<textarea name="description" rows="5"></textarea></label>
+            <label>SEO title<input name="seo_title" maxlength="180"></label>
+            <label>SEO description<textarea name="seo_description" maxlength="320" rows="2"></textarea></label>
+            <label>Tags (comma separated)<input name="tags" maxlength="1500" placeholder="IELTS, grammar, vocabulary"></label>
             <div class="grid grid-2">
                 <label>Regular price (BDT)<input type="number" name="regular_price" min="0" step="0.01" value="0" required></label>
                 <label>Sale price (optional)<input type="number" name="sale_price" min="0" step="0.01"></label>
             </div>
             <label>Product thumbnail<input type="file" name="image" accept="image/jpeg,image/png,image/webp"></label>
-            <label>PDF file (required for eBook)<input type="file" name="download_file" accept="application/pdf"></label>
+            <label>PDF file (required for eBook; stored privately)<input type="file" name="download_file" accept="application/pdf"></label>
+            <label>Sample / preview PDF (optional, public sample only)<input type="file" name="preview_file" accept="application/pdf"></label>
+            <label>Download expiry (optional)<input type="datetime-local" name="download_expires_at"></label>
             <label>Download limit (blank = unlimited)<input type="number" name="download_limit" min="1" max="1000"></label>
             <label>Product categories</label>
             <div class="grid grid-2">@forelse($categories as $category)<label style="display:flex;gap:8px;align-items:center;font-weight:500;"><input style="width:auto;" type="checkbox" name="category_ids[]" value="{{ $category->id }}"> {{ $category->name }}</label>@empty<p class="muted">Create a category below.</p>@endforelse</div>
@@ -60,6 +65,8 @@
     <div class="meta-row" style="margin-top:0;"><div><h3 style="margin:0;">{{ $product->name }}</h3><p class="muted" style="margin:5px 0;">{{ strtoupper($product->type) }} · SKU: {{ $product->sku ?: '—' }} · {{ $product->status }}</p></div><strong>৳{{ number_format((float)$product->currentPrice(),2) }}</strong></div>
     <p class="muted">{{ $product->short_description }}</p>
     <p class="muted">Categories: {{ $product->categories->pluck('name')->join(', ') ?: 'None' }} @if($product->course) · Course: {{ $product->course->title }} @endif</p>
+    @if($product->tags)<p class="muted">Tags: {{ implode(', ', $product->tags) }}</p>@endif
+    <p class="muted">Private PDF: {{ $product->download_path ? 'stored' : 'not set' }} · Sample: {{ $product->preview_path ? 'available' : 'none' }}</p>
     <details><summary style="cursor:pointer;font-weight:700;">Edit product</summary>
         <form method="POST" action="{{ route('admin.products.update',$product) }}" enctype="multipart/form-data" style="margin-top:14px;">
             @csrf @method('PUT')
@@ -69,9 +76,14 @@
             <label>SKU<input name="sku" value="{{ $product->sku }}"></label>
             <label>Short description<textarea name="short_description">{{ $product->short_description }}</textarea></label>
             <label>Full description<textarea name="description" rows="3">{{ $product->description }}</textarea></label>
+            <label>SEO title<input name="seo_title" maxlength="180" value="{{ $product->seo_title }}"></label>
+            <label>SEO description<textarea name="seo_description" maxlength="320" rows="2">{{ $product->seo_description }}</textarea></label>
+            <label>Tags (comma separated)<input name="tags" maxlength="1500" value="{{ is_array($product->tags) ? implode(', ', $product->tags) : '' }}"></label>
             <div class="grid grid-2"><label>Regular price<input type="number" name="regular_price" min="0" step="0.01" value="{{ $product->regular_price }}" required></label><label>Sale price<input type="number" name="sale_price" min="0" step="0.01" value="{{ $product->sale_price }}"></label></div>
             <label>Replace thumbnail<input type="file" name="image" accept="image/jpeg,image/png,image/webp"></label>
-            <label>Replace PDF (optional)<input type="file" name="download_file" accept="application/pdf"></label>
+            <label>Replace PDF (blocked after a purchase)<input type="file" name="download_file" accept="application/pdf"></label>
+            <label>Replace sample PDF<input type="file" name="preview_file" accept="application/pdf"></label>
+            <label>Download expiry (optional)<input type="datetime-local" name="download_expires_at" value="{{ $product->download_expires_at?->format('Y-m-d\\TH:i') }}"></label>
             <label>Download limit<input type="number" name="download_limit" min="1" max="1000" value="{{ $product->download_limit }}"></label>
             <label>Categories</label><div class="grid grid-2">@foreach($categories as $category)<label style="display:flex;gap:8px;align-items:center;font-weight:500;"><input style="width:auto;" type="checkbox" name="category_ids[]" value="{{ $category->id }}" @checked($product->categories->contains('id',$category->id))> {{ $category->name }}</label>@endforeach</div>
             <label>Status<select name="status">@foreach(['draft','published','archived'] as $status)<option value="{{ $status }}" @selected($product->status===$status)>{{ ucfirst($status) }}</option>@endforeach</select></label>

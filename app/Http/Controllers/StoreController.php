@@ -10,6 +10,7 @@ use App\Models\EbookDownloadLog;
 use App\Models\FlashSale;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\ProductCategory;
 use App\Services\Commerce\OrderFulfillmentService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,7 +28,8 @@ class StoreController extends Controller
             ->when($request->filled('category'), fn ($query) => $query->whereHas('categories', fn ($categories) => $categories->where('product_categories.slug', $request->string('category'))))
             ->when($request->filled('q'), fn ($query) => $query->where(fn ($nested) => $nested->where('name', 'like', '%'.trim($request->string('q')).'%')->orWhere('short_description', 'like', '%'.trim($request->string('q')).'%')))
             ->latest('published_at')->paginate(12)->withQueryString();
-        return view('store.index', compact('products'));
+        $categories = ProductCategory::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get();
+        return view('store.index', compact('products', 'categories'));
     }
 
     public function show(Product $product): View
