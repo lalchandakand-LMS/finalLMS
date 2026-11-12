@@ -180,12 +180,19 @@ class CourseController extends Controller
             && $course->enrollments()->where('user_id', $user->id)->whereIn('status', ['active', 'completed'])->exists();
         abort_unless($lesson->is_preview || $canManageCourse || $isEnrolled, 403);
         abort_unless(Storage::disk('lesson_videos')->exists($lesson->video_path), 404);
-        return response()->file(Storage::disk('lesson_videos')->path($lesson->video_path), [
+        $response = response()->file(Storage::disk('lesson_videos')->path($lesson->video_path), [
             'Content-Type' => Storage::disk('lesson_videos')->mimeType($lesson->video_path) ?: 'application/octet-stream',
-            'Cache-Control' => 'private, no-store, max-age=0',
             'X-Content-Type-Options' => 'nosniff',
             'Accept-Ranges' => 'bytes',
         ]);
+
+        // BinaryFileResponse may mark file responses as public during preparation.
+        // Re-apply private/no-store after constructing it so protected lesson media
+        // cannot be stored by shared caches or intermediaries.
+        $response->setPrivate();
+        $response->headers->set('Cache-Control', 'private, no-store, max-age=0');
+
+        return $response;
     }
 
     public function showLesson(Course $course, Lesson $lesson): View
