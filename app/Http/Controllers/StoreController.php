@@ -26,7 +26,7 @@ class StoreController extends Controller
     public function index(Request $request): View
     {
         $products = Product::published()->with(['categories', 'course'])
-            ->when($request->filled('category'), fn ($query) => $query->whereHas('categories', fn ($categories) => $categories->where('product_categories.slug', (string) $request->string('category'))))
+            ->when($request->filled('category'), fn ($query) => $query->whereHas('categories', fn ($categories) => $categories->where('product_categories.slug', (string) $request->string('category'))->where('product_categories.is_active', true)))
             ->when($request->filled('q'), fn ($query) => $query->where(fn ($nested) => $nested->where('name', 'like', '%'.trim((string) $request->string('q')).'%')->orWhere('short_description', 'like', '%'.trim((string) $request->string('q')).'%')))
             ->latest('published_at')->paginate(12)->withQueryString();
         $categories = ProductCategory::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get();

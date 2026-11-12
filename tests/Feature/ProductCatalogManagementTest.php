@@ -257,6 +257,7 @@ class ProductCatalogManagementTest extends TestCase
         $product = Product::where('slug', 'ielts-academic-workbook')->firstOrFail();
         Storage::disk('local')->assertExists($product->download_path);
         Storage::disk('public')->assertExists($product->preview_path);
+        Storage::disk('public')->assertMissing($product->download_path);
         $this->assertSame(['IELTS', 'Academic', 'Practice'], $product->tags);
 
         $this->get(route('store.products.show', $product))->assertOk()

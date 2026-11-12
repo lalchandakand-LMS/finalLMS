@@ -19,6 +19,7 @@ class FlashSaleController extends Controller
         $sales = FlashSale::with(['courses', 'categories', 'productCategories', 'creator'])->withCount([
             'payments as reserved_orders' => fn ($query) => $query->whereIn('status', ['pending', 'approved']),
             'enrollments as free_redemptions' => fn ($query) => $query->whereIn('status', ['active', 'completed']),
+            'orderItems as store_order_items' => fn ($query) => $query->whereHas('order', fn ($orders) => $orders->whereIn('status', ['pending', 'completed'])),
         ])->latest()->paginate(20);
         $courses = Course::where('status', 'published')->orderBy('title')->get();
         $categories = CourseCategory::orderBy('sort_order')->orderBy('name')->get();
