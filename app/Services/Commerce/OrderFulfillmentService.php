@@ -29,7 +29,7 @@ class OrderFulfillmentService
 
             if ($lockedOrder->coupon_id) {
                 $coupon = Coupon::query()->lockForUpdate()->find($lockedOrder->coupon_id);
-                if (!$coupon || !$coupon->isAvailableFor($lockedOrder->user_id, (float) $lockedOrder->subtotal)) {
+                if (!$coupon || !$coupon->isAvailableFor($lockedOrder->user_id, (float) $lockedOrder->subtotal, $lockedOrder->id)) {
                     return 'coupon_invalid';
                 }
             }
@@ -71,11 +71,23 @@ class OrderFulfillmentService
 
             if ($lockedOrder->coupon_id) {
                 $coupon = Coupon::query()->lockForUpdate()->findOrFail($lockedOrder->coupon_id);
-                $redemption = CouponRedemption::firstOrCreate(
-                    ['coupon_id' => $coupon->id, 'order_id' => $lockedOrder->id],
-                    ['user_id' => $lockedOrder->user_id, 'discount_amount' => $lockedOrder->discount_total]
-                );
-                if ($redemption->wasRecentlyCreated) {
+                $redemption = CouponRedemption::query()
+                    ->where('coupon_id', $coupon->id)
+                    ->where('order_id', $lockedOrder->id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $redemption) {
+                    CouponRedemption::create([
+                        'coupon_id' => $coupon->id,
+                        'order_id' => $lockedOrder->id,
+                        'user_id' => $lockedOrder->user_id,
+                        'discount_amount' => $lockedOrder->discount_total,
+                        'status' => 'confirmed',
+                    ]);
+                    $coupon->increment('usage_count');
+                } elseif ($redemption->status === 'pending') {
+                    $redemption->update(['status' => 'confirmed']);
                     $coupon->increment('usage_count');
                 }
             }

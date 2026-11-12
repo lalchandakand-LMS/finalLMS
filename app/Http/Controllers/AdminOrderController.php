@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\DownloadPermission;
+use App\Models\CouponRedemption;
 use App\Models\Order;
 use App\Services\Commerce\OrderFulfillmentService;
 use Illuminate\Http\RedirectResponse;
@@ -48,9 +49,13 @@ class AdminOrderController extends Controller
 
     public function reject(Order $order): RedirectResponse
     {
-        if ($order->status !== 'pending') return back()->with('info', 'Only pending orders can be rejected.');
-        $order->update(['status' => 'cancelled']);
-        return back()->with('success', 'Order cancelled.');
+        DB::transaction(function () use ($order): void {
+            $locked = Order::query()->lockForUpdate()->findOrFail($order->id);
+            if ($locked->status !== 'pending') return;
+            $locked->update(['status' => 'cancelled']);
+            CouponRedemption::query()->where('order_id', $locked->id)->where('status', 'pending')->update(['status' => 'released']);
+        });
+        return back()->with('success', 'Order cancelled; any reserved coupon usage was released.');
     }
 
     public function recordRefund(Order $order, Request $request): RedirectResponse

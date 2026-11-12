@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Coupon;
+use App\Models\CouponRedemption;
 use App\Models\DownloadPermission;
 use App\Models\EbookDownloadLog;
 use App\Models\FlashSale;
@@ -155,6 +156,16 @@ class StoreController extends Controller
                     'phone' => $request->user()->phone ?? null,
                 ],
             ]);
+
+            if ($coupon) {
+                CouponRedemption::create([
+                    'coupon_id' => $coupon->id,
+                    'order_id' => $order->id,
+                    'user_id' => $request->user()->id,
+                    'discount_amount' => $discount,
+                    'status' => 'pending',
+                ]);
+            }
 
             foreach ($lockedCart->items as $item) {
                 $product = $item->product;

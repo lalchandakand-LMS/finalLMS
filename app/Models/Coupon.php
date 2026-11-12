@@ -31,12 +31,15 @@ class Coupon extends Model
         return $this->hasMany(CouponRedemption::class);
     }
 
-    public function isAvailableFor(int $userId, float $subtotal): bool
+    public function isAvailableFor(int $userId, float $subtotal, ?int $ignoreOrderId = null): bool
     {
-        if (!$this->is_active || ($this->starts_at && $this->starts_at->isFuture()) || ($this->ends_at && $this->ends_at->isPast())) return false;
-        if ($subtotal < (float)$this->minimum_order) return false;
-        if ($this->usage_limit !== null && $this->usage_count >= $this->usage_limit) return false;
-        if ($this->redemptions()->where('user_id',$userId)->count() >= $this->per_user_limit) return false;
+        if (! $this->is_active || ($this->starts_at && $this->starts_at->isFuture()) || ($this->ends_at && $this->ends_at->isPast())) return false;
+        if ($subtotal < (float) $this->minimum_order) return false;
+
+        $reservations = fn () => $this->redemptions()->whereIn('status', ['pending', 'confirmed'])
+            ->when($ignoreOrderId, fn ($query) => $query->where('order_id', '!=', $ignoreOrderId));
+        if ($this->usage_limit !== null && $reservations()->count() >= $this->usage_limit) return false;
+        if ($reservations()->where('user_id', $userId)->count() >= $this->per_user_limit) return false;
         return true;
     }
 
