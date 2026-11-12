@@ -12,6 +12,12 @@
         $googleTagManagerId = $hasSettingsTable ? \App\Models\Setting::value('google_tag_manager_id') : null;
         $facebookPixelId = $hasSettingsTable ? \App\Models\Setting::value('facebook_pixel_id') : null;
         $marketingConsent = request()->cookie('marketing_consent') === 'accepted';
+        $visitorPopup = null;
+        if (\Illuminate\Support\Facades\Schema::hasTable('visitor_popups') && !(auth()->check() && auth()->user()->isAdmin())) {
+            $visitorPopup = \App\Models\VisitorPopup::currentlyActive()->with('image')
+                ->where(function ($query) { $query->where('audience', 'all')->orWhere('audience', auth()->check() ? 'members' : 'guests'); })
+                ->orderByDesc('priority')->latest()->first();
+        }
         $isPublicLayout = !(auth()->check() && auth()->user()->isAdmin());
         $websiteHeaderLinks = $isPublicLayout && $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('header_links', '[]'), true) : [];
         $websiteFooterTitle = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('footer_title', config('app.name')) : config('app.name');
@@ -256,6 +262,8 @@
             <a href="{{ route('admin.news.index') }}"><span>📰</span><span class="nav-text">Blog & news</span></a>
             <a class="{{ request()->routeIs('admin.analytics.*') ? 'active' : '' }}" href="{{ route('admin.analytics.index') }}"><span>📈</span><span class="nav-text">Website analytics</span></a>
             <a class="{{ request()->routeIs('admin.comments.*') ? 'active' : '' }}" href="{{ route('admin.comments.index') }}"><span>💬</span><span class="nav-text">Comment moderation</span></a>
+            <a class="{{ request()->routeIs('admin.visitor-popups.*') ? 'active' : '' }}" href="{{ route('admin.visitor-popups.index') }}"><span>📣</span><span class="nav-text">Visitor popups</span></a>
+            <a class="{{ request()->routeIs('admin.dashboard-announcements.*') ? 'active' : '' }}" href="{{ route('admin.dashboard-announcements.index') }}"><span>🔔</span><span class="nav-text">Dashboard announcements</span></a>
             <a href="{{ route('admin.backups.index') }}"><span>💾</span><span class="nav-text">Backup & restore</span></a>
             <a href="{{ route('admin.activity-logs.index') }}"><span>📋</span><span class="nav-text">Activity logs</span></a>
             <a href="{{ route('admin.settings.index') }}"><span>⚙️</span><span class="nav-text">Settings</span></a>
@@ -441,6 +449,7 @@
             });
         })();
     </script>
+    @includeWhen($visitorPopup, 'components.visitor-promo-popup', ['visitorPopup' => $visitorPopup])
     @stack('scripts')
 </body>
 </html>

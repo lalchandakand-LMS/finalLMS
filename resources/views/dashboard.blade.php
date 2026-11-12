@@ -3,6 +3,7 @@
 @section('title', __('Admin Dashboard') . ' | Alom’s English Center')
 
 @section('content')
+    @include('components.dashboard-announcement-slider')
     @php
         $roleLabel = ucfirst($user->role);
         $isAdmin = $user->role === 'admin';
