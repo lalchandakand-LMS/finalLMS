@@ -15,13 +15,14 @@ class AdminOrderController extends Controller
 {
     public function index(): View
     {
-        $orders = Order::with(['user', 'items.downloadPermissions', 'paymentTransactions'])->latest()->paginate(25);
+        $orders = Order::with(['user', 'items.downloadPermissions.logs', 'paymentTransactions'])->latest()->paginate(25);
         $summary = [
             'total' => Order::count(),
             'pending' => Order::where('status', 'pending')->count(),
             'completed' => Order::where('status', 'completed')->count(),
             'refunded' => Order::where('status', 'refunded')->count(),
             'revenue' => (float) Order::where('status', 'completed')->sum('total'),
+            'downloads' => (int) \App\Models\EbookDownloadLog::count(),
         ];
         return view('admin.orders.index', compact('orders', 'summary'));
     }

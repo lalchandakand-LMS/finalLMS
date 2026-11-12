@@ -8,6 +8,7 @@
     <div class="panel"><small>Pending</small><h2>{{ $summary['pending'] }}</h2></div>
     <div class="panel"><small>Completed revenue</small><h2>৳{{ number_format($summary['revenue'],2) }}</h2></div>
     <div class="panel"><small>Refunded</small><h2>{{ $summary['refunded'] }}</h2></div>
+    <div class="panel"><small>Authorized reads / downloads</small><h2>{{ $summary['downloads'] }}</h2></div>
 </div>
 @forelse($orders as $order)
 <section class="panel" style="padding:18px;margin:14px 0;border:1px solid var(--border);border-radius:12px;background:var(--panel)">
@@ -29,7 +30,10 @@
 <strong>Total: ৳{{ number_format((float)$order->total,2) }}</strong>
 @foreach($order->items as $item)
     @foreach($item->downloadPermissions as $permission)
-        <p class="muted">Download access #{{ $permission->id }} · {{ $permission->download_count }} downloads used · {{ $permission->downloads_remaining ?? 'Unlimited' }} remaining · {{ $permission->revoked_at ? 'Revoked' : 'Active' }}</p>
+        <p class="muted">Download access #{{ $permission->id }} · {{ $permission->download_count }} reads/downloads · {{ $permission->downloads_remaining ?? 'Unlimited' }} remaining · {{ $permission->revoked_at ? 'Revoked' : 'Active' }}</p>
+        @foreach($permission->logs->take(5) as $log)
+            <small class="muted">{{ $log->downloaded_at?->format('d M Y H:i') }} · {{ strtoupper($log->action) }} · {{ $log->ip_address ?: 'IP unavailable' }}</small><br>
+        @endforeach
         @if(!$permission->revoked_at)
             <form method="POST" action="{{ route('admin.download-permissions.revoke',$permission) }}" style="margin:8px 0;">@csrf<label>Reason<input name="reason" maxlength="1000" required placeholder="Reason for revoking access"></label><button class="btn secondary" type="submit">Revoke download access</button></form>
         @endif

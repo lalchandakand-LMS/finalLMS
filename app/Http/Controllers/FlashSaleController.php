@@ -16,7 +16,7 @@ class FlashSaleController extends Controller
 {
     public function index(): View
     {
-        $sales = FlashSale::with(['courses', 'categories', 'creator'])->withCount([
+        $sales = FlashSale::with(['courses', 'categories', 'productCategories', 'creator'])->withCount([
             'payments as reserved_orders' => fn ($query) => $query->whereIn('status', ['pending', 'approved']),
             'enrollments as free_redemptions' => fn ($query) => $query->whereIn('status', ['active', 'completed']),
         ])->latest()->paginate(20);

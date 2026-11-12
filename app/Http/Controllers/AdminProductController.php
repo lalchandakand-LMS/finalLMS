@@ -207,7 +207,7 @@ class AdminProductController extends Controller
             'category_ids' => ['nullable', 'array', 'max:100'],
             'category_ids.*' => ['integer', 'distinct', 'exists:product_categories,id'],
             'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
-            'download_file' => [Rule::prohibitedIf($hasOrderHistory), $request->input('type') === 'ebook' && (! $product || ! $product->download_path) ? 'required' : 'nullable', 'file', 'mimes:pdf', 'max:51200'],
+            'download_file' => [Rule::prohibitedIf($request->input('type') !== 'ebook' || $hasOrderHistory), $request->input('type') === 'ebook' && (! $product || ! $product->download_path) ? 'required' : 'nullable', 'file', 'mimes:pdf', 'max:51200'],
             'preview_file' => [$request->input('type') === 'ebook' ? 'nullable' : 'prohibited', 'file', 'mimes:pdf', 'max:10240'],
             'download_limit' => ['nullable', 'integer', 'min:1', 'max:1000'],
             'download_expires_at' => ['nullable', 'date', 'after:now'],
