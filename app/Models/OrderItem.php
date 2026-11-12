@@ -11,4 +11,5 @@ class OrderItem extends Model
     protected $casts = ['regular_price' => 'decimal:2','discount_total' => 'decimal:2','line_total' => 'decimal:2','product_snapshot' => 'array'];
     public function order(): BelongsTo { return $this->belongsTo(Order::class); }
     public function product(): BelongsTo { return $this->belongsTo(Product::class)->withTrashed(); }
+    public function downloadPermissions(): \Illuminate\Database\Eloquent\Relations\HasMany { return $this->hasMany(DownloadPermission::class); }
 }
