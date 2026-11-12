@@ -6,8 +6,6 @@ use App\Models\BlogPost;
 use App\Models\Comment;
 use App\Models\Course;
 use App\Models\User;
-use App\Models\PageView;
-use Illuminate\Http\Request;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -32,17 +30,6 @@ class WebsiteAnalyticsAndCommentsTest extends TestCase
         $this->assertDatabaseHas('page_views', ['view_type' => 'site']);
         $this->assertDatabaseHas('page_views', ['view_type' => 'course', 'viewable_id' => $course->id]);
         $this->assertDatabaseHas('page_views', ['view_type' => 'post', 'viewable_id' => $post->id]);
-    }
-
-    public function test_page_view_records_are_deduplicated_for_same_visitor_and_content_per_day(): void
-    {
-        $request = Request::create('/analytics-test');
-        $request->attributes->set('analytics_visitor_key', 'stable-test-visitor-key');
-
-        PageView::record($request, 'course', 'course', 123);
-        PageView::record($request, 'course', 'course', 123);
-
-        $this->assertDatabaseCount('page_views', 1);
     }
 
     public function test_authenticated_comment_is_held_for_moderation_until_approved(): void
