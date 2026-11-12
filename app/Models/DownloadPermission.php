@@ -12,4 +12,5 @@ class DownloadPermission extends Model
     public function orderItem(): BelongsTo { return $this->belongsTo(OrderItem::class); }
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
     public function product(): BelongsTo { return $this->belongsTo(Product::class)->withTrashed(); }
+    public function logs(): \Illuminate\Database\Eloquent\Relations\HasMany { return $this->hasMany(EbookDownloadLog::class); }
 }

@@ -14,7 +14,7 @@ class Product extends Model
 
     protected $fillable = [
         'type','course_id','name','slug','sku','short_description','description','image_path',
-        'seo_title','seo_description','regular_price','sale_price','currency','is_virtual',
+        'seo_title','seo_description','tags','preview_path','regular_price','sale_price','currency','is_virtual',
         'is_downloadable','download_path','download_limit','download_expires_at','status',
         'featured','published_at','created_by',
     ];
@@ -26,6 +26,7 @@ class Product extends Model
         'is_downloadable' => 'boolean',
         'featured' => 'boolean',
         'download_expires_at' => 'datetime',
+        'tags' => 'array',
         'published_at' => 'datetime',
     ];
 
