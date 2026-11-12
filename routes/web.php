@@ -10,6 +10,7 @@ use App\Http\Controllers\BatchController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\CourseController;
+use App\Http\Controllers\CourseWishlistController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\ProfileController;
@@ -139,6 +140,9 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
     });
     Route::get('/assignment-submissions/{submission}/attachment', [AssignmentController::class, 'download'])->name('assignment-submissions.attachment');
     Route::middleware('role:student')->group(function () {
+        Route::get('/my/wishlist', [CourseWishlistController::class, 'index'])->name('student.wishlist.index');
+        Route::post('/courses/{course}/wishlist', [CourseWishlistController::class, 'store'])->middleware('throttle:30,1')->name('student.wishlist.store');
+        Route::delete('/courses/{course}/wishlist', [CourseWishlistController::class, 'destroy'])->middleware('throttle:30,1')->name('student.wishlist.destroy');
         Route::post('/courses/{course}/payments/bkash', [BkashPaymentController::class, 'initiate'])->middleware('throttle:10,1')->name('courses.payments.bkash');
         Route::get('/my/courses', [CourseController::class, 'myCourses'])->name('student.courses.index');
         Route::get('/my/invoices', [InvoiceController::class, 'studentIndex'])->name('student.invoices.index');
