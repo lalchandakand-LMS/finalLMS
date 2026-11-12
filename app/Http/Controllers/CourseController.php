@@ -6,6 +6,7 @@ use App\Models\Certificate;
 use App\Models\Course;
 use App\Models\Lesson;
 use App\Models\LessonProgress;
+use App\Models\PageView;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -180,12 +181,15 @@ class CourseController extends Controller
         return redirect()->route('admin.courses.index')->with('success', 'Course deleted successfully.');
     }
 
-    public function show(Course $course): View
+    public function show(Request $request, Course $course): View
     {
         $user = Auth::user();
         $canManageCourse = $user && ($user->isAdmin() || ($user->isTeacher() && $course->teacher_id === $user->id));
         abort_unless($course->status === 'published' || $canManageCourse, 404);
 
+        PageView::record($request, 'course', 'course', $course->id);
+        $course->views_count = PageView::where('view_type', 'course')->where('viewable_id', $course->id)->count();
+        $comments = $course->comments()->with('author')->latest()->paginate(10, ['*'], 'comments_page');
         $course->load('teacher', 'enrollments.user', 'lessons');
 
         $isWishlisted = $user?->isStudent() && DB::table('course_wishlists')
@@ -217,7 +221,7 @@ class CourseController extends Controller
             ->orderBy('starts_at')
             ->get();
 
-        return view('courses.show', compact('course', 'enrollment', 'payment', 'paymentMethods', 'batches', 'canViewLessons', 'lessonProgress', 'isWishlisted'));
+        return view('courses.show', compact('course', 'enrollment', 'payment', 'paymentMethods', 'batches', 'canViewLessons', 'lessonProgress', 'isWishlisted', 'comments'));
     }
 
     public function streamLessonVideo(Course $course, Lesson $lesson): \Symfony\Component\HttpFoundation\BinaryFileResponse

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Course extends Model
 {
@@ -55,6 +56,11 @@ class Course extends Model
     public function lessons(): HasMany
     {
         return $this->hasMany(Lesson::class)->orderBy('order');
+    }
+
+    public function comments(): MorphMany
+    {
+        return $this->morphMany(Comment::class, 'commentable')->where('status', 'approved');
     }
 
     public function batches(): HasMany

@@ -35,6 +35,9 @@ use App\Http\Controllers\BackupController;
 use App\Http\Controllers\InstallController;
 use App\Http\Controllers\QuizContestController;
 use App\Http\Controllers\FlashSaleController;
+use App\Http\Controllers\AdminAnalyticsController;
+use App\Http\Controllers\AdminCommentController;
+use App\Http\Controllers\CommentController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/install', [InstallController::class, 'index'])->name('install.index');
@@ -63,6 +66,8 @@ Route::get('/contact', [CmsPageController::class, 'contact'])->name('pages.conta
 Route::get('/faq', [CmsPageController::class, 'faq'])->name('pages.faq');
 Route::get('/news', [BlogController::class, 'index'])->name('news.index');
 Route::get('/news/{post:slug}', [BlogController::class, 'show'])->name('news.show');
+Route::post('/news/{post:slug}/comments', [CommentController::class, 'storePost'])->middleware(['auth', 'throttle:5,1'])->name('news.comments.store');
+Route::post('/courses/{course}/comments', [CommentController::class, 'storeCourse'])->middleware(['auth', 'throttle:5,1'])->name('courses.comments.store');
 Route::post('/language', [LocaleController::class, 'update'])->middleware('throttle:20,1')->name('locale.update');
 Route::get('/payments/bkash/callback', [BkashPaymentController::class, 'callback'])->middleware('throttle:30,1')->name('payments.bkash.callback');
 
@@ -174,6 +179,10 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         ->name('courses.lessons.complete');
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
+        Route::get('/analytics', [AdminAnalyticsController::class, 'index'])->name('admin.analytics.index');
+        Route::get('/comments', [AdminCommentController::class, 'index'])->name('admin.comments.index');
+        Route::put('/comments/{comment}', [AdminCommentController::class, 'update'])->name('admin.comments.update');
+        Route::delete('/comments/{comment}', [AdminCommentController::class, 'destroy'])->name('admin.comments.destroy');
         Route::get('/student-devices', [StudentDeviceAccessController::class, 'adminIndex'])->name('admin.student-devices.index');
         Route::get('/teacher-applications', [TeacherApplicationController::class, 'adminIndex'])->name('admin.teacher-applications.index');
         Route::get('/teacher-applications/{application}/documents/{type}', [TeacherApplicationController::class, 'document'])->name('admin.teacher-applications.document');
