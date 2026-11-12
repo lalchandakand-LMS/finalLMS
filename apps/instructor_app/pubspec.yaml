@@ -8,6 +8,7 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_secure_storage: ^9.2.2
+  material_ui: ^1.0.0
   http: ^1.2.2
 dev_dependencies:
   flutter_test:
