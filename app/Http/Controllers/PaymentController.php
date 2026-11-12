@@ -42,27 +42,54 @@ class PaymentController extends Controller
         $amount = $flashSale ? $flashSale->discountedPrice($baseAmount) : $baseAmount;
 
         if ($amount <= 0) {
-            $enrolled = DB::transaction(function () use ($batchId, $course, $user): bool {
+            $result = DB::transaction(function () use ($batchId, $course, $user): string {
+                $lockedCourse = Course::query()->lockForUpdate()->findOrFail($course->id);
+                if ($lockedCourse->status !== 'published') {
+                    return 'unavailable';
+                }
+                if (Enrollment::query()->where('course_id', $lockedCourse->id)->where('user_id', $user->id)->exists()) {
+                    return 'already_enrolled';
+                }
+
                 if ($batchId) {
                     $batch = Batch::query()->lockForUpdate()->findOrFail($batchId);
-                    if ($batch->status !== 'open' || ! $this->hasAvailableSeat($batch)) {
-                        return false;
+                    if ($batch->course_id !== $lockedCourse->id || $batch->status !== 'open' || ! $this->hasAvailableSeat($batch)) {
+                        return 'batch_full';
+                    }
+                } else {
+                    $batch = null;
+                }
+
+                $sale = FlashSale::activeForCourse($lockedCourse->id, $user->id);
+                if ($sale) {
+                    $sale = FlashSale::query()->lockForUpdate()->find($sale->id);
+                    if (! $sale || ! $sale->courses()->whereKey($lockedCourse->id)->exists() || ! $sale->isAvailableFor($user->id)) {
+                        return 'sale_unavailable';
                     }
                 }
 
+                $base = $batch && (float) $batch->fee > 0 ? (float) $batch->fee : (float) $lockedCourse->price;
+                $payable = $sale ? $sale->discountedPrice($base) : $base;
+                if ($payable > 0) {
+                    return 'price_changed';
+                }
+
                 Enrollment::firstOrCreate(
-                    ['user_id' => $user->id, 'course_id' => $course->id],
-                    ['batch_id' => $batchId, 'status' => 'active']
+                    ['user_id' => $user->id, 'course_id' => $lockedCourse->id],
+                    ['batch_id' => $batchId, 'flash_sale_id' => $sale?->id, 'status' => 'active']
                 );
 
-                return true;
+                return 'enrolled';
             });
 
-            if (! $enrolled) {
-                return back()->with('error', 'The batch is full or this Flash Sale has ended or reached its purchase limit.');
-            }
-
-            return back()->with('success', 'You have enrolled in the course successfully.');
+            return match ($result) {
+                'enrolled' => back()->with('success', 'You have enrolled in the course successfully.'),
+                'already_enrolled' => back()->with('info', 'You are already enrolled in this course.'),
+                'batch_full' => back()->with('error', 'The selected batch is full or no longer available.'),
+                'sale_unavailable' => back()->with('error', 'This Flash Sale has ended or reached its purchase limit. Refresh the page and try again.'),
+                'price_changed' => back()->with('warning', 'The course price changed. Refresh the page and review the current checkout price.'),
+                default => back()->with('error', 'This course is no longer available.'),
+            };
         }
 
         if ($course->payments()->where('user_id', $user->id)->where('status', 'pending')->exists()) {
@@ -92,31 +119,53 @@ class PaymentController extends Controller
         ]);
 
         $proof = $request->file('proof');
-        $submitted = DB::transaction(function () use ($amount, $baseAmount, $batchId, $course, $proof, $user, $validated, $flashSale): bool {
+        $result = DB::transaction(function () use ($batchId, $course, $proof, $user, $validated): string {
+            $lockedCourse = Course::query()->lockForUpdate()->findOrFail($course->id);
+            if ($lockedCourse->status !== 'published') {
+                return 'unavailable';
+            }
+            if (Enrollment::query()->where('course_id', $lockedCourse->id)->where('user_id', $user->id)->exists()) {
+                return 'already_enrolled';
+            }
+            if (Payment::query()->where('course_id', $lockedCourse->id)->where('user_id', $user->id)->where('status', 'pending')->exists()) {
+                return 'payment_pending';
+            }
+
             if ($batchId) {
                 $batch = Batch::query()->lockForUpdate()->findOrFail($batchId);
-                if ($batch->status !== 'open' || ! $this->hasAvailableSeat($batch)) {
-                    return false;
+                if ($batch->course_id !== $lockedCourse->id || $batch->status !== 'open' || ! $this->hasAvailableSeat($batch)) {
+                    return 'batch_full';
+                }
+            } else {
+                $batch = null;
+            }
+
+            $sale = FlashSale::activeForCourse($lockedCourse->id, $user->id);
+            if ($sale) {
+                $sale = FlashSale::query()->lockForUpdate()->find($sale->id);
+                if (! $sale || ! $sale->courses()->whereKey($lockedCourse->id)->exists() || ! $sale->isAvailableFor($user->id)) {
+                    return 'sale_unavailable';
                 }
             }
 
-            if ($flashSale) {
-                $lockedSale = FlashSale::query()->lockForUpdate()->find($flashSale->id);
-                if (! $lockedSale || ! $lockedSale->isAvailableFor($user->id)) {
-                    return false;
-                }
-                $amount = $lockedSale->discountedPrice($baseAmount);
+            $base = $batch && (float) $batch->fee > 0 ? (float) $batch->fee : (float) $lockedCourse->price;
+            $payable = $sale ? $sale->discountedPrice($base) : $base;
+            if ($payable <= 0) {
+                Enrollment::firstOrCreate(
+                    ['user_id' => $user->id, 'course_id' => $lockedCourse->id],
+                    ['batch_id' => $batchId, 'flash_sale_id' => $sale?->id, 'status' => 'active']
+                );
+                return 'enrolled_free';
             }
 
             $proofPath = $proof?->store('payment-proofs', 'local');
-
             Payment::create([
                 'user_id' => $user->id,
-                'course_id' => $course->id,
-                'flash_sale_id' => $flashSale?->id,
+                'course_id' => $lockedCourse->id,
+                'flash_sale_id' => $sale?->id,
                 'batch_id' => $batchId,
                 'method' => $validated['payment_method'],
-                'amount' => $amount,
+                'amount' => $payable,
                 'currency' => 'BDT',
                 'sender_account' => $validated['sender_account'] ?? null,
                 'transaction_reference' => $validated['transaction_reference'],
@@ -124,14 +173,18 @@ class PaymentController extends Controller
                 'status' => 'pending',
             ]);
 
-            return true;
+            return 'submitted';
         });
 
-        if (! $submitted) {
-            return back()->with('error', 'This batch has reached its enrollment capacity.');
-        }
-
-        return redirect()->route('courses.show', $course)->with('success', 'Payment submitted. Course access will be available after the admin verifies it.');
+        return match ($result) {
+            'submitted' => redirect()->route('courses.show', $course)->with('success', 'Payment submitted. Course access will be available after the admin verifies it.'),
+            'enrolled_free' => redirect()->route('courses.show', $course)->with('success', 'You have enrolled in the course successfully.'),
+            'already_enrolled' => back()->with('info', 'You are already enrolled in this course.'),
+            'payment_pending' => back()->with('info', 'Your payment is already waiting for review.'),
+            'batch_full' => back()->with('error', 'The selected batch is full or no longer available.'),
+            'sale_unavailable' => back()->with('error', 'This Flash Sale has ended or reached its purchase limit. Refresh the page and try again.'),
+            default => back()->with('error', 'The course is no longer available. Refresh the page and try again.'),
+        };
     }
 
     public function index(): View

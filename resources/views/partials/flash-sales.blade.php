@@ -18,7 +18,7 @@
                 <p style="color:#dbe7ff;">{{ $sale->description }}</p>
             @endif
             <div class="grid grid-3">
-                @foreach($sale->courses as $saleCourse)
+                @foreach($sale->displayCourses ?? $sale->courses as $saleCourse)
                     <article class="card">
                         @if($saleCourse->image_path)
                             <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($saleCourse->image_path) }}" alt="{{ $saleCourse->title }}" style="width:100%;height:150px;object-fit:cover;border-radius:10px;">

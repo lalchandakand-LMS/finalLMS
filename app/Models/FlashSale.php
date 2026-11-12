@@ -13,14 +13,24 @@ class FlashSale extends Model
     protected $casts = ['starts_at' => 'datetime', 'ends_at' => 'datetime', 'discount_value' => 'decimal:2'];
 
     public function courses(): BelongsToMany { return $this->belongsToMany(Course::class, 'flash_sale_course')->withTimestamps(); }
+    public function categories(): BelongsToMany { return $this->belongsToMany(CourseCategory::class, 'flash_sale_course_category')->withTimestamps(); }
     public function payments(): HasMany { return $this->hasMany(Payment::class); }
+    public function enrollments(): HasMany { return $this->hasMany(Enrollment::class); }
     public function creator(): BelongsTo { return $this->belongsTo(User::class, 'created_by'); }
 
     public function isAvailableFor(?int $userId = null): bool
     {
         if ($this->status !== 'active' || $this->starts_at->isFuture() || $this->ends_at->isPast()) return false;
-        if ($this->max_redemptions !== null && $this->payments()->whereIn('status', ['pending','approved'])->count() >= $this->max_redemptions) return false;
-        if ($userId !== null && $this->payments()->where('user_id',$userId)->whereIn('status',['pending','approved'])->count() >= $this->per_student_limit) return false;
+        $paidRedemptions = fn () => $this->payments()->whereIn('status', ['pending', 'approved']);
+        $freeRedemptions = fn () => $this->enrollments()->whereIn('status', ['active', 'completed']);
+        $redemptionCount = $paidRedemptions()->count() + $freeRedemptions()->count();
+        if ($this->max_redemptions !== null && $redemptionCount >= $this->max_redemptions) return false;
+
+        if ($userId !== null) {
+            $studentRedemptions = $paidRedemptions()->where('user_id', $userId)->count()
+                + $freeRedemptions()->where('user_id', $userId)->count();
+            if ($studentRedemptions >= $this->per_student_limit) return false;
+        }
         return true;
     }
 
@@ -35,7 +45,11 @@ class FlashSale extends Model
     public static function activeForCourse(int $courseId, ?int $userId = null): ?self
     {
         return static::query()->where('status','active')->where('starts_at','<=',now())->where('ends_at','>=',now())
-            ->whereHas('courses', fn ($q) => $q->where('courses.id',$courseId))
+            ->where(function ($query) use ($courseId): void {
+                $query->whereHas('courses', fn ($courses) => $courses->where('courses.id', $courseId))
+                    ->orWhereHas('categories.posts', fn ($posts) => $posts->published()
+                        ->whereHas('courses', fn ($courses) => $courses->where('courses.id', $courseId)->where('courses.status', 'published')));
+            })
             ->orderByDesc('priority')->orderBy('ends_at')->get()
             ->first(fn (self $sale) => $sale->isAvailableFor($userId));
     }
@@ -43,9 +57,22 @@ class FlashSale extends Model
     public static function activeCampaigns(): \Illuminate\Support\Collection
     {
         return static::query()->where('status','active')->where('starts_at','<=',now())->where('ends_at','>=',now())
-            ->whereHas('courses', fn ($q) => $q->where('courses.status','published'))
-            ->with(['courses' => fn ($q) => $q->where('courses.status','published')->with('teacher')])
+            ->where(function ($query): void {
+                $query->whereHas('courses', fn ($courses) => $courses->where('courses.status', 'published'))
+                    ->orWhereHas('categories.posts', fn ($posts) => $posts->published()
+                        ->whereHas('courses', fn ($courses) => $courses->where('courses.status', 'published')));
+            })
+            ->with([
+                'courses' => fn ($courses) => $courses->where('courses.status', 'published')->with('teacher'),
+                'categories.posts' => fn ($posts) => $posts->published()->with([
+                    'courses' => fn ($courses) => $courses->where('courses.status', 'published')->with('teacher'),
+                ]),
+            ])
             ->orderByDesc('priority')->orderBy('ends_at')->get()
-            ->filter(fn (self $sale) => $sale->isAvailableFor())->values();
+            ->filter(fn (self $sale) => $sale->isAvailableFor())
+            ->each(function (self $sale): void {
+                $categoryCourses = $sale->categories->flatMap(fn ($category) => $category->posts->flatMap(fn ($post) => $post->courses));
+                $sale->setRelation('displayCourses', $sale->courses->merge($categoryCourses)->unique('id')->values());
+            })->values();
     }
 }

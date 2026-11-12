@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\Course;
+use App\Models\CourseCategory;
+use App\Models\CourseContentPost;
+use App\Models\CourseCurriculumItem;
 use App\Models\FlashSale;
 use App\Models\Payment;
 use App\Models\Setting;
@@ -129,4 +132,87 @@ class FlashSaleTest extends TestCase
         $this->assertSame('1000.00', $payment->amount);
         $this->assertNull($payment->flash_sale_id);
     }
+    public function test_free_flash_sale_enrollments_count_toward_campaign_and_student_limits(): void
+    {
+        $course = $this->makeCourse(0);
+        $sale = $this->makeSale($course, ['max_redemptions' => 1, 'per_student_limit' => 1]);
+        $firstStudent = User::factory()->create(['role' => 'student']);
+        $secondStudent = User::factory()->create(['role' => 'student']);
+
+        $this->actingAs($firstStudent)->from(route('courses.show', $course))->post(route('courses.enroll', $course))
+            ->assertRedirect(route('courses.show', $course));
+
+        $this->assertDatabaseHas('enrollments', [
+            'user_id' => $firstStudent->id,
+            'course_id' => $course->id,
+            'flash_sale_id' => $sale->id,
+            'status' => 'active',
+        ]);
+
+        $this->assertNull(FlashSale::activeForCourse($course->id, $secondStudent->id));
+        $this->assertFalse($sale->fresh()->isAvailableFor($firstStudent->id));
+    }
+
+    public function test_fixed_price_flash_sale_never_exceeds_the_base_price(): void
+    {
+        $course = $this->makeCourse(1000);
+        $sale = $this->makeSale($course, ['discount_type' => 'fixed_price', 'discount_value' => 1500]);
+
+        $this->assertSame(1000.0, $sale->discountedPrice(1000));
+        $this->assertSame(0.0, $sale->discountedPrice(0));
+    }
+
+    public function test_flash_sale_can_target_a_category_and_display_its_published_course_curriculum(): void
+    {
+        $course = $this->makeCourse(1200);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $category = CourseCategory::create(['name' => 'Grammar', 'slug' => 'grammar', 'is_visible' => true]);
+        $post = CourseContentPost::create([
+            'author_id' => $admin->id,
+            'title' => 'Grammar foundations',
+            'slug' => 'grammar-foundations',
+            'long_description' => 'Grammar lesson',
+            'status' => 'published',
+            'published_at' => now(),
+        ]);
+        $post->categories()->attach($category->id);
+        CourseCurriculumItem::create([
+            'course_id' => $course->id,
+            'course_content_post_id' => $post->id,
+            'position' => 1,
+        ]);
+
+        $sale = $this->makeSale($course);
+        $sale->courses()->detach($course->id);
+        $sale->categories()->attach($category->id);
+
+        $this->assertSame($sale->id, FlashSale::activeForCourse($course->id)?->id);
+        $campaign = FlashSale::activeCampaigns()->firstWhere('id', $sale->id);
+        $this->assertNotNull($campaign);
+        $this->assertSame([$course->id], $campaign->displayCourses->pluck('id')->all());
+    }
+
+    public function test_admin_can_create_a_flash_sale_using_only_a_published_category(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $category = CourseCategory::create(['name' => 'Speaking', 'slug' => 'speaking', 'is_visible' => true]);
+
+        $this->actingAs($admin)->post(route('admin.flash-sales.store'), [
+            'title' => 'Speaking category offer',
+            'badge' => 'SAVE 15%',
+            'discount_type' => 'percentage',
+            'discount_value' => 15,
+            'starts_at' => now()->subMinute()->format('Y-m-d\\TH:i'),
+            'ends_at' => now()->addDay()->format('Y-m-d\\TH:i'),
+            'status' => 'active',
+            'per_student_limit' => 1,
+            'priority' => 5,
+            'category_ids' => [$category->id],
+        ])->assertRedirect();
+
+        $sale = FlashSale::where('title', 'Speaking category offer')->firstOrFail();
+        $this->assertTrue($sale->categories->contains($category));
+        $this->assertCount(0, $sale->courses);
+    }
+
 }

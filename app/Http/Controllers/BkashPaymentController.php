@@ -24,15 +24,6 @@ class BkashPaymentController extends Controller
         abort_unless($this->isConfigured(), 503, 'bKash checkout is not configured.');
 
         $user = $request->user();
-
-        if (Enrollment::where('course_id', $course->id)->where('user_id', $user->id)->exists()) {
-            return back()->with('info', 'You are already enrolled in this course.');
-        }
-
-        if (Payment::where('course_id', $course->id)->where('user_id', $user->id)->where('status', 'pending')->exists()) {
-            return back()->with('info', 'A payment is already awaiting verification.');
-        }
-
         $hasOpenBatches = $course->batches()->where('status', 'open')->exists();
         $validated = $request->validate([
             'batch_id' => [
@@ -41,33 +32,42 @@ class BkashPaymentController extends Controller
                 Rule::exists('batches', 'id')->where(fn ($query) => $query->where('course_id', $course->id)->where('status', 'open')),
             ],
         ]);
-
         $batchId = $validated['batch_id'] ?? null;
-        $batchFee = $batchId ? (float) Batch::whereKey($batchId)->value('fee') : 0;
-        $baseAmount = $batchFee > 0 ? $batchFee : (float) $course->price;
-        $flashSale = FlashSale::activeForCourse($course->id, $user->id);
-        $amount = $flashSale ? $flashSale->discountedPrice($baseAmount) : $baseAmount;
 
-        abort_if($amount <= 0, 422, 'Online checkout is not needed for a free course.');
+        $payment = DB::transaction(function () use ($batchId, $course, $user): Payment {
+            $lockedCourse = Course::query()->lockForUpdate()->findOrFail($course->id);
+            abort_unless($lockedCourse->status === 'published', 404);
 
-        $payment = DB::transaction(function () use ($amount, $baseAmount, $batchId, $course, $user, $flashSale): Payment {
+            if (Enrollment::query()->where('course_id', $lockedCourse->id)->where('user_id', $user->id)->exists()) {
+                abort(409, 'You are already enrolled in this course.');
+            }
+            if (Payment::query()->where('course_id', $lockedCourse->id)->where('user_id', $user->id)->where('status', 'pending')->exists()) {
+                abort(409, 'A payment is already awaiting verification.');
+            }
+
             if ($batchId) {
                 $batch = Batch::query()->lockForUpdate()->findOrFail($batchId);
-                if ($batch->status !== 'open' || ! $this->hasAvailableSeat($batch)) {
+                if ($batch->course_id !== $lockedCourse->id || $batch->status !== 'open' || ! $this->hasAvailableSeat($batch)) {
                     abort(409, 'This batch has reached its enrollment capacity.');
                 }
+            } else {
+                $batch = null;
             }
 
-            if ($flashSale) {
-                $lockedSale = FlashSale::query()->lockForUpdate()->find($flashSale->id);
-                abort_unless($lockedSale && $lockedSale->isAvailableFor($user->id), 409, 'This Flash Sale has ended or reached its purchase limit.');
-                $amount = $lockedSale->discountedPrice($baseAmount);
+            $sale = FlashSale::activeForCourse($lockedCourse->id, $user->id);
+            if ($sale) {
+                $sale = FlashSale::query()->lockForUpdate()->find($sale->id);
+                abort_unless($sale && $sale->courses()->whereKey($lockedCourse->id)->exists() && $sale->isAvailableFor($user->id), 409, 'This Flash Sale has ended or reached its purchase limit.');
             }
+
+            $baseAmount = $batch && (float) $batch->fee > 0 ? (float) $batch->fee : (float) $lockedCourse->price;
+            $amount = $sale ? $sale->discountedPrice($baseAmount) : $baseAmount;
+            abort_if($amount <= 0, 422, 'Online checkout is not needed for a free course.');
 
             return Payment::create([
                 'user_id' => $user->id,
-                'course_id' => $course->id,
-                'flash_sale_id' => $flashSale?->id,
+                'course_id' => $lockedCourse->id,
+                'flash_sale_id' => $sale?->id,
                 'batch_id' => $batchId,
                 'method' => 'bkash',
                 'gateway_provider' => 'bkash',
