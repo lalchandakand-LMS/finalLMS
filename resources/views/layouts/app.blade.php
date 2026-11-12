@@ -101,6 +101,8 @@
         .admin-sidebar-label { margin:15px 10px 8px; color:#91a9d0; font-size:.68rem; font-weight:800; letter-spacing:.13em; text-transform:uppercase; }
         .admin-sidebar a { display:flex; align-items:center; gap:11px; padding:10px 12px; margin:3px 0; border-radius:10px; color:#dbe7ff; font-size:.88rem; font-weight:600; text-decoration:none; }
         .admin-sidebar a:hover,.admin-sidebar a.active { color:#fff; background:#ffffff1a; }
+        .admin-sidebar a[href="{{ route('admin.admissions.index') }}"] ~ a[href="{{ route('admin.admissions.index') }}"],
+        .admin-sidebar a[href="{{ route('admin.course-tracking.index') }}"] ~ a[href="{{ route('admin.course-tracking.index') }}"] { display:none; }
         .admin-sidebar a span:first-child { width:22px; text-align:center; font-size:1.05rem; }
         .admin-sidebar-footer { margin:22px 8px 0; padding:14px 10px; border-top:1px solid #ffffff25; color:#9fb3d4; font-size:.78rem; line-height:1.6; }
         .admin-shell .nav-links > a { display:none; }
@@ -217,6 +219,8 @@
             <a href="{{ route('admin.users.index') }}"><span>👥</span><span class="nav-text">Students & teachers</span></a>
             <a class="{{ request()->routeIs('admin.admissions.*') ? 'active' : '' }}" href="{{ route('admin.admissions.index') }}"><span>📝</span><span class="nav-text">Student admissions</span></a>
             <a class="{{ request()->routeIs('admin.course-tracking.index') ? 'active' : '' }}" href="{{ route('admin.course-tracking.index') }}"><span>⏱️</span><span class="nav-text">Course sessions</span></a>
+            <a href="{{ route('admin.admissions.index') }}"><span>📝</span><span class="nav-text">Student admissions</span></a>
+            <a href="{{ route('admin.course-tracking.index') }}"><span>⏱️</span><span class="nav-text">Course time tracking</span></a>
             <a class="{{ request()->routeIs('admin.teacher-applications.*') ? 'active' : '' }}" href="{{ route('admin.teacher-applications.index') }}"><span>🪪</span><span class="nav-text">Teacher KYC review</span></a>
             <a class="{{ request()->routeIs('admin.student-devices.*') ? 'active' : '' }}" href="{{ route('admin.student-devices.index') }}"><span>📱</span><span class="nav-text">Device approvals</span></a>
             <a class="{{ request()->routeIs('admin.security.sessions.*') ? 'active' : '' }}" href="{{ route('admin.security.sessions.index') }}"><span>🔐</span><span class="nav-text">Devices & active logins</span></a>
