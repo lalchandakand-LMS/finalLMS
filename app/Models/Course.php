@@ -58,6 +58,11 @@ class Course extends Model
         return $this->hasMany(Lesson::class)->orderBy('order');
     }
 
+    public function curriculumItems(): HasMany
+    {
+        return $this->hasMany(CourseCurriculumItem::class)->orderBy('position');
+    }
+
     public function comments(): MorphMany
     {
         return $this->morphMany(Comment::class, 'commentable')->where('status', 'approved');

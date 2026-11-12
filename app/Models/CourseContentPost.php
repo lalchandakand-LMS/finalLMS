@@ -57,6 +57,12 @@ class CourseContentPost extends Model
         return 'slug';
     }
 
+    public static function supportsVideoUrl(string $url): bool
+    {
+        return (new self(['video_url' => $url]))->video_embed_url !== null
+            && strtolower((string) parse_url($url, PHP_URL_SCHEME)) === 'https';
+    }
+
     public function getVideoEmbedUrlAttribute(): ?string
     {
         $url = (string) $this->video_url;

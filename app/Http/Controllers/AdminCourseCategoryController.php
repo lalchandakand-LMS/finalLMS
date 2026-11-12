@@ -22,7 +22,7 @@ class AdminCourseCategoryController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validated($request);
-        $data['slug'] = $this->uniqueSlug($data['slug'] ?: $data['name']);
+        $data['slug'] = $this->uniqueSlug(($data['slug'] ?? '') ?: $data['name']);
         CourseCategory::create($data);
 
         return redirect()->route('admin.course-categories.index')->with('success', __('Course category created.'));
@@ -31,7 +31,7 @@ class AdminCourseCategoryController extends Controller
     public function update(Request $request, CourseCategory $courseCategory): RedirectResponse
     {
         $data = $this->validated($request, $courseCategory);
-        $data['slug'] = $this->uniqueSlug($data['slug'] ?: $data['name'], $courseCategory->id);
+        $data['slug'] = $this->uniqueSlug(($data['slug'] ?? '') ?: $data['name'], $courseCategory->id);
         $courseCategory->update($data);
 
         return redirect()->route('admin.course-categories.index')->with('success', __('Course category updated.'));
@@ -47,7 +47,7 @@ class AdminCourseCategoryController extends Controller
 
     private function validated(Request $request, ?CourseCategory $category = null): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'slug' => ['nullable', 'string', 'max:150', Rule::unique('course_categories', 'slug')->ignore($category?->id)],
             'description' => ['nullable', 'string', 'max:3000'],
@@ -56,7 +56,10 @@ class AdminCourseCategoryController extends Controller
             'seo_description' => ['nullable', 'string', 'max:320'],
             'is_visible' => ['nullable', 'boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:100000'],
-        ]) + ['is_visible' => $request->boolean('is_visible'), 'sort_order' => (int) $request->input('sort_order', 0)];
+        ]);
+        $data['is_visible'] = $request->boolean('is_visible');
+        $data['sort_order'] = (int) ($data['sort_order'] ?? 0);
+        return $data;
     }
 
     private function uniqueSlug(string $value, ?int $ignoreId = null): string

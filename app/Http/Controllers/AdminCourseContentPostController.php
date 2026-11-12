@@ -60,7 +60,7 @@ class AdminCourseContentPostController extends Controller
         $data['author_id'] = $request->user()->id;
         $categoryIds = $data['category_ids'] ?? [];
         unset($data['category_ids']);
-        $data['slug'] = $this->uniqueSlug($data['slug'] ?: $data['title']);
+        $data['slug'] = $this->uniqueSlug(($data['slug'] ?? '') ?: $data['title']);
         $data['published_at'] = $data['status'] === 'published' ? ($data['published_at'] ?? now()) : null;
 
         $post = CourseContentPost::create($data);
@@ -74,7 +74,7 @@ class AdminCourseContentPostController extends Controller
         $data = $this->validated($request);
         $categoryIds = $data['category_ids'] ?? [];
         unset($data['category_ids']);
-        $data['slug'] = $this->uniqueSlug($data['slug'] ?: $data['title'], $courseContentPost->id);
+        $data['slug'] = $this->uniqueSlug(($data['slug'] ?? '') ?: $data['title'], $courseContentPost->id);
         $data['published_at'] = $data['status'] === 'published' ? ($data['published_at'] ?? $courseContentPost->published_at ?? now()) : null;
 
         $courseContentPost->update($data);
