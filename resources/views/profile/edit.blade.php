@@ -3,6 +3,12 @@
 @section('title', 'Edit Profile | LMS Academy')
 
 @section('content')
+    @php
+        $announcementSlides = \App\Models\DashboardAnnouncement::currentlyActive()
+            ->whereIn('audience', ['all', auth()->user()->role])
+            ->with('image')->orderByDesc('priority')->latest()->take(8)->get();
+    @endphp
+    @include('components.dashboard-announcement-slider')
     <div class="page-header">
         <div>
             <span class="badge info">Profile</span>
