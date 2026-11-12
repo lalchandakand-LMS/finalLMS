@@ -46,7 +46,7 @@ class Coupon extends Model
     public function eligibleSubtotal(iterable $items, ?int $userId = null, array $prices = []): float
     {
         $productIds = $this->products()->pluck('products.id');
-        $categoryIds = $this->categories()->pluck('product_categories.id');
+        $categoryIds = $this->categories()->where('product_categories.is_active', true)->pluck('product_categories.id');
         if ($productIds->isEmpty() && $categoryIds->isEmpty()) {
             return collect($items)->sum(fn ($item) => (float) ($prices[$item->product_id] ?? $item->product->currentPrice($userId)) * $item->quantity);
         }

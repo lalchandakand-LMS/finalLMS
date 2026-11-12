@@ -49,13 +49,16 @@ class AdminOrderController extends Controller
 
     public function reject(Order $order): RedirectResponse
     {
-        DB::transaction(function () use ($order): void {
+        $result = DB::transaction(function () use ($order): string {
             $locked = Order::query()->lockForUpdate()->findOrFail($order->id);
-            if ($locked->status !== 'pending') return;
+            if ($locked->status !== 'pending') return 'closed';
             $locked->update(['status' => 'cancelled']);
             CouponRedemption::query()->where('order_id', $locked->id)->where('status', 'pending')->update(['status' => 'released']);
+            return 'cancelled';
         });
-        return back()->with('success', 'Order cancelled; any reserved coupon usage was released.');
+        return $result === 'cancelled'
+            ? back()->with('success', 'Order cancelled; any reserved coupon usage was released.')
+            : back()->with('info', 'Only pending orders can be rejected.');
     }
 
     public function recordRefund(Order $order, Request $request): RedirectResponse
@@ -97,11 +100,18 @@ class AdminOrderController extends Controller
     public function revokeDownload(DownloadPermission $permission, Request $request): RedirectResponse
     {
         $data = $request->validate(['reason' => ['required', 'string', 'max:1000']]);
-        $permission->update([
-            'revoked_at' => now(),
-            'revoked_by' => $request->user()->id,
-            'revocation_reason' => $data['reason'],
-        ]);
-        return back()->with('success', 'eBook access revoked and the action recorded.');
+        $result = DB::transaction(function () use ($permission, $request, $data): bool {
+            $locked = DownloadPermission::query()->lockForUpdate()->findOrFail($permission->id);
+            if ($locked->revoked_at) return false;
+            $locked->update([
+                'revoked_at' => now(),
+                'revoked_by' => $request->user()->id,
+                'revocation_reason' => $data['reason'],
+            ]);
+            return true;
+        });
+        return $result
+            ? back()->with('success', 'eBook access revoked and the action recorded.')
+            : back()->with('info', 'This eBook access was already revoked.');
     }
 }

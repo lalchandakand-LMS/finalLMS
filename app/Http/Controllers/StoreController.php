@@ -242,9 +242,11 @@ class StoreController extends Controller
 
             $product = $locked->product;
             abort_unless($product && $product->is_downloadable && $product->download_path && Storage::disk('local')->exists($product->download_path), 404);
-            $locked->increment('download_count');
-            if ($locked->downloads_remaining !== null) {
-                $locked->decrement('downloads_remaining');
+            if ($action === 'download') {
+                $locked->increment('download_count');
+                if ($locked->downloads_remaining !== null) {
+                    $locked->decrement('downloads_remaining');
+                }
             }
             EbookDownloadLog::create([
                 'download_permission_id' => $locked->id,

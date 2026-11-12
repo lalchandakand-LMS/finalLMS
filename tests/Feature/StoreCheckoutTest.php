@@ -243,8 +243,10 @@ class StoreCheckoutTest extends TestCase
         $this->actingAs($student)->get(route('store.reader', $permission))->assertOk();
         $this->actingAs($student)->get(route('store.download', $permission))->assertOk();
         $this->actingAs($student)->get(route('store.download', $permission))->assertOk();
+        $this->actingAs($student)->get(route('store.download', $permission))->assertOk();
         $this->actingAs($student)->get(route('store.download', $permission))->assertStatus(410);
-        $this->assertDatabaseCount('ebook_download_logs', 3);
+        $this->assertDatabaseCount('ebook_download_logs', 4);
+        $this->assertDatabaseHas('download_permissions', ['id' => $permission->id, 'downloads_remaining' => 0, 'download_count' => 3]);
 
         $this->actingAs($admin)->post(route('admin.orders.record-refund', $order), [
             'refund_note' => 'Refund transferred manually via original payment channel.',
