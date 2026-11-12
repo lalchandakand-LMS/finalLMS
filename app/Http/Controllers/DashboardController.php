@@ -13,6 +13,10 @@ class DashboardController extends Controller
     public function index(): View
     {
         $user = Auth::user();
+        $announcementSlides = DashboardAnnouncement::currentlyActive()
+            ->whereIn('audience', ['all', $user->role])
+            ->with('image')
+            ->orderByDesc('priority')->latest()->take(8)->get();
 
         $courses = Course::with('teacher')->where('status', 'published')->latest()->get();
         $enrolledCourses = $user->isTeacher()
@@ -39,7 +43,7 @@ class DashboardController extends Controller
             'certificates' => Certificate::count(),
         ];
 
-        return view('dashboard', compact('user', 'courses', 'enrolledCourses', 'recentCertificates', 'stats'));
+        return view('dashboard', compact('user', 'courses', 'enrolledCourses', 'recentCertificates', 'stats', 'announcementSlides'));
     }
 
     public function certificate(Certificate $certificate): View
