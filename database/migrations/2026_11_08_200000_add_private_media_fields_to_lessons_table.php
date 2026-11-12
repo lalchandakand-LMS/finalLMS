@@ -11,7 +11,6 @@ return new class extends Migration {
             $table->string('attachment_path')->nullable();
             $table->string('attachment_name')->nullable();
             $table->string('attachment_mime', 120)->nullable();
-            $table->string('video_path')->nullable();
             $table->string('video_name')->nullable();
         });
     }
@@ -19,7 +18,7 @@ return new class extends Migration {
     public function down(): void
     {
         Schema::table('lessons', function (Blueprint $table) {
-            $table->dropColumn(['attachment_path', 'attachment_name', 'attachment_mime', 'video_path', 'video_name']);
+            $table->dropColumn(['attachment_path', 'attachment_name', 'attachment_mime', 'video_name']);
         });
     }
 };

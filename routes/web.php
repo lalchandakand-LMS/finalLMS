@@ -1,13 +1,15 @@
 <?php
 
 use App\Http\Controllers\AdminSettingsController;
+use App\Http\Controllers\AdminUpdateController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\StudentDeviceAccessController;
+use App\Http\Controllers\LessonMediaController;
+use App\Http\Controllers\TeacherApplicationController;
 use App\Http\Controllers\BatchController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\CourseController;
-use App\Http\Controllers\LessonMediaController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\ProfileController;
@@ -31,7 +33,7 @@ use App\Http\Controllers\WebsiteBuilderController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\InstallController;
 use App\Http\Controllers\QuizContestController;
-use App\Http\Controllers\TeacherApplicationController;
+use App\Http\Controllers\FlashSaleController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/install', [InstallController::class, 'index'])->name('install.index');
@@ -50,7 +52,6 @@ Route::middleware('guest')->group(function () {
 Route::post('/login', [StudentDeviceAccessController::class, 'beginLogin'])->middleware('throttle:5,1')->name('login.post');
 Route::get('/student-device/verify', [StudentDeviceAccessController::class, 'showVerify'])->middleware('throttle:10,1')->name('student-device.verify');
 Route::post('/student-device/verify', [StudentDeviceAccessController::class, 'verifyPhone'])->middleware('throttle:5,1')->name('student-device.verify-phone');
-
 Route::get('/teacher/apply', [TeacherApplicationController::class, 'create'])->name('teacher.apply');
 Route::post('/teacher/apply', [TeacherApplicationController::class, 'store'])->middleware('throttle:3,10')->name('teacher.apply.store');
 Route::get('/teacher/apply/verify', [TeacherApplicationController::class, 'showVerify'])->middleware('throttle:10,1')->name('teacher.apply.verify');
@@ -70,6 +71,7 @@ Route::get('/contests/{contest}', [QuizContestController::class, 'show'])->name(
 Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
 Route::get('/courses/{course}', [CourseController::class, 'show'])->name('courses.show');
 Route::get('/courses/{course}/lessons/{lesson}', [CourseController::class, 'showLesson'])->name('courses.lessons.show');
+Route::get('/courses/{course}/lessons/{lesson}/video', [CourseController::class, 'streamLessonVideo'])->name('courses.lessons.video');
 Route::get('/courses/{course}/lessons/{lesson}/media/{type}', [LessonMediaController::class, 'show'])->middleware('throttle:120,1')->name('courses.lessons.media');
 
 Route::middleware('auth')->group(function () {
@@ -132,8 +134,8 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         Route::delete('/teacher/batches/{batch}/question-bank/{question}', [ExamController::class, 'destroyBankQuestion'])->name('teacher.batches.question-bank.destroy');
         Route::get('/teacher/exams/{exam}/results', [ExamController::class, 'teacherResults'])->name('teacher.exams.results');
         Route::post('/teacher/batches/{batch}/exams', [ExamController::class, 'store'])->name('teacher.batches.exams.store');
-        Route::post('/teacher/batches/{batch}/assignments', [AssignmentController::class, 'store'])->name('teacher.batches.assignments.store');
-        Route::post('/teacher/assignments/{assignment}/submissions/{submission}/grade', [AssignmentController::class, 'grade'])->name('teacher.assignments.grade');
+        Route::post('/teacher/batches/{batch}/assignments', [AssignmentController::class, 'store'])->middleware('throttle:10,1')->name('teacher.batches.assignments.store');
+        Route::post('/teacher/assignments/{assignment}/submissions/{submission}/grade', [AssignmentController::class, 'grade'])->middleware('throttle:30,1')->name('teacher.assignments.grade');
     });
     Route::get('/assignment-submissions/{submission}/attachment', [AssignmentController::class, 'download'])->name('assignment-submissions.attachment');
     Route::middleware('role:student')->group(function () {
@@ -176,6 +178,16 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         Route::post('/student-devices/{device}/approve', [StudentDeviceAccessController::class, 'approve'])->name('admin.student-devices.approve');
         Route::post('/student-devices/{device}/reject', [StudentDeviceAccessController::class, 'reject'])->name('admin.student-devices.reject');
         Route::post('/student-devices/{device}/revoke', [StudentDeviceAccessController::class, 'revoke'])->name('admin.student-devices.revoke');
+        Route::get('/updates', [AdminUpdateController::class, 'index'])->name('admin.updates.index');
+        Route::post('/updates/check', [AdminUpdateController::class, 'check'])->middleware('throttle:3,10')->name('admin.updates.check');
+        Route::post('/updates/prepare', [AdminUpdateController::class, 'prepare'])->middleware('throttle:4,10')->name('admin.updates.prepare');
+        Route::post('/updates/{preparation}/extract', [AdminUpdateController::class, 'extract'])->middleware('throttle:5,10')->name('admin.updates.extract');
+        Route::post('/updates/{preparation}/backup', [AdminUpdateController::class, 'createBackup'])->middleware('throttle:6,10')->name('admin.updates.backup');
+        Route::post('/updates/{preparation}/preflight', [AdminUpdateController::class, 'preflight'])->middleware('throttle:7,10')->name('admin.updates.preflight');
+        Route::get('/flash-sales', [FlashSaleController::class, 'index'])->name('admin.flash-sales.index');
+        Route::post('/flash-sales', [FlashSaleController::class, 'store'])->name('admin.flash-sales.store');
+        Route::put('/flash-sales/{flashSale}', [FlashSaleController::class, 'update'])->name('admin.flash-sales.update');
+        Route::delete('/flash-sales/{flashSale}', [FlashSaleController::class, 'destroy'])->name('admin.flash-sales.destroy');
         Route::get('/contests', [QuizContestController::class, 'adminIndex'])->name('admin.contests.index');
         Route::post('/contests', [QuizContestController::class, 'store'])->middleware('throttle:10,1')->name('admin.contests.store');
         Route::post('/contests/{contest}/draw', [QuizContestController::class, 'draw'])->middleware('throttle:3,10')->name('admin.contests.draw');
@@ -193,6 +205,9 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         Route::post('/invoices', [InvoiceController::class, 'store'])->name('admin.invoices.store');
         Route::post('/invoices/{invoice}/payments', [InvoiceController::class, 'receivePayment'])->name('admin.invoices.payments.store');
         Route::get('/batches', [BatchController::class, 'index'])->name('admin.batches.index');
+        Route::get('/batches/{batch}/assignments', [AssignmentController::class, 'index'])->name('admin.batches.assignments.index');
+        Route::post('/batches/{batch}/assignments', [AssignmentController::class, 'store'])->middleware('throttle:10,1')->name('admin.batches.assignments.store');
+        Route::post('/assignments/{assignment}/submissions/{submission}/grade', [AssignmentController::class, 'grade'])->middleware('throttle:30,1')->name('admin.assignments.grade');
         Route::get('/batches/{batch}/attendance', [AttendanceController::class, 'index'])->name('admin.batches.attendance.index');
         Route::post('/batches/{batch}/attendance', [AttendanceController::class, 'store'])->name('admin.batches.attendance.store');
         Route::post('/branches', [BatchController::class, 'storeBranch'])->name('admin.branches.store');
@@ -217,6 +232,12 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         Route::post('/backups/restore', [BackupController::class, 'restore'])->middleware('throttle:2,10')->name('admin.backups.restore');
         Route::get('/website-builder', [WebsiteBuilderController::class, 'index'])->name('admin.website-builder.index');
         Route::post('/website-builder', [WebsiteBuilderController::class, 'update'])->name('admin.website-builder.update');
+        Route::post('/website-builder/draft', [WebsiteBuilderController::class, 'saveDraft'])->name('admin.website-builder.draft');
+        Route::get('/website-builder/preview', [WebsiteBuilderController::class, 'previewDraft'])->name('admin.website-builder.preview');
+        Route::post('/website-builder/publish-draft', [WebsiteBuilderController::class, 'publishDraft'])->name('admin.website-builder.publish-draft');
+        Route::post('/website-builder/rollback', [WebsiteBuilderController::class, 'rollback'])->name('admin.website-builder.rollback');
+        Route::post('/website-builder/custom-blocks', [WebsiteBuilderController::class, 'saveCustomBlock'])->name('admin.website-builder.custom-blocks.store');
+        Route::delete('/website-builder/custom-blocks', [WebsiteBuilderController::class, 'deleteCustomBlock'])->name('admin.website-builder.custom-blocks.destroy');
         Route::get('/media', [MediaLibraryController::class, 'index'])->name('admin.media.index');
         Route::post('/media', [MediaLibraryController::class, 'store'])->name('admin.media.store');
         Route::delete('/media/{media}', [MediaLibraryController::class, 'destroy'])->name('admin.media.destroy');

@@ -6,7 +6,7 @@
 <div aria-hidden="true" style="position:fixed;inset:35% 5% auto;z-index:5;pointer-events:none;opacity:.10;transform:rotate(-24deg);font-size:clamp(18px,4vw,42px);font-weight:800;text-align:center;word-break:break-all;">{{ auth()->user()?->email }} · Alom’s English Center · {{ now()->format('d/m/Y') }}</div>
 @if($privateVideoUrl)
 <div class="protected-media-frame" style="position:relative;overflow:hidden;border-radius:12px;background:#0f172a;">
-<video controls controlsList="nodownload noplaybackrate" disablePictureInPicture playsinline preload="metadata" style="display:block;width:100%;max-height:70vh;" oncontextmenu="return false"><source src="{{ $privateVideoUrl }}"></video>
+<video controls controlsList="nodownload noplaybackrate" disablePictureInPicture playsinline preload="metadata" style="display:block;width:100%;max-height:70vh;" @if($lesson->thumbnail_path) poster="{{ Storage::disk('public')->url($lesson->thumbnail_path) }}" @endif oncontextmenu="return false"><source src="{{ $privateVideoUrl }}"></video>
 <div class="dynamic-media-watermark" aria-hidden="true">{{ auth()->user()?->email ?? 'Preview visitor' }} · Alom’s English Center · {{ now()->format('d/m/Y H:i') }}</div>
 </div>
 @elseif($videoEmbedUrl)

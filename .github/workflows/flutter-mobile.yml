@@ -1,0 +1,31 @@
+name: Flutter mobile apps
+on:
+  pull_request:
+    paths:
+      - 'apps/**'
+      - '.github/workflows/flutter-mobile.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/**'
+      - '.github/workflows/flutter-mobile.yml'
+jobs:
+  analyze-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [student_app, instructor_app]
+    defaults:
+      run:
+        working-directory: apps/${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: dart format lib test
+      - run: flutter analyze --no-pub
+      - run: flutter test --no-pub

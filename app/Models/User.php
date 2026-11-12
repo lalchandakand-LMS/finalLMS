@@ -20,6 +20,11 @@ class User extends Authenticatable implements MustVerifyEmail
 
     protected $fillable = ['name', 'email', 'password', 'role', 'phone_number', 'sms_marketing_opt_in', 'branch_id'];
 
+    public function apiTokens(): HasMany
+    {
+        return $this->hasMany(ApiToken::class);
+    }
+
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);

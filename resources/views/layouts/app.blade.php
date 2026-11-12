@@ -12,6 +12,25 @@
         $googleTagManagerId = $hasSettingsTable ? \App\Models\Setting::value('google_tag_manager_id') : null;
         $facebookPixelId = $hasSettingsTable ? \App\Models\Setting::value('facebook_pixel_id') : null;
         $marketingConsent = request()->cookie('marketing_consent') === 'accepted';
+        $isPublicLayout = !(auth()->check() && auth()->user()->isAdmin());
+        $websiteHeaderLinks = $isPublicLayout && $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('header_links', '[]'), true) : [];
+        $websiteFooterTitle = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('footer_title', config('app.name')) : config('app.name');
+        $websiteFooterText = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('footer_text', '') : '';
+        $websiteFooterLinks = $isPublicLayout && $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('footer_links', '[]'), true) : [];
+        $themePrimary = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('site_primary_color', '#1546a8') : '#1546a8';
+        $themeBackground = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('site_background_color', '#f3f6fb') : '#f3f6fb';
+        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', (string) $themePrimary)) $themePrimary = '#1546a8';
+        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', (string) $themeBackground)) $themeBackground = '#f3f6fb';
+        $themeBackgroundStyle = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('site_background_style', 'soft-gradient') : 'soft-gradient';
+        $themeBackgrounds = ['solid' => $themeBackground, 'soft-gradient' => 'radial-gradient(circle at top left, rgba(21,70,168,0.10), transparent 30%), linear-gradient(180deg, ' . $themeBackground . ' 0%, #ffffff 100%)', 'warm-gradient' => 'radial-gradient(circle at top left, rgba(180,130,70,0.10), transparent 30%), linear-gradient(180deg, ' . $themeBackground . ' 0%, #fffdf9 100%)'];
+        $themePageBackground = $themeBackgrounds[$themeBackgroundStyle] ?? $themeBackgrounds['soft-gradient'];
+        $themeFont = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('site_font_family', 'system') : 'system';
+        $themeFonts = ['system' => 'Arial, Helvetica, sans-serif', 'inter' => 'Inter, Arial, sans-serif', 'nunito' => 'Nunito, Arial, sans-serif', 'poppins' => 'Poppins, Arial, sans-serif', 'georgia' => 'Georgia, serif'];
+        $themeFontFamily = $themeFonts[$themeFont] ?? $themeFonts['system'];
+        $themeHeadingScale = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('site_heading_scale', '1') : '1';
+        $themeBodyScale = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('site_body_scale', '1') : '1';
+        if (!in_array($themeHeadingScale, ['0.9', '1', '1.1', '1.2'], true)) $themeHeadingScale = '1';
+        if (!in_array($themeBodyScale, ['0.9', '1', '1.05', '1.1'], true)) $themeBodyScale = '1';
     @endphp
     <title>@yield('title', config('app.name'))</title>
     <meta name="description" content="{{ $seoDescription }}">
@@ -47,7 +66,11 @@
             --bg: #f3f6fb;
             --panel: #ffffff;
             --panel-alt: #eef4ff;
-            --primary: #1546a8;
+            --primary: {{ $themePrimary }};
+            --site-page-background: {!! $themePageBackground !!};
+            --site-font-family: {{ $themeFontFamily }};
+            --site-heading-scale: {{ $themeHeadingScale }};
+            --site-body-scale: {{ $themeBodyScale }};
             --primary-dark: #0f2d6b;
             --green: #1f9d61;
             --text: #18212f;
@@ -78,12 +101,17 @@
 
         body {
             margin: 0;
-            font-family: Arial, Helvetica, sans-serif;
-            background:
-                radial-gradient(circle at top left, rgba(21,70,168,0.12), transparent 28%),
-                linear-gradient(180deg, #eef5ff 0%, #f9fbff 100%);
+            font-family: var(--site-font-family);
+            font-size: calc(16px * var(--site-body-scale));
+            background: var(--site-page-background);
             color: var(--text);
         }
+        h1 { font-size: calc(2em * var(--site-heading-scale)); }
+        h2 { font-size: calc(1.5em * var(--site-heading-scale)); }
+        h3 { font-size: calc(1.17em * var(--site-heading-scale)); }
+        h4 { font-size: calc(1em * var(--site-heading-scale)); }
+        h5 { font-size: calc(.83em * var(--site-heading-scale)); }
+        h6 { font-size: calc(.67em * var(--site-heading-scale)); }
         a { color: var(--primary); text-decoration: none; }
         .btn, .nav-links a, .nav-links button, .course-item, .panel, .card, .summary-box, .auth-box {
             transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
@@ -166,6 +194,36 @@
             .nav-links a, .nav-links button { flex: 1 1 calc(50% - 10px); text-align: center; }
             .page-header { flex-direction: column; align-items: flex-start; }
         }
+
+        .public-nav-trigger { display:inline-flex; align-items:center; gap:11px; min-height:46px; padding:10px 16px; border:0; border-radius:14px; color:#fff; background:linear-gradient(135deg,#1747a5,#0c2b69); box-shadow:0 10px 24px rgba(13,45,105,.2); font:700 .94rem Arial,sans-serif; cursor:pointer; }
+        .public-nav-trigger:hover { transform:translateY(-1px); box-shadow:0 14px 28px rgba(13,45,105,.26); }
+        .public-nav-trigger:focus-visible,.public-nav-close:focus-visible,.public-drawer a:focus-visible,.public-drawer button:focus-visible { outline:3px solid #f7b84b; outline-offset:3px; }
+        .public-nav-trigger-icon { display:grid; gap:4px; width:19px; }
+        .public-nav-trigger-icon i { display:block; height:2px; width:100%; border-radius:3px; background:currentColor; transition:transform .25s ease,opacity .2s ease; }
+        .public-nav-backdrop { position:fixed; inset:0; z-index:80; background:rgba(6,18,43,.55); opacity:0; visibility:hidden; transition:opacity .28s ease,visibility .28s ease; backdrop-filter:blur(3px); }
+        .public-nav-backdrop.is-open { opacity:1; visibility:visible; }
+        .public-drawer { position:fixed; inset:0 0 0 auto; z-index:81; display:flex; flex-direction:column; width:min(430px,92vw); height:100dvh; padding:24px; overflow-y:auto; color:#eaf1ff; background:linear-gradient(160deg,#102e70 0%,#0a1d46 58%,#081632 100%); box-shadow:-24px 0 70px rgba(4,16,42,.28); transform:translateX(105%); visibility:hidden; transition:transform .34s cubic-bezier(.2,.8,.2,1),visibility .34s; overscroll-behavior:contain; }
+        .public-drawer.is-open { transform:translateX(0); visibility:visible; }
+        .public-drawer-head { display:flex; align-items:center; justify-content:space-between; gap:16px; padding-bottom:22px; border-bottom:1px solid rgba(255,255,255,.16); }
+        .public-drawer-brand { display:flex; align-items:center; gap:12px; color:#fff; font-weight:800; font-size:1rem; line-height:1.25; }
+        .public-drawer-brand-mark { display:grid; place-items:center; width:44px; height:44px; border-radius:14px; color:#12316e; background:#fff; font-size:1.35rem; }
+        .public-drawer-brand small { display:block; margin-top:4px; color:#b9c9e8; font-size:.72rem; font-weight:500; }
+        .public-nav-close { display:grid; place-items:center; width:42px; height:42px; border:1px solid rgba(255,255,255,.2); border-radius:13px; color:#fff; background:rgba(255,255,255,.08); font-size:1.5rem; cursor:pointer; }
+        .public-drawer-intro { margin:22px 0 12px; color:#b9c9e8; font-size:.82rem; line-height:1.6; }
+        .public-drawer-links { display:grid; gap:7px; }
+        .public-drawer-links a { display:flex; align-items:center; gap:13px; min-height:48px; padding:11px 13px; border:1px solid transparent; border-radius:13px; color:#eaf1ff; font-weight:650; text-decoration:none; transition:background .2s ease,border-color .2s ease,transform .2s ease; }
+        .public-drawer-links a:hover,.public-drawer-links a:focus-visible { transform:translateX(-3px); border-color:rgba(255,255,255,.14); color:#fff; background:rgba(255,255,255,.11); }
+        .public-drawer-links .menu-icon { display:grid; place-items:center; width:30px; height:30px; flex:0 0 30px; border-radius:10px; color:#fff; background:rgba(255,255,255,.12); font-size:.95rem; }
+        .public-drawer-section { margin:20px 0 9px; color:#8fa9d7; font-size:.68rem; font-weight:800; letter-spacing:.15em; text-transform:uppercase; }
+        .public-drawer-actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:22px; padding-top:18px; border-top:1px solid rgba(255,255,255,.16); }
+        .public-drawer-actions a,.public-drawer-actions button { display:flex; align-items:center; justify-content:center; min-height:46px; padding:10px 14px; border:1px solid rgba(255,255,255,.24); border-radius:13px; color:#fff; background:rgba(255,255,255,.08); font:700 .9rem Arial,sans-serif; text-align:center; cursor:pointer; }
+        .public-drawer-actions a.primary { border-color:#fff; color:#12316e; background:#fff; }
+        .public-drawer-locale { margin-top:18px; padding-top:16px; border-top:1px solid rgba(255,255,255,.16); }
+        .public-drawer-locale label { margin-bottom:8px; color:#b9c9e8; font-size:.78rem; }
+        .public-drawer-locale select { color:#14284d; background:#fff; }
+        body.public-menu-open { overflow:hidden; }
+        @media(max-width:820px) { .nav { flex-direction:row; align-items:center; } .nav .brand { max-width:65%; font-size:1.1rem; } .public-nav-trigger { padding:10px 13px; } .container { padding:22px 16px 48px; } }
+        @media(prefers-reduced-motion:reduce) { .public-nav-backdrop,.public-drawer,.public-nav-trigger-icon i,.public-drawer-links a { transition:none!important; } }
     </style>
 </head>
 <body class="{{ $isAdminLayout ? 'admin-shell' : '' }}">
@@ -180,6 +238,7 @@
             <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><span>▦</span><span class="nav-text">Dashboard</span></a>
             <div class="admin-sidebar-label">Academy</div>
             <a href="{{ route('admin.courses.index') }}"><span>📚</span><span class="nav-text">Courses & lessons</span></a>
+            <a href="{{ route('admin.flash-sales.index') }}"><span>🔥</span><span class="nav-text">Flash Sale</span></a>
             <a href="{{ route('admin.users.index') }}"><span>👥</span><span class="nav-text">Students & teachers</span></a>
             <a class="{{ request()->routeIs('admin.teacher-applications.*') ? 'active' : '' }}" href="{{ route('admin.teacher-applications.index') }}"><span>🪪</span><span class="nav-text">Teacher KYC review</span></a>
             <a class="{{ request()->routeIs('admin.student-devices.*') ? 'active' : '' }}" href="{{ route('admin.student-devices.index') }}"><span>📱</span><span class="nav-text">Device approvals</span></a>
@@ -205,6 +264,7 @@
     <header class="topbar">
         <nav class="nav">
             <a href="/{{ auth()->check() ? 'dashboard' : '' }}" class="brand">{{ config('app.name') }}</a>
+            @if($isAdminLayout)
             <div class="nav-links">
                 <form method="POST" action="{{ route('locale.update') }}" class="inline-form" style="display:inline-flex;gap:6px;align-items:center;">
                     @csrf
@@ -216,11 +276,18 @@
                 </form>
                 <a href="/">{{ __('Home') }}</a>
                 <a href="{{ route('courses.index') }}">{{ __('Courses') }}</a>
+                @if(\Illuminate\Support\Facades\Schema::hasTable('flash_sales') && \App\Models\FlashSale::activeCampaigns()->isNotEmpty())<a href="{{ route('landing') }}#flash-sale">🔥 {{ __('Flash Sale') }}</a>@endif
                 <a href="{{ route('contests.index') }}">Quiz & prizes</a>
                 <a href="{{ route('pages.about') }}">{{ __('About') }}</a>
                 <a href="{{ route('pages.contact') }}">{{ __('Contact') }}</a>
                 <a href="{{ route('pages.faq') }}">{{ __('FAQ') }}</a>
                 <a href="{{ route('news.index') }}">{{ __('Blog & News') }}</a>
+                
+                    @foreach(is_array($websiteHeaderLinks) ? $websiteHeaderLinks : [] as $websiteLink)
+                        @if(is_array($websiteLink) && !empty($websiteLink['label']) && !empty($websiteLink['url']))
+                            <a href="{{ $websiteLink['url'] }}">{{ $websiteLink['label'] }}</a>
+                        @endif
+                    @endforeach
                 @auth
                     <a href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a>
                     <a href="{{ route('profile.edit') }}">{{ __('Profile') }}</a>
@@ -241,6 +308,7 @@
                         <a href="{{ route('admin.news.index') }}">{{ __('Blog & News') }}</a>
                         <a href="{{ route('admin.users.index') }}">Users</a>
                         <a href="{{ route('admin.courses.index') }}">Courses</a>
+                        <a href="{{ route('admin.flash-sales.index') }}">Flash Sale</a>
                     @endif
                     @if(auth()->user()->isBranchManager())
                         <a href="{{ route('branch-manager.batches.index') }}">My branch</a>
@@ -269,6 +337,9 @@
                     <a href="{{ route('teacher.apply') }}">Teacher apply</a>
                 @endauth
             </div>
+            @else
+                @include('partials.public-navigation')
+            @endif
         </nav>
     </header>
 
@@ -285,6 +356,24 @@
 
         @yield('content')
     </main>
+    
+        <footer class="container" style="display:{{ $isAdminLayout ? 'none' : 'block' }};padding-top:24px;padding-bottom:36px;border-top:1px solid var(--border);">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap;">
+                <div style="max-width:620px;">
+                    <strong>{{ $websiteFooterTitle }}</strong>
+                    @if($websiteFooterText !== '')
+                        <p class="muted" style="margin:8px 0 0;line-height:1.7;">{{ $websiteFooterText }}</p>
+                    @endif
+                </div>
+                <nav aria-label="{{ __('Footer navigation') }}" style="display:flex;gap:12px;flex-wrap:wrap;">
+                    @foreach(is_array($websiteFooterLinks) ? $websiteFooterLinks : [] as $websiteLink)
+                        @if(is_array($websiteLink) && !empty($websiteLink['label']) && !empty($websiteLink['url']))
+                            <a href="{{ $websiteLink['url'] }}">{{ $websiteLink['label'] }}</a>
+                        @endif
+                    @endforeach
+                </nav>
+            </div>
+        </footer>
     @if(!request()->cookie('marketing_consent'))
         <aside id="cookie-preferences" class="panel" style="position:fixed; right:20px; bottom:20px; z-index:20; max-width:440px; box-shadow:var(--shadow);">
             <strong>Cookie preferences</strong>
@@ -304,6 +393,50 @@
             document.cookie = `${value}; Path=/; SameSite=Lax${secure}`;
             window.location.reload();
         }
+    </script>
+
+    <script>
+        (() => {
+            const trigger = document.getElementById('public-nav-trigger');
+            const drawer = document.getElementById('public-navigation-drawer');
+            const backdrop = document.getElementById('public-nav-backdrop');
+            if (!trigger || !drawer || !backdrop) return;
+            const closeButton = drawer.querySelector('[data-menu-close]');
+            let previousFocus = null;
+            const openMenu = () => {
+                previousFocus = document.activeElement;
+                drawer.classList.add('is-open');
+                backdrop.classList.add('is-open');
+                document.body.classList.add('public-menu-open');
+                trigger.setAttribute('aria-expanded', 'true');
+                drawer.setAttribute('aria-hidden', 'false');
+                backdrop.setAttribute('aria-hidden', 'false');
+                window.setTimeout(() => { if (closeButton) closeButton.focus(); }, 30);
+            };
+            const closeMenu = () => {
+                drawer.classList.remove('is-open');
+                backdrop.classList.remove('is-open');
+                document.body.classList.remove('public-menu-open');
+                trigger.setAttribute('aria-expanded', 'false');
+                drawer.setAttribute('aria-hidden', 'true');
+                backdrop.setAttribute('aria-hidden', 'true');
+                if (previousFocus && previousFocus.focus) previousFocus.focus();
+            };
+            trigger.addEventListener('click', () => trigger.getAttribute('aria-expanded') === 'true' ? closeMenu() : openMenu());
+            if (closeButton) closeButton.addEventListener('click', closeMenu);
+            backdrop.addEventListener('click', closeMenu);
+            drawer.querySelectorAll('a').forEach(link => link.addEventListener('click', closeMenu));
+            document.addEventListener('keydown', event => {
+                if (event.key === 'Escape' && drawer.classList.contains('is-open')) closeMenu();
+                if (event.key === 'Tab' && drawer.classList.contains('is-open')) {
+                    const focusable = Array.from(drawer.querySelectorAll('a[href],button:not([disabled]),select')).filter(el => el.offsetParent !== null);
+                    if (!focusable.length) return;
+                    const first = focusable[0], last = focusable[focusable.length - 1];
+                    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+                    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+                }
+            });
+        })();
     </script>
     @stack('scripts')
 </body>

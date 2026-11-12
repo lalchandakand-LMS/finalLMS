@@ -4,7 +4,7 @@ This guide covers a fresh Laravel 12 installation on PHP 8.3+ with MySQL/MariaDB
 
 ## Requirements
 
-- PHP 8.3 with `bcmath`, `ctype`, `fileinfo`, `mbstring`, `openssl`, `pdo_mysql`, `tokenizer`, and `xml` enabled
+- PHP 8.3 with `bcmath`, `ctype`, `fileinfo`, `mbstring`, `openssl`, `pdo_mysql`, `tokenizer`, `xml`, and `zip` enabled
 - A new, empty MySQL/MariaDB database and database user with full privileges on that database
 - HTTPS enabled for the domain
 - Writable `storage`, `bootstrap/cache`, and application-root directories during installation
@@ -41,6 +41,8 @@ For an existing deployment, back up files and database first, follow the migrati
   ```
 
 - Run route checks and smoke tests before opening enrollment. Set up database backups and monitor application logs.
+- Keep the packaged `VERSION` file with the deployed code. Leave `LMS_VERSION` empty to read the installed version from this marker; the signed release workflow stamps it from the immutable version tag.
+- Signed update checks remain disabled by default. The Admin Update Center requires an independently verified RSA public key stored outside the public web root before `LMS_UPDATES_ENABLED=true` is set. It can verify signed release metadata, download and checksum-validate a release package, and extract it into isolated private staging. It does not activate or install code, run migrations, or provide rollback.
 
 ## Release Artifact
 
@@ -49,3 +51,7 @@ The `Laravel CI` workflow creates the `AlomsEnglishCenter-cpanel.zip` artifact o
 ## Known Deployment Gaps
 
 The web installer and installation gate are implemented in code, but still require a successful GitHub CI run and a real cPanel staging installation. Automated scheduled off-site backups and disaster recovery are not yet implemented. The bKash Tokenized Checkout adapter now performs server-side token, execute, and payment-status verification. It remains disabled until the academy supplies official merchant credentials, configures the registered callback URL, and completes sandbox and production verification. Nagad and SSLCommerz direct API integrations are not implemented; Nagad remains configuration-only until official merchant documentation and credentials are supplied. Do not advertise automatic Nagad or SSLCommerz payment processing. The cPanel guide has not been exercised on an actual cPanel account.
+
+## Post-launch application updates
+
+The long-term update design and acceptance criteria are documented in [Admin Update Center and Safe Release System](../docs/ADMIN_UPDATE_SYSTEM.md). The current Admin Update Center verifies signed metadata and packages, extracts them into isolated private staging, and can create a private code snapshot tied to a recent HMAC-verified database/media backup. Before using the snapshot action, create a fresh database/media backup in Admin → Backups. Its read-only activation preflight checks server, filesystem, database and pending-migration readiness and verifies the tied backup files. It still explicitly blocks activation because automatic code activation, controlled migrations, post-activation health checks and tested rollback are not implemented. The code snapshot is not itself a tested restore/rollback tool. Until activation/recovery are implemented and accepted on cPanel staging, deploy reviewed release ZIPs using the manual backup-and-release procedure; do not install arbitrary packages or overwrite the live application in place.

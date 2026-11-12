@@ -27,10 +27,12 @@ jobs:
           --health-retries=10
     steps:
       - uses: actions/checkout@v5
+      - name: Lint GitHub Actions workflows
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: bcmath, ctype, fileinfo, mbstring, openssl, pdo_mysql, tokenizer, xml
+          extensions: bcmath, ctype, fileinfo, mbstring, openssl, pdo_mysql, tokenizer, xml, zip
           coverage: none
       - uses: actions/setup-node@v5
         with:
@@ -80,6 +82,8 @@ jobs:
       - run: composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
       - run: php artisan key:generate --force
       - run: php artisan config:cache
+      - name: Verify packaged LMS version marker
+        run: EXPECTED_VERSION="$(tr -d '\r\n' < VERSION)" php .github/scripts/assert-release-version.php
       - run: php artisan view:cache
       - run: npm ci
       - run: npm run build
@@ -98,14 +102,15 @@ jobs:
             --exclude='node_modules' \
             --exclude='.git' \
             --exclude='dist' \
-            app artisan bootstrap config database deployment public resources routes storage vendor composer.json composer.lock README.md \
+            app artisan bootstrap config database deployment public resources routes storage vendor composer.json composer.lock README.md VERSION \
             "$RUNNER_TEMP/cpanel-package/"
           (cd "$RUNNER_TEMP/cpanel-package" && zip -qr "$GITHUB_WORKSPACE/dist/AlomsEnglishCenter-cpanel.zip" .)
           unzip -t dist/AlomsEnglishCenter-cpanel.zip
           unzip -Z1 dist/AlomsEnglishCenter-cpanel.zip > "$RUNNER_TEMP/cpanel-files.txt"
-          ! grep -Eq '(^|/)(\.env|database\.sqlite|laravel\.log|\.git)(/|$)' "$RUNNER_TEMP/cpanel-files.txt"
+          if grep -Eq '(^|/)(\.env|database\.sqlite|laravel\.log|\.git)(/|$)' "$RUNNER_TEMP/cpanel-files.txt"; then echo "Forbidden runtime or secret file found in release package."; exit 1; fi
           grep -Fxq 'public/index.php' "$RUNNER_TEMP/cpanel-files.txt"
           grep -Fxq 'vendor/autoload.php' "$RUNNER_TEMP/cpanel-files.txt"
+          grep -Fxq 'VERSION' "$RUNNER_TEMP/cpanel-files.txt"
           grep -Fxq 'deployment/.env.example' "$RUNNER_TEMP/cpanel-files.txt"
       - uses: actions/upload-artifact@v7
         with:

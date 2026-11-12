@@ -40,6 +40,18 @@
                 @else
                     <a class="btn secondary" href="{{ $liveClass->meeting_url }}" target="_blank" rel="noopener noreferrer">{{ __('Open meeting link') }}</a>
                 @endif
+                @if($liveClass->recording_embed_url)
+                    <section class="panel" style="margin-top:16px;">
+                        <span class="badge success">{{ __('Class recording available') }}</span>
+                        <h3>{{ __('Watch recorded class') }}</h3>
+                        <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:12px;background:#0f172a;">
+                            <iframe src="{{ $liveClass->recording_embed_url }}" title="{{ $liveClass->title }} recording" allow="accelerometer; autoplay; encrypted-media; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen style="position:absolute;inset:0;width:100%;height:100%;border:0;"></iframe>
+                        </div>
+                        @if($liveClass->recording_notes)<p style="margin-top:12px;">{{ $liveClass->recording_notes }}</p>@endif
+                    </section>
+                @elseif(auth()->user()->isStudent() && $liveClass->recording_url)
+                    <p class="muted">{{ __('The teacher has not published this recording yet.') }}</p>
+                @endif
                 @if($canManage)
                     <details style="margin-top:14px;">
                         <summary>{{ __('Edit session') }}</summary>
@@ -48,6 +60,9 @@
                             @method('PUT')
                             <label>Title<input name="title" value="{{ $liveClass->title }}" maxlength="160" required></label>
                             <label>Meeting URL<input type="url" name="meeting_url" value="{{ $liveClass->meeting_url }}" maxlength="2048" required></label>
+                            <label>Recording URL (YouTube Unlisted/Vimeo)<input type="url" name="recording_url" value="{{ $liveClass->recording_url }}" maxlength="2048"></label>
+                            <label>Publish recording at<input type="datetime-local" name="recording_published_at" value="{{ $liveClass->recording_published_at?->format('Y-m-d\\TH:i') }}"></label>
+                            <label>Recording notes<textarea name="recording_notes">{{ $liveClass->recording_notes }}</textarea></label>
                             <label>Start<input type="datetime-local" name="starts_at" value="{{ $liveClass->starts_at->format('Y-m-d\TH:i') }}" required></label>
                             <label>End<input type="datetime-local" name="ends_at" value="{{ $liveClass->ends_at->format('Y-m-d\TH:i') }}" required></label>
                             <label>Status<select name="status">@foreach(['scheduled', 'live', 'completed', 'cancelled'] as $status)<option value="{{ $status }}" @selected($liveClass->status === $status)>{{ ucfirst($status) }}</option>@endforeach</select></label>

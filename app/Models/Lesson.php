@@ -19,10 +19,11 @@ class Lesson extends Model
         'order',
         'is_preview',
         'video_url',
+        'video_path',
+        'thumbnail_path',
         'attachment_path',
         'attachment_name',
         'attachment_mime',
-        'video_path',
         'video_name',
     ];
 

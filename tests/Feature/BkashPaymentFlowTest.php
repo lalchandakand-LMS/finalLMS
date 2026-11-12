@@ -158,6 +158,92 @@ class BkashPaymentFlowTest extends TestCase
         $this->assertDatabaseMissing('enrollments', ['user_id' => $student->id, 'course_id' => $course->id]);
     }
 
+
+    public function test_callback_retry_after_approval_is_idempotent_and_does_not_call_gateway_again(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $course = $this->paidCourse();
+        $payment = Payment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'method' => 'bkash',
+            'gateway_provider' => 'bkash',
+            'amount' => '1500.00',
+            'currency' => 'BDT',
+            'transaction_reference' => 'BKASH-RETRY-REF',
+            'gateway_payment_id' => 'BKASH-PAY-RETRY',
+            'gateway_transaction_id' => 'BKASH-TRX-RETRY',
+            'status' => 'approved',
+            'reviewed_at' => now(),
+        ]);
+        Enrollment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'status' => 'active',
+        ]);
+
+        Http::preventStrayRequests();
+
+        $this->get(route('payments.bkash.callback', [
+            'paymentID' => 'BKASH-PAY-RETRY',
+            'status' => 'success',
+        ]))->assertRedirect(route('courses.show', $course));
+
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'approved']);
+        $this->assertDatabaseCount('enrollments', 1);
+        Http::assertNothingSent();
+    }
+
+    public function test_status_query_can_confirm_payment_when_execute_request_fails(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $course = $this->paidCourse();
+        $payment = Payment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'method' => 'bkash',
+            'gateway_provider' => 'bkash',
+            'amount' => '1500.00',
+            'currency' => 'BDT',
+            'transaction_reference' => 'BKASH-EXEC-RETRY-REF',
+            'gateway_payment_id' => 'BKASH-PAY-EXEC-RETRY',
+            'status' => 'pending',
+        ]);
+
+        Http::fake([
+            '*/tokenized/checkout/token/grant' => Http::response(['id_token' => 'verify-token'], 200),
+            '*/tokenized/checkout/execute' => Http::response(['message' => 'Already executed'], 409),
+            '*/tokenized/checkout/payment/status' => Http::response([
+                'transactionStatus' => 'Completed',
+                'paymentID' => 'BKASH-PAY-EXEC-RETRY',
+                'trxID' => 'BKASH-TRX-EXEC-RETRY',
+                'amount' => '1500.00',
+                'currency' => 'BDT',
+                'merchantInvoiceNumber' => 'BKASH-EXEC-RETRY-REF',
+            ], 200),
+        ]);
+
+        $this->get(route('payments.bkash.callback', [
+            'paymentID' => 'BKASH-PAY-EXEC-RETRY',
+            'status' => 'success',
+        ]))->assertRedirect(route('courses.show', $course));
+
+        $this->assertDatabaseHas('payments', [
+            'id' => $payment->id,
+            'status' => 'approved',
+            'gateway_transaction_id' => 'BKASH-TRX-EXEC-RETRY',
+        ]);
+        $this->assertDatabaseHas('enrollments', [
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'status' => 'active',
+        ]);
+        Http::assertSent(fn (Request $request) =>
+            str_ends_with($request->url(), '/tokenized/checkout/payment/status')
+            && $request['paymentID'] === 'BKASH-PAY-EXEC-RETRY'
+        );
+    }
+
     private function paidCourse(): Course
     {
         $teacher = User::factory()->create(['role' => 'teacher']);
