@@ -78,7 +78,7 @@ Route::get('/faq', [CmsPageController::class, 'faq'])->name('pages.faq');
 Route::get('/news', [BlogController::class, 'index'])->name('news.index');
 Route::get('/news/{post:slug}', [BlogController::class, 'show'])->name('news.show');
 Route::get('/store', [StoreController::class, 'index'])->name('store.index');
-Route::get('/store/{product:slug}/preview', [StoreController::class, 'preview'])->name('store.preview');
+Route::get('/store/{product:slug}/preview', [StoreController::class, 'preview'])->middleware('throttle:10,1')->name('store.preview');
 Route::get('/store/{product:slug}', [StoreController::class, 'show'])->name('store.products.show');
 Route::get('/store/payments/bkash/callback', [CommerceBkashController::class, 'callback'])->middleware('throttle:20,1')->name('store.payments.bkash.callback');
 Route::post('/news/{post:slug}/comments', [CommentController::class, 'storePost'])->middleware(['auth', 'throttle:5,1'])->name('news.comments.store');
