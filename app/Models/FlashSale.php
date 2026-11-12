@@ -19,8 +19,16 @@ class FlashSale extends Model
     public function isAvailableFor(?int $userId = null): bool
     {
         if ($this->status !== 'active' || $this->starts_at->isFuture() || $this->ends_at->isPast()) return false;
-        if ($this->max_redemptions !== null && $this->payments()->whereIn('status', ['pending','approved'])->count() >= $this->max_redemptions) return false;
-        if ($userId !== null && $this->payments()->where('user_id',$userId)->whereIn('status',['pending','approved'])->count() >= $this->per_student_limit) return false;
+        $paidRedemptions = $this->payments()->whereIn('status', ['pending', 'approved']);
+        $freeRedemptions = Enrollment::query()->where('flash_sale_id', $this->id)->whereIn('status', ['active', 'completed']);
+        $redemptionCount = (clone $paidRedemptions)->count() + (clone $freeRedemptions)->count();
+        if ($this->max_redemptions !== null && $redemptionCount >= $this->max_redemptions) return false;
+
+        if ($userId !== null) {
+            $studentRedemptions = (clone $paidRedemptions)->where('user_id', $userId)->count()
+                + (clone $freeRedemptions)->where('user_id', $userId)->count();
+            if ($studentRedemptions >= $this->per_student_limit) return false;
+        }
         return true;
     }
 

@@ -11,6 +11,7 @@ class Enrollment extends Model
         'user_id',
         'course_id',
         'batch_id',
+        'flash_sale_id',
         'status',
         'completed_at',
     ];
@@ -27,6 +28,11 @@ class Enrollment extends Model
     public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class);
+    }
+
+    public function flashSale(): BelongsTo
+    {
+        return $this->belongsTo(FlashSale::class);
     }
 
     public function batch(): BelongsTo

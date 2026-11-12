@@ -129,4 +129,34 @@ class FlashSaleTest extends TestCase
         $this->assertSame('1000.00', $payment->amount);
         $this->assertNull($payment->flash_sale_id);
     }
+    public function test_free_flash_sale_enrollments_count_toward_campaign_and_student_limits(): void
+    {
+        $course = $this->makeCourse(0);
+        $sale = $this->makeSale($course, ['max_redemptions' => 1, 'per_student_limit' => 1]);
+        $firstStudent = User::factory()->create(['role' => 'student']);
+        $secondStudent = User::factory()->create(['role' => 'student']);
+
+        $this->actingAs($firstStudent)->post(route('courses.enroll', $course))
+            ->assertRedirect(route('courses.show', $course));
+
+        $this->assertDatabaseHas('enrollments', [
+            'user_id' => $firstStudent->id,
+            'course_id' => $course->id,
+            'flash_sale_id' => $sale->id,
+            'status' => 'active',
+        ]);
+
+        $this->assertNull(FlashSale::activeForCourse($course->id, $secondStudent->id));
+        $this->assertFalse($sale->fresh()->isAvailableFor($firstStudent->id));
+    }
+
+    public function test_fixed_price_flash_sale_never_exceeds_the_base_price(): void
+    {
+        $course = $this->makeCourse(1000);
+        $sale = $this->makeSale($course, ['discount_type' => 'fixed_price', 'discount_value' => 1500]);
+
+        $this->assertSame(1000.0, $sale->discountedPrice(1000));
+        $this->assertSame(0.0, $sale->discountedPrice(0));
+    }
+
 }
