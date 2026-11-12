@@ -104,11 +104,11 @@ class AdminDashboardAnnouncementController extends Controller
             $course = Course::findOrFail($data['course_id']);
             $data['title'] = $data['title'] ?: $course->title;
             $data['button_url'] = route('courses.show', $course);
-            $data['button_label'] = $data['button_label'] ?: __('View course');
+            $data['button_label'] = ($data['button_label'] ?? null) ?: __('View course');
         } elseif ($data['content_type'] === 'post') {
             $post = BlogPost::findOrFail($data['blog_post_id']);
             $data['button_url'] = route('news.show', $post->slug);
-            $data['button_label'] = $data['button_label'] ?: __('Read post');
+            $data['button_label'] = ($data['button_label'] ?? null) ?: __('Read post');
         } else {
             $url = trim((string) ($data['button_url'] ?? ''));
             if ($url !== '' && !Str::startsWith($url, '/') && !preg_match('/^https:\/\//i', $url)) {
