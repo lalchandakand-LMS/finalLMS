@@ -41,7 +41,7 @@ class AdminOrderController extends Controller
     public function proof(Order $order)
     {
         abort_unless($order->payment_proof_path && Storage::disk('local')->exists($order->payment_proof_path), 404);
-        return Storage::disk('local')->download($order->payment_proof_path, 'payment-proof-'.$order->order_number.'.pdf', [
+        return Storage::disk('local')->download($order->payment_proof_path, basename($order->payment_proof_path), [
             'Cache-Control' => 'private, no-store',
             'X-Content-Type-Options' => 'nosniff',
         ]);

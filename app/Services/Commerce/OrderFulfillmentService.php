@@ -29,7 +29,12 @@ class OrderFulfillmentService
 
             if ($lockedOrder->coupon_id) {
                 $coupon = Coupon::query()->lockForUpdate()->find($lockedOrder->coupon_id);
-                if (!$coupon || !$coupon->isAvailableFor($lockedOrder->user_id, (float) $lockedOrder->subtotal, $lockedOrder->id)) {
+                $reservation = CouponRedemption::query()
+                    ->where('coupon_id', $lockedOrder->coupon_id)
+                    ->where('order_id', $lockedOrder->id)
+                    ->where('status', 'pending')
+                    ->exists();
+                if (!$coupon || (!$reservation && !$coupon->isAvailableFor($lockedOrder->user_id, (float) $lockedOrder->subtotal, $lockedOrder->id))) {
                     return 'coupon_invalid';
                 }
             }

@@ -66,7 +66,7 @@ class StoreController extends Controller
         $data = $request->validate(['quantity' => ['nullable', 'integer', 'min:1', 'max:10']]);
         $cart = Cart::firstOrCreate(['user_id' => $request->user()->id]);
         $item = $cart->items()->firstOrNew(['product_id' => $product->id]);
-        $item->quantity = min(10, ($item->exists ? $item->quantity : 0) + ($data['quantity'] ?? 1));
+        $item->quantity = $product->type === 'ebook' ? 1 : min(10, ($item->exists ? $item->quantity : 0) + ($data['quantity'] ?? 1));
         $item->save();
         return back()->with('success', 'Product added to cart.');
     }
@@ -74,7 +74,11 @@ class StoreController extends Controller
     public function update(Request $request, int $item): RedirectResponse
     {
         $data = $request->validate(['quantity' => ['required', 'integer', 'min:1', 'max:10']]);
-        CartItem::query()->whereHas('cart', fn ($query) => $query->where('user_id', $request->user()->id))->findOrFail($item)->update($data);
+        $cartItem = CartItem::query()->with('product')->whereHas('cart', fn ($query) => $query->where('user_id', $request->user()->id))->findOrFail($item);
+        if ($cartItem->product?->type === 'ebook' && $data['quantity'] > 1) {
+            return back()->with('error', 'eBooks are licensed one copy per order.');
+        }
+        $cartItem->update($data);
         return back()->with('success', 'Cart updated.');
     }
 
@@ -110,6 +114,7 @@ class StoreController extends Controller
                 $product = Product::query()->whereKey($item->product_id)->lockForUpdate()->first();
                 abort_unless($product && $product->status === 'published' && $product->published_at && $product->published_at->lte(now()), 422, 'A product is no longer available.');
                 $item->setRelation('product', $product);
+                abort_if($product->type === 'ebook' && $item->quantity !== 1, 422, 'eBooks can only be purchased one copy per order.');
 
                 $regularPrice = (float) $product->regular_price;
                 $basePrice = $product->sale_price !== null && (float) $product->sale_price >= 0 && (float) $product->sale_price < $regularPrice

@@ -73,9 +73,11 @@ class FlashSale extends Model
             ->where(function ($query) use ($product, $categoryIds): void {
                 if ($product->course_id) {
                     $query->whereHas('courses', fn ($courses) => $courses->where('courses.id', $product->course_id));
-                }
-                if ($categoryIds->isNotEmpty()) {
-                    $query->orWhereHas('productCategories', fn ($categories) => $categories->whereIn('product_categories.id', $categoryIds));
+                    if ($categoryIds->isNotEmpty()) {
+                        $query->orWhereHas('productCategories', fn ($categories) => $categories->whereIn('product_categories.id', $categoryIds));
+                    }
+                } elseif ($categoryIds->isNotEmpty()) {
+                    $query->whereHas('productCategories', fn ($categories) => $categories->whereIn('product_categories.id', $categoryIds));
                 }
             })
             ->orderByDesc('priority')
