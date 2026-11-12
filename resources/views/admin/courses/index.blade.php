@@ -23,6 +23,7 @@
                     <td style="padding:12px 10px;"><span class="badge {{ $course->status === 'published' ? 'success' : 'warning' }}">{{ ucfirst($course->status) }}</span></td>
                     <td style="padding:12px 10px;white-space:nowrap;">
                         <a href="{{ route('admin.courses.edit', $course) }}" class="btn secondary" style="padding:8px 10px;">{{ __('Edit') }}</a>
+                        <a href="{{ route('admin.course-builder.edit', $course) }}" class="btn secondary" style="padding:8px 10px;">{{ __('Build curriculum') }}</a>
                         <form method="POST" action="{{ route('admin.courses.destroy', $course) }}" style="display:inline;margin-left:8px;">
                             @csrf @method('DELETE')
                             <button type="submit" class="btn" style="background:#b42318;color:white;border:none;padding:8px 10px;">{{ __('Delete') }}</button>

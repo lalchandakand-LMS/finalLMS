@@ -39,6 +39,10 @@ use App\Http\Controllers\AdminAnalyticsController;
 use App\Http\Controllers\AdminCommentController;
 use App\Http\Controllers\AdminDashboardAnnouncementController;
 use App\Http\Controllers\AdminVisitorPopupController;
+use App\Http\Controllers\AdminCourseCategoryController;
+use App\Http\Controllers\AdminCourseContentPostController;
+use App\Http\Controllers\AdminCourseBuilderController;
+use App\Http\Controllers\CourseContentController;
 use App\Http\Controllers\CommentController;
 use Illuminate\Support\Facades\Route;
 
@@ -78,6 +82,7 @@ Route::get('/contests/{contest}', [QuizContestController::class, 'show'])->name(
 
 Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
 Route::get('/courses/{course}', [CourseController::class, 'show'])->name('courses.show');
+Route::get('/courses/{course}/content/{post:slug}', [CourseContentController::class, 'show'])->name('courses.content.show');
 Route::get('/courses/{course}/lessons/{lesson}', [CourseController::class, 'showLesson'])->name('courses.lessons.show');
 Route::get('/courses/{course}/lessons/{lesson}/video', [CourseController::class, 'streamLessonVideo'])->name('courses.lessons.video');
 Route::get('/courses/{course}/lessons/{lesson}/media/{type}', [LessonMediaController::class, 'show'])->middleware('throttle:120,1')->name('courses.lessons.media');
@@ -282,7 +287,20 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         Route::get('/users', [UserController::class, 'index'])->name('admin.users.index');
         Route::post('/users/{user}/role', [UserController::class, 'updateRole'])->name('admin.users.updateRole');
 
+        Route::get('/course-categories', [AdminCourseCategoryController::class, 'index'])->name('admin.course-categories.index');
+        Route::post('/course-categories', [AdminCourseCategoryController::class, 'store'])->name('admin.course-categories.store');
+        Route::get('/course-categories/{courseCategory}/edit', [AdminCourseCategoryController::class, 'edit'])->name('admin.course-categories.edit');
+        Route::put('/course-categories/{courseCategory}', [AdminCourseCategoryController::class, 'update'])->name('admin.course-categories.update');
+        Route::delete('/course-categories/{courseCategory}', [AdminCourseCategoryController::class, 'destroy'])->name('admin.course-categories.destroy');
+        Route::get('/course-content-posts', [AdminCourseContentPostController::class, 'index'])->name('admin.course-content-posts.index');
+        Route::get('/course-content-posts/create', [AdminCourseContentPostController::class, 'create'])->name('admin.course-content-posts.create');
+        Route::post('/course-content-posts', [AdminCourseContentPostController::class, 'store'])->name('admin.course-content-posts.store');
+        Route::get('/course-content-posts/{courseContentPost}/edit', [AdminCourseContentPostController::class, 'edit'])->name('admin.course-content-posts.edit');
+        Route::put('/course-content-posts/{courseContentPost}', [AdminCourseContentPostController::class, 'update'])->name('admin.course-content-posts.update');
+        Route::delete('/course-content-posts/{courseContentPost}', [AdminCourseContentPostController::class, 'destroy'])->name('admin.course-content-posts.destroy');
         Route::get('/courses', [CourseController::class, 'adminIndex'])->name('admin.courses.index');
+        Route::get('/courses/{course}/builder', [AdminCourseBuilderController::class, 'edit'])->name('admin.course-builder.edit');
+        Route::put('/courses/{course}/builder', [AdminCourseBuilderController::class, 'update'])->name('admin.course-builder.update');
         Route::get('/courses/create', [CourseController::class, 'create'])->name('admin.courses.create');
         Route::post('/courses', [CourseController::class, 'store'])->name('admin.courses.store');
         Route::get('/courses/{course}/edit', [CourseController::class, 'edit'])->name('admin.courses.edit');
