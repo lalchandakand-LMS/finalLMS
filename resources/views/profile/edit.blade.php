@@ -4,7 +4,7 @@
 
 @section('content')
     @php
-        $announcementSlides = \\App\\Models\\DashboardAnnouncement::currentlyActive()
+        $announcementSlides = \App\Models\DashboardAnnouncement::currentlyActive()
             ->whereIn('audience', ['all', auth()->user()->role])
             ->with('image')->orderByDesc('priority')->latest()->take(8)->get();
     @endphp
