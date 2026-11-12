@@ -5,13 +5,13 @@
 <div class="page-header"><div><span class="badge info">{{ __('Teacher portal') }}</span><h1 style="margin:12px 0 0;">{{ $course->title }} — {{ __('Lessons') }}</h1></div><a href="{{ route('dashboard') }}" class="btn secondary">{{ __('Dashboard') }}</a></div>
 <div class="panel">
     <h2>{{ __('Add lesson') }}</h2>
-    <form method="POST" enctype="multipart/form-data" action="{{ route($lessonRoutePrefix . '.store', $course) }}" class="grid grid-2">
+    <form method="POST" action="{{ route($lessonRoutePrefix . '.store', $course) }}" class="grid grid-2" enctype="multipart/form-data">
         @csrf
         <label>{{ __('Title') }}<input name="title" maxlength="255" required></label>
         <label>{{ __('Duration (min)') }}<input type="number" name="duration_minutes" min="1" max="600" value="30" required></label>
         <label>{{ __('Order') }}<input type="number" name="order" min="1" value="{{ $course->lessons->count()+1 }}" required></label>
         <label>{{ __('YouTube or Vimeo URL') }}<input type="url" name="video_url" maxlength="2048" placeholder="https://youtu.be/..."></label>
-        <label>{{ __('Or upload video (MP4, MOV, WebM; max 512 MB)') }}<input type="file" name="video_file" accept="video/mp4,video/quicktime,video/webm,.m4v"></label>
+        <label>{{ __('Or upload video (MP4, M4V, MOV, WebM; max 512 MB)') }}<input type="file" name="video_file" accept="video/mp4,video/quicktime,video/webm"></label>
         <label>{{ __('Video thumbnail') }}<input type="file" name="thumbnail" accept="image/jpeg,image/png,image/webp"></label>
         <label style="grid-column:1/-1;">{{ __('Lesson content') }}<textarea name="content" required></textarea></label>
         <label><input type="checkbox" name="is_preview" value="1"> {{ __('Free preview') }}</label>
@@ -23,16 +23,16 @@
 @forelse($course->lessons as $lesson)
 <details style="padding:14px 0;border-bottom:1px solid var(--border);">
     <summary><strong>{{ $lesson->order }}. {{ $lesson->title }}</strong> · {{ $lesson->duration_minutes }} {{ __('min') }}</summary>
-    <form method="POST" enctype="multipart/form-data" action="{{ route($lessonRoutePrefix . '.update', [$course,$lesson]) }}" class="grid grid-2" style="margin-top:14px;">
+    <form method="POST" action="{{ route($lessonRoutePrefix . '.update', [$course,$lesson]) }}" class="grid grid-2" style="margin-top:14px;" enctype="multipart/form-data">
         @csrf @method('PUT')
         <label>{{ __('Title') }}<input name="title" value="{{ $lesson->title }}" maxlength="255" required></label>
         <label>{{ __('Duration (min)') }}<input type="number" name="duration_minutes" value="{{ $lesson->duration_minutes }}" min="1" max="600" required></label>
         <label>{{ __('Order') }}<input type="number" name="order" value="{{ $lesson->order }}" min="1" required></label>
         <label>{{ __('Video URL') }}<input type="url" name="video_url" value="{{ $lesson->video_url }}" maxlength="2048"></label>
-        <label>{{ __('Replace/upload video (MP4, MOV, WebM; max 512 MB)') }}<input type="file" name="video_file" accept="video/mp4,video/quicktime,video/webm,.m4v"></label>
+        <label>{{ __('Replace/upload video (MP4, M4V, MOV, WebM; max 512 MB)') }}<input type="file" name="video_file" accept="video/mp4,video/quicktime,video/webm"></label>
         <label>{{ __('Replace thumbnail') }}<input type="file" name="thumbnail" accept="image/jpeg,image/png,image/webp"></label>
-        @if($lesson->video_path)<label><input type="checkbox" name="remove_video" value="1"> {{ __('Remove uploaded video') }}</label>@endif
-        @if($lesson->thumbnail_path)<label><input type="checkbox" name="remove_thumbnail" value="1"> {{ __('Remove thumbnail') }}</label>@endif
+        <label><input type="checkbox" name="remove_video" value="1"> {{ __('Remove uploaded video') }}</label>
+        <label><input type="checkbox" name="remove_thumbnail" value="1"> {{ __('Remove thumbnail') }}</label>
         <label style="grid-column:1/-1;">{{ __('Content') }}<textarea name="content" required>{{ $lesson->content }}</textarea></label>
         <label><input type="checkbox" name="is_preview" value="1" @checked($lesson->is_preview)> {{ __('Free preview') }}</label>
         <button class="btn primary" type="submit">{{ __('Save changes') }}</button>
