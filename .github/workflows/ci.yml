@@ -61,10 +61,15 @@ jobs:
           DB_USERNAME: root
           DB_PASSWORD: root
         run: vendor/bin/phpunit
-      - run: php artisan route:list
-      - run: npm run build
+      - name: Validate Laravel routes
+        if: always()
+        run: php artisan route:list
+      - name: Build frontend assets
+        if: always()
+        run: npm run build
 
   package:
+    if: always()
     needs: test
     runs-on: ubuntu-24.04
     steps:
