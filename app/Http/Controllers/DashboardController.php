@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Certificate;
 use App\Models\Course;
 use App\Models\DashboardAnnouncement;
+use App\Models\DashboardAnnouncement;
 use App\Models\Enrollment;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
