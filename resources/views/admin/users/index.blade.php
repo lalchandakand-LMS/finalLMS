@@ -22,7 +22,7 @@
                 <label for="role">{{ __('Role') }}</label>
                 <select id="role" name="role">
                     <option value="">{{ __('All roles') }}</option>
-                    @foreach(['admin' => 'Admin', 'branch_manager' => 'Branch Manager', 'accountant' => 'Accountant', 'teacher' => 'Teacher', 'student' => 'Student'] as $roleValue => $roleLabel)
+                    @foreach(['admin' => 'Admin', 'branch_manager' => 'Branch Manager', 'accountant' => 'Accountant', 'teacher' => 'Teacher', 'student' => 'Student', 'guardian' => 'Guardian'] as $roleValue => $roleLabel)
                         <option value="{{ $roleValue }}" @selected(request('role') === $roleValue)>{{ __($roleLabel) }}</option>
                     @endforeach
                 </select>
@@ -45,14 +45,14 @@
                 @forelse($users as $user)
                     <tr style="border-bottom:1px solid var(--border);">
                         <td style="padding:12px 10px;">{{ $user->name }}</td><td style="padding:12px 10px;">{{ $user->email }}</td><td style="padding:12px 10px;">{{ $user->phone_number ?? '—' }}<br><small class="muted">{{ $user->phone_verified_at ? 'Verified' : 'Not verified' }}</small></td>
-                        <td style="padding:12px 10px;"><span class="badge {{ $user->role === 'admin' ? 'info' : (in_array($user->role, ['teacher', 'branch_manager'], true) ? 'success' : 'warning') }}">{{ ucwords(str_replace('_', ' ', $user->role)) }}</span></td>
+                        <td style="padding:12px 10px;"><span class="badge {{ $user->role === 'admin' ? 'info' : (in_array($user->role, ['teacher', 'branch_manager', 'guardian'], true) ? 'success' : 'warning') }}">{{ ucwords(str_replace('_', ' ', $user->role)) }}</span></td>
                         <td style="padding:12px 10px;">{{ $user->branch?->name ?? '—' }}</td><td style="padding:12px 10px;">{{ $user->courses_count }}</td><td style="padding:12px 10px;">{{ $user->enrollments_count }}</td>
                         <td style="padding:12px 10px;">
                             <form method="POST" action="{{ route('admin.users.updateRole', $user) }}" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
                                 @csrf
                                 <input type="tel" name="phone_number" value="{{ $user->phone_number }}" placeholder="+8801XXXXXXXXX" pattern="[+][1-9][0-9]{7,14}" style="width:150px;" aria-label="Student mobile number (E.164)">
                                 <select name="role" style="width:auto;min-width:130px;">
-                                    @foreach(['student' => 'Student', 'branch_manager' => 'Branch Manager', 'accountant' => 'Accountant', 'teacher' => 'Teacher', 'admin' => 'Admin'] as $roleValue => $roleLabel)
+                                    @foreach(['student' => 'Student', 'branch_manager' => 'Branch Manager', 'accountant' => 'Accountant', 'teacher' => 'Teacher', 'guardian' => 'Guardian', 'admin' => 'Admin'] as $roleValue => $roleLabel)
                                         <option value="{{ $roleValue }}" @selected($user->role === $roleValue)>{{ __($roleLabel) }}</option>
                                     @endforeach
                                 </select>
