@@ -77,6 +77,7 @@
                 <a class="aec-link" href="{{ route('admin.media.index') }}"><span class="aec-link-icon">🖼️</span><strong>{{ __('Media library') }}</strong><span>{{ __('Upload and organize media files') }}</span></a>
                 <a class="aec-link" href="{{ route('admin.news.index') }}"><span class="aec-link-icon">📰</span><strong>{{ __('Blog & news') }}</strong><span>{{ __('Publish academy news and articles') }}</span></a>
                 <a class="aec-link" href="{{ route('admin.backups.index') }}"><span class="aec-link-icon">💾</span><strong>{{ __('Backup & restore') }}</strong><span>{{ __('Create and manage system backups') }}</span></a>
+                <a class="aec-link" href="{{ route('admin.updates.index') }}"><span class="aec-link-icon">🔄</span><strong>{{ __('System updates') }}</strong><span>{{ __('Check trusted LMS releases and update history') }}</span></a>
                 <a class="aec-link" href="{{ route('admin.activity-logs.index') }}"><span class="aec-link-icon">📋</span><strong>{{ __('Activity logs') }}</strong><span>{{ __('Review recorded account activity') }}</span></a>
                 <a class="aec-link" href="{{ route('admin.invoices.index') }}"><span class="aec-link-icon">🧾</span><strong>{{ __('Invoices') }}</strong><span>{{ __('Manage invoices and fee records') }}</span></a>
                 <a class="aec-link" href="{{ route('admin.settings.index') }}"><span class="aec-link-icon">⚙️</span><strong>{{ __('System settings') }}</strong><span>{{ __('Configure academy and platform settings') }}</span></a>

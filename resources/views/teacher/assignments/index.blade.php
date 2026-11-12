@@ -8,12 +8,12 @@
             <span class="badge info">{{ $batch->course->title }}</span>
             <h1 style="margin:12px 0 0;">{{ $batch->title }} assignments</h1>
         </div>
-        <a href="{{ route('teacher.batches.index') }}" class="btn secondary">My batches</a>
+        <a href="{{ $isAdmin ? route('admin.batches.index') : route('teacher.batches.index') }}" class="btn secondary">{{ $isAdmin ? __('All batches') : __('My batches') }}</a>
     </div>
 
     <div class="panel" style="margin-bottom:20px;">
         <h2 style="margin-top:0;">{{ __('Publish assignment') }}</h2>
-        <form method="POST" action="{{ route('teacher.batches.assignments.store', $batch) }}">
+        <form method="POST" action="{{ $isAdmin ? route('admin.batches.assignments.store', $batch) : route('teacher.batches.assignments.store', $batch) }}">
             @csrf
             <label>{{ __('Title') }}<input name="title" maxlength="160" required></label>
             <label>{{ __('Instructions') }}<textarea name="instructions" maxlength="10000" required></textarea></label>
@@ -34,9 +34,11 @@
                 @foreach($assignment->submissions as $submission)
                     <div class="course-item" style="margin-top:12px;">
                         <strong>{{ $submission->student->name }}</strong>
+                        <span class="badge {{ $submission->status === 'graded' ? 'success' : 'warning' }}">{{ ucfirst($submission->status) }}</span>
+                        <div class="muted">{{ __('Submitted') }}: {{ $submission->submitted_at?->format('M j, Y H:i') ?? '—' }}</div>
                         <p>{{ $submission->answer }}</p>
                         @if($submission->attachment_path)<a class="btn secondary" href="{{ route('assignment-submissions.attachment', $submission) }}">{{ __('Download student attachment') }}: {{ $submission->attachment_name }}</a>@endif
-                        <form method="POST" action="{{ route('teacher.assignments.grade', [$assignment, $submission]) }}">
+                        <form method="POST" action="{{ $isAdmin ? route('admin.assignments.grade', [$assignment, $submission]) : route('teacher.assignments.grade', [$assignment, $submission]) }}">
                             @csrf
                             <label>{{ __('Score') }}<input type="number" name="score" min="0" max="{{ $assignment->max_marks }}" step="0.01" value="{{ $submission->score }}" required></label>
                             <label>{{ __('Feedback') }}<textarea name="feedback">{{ $submission->feedback }}</textarea></label>
