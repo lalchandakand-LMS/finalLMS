@@ -15,7 +15,10 @@ class FlashSaleController extends Controller
 {
     public function index(): View
     {
-        $sales = FlashSale::with(['courses', 'categories', 'creator'])->withCount(['payments as reserved_orders' => fn ($q) => $q->whereIn('status', ['pending', 'approved'])])->latest()->paginate(20);
+        $sales = FlashSale::with(['courses', 'categories', 'creator'])->withCount([
+            'payments as reserved_orders' => fn ($query) => $query->whereIn('status', ['pending', 'approved']),
+            'enrollments as free_redemptions' => fn ($query) => $query->whereIn('status', ['active', 'completed']),
+        ])->latest()->paginate(20);
         $courses = Course::where('status', 'published')->orderBy('title')->get();
         $categories = CourseCategory::orderBy('sort_order')->orderBy('name')->get();
         return view('admin.flash-sales.index', compact('sales', 'courses', 'categories'));
@@ -55,7 +58,7 @@ class FlashSaleController extends Controller
 
     public function destroy(FlashSale $flashSale): RedirectResponse
     {
-        if ($flashSale->payments()->whereIn('status',['pending','approved'])->exists()) return back()->with('error','This campaign has payment history. Archive it instead.');
+        if ($flashSale->payments()->whereIn('status', ['pending', 'approved'])->exists() || $flashSale->enrollments()->exists()) return back()->with('error', 'This campaign has redemption history. Archive it instead.');
         if ($flashSale->banner_path) Storage::disk('public')->delete($flashSale->banner_path);
         $flashSale->delete();
         return back()->with('success','Flash sale campaign deleted.');

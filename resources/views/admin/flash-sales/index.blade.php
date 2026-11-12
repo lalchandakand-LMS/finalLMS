@@ -44,7 +44,7 @@
 <div class="page-header"><h2>Campaigns</h2><span class="badge info">{{ $sales->total() }} total</span></div>
 @forelse($sales as $sale)
 <div class="panel" style="margin-bottom:18px;">
-    <div class="meta-row" style="margin-top:0;"><div><h3 style="margin:0;">{{ $sale->title }}</h3><p class="muted" style="margin:6px 0;">{{ $sale->badge }} · {{ strtoupper($sale->status) }} · {{ $sale->reserved_orders }} reserved/approved orders</p></div><span class="badge {{ $sale->status === 'active' ? 'success' : 'warning' }}">{{ ucfirst($sale->status) }}</span></div>
+    <div class="meta-row" style="margin-top:0;"><div><h3 style="margin:0;">{{ $sale->title }}</h3><p class="muted" style="margin:6px 0;">{{ $sale->badge }} · {{ strtoupper($sale->status) }} · {{ $sale->reserved_orders + $sale->free_redemptions }} reserved/approved/free redemptions</p></div><span class="badge {{ $sale->status === 'active' ? 'success' : 'warning' }}">{{ ucfirst($sale->status) }}</span></div>
     <p>{{ $sale->description }}</p>
     <p class="muted">Courses: {{ $sale->courses->pluck('title')->join(', ') ?: 'Category-targeted' }} · Categories: {{ $sale->categories->pluck('name')->join(', ') ?: '—' }} · {{ $sale->starts_at->format('M d, Y H:i') }} – {{ $sale->ends_at->format('M d, Y H:i') }}</p>
     <details><summary style="cursor:pointer;font-weight:700;margin:12px 0;">Edit campaign</summary>

@@ -15,19 +15,20 @@ class FlashSale extends Model
     public function courses(): BelongsToMany { return $this->belongsToMany(Course::class, 'flash_sale_course')->withTimestamps(); }
     public function categories(): BelongsToMany { return $this->belongsToMany(CourseCategory::class, 'flash_sale_course_category')->withTimestamps(); }
     public function payments(): HasMany { return $this->hasMany(Payment::class); }
+    public function enrollments(): HasMany { return $this->hasMany(Enrollment::class); }
     public function creator(): BelongsTo { return $this->belongsTo(User::class, 'created_by'); }
 
     public function isAvailableFor(?int $userId = null): bool
     {
         if ($this->status !== 'active' || $this->starts_at->isFuture() || $this->ends_at->isPast()) return false;
-        $paidRedemptions = $this->payments()->whereIn('status', ['pending', 'approved']);
-        $freeRedemptions = Enrollment::query()->where('flash_sale_id', $this->id)->whereIn('status', ['active', 'completed']);
-        $redemptionCount = (clone $paidRedemptions)->count() + (clone $freeRedemptions)->count();
+        $paidRedemptions = fn () => $this->payments()->whereIn('status', ['pending', 'approved']);
+        $freeRedemptions = fn () => $this->enrollments()->whereIn('status', ['active', 'completed']);
+        $redemptionCount = $paidRedemptions()->count() + $freeRedemptions()->count();
         if ($this->max_redemptions !== null && $redemptionCount >= $this->max_redemptions) return false;
 
         if ($userId !== null) {
-            $studentRedemptions = (clone $paidRedemptions)->where('user_id', $userId)->count()
-                + (clone $freeRedemptions)->where('user_id', $userId)->count();
+            $studentRedemptions = $paidRedemptions()->where('user_id', $userId)->count()
+                + $freeRedemptions()->where('user_id', $userId)->count();
             if ($studentRedemptions >= $this->per_student_limit) return false;
         }
         return true;
