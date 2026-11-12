@@ -12,17 +12,59 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class CourseController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $courses = Course::with('teacher')->where('status', 'published')->latest()->get();
+        $validated = $request->validate([
+            'q' => ['nullable', 'string', 'max:120'],
+            'teacher' => ['nullable', 'integer', 'min:1'],
+            'min_price' => ['nullable', 'numeric', 'min:0', 'max:100000000'],
+            'max_price' => ['nullable', 'numeric', 'min:0', 'max:100000000', 'gte:min_price'],
+            'sort' => ['nullable', 'in:latest,oldest,price_low,price_high,title'],
+        ]);
 
-        return view('courses.index', compact('courses'));
+        $query = Course::query()->with('teacher')->where('status', 'published');
+
+        if (! empty($validated['q'])) {
+            $term = trim($validated['q']);
+            $query->where(function ($builder) use ($term): void {
+                $builder->where('title', 'like', '%'.$term.'%')
+                    ->orWhere('description', 'like', '%'.$term.'%')
+                    ->orWhereHas('teacher', fn ($teacher) => $teacher->where('name', 'like', '%'.$term.'%'));
+            });
+        }
+
+        if (! empty($validated['teacher'])) {
+            $query->where('teacher_id', $validated['teacher']);
+        }
+        if (isset($validated['min_price'])) {
+            $query->where('price', '>=', $validated['min_price']);
+        }
+        if (isset($validated['max_price'])) {
+            $query->where('price', '<=', $validated['max_price']);
+        }
+
+        match ($validated['sort'] ?? 'latest') {
+            'oldest' => $query->oldest(),
+            'price_low' => $query->orderBy('price')->orderByDesc('id'),
+            'price_high' => $query->orderByDesc('price')->orderByDesc('id'),
+            'title' => $query->orderBy('title')->orderBy('id'),
+            default => $query->latest(),
+        };
+
+        $courses = $query->paginate(12)->withQueryString();
+        $teachers = User::query()
+            ->whereIn('id', Course::query()->where('status', 'published')->select('teacher_id'))
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return view('courses.index', compact('courses', 'teachers'));
     }
 
     public function myCourses(): View
@@ -146,6 +188,11 @@ class CourseController extends Controller
 
         $course->load('teacher', 'enrollments.user', 'lessons');
 
+        $isWishlisted = $user?->isStudent() && DB::table('course_wishlists')
+            ->where('user_id', $user->id)
+            ->where('course_id', $course->id)
+            ->exists();
+
         $enrollment = null;
         if (Auth::check()) {
             $enrollment = $course->enrollments()->where('user_id', Auth::id())->first();
@@ -170,7 +217,7 @@ class CourseController extends Controller
             ->orderBy('starts_at')
             ->get();
 
-        return view('courses.show', compact('course', 'enrollment', 'payment', 'paymentMethods', 'batches', 'canViewLessons', 'lessonProgress'));
+        return view('courses.show', compact('course', 'enrollment', 'payment', 'paymentMethods', 'batches', 'canViewLessons', 'lessonProgress', 'isWishlisted'));
     }
 
     public function streamLessonVideo(Course $course, Lesson $lesson): \Symfony\Component\HttpFoundation\BinaryFileResponse
