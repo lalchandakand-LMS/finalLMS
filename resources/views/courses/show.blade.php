@@ -213,6 +213,27 @@
             @endauth
         </div>
     </div>
+@if($course->curriculumItems->isNotEmpty())
+<section class="panel" style="margin-top:22px;">
+    <div class="page-header" style="margin-bottom:12px;"><h2>{{ __('Course curriculum') }}</h2><span class="muted">{{ $course->curriculumItems->count() }} {{ __('lessons') }}</span></div>
+    @foreach($course->curriculumItems as $item)
+        @if($item->post && $item->post->status === 'published')
+        <div class="course-item" style="display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:10px;">
+            <div><strong>{{ $item->post->title }}</strong>
+                @if($item->section_title)<div class="muted">{{ $item->section_title }}</div>@endif
+                @if($item->post->short_description)<p class="muted" style="margin:5px 0 0;">{{ $item->post->short_description }}</p>@endif
+                @if($item->duration_minutes)<small class="muted">{{ $item->duration_minutes }} {{ __('minutes') }}</small>@endif
+            </div>
+            @if($item->is_preview || $canViewLessons)
+                <a class="btn secondary" href="{{ route('courses.content.show', [$course, $item->post]) }}">{{ $item->is_preview ? __('Preview lesson') : __('Open lesson') }}</a>
+            @else
+                <span class="badge warning">{{ __('Enroll to unlock') }}</span>
+            @endif
+        </div>
+        @endif
+    @endforeach
+</section>
+@endif
 <section class="panel" style="margin-top:22px;">
     <div class="page-header" style="margin-bottom:10px;"><h2>{{ __('Course discussion') }}</h2><span class="badge info">{{ number_format($course->views_count) }} {{ __('views') }}</span></div>
     @auth

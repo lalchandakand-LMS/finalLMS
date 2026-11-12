@@ -190,7 +190,7 @@ class CourseController extends Controller
         PageView::record($request, 'course', 'course', $course->id);
         $course->views_count = PageView::where('view_type', 'course')->where('viewable_id', $course->id)->count();
         $comments = $course->comments()->with('author')->latest()->paginate(10, ['*'], 'comments_page');
-        $course->load('teacher', 'enrollments.user', 'lessons');
+        $course->load('teacher', 'enrollments.user', 'lessons', 'curriculumItems.post.categories', 'curriculumItems.post.thumbnail');
 
         $isWishlisted = $user?->isStudent() && DB::table('course_wishlists')
             ->where('user_id', $user->id)

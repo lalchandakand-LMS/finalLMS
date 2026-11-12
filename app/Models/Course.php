@@ -58,6 +58,19 @@ class Course extends Model
         return $this->hasMany(Lesson::class)->orderBy('order');
     }
 
+    public function posts(): BelongsToMany
+    {
+        return $this->belongsToMany(CourseContentPost::class, 'course_curriculum_items')
+            ->withPivot(['section_title', 'position', 'is_preview', 'duration_minutes'])
+            ->withTimestamps()
+            ->orderByPivot('position');
+    }
+
+    public function curriculumItems(): HasMany
+    {
+        return $this->hasMany(CourseCurriculumItem::class)->orderBy('position');
+    }
+
     public function comments(): MorphMany
     {
         return $this->morphMany(Comment::class, 'commentable')->where('status', 'approved');
