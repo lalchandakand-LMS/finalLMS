@@ -23,11 +23,11 @@ class WebsiteAnalyticsAndCommentsTest extends TestCase
             'body' => 'Article text', 'status' => 'published', 'published_at' => now()->subMinute(),
         ]);
 
-        $this->withCookie('aec_visitor', 'testvisitor00000000000000000000000000000000')
+        $this->withUnencryptedCookie('aec_visitor', 'testvisitor00000000000000000000000000000000')
             ->get(route('courses.show', $course))->assertOk();
-        $this->withCookie('aec_visitor', 'testvisitor00000000000000000000000000000000')
+        $this->withUnencryptedCookie('aec_visitor', 'testvisitor00000000000000000000000000000000')
             ->get(route('courses.show', $course))->assertOk();
-        $this->withCookie('aec_visitor', 'testvisitor00000000000000000000000000000000')
+        $this->withUnencryptedCookie('aec_visitor', 'testvisitor00000000000000000000000000000000')
             ->get(route('news.show', $post->slug))->assertOk();
 
         $this->assertDatabaseCount('page_views', 3); // one site visitor row, one course view, one post view
