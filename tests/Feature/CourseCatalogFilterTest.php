@@ -54,9 +54,13 @@ class CourseCatalogFilterTest extends TestCase
         $this->course($teacher, 'Mid Course', 2500);
         $this->course($teacher, 'Low Course', 1000);
         $this->course($teacher, 'High Course', 5000);
+        for ($number = 1; $number <= 10; $number++) {
+            $this->course($teacher, 'Extra Course '.$number, 3000 + $number);
+        }
 
-        $this->get(route('courses.index', ['sort' => 'price_low', 'q' => 'Course']))
-            ->assertOk()->assertSee('sort=price_low', false)->assertSee('q=Course', false);
+        $response = $this->get(route('courses.index', ['sort' => 'price_low', 'q' => 'Course']));
+        $response->assertOk()->assertSee('sort=price_low', false)->assertSee('q=Course', false);
+        $response->assertSeeInOrder(['Low Course', 'Mid Course', 'High Course']);
     }
 
     public function test_catalog_rejects_invalid_sort_and_inverted_price_range(): void
