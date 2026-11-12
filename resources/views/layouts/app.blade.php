@@ -323,6 +323,7 @@
                         <a href="{{ route('teacher.batches.index') }}">My batches</a>
                     @endif
                     @if(auth()->user()->isStudent())
+                        <a href="{{ route('student.wishlist.index') }}">Wishlist</a>
                         <a href="{{ route('student.attendance.index') }}">Attendance</a>
                     <a href="{{ route('student.exams.index') }}">Exams</a>
                         <a href="{{ route('student.invoices.index') }}">My fees</a>
