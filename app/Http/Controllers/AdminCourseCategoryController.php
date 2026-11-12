@@ -19,6 +19,11 @@ class AdminCourseCategoryController extends Controller
         return view('admin.course-categories.index', compact('categories'));
     }
 
+    public function edit(CourseCategory $courseCategory): View
+    {
+        return view('admin.course-categories.form', compact('courseCategory'));
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validated($request);
