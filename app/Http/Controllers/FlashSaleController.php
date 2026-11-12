@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Course;
+use App\Models\CourseCategory;
+use Illuminate\Validation\Rule;
 use App\Models\FlashSale;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,9 +15,10 @@ class FlashSaleController extends Controller
 {
     public function index(): View
     {
-        $sales = FlashSale::with(['courses','creator'])->withCount(['payments as reserved_orders' => fn ($q) => $q->whereIn('status',['pending','approved'])])->latest()->paginate(20);
-        $courses = Course::where('status','published')->orderBy('title')->get();
-        return view('admin.flash-sales.index', compact('sales','courses'));
+        $sales = FlashSale::with(['courses', 'categories', 'creator'])->withCount(['payments as reserved_orders' => fn ($q) => $q->whereIn('status', ['pending', 'approved'])])->latest()->paginate(20);
+        $courses = Course::where('status', 'published')->orderBy('title')->get();
+        $categories = CourseCategory::orderBy('sort_order')->orderBy('name')->get();
+        return view('admin.flash-sales.index', compact('sales', 'courses', 'categories'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -23,10 +26,13 @@ class FlashSaleController extends Controller
         $data = $this->validated($request);
         $data['created_by'] = $request->user()->id;
         $image = $request->file('banner');
-        unset($data['course_ids'], $data['banner']);
+        $courseIds = $data['course_ids'] ?? [];
+        $categoryIds = $data['category_ids'] ?? [];
+        unset($data['course_ids'], $data['category_ids'], $data['banner']);
         if ($image) $data['banner_path'] = $image->store('flash-sales','public');
         $sale = FlashSale::create($data);
-        $sale->courses()->sync($request->input('course_ids',[]));
+        $sale->courses()->sync($courseIds);
+        $sale->categories()->sync($categoryIds);
         return back()->with('success','Flash sale campaign created.');
     }
 
@@ -34,13 +40,16 @@ class FlashSaleController extends Controller
     {
         $data = $this->validated($request);
         $image = $request->file('banner');
-        unset($data['course_ids'], $data['banner']);
+        $courseIds = $data['course_ids'] ?? [];
+        $categoryIds = $data['category_ids'] ?? [];
+        unset($data['course_ids'], $data['category_ids'], $data['banner']);
         if ($image) {
             if ($flashSale->banner_path) Storage::disk('public')->delete($flashSale->banner_path);
             $data['banner_path'] = $image->store('flash-sales','public');
         }
         $flashSale->update($data);
-        $flashSale->courses()->sync($request->input('course_ids',[]));
+        $flashSale->courses()->sync($courseIds);
+        $flashSale->categories()->sync($categoryIds);
         return back()->with('success','Flash sale campaign updated.');
     }
 
@@ -62,7 +71,10 @@ class FlashSaleController extends Controller
             'status'=>['required','in:draft,active,paused,archived'],
             'max_redemptions'=>['nullable','integer','min:1','max:1000000'],
             'per_student_limit'=>['required','integer','min:1','max:100'],'priority'=>['required','integer','min:0','max:10000'],
-            'course_ids'=>['required','array','min:1'],'course_ids.*'=>['required','integer','distinct','exists:courses,id'],
+            'course_ids' => ['nullable', 'array', 'required_without:category_ids', 'min:1', 'max:500'],
+            'course_ids.*' => ['required', 'integer', 'distinct', Rule::exists('courses', 'id')->where(fn ($query) => $query->where('status', 'published'))],
+            'category_ids' => ['nullable', 'array', 'required_without:course_ids', 'min:1', 'max:200'],
+            'category_ids.*' => ['required', 'integer', 'distinct', 'exists:course_categories,id'],
             'banner'=>['nullable','image','mimes:jpg,jpeg,png,webp','max:5120'],
         ]);
     }
