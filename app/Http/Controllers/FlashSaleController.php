@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Course;
 use App\Models\CourseCategory;
+use App\Models\ProductCategory;
 use Illuminate\Validation\Rule;
 use App\Models\FlashSale;
 use Illuminate\Http\RedirectResponse;
@@ -21,7 +22,8 @@ class FlashSaleController extends Controller
         ])->latest()->paginate(20);
         $courses = Course::where('status', 'published')->orderBy('title')->get();
         $categories = CourseCategory::orderBy('sort_order')->orderBy('name')->get();
-        return view('admin.flash-sales.index', compact('sales', 'courses', 'categories'));
+        $productCategories = ProductCategory::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get();
+        return view('admin.flash-sales.index', compact('sales', 'courses', 'categories', 'productCategories'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -31,11 +33,13 @@ class FlashSaleController extends Controller
         $image = $request->file('banner');
         $courseIds = $data['course_ids'] ?? [];
         $categoryIds = $data['category_ids'] ?? [];
-        unset($data['course_ids'], $data['category_ids'], $data['banner']);
+        $productCategoryIds = $data['product_category_ids'] ?? [];
+        unset($data['course_ids'], $data['category_ids'], $data['product_category_ids'], $data['banner']);
         if ($image) $data['banner_path'] = $image->store('flash-sales','public');
         $sale = FlashSale::create($data);
         $sale->courses()->sync($courseIds);
         $sale->categories()->sync($categoryIds);
+        $sale->productCategories()->sync($productCategoryIds);
         return back()->with('success','Flash sale campaign created.');
     }
 
@@ -45,7 +49,8 @@ class FlashSaleController extends Controller
         $image = $request->file('banner');
         $courseIds = $data['course_ids'] ?? [];
         $categoryIds = $data['category_ids'] ?? [];
-        unset($data['course_ids'], $data['category_ids'], $data['banner']);
+        $productCategoryIds = $data['product_category_ids'] ?? [];
+        unset($data['course_ids'], $data['category_ids'], $data['product_category_ids'], $data['banner']);
         if ($image) {
             if ($flashSale->banner_path) Storage::disk('public')->delete($flashSale->banner_path);
             $data['banner_path'] = $image->store('flash-sales','public');
@@ -53,12 +58,13 @@ class FlashSaleController extends Controller
         $flashSale->update($data);
         $flashSale->courses()->sync($courseIds);
         $flashSale->categories()->sync($categoryIds);
+        $flashSale->productCategories()->sync($productCategoryIds);
         return back()->with('success','Flash sale campaign updated.');
     }
 
     public function destroy(FlashSale $flashSale): RedirectResponse
     {
-        if ($flashSale->payments()->whereIn('status', ['pending', 'approved'])->exists() || $flashSale->enrollments()->exists()) return back()->with('error', 'This campaign has redemption history. Archive it instead.');
+        if ($flashSale->payments()->whereIn('status', ['pending', 'approved'])->exists() || $flashSale->enrollments()->exists() || $flashSale->orderItems()->whereHas('order')->exists()) return back()->with('error', 'This campaign has redemption history. Archive it instead.');
         if ($flashSale->banner_path) Storage::disk('public')->delete($flashSale->banner_path);
         $flashSale->delete();
         return back()->with('success','Flash sale campaign deleted.');
@@ -74,10 +80,12 @@ class FlashSaleController extends Controller
             'status'=>['required','in:draft,active,paused,archived'],
             'max_redemptions'=>['nullable','integer','min:1','max:1000000'],
             'per_student_limit'=>['required','integer','min:1','max:100'],'priority'=>['required','integer','min:0','max:10000'],
-            'course_ids' => ['nullable', 'array', 'required_without:category_ids', 'min:1', 'max:500'],
+            'course_ids' => ['nullable', 'array', 'required_without_all:category_ids,product_category_ids', 'min:1', 'max:500'],
             'course_ids.*' => ['required', 'integer', 'distinct', Rule::exists('courses', 'id')->where(fn ($query) => $query->where('status', 'published'))],
-            'category_ids' => ['nullable', 'array', 'required_without:course_ids', 'min:1', 'max:200'],
+            'category_ids' => ['nullable', 'array', 'required_without_all:course_ids,product_category_ids', 'min:1', 'max:200'],
             'category_ids.*' => ['required', 'integer', 'distinct', 'exists:course_categories,id'],
+            'product_category_ids' => ['nullable', 'array', 'required_without_all:course_ids,category_ids', 'min:1', 'max:200'],
+            'product_category_ids.*' => ['required', 'integer', 'distinct', 'exists:product_categories,id'],
             'banner'=>['nullable','image','mimes:jpg,jpeg,png,webp','max:5120'],
         ]);
     }
