@@ -16,16 +16,13 @@ class CourseWishlistController extends Controller
         abort_unless($user?->isStudent(), 403);
 
         $courses = Course::query()
-            ->where('status', 'published')
-            ->whereIn('id', DB::table('course_wishlists')
-                ->where('user_id', $user->id)
-                ->select('course_id'))
-            ->with('teacher')
-            ->orderByDesc('course_wishlists.created_at')
             ->join('course_wishlists', function ($join) use ($user): void {
                 $join->on('courses.id', '=', 'course_wishlists.course_id')
                     ->where('course_wishlists.user_id', '=', $user->id);
             })
+            ->where('courses.status', 'published')
+            ->with('teacher')
+            ->orderByDesc('course_wishlists.created_at')
             ->select('courses.*')
             ->paginate(12);
 
