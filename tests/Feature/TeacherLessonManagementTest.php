@@ -177,10 +177,15 @@ class TeacherLessonManagementTest extends TestCase
         Storage::disk('lesson_videos')->put($preview->video_path, 'preview-bytes');
         Storage::disk('lesson_videos')->put($private->video_path, 'private-bytes');
 
-        $this->get(route('courses.lessons.video', [$course, $preview]))
-            ->assertOk()
-            ->assertHeader('Cache-Control', 'private, no-store, max-age=0')
+        $response = $this->get(route('courses.lessons.video', [$course, $preview]));
+
+        $response->assertOk()
             ->assertHeader('X-Content-Type-Options', 'nosniff');
+
+        $cacheControl = $response->headers->get('Cache-Control', '');
+        $this->assertStringContainsString('private', $cacheControl);
+        $this->assertStringContainsString('no-store', $cacheControl);
+        $this->assertStringContainsString('max-age=0', $cacheControl);
 
         $this->get(route('courses.lessons.video', [$course, $private]))->assertForbidden();
     }
