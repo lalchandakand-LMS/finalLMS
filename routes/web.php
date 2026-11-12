@@ -181,7 +181,7 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         Route::get('/dashboard-announcements/{dashboardAnnouncement}/edit', [AdminDashboardAnnouncementController::class, 'edit'])->name('admin.dashboard-announcements.edit');
         Route::put('/dashboard-announcements/{dashboardAnnouncement}', [AdminDashboardAnnouncementController::class, 'update'])->name('admin.dashboard-announcements.update');
         Route::patch('/dashboard-announcements/{dashboardAnnouncement}/toggle', [AdminDashboardAnnouncementController::class, 'toggle'])->name('admin.dashboard-announcements.toggle');
-        Route::delete('/dashboard-announcements/{dashboardAnnouncement}/toggle', [AdminDashboardAnnouncementController::class, 'destroy'])->name('admin.dashboard-announcements.destroy');
+        Route::delete('/dashboard-announcements/{dashboardAnnouncement}', [AdminDashboardAnnouncementController::class, 'destroy'])->name('admin.dashboard-announcements.destroy');
         Route::get('/analytics', [AdminAnalyticsController::class, 'index'])->name('admin.analytics.index');
         Route::get('/visitor-popups', [AdminVisitorPopupController::class, 'index'])->name('admin.visitor-popups.index');
         Route::get('/visitor-popups/create', [AdminVisitorPopupController::class, 'create'])->name('admin.visitor-popups.create');
