@@ -152,4 +152,56 @@ class TeacherLessonManagementTest extends TestCase
         $this->actingAs($outsider)->get(route('courses.lessons.video', [$draftCourse, $previewLesson]))->assertNotFound();
     }
 
+
+    public function test_published_preview_video_is_public_but_non_preview_video_is_protected(): void
+    {
+        Storage::fake('lesson_videos');
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $course = Course::factory()->create(['teacher_id' => $teacher->id, 'status' => 'published']);
+        $preview = $course->lessons()->create([
+            'title' => 'Free preview',
+            'content' => 'Public sample.',
+            'duration_minutes' => 5,
+            'order' => 1,
+            'is_preview' => true,
+            'video_path' => 'course-videos/public-preview.mp4',
+        ]);
+        $private = $course->lessons()->create([
+            'title' => 'Paid lesson',
+            'content' => 'Enrolled students only.',
+            'duration_minutes' => 10,
+            'order' => 2,
+            'is_preview' => false,
+            'video_path' => 'course-videos/private-lesson.mp4',
+        ]);
+        Storage::disk('lesson_videos')->put($preview->video_path, 'preview-bytes');
+        Storage::disk('lesson_videos')->put($private->video_path, 'private-bytes');
+
+        $this->get(route('courses.lessons.video', [$course, $preview]))
+            ->assertOk()
+            ->assertHeader('Cache-Control', 'private, no-store, max-age=0')
+            ->assertHeader('X-Content-Type-Options', 'nosniff');
+
+        $this->get(route('courses.lessons.video', [$course, $private]))->assertForbidden();
+    }
+
+    public function test_lesson_video_route_rejects_a_lesson_from_another_course(): void
+    {
+        Storage::fake('lesson_videos');
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $course = Course::factory()->create(['teacher_id' => $teacher->id, 'status' => 'published']);
+        $otherCourse = Course::factory()->create(['teacher_id' => $teacher->id, 'status' => 'published']);
+        $lesson = $otherCourse->lessons()->create([
+            'title' => 'Different course lesson',
+            'content' => 'Must not be reachable through another course URL.',
+            'duration_minutes' => 10,
+            'order' => 1,
+            'is_preview' => true,
+            'video_path' => 'course-videos/other-course.mp4',
+        ]);
+        Storage::disk('lesson_videos')->put($lesson->video_path, 'private-bytes');
+
+        $this->get(route('courses.lessons.video', [$course, $lesson]))->assertNotFound();
+    }
+
 }
