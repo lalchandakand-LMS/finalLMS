@@ -168,6 +168,95 @@
                 </section>
             @endfor
 
+            <hr style="border:0;border-top:1px solid var(--border);margin:28px 0;">
+            <section aria-labelledby="theme-customizer-title">
+                <span class="badge info">{{ __('Admin appearance') }}</span>
+                <h2 id="theme-customizer-title" style="margin:12px 0 6px;">{{ __('Theme & color customizer') }}</h2>
+                <p class="muted">{{ __('Change dashboard, sidebar, buttons, cards, text and website colors without coding. The default header is a blue gradient.') }}</p>
+                <div class="grid grid-2" id="aec-theme-fields" style="margin:18px 0;">
+                    <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:14px;">
+                        <label for="theme_primary" style="margin:0;">{{ __('Primary / button color') }}</label>
+                        <input id="theme_primary" type="color" name="theme_primary" value="{{ old('theme_primary', $settings['theme_primary'] ?? '#1769e8') }}" data-theme-var="theme_primary" style="width:58px;height:42px;padding:3px;cursor:pointer;">
+                    </div>
+                    <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:14px;">
+                        <label for="theme_primary_dark" style="margin:0;">{{ __('Dark primary / headings') }}</label>
+                        <input id="theme_primary_dark" type="color" name="theme_primary_dark" value="{{ old('theme_primary_dark', $settings['theme_primary_dark'] ?? '#0b2253') }}" data-theme-var="theme_primary_dark" style="width:58px;height:42px;padding:3px;cursor:pointer;">
+                    </div>
+                    <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:14px;">
+                        <label for="theme_accent" style="margin:0;">{{ __('Accent color') }}</label>
+                        <input id="theme_accent" type="color" name="theme_accent" value="{{ old('theme_accent', $settings['theme_accent'] ?? '#268cf5') }}" data-theme-var="theme_accent" style="width:58px;height:42px;padding:3px;cursor:pointer;">
+                    </div>
+                    <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:14px;">
+                        <label for="theme_background" style="margin:0;">{{ __('Page background') }}</label>
+                        <input id="theme_background" type="color" name="theme_background" value="{{ old('theme_background', $settings['theme_background'] ?? '#f3f6fb') }}" data-theme-var="theme_background" style="width:58px;height:42px;padding:3px;cursor:pointer;">
+                    </div>
+                    <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:14px;">
+                        <label for="theme_surface" style="margin:0;">{{ __('Cards and panels') }}</label>
+                        <input id="theme_surface" type="color" name="theme_surface" value="{{ old('theme_surface', $settings['theme_surface'] ?? '#ffffff') }}" data-theme-var="theme_surface" style="width:58px;height:42px;padding:3px;cursor:pointer;">
+                    </div>
+                    <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:14px;">
+                        <label for="theme_surface_alt" style="margin:0;">{{ __('Soft panels / highlights') }}</label>
+                        <input id="theme_surface_alt" type="color" name="theme_surface_alt" value="{{ old('theme_surface_alt', $settings['theme_surface_alt'] ?? '#eef4ff') }}" data-theme-var="theme_surface_alt" style="width:58px;height:42px;padding:3px;cursor:pointer;">
+                    </div>
+                    <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:14px;">
+                        <label for="theme_text" style="margin:0;">{{ __('Main text color') }}</label>
+                        <input id="theme_text" type="color" name="theme_text" value="{{ old('theme_text', $settings['theme_text'] ?? '#18212f') }}" data-theme-var="theme_text" style="width:58px;height:42px;padding:3px;cursor:pointer;">
+                    </div>
+                    <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:14px;">
+                        <label for="theme_muted" style="margin:0;">{{ __('Secondary text color') }}</label>
+                        <input id="theme_muted" type="color" name="theme_muted" value="{{ old('theme_muted', $settings['theme_muted'] ?? '#5b6576') }}" data-theme-var="theme_muted" style="width:58px;height:42px;padding:3px;cursor:pointer;">
+                    </div>
+                    <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:14px;">
+                        <label for="theme_border" style="margin:0;">{{ __('Borders') }}</label>
+                        <input id="theme_border" type="color" name="theme_border" value="{{ old('theme_border', $settings['theme_border'] ?? '#dfe7f6') }}" data-theme-var="theme_border" style="width:58px;height:42px;padding:3px;cursor:pointer;">
+                    </div>
+                    <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:14px;">
+                        <label for="theme_sidebar_start" style="margin:0;">{{ __('Sidebar top color') }}</label>
+                        <input id="theme_sidebar_start" type="color" name="theme_sidebar_start" value="{{ old('theme_sidebar_start', $settings['theme_sidebar_start'] ?? '#102b63') }}" data-theme-var="theme_sidebar_start" style="width:58px;height:42px;padding:3px;cursor:pointer;">
+                    </div>
+                    <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:14px;">
+                        <label for="theme_sidebar_end" style="margin:0;">{{ __('Sidebar bottom color') }}</label>
+                        <input id="theme_sidebar_end" type="color" name="theme_sidebar_end" value="{{ old('theme_sidebar_end', $settings['theme_sidebar_end'] ?? '#0b1d42') }}" data-theme-var="theme_sidebar_end" style="width:58px;height:42px;padding:3px;cursor:pointer;">
+                    </div>
+                    <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:14px;">
+                        <label for="theme_hero_start" style="margin:0;">{{ __('Dashboard header start (blue)') }}</label>
+                        <input id="theme_hero_start" type="color" name="theme_hero_start" value="{{ old('theme_hero_start', $settings['theme_hero_start'] ?? '#0b2253') }}" data-theme-var="theme_hero_start" style="width:58px;height:42px;padding:3px;cursor:pointer;">
+                    </div>
+                    <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:14px;">
+                        <label for="theme_hero_middle" style="margin:0;">{{ __('Dashboard header middle (blue)') }}</label>
+                        <input id="theme_hero_middle" type="color" name="theme_hero_middle" value="{{ old('theme_hero_middle', $settings['theme_hero_middle'] ?? '#0759c8') }}" data-theme-var="theme_hero_middle" style="width:58px;height:42px;padding:3px;cursor:pointer;">
+                    </div>
+                    <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:14px;">
+                        <label for="theme_hero_end" style="margin:0;">{{ __('Dashboard header end (blue)') }}</label>
+                        <input id="theme_hero_end" type="color" name="theme_hero_end" value="{{ old('theme_hero_end', $settings['theme_hero_end'] ?? '#268cf5') }}" data-theme-var="theme_hero_end" style="width:58px;height:42px;padding:3px;cursor:pointer;">
+                    </div>
+                </div>
+                <div id="aec-theme-preview" class="panel" style="background:linear-gradient(115deg,#0b2253,#0759c8 62%,#268cf5);color:#fff;margin-bottom:18px;">
+                    <strong>{{ __('Live preview — Blue gradient dashboard header') }}</strong>
+                    <p style="color:#e2edff;margin:6px 0 0;">{{ __('Selected colors preview here before saving.') }}</p>
+                </div>
+                <button type="button" class="btn secondary" id="aec-theme-reset">{{ __('Restore default blue theme') }}</button>
+            </section>
+            <script>
+                (function () {
+                    const defaults = {"theme_primary":"#1769e8","theme_primary_dark":"#0b2253","theme_accent":"#268cf5","theme_background":"#f3f6fb","theme_surface":"#ffffff","theme_surface_alt":"#eef4ff","theme_text":"#18212f","theme_muted":"#5b6576","theme_border":"#dfe7f6","theme_sidebar_start":"#102b63","theme_sidebar_end":"#0b1d42","theme_hero_start":"#0b2253","theme_hero_middle":"#0759c8","theme_hero_end":"#268cf5"};
+                    const inputs = document.querySelectorAll('[data-theme-var]');
+                    const preview = document.getElementById('aec-theme-preview');
+                    const root = document.documentElement;
+                    const vars = {theme_primary:'--primary',theme_primary_dark:'--primary-dark',theme_accent:'--accent',theme_background:'--bg',theme_surface:'--panel',theme_surface_alt:'--panel-alt',theme_text:'--text',theme_muted:'--muted',theme_border:'--border',theme_sidebar_start:'--admin-sidebar-start',theme_sidebar_end:'--admin-sidebar-end',theme_hero_start:'--dashboard-hero-start',theme_hero_middle:'--dashboard-hero-middle',theme_hero_end:'--dashboard-hero-end'};
+                    function previewTheme() {
+                        inputs.forEach(input => root.style.setProperty(vars[input.dataset.themeVar], input.value));
+                        preview.style.background = 'linear-gradient(115deg,' + document.getElementById('theme_hero_start').value + ',' + document.getElementById('theme_hero_middle').value + ' 62%,' + document.getElementById('theme_hero_end').value + ')';
+                    }
+                    inputs.forEach(input => input.addEventListener('input', previewTheme));
+                    document.getElementById('aec-theme-reset').addEventListener('click', () => {
+                        inputs.forEach(input => { input.value = defaults[input.dataset.themeVar]; });
+                        previewTheme();
+                    });
+                    previewTheme();
+                })();
+            </script>
+
             <hr style="border: 0; border-top: 1px solid var(--border); margin: 28px 0;">
             <div style="margin-bottom: 18px;">
                 <span class="badge info">{{ __('Search and marketing') }}</span>

@@ -22,6 +22,20 @@ class AdminSettingsController extends Controller
     public function update(Request $request): RedirectResponse
     {
         $validated = $request->validate([
+            'theme_primary' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'theme_primary_dark' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'theme_accent' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'theme_background' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'theme_surface' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'theme_surface_alt' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'theme_text' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'theme_muted' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'theme_border' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'theme_sidebar_start' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'theme_sidebar_end' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'theme_hero_start' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'theme_hero_middle' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'theme_hero_end' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'home_title' => ['nullable', 'string', 'max:255'],
             'home_subtitle' => ['nullable', 'string', 'max:500'],
             'home_cta_primary' => ['nullable', 'string', 'max:50'],
