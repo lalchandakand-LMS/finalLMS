@@ -3,6 +3,9 @@
 use App\Http\Controllers\AdminSettingsController;
 use App\Http\Controllers\AdminUpdateController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\StudentDeviceAccessController;
+use App\Http\Controllers\LessonMediaController;
+use App\Http\Controllers\TeacherApplicationController;
 use App\Http\Controllers\BatchController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AssignmentController;
@@ -46,7 +49,13 @@ Route::middleware('guest')->group(function () {
     Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
     Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1')->name('register.store');
 });
-Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1')->name('login.post');
+Route::post('/login', [StudentDeviceAccessController::class, 'beginLogin'])->middleware('throttle:5,1')->name('login.post');
+Route::get('/student-device/verify', [StudentDeviceAccessController::class, 'showVerify'])->middleware('throttle:10,1')->name('student-device.verify');
+Route::post('/student-device/verify', [StudentDeviceAccessController::class, 'verifyPhone'])->middleware('throttle:5,1')->name('student-device.verify-phone');
+Route::get('/teacher/apply', [TeacherApplicationController::class, 'create'])->name('teacher.apply');
+Route::post('/teacher/apply', [TeacherApplicationController::class, 'store'])->middleware('throttle:3,10')->name('teacher.apply.store');
+Route::get('/teacher/apply/verify', [TeacherApplicationController::class, 'showVerify'])->middleware('throttle:10,1')->name('teacher.apply.verify');
+Route::post('/teacher/apply/verify', [TeacherApplicationController::class, 'verify'])->middleware('throttle:5,10')->name('teacher.apply.verify.post');
 
 Route::get('/about', [CmsPageController::class, 'about'])->name('pages.about');
 Route::get('/contact', [CmsPageController::class, 'contact'])->name('pages.contact');
@@ -63,6 +72,7 @@ Route::get('/courses', [CourseController::class, 'index'])->name('courses.index'
 Route::get('/courses/{course}', [CourseController::class, 'show'])->name('courses.show');
 Route::get('/courses/{course}/lessons/{lesson}', [CourseController::class, 'showLesson'])->name('courses.lessons.show');
 Route::get('/courses/{course}/lessons/{lesson}/video', [CourseController::class, 'streamLessonVideo'])->name('courses.lessons.video');
+Route::get('/courses/{course}/lessons/{lesson}/media/{type}', [LessonMediaController::class, 'show'])->middleware('throttle:120,1')->name('courses.lessons.media');
 
 Route::middleware('auth')->group(function () {
     Route::get('/email/verify', [EmailVerificationController::class, 'notice'])->name('verification.notice');
@@ -160,6 +170,14 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         ->name('courses.lessons.complete');
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
+        Route::get('/student-devices', [StudentDeviceAccessController::class, 'adminIndex'])->name('admin.student-devices.index');
+        Route::get('/teacher-applications', [TeacherApplicationController::class, 'adminIndex'])->name('admin.teacher-applications.index');
+        Route::get('/teacher-applications/{application}/documents/{type}', [TeacherApplicationController::class, 'document'])->name('admin.teacher-applications.document');
+        Route::post('/teacher-applications/{application}/approve', [TeacherApplicationController::class, 'approve'])->name('admin.teacher-applications.approve');
+        Route::post('/teacher-applications/{application}/reject', [TeacherApplicationController::class, 'reject'])->name('admin.teacher-applications.reject');
+        Route::post('/student-devices/{device}/approve', [StudentDeviceAccessController::class, 'approve'])->name('admin.student-devices.approve');
+        Route::post('/student-devices/{device}/reject', [StudentDeviceAccessController::class, 'reject'])->name('admin.student-devices.reject');
+        Route::post('/student-devices/{device}/revoke', [StudentDeviceAccessController::class, 'revoke'])->name('admin.student-devices.revoke');
         Route::get('/updates', [AdminUpdateController::class, 'index'])->name('admin.updates.index');
         Route::post('/updates/check', [AdminUpdateController::class, 'check'])->middleware('throttle:3,10')->name('admin.updates.check');
         Route::post('/updates/prepare', [AdminUpdateController::class, 'prepare'])->middleware('throttle:4,10')->name('admin.updates.prepare');

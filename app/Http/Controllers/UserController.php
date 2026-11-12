@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Branch;
+use App\Models\StudentDevice;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -44,6 +45,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'role' => ['required', 'in:admin,branch_manager,accountant,teacher,student'],
             'branch_id' => ['nullable', Rule::exists('branches', 'id')->where('is_active', true)],
+            'phone_number' => ['nullable', 'string', 'regex:/^\+[1-9][0-9]{7,14}$/', Rule::unique('users', 'phone_number')->ignore($user->id)],
         ]);
 
         if ($user->id === Auth::id() && $validated['role'] !== 'admin') {
@@ -58,11 +60,30 @@ class UserController extends Controller
             return back()->withErrors(['branch_id' => 'Select an active branch for this staff account.']);
         }
 
+        $phoneChanged = array_key_exists('phone_number', $validated) && $user->phone_number !== $validated['phone_number'];
+        $roleChangedAwayFromStudent = $user->isStudent() && $validated['role'] !== 'student';
+
         $user->update([
             'role' => $validated['role'],
             'branch_id' => in_array($validated['role'], ['branch_manager', 'accountant', 'student'], true) ? ($validated['branch_id'] ?? null) : null,
+            'phone_number' => $validated['phone_number'] ?? null,
         ]);
 
-        return redirect()->route('admin.users.index')->with('success', 'User role updated successfully.');
+        if ($phoneChanged) {
+            $user->forceFill([
+                'phone_verified_at' => null,
+                'phone_verification_code' => null,
+                'phone_verification_expires_at' => null,
+            ])->save();
+        }
+
+        if ($phoneChanged || $roleChangedAwayFromStudent) {
+            StudentDevice::query()
+                ->where('user_id', $user->id)
+                ->whereIn('status', ['approved', 'pending_admin_approval', 'pending_phone_verification'])
+                ->update(['status' => 'revoked', 'phone_otp_hash' => null, 'phone_otp_expires_at' => null, 'updated_at' => now()]);
+        }
+
+        return redirect()->route('admin.users.index')->with('success', 'User role and contact details updated successfully.');
     }
 }

@@ -27,6 +27,7 @@
             <button type="submit" class="btn primary" style="width:100%; margin-top: 12px;">{{ __('Login') }}</button>
         </form>
 
+        <p class="muted" style="font-size:.88rem;margin-top:14px;">For student accounts, each new device requires mobile-number verification. Additional devices must also be approved by an academy administrator.</p>
         <p class="muted" style="margin-bottom:0;">New to {{ config('app.name') }}? <a href="{{ route('register') }}">{{ __('Create a student account') }}</a></p>
     </div>
 @endsection

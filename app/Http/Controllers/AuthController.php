@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
@@ -34,38 +35,22 @@ class AuthController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'phone_number' => ['required', 'string', 'regex:/^\+[1-9][0-9]{7,14}$/', 'unique:users,phone_number'],
             'password' => ['required', 'confirmed', Password::defaults()],
         ]);
 
-        $user = \App\Models\User::create([
+        $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
+            'phone_number' => $validated['phone_number'],
             'password' => $validated['password'],
             'role' => 'student',
         ]);
 
         event(new Registered($user));
-        Auth::login($user);
 
-        return redirect()->route('verification.notice');
-    }
-
-    public function login(Request $request): RedirectResponse
-    {
-        $credentials = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required'],
-        ]);
-
-        if (Auth::attempt($credentials)) {
-            $request->session()->regenerate();
-
-            return redirect()->intended('/dashboard');
-        }
-
-        return back()->withErrors([
-            'email' => 'The provided credentials do not match our records.',
-        ])->onlyInput('email');
+        // Do not create an authenticated session until the student's first device has passed SMS verification.
+        return redirect()->route('login')->with('success', 'Student account created. Sign in to verify your mobile number and register this device.');
     }
 
     public function logout(Request $request): RedirectResponse

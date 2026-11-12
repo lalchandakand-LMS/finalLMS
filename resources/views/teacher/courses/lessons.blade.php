@@ -13,6 +13,7 @@
         <label>{{ __('YouTube or Vimeo URL') }}<input type="url" name="video_url" maxlength="2048" placeholder="https://youtu.be/..."></label>
         <label>{{ __('Or upload video (MP4, M4V, MOV, WebM; max 512 MB)') }}<input type="file" name="video_file" accept="video/mp4,video/quicktime,video/webm"></label>
         <label>{{ __('Video thumbnail') }}<input type="file" name="thumbnail" accept="image/jpeg,image/png,image/webp"></label>
+        <label>{{ __('PDF / Notes / Image (max 20 MB)') }}<input type="file" name="attachment_file" accept=".pdf,.jpg,.jpeg,.png"></label>
         <label style="grid-column:1/-1;">{{ __('Lesson content') }}<textarea name="content" required></textarea></label>
         <label><input type="checkbox" name="is_preview" value="1"> {{ __('Free preview') }}</label>
         <button class="btn primary" type="submit">{{ __('Add lesson') }}</button>
@@ -31,6 +32,8 @@
         <label>{{ __('Video URL') }}<input type="url" name="video_url" value="{{ $lesson->video_url }}" maxlength="2048"></label>
         <label>{{ __('Replace/upload video (MP4, M4V, MOV, WebM; max 512 MB)') }}<input type="file" name="video_file" accept="video/mp4,video/quicktime,video/webm"></label>
         <label>{{ __('Replace thumbnail') }}<input type="file" name="thumbnail" accept="image/jpeg,image/png,image/webp"></label>
+        <label>{{ __('Replace PDF / Notes / Image (max 20 MB)') }}<input type="file" name="attachment_file" accept=".pdf,.jpg,.jpeg,.png"></label>
+        @if($lesson->attachment_path)<label><input type="checkbox" name="remove_attachment" value="1"> {{ __('Remove current attachment') }} ({{ $lesson->attachment_name }})</label>@endif
         <label><input type="checkbox" name="remove_video" value="1"> {{ __('Remove uploaded video') }}</label>
         <label><input type="checkbox" name="remove_thumbnail" value="1"> {{ __('Remove thumbnail') }}</label>
         <label style="grid-column:1/-1;">{{ __('Content') }}<textarea name="content" required>{{ $lesson->content }}</textarea></label>

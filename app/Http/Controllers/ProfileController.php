@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\StudentDevice;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -42,6 +43,13 @@ class ProfileController extends Controller
         }
 
         $user->save();
+
+        if ($phoneChanged) {
+            StudentDevice::query()
+                ->where('user_id', $user->id)
+                ->whereIn('status', ['approved', 'pending_admin_approval', 'pending_phone_verification'])
+                ->update(['status' => 'revoked', 'phone_otp_hash' => null, 'phone_otp_expires_at' => null, 'updated_at' => now()]);
+        }
 
         if ($emailChanged) {
             $user->sendEmailVerificationNotification();

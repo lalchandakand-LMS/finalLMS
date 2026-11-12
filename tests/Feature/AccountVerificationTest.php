@@ -20,17 +20,19 @@ class AccountVerificationTest extends TestCase
         $this->post(route('register.store'), [
             'name' => 'New Student',
             'email' => 'new.student@example.com',
+            'phone_number' => '+8801712345678',
             'password' => 'StrongPassword123!',
             'password_confirmation' => 'StrongPassword123!',
             'role' => 'admin',
-        ])->assertRedirect(route('verification.notice'));
+        ])->assertRedirect(route('login'));
 
         $student = User::where('email', 'new.student@example.com')->firstOrFail();
 
         $this->assertSame('student', $student->role);
         $this->assertNull($student->email_verified_at);
         Notification::assertSentTo($student, VerifyEmail::class);
-        $this->get(route('dashboard'))->assertRedirect(route('verification.notice'));
+        $this->assertGuest();
+        $this->get(route('dashboard'))->assertRedirect(route('login'));
     }
 
     public function test_signed_email_verification_link_marks_the_account_as_verified(): void
