@@ -8,6 +8,8 @@ use App\Models\CourseContentPost;
 use App\Models\CourseCurriculumItem;
 use App\Models\FlashSale;
 use App\Models\Payment;
+use App\Models\Product;
+use App\Models\ProductCategory;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -213,6 +215,80 @@ class FlashSaleTest extends TestCase
         $sale = FlashSale::where('title', 'Speaking category offer')->firstOrFail();
         $this->assertTrue($sale->categories->contains($category));
         $this->assertCount(0, $sale->courses);
+    }
+
+    public function test_admin_can_target_product_category_and_checkout_uses_server_flash_sale_price(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $category = ProductCategory::create(['name' => 'PDF Workbooks', 'slug' => 'pdf-workbooks']);
+        $product = Product::create([
+            'type' => 'ebook',
+            'name' => 'Business English PDF',
+            'slug' => 'business-english-pdf',
+            'regular_price' => 800,
+            'currency' => 'BDT',
+            'status' => 'published',
+            'published_at' => now(),
+            'is_downloadable' => true,
+            'download_path' => 'private/products/business-english.pdf',
+            'created_by' => $admin->id,
+        ]);
+        $product->categories()->attach($category);
+        $sale = FlashSale::create([
+            'title' => 'Workbook Category Offer',
+            'badge' => 'SAVE 25%',
+            'discount_type' => 'percentage',
+            'discount_value' => 25,
+            'starts_at' => now()->subMinute(),
+            'ends_at' => now()->addDay(),
+            'status' => 'active',
+            'max_redemptions' => 1,
+            'per_student_limit' => 1,
+            'priority' => 20,
+            'created_by' => $admin->id,
+        ]);
+        $sale->productCategories()->attach($category->id);
+
+        $this->assertSame($sale->id, FlashSale::activeForProduct($product)?->id);
+        $student = User::factory()->create(['role' => 'student']);
+        Setting::setValue('payment_methods', json_encode(['manual' => ['enabled' => true, 'label' => 'Manual']]));
+        $this->actingAs($student)->post(route('store.cart.add', $product))->assertRedirect();
+        $this->actingAs($student)->post(route('store.checkout'), [
+            'payment_method' => 'manual',
+            'payment_reference' => 'PRODUCT-FLASH-SALE-001',
+        ])->assertRedirect(route('store.orders'));
+
+        $order = \App\Models\Order::where('payment_reference', 'PRODUCT-FLASH-SALE-001')->firstOrFail();
+        $this->assertSame('600.00', $order->total);
+        $this->assertDatabaseHas('order_items', [
+            'order_id' => $order->id,
+            'flash_sale_id' => $sale->id,
+            'line_total' => '600.00',
+        ]);
+    }
+
+    public function test_flash_sale_admin_can_select_only_product_categories(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $category = ProductCategory::create(['name' => 'Grammar PDFs', 'slug' => 'grammar-pdfs']);
+
+        $this->actingAs($admin)->post(route('admin.flash-sales.store'), [
+            'title' => 'Grammar PDF offer',
+            'badge' => 'SAVE 10%',
+            'discount_type' => 'percentage',
+            'discount_value' => 10,
+            'starts_at' => now()->subMinute()->format('Y-m-d\\TH:i'),
+            'ends_at' => now()->addDay()->format('Y-m-d\\TH:i'),
+            'status' => 'active',
+            'per_student_limit' => 1,
+            'priority' => 3,
+            'product_category_ids' => [$category->id],
+        ])->assertRedirect();
+
+        $sale = FlashSale::where('title', 'Grammar PDF offer')->firstOrFail();
+        $this->assertTrue($sale->productCategories->contains($category));
+        $this->assertCount(0, $sale->courses);
+        $this->assertCount(0, $sale->categories);
     }
 
 }

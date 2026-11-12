@@ -11,6 +11,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class ProductCatalogManagementTest extends TestCase
@@ -231,6 +232,37 @@ class ProductCatalogManagementTest extends TestCase
 
         $this->assertSame('private/products/original.pdf', $product->fresh()->download_path);
         Storage::disk('local')->assertExists('private/products/original.pdf');
+    }
+
+    public function test_admin_uploads_private_ebook_and_separate_public_sample_with_search_metadata(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->post(route('admin.products.store'), [
+            'type' => 'ebook',
+            'name' => 'IELTS Academic Workbook',
+            'short_description' => 'Practice tests and guided lessons.',
+            'description' => 'A complete preparation workbook.',
+            'seo_title' => 'IELTS Academic Workbook PDF',
+            'seo_description' => 'A practical IELTS preparation workbook.',
+            'tags' => 'IELTS, Academic, Practice',
+            'regular_price' => '650.00',
+            'currency' => 'BDT',
+            'status' => 'published',
+            'download_file' => UploadedFile::fake()->create('workbook.pdf', 100, 'application/pdf'),
+            'preview_file' => UploadedFile::fake()->create('workbook-sample.pdf', 20, 'application/pdf'),
+        ])->assertRedirect();
+
+        $product = Product::where('slug', 'ielts-academic-workbook')->firstOrFail();
+        Storage::disk('local')->assertExists($product->download_path);
+        Storage::disk('public')->assertExists($product->preview_path);
+        $this->assertSame(['IELTS', 'Academic', 'Practice'], $product->tags);
+
+        $this->get(route('store.products.show', $product))->assertOk()
+            ->assertSee('IELTS Academic Workbook PDF');
+        $this->get(route('store.preview', $product))->assertOk();
     }
 
 }

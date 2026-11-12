@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Cart;
 use App\Models\Coupon;
+use App\Models\CouponRedemption;
 use App\Models\Course;
 use App\Models\DownloadPermission;
 use App\Models\Enrollment;
@@ -168,6 +169,92 @@ class StoreCheckoutTest extends TestCase
         $this->assertDatabaseHas('order_items', [
             'order_id'=>$secondOrder->id,'flash_sale_id'=>null,'line_total'=>'1000.00',
         ]);
+    }
+
+    public function test_coupon_usage_is_reserved_until_order_is_rejected_then_released(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $firstStudent = User::factory()->create(['role' => 'student']);
+        $secondStudent = User::factory()->create(['role' => 'student']);
+        $product = Product::create([
+            'type' => 'ebook', 'name' => 'Reserved Coupon Book', 'slug' => 'reserved-coupon-book',
+            'regular_price' => 500, 'currency' => 'BDT', 'status' => 'published',
+            'published_at' => now(), 'is_downloadable' => true,
+            'download_path' => 'private/products/reserved.pdf', 'created_by' => $admin->id,
+        ]);
+        $coupon = Coupon::create([
+            'code' => 'ONLYONE', 'discount_type' => 'percentage', 'discount_value' => 10,
+            'minimum_order' => 0, 'usage_limit' => 1, 'per_user_limit' => 1, 'is_active' => true,
+        ]);
+        Setting::setValue('payment_methods', json_encode(['manual' => ['enabled' => true, 'label' => 'Manual']]));
+
+        $this->actingAs($firstStudent)->post(route('store.cart.add', $product))->assertRedirect();
+        $this->actingAs($firstStudent)->post(route('store.checkout'), [
+            'payment_method' => 'manual', 'payment_reference' => 'COUPON-RESERVE-001', 'coupon_code' => 'ONLYONE',
+        ])->assertRedirect(route('store.orders'));
+
+        $firstOrder = Order::where('payment_reference', 'COUPON-RESERVE-001')->firstOrFail();
+        $this->assertDatabaseHas('coupon_redemptions', [
+            'coupon_id' => $coupon->id, 'order_id' => $firstOrder->id, 'status' => 'pending',
+        ]);
+
+        $this->actingAs($secondStudent)->post(route('store.cart.add', $product))->assertRedirect();
+        $this->actingAs($secondStudent)->post(route('store.checkout'), [
+            'payment_method' => 'manual', 'payment_reference' => 'COUPON-RESERVE-002', 'coupon_code' => 'ONLYONE',
+        ])->assertStatus(422);
+
+        $this->actingAs($admin)->post(route('admin.orders.reject', $firstOrder))->assertRedirect();
+        $this->assertDatabaseHas('coupon_redemptions', ['order_id' => $firstOrder->id, 'status' => 'released']);
+
+        $this->actingAs($secondStudent)->post(route('store.checkout'), [
+            'payment_method' => 'manual', 'payment_reference' => 'COUPON-RESERVE-003', 'coupon_code' => 'ONLYONE',
+        ])->assertRedirect(route('store.orders'));
+
+        $secondOrder = Order::where('payment_reference', 'COUPON-RESERVE-003')->firstOrFail();
+        $this->assertSame('450.00', $secondOrder->total);
+        $this->assertDatabaseHas('coupon_redemptions', ['order_id' => $secondOrder->id, 'status' => 'pending']);
+    }
+
+    public function test_ebook_reader_logs_access_and_refund_record_revokes_download_permission(): void
+    {
+        Storage::fake('local');
+        Storage::disk('local')->put('private/products/audit-guide.pdf', 'private pdf bytes');
+        $student = User::factory()->create(['role' => 'student']);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = Product::create([
+            'type' => 'ebook', 'name' => 'Audit Guide', 'slug' => 'audit-guide',
+            'regular_price' => 300, 'currency' => 'BDT', 'status' => 'published', 'published_at' => now(),
+            'is_downloadable' => true, 'download_path' => 'private/products/audit-guide.pdf',
+            'download_limit' => 3, 'created_by' => $admin->id,
+        ]);
+        Setting::setValue('payment_methods', json_encode(['manual' => ['enabled' => true, 'label' => 'Manual']]));
+
+        $this->actingAs($student)->post(route('store.cart.add', $product))->assertRedirect();
+        $this->actingAs($student)->post(route('store.checkout'), [
+            'payment_method' => 'manual', 'payment_reference' => 'AUDIT-EBOOK-001',
+        ])->assertRedirect(route('store.orders'));
+        $order = Order::where('payment_reference', 'AUDIT-EBOOK-001')->firstOrFail();
+        $this->actingAs($admin)->post(route('admin.orders.approve', $order))->assertRedirect();
+
+        $permission = DownloadPermission::where('user_id', $student->id)->firstOrFail();
+        $otherStudent = User::factory()->create(['role' => 'student']);
+        $this->actingAs($otherStudent)->get(route('store.download', $permission))->assertNotFound();
+
+        $this->actingAs($student)->get(route('store.reader', $permission))->assertOk();
+        $this->actingAs($student)->get(route('store.download', $permission))->assertOk();
+        $this->actingAs($student)->get(route('store.download', $permission))->assertOk();
+        $this->actingAs($student)->get(route('store.download', $permission))->assertStatus(410);
+        $this->assertDatabaseCount('ebook_download_logs', 3);
+
+        $this->actingAs($admin)->post(route('admin.orders.record-refund', $order), [
+            'refund_note' => 'Refund transferred manually via original payment channel.',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'refunded']);
+        $this->assertDatabaseHas('download_permissions', [
+            'id' => $permission->id, 'revoked_by' => $admin->id,
+        ]);
+        $this->actingAs($student)->get(route('store.download', $permission))->assertNotFound();
     }
 
 }
