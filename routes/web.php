@@ -84,6 +84,8 @@ Route::get('/contests', [QuizContestController::class, 'index'])->name('contests
 Route::get('/contests/{contest}', [QuizContestController::class, 'show'])->name('contests.show');
 
 Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
+Route::get('/course-combos', [CourseComboController::class, 'publicIndex'])->name('course-combos.index');
+Route::get('/course-combos/{courseCombo:slug}', [CourseComboController::class, 'show'])->name('course-combos.show');
 Route::get('/courses/{course}', [CourseController::class, 'show'])->name('courses.show');
 Route::get('/courses/{course}/content/{post:slug}', [CourseContentController::class, 'show'])->name('courses.content.show');
 Route::get('/courses/{course}/lessons/{lesson}', [CourseController::class, 'showLesson'])->name('courses.lessons.show');
@@ -182,6 +184,7 @@ Route::middleware(['auth', 'verified', 'activity.log', 'student.device'])->group
     Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::get('/certificates/{certificate}', [DashboardController::class, 'certificate'])->name('certificates.show');
 
+    Route::post('/course-combos/{courseCombo:slug}/enroll', [PaymentController::class, 'submitCombo'])->middleware('role:student')->name('course-combos.enroll');
     Route::post('/courses/{course}/enroll', [PaymentController::class, 'submit'])->name('courses.enroll');
     Route::post('/courses/{course}/complete', [CourseController::class, 'complete'])->name('courses.complete');
     Route::post('/courses/{course}/lessons/{lesson}/complete', [CourseController::class, 'completeLesson'])
@@ -309,6 +312,12 @@ Route::middleware(['auth', 'verified', 'activity.log', 'student.device'])->group
         Route::get('/course-content-posts/{courseContentPost}/edit', [AdminCourseContentPostController::class, 'edit'])->name('admin.course-content-posts.edit');
         Route::put('/course-content-posts/{courseContentPost}', [AdminCourseContentPostController::class, 'update'])->name('admin.course-content-posts.update');
         Route::delete('/course-content-posts/{courseContentPost}', [AdminCourseContentPostController::class, 'destroy'])->name('admin.course-content-posts.destroy');
+        Route::get('/course-combos', [CourseComboController::class, 'index'])->name('admin.course-combos.index');
+        Route::get('/course-combos/create', [CourseComboController::class, 'create'])->name('admin.course-combos.create');
+        Route::post('/course-combos', [CourseComboController::class, 'store'])->name('admin.course-combos.store');
+        Route::get('/course-combos/{courseCombo}/edit', [CourseComboController::class, 'edit'])->name('admin.course-combos.edit');
+        Route::put('/course-combos/{courseCombo}', [CourseComboController::class, 'update'])->name('admin.course-combos.update');
+        Route::delete('/course-combos/{courseCombo}', [CourseComboController::class, 'destroy'])->name('admin.course-combos.destroy');
         Route::get('/courses', [CourseController::class, 'adminIndex'])->name('admin.courses.index');
         Route::get('/courses/{course}/builder', [AdminCourseBuilderController::class, 'edit'])->name('admin.course-builder.edit');
         Route::put('/courses/{course}/builder', [AdminCourseBuilderController::class, 'update'])->name('admin.course-builder.update');
