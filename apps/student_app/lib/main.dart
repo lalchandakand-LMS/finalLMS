@@ -29,7 +29,7 @@ class _StudentGateState extends State<StudentGate> {
   void initState() {
     super.initState();
     api.restoreSession().then((restored) {
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() { signedIn = restored; loading = false; });
     });
   }
@@ -84,7 +84,7 @@ class _StudentLoginState extends State<StudentLogin> {
       );
       _handleOutcome(outcome);
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -106,14 +106,14 @@ class _StudentLoginState extends State<StudentLogin> {
         });
       }
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
       if (mounted) setState(() => busy = false);
     }
   }
 
   void _handleOutcome(LoginOutcome outcome) {
-    if (!mounted) return;
+    if (!mounted) { return; }
     switch (outcome.state) {
       case LoginState.authenticated:
         approvalTimer?.cancel();
@@ -146,8 +146,8 @@ class _StudentLoginState extends State<StudentLogin> {
   }
 
   Future<void> checkApproval({bool silent = false}) async {
-    if (busy) return;
-    if (!silent && mounted) setState(() { busy = true; error = null; });
+    if (busy) { return; }
+    if (!silent && mounted) { setState(() { busy = true; error = null; }); }
     try {
       final outcome = await widget.api.checkDeviceStatus();
       _handleOutcome(outcome);
@@ -163,9 +163,9 @@ class _StudentLoginState extends State<StudentLogin> {
         setState(() => error = exception.toString());
       }
     } catch (exception) {
-      if (mounted && !silent) setState(() => error = exception.toString());
+      if (mounted && !silent) { setState(() => error = exception.toString()); }
     } finally {
-      if (!silent && mounted) setState(() => busy = false);
+      if (!silent && mounted) { setState(() => busy = false); }
     }
   }
 
