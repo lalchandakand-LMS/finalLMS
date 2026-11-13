@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Course;
+use App\Models\CourseCombo;
+use App\Models\PaymentComboCourse;
 use App\Models\Batch;
 use App\Models\Enrollment;
 use App\Models\Payment;
@@ -187,9 +189,121 @@ class PaymentController extends Controller
         };
     }
 
+    public function submitCombo(CourseCombo $courseCombo, Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        if (! $user->isStudent()) {
+            return back()->with('error', 'Only students can purchase course combos.');
+        }
+
+        $courseCombo->load('courses');
+        abort_unless($courseCombo->status === 'published' && $courseCombo->courses->count() >= 2, 404);
+        if ($courseCombo->courses->contains(fn (Course $course) => $course->status !== 'published'
+            || $course->batches()->where('status', 'open')->exists())) {
+            return back()->with('error', 'This combo is unavailable because an included course has an open batch or is unpublished.');
+        }
+
+        $enabledMethods = collect(Setting::paymentMethods())
+            ->filter(fn (array $method) => (bool) ($method['enabled'] ?? false))
+            ->keys()
+            ->all();
+
+        $validated = [];
+        if ((float) $courseCombo->price > 0) {
+            if ($enabledMethods === []) {
+                return back()->with('error', 'There are no payment methods available right now. Please contact the academy.');
+            }
+
+            $validated = $request->validate([
+                'payment_method' => ['required', Rule::in($enabledMethods)],
+                'sender_account' => ['nullable', 'string', 'max:50'],
+                'transaction_reference' => [
+                    'required',
+                    'string',
+                    'max:120',
+                    Rule::unique('payments', 'transaction_reference')
+                        ->where(fn ($queryBuilder) => $queryBuilder->where('method', $request->input('payment_method'))),
+                ],
+                'proof' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
+            ]);
+        }
+
+        $proof = $request->file('proof');
+        $result = DB::transaction(function () use ($courseCombo, $proof, $user, $validated): string {
+            $lockedCombo = CourseCombo::query()->lockForUpdate()->with('courses')->findOrFail($courseCombo->id);
+            $courses = $lockedCombo->courses;
+            if ($lockedCombo->status !== 'published' || $courses->count() < 2
+                || $courses->contains(fn (Course $course) => $course->status !== 'published'
+                    || $course->batches()->where('status', 'open')->exists())) {
+                return 'unavailable';
+            }
+
+            $courseIds = $courses->pluck('id')->all();
+            $alreadyEnrolled = Enrollment::query()
+                ->where('user_id', $user->id)
+                ->whereIn('course_id', $courseIds)
+                ->whereIn('status', ['active', 'completed'])
+                ->count();
+
+            if ($alreadyEnrolled === count($courseIds)) {
+                return 'already_enrolled';
+            }
+
+            if ((float) $lockedCombo->price <= 0) {
+                foreach ($courses as $course) {
+                    Enrollment::firstOrCreate(
+                        ['user_id' => $user->id, 'course_id' => $course->id],
+                        ['status' => 'active']
+                    );
+                }
+
+                return 'enrolled_free';
+            }
+
+            if (Payment::query()->where('user_id', $user->id)
+                ->where('course_combo_id', $lockedCombo->id)
+                ->where('status', 'pending')->exists()) {
+                return 'payment_pending';
+            }
+
+            $proofPath = $proof?->store('payment-proofs', 'local');
+            $payment = Payment::create([
+                'user_id' => $user->id,
+                'course_id' => $courses->first()->id,
+                'course_combo_id' => $lockedCombo->id,
+                'method' => $validated['payment_method'],
+                'amount' => $lockedCombo->price,
+                'currency' => 'BDT',
+                'sender_account' => $validated['sender_account'] ?? null,
+                'transaction_reference' => $validated['transaction_reference'],
+                'proof_path' => $proofPath,
+                'status' => 'pending',
+            ]);
+
+            foreach ($courses->values() as $position => $course) {
+                PaymentComboCourse::create([
+                    'payment_id' => $payment->id,
+                    'course_id' => $course->id,
+                    'course_title' => $course->title,
+                    'position' => $position + 1,
+                ]);
+            }
+
+            return 'submitted';
+        });
+
+        return match ($result) {
+            'submitted' => back()->with('success', 'Combo payment submitted. Access to all included courses will be granted after academy verification.'),
+            'enrolled_free' => redirect()->route('course-combos.show', $courseCombo)->with('success', 'You have enrolled in all combo courses successfully.'),
+            'already_enrolled' => back()->with('info', 'You are already enrolled in every course in this combo.'),
+            'payment_pending' => back()->with('info', 'Your combo payment is already waiting for review.'),
+            default => back()->with('error', 'This combo is no longer available. Refresh the page and try again.'),
+        };
+    }
+
     public function index(): View
     {
-        $payments = Payment::with(['user', 'course', 'reviewer'])
+        $payments = Payment::with(['user', 'course', 'courseCombo', 'comboCourses', 'reviewer'])
             ->latest()
             ->paginate(20);
 
@@ -216,16 +330,41 @@ class PaymentController extends Controller
                 }
             }
 
+            if ($payment->course_combo_id) {
+                $comboItems = PaymentComboCourse::query()
+                    ->where('payment_id', $payment->id)
+                    ->orderBy('position')
+                    ->get();
+                $courseIds = $comboItems->pluck('course_id')->filter()->unique()->values();
+
+                if ($comboItems->count() < 2 || $courseIds->count() !== $comboItems->count()) {
+                    return 'combo_unavailable';
+                }
+
+                $courses = Course::query()->whereIn('id', $courseIds)->get()->keyBy('id');
+                if ($courses->count() !== $comboItems->count()
+                    || $courses->contains(fn (Course $course) => $course->status !== 'published')) {
+                    return 'combo_unavailable';
+                }
+
+                foreach ($comboItems as $item) {
+                    Enrollment::firstOrCreate(
+                        ['user_id' => $payment->user_id, 'course_id' => $item->course_id],
+                        ['status' => 'active']
+                    );
+                }
+            } else {
+                Enrollment::firstOrCreate(
+                    ['user_id' => $payment->user_id, 'course_id' => $payment->course_id],
+                    ['batch_id' => $payment->batch_id, 'status' => 'active']
+                );
+            }
+
             $payment->update([
                 'status' => 'approved',
                 'reviewed_by' => auth()->id(),
                 'reviewed_at' => now(),
             ]);
-
-            Enrollment::firstOrCreate(
-                ['user_id' => $payment->user_id, 'course_id' => $payment->course_id],
-                ['batch_id' => $payment->batch_id, 'status' => 'active']
-            );
 
             return 'approved';
         });
@@ -236,6 +375,10 @@ class PaymentController extends Controller
 
         if ($result === 'reviewed') {
             return back()->with('info', 'This payment has already been reviewed.');
+        }
+
+        if ($result === 'combo_unavailable') {
+            return back()->with('error', 'The purchased combo no longer contains all its original published courses. Payment remains pending for manual resolution.');
         }
 
         return back()->with('success', 'Payment approved and course access granted.');
