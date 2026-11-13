@@ -195,7 +195,11 @@
     <section class="home-welcome">
         <div class="home-welcome__copy"><span class="home-eyebrow">{{ $siteName }}</span><h1>{{ $homeTitle }}</h1><p>{{ $homeSubtitle }}</p>
             <div class="home-actions"><a href="{{ route('courses.index') }}" class="home-button home-button--light">{{ $homePrimaryLabel }}</a>
-                @guest<a href="{{ route('register') }}" class="home-button home-button--outline">{{ __('Create student account') }}</a>@else<a href="{{ url('/dashboard') }}" class="home-button home-button--outline">{{ __('Go to dashboard') }}</a>@endguest
+                @if(auth()->guest())
+                    <a href="{{ route('register') }}" class="home-button home-button--outline">{{ __('Create student account') }}</a>
+                @else
+                    <a href="{{ url('/dashboard') }}" class="home-button home-button--outline">{{ __('Go to dashboard') }}</a>
+                @endif
             </div>
         </div>
         <div class="home-welcome__art" aria-hidden="true"><div class="home-orbit"></div><div class="home-orbit home-orbit--two"></div><div class="home-book"><span>ABC</span><strong>{{ __('Learn') }}</strong><small>{{ __('Practice · Improve · Succeed') }}</small></div><div class="home-floating home-floating--one">Aa</div><div class="home-floating home-floating--two">✓</div></div>
@@ -203,6 +207,19 @@
     <section class="home-overview">
         <div class="home-overview__panel home-overview__panel--batches"><span class="home-section-kicker">{{ __('Admissions & batches') }}</span><h2>{{ $homeBatchesTitle }}</h2><p>{{ __('Book your seat in an available class.') }}</p>
             @forelse($openBatches as $batch)
+                @if($batch->course)
+                    <a class="home-batch" href="{{ route('courses.show', $batch->course) }}">
+                        <span class="home-batch__icon">▣</span>
+                        <span class="home-batch__details">
+                            <strong>{{ $batch->title }}</strong>
+                            <small>{{ $batch->course->title }}{{ $batch->teacher ? ' · '.$batch->teacher->name : '' }}</small>
+                        </span>
+                        <span>↗</span>
+                    </a>
+                @endif
+            @empty
+                <div class="home-empty"><strong>{{ __('No active batches at the moment') }}</strong><span>{{ __('New batch announcements will appear here when published by the admin.') }}</span></div>
+            @endforelse
                 @if($batch->course)<a class="home-batch" href="{{ route('courses.show',$batch->course) }}"><span class="home-batch__icon">▣</span><span class="home-batch__details"><strong>{{ $batch->title }}</strong><small>{{ $batch->course->title }}@if($batch->teacher) · {{ $batch->teacher->name }}@endif</small></span><span>↗</span></a>@endif
             @empty<div class="home-empty"><strong>{{ __('No active batches at the moment') }}</strong><span>{{ __('New batch announcements will appear here when published by the admin.') }}</span></div>@endforelse
             <a class="home-text-link" href="{{ route('courses.index') }}">{{ __('See all courses') }} →</a>
@@ -228,12 +245,16 @@
                     </a>
                 @endforeach
             </div>
-        @else<div class="home-empty home-empty--light"><strong>{{ __('Our learning paths are being prepared') }}</strong><span>{{ __('Published courses will appear here automatically.') }}</span></div>@endif
+        @else
+            <div class="home-empty home-empty--light"><strong>{{ __('Our learning paths are being prepared') }}</strong><span>{{ __('Published courses will appear here automatically.') }}</span></div>
+        @endif
         <div class="home-paths__footer"><a class="home-button home-button--primary" href="{{ route('courses.index') }}">{{ __('Browse all courses') }}</a></div>
     </section>
     @if($learnerVoices->isNotEmpty())
         @php($testimonialRows=[$learnerVoices->values()->slice(0,6),$learnerVoices->values()->slice(6,6)])
-        @if($testimonialRows[1]->isEmpty()) @php($testimonialRows[1]=$testimonialRows[0]) @endif
+        @if($testimonialRows[1]->isEmpty())
+            @php($testimonialRows[1] = $testimonialRows[0])
+        @endif
         <section class="home-testimonials"><div class="home-section-heading home-section-heading--dark"><span class="home-heading-kicker">{{ __('Student reviews') }}</span><h2>{{ $homeReviewsTitle }}</h2><p>{{ __('Approved feedback from our learners') }}</p></div>
             @foreach($testimonialRows as $rowIndex => $row)
                 <div class="home-testimonial-viewport">
@@ -273,8 +294,12 @@
             <section class="panel" style="margin-top:28px;background-color:{{ $sectionBackground }};color:{{ $sectionTextColor }};padding:{{ $sectionSpacing }};">
                 <div class="grid grid-2" style="align-items:center;{{ $sectionGridStyle }}">
                     <div style="direction:ltr;text-align:{{ $sectionLayout === 'centered' ? 'center' : 'left' }};">
-                        @if(!empty($section['title']))<h2>{{ $section['title'] }}</h2>@endif
-                        @if(!empty($section['body']))<p style="white-space:pre-line;line-height:1.8;">{{ $section['body'] }}</p>@endif
+                        @if(!empty($section['title']))
+                            <h2>{{ $section['title'] }}</h2>
+                        @endif
+                        @if(!empty($section['body']))
+                            <p style="white-space:pre-line;line-height:1.8;">{{ $section['body'] }}</p>
+                        @endif
                         @if(!empty($section['button_label']) && !empty($section['button_url']))
                             <a class="btn primary" href="{{ $section['button_url'] }}" rel="nofollow noopener">{{ $section['button_label'] }}</a>
                         @endif
