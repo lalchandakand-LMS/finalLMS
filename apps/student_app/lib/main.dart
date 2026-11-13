@@ -533,7 +533,7 @@ class _StudentHomeState extends State<StudentHome> {
                     ),
                     const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
-                      value: sort,
+                      initialValue: sort,
                       decoration: const InputDecoration(
                         labelText: 'Sort courses',
                         border: OutlineInputBorder(),
