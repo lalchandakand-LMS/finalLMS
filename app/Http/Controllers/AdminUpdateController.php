@@ -5,12 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\SystemUpdateBackup;
 use App\Models\SystemUpdateCheck;
 use App\Models\SystemUpdateEvent;
+use App\Models\SystemUpdateLock;
 use App\Models\SystemUpdatePreparation;
 use App\Models\SystemUpdatePreflight;
 use App\Services\ReleaseActivationPreflight;
 use App\Services\ReleaseManifestChecker;
 use App\Services\UpdateBackupCoordinator;
 use App\Services\ReleasePackageStager;
+use App\Services\UpdateOperationLock;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 use RuntimeException;
@@ -37,6 +39,7 @@ class AdminUpdateController extends Controller
             'preflight' => $latestPreparation
                 ? SystemUpdatePreflight::query()->where('preparation_id', $latestPreparation->id)->latest('checked_at')->first()
                 : null,
+            'operationLock' => SystemUpdateLock::query()->find(1),
             'events' => SystemUpdateEvent::query()
                 ->with(['performedBy:id,name', 'preparation:id,version'])
                 ->latest()
@@ -96,14 +99,18 @@ class AdminUpdateController extends Controller
             ->with($result['status'] === 'failed' ? 'error' : 'success', $result['message']);
     }
 
-    public function prepare(ReleasePackageStager $stager): RedirectResponse
+    public function prepare(ReleasePackageStager $stager, UpdateOperationLock $operationLock): RedirectResponse
     {
         try {
-            $preparation = $stager->prepare(auth()->user());
-            $this->recordEvent('package_prepare', 'success', $preparation->message, $preparation, [
-                'version' => $preparation->version,
-                'file_size' => $preparation->file_size,
-            ]);
+            $preparation = $operationLock->run('package_prepare', auth()->user(), function () use ($stager) {
+                $preparation = $stager->prepare(auth()->user());
+                $this->recordEvent('package_prepare', 'success', $preparation->message, $preparation, [
+                    'version' => $preparation->version,
+                    'file_size' => $preparation->file_size,
+                ]);
+
+                return $preparation;
+            });
 
             return redirect()->route('admin.updates.index')->with('success', $preparation->message);
         } catch (Throwable $exception) {
@@ -120,14 +127,18 @@ class AdminUpdateController extends Controller
         }
     }
 
-    public function extract(SystemUpdatePreparation $preparation, ReleasePackageStager $stager): RedirectResponse
+    public function extract(SystemUpdatePreparation $preparation, ReleasePackageStager $stager, UpdateOperationLock $operationLock): RedirectResponse
     {
         try {
-            $preparation = $stager->extract($preparation);
-            $this->recordEvent('private_extract', 'success', $preparation->message, $preparation, [
-                'version' => $preparation->version,
-                'release_path' => $preparation->release_path,
-            ]);
+            $preparation = $operationLock->run('private_extract', auth()->user(), function () use ($stager, $preparation) {
+                $preparation = $stager->extract($preparation);
+                $this->recordEvent('private_extract', 'success', $preparation->message, $preparation, [
+                    'version' => $preparation->version,
+                    'release_path' => $preparation->release_path,
+                ]);
+
+                return $preparation;
+            });
 
             return redirect()->route('admin.updates.index')->with('success', $preparation->message);
         } catch (Throwable $exception) {
@@ -146,18 +157,22 @@ class AdminUpdateController extends Controller
         }
     }
 
-    public function preflight(SystemUpdatePreparation $preparation, ReleaseActivationPreflight $preflight): RedirectResponse
+    public function preflight(SystemUpdatePreparation $preparation, ReleaseActivationPreflight $preflight, UpdateOperationLock $operationLock): RedirectResponse
     {
         try {
-            $report = $preflight->run($preparation, auth()->user());
-            $status = $report->status === 'blocked' ? 'blocked' : ($report->status === 'warning' ? 'warning' : 'success');
-            $this->recordEvent('activation_preflight', $status, $report->summary, $preparation, [
-                'preflight_id' => $report->id,
-                'checks' => collect($report->checks)->map(fn (array $check) => [
-                    'key' => $check['key'] ?? 'unknown',
-                    'status' => $check['status'] ?? 'unknown',
-                ])->all(),
-            ]);
+            $report = $operationLock->run('activation_preflight', auth()->user(), function () use ($preflight, $preparation) {
+                $report = $preflight->run($preparation, auth()->user());
+                $status = $report->status === 'blocked' ? 'blocked' : ($report->status === 'warning' ? 'warning' : 'success');
+                $this->recordEvent('activation_preflight', $status, $report->summary, $preparation, [
+                    'preflight_id' => $report->id,
+                    'checks' => collect($report->checks)->map(fn (array $check) => [
+                        'key' => $check['key'] ?? 'unknown',
+                        'status' => $check['status'] ?? 'unknown',
+                    ])->all(),
+                ]);
+
+                return $report;
+            });
 
             return redirect()->route('admin.updates.index')
                 ->with($report->status === 'blocked' ? 'error' : 'success', $report->summary);
@@ -175,15 +190,19 @@ class AdminUpdateController extends Controller
         }
     }
 
-    public function createBackup(SystemUpdatePreparation $preparation, UpdateBackupCoordinator $coordinator): RedirectResponse
+    public function createBackup(SystemUpdatePreparation $preparation, UpdateBackupCoordinator $coordinator, UpdateOperationLock $operationLock): RedirectResponse
     {
         try {
-            $backup = $coordinator->create($preparation, auth()->user());
-            $this->recordEvent('pre_activation_backup', 'success', $backup->message, $preparation, [
-                'backup_id' => $backup->id,
-                'code_snapshot_sha256' => $backup->code_snapshot_sha256,
-                'database_backup_sha256' => $backup->database_backup_sha256,
-            ]);
+            $backup = $operationLock->run('pre_activation_backup', auth()->user(), function () use ($coordinator, $preparation) {
+                $backup = $coordinator->create($preparation, auth()->user());
+                $this->recordEvent('pre_activation_backup', 'success', $backup->message, $preparation, [
+                    'backup_id' => $backup->id,
+                    'code_snapshot_sha256' => $backup->code_snapshot_sha256,
+                    'database_backup_sha256' => $backup->database_backup_sha256,
+                ]);
+
+                return $backup;
+            });
 
             return redirect()->route('admin.updates.index')->with('success', $backup->message);
         } catch (Throwable $exception) {
