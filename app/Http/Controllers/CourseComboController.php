@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Course;
 use App\Models\CourseCombo;
+use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -104,7 +105,7 @@ class CourseComboController extends Controller
     public function show(CourseCombo $courseCombo): View
     {
         abort_unless($courseCombo->status === 'published', 404);
-        $courseCombo->load(['courses.teacher', 'courses' => fn ($courses) => $courses->withCount([
+        $courseCombo->load(['courses' => fn ($courses) => $courses->with('teacher')->withCount([
             'batches as open_batches_count' => fn ($batches) => $batches->where('status', 'open'),
         ])]);
         abort_unless($courseCombo->courses->count() >= 2
@@ -112,7 +113,7 @@ class CourseComboController extends Controller
 
         $purchaseAvailable = $courseCombo->courses->every(fn (Course $course) => (int) $course->open_batches_count === 0);
 
-        return view('course-combos.show', compact('courseCombo', 'purchaseAvailable'));
+        $paymentMethods = collect(Setting::paymentMethods())\n            ->filter(fn (array $method) => (bool) ($method['enabled'] ?? false));\n\n        return view('course-combos.show', compact('courseCombo', 'purchaseAvailable', 'paymentMethods'));
     }
 
     private function validateCombo(Request $request): array
@@ -169,7 +170,7 @@ class CourseComboController extends Controller
         $slug = $base;
         $suffix = 2;
 
-        while (CourseCombo::query()->where('slug', $slug)->when($ignoreId, fn ($query) => $query->whereKeyNot($ignoreId))->exists()) {
+        while (CourseCombo::query()->where('slug', $slug)->when($ignoreId, fn ($query) => $query->where('id', '!=', $ignoreId))->exists()) {
             $slug = $base.'-'.$suffix++;
         }
 
