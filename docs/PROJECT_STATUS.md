@@ -41,6 +41,7 @@ The current main README lists a number of foundations as implemented: registrati
 | [#67](https://github.com/lalchandakand-LMS/finalLMS/pull/67) | Assignment workflow and grading | Verify exact current head. |
 | [#66](https://github.com/lalchandakand-LMS/finalLMS/pull/66) | bKash server-side callback verification | Do not infer live merchant activation. |
 | [#65](https://github.com/lalchandakand-LMS/finalLMS/pull/65) | 15 homepage presets and visual builder | Last recorded head: `3f98f7c9fbc137a7bb2fed956054c128b2f7e662`; Laravel CI run #2647 and CodeQL #390 were in progress at last check. Re-fetch current status. |
+| [#116](https://github.com/lalchandakand-LMS/finalLMS/pull/116) | Premium homepage/CMS, course catalog/posts/login, course combos and browser-device policy | Open Draft PR; re-fetch exact head and CI/CodeQL/package results before claiming verification. Do not merge or deploy under the current owner instruction. |
 
 ## Known completed/verified evidence from prior checks (historical; re-check before release)
 
@@ -48,6 +49,15 @@ The current main README lists a number of foundations as implemented: registrati
 - PR #65: hero slider work was added on head `3f98f7c9fbc137a7bb2fed956054c128b2f7e662`; last observed Laravel CI run #2647 and CodeQL #390 were running, not passed. Re-check current runs.
 - PR #75: uploaded ZIP security audit commit `4482c2ea1e55538fd9394a74eb6f62c9a1e3bb50`; documentation/audit only.
 - Main branch baseline previously recorded as `e8ec871f230fcf948938eabc785e0ff03370480c`, but current main has moved. Always fetch fresh SHA.
+
+## Current PR #116 implementation snapshot (2026-11-13)
+
+- Admin CRUD for fixed-price course combos; public catalog/detail pages; course selection restricted to published courses without open batches.
+- Paid combo checkout creates one manual payment plus an immutable purchased-course snapshot; Admin approval enrolls the student into all snapshot courses atomically. Free combos enroll immediately.
+- Combo payment history is retained by archiving rather than deleting a combo; course deletion is blocked while combo or payment history references the course.
+- Student browser login now enforces one approved browser device: first-device SMS OTP, additional/revoked-device Admin approval, revocation of previous approved devices, and server-side session invalidation.
+- The separate mobile API bearer-token login is not yet connected to this browser OTP/Admin-approval policy.
+- Exact-head CI status must be checked from GitHub before moving this snapshot to CI-verified. No merge, deployment, production data mutation or live-payment activation is authorized by this workstream.
 
 ## Priority backlog
 
@@ -78,7 +88,7 @@ The current main README lists a number of foundations as implemented: registrati
 ### P3 — commerce and institutional operations
 - [ ] Course fees, invoices, installment plans, discounts/scholarships, receipts, dues/reminders, refunds, expenses and reconciliation.
 - [ ] bKash official merchant sandbox and live readiness; implement Nagad/SSLCommerz only with official docs and sandbox.
-- [ ] Cart/coupons/bundles/subscriptions/affiliate and purchase reporting.
+- [ ] Cart/coupons/subscriptions/affiliate and purchase reporting beyond the current fixed course-combo workflow.
 - [ ] Secure PDF/eBook store with private storage and verified entitlements.
 - [ ] Notification providers, templates, retries and delivery logs.
 - [ ] Reports for admission, attendance, performance, revenue, dues, branch and teacher.
