@@ -20,7 +20,16 @@ class CourseContentController extends Controller
         $isEnrolled = $user?->isStudent() && $course->enrollments()
             ->where('user_id', $user->id)->whereIn('status', ['active', 'completed'])->exists();
 
-        abort_unless($item->is_preview || $canManage || $isEnrolled, 403);
+        if (! $item->is_preview && ! $canManage && ! $isEnrolled) {
+            if (! $user) {
+                return redirect()->route('login', [
+                    'continue' => route('courses.show', $course, false),
+                ])->with('info', __('Log in and enroll to unlock this lesson.'));
+            }
+
+            return redirect()->route('courses.show', $course)
+                ->with('warning', __('Enroll in this course to unlock the lesson.'));
+        }
 
         $post->load(['thumbnail', 'categories']);
         $curriculumItems = $course->curriculumItems()->with('post')->get()
