@@ -94,4 +94,41 @@ class WebsitePageBuilderTest extends TestCase
 
         $this->assertDatabaseHas('website_pages', ['slug' => 'my-new-page']);
     }
+    public function test_admin_can_edit_duplicate_and_delete_custom_pages(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $page = WebsitePage::create([
+            'title' => 'Original page',
+            'slug' => 'original-page',
+            'template' => 'standard',
+            'sections' => [['type' => 'text', 'title' => 'Original', 'enabled' => true]],
+            'status' => 'draft',
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->put(route('admin.website-pages.update', $page), [
+            'title' => 'Updated page',
+            'slug' => 'updated-page',
+            'template' => 'centered',
+            'status' => 'published',
+            'show_in_menu' => '1',
+            'sections' => [['type' => 'text', 'title' => 'Updated content', 'enabled' => '1']],
+        ])->assertRedirect(route('admin.website-pages.index'));
+
+        $page->refresh();
+        $this->assertSame('Updated page', $page->title);
+        $this->assertSame('published', $page->status);
+
+        $this->post(route('admin.website-pages.duplicate', $page))
+            ->assertRedirect();
+        $copy = WebsitePage::where('slug', 'updated-page-copy')->first();
+        $this->assertNotNull($copy);
+        $this->assertSame('draft', $copy->status);
+        $this->assertFalse($copy->show_in_menu);
+
+        $this->delete(route('admin.website-pages.destroy', $page))
+            ->assertRedirect();
+        $this->assertDatabaseMissing('website_pages', ['id' => $page->id]);
+    }
+
 }
