@@ -20,6 +20,6 @@ Override the API URL for staging/local builds using `--dart-define=API_BASE_URL=
 - Bearer tokens are stored in secure storage, validated when restoring a session, and revoked server-side on sign-out.
 - If an Admin revokes the device, its next API request is rejected and the app returns to sign-in.
 
-Current screens: sign-in, OTP verification, Admin approval waiting/status screen, secure token persistence, server-side logout, course catalog, course details, preview lesson access and enrolled-course progress overview. Course purchase, full video playback, quizzes, assignments, wishlist/cart, reviews, notices and support screens are still pending.
+Current screens: sign-in, OTP verification, Admin approval waiting/status screen, secure token persistence, server-side logout, searchable course catalog with instructor/title search, server-side sorting and paginated loading, course details, preview lesson access and enrolled-course progress overview. Course purchase, full video playback, quizzes, assignments, wishlist/cart, reviews, notices and support screens are still pending.
 
 The backend SMS service must be configured and the full OTP/admin-approval path must be tested on isolated staging before distributing the app.
