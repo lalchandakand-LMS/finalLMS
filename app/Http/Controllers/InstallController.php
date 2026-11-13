@@ -3,12 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\FreshDatabaseInspector;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
@@ -24,7 +24,7 @@ class InstallController extends Controller
         return view('install.index');
     }
 
-    public function install(Request $request): RedirectResponse
+    public function install(Request $request, FreshDatabaseInspector $databaseInspector): RedirectResponse
     {
         abort_if($this->isInstalled(), 404);
 
@@ -128,10 +128,7 @@ class InstallController extends Controller
             DB::connection('mysql')->getPdo();
 
             // The fresh installer must never share a database with another app or a partial install.
-            $schema = Schema::connection('mysql');
-            if ($schema->getTables($validated['db_database']) !== [] || $schema->getViews($validated['db_database']) !== []) {
-                throw new RuntimeException('The selected database is not empty. Create a brand-new empty database and try again.');
-            }
+            $databaseInspector->assertEmpty('mysql', $validated['db_database']);
 
             // Persist credentials only after connectivity and the empty-database guard pass.
             $this->writeEnvironment($envPath, $environment);
