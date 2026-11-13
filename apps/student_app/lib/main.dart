@@ -118,12 +118,14 @@ class _StudentLoginState extends State<StudentLogin> {
       case LoginState.authenticated:
         approvalTimer?.cancel();
         widget.onLogin();
+        return;
       case LoginState.verifyPhone:
         setState(() {
           stage = _LoginStage.phoneVerification;
           notice = outcome.message;
           error = null;
         });
+        return;
       case LoginState.pendingApproval:
         setState(() {
           stage = _LoginStage.adminApproval;
@@ -131,6 +133,7 @@ class _StudentLoginState extends State<StudentLogin> {
           error = null;
         });
         _startApprovalPolling();
+        return;
     }
   }
 
@@ -241,6 +244,7 @@ class _StudentLoginState extends State<StudentLogin> {
                     controller: code,
                     keyboardType: TextInputType.number,
                     maxLength: 6,
+                    onChanged: (_) => setState(() {}),
                     textAlign: TextAlign.center,
                     decoration: const InputDecoration(
                       labelText: '6-digit verification code',
