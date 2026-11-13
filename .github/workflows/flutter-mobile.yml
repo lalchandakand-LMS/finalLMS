@@ -9,6 +9,8 @@ on:
     paths:
       - 'apps/**'
       - '.github/workflows/flutter-mobile.yml'
+permissions:
+  contents: read
 jobs:
   analyze-and-test:
     runs-on: ubuntu-latest
@@ -18,7 +20,7 @@ jobs:
         app: [student_app, instructor_app]
     defaults:
       run:
-        working-directory: apps/${{ matrix.app }}
+        working-directory: apps/\${{ matrix.app }}
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -29,3 +31,37 @@ jobs:
       - run: dart format lib test
       - run: flutter analyze --no-pub
       - run: flutter test --no-pub
+
+  build-android-apk:
+    name: Build \${{ matrix.app }} Android APK
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: student_app
+            project_name: aloms_student_app
+          - app: instructor_app
+            project_name: aloms_instructor_app
+    defaults:
+      run:
+        working-directory: apps/\${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate Android platform scaffold
+        run: flutter create --platforms=android --org com.alomsenglishcenter --project-name \${{ matrix.project_name }} .
+      - name: Resolve dependencies
+        run: flutter pub get
+      - name: Build release APK
+        run: flutter build apk --release --dart-define=API_BASE_URL=https://alomsenglishcenter.com/api/v1
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: \${{ matrix.app }}-android-apk
+          path: apps/\${{ matrix.app }}/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
