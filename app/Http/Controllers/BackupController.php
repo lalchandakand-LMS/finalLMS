@@ -91,18 +91,16 @@ class BackupController extends Controller
             }
         }
 
+        // The local disk is the private user-data root. Include every private
+        // upload (payment proofs, teacher documents, assignment submissions,
+        // lesson attachments and course videos), but never nest backups or
+        // updater staging snapshots inside another backup.
         $privateFiles = [];
-        foreach (['assignment-submissions', 'course-media'] as $directory) {
-            foreach (Storage::disk('local')->allFiles($directory) as $privatePath) {
-                $privateFiles[$privatePath] = base64_encode(Storage::disk('local')->get($privatePath));
+        foreach (Storage::disk('local')->allFiles() as $privatePath) {
+            if (str_starts_with($privatePath, 'backups/') || str_starts_with($privatePath, 'updates/')) {
+                continue;
             }
-        }
-
-        // lesson_videos is rooted at storage/app/private/course-videos, so the
-        // prefixed key can be restored safely through the local private disk.
-        foreach (Storage::disk('lesson_videos')->allFiles() as $videoPath) {
-            $privatePath = 'course-videos/'.$videoPath;
-            $privateFiles[$privatePath] = base64_encode(Storage::disk('lesson_videos')->get($videoPath));
+            $privateFiles[$privatePath] = base64_encode(Storage::disk('local')->get($privatePath));
         }
 
         $payload = json_encode([
