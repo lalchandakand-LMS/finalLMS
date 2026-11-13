@@ -73,12 +73,22 @@ class WebsitePageController extends Controller
         return back()->with('success', 'Website page deleted.');
     }
 
+    public function preview(WebsitePage $websitePage): View
+    {
+        return $this->renderPage($websitePage, true);
+    }
+
     public function show(string $slug): View
     {
         $page = WebsitePage::published()->where('slug', $slug)->firstOrFail();
+        return $this->renderPage($page, false);
+    }
+
+    private function renderPage(WebsitePage $page, bool $isPreview): View
+    {
         $imageIds = collect($page->sections ?? [])->pluck('image_id')->filter()->unique();
         $media = MediaAsset::query()->whereIn('id', $imageIds)->where('mime_type', 'like', 'image/%')->get()->keyBy('id');
-        return view('website-pages.show', compact('page', 'media'));
+        return view('website-pages.show', compact('page', 'media', 'isPreview'));
     }
 
     private function validated(Request $request, ?WebsitePage $page = null): array
