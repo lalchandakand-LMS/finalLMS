@@ -56,7 +56,7 @@ The current main README lists a number of foundations as implemented: registrati
 - Paid combo checkout creates one manual payment plus an immutable purchased-course snapshot; Admin approval enrolls the student into all snapshot courses atomically. Free combos enroll immediately.
 - Combo payment history is retained by archiving rather than deleting a combo; course deletion is blocked while combo or payment history references the course.
 - Student browser login now enforces one approved browser device: first-device SMS OTP, additional/revoked-device Admin approval, revocation of previous approved devices, and server-side session invalidation.
-- The separate mobile API bearer-token login is not yet connected to this browser OTP/Admin-approval policy.
+- Student mobile API login now shares the approved-device registry: secure installation ID, SMS OTP, Admin approval for additional devices, device-bound bearer tokens and server-side token invalidation. Teacher API login remains password-based. Flutter client UI/secure-storage/polling and live SMS staging acceptance remain pending.
 - Exact-head CI status must be checked from GitHub before moving this snapshot to CI-verified. No merge, deployment, production data mutation or live-payment activation is authorized by this workstream.
 
 ## Priority backlog
