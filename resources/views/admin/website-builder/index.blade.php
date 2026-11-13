@@ -142,7 +142,7 @@
         @php($menuLink = old("header_links.$i", $headerLinks[$i] ?? []))
         <div class="grid grid-2" data-header-link-row>
             <div><label>Menu item {{ $i + 1 }} label<input name="header_links[{{ $i }}][label]" maxlength="60" value="{{ $menuLink['label'] ?? '' }}"></label></div>
-            <div><label>Menu item {{ $i + 1 }} URL<input name="header_links[{{ $i }}][url]" maxlength="500" value="{{ $menuLink['url'] ?? '' }}" placeholder="/courses"></label><div class="cta-row"><button type="button" class="btn secondary" data-clear-link>Remove link</button></div></div>
+            <div><label>Menu item {{ $i + 1 }} URL<input name="header_links[{{ $i }}][url]" maxlength="500" value="{{ $menuLink['url'] ?? '' }}" placeholder="/courses"></label><div class="cta-row"><button type="button" class="btn secondary" data-move-link="up">↑</button><button type="button" class="btn secondary" data-move-link="down">↓</button><button type="button" class="btn secondary" data-clear-link>Remove link</button></div></div>
         </div>
     @endfor
 </section>
@@ -183,6 +183,20 @@
 @push('scripts')
 <script>
 (() => {
+    document.addEventListener('click', (event) => {
+        const move = event.target.closest('[data-move-link]');
+        if (!move) return;
+        const row = move.closest('[data-header-link-row], [data-footer-link-row]');
+        if (!row) return;
+        const selector = row.hasAttribute('data-header-link-row') ? '[data-header-link-row]' : '[data-footer-link-row]';
+        if (move.dataset.moveLink === 'up' && row.previousElementSibling?.matches(selector)) row.parentElement.insertBefore(row, row.previousElementSibling);
+        if (move.dataset.moveLink === 'down' && row.nextElementSibling?.matches(selector)) row.parentElement.insertBefore(row.nextElementSibling, row);
+        row.parentElement.querySelectorAll(selector).forEach((item, index) => {
+            item.querySelectorAll('input').forEach((field) => {
+                field.name = field.name.replace(/(header_links|footer_links)\\[\\d+\\]/, '$1[' + index + ']');
+            });
+        });
+    });
     document.querySelectorAll('[data-clear-link]').forEach((button) => {
         button.addEventListener('click', () => {
             const row = button.closest('[data-header-link-row], [data-footer-link-row]');
