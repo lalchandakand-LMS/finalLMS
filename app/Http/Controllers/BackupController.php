@@ -303,12 +303,12 @@ class BackupController extends Controller
 
                 foreach ($mediaToRestore as $mediaPath => $contents) {
                     if (! Storage::disk('public')->put($mediaPath, $contents)) {
-                        throw new \\RuntimeException('A public media file could not be restored.');
+                        throw new \RuntimeException('A public media file could not be restored.');
                     }
                 }
                 foreach ($privateFilesToRestore as $privatePath => $contents) {
                     if (! Storage::disk('local')->put($privatePath, $contents)) {
-                        throw new \\RuntimeException('A private media file could not be restored.');
+                        throw new \RuntimeException('A private media file could not be restored.');
                     }
                 }
             });
