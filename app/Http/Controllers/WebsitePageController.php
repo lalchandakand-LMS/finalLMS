@@ -30,7 +30,7 @@ class WebsitePageController extends Controller
     {
         $data = $this->validated($request);
         $data['created_by'] = $request->user()->id;
-        $data['slug'] = $this->uniqueSlug($data['slug'] ?? $data['title']);
+        $data['slug'] = $this->uniqueSlug(!empty($data['slug']) ? $data['slug'] : $data['title']);
         $data['published_at'] = $data['status'] === 'published' ? ($data['published_at'] ?? now()) : null;
         WebsitePage::create($data);
         return redirect()->route('admin.website-pages.index')->with('success', 'Website page created.');
@@ -47,7 +47,7 @@ class WebsitePageController extends Controller
     public function update(Request $request, WebsitePage $websitePage): RedirectResponse
     {
         $data = $this->validated($request, $websitePage);
-        $data['slug'] = $this->uniqueSlug($data['slug'] ?? $data['title'], $websitePage->id);
+        $data['slug'] = $this->uniqueSlug(!empty($data['slug']) ? $data['slug'] : $data['title'], $websitePage->id);
         $data['published_at'] = $data['status'] === 'published' ? ($data['published_at'] ?? $websitePage->published_at ?? now()) : null;
         $websitePage->update($data);
         return redirect()->route('admin.website-pages.index')->with('success', 'Website page updated.');
