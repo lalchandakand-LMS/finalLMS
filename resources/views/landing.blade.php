@@ -235,7 +235,24 @@
         @php($testimonialRows=[$learnerVoices->values()->slice(0,6),$learnerVoices->values()->slice(6,6)])
         @if($testimonialRows[1]->isEmpty()) @php($testimonialRows[1]=$testimonialRows[0]) @endif
         <section class="home-testimonials"><div class="home-section-heading home-section-heading--dark"><span class="home-heading-kicker">{{ __('Student reviews') }}</span><h2>{{ $homeReviewsTitle }}</h2><p>{{ __('Approved feedback from our learners') }}</p></div>
-            @foreach($testimonialRows as $rowIndex=>$row)<div class="home-testimonial-viewport"><div class="home-testimonial-track {{ $rowIndex===1?'home-testimonial-track--reverse':'' }}">@foreach([0,1] as $copy)@foreach($row as $comment)<article class="home-quote-card" @if($copy===1) aria-hidden="true" @endif><span class="home-quote-mark">“</span><p>{{ \Illuminate\Support\Str::limit(strip_tags($comment->body),190) }}</p><div class="home-quote-author"><span class="home-quote-avatar">{{ mb_strtoupper(mb_substr($comment->author?->name ?? 'S',0,1)) }}</span><strong>{{ $comment->author?->name ?? __('Student') }}</strong></div></article>@endforeach @endforeach</div></div>@endforeach
+            @foreach($testimonialRows as $rowIndex => $row)
+                <div class="home-testimonial-viewport">
+                    <div class="home-testimonial-track {{ $rowIndex === 1 ? 'home-testimonial-track--reverse' : '' }}">
+                        @foreach([0, 1] as $copy)
+                            @foreach($row as $comment)
+                                <article class="home-quote-card" aria-hidden="{{ $copy === 1 ? 'true' : 'false' }}">
+                                    <span class="home-quote-mark">“</span>
+                                    <p>{{ \Illuminate\Support\Str::limit(strip_tags($comment->body), 190) }}</p>
+                                    <div class="home-quote-author">
+                                        <span class="home-quote-avatar">{{ mb_strtoupper(mb_substr($comment->author?->name ?? 'S', 0, 1)) }}</span>
+                                        <strong>{{ $comment->author?->name ?? __('Student') }}</strong>
+                                    </div>
+                                </article>
+                            @endforeach
+                        @endforeach
+                    </div>
+                </div>
+            @endforeach
         </section>
     @endif
 
