@@ -60,7 +60,7 @@ class BackupController extends Controller
             $safePath = is_string($path)
                 && $path !== ''
                 && ! str_starts_with($path, '/')
-                && ! str_contains($path, '\\\\')
+                && ! str_contains($path, '\\')
                 && ! str_contains($path, "\\0")
                 && ! in_array('', $segments, true)
                 && ! in_array('.', $segments, true)
