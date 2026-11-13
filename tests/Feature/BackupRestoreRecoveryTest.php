@@ -21,6 +21,7 @@ class BackupRestoreRecoveryTest extends TestCase
 
         $user = User::factory()->create(['role' => 'admin']);
         $publicDisk = Storage::disk('public');
+        $localDisk = Storage::disk('local');
         $publicDisk->put('existing-before-restore.txt', 'original-bytes');
 
         $failingPublicDisk = Mockery::mock($publicDisk)->makePartial();
@@ -37,7 +38,7 @@ class BackupRestoreRecoveryTest extends TestCase
         );
 
         Storage::shouldReceive('disk')->with('public')->andReturn($failingPublicDisk);
-        Storage::shouldReceive('disk')->with('local')->andReturn(Storage::disk('local'));
+        Storage::shouldReceive('disk')->with('local')->andReturn($localDisk);
 
         $targetPayload = [
             'tables' => ['users' => []],
