@@ -28,6 +28,11 @@ class Course extends Model
         return $this->belongsToMany(FlashSale::class, 'flash_sale_course')->withTimestamps();
     }
 
+    public function combos(): BelongsToMany
+    {
+        return $this->belongsToMany(CourseCombo::class, 'course_combo_course')->withPivot('position')->withTimestamps();
+    }
+
     public function teacher(): BelongsTo
     {
         return $this->belongsTo(User::class, 'teacher_id');
