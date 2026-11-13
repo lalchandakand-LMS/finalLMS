@@ -55,6 +55,26 @@ class UpdateOperationLockTest extends TestCase
         $this->assertNull($lock->current()->expires_at);
     }
 
+
+    public function test_admin_update_action_is_rejected_while_another_operation_holds_the_lease(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $lock = app(UpdateOperationLock::class);
+
+        $lock->run('private_extract', $admin, function () use ($admin) {
+            $this->actingAs($admin)
+                ->post(route('admin.updates.prepare'))
+                ->assertRedirect(route('admin.updates.index'))
+                ->assertSessionHas('error', fn ($message) => str_contains($message, 'Another update operation is already running'));
+        });
+
+        $this->assertDatabaseHas('system_update_events', [
+            'performed_by' => $admin->id,
+            'event' => 'package_prepare',
+            'status' => 'failed',
+        ]);
+    }
+
     public function test_expired_database_lease_can_be_reclaimed_after_an_interrupted_request(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
