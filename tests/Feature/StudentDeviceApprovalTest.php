@@ -107,13 +107,61 @@ class StudentDeviceApprovalTest extends TestCase
             'status' => 'approved',
             'approved_by' => $admin->id,
         ]);
+        $this->assertDatabaseHas('student_devices', [
+            'id' => $student->devices()->value('id'),
+            'status' => 'revoked',
+        ]);
 
         auth()->logout();
+        $this->actingAs($student)
+            ->withSession(['student_device_id' => $student->devices()->where('status', 'revoked')->value('id')])
+            ->get('/dashboard')
+            ->assertRedirect(route('login'))
+            ->assertSessionHas('warning');
+        $this->assertGuest();
         $this->withCookie('lms_student_device', $newDeviceToken)
             ->post(route('login.post'), ['email' => $student->email, 'password' => 'password'])
             ->assertRedirect('/dashboard');
 
         $this->assertAuthenticatedAs($student);
+    }
+
+
+    public function test_revoked_previously_trusted_device_requires_admin_approval_again(): void
+    {
+        $code = null;
+        Http::fake(function ($request) use (&$code) {
+            preg_match('/code is ([0-9]{6})/', $request['Body'], $matches);
+            $code = $matches[1] ?? null;
+            return Http::response(['sid' => 'SM-test'], 201);
+        });
+
+        $student = User::factory()->create([
+            'role' => 'student',
+            'email_verified_at' => now(),
+            'phone_number' => '+8801712345678',
+            'phone_verified_at' => now(),
+        ]);
+        $token = str_repeat('c', 64);
+        $device = StudentDevice::create([
+            'user_id' => $student->id,
+            'device_hash' => hash('sha256', $token),
+            'device_name' => 'Windows · Edge',
+            'status' => 'revoked',
+            'phone_verified_at' => now()->subDay(),
+            'approved_at' => now()->subDay(),
+        ]);
+
+        $this->withCookie('lms_student_device', $token)
+            ->post(route('login.post'), ['email' => $student->email, 'password' => 'password'])
+            ->assertRedirect(route('student-device.verify'));
+
+        $this->post(route('student-device.verify-phone'), ['code' => $code])
+            ->assertRedirect(route('login'))
+            ->assertSessionHas('warning');
+
+        $this->assertSame('pending_admin_approval', $device->fresh()->status);
+        $this->assertGuest();
     }
 
     public function test_non_admin_cannot_open_device_approval_dashboard(): void
