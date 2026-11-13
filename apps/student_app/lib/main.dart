@@ -310,70 +310,279 @@ class StudentHome extends StatefulWidget {
   State<StudentHome> createState() => _StudentHomeState();
 }
 class _StudentHomeState extends State<StudentHome> {
+  final search = TextEditingController();
   List<dynamic> catalog = [];
   List<dynamic> myCourses = [];
   bool loading = true;
+  bool loadingMore = false;
   String? error;
+  String sort = 'newest';
+  int currentPage = 1;
+  int lastPage = 1;
+
   @override
-  void initState() { super.initState(); load(); }
-  Future<void> load() async {
-    setState(() { loading = true; error = null; });
-    try {
-      final results = await Future.wait([widget.api.get('/courses'), widget.api.get('/my/courses')]);
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  @override
+  void dispose() {
+    search.dispose();
+    super.dispose();
+  }
+
+  Future<void> load({bool loadMore = false}) async {
+    if (loadingMore || (loading && loadMore)) return;
+    if (mounted) {
       setState(() {
-        catalog = results[0]['data'] as List<dynamic>? ?? [];
-        myCourses = results[1]['data'] as List<dynamic>? ?? [];
+        if (loadMore) {
+          loadingMore = true;
+        } else {
+          loading = true;
+          error = null;
+          currentPage = 1;
+        }
       });
-    } catch (e) {
-      if (e is ApiException && e.statusCode == 401) {
+    }
+    try {
+      final requestedPage = loadMore ? currentPage + 1 : 1;
+      final query = Uri(queryParameters: {
+        if (search.text.trim().isNotEmpty) 'q': search.text.trim(),
+        'sort': sort,
+        'per_page': '12',
+        'page': requestedPage.toString(),
+      }).query;
+      final results = await Future.wait([
+        widget.api.get('/courses?$query'),
+        if (!loadMore) widget.api.get('/my/courses'),
+      ]);
+      if (!mounted) return;
+      final catalogResponse = results[0];
+      final nextCourses = catalogResponse['data'] as List<dynamic>? ?? [];
+      final meta = catalogResponse['meta'] as Map<String, dynamic>? ?? {};
+      setState(() {
+        catalog = loadMore ? [...catalog, ...nextCourses] : nextCourses;
+        currentPage = (meta['current_page'] as num?)?.toInt() ?? requestedPage;
+        lastPage = (meta['last_page'] as num?)?.toInt() ?? currentPage;
+        if (!loadMore) {
+          myCourses = results[1]['data'] as List<dynamic>? ?? [];
+        }
+      });
+    } catch (exception) {
+      if (exception is ApiException && exception.statusCode == 401) {
         widget.onLogout();
-      } else {
-        setState(() => error = e.toString());
+      } else if (mounted) {
+        setState(() => error = exception.toString());
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          loading = false;
+          loadingMore = false;
+        });
       }
     }
-    finally { if (mounted) { setState(() => loading = false); } }
   }
-  Future<void> logout() async { await widget.api.logout(); widget.onLogout(); }
+
+  Future<void> logout() async {
+    await widget.api.logout();
+    widget.onLogout();
+  }
+
+  Widget _courseCard(dynamic item) {
+    final course = item as Map<String, dynamic>;
+    final imageUrl = course['image_url']?.toString();
+    final instructor = course['instructor'] is Map<String, dynamic>
+        ? (course['instructor'] as Map<String, dynamic>)['name']?.toString()
+        : null;
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(12),
+        leading: imageUrl != null && imageUrl.isNotEmpty
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  imageUrl,
+                  width: 64,
+                  height: 64,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const SizedBox(
+                    width: 64,
+                    height: 64,
+                    child: Icon(Icons.menu_book, size: 32),
+                  ),
+                ),
+              )
+            : const SizedBox(
+                width: 64,
+                height: 64,
+                child: Icon(Icons.menu_book, size: 32),
+              ),
+        title: Text(
+          course['title']?.toString() ?? 'Course',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (instructor != null && instructor.isNotEmpty) Text(instructor),
+            const SizedBox(height: 4),
+            Text("৳\${course['price'] ?? 0}"),
+          ],
+        ),
+        isThreeLine: instructor != null && instructor.isNotEmpty,
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => CourseDetailsPage(
+            api: widget.api,
+            slug: course['slug'].toString(),
+          ),
+        )),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Student Learning'), actions: [IconButton(onPressed: logout, icon: const Icon(Icons.logout), tooltip: 'Sign out')]),
+    appBar: AppBar(
+      title: const Text('Student Learning'),
+      actions: [
+        IconButton(
+          onPressed: load,
+          icon: const Icon(Icons.refresh),
+          tooltip: 'Refresh',
+        ),
+        IconButton(
+          onPressed: logout,
+          icon: const Icon(Icons.logout),
+          tooltip: 'Sign out',
+        ),
+      ],
+    ),
     body: RefreshIndicator(
       onRefresh: load,
-      child: loading ? const Center(child: CircularProgressIndicator())
-        : error != null ? ListView(children: [const SizedBox(height: 80), Center(child: Text(error!)), TextButton(onPressed: load, child: const Text('Retry'))])
-        : ListView(padding: const EdgeInsets.all(16), children: [
-          Text('My Courses', style: Theme.of(context).textTheme.titleLarge),
-          if (myCourses.isEmpty) const ListTile(title: Text('No active courses yet.')),
-          ...myCourses.map((item) {
-            final course = item['course'] as Map<String, dynamic>;
-            final progress = item['progress_percent'] as num? ?? 0;
-            return Card(child: ListTile(
-              title: Text(course['title']?.toString() ?? 'Course'),
-              subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('$progress% completed'),
-                const SizedBox(height: 6),
-                LinearProgressIndicator(value: progress.toDouble() / 100),
-              ]),
-            ));
-          }),
-          const SizedBox(height: 20),
-          Text('Explore Courses', style: Theme.of(context).textTheme.titleLarge),
-          ...catalog.map((item) => Card(child: ListTile(
-            leading: const Icon(Icons.menu_book),
-            title: Text(item['title']?.toString() ?? 'Course'),
-            subtitle: Text("৳${item['price'] ?? 0}"),
-            onTap: () => Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => CourseDetailsPage(
-                api: widget.api,
-                slug: item['slug'].toString(),
-              ),
-            )),
-          ))),
-        ]),
+      child: loading
+          ? const Center(child: CircularProgressIndicator())
+          : error != null
+              ? ListView(
+                  children: [
+                    const SizedBox(height: 80),
+                    Center(child: Text(error!)),
+                    TextButton(onPressed: load, child: const Text('Retry')),
+                  ],
+                )
+              : ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    Text('My Courses',
+                        style: Theme.of(context).textTheme.titleLarge),
+                    if (myCourses.isEmpty)
+                      const ListTile(title: Text('No active courses yet.')),
+                    ...myCourses.map((item) {
+                      final enrollment = item as Map<String, dynamic>;
+                      final course = enrollment['course'] as Map<String, dynamic>;
+                      final progress =
+                          enrollment['progress_percent'] as num? ?? 0;
+                      return Card(
+                        child: ListTile(
+                          title: Text(course['title']?.toString() ?? 'Course'),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('$progress% completed'),
+                              const SizedBox(height: 6),
+                              LinearProgressIndicator(
+                                value: progress.toDouble().clamp(0, 100) / 100,
+                              ),
+                            ],
+                          ),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => CourseDetailsPage(
+                                api: widget.api,
+                                slug: course['slug'].toString(),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 20),
+                    Text('Explore Courses',
+                        style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: search,
+                      textInputAction: TextInputAction.search,
+                      onSubmitted: (_) => load(),
+                      decoration: InputDecoration(
+                        labelText: 'Search courses or instructors',
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: IconButton(
+                          tooltip: 'Clear search',
+                          onPressed: () {
+                            search.clear();
+                            load();
+                          },
+                          icon: const Icon(Icons.clear),
+                        ),
+                        border: const OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    DropdownButtonFormField<String>(
+                      value: sort,
+                      decoration: const InputDecoration(
+                        labelText: 'Sort courses',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                            value: 'newest', child: Text('Newest first')),
+                        DropdownMenuItem(
+                            value: 'oldest', child: Text('Oldest first')),
+                        DropdownMenuItem(
+                            value: 'price_low',
+                            child: Text('Price: low to high')),
+                        DropdownMenuItem(
+                            value: 'price_high',
+                            child: Text('Price: high to low')),
+                        DropdownMenuItem(
+                            value: 'title', child: Text('Course title')),
+                      ],
+                      onChanged: (value) {
+                        if (value == null) return;
+                        setState(() => sort = value);
+                        load();
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    if (catalog.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(20),
+                        child: Center(
+                          child: Text('No courses match your search.'),
+                        ),
+                      ),
+                    ...catalog.map(_courseCard),
+                    if (currentPage < lastPage)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: OutlinedButton(
+                          onPressed:
+                              loadingMore ? null : () => load(loadMore: true),
+                          child: loadingMore
+                              ? const CircularProgressIndicator()
+                              : const Text('Load more courses'),
+                        ),
+                      ),
+                  ],
+                ),
     ),
   );
 }
-
 
 class CourseDetailsPage extends StatefulWidget {
   const CourseDetailsPage({required this.api, required this.slug, super.key});
