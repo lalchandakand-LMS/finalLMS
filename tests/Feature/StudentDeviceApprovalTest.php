@@ -49,6 +49,7 @@ class StudentDeviceApprovalTest extends TestCase
             ->assertRedirect('/dashboard');
 
         $this->assertAuthenticatedAs($student);
+        $this->assertSame($device->id, session('student_device_id'));
         $this->assertDatabaseHas('student_devices', [
             'id' => $device->id,
             'status' => 'approved',
