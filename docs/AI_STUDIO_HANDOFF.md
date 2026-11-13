@@ -263,3 +263,23 @@ Do not expose sensitive student records to a guardian until the relationship is 
 9. Verify the exact release and rollback on isolated Web Host BD cPanel staging before production acceptance.
 
 PR #80 supplies the signed artifact pipeline only. The Admin Update Center and installer/activation/recovery stages remain incomplete until these acceptance checks pass.
+
+## 14. Course combos and student browser-device policy (2026-11-13)
+
+The active feature branch adds an Admin-managed fixed-price Course Combo workflow:
+- Admin creates, edits, publishes, archives and deletes combos; each published combo contains at least two published courses.
+- Courses with open batches are excluded because combo checkout does not reserve separate batch seats.
+- Public combo catalog/detail pages show included courses and package savings. The regular Courses catalog links to combos without adding another top-level public menu item.
+- Students can enroll in a free combo immediately or submit one manual payment for a paid combo. Admin payment approval grants every course in the original purchased snapshot in one database transaction.
+- The payment snapshot preserves course IDs/titles/order if an Admin edits the combo after checkout. If a snapshot course was deleted or is no longer published, approval remains blocked for manual resolution.
+- Combos with payment history are archived instead of deleted; courses referenced by a combo or payment history cannot be deleted through the course Admin action.
+
+The student browser sign-in policy is now:
+- First browser device: SMS OTP verification, then trusted.
+- Additional or previously revoked browser device: SMS OTP plus Admin approval.
+- Approving a new browser device revokes the student's other approved browser devices.
+- Authenticated student web requests carry the approved device ID in the server session; revoked device sessions are logged out on their next protected request.
+- The mobile API now uses the same approved-device registry: Student login requires a persistent secure installation ID, SMS OTP for new/revoked devices, and Admin approval for additional devices. Tokens are issued only after approval and are bound to the approved device; Admin approval/revocation invalidates prior mobile tokens. Teacher API login remains password-based.
+- Mobile API endpoints: `POST /api/v1/auth/login`, `POST /api/v1/auth/verify-device`, and `POST /api/v1/auth/device-status`. The contract and client requirements are documented in `docs/mobile-api-v1.md`. The Flutter Student App now implements secure device-ID/token storage, OTP entry, Admin-approval waiting UI and 15-second approval polling. Flutter analyze/tests and backend CI passed on the current head; real SMS delivery and end-to-end approval still need isolated staging acceptance.
+
+Current work is on PR #116, branch `feature/aloms-premium-homepage-clean`. Keep PR #116 unmerged and do not deploy or change production data/payment settings without a separate explicit owner instruction. Re-fetch the PR head and exact-head Laravel CI/CodeQL/package runs before relying on any verification status.

@@ -93,7 +93,7 @@
     @endfor
 </section>
 <section class="panel" style="margin-bottom:20px;">
-    <div class="page-header"><div><h2>Homepage content sections</h2><p class="muted">Enable and fill up to 12 custom sections. HTML and scripts are not accepted.</p></div></div>
+    <div class="page-header"><div><h2>Homepage content sections</h2><p class="muted">Add, edit, remove, enable, disable and reorder up to 20 custom sections. HTML and scripts are not accepted.</p></div></div>
     <div class="card" style="margin-bottom:16px;">
         <h3>Reusable section block library</h3><p class="muted">Insert a ready-made content structure into the first empty section, then edit it before publishing.</p>
         <div class="cta-row">
@@ -117,10 +117,10 @@
         @endforelse
     </div>
     <div data-section-list>
-    @for($i = 0; $i < 12; $i++)
+    @for($i = 0; $i < 20; $i++)
         @php($section = old("sections.$i", $sections[$i] ?? []))
         <section class="card website-section-item" draggable="true" style="margin-bottom:16px;" data-section-item>
-            <div class="page-header"><h3><span class="section-position">{{ $i + 1 }}</span> · Section</h3><div class="cta-row"><button type="button" class="btn secondary" data-save-custom-block>Save as reusable block</button><button type="button" class="btn secondary section-drag-handle" aria-label="Drag to reorder section" style="cursor:grab;">↕ Drag to reorder</button></div><label style="display:flex;gap:8px;align-items:center;"><input type="hidden" name="sections[{{ $i }}][enabled]" value="0"><input type="checkbox" name="sections[{{ $i }}][enabled]" value="1" style="width:auto;" @checked($section['enabled'] ?? false)> Enabled</label></div>
+            <div class="page-header"><h3><span class="section-position">{{ $i + 1 }}</span> · Section</h3><div class="cta-row"><button type="button" class="btn secondary" data-save-custom-block>Save as reusable block</button><button type="button" class="btn secondary section-drag-handle" aria-label="Drag to reorder section" style="cursor:grab;">↕ Drag to reorder</button><button type="button" class="btn secondary" data-remove-section>Remove section</button></div><label style="display:flex;gap:8px;align-items:center;"><input type="hidden" name="sections[{{ $i }}][enabled]" value="0"><input type="checkbox" name="sections[{{ $i }}][enabled]" value="1" style="width:auto;" @checked($section['enabled'] ?? false)> Enabled</label></div>
             <label>Heading<input name="sections[{{ $i }}][title]" maxlength="180" value="{{ $section['title'] ?? '' }}"></label>
             <label>Text<textarea name="sections[{{ $i }}][body]" rows="3" maxlength="3000">{{ $section['body'] ?? '' }}</textarea></label>
             <label>Image<select name="sections[{{ $i }}][image_id]"><option value="">No image</option>@foreach($media as $asset)<option value="{{ $asset->id }}" @selected(($section['image_id'] ?? '') == $asset->id)>{{ $asset->original_name }}</option>@endforeach</select></label>
@@ -137,12 +137,12 @@
 </section>
 <section class="panel" style="margin-bottom:20px;">
     <h2>Header navigation menu</h2>
-    <p class="muted">Add up to six custom links. When saved, these replace the default public links (Home, Courses, About, Contact, FAQ and Blog) while account controls remain available.</p>
-    @for($i = 0; $i < 6; $i++)
+    <p class="muted">Manage public menu links here. Published custom pages with “Show in menu” are added automatically; clear a link to remove it.</p>
+    @for($i = 0; $i < 20; $i++)
         @php($menuLink = old("header_links.$i", $headerLinks[$i] ?? []))
-        <div class="grid grid-2">
+        <div class="grid grid-2" data-header-link-row>
             <div><label>Menu item {{ $i + 1 }} label<input name="header_links[{{ $i }}][label]" maxlength="60" value="{{ $menuLink['label'] ?? '' }}"></label></div>
-            <div><label>Menu item {{ $i + 1 }} URL<input name="header_links[{{ $i }}][url]" maxlength="500" value="{{ $menuLink['url'] ?? '' }}" placeholder="/courses"></label></div>
+            <div><label>Menu item {{ $i + 1 }} URL<input name="header_links[{{ $i }}][url]" maxlength="500" value="{{ $menuLink['url'] ?? '' }}" placeholder="/courses"></label><div class="cta-row"><button type="button" class="btn secondary" data-move-link="up">↑</button><button type="button" class="btn secondary" data-move-link="down">↓</button><button type="button" class="btn secondary" data-clear-link>Remove link</button></div></div>
         </div>
     @endfor
 </section>
@@ -152,12 +152,12 @@
         <div><label for="footer-title">Footer heading</label><input id="footer-title" name="footer_title" maxlength="120" value="{{ old('footer_title', $settings['footer_title'] ?? $settings['site_name'] ?? config('app.name')) }}"></div>
         <div><label for="footer-text">Footer description</label><textarea id="footer-text" name="footer_text" rows="2" maxlength="500">{{ old('footer_text', $settings['footer_text'] ?? '') }}</textarea></div>
     </div>
-    <p class="muted">Add up to five footer links. Use internal paths such as /courses or full https:// URLs.</p>
-    @for($i = 0; $i < 5; $i++)
+    <p class="muted">Manage footer links. Clear a link to remove it; use internal paths or trusted https:// URLs.</p>
+    @for($i = 0; $i < 20; $i++)
         @php($link = old("footer_links.$i", $footerLinks[$i] ?? []))
-        <div class="grid grid-2">
+        <div class="grid grid-2" data-footer-link-row>
             <div><label>Link {{ $i + 1 }} label<input name="footer_links[{{ $i }}][label]" maxlength="60" value="{{ $link['label'] ?? '' }}"></label></div>
-            <div><label>Link {{ $i + 1 }} URL<input name="footer_links[{{ $i }}][url]" maxlength="500" value="{{ $link['url'] ?? '' }}" placeholder="/courses"></label></div>
+            <div><label>Link {{ $i + 1 }} URL<input name="footer_links[{{ $i }}][url]" maxlength="500" value="{{ $link['url'] ?? '' }}" placeholder="/courses"></label><div class="cta-row"><button type="button" class="btn secondary" data-clear-link>Remove link</button></div></div>
         </div>
     @endfor
 </section>
@@ -183,6 +183,26 @@
 @push('scripts')
 <script>
 (() => {
+    document.addEventListener('click', (event) => {
+        const move = event.target.closest('[data-move-link]');
+        if (!move) return;
+        const row = move.closest('[data-header-link-row], [data-footer-link-row]');
+        if (!row) return;
+        const selector = row.hasAttribute('data-header-link-row') ? '[data-header-link-row]' : '[data-footer-link-row]';
+        if (move.dataset.moveLink === 'up' && row.previousElementSibling?.matches(selector)) row.parentElement.insertBefore(row, row.previousElementSibling);
+        if (move.dataset.moveLink === 'down' && row.nextElementSibling?.matches(selector)) row.parentElement.insertBefore(row.nextElementSibling, row);
+        row.parentElement.querySelectorAll(selector).forEach((item, index) => {
+            item.querySelectorAll('input').forEach((field) => {
+                field.name = field.name.replace(/(header_links|footer_links)\[\d+\]/, '$1[' + index + ']');
+            });
+        });
+    });
+    document.querySelectorAll('[data-clear-link]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const row = button.closest('[data-header-link-row], [data-footer-link-row]');
+            row?.querySelectorAll('input').forEach((field) => field.value = '');
+        });
+    });
     const list = document.querySelector('[data-section-list]');
     if (!list) return;
     const csrf = document.querySelector('meta[name="csrf-token"]')?.content || document.querySelector('input[name="_token"]')?.value || '';
@@ -203,7 +223,7 @@
                 return title && !title.value.trim();
             });
             if (!target) {
-                window.alert('All 12 homepage sections are in use. Clear a section before inserting another block.');
+                window.alert('All 20 homepage sections are in use. Clear a section before inserting another block.');
                 return;
             }
             const setField = (suffix, value) => {
@@ -236,7 +256,7 @@
                 const title = card.querySelector('[name$="[title]"]');
                 return title && !title.value.trim();
             });
-            if (!target) return window.alert('All 12 homepage sections are in use. Clear a section first.');
+            if (!target) return window.alert('All 20 homepage sections are in use. Remove or clear a section first.');
             try { fillSection(target, JSON.parse(button.dataset.insertCustomBlock)); }
             catch (_) { window.alert('This saved block could not be loaded.'); }
         });
@@ -285,6 +305,15 @@
                 window.alert('Could not delete this block. Please check your session and try again.');
             }
         });
+    });
+    list.addEventListener('click', (event) => {
+        const removeButton = event.target.closest('[data-remove-section]');
+        if (!removeButton) return;
+        const card = removeButton.closest('[data-section-item]');
+        if (!card) return;
+        if (!window.confirm('Remove this homepage section? It will be removed from the next saved or published version.')) return;
+        card.remove();
+        refresh();
     });
     list.querySelectorAll('[data-section-item]').forEach((card) => {
         card.addEventListener('dragstart', (event) => {

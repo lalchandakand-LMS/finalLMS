@@ -10,6 +10,7 @@ use App\Http\Controllers\BatchController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\CourseController;
+use App\Http\Controllers\CourseComboController;
 use App\Http\Controllers\CourseWishlistController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmailVerificationController;
@@ -31,6 +32,7 @@ use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\MediaLibraryController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\WebsiteBuilderController;
+use App\Http\Controllers\WebsitePageController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\InstallController;
 use App\Http\Controllers\QuizContestController;
@@ -70,6 +72,7 @@ Route::post('/teacher/apply/verify', [TeacherApplicationController::class, 'veri
 Route::get('/about', [CmsPageController::class, 'about'])->name('pages.about');
 Route::get('/contact', [CmsPageController::class, 'contact'])->name('pages.contact');
 Route::get('/faq', [CmsPageController::class, 'faq'])->name('pages.faq');
+Route::get('/pages/{slug}', [WebsitePageController::class, 'show'])->where('slug', '[a-z0-9-]+')->name('website-pages.show');
 Route::get('/news', [BlogController::class, 'index'])->name('news.index');
 Route::get('/news/{post:slug}', [BlogController::class, 'show'])->name('news.show');
 Route::post('/news/{post:slug}/comments', [CommentController::class, 'storePost'])->middleware(['auth', 'throttle:5,1'])->name('news.comments.store');
@@ -77,10 +80,13 @@ Route::post('/courses/{course}/comments', [CommentController::class, 'storeCours
 Route::post('/language', [LocaleController::class, 'update'])->middleware('throttle:20,1')->name('locale.update');
 Route::get('/payments/bkash/callback', [BkashPaymentController::class, 'callback'])->middleware('throttle:30,1')->name('payments.bkash.callback');
 
+Route::get('/flash-sale', [FlashSaleController::class, 'publicIndex'])->name('flash-sales.public');
 Route::get('/contests', [QuizContestController::class, 'index'])->name('contests.index');
 Route::get('/contests/{contest}', [QuizContestController::class, 'show'])->name('contests.show');
 
 Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
+Route::get('/course-combos', [CourseComboController::class, 'publicIndex'])->name('course-combos.index');
+Route::get('/course-combos/{courseCombo:slug}', [CourseComboController::class, 'show'])->name('course-combos.show');
 Route::get('/courses/{course}', [CourseController::class, 'show'])->name('courses.show');
 Route::get('/courses/{course}/content/{post:slug}', [CourseContentController::class, 'show'])->name('courses.content.show');
 Route::get('/courses/{course}/lessons/{lesson}', [CourseController::class, 'showLesson'])->name('courses.lessons.show');
@@ -97,7 +103,7 @@ Route::middleware('auth')->group(function () {
         ->name('verification.send');
 });
 
-Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
+Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group(function () {
     Route::get('/live-classes', [LiveClassController::class, 'index'])->name('live-classes.index');
     Route::get('/invoice-payments/{payment}/receipt', [InvoiceController::class, 'receipt'])
         ->middleware('role:admin,accountant')
@@ -179,6 +185,7 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
     Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::get('/certificates/{certificate}', [DashboardController::class, 'certificate'])->name('certificates.show');
 
+    Route::post('/course-combos/{courseCombo:slug}/enroll', [PaymentController::class, 'submitCombo'])->middleware('role:student')->name('course-combos.enroll');
     Route::post('/courses/{course}/enroll', [PaymentController::class, 'submit'])->name('courses.enroll');
     Route::post('/courses/{course}/complete', [CourseController::class, 'complete'])->name('courses.complete');
     Route::post('/courses/{course}/lessons/{lesson}/complete', [CourseController::class, 'completeLesson'])
@@ -264,6 +271,14 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         Route::post('/backups', [BackupController::class, 'create'])->name('admin.backups.create');
         Route::get('/backups/{filename}', [BackupController::class, 'download'])->name('admin.backups.download');
         Route::post('/backups/restore', [BackupController::class, 'restore'])->middleware('throttle:2,10')->name('admin.backups.restore');
+        Route::get('/website-pages', [WebsitePageController::class, 'index'])->name('admin.website-pages.index');
+        Route::get('/website-pages/create', [WebsitePageController::class, 'create'])->name('admin.website-pages.create');
+        Route::post('/website-pages', [WebsitePageController::class, 'store'])->name('admin.website-pages.store');
+        Route::get('/website-pages/{websitePage}/edit', [WebsitePageController::class, 'edit'])->name('admin.website-pages.edit');
+        Route::get('/website-pages/{websitePage}/preview', [WebsitePageController::class, 'preview'])->name('admin.website-pages.preview');
+        Route::put('/website-pages/{websitePage}', [WebsitePageController::class, 'update'])->name('admin.website-pages.update');
+        Route::post('/website-pages/{websitePage}/duplicate', [WebsitePageController::class, 'duplicate'])->name('admin.website-pages.duplicate');
+        Route::delete('/website-pages/{websitePage}', [WebsitePageController::class, 'destroy'])->name('admin.website-pages.destroy');
         Route::get('/website-builder', [WebsiteBuilderController::class, 'index'])->name('admin.website-builder.index');
         Route::post('/website-builder', [WebsiteBuilderController::class, 'update'])->name('admin.website-builder.update');
         Route::post('/website-builder/draft', [WebsiteBuilderController::class, 'saveDraft'])->name('admin.website-builder.draft');
@@ -298,6 +313,12 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         Route::get('/course-content-posts/{courseContentPost}/edit', [AdminCourseContentPostController::class, 'edit'])->name('admin.course-content-posts.edit');
         Route::put('/course-content-posts/{courseContentPost}', [AdminCourseContentPostController::class, 'update'])->name('admin.course-content-posts.update');
         Route::delete('/course-content-posts/{courseContentPost}', [AdminCourseContentPostController::class, 'destroy'])->name('admin.course-content-posts.destroy');
+        Route::get('/course-combos', [CourseComboController::class, 'index'])->name('admin.course-combos.index');
+        Route::get('/course-combos/create', [CourseComboController::class, 'create'])->name('admin.course-combos.create');
+        Route::post('/course-combos', [CourseComboController::class, 'store'])->name('admin.course-combos.store');
+        Route::get('/course-combos/{courseCombo}/edit', [CourseComboController::class, 'edit'])->name('admin.course-combos.edit');
+        Route::put('/course-combos/{courseCombo}', [CourseComboController::class, 'update'])->name('admin.course-combos.update');
+        Route::delete('/course-combos/{courseCombo}', [CourseComboController::class, 'destroy'])->name('admin.course-combos.destroy');
         Route::get('/courses', [CourseController::class, 'adminIndex'])->name('admin.courses.index');
         Route::get('/courses/{course}/builder', [AdminCourseBuilderController::class, 'edit'])->name('admin.course-builder.edit');
         Route::put('/courses/{course}/builder', [AdminCourseBuilderController::class, 'update'])->name('admin.course-builder.update');

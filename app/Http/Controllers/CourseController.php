@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Certificate;
 use App\Models\Course;
+use App\Models\CourseCategory;
 use App\Models\Lesson;
 use App\Models\LessonProgress;
 use App\Models\PageView;
@@ -25,12 +26,21 @@ class CourseController extends Controller
         $validated = $request->validate([
             'q' => ['nullable', 'string', 'max:120'],
             'teacher' => ['nullable', 'integer', 'min:1'],
+            'category' => ['nullable', 'integer', 'min:1'],
             'min_price' => ['nullable', 'numeric', 'min:0', 'max:100000000'],
             'max_price' => ['nullable', 'numeric', 'min:0', 'max:100000000', 'gte:min_price'],
             'sort' => ['nullable', 'in:latest,oldest,price_low,price_high,title'],
         ]);
 
-        $query = Course::query()->with('teacher')->where('status', 'published');
+        $query = Course::query()
+            ->with([
+                'teacher',
+                'curriculumItems' => fn ($items) => $items
+                    ->whereHas('post', fn ($posts) => $posts->published())
+                    ->with('post.categories'),
+            ])
+            ->withCount(['lessons', 'curriculumItems', 'enrollments as students_count' => fn ($enrollments) => $enrollments->whereIn('status', ['active', 'completed'])])
+            ->where('status', 'published');
 
         if (! empty($validated['q'])) {
             $term = trim($validated['q']);
@@ -44,6 +54,13 @@ class CourseController extends Controller
         if (! empty($validated['teacher'])) {
             $query->where('teacher_id', $validated['teacher']);
         }
+        if (! empty($validated['category'])) {
+            $categoryId = (int) $validated['category'];
+            $query->whereHas('curriculumItems.post', fn ($posts) => $posts
+                ->published()
+                ->whereHas('categories', fn ($categories) => $categories->whereKey($categoryId)));
+        }
+
         if (isset($validated['min_price'])) {
             $query->where('price', '>=', $validated['min_price']);
         }
@@ -64,8 +81,14 @@ class CourseController extends Controller
             ->whereIn('id', Course::query()->where('status', 'published')->select('teacher_id'))
             ->orderBy('name')
             ->get(['id', 'name']);
+        $categories = CourseCategory::query()
+            ->where('is_visible', true)
+            ->whereHas('posts', fn ($posts) => $posts->published()->whereHas('courses', fn ($relatedCourses) => $relatedCourses->where('status', 'published')))
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['id', 'name']);
 
-        return view('courses.index', compact('courses', 'teachers'));
+        return view('courses.index', compact('courses', 'teachers', 'categories'));
     }
 
     public function myCourses(): View
@@ -168,6 +191,14 @@ class CourseController extends Controller
 
     public function destroy(Course $course): RedirectResponse
     {
+        if ($course->combos()->exists()) {
+            return back()->with('error', 'Remove this course from every combo before deleting it.');
+        }
+
+        if ($course->payments()->exists()) {
+            return back()->with('error', 'This course has payment history. Archive it instead of deleting it.');
+        }
+
         $course->load('lessons');
         $videoPaths = $course->lessons->pluck('video_path')->filter()->all();
         $thumbnailPaths = $course->lessons->pluck('thumbnail_path')->filter()->all();
@@ -220,8 +251,28 @@ class CourseController extends Controller
             ->withCount('enrollments')
             ->orderBy('starts_at')
             ->get();
+        $demoLesson = $course->curriculumItems->first(function ($curriculumItem): bool {
+            $post = $curriculumItem->post;
 
-        return view('courses.show', compact('course', 'enrollment', 'payment', 'paymentMethods', 'batches', 'canViewLessons', 'lessonProgress', 'isWishlisted', 'comments'));
+            return $curriculumItem->is_preview
+                && $post
+                && $post->status === 'published'
+                && $post->published_at?->lte(now())
+                && $post->video_embed_url;
+        });
+        $studentCount = $course->enrollments->whereIn('status', ['active', 'completed'])->count();
+        $publishedPostCount = $course->curriculumItems->filter(function ($curriculumItem): bool {
+            $post = $curriculumItem->post;
+
+            return $post && $post->status === 'published' && $post->published_at?->lte(now());
+        })->count();
+        $courseContentCount = $publishedPostCount + $course->lessons->count();
+
+        return view('courses.show', compact(
+            'course', 'enrollment', 'payment', 'paymentMethods', 'batches',
+            'canViewLessons', 'lessonProgress', 'isWishlisted', 'comments',
+            'demoLesson', 'studentCount', 'courseContentCount'
+        ));
     }
 
     public function streamLessonVideo(Course $course, Lesson $lesson): \Symfony\Component\HttpFoundation\BinaryFileResponse

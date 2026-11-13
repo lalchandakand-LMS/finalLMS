@@ -13,7 +13,7 @@
 <form method="POST" action="{{ route('news.comments.store', $post->slug) }}" style="margin-bottom:20px;">@csrf
 <label>{{ __('Write a comment') }}<textarea name="body" minlength="2" maxlength="2000" required></textarea></label><button class="btn primary" type="submit">{{ __('Submit comment') }}</button><small class="muted">{{ __('Comments appear after admin approval.') }}</small>
 </form>
-@else<p class="muted"><a href="{{ route('login') }}">{{ __('Log in') }}</a> {{ __('to comment.') }}</p>@endauth
+@else<p class="muted"><a href="{{ route('login', ['continue' => route('news.show', $post, false)]) }}">{{ __('Log in') }}</a> {{ __('to comment.') }}</p>@endauth
 @forelse($comments as $comment)<div class="course-item" style="margin-bottom:10px;"><strong>{{ $comment->author?->name ?? __('User') }}</strong><small class="muted"> · {{ $comment->created_at->format('d M Y') }}</small><p style="margin-bottom:0;">{{ $comment->body }}</p></div>
 @empty<p class="muted">{{ __('No approved comments yet.') }}</p>@endforelse
 {{ $comments->links() }}

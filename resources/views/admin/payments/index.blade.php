@@ -17,7 +17,10 @@
                 <div class="meta-row">
                     <div>
                         <span class="badge {{ $payment->status === 'approved' ? 'success' : ($payment->status === 'pending' ? 'warning' : 'info') }}">{{ __(ucfirst($payment->status)) }}</span>
-                        <h2 style="margin: 10px 0 6px;">{{ $payment->course->title }}</h2>
+                        <h2 style="margin: 10px 0 6px;">{{ $payment->courseCombo?->title ?? $payment->course?->title ?? __('Course unavailable') }}</h2>
+                        @if($payment->courseCombo)
+                            <div class="muted">{{ __('Combo includes:') }} {{ $payment->comboCourses->pluck('course_title')->implode(', ') }}</div>
+                        @endif
                         <div class="muted">{{ __('Student:') }} {{ $payment->user->name }} ({{ $payment->user->email }})</div>
                         <div class="muted">{{ __(ucfirst($payment->method)) }} · BDT {{ number_format($payment->amount, 2) }} · {{ __('Reference:') }} {{ $payment->transaction_reference }}</div>
                         @if($payment->sender_account)

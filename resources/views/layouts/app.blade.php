@@ -39,7 +39,7 @@
         if (!in_array($themeBodyScale, ['0.9', '1', '1.05', '1.1'], true)) $themeBodyScale = '1';
     @endphp
     <title>@yield('title', config('app.name'))</title>
-    <meta name="description" content="{{ $seoDescription }}">
+    <meta name="description" content="@yield('meta_description', $seoDescription)">
     <meta name="keywords" content="{{ $seoKeywords }}">
     <meta property="og:title" content="{{ $seoTitle }}">
     <meta property="og:description" content="{{ $seoDescription }}">
@@ -244,6 +244,7 @@
             <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><span>▦</span><span class="nav-text">Dashboard</span></a>
             <div class="admin-sidebar-label">Academy</div>
             <a href="{{ route('admin.courses.index') }}"><span>📚</span><span class="nav-text">Courses & lessons</span></a>
+            <a class="{{ request()->routeIs('admin.course-combos.*') ? 'active' : '' }}" href="{{ route('admin.course-combos.index') }}"><span>🎁</span><span class="nav-text">Course combos</span></a>
             <a class="{{ request()->routeIs('admin.course-categories.*') ? 'active' : '' }}" href="{{ route('admin.course-categories.index') }}"><span>🗂️</span><span class="nav-text">Course categories</span></a>
             <a class="{{ request()->routeIs('admin.course-content-posts.*') ? 'active' : '' }}" href="{{ route('admin.course-content-posts.index') }}"><span>📝</span><span class="nav-text">Course content studio</span></a>
             <a href="{{ route('admin.flash-sales.index') }}"><span>🔥</span><span class="nav-text">Flash Sale</span></a>
@@ -260,6 +261,7 @@
             <a href="{{ route('admin.expenses.index') }}"><span>💸</span><span class="nav-text">Expenses & reports</span></a>
             <div class="admin-sidebar-label">Website & tools</div>
             <a href="{{ route('admin.website-builder.index') }}"><span>🖥️</span><span class="nav-text">Website builder</span></a>
+            <a href="{{ route('admin.website-pages.index') }}"><span>📄</span><span class="nav-text">Custom pages</span></a>
             <a href="{{ route('admin.media.index') }}"><span>🖼️</span><span class="nav-text">Media library</span></a>
             <a href="{{ route('admin.news.index') }}"><span>📰</span><span class="nav-text">Blog & news</span></a>
             <a class="{{ request()->routeIs('admin.analytics.*') ? 'active' : '' }}" href="{{ route('admin.analytics.index') }}"><span>📈</span><span class="nav-text">Website analytics</span></a>

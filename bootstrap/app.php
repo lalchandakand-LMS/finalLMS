@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'activity.log' => \App\Http\Middleware\LogUserActivity::class,
+            'student.device' => \App\Http\Middleware\EnsureStudentDeviceIsApproved::class,
             'api.token' => \App\Http\Middleware\AuthenticateApiToken::class,
         ]);
     })

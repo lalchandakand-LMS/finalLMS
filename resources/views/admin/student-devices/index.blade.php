@@ -7,7 +7,7 @@
     <div>
         <span class="badge info">Admin only</span>
         <h1 style="margin:12px 0 0;">Student device approvals</h1>
-        <p class="muted">Review additional-device requests after the student has verified their mobile number.</p>
+        <p class="muted">Review additional-device requests after mobile verification. Approving a new device automatically revokes the student's previous approved device.</p>
     </div>
 </div>
 

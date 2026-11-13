@@ -1,26 +1,55 @@
-# Mobile API v1 — initial contract
+# Mobile API v1 — contract
 
 Base path: `/api/v1`
 
-All responses are JSON. Protected endpoints require `Authorization: Bearer <access_token>`. Tokens are opaque random values; only SHA-256 hashes are stored in the database. A device token expires after 30 days and can be revoked independently or all at once.
+All responses are JSON. Protected endpoints require `Authorization: Bearer <access_token>`. Tokens are opaque random values; only SHA-256 hashes are stored. A token expires after 30 days and can be revoked independently or all at once.
 
-## Authentication
+## Authentication and student device approval
+
+Mobile clients must generate a cryptographically random 32-byte installation identifier, encode it as 64 lowercase hexadecimal characters, and keep it in the platform secure store (Android Keystore / iOS Keychain). Send the same identifier on later logins from that installation. Do not use an advertising ID, IMEI, phone number, or a user-editable device label as the identifier.
 
 ### POST `/auth/login`
-Body:
-- `email` (required)
-- `password` (required)
-- `device_name` (required, 2–100 characters)
 
-Returns `access_token`, `token_type`, `expires_at`, and a minimal user profile. Only `student` and `teacher` roles can sign in to these apps.
+Body:
+- `email`, `password`
+- `device_name` (2–100 characters)
+- `device_id` (required for students; 64 lowercase hexadecimal characters; omitted for teachers)
+
+Teachers with valid credentials receive a bearer token as before and do not need a device ID. Student accounts must send the secure installation ID and have a registered mobile number:
+- A previously approved installation receives a device-bound token.
+- A new, unknown, or revoked installation receives HTTP 202 with `status=phone_verification_required`, a one-time `challenge_token`, and `expires_in=600`. No API bearer token is issued at this stage. A six-digit OTP is sent to the phone number registered by the academy.
+- If SMS is not configured or sending fails, the endpoint returns HTTP 503 and issues no token.
+
+### POST `/auth/verify-device`
+
+Body: `challenge_token`, `code` (six digits).
+
+- First-ever student installation: successful OTP verification approves the device and returns the bearer token.
+- Additional or previously approved/revoked installation: successful OTP verification returns HTTP 202 with `status=pending_admin_approval`. It does not issue a token. The request must be approved in Admin → Student Devices.
+- Invalid/expired challenge: HTTP 410. Invalid OTP: HTTP 422. Too many attempts: HTTP 429.
+
+### POST `/auth/device-status`
+
+Body: `challenge_token`.
+
+After an additional device has passed OTP, poll this endpoint (suggested interval: 10–20 seconds) until Admin approval:
+- Pending: HTTP 202 and `status=pending_admin_approval`.
+- Approved: HTTP 200 with the device-bound bearer token.
+- Rejected/revoked: HTTP 403.
+- Expired challenge: HTTP 410.
+
+The challenge token expires after 24 hours and is single-use once a bearer token is issued. Never log or expose it in analytics or crash reports.
 
 ### GET `/auth/me`
+
 Returns the authenticated user profile.
 
 ### POST `/auth/logout`
+
 Revokes the current device token.
 
 ### POST `/auth/logout-all`
+
 Revokes every active mobile token for the authenticated user.
 
 ## Student endpoints
@@ -40,10 +69,12 @@ Course ownership is checked server-side. The API does not accept a client-suppli
 
 ## Security and implementation notes
 
-- Login is rate-limited to 5 requests/minute per Laravel throttle key.
-- Catalog routes are rate-limited to 60 requests/minute.
-- Authenticated API routes are rate-limited to 120 requests/minute.
-- Token hashes, not bearer values, are persisted.
-- Expired and revoked tokens are rejected.
-- Student and instructor role boundaries are enforced on the server.
-- This is the initial mobile API foundation. Enrollment purchase, cart/coupons, reviews, quizzes, assignments, live-class operations, notifications, and the complete Flutter user interfaces are separate remaining deliverables.
+- Login and OTP verification are rate-limited to 5 requests/minute; device-status polling is limited to 30 requests/minute.
+- Catalog routes are rate-limited to 60 requests/minute; authenticated API routes are rate-limited to 120 requests/minute.
+- Student API tokens must reference a currently approved `student_devices` record owned by that student. Legacy student tokens without an approved device binding are rejected and revoked on use.
+- Admin approval of a new device revokes the student's previous approved device and all existing mobile bearer tokens. Admin revocation also invalidates tokens bound to that device.
+- Student web sessions and mobile API tokens share the same approved-device registry, enforcing one active student device across the web and app. A revoked device's web session is ended on its next protected web request; its mobile token is rejected on its next API request.
+- Teacher API login remains password-based and is not subject to the student SMS device policy.
+- Token hashes, not bearer values, are persisted. Expired and revoked tokens are rejected.
+- The Student Flutter app now implements secure installation-ID and bearer-token storage, OTP entry, Admin-approval waiting UI, 15-second approval polling, session restoration and server-side logout. Flutter analyze/tests must pass for each release; real SMS and end-to-end approval still require isolated staging acceptance.
+- Enrollment purchase, cart/coupons, reviews, quizzes, assignments, live-class operations, notifications, and complete Flutter user interfaces are separate remaining deliverables.

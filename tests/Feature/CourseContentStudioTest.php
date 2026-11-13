@@ -166,7 +166,12 @@ class CourseContentStudioTest extends TestCase
         ]);
 
         $this->get(route('courses.content.show', [$course, $preview]))->assertOk()->assertSee('Free preview');
-        $this->get(route('courses.content.show', [$course, $locked]))->assertForbidden();
+        $this->get(route('courses.content.show', [$course, $locked]))
+            ->assertRedirect(route('login', ['continue' => route('courses.show', $course, false)]));
+
+        $this->get(route('login', ['continue' => route('courses.show', $course, false)]))
+            ->assertOk()
+            ->assertSessionHas('url.intended', route('courses.show', $course, false));
 
         Enrollment::create(['user_id' => $student->id, 'course_id' => $course->id, 'status' => 'active']);
         $this->actingAs($student)->get(route('courses.content.show', [$course, $locked]))
