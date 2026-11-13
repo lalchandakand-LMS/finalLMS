@@ -31,6 +31,7 @@ use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\MediaLibraryController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\WebsiteBuilderController;
+use App\Http\Controllers\WebsitePageController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\InstallController;
 use App\Http\Controllers\QuizContestController;
@@ -70,6 +71,7 @@ Route::post('/teacher/apply/verify', [TeacherApplicationController::class, 'veri
 Route::get('/about', [CmsPageController::class, 'about'])->name('pages.about');
 Route::get('/contact', [CmsPageController::class, 'contact'])->name('pages.contact');
 Route::get('/faq', [CmsPageController::class, 'faq'])->name('pages.faq');
+Route::get('/pages/{slug}', [WebsitePageController::class, 'show'])->where('slug', '[a-z0-9-]+')->name('website-pages.show');
 Route::get('/news', [BlogController::class, 'index'])->name('news.index');
 Route::get('/news/{post:slug}', [BlogController::class, 'show'])->name('news.show');
 Route::post('/news/{post:slug}/comments', [CommentController::class, 'storePost'])->middleware(['auth', 'throttle:5,1'])->name('news.comments.store');
@@ -264,6 +266,12 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         Route::post('/backups', [BackupController::class, 'create'])->name('admin.backups.create');
         Route::get('/backups/{filename}', [BackupController::class, 'download'])->name('admin.backups.download');
         Route::post('/backups/restore', [BackupController::class, 'restore'])->middleware('throttle:2,10')->name('admin.backups.restore');
+        Route::get('/website-pages', [WebsitePageController::class, 'index'])->name('admin.website-pages.index');
+        Route::get('/website-pages/create', [WebsitePageController::class, 'create'])->name('admin.website-pages.create');
+        Route::post('/website-pages', [WebsitePageController::class, 'store'])->name('admin.website-pages.store');
+        Route::get('/website-pages/{websitePage}/edit', [WebsitePageController::class, 'edit'])->name('admin.website-pages.edit');
+        Route::put('/website-pages/{websitePage}', [WebsitePageController::class, 'update'])->name('admin.website-pages.update');
+        Route::delete('/website-pages/{websitePage}', [WebsitePageController::class, 'destroy'])->name('admin.website-pages.destroy');
         Route::get('/website-builder', [WebsiteBuilderController::class, 'index'])->name('admin.website-builder.index');
         Route::post('/website-builder', [WebsiteBuilderController::class, 'update'])->name('admin.website-builder.update');
         Route::post('/website-builder/draft', [WebsiteBuilderController::class, 'saveDraft'])->name('admin.website-builder.draft');
