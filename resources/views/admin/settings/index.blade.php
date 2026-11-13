@@ -81,6 +81,28 @@
                 <h2 style="margin: 12px 0 6px;">{{ __('Hero image slides') }}</h2>
                 <p class="muted" style="margin: 0;">{{ __('Choose up to three images from Media Library. Upload images there first, then select them here. Only enabled slides with an image are shown.') }} <a href="{{ route('admin.media.index') }}">{{ __('Open Media Library') }}</a></p>
             </div>
+
+            <div class="panel" style="padding:18px;margin-bottom:18px;">
+                <h3>{{ __('Slider behaviour and dimensions') }}</h3>
+                <div class="grid grid-3">
+                    <div><label>{{ __('Autoplay') }}</label><select name="home_slider_autoplay"><option value="1" @selected(old('home_slider_autoplay',$settings['home_slider_autoplay'] ?? '1') == '1')>{{ __('On') }}</option><option value="0" @selected(old('home_slider_autoplay',$settings['home_slider_autoplay'] ?? '1') == '0')>{{ __('Off') }}</option></select></div>
+                    <div><label>{{ __('Slide interval (milliseconds)') }}</label><input type="number" name="home_slider_interval" min="3000" max="12000" step="500" value="{{ old('home_slider_interval',$settings['home_slider_interval'] ?? 5000) }}"></div>
+                    <div><label>{{ __('Desktop height (px)') }}</label><input type="number" name="home_slider_height" min="320" max="720" value="{{ old('home_slider_height',$settings['home_slider_height'] ?? 480) }}"></div>
+                    <div><label>{{ __('Mobile height (px)') }}</label><input type="number" name="home_slider_mobile_height" min="220" max="520" value="{{ old('home_slider_mobile_height',$settings['home_slider_mobile_height'] ?? 300) }}"></div>
+                    <div><label>{{ __('Image overlay (%)') }}</label><input type="number" name="home_slider_overlay" min="20" max="90" value="{{ old('home_slider_overlay',$settings['home_slider_overlay'] ?? 60) }}"></div>
+                    <div><label>{{ __('Pause on hover') }}</label><select name="home_slider_pause_hover"><option value="1" @selected(old('home_slider_pause_hover',$settings['home_slider_pause_hover'] ?? '1') == '1')>{{ __('On') }}</option><option value="0" @selected(old('home_slider_pause_hover',$settings['home_slider_pause_hover'] ?? '1') == '0')>{{ __('Off') }}</option></select></div>
+                    <div><label>{{ __('Navigation arrows') }}</label><select name="home_slider_arrows"><option value="1" @selected(old('home_slider_arrows',$settings['home_slider_arrows'] ?? '1') == '1')>{{ __('Show') }}</option><option value="0" @selected(old('home_slider_arrows',$settings['home_slider_arrows'] ?? '1') == '0')>{{ __('Hide') }}</option></select></div>
+                    <div><label>{{ __('Navigation dots') }}</label><select name="home_slider_dots"><option value="1" @selected(old('home_slider_dots',$settings['home_slider_dots'] ?? '1') == '1')>{{ __('Show') }}</option><option value="0" @selected(old('home_slider_dots',$settings['home_slider_dots'] ?? '1') == '0')>{{ __('Hide') }}</option></select></div>
+                </div>
+            </div>
+            <hr style="border:0;border-top:1px solid var(--border);margin:28px 0;">
+            <div style="margin-bottom:18px;"><span class="badge info">{{ __('Homepage section headings') }}</span><h2 style="margin:12px 0 6px;">{{ __('Edit section titles') }}</h2></div>
+            <div class="grid grid-2" style="margin-bottom:18px;">
+                <div><label>{{ __('Batch panel title') }}</label><input name="home_batches_title" maxlength="120" value="{{ old('home_batches_title',$settings['home_batches_title'] ?? 'Online Batches are ongoing!') }}"></div>
+                <div><label>{{ __('Statistics panel title') }}</label><input name="home_stats_title" maxlength="120" value="{{ old('home_stats_title',$settings['home_stats_title'] ?? 'See the stats!') }}"></div>
+                <div><label>{{ __('Learning path section title') }}</label><input name="home_paths_title" maxlength="120" value="{{ old('home_paths_title',$settings['home_paths_title'] ?? 'Choose Your Learning Path') }}"></div>
+                <div><label>{{ __('Student reviews section title') }}</label><input name="home_reviews_title" maxlength="120" value="{{ old('home_reviews_title',$settings['home_reviews_title'] ?? 'What Our Students Say') }}"></div>
+            </div>
             @for($i = 0; $i < 3; $i++)
                 @php($savedSlide = $savedSlides[$i] ?? [])
                 <section class="panel" style="padding:18px;margin-bottom:14px;">
