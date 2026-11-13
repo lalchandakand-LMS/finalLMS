@@ -1,5 +1,6 @@
 @extends('layouts.app')
 @section('title', $page->seo_title ?: $page->title)
+@section('meta_description', $page->seo_description ?: $page->title)
 @section('content')
 @php
     $pageWidth = $page->template === 'wide' ? 'min(1180px, 100%)' : ($page->template === 'centered' ? 'min(820px, 100%)' : ($page->template === 'split' ? 'min(1080px, 100%)' : 'min(980px, 100%)'));
