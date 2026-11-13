@@ -36,6 +36,20 @@ class CourseDiscoveryTest extends TestCase
             'position' => 1,
             'is_preview' => true,
         ]);
+        $draftPost = CourseContentPost::create([
+            'author_id' => $otherCourse->teacher_id,
+            'title' => 'Draft grammar module',
+            'slug' => 'draft-grammar-module',
+            'long_description' => 'This draft must not appear in public category filters.',
+            'status' => 'draft',
+            'published_at' => now(),
+        ]);
+        $draftPost->categories()->attach($category);
+        $otherCourse->curriculumItems()->create([
+            'course_content_post_id' => $draftPost->id,
+            'position' => 1,
+            'is_preview' => true,
+        ]);
 
         $this->get(route('courses.index', ['category' => $category->id]))
             ->assertOk()
