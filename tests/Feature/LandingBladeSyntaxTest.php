@@ -9,7 +9,7 @@ class LandingBladeSyntaxTest extends TestCase
 {
     public function test_landing_view_compiles_to_valid_php(): void
     {
-        foreach (['layouts/app.blade.php', 'landing.blade.php'] as $viewPath) {
+        foreach (['layouts/app.blade.php', 'partials/public-navigation.blade.php', 'landing.blade.php'] as $viewPath) {
             $source = file_get_contents(resource_path('views/'.$viewPath));
             $compiled = Blade::compileString($source);
 
