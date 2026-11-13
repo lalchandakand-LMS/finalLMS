@@ -9,6 +9,7 @@ Last reviewed: 2026-11-14. Canonical destination: `lalchandakand-LMS/finalLMS` (
 | `lalchandakand-LMS/Final` | Phase notes and package metadata only; no app source tree. | Documentation only. |
 | `lalchandakand-LMS/lms` | Empty. | No source. |
 | `lalchandakand-LMS/demo-of-Google-AI` | README-only demo. | No LMS source. |
+| `Shuvouits/YouTubeLMS` | Public MIT Laravel 11 LMS with course catalog, cart, coupons, Stripe and admin/instructor workflows. | Reference only for isolated patterns; finalLMS is Laravel 12 and already has newer course combo, wishlist, checkout, payment and content modules. No wholesale copy. |
 | `lalchandakand-LMS/finalLMS` | Canonical Laravel app/issues. | Destination for accepted ports. |
 
 ## High-value reuse map
