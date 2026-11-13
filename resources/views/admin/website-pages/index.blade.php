@@ -15,6 +15,7 @@
             </div>
             <div class="cta-row">
                 @if($page->status === 'published')<a class="btn secondary" target="_blank" rel="noopener" href="{{ route('website-pages.show', $page->slug) }}">View</a>@endif
+                <form method="POST" action="{{ route('admin.website-pages.duplicate', $page) }}">@csrf<button class="btn secondary" type="submit">Duplicate</button></form>
                 <a class="btn secondary" href="{{ route('admin.website-pages.edit', $page) }}">Edit</a>
                 <form method="POST" action="{{ route('admin.website-pages.destroy', $page) }}" onsubmit="return confirm('Delete this page permanently?')">@csrf @method('DELETE')<button class="btn danger" type="submit">Delete</button></form>
             </div>
