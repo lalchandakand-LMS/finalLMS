@@ -45,7 +45,7 @@ class BackupMediaCoverageTest extends TestCase
         Storage::disk('local')->put('payment-proofs/payment-proof.png', 'payment-proof-bytes');
 
         $response = app(BackupController::class)->create(app(UpdateOperationLock::class));
-        $response->assertSessionHas('success', 'Database and uploaded media backup created and integrity-verified.');
+        $this->assertSame('Database and uploaded media backup created and integrity-verified.', session('success'));
 
         $backupFiles = Storage::disk('local')->files('backups');
         $this->assertCount(1, $backupFiles, 'Only the completed backup should be visible; temporary files must be cleaned up.');
@@ -102,7 +102,7 @@ class BackupMediaCoverageTest extends TestCase
             return app(BackupController::class)->create(app(UpdateOperationLock::class));
         });
 
-        $response->assertSessionHas('error');
+        $this->assertNotEmpty(session('error'));
         $this->assertSame([], Storage::disk('local')->files('backups'));
     }
 
