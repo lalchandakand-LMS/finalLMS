@@ -9,7 +9,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -300,13 +299,16 @@ class BackupController extends Controller
             ]);
         } catch (Throwable $exception) {
             report($exception);
+            $auditMessage = $exception instanceof RuntimeException
+                ? $exception->getMessage()
+                : 'Backup restore did not complete; inspect the server log and verify database/media state before retrying.';
             SystemUpdateEvent::create([
                 'performed_by' => $request->user()->id,
                 'event' => 'backup_restore',
                 'status' => 'failed',
-                'message' => 'Backup restore did not complete; inspect the server log and verify database/media state before retrying.',
+                'message' => $auditMessage,
             ]);
-            abort(422, 'Restore failed or another update operation is active. No success was reported; check the application log and database state before retrying.');
+            abort(422, 'Restore failed or another update operation is active. No success was reported; check the Admin Update audit timeline and application log before retrying.');
         }
 
         return redirect()->route('admin.backups.index')->with('success', 'Backup restored. Sign out and sign in again to refresh your session.');
