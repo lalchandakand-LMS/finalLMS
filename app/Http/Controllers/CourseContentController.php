@@ -23,6 +23,18 @@ class CourseContentController extends Controller
         abort_unless($item->is_preview || $canManage || $isEnrolled, 403);
 
         $post->load(['thumbnail', 'categories']);
-        return view('courses.content', compact('course', 'post', 'item'));
+        $curriculumItems = $course->curriculumItems()->with('post')->get()
+            ->filter(fn ($curriculumItem) => $curriculumItem->post && $curriculumItem->post->status === 'published')
+            ->values();
+        $currentIndex = $curriculumItems->search(fn ($curriculumItem) => $curriculumItem->id === $item->id);
+        $previousItem = $currentIndex !== false && $currentIndex > 0 ? $curriculumItems[$currentIndex - 1] : null;
+        $nextItem = $currentIndex !== false ? ($curriculumItems[$currentIndex + 1] ?? null) : null;
+        $canAccessNext = $nextItem && ($nextItem->is_preview || $canManage || $isEnrolled);
+        $canAccessPrevious = $previousItem && ($previousItem->is_preview || $canManage || $isEnrolled);
+
+        return view('courses.content', compact(
+            'course', 'post', 'item', 'curriculumItems', 'previousItem',
+            'nextItem', 'canAccessNext', 'canAccessPrevious'
+        ));
     }
 }
