@@ -122,7 +122,7 @@ class BackupController extends Controller
                         ], JSON_THROW_ON_ERROR), 9);
                 
                         if (! is_string($archive) || $archive === '') {
-                            throw new \\RuntimeException('The database/media backup archive could not be compressed.');
+                            throw new \RuntimeException('The database/media backup archive could not be compressed.');
                         }
                 
                         // Publish only a complete, readable and HMAC-verifiable archive. Write to
@@ -136,13 +136,13 @@ class BackupController extends Controller
                 
                         try {
                             if (! $disk->put($temporaryPath, $archive)) {
-                                throw new \\RuntimeException('The temporary database/media backup could not be written to private storage.');
+                                throw new \RuntimeException('The temporary database/media backup could not be written to private storage.');
                             }
                 
                             $storedArchive = $disk->get($temporaryPath);
                             $storedEnvelopeJson = @gzdecode($storedArchive, 536870912);
                             if (! is_string($storedEnvelopeJson)) {
-                                throw new \\RuntimeException('The written database/media backup failed its compression integrity check.');
+                                throw new \RuntimeException('The written database/media backup failed its compression integrity check.');
                             }
                 
                             $storedEnvelope = json_decode($storedEnvelopeJson, true, 512, JSON_THROW_ON_ERROR);
@@ -156,16 +156,16 @@ class BackupController extends Controller
                                 || ! is_string($storedSignature)
                                 || ! hash_equals(hash('sha256', $payload), hash('sha256', $storedPayload))
                                 || ! hash_equals($expectedSignature, $storedSignature)) {
-                                throw new \\RuntimeException('The written database/media backup failed its payload or HMAC integrity check.');
+                                throw new \RuntimeException('The written database/media backup failed its payload or HMAC integrity check.');
                             }
                 
                             if (! $disk->move($temporaryPath, $finalPath)) {
-                                throw new \\RuntimeException('The verified database/media backup could not be published.');
+                                throw new \RuntimeException('The verified database/media backup could not be published.');
                             }
                 
                             $publishedBytes = $disk->get($finalPath);
                             if (! hash_equals(hash('sha256', $archive), hash('sha256', $publishedBytes))) {
-                                throw new \\RuntimeException('The published database/media backup failed its final file integrity check.');
+                                throw new \RuntimeException('The published database/media backup failed its final file integrity check.');
                             }
                 
                             $published = true;
