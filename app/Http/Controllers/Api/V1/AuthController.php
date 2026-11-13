@@ -23,7 +23,7 @@ class AuthController extends Controller
             'email' => ['required', 'email', 'max:255'],
             'password' => ['required', 'string', 'max:200'],
             'device_name' => ['required', 'string', 'min:2', 'max:100'],
-            'device_id' => ['required', 'string', 'regex:/^[a-f0-9]{64}$/'],
+            'device_id' => ['nullable', 'string', 'regex:/^[a-f0-9]{64}$/'],
         ]);
 
         $user = User::query()->where('email', $validated['email'])->first();
@@ -41,6 +41,10 @@ class AuthController extends Controller
 
         if (! $user->phone_number) {
             return response()->json(['message' => 'A verified mobile number is required. Contact the academy administrator.'], 422);
+        }
+
+        if (empty($validated['device_id'])) {
+            return response()->json(['message' => 'A secure mobile installation identifier is required for student sign-in.'], 422);
         }
 
         $deviceHash = hash('sha256', $validated['device_id']);
