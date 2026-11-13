@@ -25,6 +25,8 @@ The local/testing seeder creates `admin@lms.test`, `teacher@lms.test`, and `stud
 - Admin, branch manager, accountant, teacher, and student role foundations; role middleware and protected routes
 - Branch managers are assigned one branch and can create/update only that branch's batches; accountants can access the invoice ledger without admin payment-review or user-management access
 - Courses, lessons, course enrollment, certificates, and manual payment review
+- Admin-managed course combos with public package pages, fixed combo pricing, manual payment review, immutable purchased-course snapshots, and atomic enrollment into every included course after approval.
+- Student web sign-in with SMS verification for the first browser device, administrator approval for additional devices, one approved browser device at a time, and server-side invalidation of revoked browser sessions.
 - Branch and batch create/read/update/delete controls; teacher-scoped batch views
 - Batch enrollment associations, teacher attendance entry, and student-private attendance history
 - Batch assignments, one submission per enrolled student, teacher grading/feedback, and private PDF/DOC/DOCX/JPG/PNG attachment submissions (10 MB limit)
