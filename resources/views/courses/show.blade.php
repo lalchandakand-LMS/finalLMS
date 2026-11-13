@@ -49,7 +49,7 @@
     <div class="grid grid-2" id="overview">
         <div class="panel">
             @if($course->image_path)
-                <img src="{{ \\Illuminate\\Support\\Facades\\Storage::disk('public')->url($course->image_path) }}" alt="{{ $course->title }}" loading="lazy" style="width:100%;max-height:300px;aspect-ratio:16/9;object-fit:cover;border-radius:14px;margin-bottom:16px;">
+                <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($course->image_path) }}" alt="{{ $course->title }}" loading="lazy" style="width:100%;max-height:300px;aspect-ratio:16/9;object-fit:cover;border-radius:14px;margin-bottom:16px;">
             @endif
             <p class="muted">{{ __('Instructor:') }} {{ $course->teacher?->name ?? __('N/A') }}</p>
             <div class="course-detail-stats">
