@@ -38,7 +38,7 @@ class GoogleDriveStorageConnectionTest extends TestCase
         $this->assertContains('openid', explode(' ', $query['scope']));
         $this->assertSame('offline', $query['access_type']);
         $this->assertNotEmpty($query['state']);
-        $this->assertSessionHas('google_drive_oauth_state', $query['state']);
+        $this->assertSame($query['state'], session()->get('google_drive_oauth_state'));
     }
 
     public function test_oauth_callback_rejects_a_mismatched_state(): void
