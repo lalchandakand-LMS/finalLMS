@@ -236,8 +236,17 @@ class CourseController extends Controller
             ->withCount('enrollments')
             ->orderBy('starts_at')
             ->get();
+        $demoLesson = $course->curriculumItems->first(
+            fn ($curriculumItem) => $curriculumItem->is_preview && $curriculumItem->post?->video_embed_url
+        );
+        $studentCount = $course->enrollments->whereIn('status', ['active', 'completed'])->count();
+        $courseContentCount = $course->curriculumItems->count();
 
-        return view('courses.show', compact('course', 'enrollment', 'payment', 'paymentMethods', 'batches', 'canViewLessons', 'lessonProgress', 'isWishlisted', 'comments'));
+        return view('courses.show', compact(
+            'course', 'enrollment', 'payment', 'paymentMethods', 'batches',
+            'canViewLessons', 'lessonProgress', 'isWishlisted', 'comments',
+            'demoLesson', 'studentCount', 'courseContentCount'
+        ));
     }
 
     public function streamLessonVideo(Course $course, Lesson $lesson): \Symfony\Component\HttpFoundation\BinaryFileResponse
