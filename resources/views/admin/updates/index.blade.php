@@ -10,6 +10,19 @@
     <a href="{{ route('dashboard') }}" class="btn secondary">{{ __('Dashboard') }}</a>
 </div>
 
+@php($updateOperationBusy = $operationLock && $operationLock->isActive())
+@if($updateOperationBusy)
+    <div class="panel" style="margin-bottom:20px;">
+        <div class="flash warning">
+            <strong>{{ __('An update operation is currently in progress.') }}</strong>
+            <p>{{ __('Operation') }}: {{ str_replace('_', ' ', ucfirst($operationLock->operation)) }}</p>
+            <p>{{ __('Started') }}: {{ $operationLock->acquired_at?->format('d M Y H:i:s') }} · {{ __('By') }}: {{ $operationLock->lockedBy?->name ?? __('Administrator') }}</p>
+            <p>{{ __('Safety lease expires') }}: {{ $operationLock->expires_at?->format('d M Y H:i:s') }}</p>
+            <small>{{ __('Other package, backup and preflight actions are temporarily blocked until this operation completes or its lease expires.') }}</small>
+        </div>
+    </div>
+@endif
+
 <div class="panel" style="margin-bottom:20px;">
     <div style="display:flex;justify-content:space-between;gap:18px;align-items:center;flex-wrap:wrap;">
         <div>
@@ -34,7 +47,7 @@
     @if($updatesEnabled && $latestCheck && $latestCheck->status === 'available' && (!$preparation || $preparation->version !== $latestCheck->target_version || !in_array($preparation->status, ['verified', 'staged'], true) || !$preparation->expires_at || $preparation->expires_at->isPast()))
         <form method="POST" action="{{ route('admin.updates.prepare') }}" style="margin-top:16px;">
             @csrf
-            <button class="btn secondary" type="submit">{{ __('Download and verify release package') }}</button>
+            <button class="btn secondary" type="submit" @disabled($updateOperationBusy)>{{ __('Download and verify release package') }}</button>
         </form>
     @endif
     @if($preparation)
@@ -50,7 +63,7 @@
             @if($preparation->status === 'verified' && $preparation->expires_at && $preparation->expires_at->isFuture())
                 <form method="POST" action="{{ route('admin.updates.extract', $preparation) }}" style="margin-top:12px;">
                     @csrf
-                    <button class="btn secondary" type="submit">{{ __('Extract to private staging') }}</button>
+                    <button class="btn secondary" type="submit" @disabled($updateOperationBusy)>{{ __('Extract to private staging') }}</button>
                 </form>
             @elseif($preparation->status === 'staged' && $preparation->release_path && $preparation->expires_at && $preparation->expires_at->isFuture())
                 <p><small class="muted">{{ __('Private staging directory') }}: <code>{{ $preparation->release_path }}</code></small></p>
@@ -61,7 +74,7 @@
                 </p>
                 <form method="POST" action="{{ route('admin.updates.backup', $preparation) }}" style="margin-top:12px;">
                     @csrf
-                    <button class="btn secondary" type="submit">{{ __('Create and verify pre-activation backup') }}</button>
+                    <button class="btn secondary" type="submit" @disabled($updateOperationBusy)>{{ __('Create and verify pre-activation backup') }}</button>
                 </form>
                 @if($backup && $backup->preparation_id === $preparation->id)
                     <div class="course-item" style="margin-top:12px;">
@@ -75,7 +88,7 @@
                 @endif
                 <form method="POST" action="{{ route('admin.updates.preflight', $preparation) }}" style="margin-top:12px;">
                     @csrf
-                    <button class="btn secondary" type="submit">{{ __('Run activation readiness preflight') }}</button>
+                    <button class="btn secondary" type="submit" @disabled($updateOperationBusy)>{{ __('Run activation readiness preflight') }}</button>
                 </form>
                 @if($preflight && $preflight->preparation_id === $preparation->id)
                     <div class="panel" style="margin-top:16px;">
@@ -140,6 +153,33 @@
         </div>
     @empty
         <p class="muted">{{ __('No update checks have been performed yet.') }}</p>
+    @endforelse
+</div>
+<div class="panel" style="margin-top:20px;">
+    <h2>{{ __('Update activity & audit trail') }}</h2>
+    <p class="muted">{{ __('The latest 30 update actions are stored in the database and remain available after refreshing or leaving this page.') }}</p>
+    @forelse($events as $event)
+        <div class="course-item" style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap;">
+            <div style="min-width:240px;flex:1;">
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                    <strong>{{ str_replace('_', ' ', ucfirst($event->event)) }}</strong>
+                    <span class="badge {{ $event->status === 'success' ? 'success' : ($event->status === 'failed' || $event->status === 'blocked' ? 'error' : 'warning') }}">{{ ucfirst($event->status) }}</span>
+                    @if($event->preparation)
+                        <span class="badge info">{{ __('Release') }} {{ $event->preparation->version }}</span>
+                    @endif
+                </div>
+                <p class="muted">{{ $event->message }}</p>
+                <small class="muted">
+                    {{ $event->created_at?->format('d M Y H:i:s') }}
+                    · {{ __('By') }} {{ $event->performedBy?->name ?? __('System / unavailable account') }}
+                </small>
+                @if(!empty($event->context['git_commit']))
+                    <p><small class="muted">{{ __('Commit') }}: <code>{{ $event->context['git_commit'] }}</code></small></p>
+                @endif
+            </div>
+        </div>
+    @empty
+        <p class="muted">{{ __('No update activity has been recorded yet.') }}</p>
     @endforelse
 </div>
 @endsection

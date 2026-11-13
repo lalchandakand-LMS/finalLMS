@@ -34,6 +34,10 @@ jobs:
           php-version: '8.3'
           extensions: bcmath, ctype, fileinfo, mbstring, openssl, pdo_mysql, tokenizer, xml, zip
           coverage: none
+      - name: Lint PHP source files
+        run: |
+          find app bootstrap config database public routes tests .github/scripts -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          php -l artisan
       - uses: actions/setup-node@v5
         with:
           node-version: '20'

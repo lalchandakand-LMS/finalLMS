@@ -10,6 +10,7 @@ use App\Models\SystemUpdatePreflight;
 use App\Models\User;
 use App\Services\ReleaseManifestChecker;
 use App\Services\UpdateBackupCoordinator;
+use App\Services\UpdateOperationLock;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Http;
@@ -273,7 +274,7 @@ class AdminUpdateCenterTest extends TestCase
         $preparation = SystemUpdatePreparation::query()->firstOrFail();
         $this->actingAs($admin)->post(route('admin.updates.extract', $preparation));
 
-        app(BackupController::class)->create();
+        app(BackupController::class)->create(app(UpdateOperationLock::class));
         $this->assertCount(1, Storage::disk('local')->files('backups'));
         config(['services.lms_updates.current_version' => trim((string) file_get_contents(base_path('VERSION')))]);
 
