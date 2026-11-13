@@ -258,7 +258,7 @@
 <section class="panel" style="margin-top:22px;">
     <div class="page-header" style="margin-bottom:12px;"><h2>{{ __('Course curriculum') }}</h2><span class="muted">{{ $course->curriculumItems->count() }} {{ __('lessons') }}</span></div>
     @foreach($course->curriculumItems as $item)
-        @if($item->post && $item->post->status === 'published')
+        @if($item->post && $item->post->status === 'published' && $item->post->published_at && $item->post->published_at->lte(now()))
         <div class="course-item" style="display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:10px;">
             <div><strong>{{ $item->post->title }}</strong>
                 @if($item->section_title)<div class="muted">{{ $item->section_title }}</div>@endif
