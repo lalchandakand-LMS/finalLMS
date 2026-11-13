@@ -73,7 +73,7 @@ class UpdateOperationLockTest extends TestCase
             ->get(route('admin.updates.index'))
             ->assertOk()
             ->assertSee('An update operation is currently in progress.')
-            ->assertSee('private extract')
+            ->assertSee('Private extract')
             ->assertSee($admin->name);
     }
 
