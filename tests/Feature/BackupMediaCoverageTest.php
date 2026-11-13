@@ -16,7 +16,6 @@ class BackupMediaCoverageTest extends TestCase
     public function test_database_media_backup_includes_course_images_and_private_lesson_assets(): void
     {
         Storage::fake('local');
-        Storage::fake('lesson_videos');
         Storage::fake('public');
 
         $teacher = User::factory()->create(['role' => 'teacher']);
@@ -36,9 +35,10 @@ class BackupMediaCoverageTest extends TestCase
 
         Storage::disk('public')->put($course->image_path, 'course-image-bytes');
         Storage::disk('public')->put($lesson->thumbnail_path, 'lesson-thumbnail-bytes');
-        Storage::disk('lesson_videos')->put($lesson->video_path, 'private-video-bytes');
+        Storage::disk('local')->put('course-videos/'.$lesson->video_path, 'private-video-bytes');
         Storage::disk('local')->put($lesson->attachment_path, 'private-attachment-bytes');
         Storage::disk('local')->put('assignment-submissions/submission.pdf', 'submission-bytes');
+        Storage::disk('local')->put('payment-proofs/payment-proof.png', 'payment-proof-bytes');
 
         app(BackupController::class)->create();
 
@@ -77,6 +77,10 @@ class BackupMediaCoverageTest extends TestCase
         $this->assertSame(
             base64_encode('submission-bytes'),
             $payload['private_files']['assignment-submissions/submission.pdf']
+        );
+        $this->assertSame(
+            base64_encode('payment-proof-bytes'),
+            $payload['private_files']['payment-proofs/payment-proof.png']
         );
     }
 }
