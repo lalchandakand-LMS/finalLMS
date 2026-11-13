@@ -47,20 +47,20 @@
         $homepageTemplate = (string) ($hasSettingsTable ? \App\Models\Setting::value('homepage_template', 'academy-modern') : 'academy-modern');
         $homepageTemplate = array_key_exists($homepageTemplate, \App\Http\Controllers\WebsiteBuilderController::homepageTemplates()) ? $homepageTemplate : 'academy-modern';
 
-        $homeBatchesTitle = $hasSettingsTable ? \\App\\Models\\Setting::value('home_batches_title', 'Online Batches are ongoing!') : 'Online Batches are ongoing!';
-        $homeStatsTitle = $hasSettingsTable ? \\App\\Models\\Setting::value('home_stats_title', 'See the stats!') : 'See the stats!';
-        $homePathsTitle = $hasSettingsTable ? \\App\\Models\\Setting::value('home_paths_title', 'Choose Your Learning Path') : 'Choose Your Learning Path';
-        $homeReviewsTitle = $hasSettingsTable ? \\App\\Models\\Setting::value('home_reviews_title', 'What Our Students Say') : 'What Our Students Say';
-        $openBatches = \\Illuminate\\Support\\Facades\\Schema::hasTable('batches')
-            ? \\App\\Models\\Batch::query()->with(['course','teacher'])->where('status','open')->orderBy('starts_at')->take(4)->get()
+        $homeBatchesTitle = $hasSettingsTable ? \App\Models\Setting::value('home_batches_title', 'Online Batches are ongoing!') : 'Online Batches are ongoing!';
+        $homeStatsTitle = $hasSettingsTable ? \App\Models\Setting::value('home_stats_title', 'See the stats!') : 'See the stats!';
+        $homePathsTitle = $hasSettingsTable ? \App\Models\Setting::value('home_paths_title', 'Choose Your Learning Path') : 'Choose Your Learning Path';
+        $homeReviewsTitle = $hasSettingsTable ? \App\Models\Setting::value('home_reviews_title', 'What Our Students Say') : 'What Our Students Say';
+        $openBatches = \Illuminate\Support\Facades\Schema::hasTable('batches')
+            ? \App\Models\Batch::query()->with(['course','teacher'])->where('status','open')->orderBy('starts_at')->take(4)->get()
             : collect();
-        $publishedCourses = $hasCoursesTable ? \\App\\Models\\Course::where('status','published')->with('teacher')->withCount('lessons')->latest()->take(6)->get() : collect();
-        $publishedCourseCount = $hasCoursesTable ? \\App\\Models\\Course::where('status','published')->count() : 0;
-        $activeStudentCount = $hasUsersTable ? \\App\\Models\\User::where('role','student')->count() : 0;
-        $teacherCount = $hasUsersTable ? \\App\\Models\\User::where('role','teacher')->count() : 0;
-        $publishedLessonCount = $hasCoursesTable && \\Illuminate\\Support\\Facades\\Schema::hasTable('lessons') ? \\App\\Models\\Lesson::whereHas('course',fn($q)=>$q->where('status','published'))->count() : 0;
-        $learnerVoices = \\Illuminate\\Support\\Facades\\Schema::hasTable('comments') && $hasCoursesTable
-            ? \\App\\Models\\Comment::with('author')->where('commentable_type',\\App\\Models\\Course::class)->where('status','approved')->whereIn('commentable_id',\\App\\Models\\Course::where('status','published')->select('id'))->latest()->take(12)->get()
+        $publishedCourses = $hasCoursesTable ? \App\Models\Course::where('status','published')->with('teacher')->withCount('lessons')->latest()->take(6)->get() : collect();
+        $publishedCourseCount = $hasCoursesTable ? \App\Models\Course::where('status','published')->count() : 0;
+        $activeStudentCount = $hasUsersTable ? \App\Models\User::where('role','student')->count() : 0;
+        $teacherCount = $hasUsersTable ? \App\Models\User::where('role','teacher')->count() : 0;
+        $publishedLessonCount = $hasCoursesTable && \Illuminate\Support\Facades\Schema::hasTable('lessons') ? \App\Models\Lesson::whereHas('course',fn($q)=>$q->where('status','published'))->count() : 0;
+        $learnerVoices = \Illuminate\Support\Facades\Schema::hasTable('comments') && $hasCoursesTable
+            ? \App\Models\Comment::with('author')->where('commentable_type',\App\Models\Course::class)->where('status','approved')->whereIn('commentable_id',\App\Models\Course::where('status','published')->select('id'))->latest()->take(12)->get()
             : collect();
     @endphp
 
@@ -213,7 +213,7 @@
         </div>
     </section>
     <section class="home-paths"><div class="home-section-heading"><span class="home-heading-kicker">{{ __('Start learning today') }}</span><h2>{{ $homePathsTitle }}</h2><p>{{ __('Explore courses published by Alom’s English Center.') }}</p></div>
-        @if($publishedCourses->isNotEmpty())<div class="home-course-grid">@foreach($publishedCourses as $course)<a class="home-course-tile" href="{{ route('courses.show',$course) }}"><span class="home-course-tile__icon">{{ ['✦','▤','◈','⌘','◎','✎'][$loop->index % 6] }}</span><strong>{{ $course->title }}</strong><span>{{ \\Illuminate\\Support\\Str::limit(strip_tags($course->description),88) }}</span><small>{{ $course->lessons_count }} {{ __('lessons') }} <b>↗</b></small></a>@endforeach</div>
+        @if($publishedCourses->isNotEmpty())<div class="home-course-grid">@foreach($publishedCourses as $course)<a class="home-course-tile" href="{{ route('courses.show',$course) }}"><span class="home-course-tile__icon">{{ ['✦','▤','◈','⌘','◎','✎'][$loop->index % 6] }}</span><strong>{{ $course->title }}</strong><span>{{ \Illuminate\Support\Str::limit(strip_tags($course->description),88) }}</span><small>{{ $course->lessons_count }} {{ __('lessons') }} <b>↗</b></small></a>@endforeach</div>
         @else<div class="home-empty home-empty--light"><strong>{{ __('Our learning paths are being prepared') }}</strong><span>{{ __('Published courses will appear here automatically.') }}</span></div>@endif
         <div class="home-paths__footer"><a class="home-button home-button--primary" href="{{ route('courses.index') }}">{{ __('Browse all courses') }}</a></div>
     </section>
@@ -221,7 +221,7 @@
         @php($testimonialRows=[$learnerVoices->values()->slice(0,6),$learnerVoices->values()->slice(6,6)])
         @if($testimonialRows[1]->isEmpty()) @php($testimonialRows[1]=$testimonialRows[0]) @endif
         <section class="home-testimonials"><div class="home-section-heading home-section-heading--dark"><span class="home-heading-kicker">{{ __('Student reviews') }}</span><h2>{{ $homeReviewsTitle }}</h2><p>{{ __('Approved feedback from our learners') }}</p></div>
-            @foreach($testimonialRows as $rowIndex=>$row)<div class="home-testimonial-viewport"><div class="home-testimonial-track {{ $rowIndex===1?'home-testimonial-track--reverse':'' }}">@foreach([0,1] as $copy)@foreach($row as $comment)<article class="home-quote-card" @if($copy===1) aria-hidden="true" @endif><span class="home-quote-mark">“</span><p>{{ \\Illuminate\\Support\\Str::limit(strip_tags($comment->body),190) }}</p><div class="home-quote-author"><span class="home-quote-avatar">{{ mb_strtoupper(mb_substr($comment->author?->name ?? 'S',0,1)) }}</span><strong>{{ $comment->author?->name ?? __('Student') }}</strong></div></article>@endforeach @endforeach</div></div>@endforeach
+            @foreach($testimonialRows as $rowIndex=>$row)<div class="home-testimonial-viewport"><div class="home-testimonial-track {{ $rowIndex===1?'home-testimonial-track--reverse':'' }}">@foreach([0,1] as $copy)@foreach($row as $comment)<article class="home-quote-card" @if($copy===1) aria-hidden="true" @endif><span class="home-quote-mark">“</span><p>{{ \Illuminate\Support\Str::limit(strip_tags($comment->body),190) }}</p><div class="home-quote-author"><span class="home-quote-avatar">{{ mb_strtoupper(mb_substr($comment->author?->name ?? 'S',0,1)) }}</span><strong>{{ $comment->author?->name ?? __('Student') }}</strong></div></article>@endforeach @endforeach</div></div>@endforeach
         </section>
     @endif
 
