@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\SystemUpdateEvent;
+use App\Services\BackupRestoreRecovery;
 use App\Services\UpdateOperationLock;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -281,47 +282,20 @@ class BackupController extends Controller
                 $privateFilesToRestore[$privatePath] = $contents;
             }
 
-            $operationLock->run('backup_restore', $request->user(), function () use ($currentTables, $payload, $mediaToRestore, $privateFilesToRestore): void {
-                Schema::disableForeignKeyConstraints();
-                try {
-                    DB::transaction(function () use ($currentTables, $payload): void {
-                        foreach (array_reverse($currentTables) as $table) {
-                            DB::table($table)->delete();
-                        }
-                        foreach ($currentTables as $table) {
-                            $rows = $payload['tables'][$table] ?? [];
-                            foreach (array_chunk($rows, 500) as $chunk) {
-                                if ($chunk !== []) {
-                                    DB::table($table)->insert($chunk);
-                                }
-                            }
-                        }
-                    });
-                } finally {
-                    Schema::enableForeignKeyConstraints();
-                }
-
-                foreach ($mediaToRestore as $mediaPath => $contents) {
-                    if (! Storage::disk('public')->put($mediaPath, $contents)) {
-                        throw new \RuntimeException('A public media file could not be restored.');
-                    }
-                }
-                foreach ($privateFilesToRestore as $privatePath => $contents) {
-                    if (! Storage::disk('local')->put($privatePath, $contents)) {
-                        throw new \RuntimeException('A private media file could not be restored.');
-                    }
-                }
+            $safetySnapshotFilename = $operationLock->run('backup_restore', $request->user(), function () use ($currentTables, $payload): string {
+                return app(BackupRestoreRecovery::class)->applyWithRecovery($currentTables, $payload);
             });
 
             SystemUpdateEvent::create([
                 'performed_by' => $request->user()->id,
                 'event' => 'backup_restore',
                 'status' => 'success',
-                'message' => 'A signed database and media backup was restored under the exclusive update-operation lock.',
+                'message' => 'A signed backup was restored under the exclusive operation lock after a verified pre-restore safety snapshot was retained.',
                 'context' => [
                     'table_count' => count($currentTables),
                     'public_file_count' => count($mediaToRestore),
                     'private_file_count' => count($privateFilesToRestore),
+                    'safety_snapshot' => $safetySnapshotFilename,
                 ],
             ]);
         } catch (Throwable $exception) {
