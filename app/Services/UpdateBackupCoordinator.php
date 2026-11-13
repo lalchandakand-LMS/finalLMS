@@ -184,10 +184,14 @@ class UpdateBackupCoordinator
         }
 
         foreach ($payload['public_media'] as $mediaPath => $encoded) {
-            if (! is_string($mediaPath)
-                || ! str_starts_with($mediaPath, 'media/')
+            $allowedPublicPath = is_string($mediaPath)
+                && (str_starts_with($mediaPath, 'media/')
+                    || str_starts_with($mediaPath, 'courses/')
+                    || str_starts_with($mediaPath, 'course-thumbnails/'));
+            if (! $allowedPublicPath
                 || str_contains($mediaPath, '..')
                 || str_contains($mediaPath, '\\')
+                || str_starts_with($mediaPath, '/')
                 || ! is_string($encoded)
                 || base64_decode($encoded, true) === false) {
                 throw new RuntimeException('The database/media backup contains an unsafe or damaged public media file.');
@@ -195,10 +199,14 @@ class UpdateBackupCoordinator
         }
 
         foreach ($payload['private_files'] as $privatePath => $encoded) {
-            if (! is_string($privatePath)
-                || ! str_starts_with($privatePath, 'assignment-submissions/')
+            $allowedPrivatePath = is_string($privatePath)
+                && (str_starts_with($privatePath, 'assignment-submissions/')
+                    || str_starts_with($privatePath, 'course-media/')
+                    || str_starts_with($privatePath, 'course-videos/'));
+            if (! $allowedPrivatePath
                 || str_contains($privatePath, '..')
                 || str_contains($privatePath, '\\')
+                || str_starts_with($privatePath, '/')
                 || ! is_string($encoded)
                 || base64_decode($encoded, true) === false) {
                 throw new RuntimeException('The database/media backup contains an unsafe or damaged private file.');
@@ -212,6 +220,34 @@ class UpdateBackupCoordinator
             $mediaPath = (string) ($asset['path'] ?? '');
             if ($mediaPath !== '' && ! array_key_exists($mediaPath, $payload['public_media'])) {
                 throw new RuntimeException('A media asset record is missing its corresponding uploaded file from the backup.');
+            }
+        }
+
+        foreach (($payload['tables']['courses'] ?? []) as $course) {
+            if (! is_array($course)) {
+                throw new RuntimeException('The database/media backup contains an invalid course record.');
+            }
+            $imagePath = (string) ($course['image_path'] ?? '');
+            if ($imagePath !== '' && ! array_key_exists($imagePath, $payload['public_media'])) {
+                throw new RuntimeException('A course image is missing its corresponding uploaded file from the backup.');
+            }
+        }
+
+        foreach (($payload['tables']['lessons'] ?? []) as $lesson) {
+            if (! is_array($lesson)) {
+                throw new RuntimeException('The database/media backup contains an invalid lesson record.');
+            }
+            $videoPath = (string) ($lesson['video_path'] ?? '');
+            if ($videoPath !== '' && ! array_key_exists('course-videos/'.$videoPath, $payload['private_files'])) {
+                throw new RuntimeException('A private lesson video is missing its corresponding uploaded file from the backup.');
+            }
+            $attachmentPath = (string) ($lesson['attachment_path'] ?? '');
+            if ($attachmentPath !== '' && ! array_key_exists($attachmentPath, $payload['private_files'])) {
+                throw new RuntimeException('A private lesson attachment is missing its corresponding uploaded file from the backup.');
+            }
+            $thumbnailPath = (string) ($lesson['thumbnail_path'] ?? '');
+            if ($thumbnailPath !== '' && ! array_key_exists($thumbnailPath, $payload['public_media'])) {
+                throw new RuntimeException('A lesson thumbnail is missing its corresponding uploaded file from the backup.');
             }
         }
 
