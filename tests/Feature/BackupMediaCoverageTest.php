@@ -65,6 +65,8 @@ class BackupMediaCoverageTest extends TestCase
         );
 
         $payload = json_decode($payloadJson, true, 512, JSON_THROW_ON_ERROR);
+        $this->assertArrayNotHasKey('system_update_locks', $payload['tables']);
+        $this->assertArrayNotHasKey('system_update_events', $payload['tables']);
 
         $this->assertSame(
             base64_encode('course-image-bytes'),
@@ -134,6 +136,11 @@ class BackupMediaCoverageTest extends TestCase
 
         $this->assertDatabaseHas('courses', ['id' => $originalCourse->id]);
         $this->assertDatabaseHas('courses', ['id' => $laterCourse->id]);
+        $this->assertDatabaseHas('system_update_locks', [
+            'id' => 1,
+            'operation' => null,
+            'token' => null,
+        ]);
         $this->assertDatabaseHas('system_update_events', [
             'event' => 'backup_restore',
             'status' => 'failed',
@@ -194,6 +201,21 @@ class BackupMediaCoverageTest extends TestCase
         Storage::disk('local')->assertExists($lesson->attachment_path);
         Storage::disk('local')->assertExists('payment-proofs/restore-proof.png');
         $this->assertSame('private-video', Storage::disk('local')->get('course-videos/'.$lesson->video_path));
+        $this->assertDatabaseHas('system_update_events', [
+            'event' => 'manual_backup',
+            'status' => 'success',
+            'performed_by' => $admin->id,
+        ]);
+        $this->assertDatabaseHas('system_update_events', [
+            'event' => 'backup_restore',
+            'status' => 'success',
+            'performed_by' => $admin->id,
+        ]);
+        $this->assertDatabaseHas('system_update_locks', [
+            'id' => 1,
+            'operation' => null,
+            'token' => null,
+        ]);
     }
 
 }
