@@ -38,6 +38,7 @@ use App\Http\Controllers\InstallController;
 use App\Http\Controllers\QuizContestController;
 use App\Http\Controllers\FlashSaleController;
 use App\Http\Controllers\GuardianController;
+use App\Http\Controllers\StorageManagerController;
 use App\Http\Controllers\AdminAnalyticsController;
 use App\Http\Controllers\AdminCommentController;
 use App\Http\Controllers\AdminDashboardAnnouncementController;
@@ -280,6 +281,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::post('/payments/{payment}/reject', [PaymentController::class, 'reject'])->name('admin.payments.reject');
         Route::get('/payments/{payment}/proof', [PaymentController::class, 'proof'])->name('admin.payments.proof');
 
+        Route::get('/storage', [StorageManagerController::class, 'index'])->name('admin.storage.index');
         Route::get('/backups', [BackupController::class, 'index'])->name('admin.backups.index');
         Route::post('/backups', [BackupController::class, 'create'])->name('admin.backups.create');
         Route::get('/backups/{filename}', [BackupController::class, 'download'])->name('admin.backups.download');
