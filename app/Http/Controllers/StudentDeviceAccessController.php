@@ -143,6 +143,11 @@ class StudentDeviceAccessController extends Controller
                 ->where('status', 'approved')
                 ->update(['status' => 'revoked', 'updated_at' => now()]);
 
+            DB::table('api_tokens')
+                ->where('user_id', $device->user_id)
+                ->whereNull('revoked_at')
+                ->update(['revoked_at' => now(), 'updated_at' => now()]);
+
             $target->forceFill([
                 'status' => 'approved',
                 'approved_by' => $request->user()->id,
@@ -178,9 +183,15 @@ class StudentDeviceAccessController extends Controller
             return back()->with('error', 'Only an approved device can be revoked.');
         }
 
-        $device->forceFill(['status' => 'revoked'])->save();
+        DB::transaction(function () use ($device): void {
+            $device->forceFill(['status' => 'revoked'])->save();
+            DB::table('api_tokens')
+                ->where('student_device_id', $device->id)
+                ->whereNull('revoked_at')
+                ->update(['revoked_at' => now(), 'updated_at' => now()]);
+        });
 
-        return back()->with('success', 'Device access revoked. Its next login attempt will require approval again.');
+        return back()->with('success', 'Device access revoked. Its web and mobile sessions are now invalid.');
     }
 
     public function beginLogin(Request $request, SmsGateway $sms): RedirectResponse
