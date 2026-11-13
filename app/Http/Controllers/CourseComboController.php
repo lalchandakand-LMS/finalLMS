@@ -113,7 +113,10 @@ class CourseComboController extends Controller
 
         $purchaseAvailable = $courseCombo->courses->every(fn (Course $course) => (int) $course->open_batches_count === 0);
 
-        $paymentMethods = collect(Setting::paymentMethods())\n            ->filter(fn (array $method) => (bool) ($method['enabled'] ?? false));\n\n        return view('course-combos.show', compact('courseCombo', 'purchaseAvailable', 'paymentMethods'));
+        $paymentMethods = collect(Setting::paymentMethods())
+            ->filter(fn (array $method) => (bool) ($method['enabled'] ?? false));
+
+        return view('course-combos.show', compact('courseCombo', 'purchaseAvailable', 'paymentMethods'));
     }
 
     private function validateCombo(Request $request): array
