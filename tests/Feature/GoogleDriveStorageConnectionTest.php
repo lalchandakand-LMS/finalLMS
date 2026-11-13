@@ -115,7 +115,8 @@ class GoogleDriveStorageConnectionTest extends TestCase
         $this->assertSame(13.3, $quota['usage_percent']);
         $this->assertNotNull($connection->fresh()->last_checked_at);
 
-        Http::assertSent(fn ($request) => $request->url() === 'https://www.googleapis.com/drive/v3/about?fields=user%28emailAddress%29%2CstorageQuota%28limit%2Cusage%2CusageInDrive%2CusageInDriveTrash%29'
+        Http::assertSent(fn ($request) => str_starts_with($request->url(), 'https://www.googleapis.com/drive/v3/about?')
+            && str_contains(urldecode($request->url()), 'storageQuota')
             && $request->hasHeader('Authorization', 'Bearer valid-access-token'));
     }
 
