@@ -188,3 +188,11 @@ The latest PR #96 exact-head MySQL test suite, route/build checks, cPanel packag
 
 The release signing private key and public-key fingerprint still require secure owner provisioning/verification. Do not enable signed checks until the public key is installed outside the web root and its fingerprint independently verified. Do not deploy or run an update on `alomsenglishcenter.com` yet. The cPanel deployment guide remains explicit that manual backup/release procedures are required until activation/recovery and staging acceptance pass.
 
+## Student mobile device authentication (2026-11-13)
+
+- Student API login now uses a cryptographically random 32-byte installation ID stored by the Flutter app in platform secure storage.
+- New/revoked devices require SMS OTP; additional devices require Admin approval through the existing Student Devices dashboard.
+- Student bearer tokens are linked to the approved device record. Tokens without a current approved device are rejected; Admin approval/revocation invalidates existing mobile sessions.
+- The Student Flutter app includes OTP entry, Admin-approval waiting, 15-second approval polling, secure token persistence, session restoration and logout. Teacher API login remains password-based.
+- Exact-head verification on ff778f24eb4b7e1478eb23583ccea38b2a1bdee7: Laravel CI passed 309 tests / 1,608 assertions, migrations, route listing and frontend build; CodeQL passed; Flutter analyze and tests passed for both student and instructor apps.
+- Still required before app distribution: configure production-like SMS credentials and perform end-to-end login, wrong/expired OTP, additional-device approval, revocation and logout tests on isolated staging. Do not test against production student accounts or activate/deploy this PR.
