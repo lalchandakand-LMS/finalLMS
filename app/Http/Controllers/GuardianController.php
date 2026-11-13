@@ -1,7 +1,7 @@
 <?php
 namespace App\Http\Controllers;
 use App\Models\ActivityLog; use App\Models\Attendance; use App\Models\Branch; use App\Models\Certificate;
-use App\Models\Enrollment; use App\Models\ExamAttempt; use App\Models\GuardianStudentLink; use App\Models\Invoice; use App\Models\Payment; use App\Models\User;
+use App\Models\Enrollment; use App\Models\ExamAttempt; use App\Models\GuardianStudentLink; use App\Models\Invoice; use App\Models\LessonProgress; use App\Models\Payment; use App\Models\User;
 use Illuminate\Http\JsonResponse; use Illuminate\Http\Request; use Illuminate\Support\Facades\DB; use Illuminate\Validation\ValidationException;
 class GuardianController extends Controller {
  public function links(Request $request): JsonResponse {
@@ -53,6 +53,7 @@ class GuardianController extends Controller {
   return response()->json(['data'=>[
    'student'=>$student->only(['id','name','email']),
    'courses'=>Enrollment::where('user_id',$student->id)->with('course:id,title')->latest()->limit(30)->get(['id','course_id','status','completed_at','created_at']),
+   'progress'=>LessonProgress::where('user_id',$student->id)->with('lesson:id,course_id,title')->latest('completed_at')->limit(50)->get(['id','lesson_id','completed_at']),
    'attendance'=>Attendance::where('student_id',$student->id)->with('batch.course:id,title')->orderByDesc('attendance_date')->limit(30)->get(['id','batch_id','attendance_date','status']),
    'exams'=>ExamAttempt::where('student_id',$student->id)->where('status','submitted')->with('exam:id,batch_id,title')->latest('submitted_at')->limit(30)->get(['id','exam_id','score','status','submitted_at']),
    'payments'=>Payment::where('user_id',$student->id)->with('course:id,title')->latest()->limit(30)->get(['id','course_id','amount','currency','method','status','created_at']),
@@ -61,7 +62,7 @@ class GuardianController extends Controller {
   ]]);
  }
  private function sameBranch(User $g,User $s): void {
-  if($g->branch_id!==$s->branch_id) abort(403,'Guardian and student must belong to the same branch.');
+  if(($g->branch_id===null)!==($s->branch_id===null) || ($g->branch_id!==null && (int)$g->branch_id!==(int)$s->branch_id)) abort(403,'Guardian and student must belong to the same branch.');
   if($g->branch_id!==null && !Branch::whereKey($g->branch_id)->where('is_active',true)->exists()) abort(403,'The assigned branch is inactive.');
  }
  private function audit(Request $request,User $actor,string $event,GuardianStudentLink $link,string $description): void {
