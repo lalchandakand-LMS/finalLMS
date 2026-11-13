@@ -128,8 +128,8 @@ class InstallController extends Controller
             DB::connection('mysql')->getPdo();
 
             // The fresh installer must never share a database with another app or a partial install.
-            // SHOW FULL TABLES includes both base tables and views on MySQL/MariaDB.
-            if (DB::connection('mysql')->select('SHOW FULL TABLES') !== []) {
+            $schema = Schema::connection('mysql');
+            if ($schema->getTables() !== [] || $schema->getViews() !== []) {
                 throw new RuntimeException('The selected database is not empty. Create a brand-new empty database and try again.');
             }
 
