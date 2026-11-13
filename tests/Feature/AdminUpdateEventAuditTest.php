@@ -28,9 +28,9 @@ class AdminUpdateEventAuditTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.updates.index'))
             ->assertOk()
-            ->assertSee('Update activity &amp; audit trail')
+            ->assertSee('Update activity & audit trail')
             ->assertSee('Release check')
-            ->assertSee('Secure release checking is disabled');
+            ->assertSee('Release checks are disabled until a trusted release key and manifest URL are configured.');
     }
 
     public function test_non_admin_cannot_read_the_update_audit_timeline(): void
