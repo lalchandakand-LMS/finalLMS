@@ -209,7 +209,7 @@ class BackupMediaCoverageTest extends TestCase
         );
         $safetyPayload = json_decode($safetyPayloadJson, true, 512, JSON_THROW_ON_ERROR);
         $this->assertSame('pre_restore_safety', $safetyPayload['snapshot_type']);
-        $this->assertArrayHasKey('system_update_events', $safetyPayload['tables']) === false;
+        $this->assertArrayNotHasKey('system_update_events', $safetyPayload['tables']);
         Storage::disk('public')->assertExists($course->image_path);
         Storage::disk('public')->assertExists($lesson->thumbnail_path);
         Storage::disk('local')->assertExists('course-videos/'.$lesson->video_path);
