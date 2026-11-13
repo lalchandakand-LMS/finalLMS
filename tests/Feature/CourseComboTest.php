@@ -93,6 +93,29 @@ class CourseComboTest extends TestCase
         $this->assertDatabaseHas('enrollments', ['user_id' => $student->id, 'course_id' => $second->id, 'status' => 'active']);
     }
 
+
+    public function test_course_used_in_a_combo_cannot_be_deleted_until_removed_from_the_combo(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $first = Course::factory()->create(['teacher_id' => $teacher->id]);
+        $second = Course::factory()->create(['teacher_id' => $teacher->id]);
+        $combo = CourseCombo::create([
+            'title' => 'Protected Combo',
+            'slug' => 'protected-combo',
+            'price' => 100,
+            'status' => 'draft',
+        ]);
+        $combo->courses()->attach([$first->id, $second->id]);
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+
+        $this->actingAs($admin)
+            ->delete(route('admin.courses.destroy', $first))
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseHas('courses', ['id' => $first->id]);
+    }
+
     public function test_draft_combo_is_not_visible_on_public_pages(): void
     {
         $teacher = User::factory()->create(['role' => 'teacher']);
