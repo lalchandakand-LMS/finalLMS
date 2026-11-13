@@ -5,6 +5,7 @@
 @php
     $pageWidth = $page->template === 'wide' ? 'min(1180px, 100%)' : ($page->template === 'centered' ? 'min(820px, 100%)' : ($page->template === 'split' ? 'min(1080px, 100%)' : 'min(980px, 100%)'));
 @endphp
+@if($isPreview)<div class="flash info">Unpublished administrator preview — visitors cannot see this draft.</div>@endif
 <article class="website-page website-page--{{ $page->template }}" style="max-width:{{ $pageWidth }};margin:24px auto 48px;">
     <header style="padding:clamp(24px,5vw,56px);border-radius:22px;background:linear-gradient(135deg,var(--primary),#0c315e);color:#fff;margin-bottom:22px;">
         <h1 style="color:#fff;margin:0 0 12px;font-size:clamp(30px,5vw,48px);">{{ $page->title }}</h1>
