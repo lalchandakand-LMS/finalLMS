@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Auth\MustVerifyEmail as MustVerifyEmailTrait;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -43,6 +44,31 @@ class User extends Authenticatable implements MustVerifyEmail
     public function certificates(): HasMany
     {
         return $this->hasMany(Certificate::class);
+    }
+
+    /** Approved learner relationships visible to this guardian account. */
+    public function linkedStudents(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'guardian_student_links', 'guardian_id', 'student_id')
+            ->withPivot(['relationship', 'status', 'requested_by', 'reviewed_by', 'requested_at', 'reviewed_at'])
+            ->withTimestamps()
+            ->wherePivot('status', 'active')
+            ->wherePivotNotNull('reviewed_at');
+    }
+
+    public function guardianStudentLinks(): HasMany
+    {
+        return $this->hasMany(GuardianStudentLink::class, 'guardian_id');
+    }
+
+    public function guardianLinksAsStudent(): HasMany
+    {
+        return $this->hasMany(GuardianStudentLink::class, 'student_id');
+    }
+
+    public function isGuardian(): bool
+    {
+        return $this->role === 'guardian';
     }
 
     public function isAdmin(): bool
