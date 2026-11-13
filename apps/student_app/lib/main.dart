@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'api_client.dart';
 
@@ -26,11 +28,9 @@ class _StudentGateState extends State<StudentGate> {
   @override
   void initState() {
     super.initState();
-    api.readToken().then((token) {
-      if (!mounted) {
-        return;
-      }
-      setState(() { signedIn = token != null; loading = false; });
+    api.restoreSession().then((restored) {
+      if (!mounted) return;
+      setState(() { signedIn = restored; loading = false; });
     });
   }
   @override
@@ -48,46 +48,254 @@ class StudentLogin extends StatefulWidget {
   const StudentLogin({required this.api, required this.onLogin, super.key});
   final MobileApi api;
   final VoidCallback onLogin;
+
   @override
   State<StudentLogin> createState() => _StudentLoginState();
 }
+
+enum _LoginStage { credentials, phoneVerification, adminApproval }
+
 class _StudentLoginState extends State<StudentLogin> {
   final email = TextEditingController();
   final password = TextEditingController();
+  final code = TextEditingController();
   bool busy = false;
   String? error;
+  String? notice;
+  _LoginStage stage = _LoginStage.credentials;
+  Timer? approvalTimer;
+
   @override
-  void dispose() { email.dispose(); password.dispose(); super.dispose(); }
+  void dispose() {
+    approvalTimer?.cancel();
+    email.dispose();
+    password.dispose();
+    code.dispose();
+    super.dispose();
+  }
+
   Future<void> submit() async {
+    setState(() { busy = true; error = null; notice = null; });
+    try {
+      final outcome = await widget.api.login(
+        email.text.trim(),
+        password.text,
+        'Aloms Student App',
+      );
+      _handleOutcome(outcome);
+    } catch (exception) {
+      if (mounted) setState(() => error = exception.toString());
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> verifyPhone() async {
     setState(() { busy = true; error = null; });
     try {
-      await widget.api.login(email.text.trim(), password.text, 'Aloms Student App');
-      widget.onLogin();
-    } catch (e) { setState(() => error = e.toString()); }
-    finally { if (mounted) { setState(() => busy = false); } }
+      final outcome = await widget.api.verifyDevice(code.text);
+      _handleOutcome(outcome);
+    } on ApiException catch (exception) {
+      if (mounted) {
+        setState(() {
+          error = exception.toString();
+          if (exception.statusCode == 410 || exception.statusCode == 403) {
+            stage = _LoginStage.credentials;
+            widget.api.clearLoginChallenge();
+          }
+        });
+      }
+    } catch (exception) {
+      if (mounted) setState(() => error = exception.toString());
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
   }
+
+  void _handleOutcome(LoginOutcome outcome) {
+    if (!mounted) return;
+    switch (outcome.state) {
+      case LoginState.authenticated:
+        approvalTimer?.cancel();
+        widget.onLogin();
+      case LoginState.verifyPhone:
+        setState(() {
+          stage = _LoginStage.phoneVerification;
+          notice = outcome.message;
+          error = null;
+        });
+      case LoginState.pendingApproval:
+        setState(() {
+          stage = _LoginStage.adminApproval;
+          notice = outcome.message;
+          error = null;
+        });
+        _startApprovalPolling();
+    }
+  }
+
+  void _startApprovalPolling() {
+    approvalTimer?.cancel();
+    approvalTimer = Timer.periodic(
+      const Duration(seconds: 15),
+      (_) => checkApproval(silent: true),
+    );
+  }
+
+  Future<void> checkApproval({bool silent = false}) async {
+    if (busy) return;
+    if (!silent && mounted) setState(() { busy = true; error = null; });
+    try {
+      final outcome = await widget.api.checkDeviceStatus();
+      _handleOutcome(outcome);
+    } on ApiException catch (exception) {
+      if (mounted && !silent) {
+        setState(() {
+          error = exception.toString();
+          if (exception.statusCode == 403 || exception.statusCode == 410) {
+            stage = _LoginStage.credentials;
+            approvalTimer?.cancel();
+            widget.api.clearLoginChallenge();
+          }
+        });
+      }
+    } catch (exception) {
+      if (mounted && !silent) setState(() => error = exception.toString());
+    } finally {
+      if (!silent && mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> backToLogin() async {
+    approvalTimer?.cancel();
+    await widget.api.clearLoginChallenge();
+    code.clear();
+    if (mounted) {
+      setState(() {
+        stage = _LoginStage.credentials;
+        notice = null;
+        error = null;
+      });
+    }
+  }
+
   @override
-  Widget build(BuildContext context) => Scaffold(
-    body: Center(child: ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 440),
-      child: Padding(padding: const EdgeInsets.all(24), child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Icon(Icons.school, size: 64),
-          Text("Alom's English Center", textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineSmall),
-          const Text('Student App', textAlign: TextAlign.center),
-          const SizedBox(height: 24),
-          TextField(controller: email, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder())),
-          const SizedBox(height: 12),
-          TextField(controller: password, obscureText: true, decoration: const InputDecoration(labelText: 'Password', border: OutlineInputBorder())),
-          if (error != null) Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-          const SizedBox(height: 16),
-          FilledButton(onPressed: busy ? null : submit, child: busy ? const CircularProgressIndicator() : const Text('Sign in')),
-        ],
-      )),
-    )),
-  );
+  Widget build(BuildContext context) {
+    final title = stage == _LoginStage.credentials
+        ? 'Student App'
+        : stage == _LoginStage.phoneVerification
+            ? 'Verify your mobile number'
+            : 'Waiting for academy approval';
+
+    return Scaffold(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 440),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Icon(Icons.school, size: 64),
+                Text(
+                  "Alom's English Center",
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                Text(title, textAlign: TextAlign.center),
+                const SizedBox(height: 24),
+                if (stage == _LoginStage.credentials) ...[
+                  TextField(
+                    controller: email,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: const InputDecoration(
+                      labelText: 'Email',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: password,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Password',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: busy ? null : submit,
+                    child: busy
+                        ? const CircularProgressIndicator()
+                        : const Text('Sign in'),
+                  ),
+                ] else if (stage == _LoginStage.phoneVerification) ...[
+                  const Icon(Icons.sms_outlined, size: 38),
+                  Text(
+                    notice ?? 'Enter the six-digit code sent to your registered mobile number.',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: code,
+                    keyboardType: TextInputType.number,
+                    maxLength: 6,
+                    textAlign: TextAlign.center,
+                    decoration: const InputDecoration(
+                      labelText: '6-digit verification code',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  FilledButton(
+                    onPressed: busy || code.text.trim().length != 6
+                        ? null
+                        : verifyPhone,
+                    child: busy
+                        ? const CircularProgressIndicator()
+                        : const Text('Verify and continue'),
+                  ),
+                  TextButton(
+                    onPressed: busy ? null : backToLogin,
+                    child: const Text('Back to sign in'),
+                  ),
+                ] else ...[
+                  const Icon(Icons.hourglass_top, size: 42),
+                  Text(
+                    notice ?? 'Your phone is verified. The academy administrator must approve this device.',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: busy ? null : () => checkApproval(),
+                    child: busy
+                        ? const CircularProgressIndicator()
+                        : const Text('Check approval status'),
+                  ),
+                  const Text(
+                    'This screen checks for approval automatically every 15 seconds.',
+                    textAlign: TextAlign.center,
+                  ),
+                  TextButton(
+                    onPressed: busy ? null : backToLogin,
+                    child: const Text('Cancel'),
+                  ),
+                ],
+                if (error != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    error!,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class StudentHome extends StatefulWidget {
@@ -112,7 +320,13 @@ class _StudentHomeState extends State<StudentHome> {
         catalog = results[0]['data'] as List<dynamic>? ?? [];
         myCourses = results[1]['data'] as List<dynamic>? ?? [];
       });
-    } catch (e) { setState(() => error = e.toString()); }
+    } catch (e) {
+      if (e is ApiException && e.statusCode == 401) {
+        widget.onLogout();
+      } else {
+        setState(() => error = e.toString());
+      }
+    }
     finally { if (mounted) { setState(() => loading = false); } }
   }
   Future<void> logout() async { await widget.api.logout(); widget.onLogout(); }
