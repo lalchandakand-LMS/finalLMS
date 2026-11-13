@@ -73,20 +73,36 @@ class BackupController extends Controller
             $tables[$table] = DB::table($table)->get()->map(fn ($row) => (array) $row)->all();
         }
 
+        // Back up every file on the public upload disk, not only Media Library
+        // records. Course images and lesson thumbnails are stored separately.
         $mediaFiles = [];
+        foreach (Storage::disk('public')->allFiles() as $path) {
+            $mediaFiles[$path] = base64_encode(Storage::disk('public')->get($path));
+        }
+
+        // Preserve media assets stored on an explicitly configured disk too.
         if (in_array('media_assets', $tableNames, true)) {
             foreach ($tables['media_assets'] as $asset) {
                 $disk = $asset['disk'] ?? 'public';
                 $path = $asset['path'] ?? '';
-                if ($path !== '' && Storage::disk($disk)->exists($path)) {
+                if ($path !== '' && ! array_key_exists($path, $mediaFiles) && Storage::disk($disk)->exists($path)) {
                     $mediaFiles[$path] = base64_encode(Storage::disk($disk)->get($path));
                 }
             }
         }
 
         $privateFiles = [];
-        foreach (Storage::disk('local')->allFiles('assignment-submissions') as $privatePath) {
-            $privateFiles[$privatePath] = base64_encode(Storage::disk('local')->get($privatePath));
+        foreach (['assignment-submissions', 'course-media'] as $directory) {
+            foreach (Storage::disk('local')->allFiles($directory) as $privatePath) {
+                $privateFiles[$privatePath] = base64_encode(Storage::disk('local')->get($privatePath));
+            }
+        }
+
+        // lesson_videos is rooted at storage/app/private/course-videos, so the
+        // prefixed key can be restored safely through the local private disk.
+        foreach (Storage::disk('lesson_videos')->allFiles() as $videoPath) {
+            $privatePath = 'course-videos/'.$videoPath;
+            $privateFiles[$privatePath] = base64_encode(Storage::disk('lesson_videos')->get($videoPath));
         }
 
         $payload = json_encode([
