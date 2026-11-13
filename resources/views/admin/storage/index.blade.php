@@ -73,6 +73,10 @@
         <p class="muted">{{ __('Connect a dedicated Google account to view its shared Drive/Gmail/Photos storage quota. The LMS requests limited per-file Drive access, not full access to every personal file.') }}</p>
     @endif
 
+    @if($driveQuota['connected'] && !$driveQuota['available'] && $googleDriveConfigured)
+        <a class="btn primary" href="{{ route('admin.storage.google.connect') }}">{{ __('Reconnect Google Drive') }}</a>
+    @endif
+
     @if($driveQuota['connected'])
         <form method="POST" action="{{ route('admin.storage.google.disconnect') }}" onsubmit="return confirm('{{ __('Disconnect this Google account? Existing Drive files will not be deleted.') }}')">
             @csrf
