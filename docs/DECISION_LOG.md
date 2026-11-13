@@ -86,3 +86,10 @@ This file records decisions that should not be casually reversed by a developer 
 ## D-013 — Autonomous repository workflow authorization
 - Owner authorizes autonomous feature-branch/PR implementation and safe merges to main after complete review and exact-head checks pass; no repeated approval request is needed for routine merges.
 - Production deployment and irreversible live-data operations remain subject to demonstrable backup, rollback and environment safety gates.
+
+## D-014 — Course combos and single active student browser device (2026-11-13)
+- Admin may create fixed-price course combos containing at least two published courses. Combo checkout does not bypass batch capacity: courses with open batches cannot be added or purchased through combos.
+- A paid combo is one manual payment. Its included course IDs/titles/order are snapshotted at checkout; Admin approval grants the original included courses together. Editing the current combo must not change an existing paid order.
+- Combos with payment history are archived rather than deleted. Courses referenced by combos or payment history must be archived/removed from those references before deletion.
+- Student web/browser sign-in allows one approved browser device at a time. First browser device is activated after SMS OTP; additional or previously revoked devices require SMS OTP and Admin approval. Approving a new device revokes the previous approved browser device, and its server-side web session is invalidated on the next protected request.
+- Scope limitation: the separate mobile API bearer-token login is not yet integrated with this browser OTP/Admin approval policy. Do not describe the mobile API as covered until its authentication flow is updated and tested.
