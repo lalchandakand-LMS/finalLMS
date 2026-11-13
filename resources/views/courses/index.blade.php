@@ -36,7 +36,10 @@
             <h1>{{ __('Find the right course for you') }}</h1>
             <p>{{ __('Explore our published courses, compare learning options, meet your instructors and choose your next step.') }}</p>
         </div>
-        <div class="course-catalog-count"><strong>{{ number_format($courses->total()) }}</strong> {{ __('courses available') }}</div>
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;">
+            <div class="course-catalog-count"><strong>{{ number_format($courses->total()) }}</strong> {{ __('courses available') }}</div>
+            <a class="btn" style="background:#fff;color:#123e62;" href="{{ route('course-combos.index') }}">{{ __('Explore course combos') }}</a>
+        </div>
     </section>
 
     <form method="GET" action="{{ route('courses.index') }}" class="panel course-filter-panel">
