@@ -195,6 +195,10 @@ class CourseController extends Controller
             return back()->with('error', 'Remove this course from every combo before deleting it.');
         }
 
+        if ($course->payments()->exists()) {
+            return back()->with('error', 'This course has payment history. Archive it instead of deleting it.');
+        }
+
         $course->load('lessons');
         $videoPaths = $course->lessons->pluck('video_path')->filter()->all();
         $thumbnailPaths = $course->lessons->pluck('thumbnail_path')->filter()->all();
