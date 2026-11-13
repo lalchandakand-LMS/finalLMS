@@ -33,7 +33,7 @@ class CourseContentController extends Controller
 
         $post->load(['thumbnail', 'categories']);
         $curriculumItems = $course->curriculumItems()->with('post')->get()
-            ->filter(fn ($curriculumItem) => $curriculumItem->post && $curriculumItem->post->status === 'published')
+            ->filter(fn ($curriculumItem) => $curriculumItem->post && $curriculumItem->post->status === 'published' && $curriculumItem->post->published_at?->lte(now()))
             ->values();
         $currentIndex = $curriculumItems->search(fn ($curriculumItem) => $curriculumItem->id === $item->id);
         $previousItem = $currentIndex !== false && $currentIndex > 0 ? $curriculumItems[$currentIndex - 1] : null;
