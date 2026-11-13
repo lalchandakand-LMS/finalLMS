@@ -134,24 +134,20 @@ class BkashPaymentController extends Controller
             return redirect()->route('courses.show', $payment->course)->with('success', 'Your payment is already verified.');
         }
 
-        if ($callbackStatus !== 'success') {
-            $payment->update([
-                'status' => 'rejected',
-                'admin_note' => 'The bKash checkout was cancelled or not completed.',
-            ]);
-
-            return redirect()->route('courses.show', $payment->course)
-                ->with('error', 'The bKash payment was not completed. You can try again.');
-        }
-
+        // The browser callback query string is not proof of payment success or failure.
+        // Always ask bKash for the authoritative server-side transaction status before
+        // changing the local payment state. Only attempt execute on a success callback;
+        // queryPayment remains mandatory in either case.
         try {
             $token = $bkash->grantToken();
             $executed = [];
-            try {
-                $executed = $bkash->executePayment($token, $paymentId);
-            } catch (Throwable) {
-                // A repeated callback may arrive after bKash has already executed the payment.
-                // The payment-status query below remains the authoritative verification step.
+            if ($callbackStatus === 'success') {
+                try {
+                    $executed = $bkash->executePayment($token, $paymentId);
+                } catch (Throwable) {
+                    // A repeated callback may arrive after bKash has already executed the payment.
+                    // The payment-status query below remains the authoritative verification step.
+                }
             }
             $verified = $bkash->queryPayment($token, $paymentId);
 
