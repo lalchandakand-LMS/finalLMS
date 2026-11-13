@@ -211,7 +211,7 @@ class BackupController extends Controller
         return Storage::disk('local')->download($path, $filename, ['Content-Type' => 'application/gzip']);
     }
 
-    public function restore(Request $request): RedirectResponse
+    public function restore(Request $request, UpdateOperationLock $operationLock): RedirectResponse
     {
         $validated = $request->validate([
             'backup_file' => ['required', 'file', 'max:524288'],
@@ -281,34 +281,58 @@ class BackupController extends Controller
                 $privateFilesToRestore[$privatePath] = $contents;
             }
 
-            Schema::disableForeignKeyConstraints();
-            try {
-                DB::transaction(function () use ($currentTables, $payload): void {
-                    foreach (array_reverse($currentTables) as $table) {
-                        DB::table($table)->delete();
-                    }
-                    foreach ($currentTables as $table) {
-                        $rows = $payload['tables'][$table] ?? [];
-                        foreach (array_chunk($rows, 500) as $chunk) {
-                            if ($chunk !== []) {
-                                DB::table($table)->insert($chunk);
+            $operationLock->run('backup_restore', $request->user(), function () use ($currentTables, $payload, $mediaToRestore, $privateFilesToRestore): void {
+                Schema::disableForeignKeyConstraints();
+                try {
+                    DB::transaction(function () use ($currentTables, $payload): void {
+                        foreach (array_reverse($currentTables) as $table) {
+                            DB::table($table)->delete();
+                        }
+                        foreach ($currentTables as $table) {
+                            $rows = $payload['tables'][$table] ?? [];
+                            foreach (array_chunk($rows, 500) as $chunk) {
+                                if ($chunk !== []) {
+                                    DB::table($table)->insert($chunk);
+                                }
                             }
                         }
-                    }
-                });
-            } finally {
-                Schema::enableForeignKeyConstraints();
-            }
+                    });
+                } finally {
+                    Schema::enableForeignKeyConstraints();
+                }
 
-            foreach ($mediaToRestore as $mediaPath => $contents) {
-                Storage::disk('public')->put($mediaPath, $contents);
-            }
-            foreach ($privateFilesToRestore as $privatePath => $contents) {
-                Storage::disk('local')->put($privatePath, $contents);
-            }
+                foreach ($mediaToRestore as $mediaPath => $contents) {
+                    if (! Storage::disk('public')->put($mediaPath, $contents)) {
+                        throw new \\RuntimeException('A public media file could not be restored.');
+                    }
+                }
+                foreach ($privateFilesToRestore as $privatePath => $contents) {
+                    if (! Storage::disk('local')->put($privatePath, $contents)) {
+                        throw new \\RuntimeException('A private media file could not be restored.');
+                    }
+                }
+            });
+
+            SystemUpdateEvent::create([
+                'performed_by' => $request->user()->id,
+                'event' => 'backup_restore',
+                'status' => 'success',
+                'message' => 'A signed database and media backup was restored under the exclusive update-operation lock.',
+                'context' => [
+                    'table_count' => count($currentTables),
+                    'public_file_count' => count($mediaToRestore),
+                    'private_file_count' => count($privateFilesToRestore),
+                ],
+            ]);
         } catch (Throwable $exception) {
             report($exception);
-            abort(422, 'Restore failed. No success was reported; check the application log and database state before retrying.');
+            SystemUpdateEvent::create([
+                'performed_by' => $request->user()->id,
+                'event' => 'backup_restore',
+                'status' => 'failed',
+                'message' => 'Backup restore did not complete; inspect the server log and verify database/media state before retrying.',
+            ]);
+            abort(422, 'Restore failed or another update operation is active. No success was reported; check the application log and database state before retrying.');
         }
 
         return redirect()->route('admin.backups.index')->with('success', 'Backup restored. Sign out and sign in again to refresh your session.');
