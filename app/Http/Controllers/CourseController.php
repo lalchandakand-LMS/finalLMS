@@ -34,7 +34,7 @@ class CourseController extends Controller
 
         $query = Course::query()
             ->with(['teacher', 'curriculumItems.post.categories'])
-            ->withCount(['enrollments as students_count' => fn ($enrollments) => $enrollments->whereIn('status', ['active', 'completed'])])
+            ->withCount(['lessons', 'curriculumItems', 'enrollments as students_count' => fn ($enrollments) => $enrollments->whereIn('status', ['active', 'completed'])])
             ->where('status', 'published');
 
         if (! empty($validated['q'])) {
@@ -240,7 +240,7 @@ class CourseController extends Controller
             fn ($curriculumItem) => $curriculumItem->is_preview && $curriculumItem->post?->video_embed_url
         );
         $studentCount = $course->enrollments->whereIn('status', ['active', 'completed'])->count();
-        $courseContentCount = $course->curriculumItems->count();
+        $courseContentCount = $course->curriculumItems->count() + $course->lessons->count();
 
         return view('courses.show', compact(
             'course', 'enrollment', 'payment', 'paymentMethods', 'batches',
