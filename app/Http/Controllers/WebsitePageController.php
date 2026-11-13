@@ -53,6 +53,20 @@ class WebsitePageController extends Controller
         return redirect()->route('admin.website-pages.index')->with('success', 'Website page updated.');
     }
 
+    public function duplicate(Request $request, WebsitePage $websitePage): RedirectResponse
+    {
+        $copy = $websitePage->replicate(['slug', 'created_at', 'updated_at']);
+        $copy->title = $websitePage->title.' (Copy)';
+        $copy->slug = $this->uniqueSlug($copy->title);
+        $copy->menu_label = null;
+        $copy->show_in_menu = false;
+        $copy->status = 'draft';
+        $copy->published_at = null;
+        $copy->created_by = $request->user()->id;
+        $copy->save();
+        return redirect()->route('admin.website-pages.edit', $copy)->with('success', 'Page duplicated as a draft.');
+    }
+
     public function destroy(WebsitePage $websitePage): RedirectResponse
     {
         $websitePage->delete();
