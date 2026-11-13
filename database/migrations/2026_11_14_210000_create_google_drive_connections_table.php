@@ -10,7 +10,7 @@ return new class extends Migration {
         Schema::create('google_drive_connections', function (Blueprint $table): void {
             $table->id();
             $table->string('google_email')->unique();
-            $table->longText('access_token');
+            $table->longText('access_token')->nullable();
             $table->longText('refresh_token')->nullable();
             $table->timestamp('token_expires_at')->nullable();
             $table->boolean('is_active')->default(false)->index();
