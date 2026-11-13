@@ -169,7 +169,16 @@ class BackupController extends Controller
 
             $mediaToRestore = [];
             foreach (($payload['public_media'] ?? []) as $mediaPath => $encoded) {
-                abort_unless(is_string($mediaPath) && str_starts_with($mediaPath, 'media/') && ! Str::contains($mediaPath, ['..', '\\']), 422, 'Unsafe media path in backup.');
+                $segments = is_string($mediaPath) ? explode('/', $mediaPath) : [];
+                $safePath = is_string($mediaPath)
+                    && $mediaPath !== ''
+                    && ! str_starts_with($mediaPath, '/')
+                    && ! str_contains($mediaPath, '\\')
+                    && ! str_contains($mediaPath, "\0")
+                    && ! in_array('', $segments, true)
+                    && ! in_array('.', $segments, true)
+                    && ! in_array('..', $segments, true);
+                abort_unless($safePath, 422, 'Unsafe media path in backup.');
                 $contents = base64_decode($encoded, true);
                 abort_unless(is_string($contents), 422, 'A media file in this backup is damaged.');
                 $mediaToRestore[$mediaPath] = $contents;
@@ -177,7 +186,17 @@ class BackupController extends Controller
 
             $privateFilesToRestore = [];
             foreach (($payload['private_files'] ?? []) as $privatePath => $encoded) {
-                abort_unless(is_string($privatePath) && str_starts_with($privatePath, 'assignment-submissions/') && ! Str::contains($privatePath, ['..', '\\']), 422, 'Unsafe private file path in backup.');
+                $segments = is_string($privatePath) ? explode('/', $privatePath) : [];
+                $safePath = is_string($privatePath)
+                    && $privatePath !== ''
+                    && ! str_starts_with($privatePath, '/')
+                    && ! str_contains($privatePath, '\\')
+                    && ! str_contains($privatePath, "\0")
+                    && ! in_array('', $segments, true)
+                    && ! in_array('.', $segments, true)
+                    && ! in_array('..', $segments, true)
+                    && ! in_array($segments[0] ?? '', ['backups', 'updates'], true);
+                abort_unless($safePath, 422, 'Unsafe private file path in backup.');
                 $contents = base64_decode($encoded, true);
                 abort_unless(is_string($contents), 422, 'A private file in this backup is damaged.');
                 $privateFilesToRestore[$privatePath] = $contents;
