@@ -12,19 +12,23 @@ use Illuminate\View\View;
 
 class AuthController extends Controller
 {
-    public function showLogin(): View|RedirectResponse
+    public function showLogin(Request $request): View|RedirectResponse
     {
+        $this->rememberContinuePath($request);
+
         if (Auth::check()) {
-            return redirect()->route('dashboard');
+            return redirect()->intended('/dashboard');
         }
 
         return view('auth.login');
     }
 
-    public function showRegister(): View|RedirectResponse
+    public function showRegister(Request $request): View|RedirectResponse
     {
+        $this->rememberContinuePath($request);
+
         if (Auth::check()) {
-            return redirect()->route('dashboard');
+            return redirect()->intended('/dashboard');
         }
 
         return view('auth.register');
@@ -61,5 +65,20 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect('/');
+    }
+
+    private function rememberContinuePath(Request $request): void
+    {
+        $continue = $request->query('continue');
+
+        if (! is_string($continue)
+            || ! str_starts_with($continue, '/')
+            || str_starts_with($continue, '//')
+            || str_contains($continue, "\\\\")
+            || preg_match('/[\\r\\n]/', $continue)) {
+            return;
+        }
+
+        $request->session()->put('url.intended', $continue);
     }
 }
