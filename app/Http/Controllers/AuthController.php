@@ -74,7 +74,7 @@ class AuthController extends Controller
         if (! is_string($continue)
             || ! str_starts_with($continue, '/')
             || str_starts_with($continue, '//')
-            || str_contains($continue, "\\\\")
+            || str_contains($continue, chr(92))
             || preg_match('/[\\r\\n]/', $continue)) {
             return;
         }
