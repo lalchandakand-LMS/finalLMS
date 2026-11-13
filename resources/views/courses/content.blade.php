@@ -95,10 +95,10 @@
                 @foreach($curriculumItems as $index => $curriculumItem)
                     @php
                         $isCurrent = $curriculumItem->id === $item->id;
-                        $isAccessible = $curriculumItem->is_preview || auth()->user()?->isAdmin() || (auth()->user()?->isTeacher() && $course->teacher_id === auth()->id()) || (auth()->user()?->isStudent() && $course->enrollments()->where('user_id', auth()->id())->whereIn('status', ['active', 'completed'])->exists());
+                        $isAccessible = $curriculumItem->is_preview || $canViewAllLessons;
                     @endphp
                     @if($isAccessible)
-                        <a class="lesson-list-item {{ $isCurrent ? 'is-current' : '' }}" href="{{ route('courses.content.show', [$course, $curriculumItem->post]) }}" @if($isCurrent) aria-current="page" @endif>
+                        <a class="lesson-list-item {{ $isCurrent ? 'is-current' : '' }}" href="{{ route('courses.content.show', [$course, $curriculumItem->post]) }}" aria-current="{{ $isCurrent ? 'page' : 'false' }}">
                             <span class="lesson-list-number">{{ $index + 1 }}</span>
                             <span class="lesson-list-title">{{ $curriculumItem->post->title }}@if($curriculumItem->is_preview)<small class="muted" style="display:block;">{{ __('Free preview') }}</small>@endif</span>
                         </a>
