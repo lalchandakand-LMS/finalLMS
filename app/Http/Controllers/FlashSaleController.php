@@ -13,6 +13,12 @@ use Illuminate\View\View;
 
 class FlashSaleController extends Controller
 {
+    public function publicIndex(): View
+    {
+        $campaigns = FlashSale::activeCampaigns();
+        return view('flash-sales.public', compact('campaigns'));
+    }
+
     public function index(): View
     {
         $sales = FlashSale::with(['courses', 'categories', 'creator'])->withCount([
