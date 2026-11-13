@@ -123,7 +123,7 @@
                         @endif
                     </div>
                     <div class="catalog-course-footer">
-                        <small class="muted">{{ $course->lessons_count ?? $course->curriculumItems->count() }} {{ __('lessons') }}</small>
+                        <small class="muted">{{ ($course->lessons_count ?? 0) + ($course->curriculum_items_count ?? 0) }} {{ __('lessons') }}</small>
                         <a href="{{ route('courses.show', $course) }}" class="btn primary">{{ __('View course') }} →</a>
                     </div>
                 </div>
