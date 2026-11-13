@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Http\Controllers\BackupController;
 use App\Models\Course;
 use App\Models\User;
+use App\Services\UpdateOperationLock;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
