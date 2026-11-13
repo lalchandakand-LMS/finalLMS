@@ -18,6 +18,7 @@
                 <div style="text-align:{{ ($section['layout'] ?? '') === 'centered' ? 'center' : 'left' }};">
                     @if($asset)<img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($asset->path) }}" alt="{{ $section['title'] ?? $page->title }}" loading="lazy" style="width:100%;max-height:420px;object-fit:cover;border-radius:16px;margin-bottom:18px;">@endif
                     <h2>{{ $section['title'] }}</h2><p style="line-height:1.8;white-space:pre-line;">{{ $section['body'] }}</p>
+                    @if(!empty($section['button_label']) && !empty($section['button_url']))<a class="btn primary" href="{{ $section['button_url'] }}">{{ $section['button_label'] }}</a>@endif
                 </div>
             @else
                 <div style="display:grid;grid-template-columns:{{ $asset ? 'minmax(0,1fr) minmax(0,1fr)' : '1fr' }};gap:24px;align-items:center;">
