@@ -10,6 +10,7 @@ class Payment extends Model
     protected $fillable = [
         'user_id',
         'course_id',
+        'course_combo_id',
         'flash_sale_id',
         'batch_id',
         'gateway_provider',
@@ -45,5 +46,15 @@ class Payment extends Model
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    public function courseCombo(): BelongsTo
+    {
+        return $this->belongsTo(CourseCombo::class);
+    }
+
+    public function comboCourses(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(PaymentComboCourse::class)->orderBy('position');
     }
 }
