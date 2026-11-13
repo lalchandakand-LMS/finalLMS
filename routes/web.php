@@ -271,6 +271,7 @@ Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
         Route::get('/website-pages/create', [WebsitePageController::class, 'create'])->name('admin.website-pages.create');
         Route::post('/website-pages', [WebsitePageController::class, 'store'])->name('admin.website-pages.store');
         Route::get('/website-pages/{websitePage}/edit', [WebsitePageController::class, 'edit'])->name('admin.website-pages.edit');
+        Route::get('/website-pages/{websitePage}/preview', [WebsitePageController::class, 'preview'])->name('admin.website-pages.preview');
         Route::put('/website-pages/{websitePage}', [WebsitePageController::class, 'update'])->name('admin.website-pages.update');
         Route::post('/website-pages/{websitePage}/duplicate', [WebsitePageController::class, 'duplicate'])->name('admin.website-pages.duplicate');
         Route::delete('/website-pages/{websitePage}', [WebsitePageController::class, 'destroy'])->name('admin.website-pages.destroy');
