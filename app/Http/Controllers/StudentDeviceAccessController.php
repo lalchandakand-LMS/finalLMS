@@ -8,6 +8,7 @@ use App\Services\SmsGateway;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\View\View;
@@ -52,37 +53,53 @@ class StudentDeviceAccessController extends Controller
         }
 
         $user = $device->user;
-        $hasApprovedDevice = StudentDevice::query()
-            ->where('user_id', $user->id)
-            ->where('id', '!=', $device->id)
-            ->where(function ($query): void {
-                $query->whereNotNull('phone_verified_at')
-                    ->orWhereIn('status', ['approved', 'revoked', 'rejected', 'pending_admin_approval']);
-            })
-            ->exists();
+        $result = DB::transaction(function () use ($device, $user): string {
+            User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
+            $lockedDevice = StudentDevice::query()->whereKey($device->id)->lockForUpdate()->firstOrFail();
+            if ($lockedDevice->status !== 'pending_phone_verification'
+                || ! $lockedDevice->phone_otp_hash
+                || ! $lockedDevice->phone_otp_expires_at?->isFuture()) {
+                return 'expired';
+            }
 
-        $device->forceFill([
-            'phone_otp_hash' => null,
-            'phone_otp_expires_at' => null,
-            'phone_verified_at' => now(),
-            'status' => $hasApprovedDevice ? 'pending_admin_approval' : 'approved',
-            'approved_at' => $hasApprovedDevice ? null : now(),
-            'last_used_at' => $hasApprovedDevice ? null : now(),
-        ])->save();
+            $hasPriorDevice = StudentDevice::query()
+                ->where('user_id', $user->id)
+                ->where('id', '!=', $lockedDevice->id)
+                ->exists();
+            $wasPreviouslyTrusted = $lockedDevice->approved_at !== null;
+            $requiresAdminApproval = $hasPriorDevice || $wasPreviouslyTrusted;
 
-        if (! $user->phone_verified_at) {
-            $user->forceFill(['phone_verified_at' => now()])->save();
-        }
+            $lockedDevice->forceFill([
+                'phone_otp_hash' => null,
+                'phone_otp_expires_at' => null,
+                'phone_verified_at' => now(),
+                'status' => $requiresAdminApproval ? 'pending_admin_approval' : 'approved',
+                'approved_at' => $requiresAdminApproval ? $lockedDevice->approved_at : now(),
+                'last_used_at' => $requiresAdminApproval ? null : now(),
+            ])->save();
+
+            if (! $user->phone_verified_at) {
+                $user->forceFill(['phone_verified_at' => now()])->save();
+            }
+
+            return $requiresAdminApproval ? 'approval_required' : 'approved';
+        });
 
         RateLimiter::clear($key);
 
-        if ($hasApprovedDevice) {
+        if ($result === 'expired') {
             $request->session()->forget('student_device_request_id');
-            return redirect()->route('login')->with('warning', 'Mobile number verified. This is an additional device, so an administrator must approve it before you can sign in.');
+            return redirect()->route('login')->with('error', 'The verification request expired. Please sign in again.');
+        }
+
+        if ($result === 'approval_required') {
+            $request->session()->forget('student_device_request_id');
+            return redirect()->route('login')->with('warning', 'Mobile number verified. This device needs administrator approval before sign-in.');
         }
 
         Auth::login($user);
         $request->session()->regenerate();
+        $request->session()->put('student_device_id', $device->id);
         $request->session()->forget('student_device_request_id');
 
         return redirect()->intended('/dashboard')->with('success', 'Mobile number verified and this device is now trusted.');
@@ -108,18 +125,40 @@ class StudentDeviceAccessController extends Controller
 
     public function approve(StudentDevice $device, Request $request): RedirectResponse
     {
-        if ($device->status !== 'pending_admin_approval' || ! $device->phone_verified_at) {
+        $approved = DB::transaction(function () use ($device, $request): bool {
+            User::query()->whereKey($device->user_id)->lockForUpdate()->firstOrFail();
+            $devices = StudentDevice::query()
+                ->where('user_id', $device->user_id)
+                ->lockForUpdate()
+                ->get();
+            $target = $devices->firstWhere('id', $device->id);
+
+            if (! $target || $target->status !== 'pending_admin_approval' || ! $target->phone_verified_at) {
+                return false;
+            }
+
+            StudentDevice::query()
+                ->where('user_id', $device->user_id)
+                ->where('id', '!=', $device->id)
+                ->where('status', 'approved')
+                ->update(['status' => 'revoked', 'updated_at' => now()]);
+
+            $target->forceFill([
+                'status' => 'approved',
+                'approved_by' => $request->user()->id,
+                'approved_at' => now(),
+                'rejected_at' => null,
+                'last_used_at' => null,
+            ])->save();
+
+            return true;
+        });
+
+        if (! $approved) {
             return back()->with('error', 'Only phone-verified pending devices can be approved.');
         }
 
-        $device->forceFill([
-            'status' => 'approved',
-            'approved_by' => $request->user()->id,
-            'approved_at' => now(),
-            'rejected_at' => null,
-        ])->save();
-
-        return back()->with('success', 'Student device approved. The student can now sign in from this device.');
+        return back()->with('success', 'Student device approved. Previous device access has been revoked.');
     }
 
     public function reject(StudentDevice $device): RedirectResponse
@@ -181,9 +220,27 @@ class StudentDeviceAccessController extends Controller
             ->first();
 
         if ($device?->status === 'approved') {
+            $hasAnotherApprovedDevice = StudentDevice::query()
+                ->where('user_id', $user->id)
+                ->where('id', '!=', $device->id)
+                ->where('status', 'approved')
+                ->exists();
+
+            if ($hasAnotherApprovedDevice) {
+                DB::transaction(function () use ($user, $device): void {
+                    User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
+                    StudentDevice::query()
+                        ->where('user_id', $user->id)
+                        ->where('id', '!=', $device->id)
+                        ->where('status', 'approved')
+                        ->update(['status' => 'revoked', 'updated_at' => now()]);
+                });
+            }
+
             $device->forceFill(['last_used_at' => now()])->save();
             Auth::login($user);
             $request->session()->regenerate();
+            $request->session()->put('student_device_id', $device->id);
 
             return redirect()->intended('/dashboard')
                 ->withCookie(cookie('lms_student_device', $deviceToken, 60 * 24 * 365, '/', null, true, true, false, 'lax'));
@@ -204,8 +261,8 @@ class StudentDeviceAccessController extends Controller
                 'phone_otp_hash' => Hash::make($otp),
                 'phone_otp_expires_at' => now()->addMinutes(10),
                 'phone_verified_at' => null,
-                'approved_by' => null,
-                'approved_at' => null,
+                'approved_by' => $device?->approved_by,
+                'approved_at' => $device?->approved_at,
                 'rejected_at' => null,
             ]
         );
