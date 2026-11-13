@@ -10,7 +10,7 @@ class InstallerTest extends TestCase
     {
         $this->get(route('install.index'))->assertOk()
             ->assertSee('Install LMS securely')
-            ->assertSee('any table or view')
+            ->assertSee('a table or view')
             ->assertSee('brand-new, completely empty database');
     }
 
