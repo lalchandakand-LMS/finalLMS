@@ -10,6 +10,7 @@ use App\Http\Controllers\BatchController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\CourseController;
+use App\Http\Controllers\CourseComboController;
 use App\Http\Controllers\CourseWishlistController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmailVerificationController;
