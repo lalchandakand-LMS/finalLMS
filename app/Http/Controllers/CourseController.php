@@ -191,6 +191,10 @@ class CourseController extends Controller
 
     public function destroy(Course $course): RedirectResponse
     {
+        if ($course->combos()->exists()) {
+            return back()->with('error', 'Remove this course from every combo before deleting it.');
+        }
+
         $course->load('lessons');
         $videoPaths = $course->lessons->pluck('video_path')->filter()->all();
         $thumbnailPaths = $course->lessons->pluck('thumbnail_path')->filter()->all();
