@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Certificate;
 use App\Models\Course;
+use App\Models\CourseCategory;
 use App\Models\Lesson;
 use App\Models\LessonProgress;
 use App\Models\PageView;
