@@ -184,31 +184,32 @@ class UpdateBackupCoordinator
         }
 
         foreach ($payload['public_media'] as $mediaPath => $encoded) {
-            $allowedPublicPath = is_string($mediaPath)
-                && (str_starts_with($mediaPath, 'media/')
-                    || str_starts_with($mediaPath, 'courses/')
-                    || str_starts_with($mediaPath, 'course-thumbnails/'));
-            if (! $allowedPublicPath
-                || str_contains($mediaPath, '..')
-                || str_contains($mediaPath, '\\')
-                || str_starts_with($mediaPath, '/')
-                || ! is_string($encoded)
-                || base64_decode($encoded, true) === false) {
+            $segments = is_string($mediaPath) ? explode('/', $mediaPath) : [];
+            $safePath = is_string($mediaPath)
+                && $mediaPath !== ''
+                && ! str_starts_with($mediaPath, '/')
+                && ! str_contains($mediaPath, '\\')
+                && ! str_contains($mediaPath, "\0")
+                && ! in_array('', $segments, true)
+                && ! in_array('.', $segments, true)
+                && ! in_array('..', $segments, true);
+            if (! $safePath || ! is_string($encoded) || base64_decode($encoded, true) === false) {
                 throw new RuntimeException('The database/media backup contains an unsafe or damaged public media file.');
             }
         }
 
         foreach ($payload['private_files'] as $privatePath => $encoded) {
-            $allowedPrivatePath = is_string($privatePath)
-                && (str_starts_with($privatePath, 'assignment-submissions/')
-                    || str_starts_with($privatePath, 'course-media/')
-                    || str_starts_with($privatePath, 'course-videos/'));
-            if (! $allowedPrivatePath
-                || str_contains($privatePath, '..')
-                || str_contains($privatePath, '\\')
-                || str_starts_with($privatePath, '/')
-                || ! is_string($encoded)
-                || base64_decode($encoded, true) === false) {
+            $segments = is_string($privatePath) ? explode('/', $privatePath) : [];
+            $safePath = is_string($privatePath)
+                && $privatePath !== ''
+                && ! str_starts_with($privatePath, '/')
+                && ! str_contains($privatePath, '\\')
+                && ! str_contains($privatePath, "\0")
+                && ! in_array('', $segments, true)
+                && ! in_array('.', $segments, true)
+                && ! in_array('..', $segments, true)
+                && ! in_array($segments[0] ?? '', ['backups', 'updates'], true);
+            if (! $safePath || ! is_string($encoded) || base64_decode($encoded, true) === false) {
                 throw new RuntimeException('The database/media backup contains an unsafe or damaged private file.');
             }
         }
