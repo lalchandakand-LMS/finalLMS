@@ -10,7 +10,7 @@ use Illuminate\View\View;
 
 class CourseContentController extends Controller
 {
-    public function show(Request $request, Course $course, CourseContentPost $post): View
+    public function show(Request $request, Course $course, CourseContentPost $post): View|RedirectResponse
     {
         abort_unless($post->status === 'published' && $post->published_at && $post->published_at->lte(now()), 404);
 
