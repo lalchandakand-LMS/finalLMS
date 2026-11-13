@@ -167,8 +167,12 @@
                             <img src="{{ $slide['asset']->url }}" alt="{{ $slide['asset']->alt_text ?: $slide['title'] }}" loading="{{ $index === 0 ? 'eager' : 'lazy' }}">
                             <div class="home-carousel__shade"></div>
                             <div class="home-carousel__content">
-                                @if($slide['title'] !== '')<h2>{{ $slide['title'] }}</h2>@endif
-                                @if($slide['subtitle'] !== '')<p>{{ $slide['subtitle'] }}</p>@endif
+                                @if($slide['title'] !== '')
+                                    <h2>{{ $slide['title'] }}</h2>
+                                @endif
+                                @if($slide['subtitle'] !== '')
+                                    <p>{{ $slide['subtitle'] }}</p>
+                                @endif
                                 @if($slide['button_label'] !== '' && $slide['button_url'] !== '')
                                     <a class="btn primary" href="{{ $slide['button_url'] }}" rel="noopener">{{ $slide['button_label'] }}</a>
                                 @endif
@@ -281,7 +285,11 @@
         $builderSections = is_array($builderSections) ? $builderSections : [];
     @endphp
     @foreach($builderSections as $section)
-        @if(($section['enabled'] ?? false) && (trim($section['title'] ?? '') !== '' || trim($section['body'] ?? '') !== ''))
+        @php
+            $sectionEnabled = (bool) ($section['enabled'] ?? false);
+            $sectionHasContent = trim((string) ($section['title'] ?? '')) !== '' || trim((string) ($section['body'] ?? '')) !== '';
+        @endphp
+        @if($sectionEnabled && $sectionHasContent)
             @php
                 $sectionImage = !empty($section['image_id']) ? \App\Models\MediaAsset::find($section['image_id']) : null;
                 $sectionBackground = preg_match('/^#[0-9A-Fa-f]{6}$/', $section['background_color'] ?? '') ? $section['background_color'] : '#ffffff';
