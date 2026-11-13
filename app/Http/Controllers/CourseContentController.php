@@ -29,12 +29,13 @@ class CourseContentController extends Controller
         $currentIndex = $curriculumItems->search(fn ($curriculumItem) => $curriculumItem->id === $item->id);
         $previousItem = $currentIndex !== false && $currentIndex > 0 ? $curriculumItems[$currentIndex - 1] : null;
         $nextItem = $currentIndex !== false ? ($curriculumItems[$currentIndex + 1] ?? null) : null;
-        $canAccessNext = $nextItem && ($nextItem->is_preview || $canManage || $isEnrolled);
-        $canAccessPrevious = $previousItem && ($previousItem->is_preview || $canManage || $isEnrolled);
+        $canViewAllLessons = $canManage || $isEnrolled;
+        $canAccessNext = $nextItem && ($nextItem->is_preview || $canViewAllLessons);
+        $canAccessPrevious = $previousItem && ($previousItem->is_preview || $canViewAllLessons);
 
         return view('courses.content', compact(
             'course', 'post', 'item', 'curriculumItems', 'previousItem',
-            'nextItem', 'canAccessNext', 'canAccessPrevious'
+            'nextItem', 'canAccessNext', 'canAccessPrevious', 'canViewAllLessons'
         ));
     }
 }
