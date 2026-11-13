@@ -33,7 +33,12 @@ class CourseController extends Controller
         ]);
 
         $query = Course::query()
-            ->with(['teacher', 'curriculumItems.post.categories'])
+            ->with([
+                'teacher',
+                'curriculumItems' => fn ($items) => $items
+                    ->whereHas('post', fn ($posts) => $posts->published())
+                    ->with('post.categories'),
+            ])
             ->withCount(['lessons', 'curriculumItems', 'enrollments as students_count' => fn ($enrollments) => $enrollments->whereIn('status', ['active', 'completed'])])
             ->where('status', 'published');
 
@@ -51,7 +56,9 @@ class CourseController extends Controller
         }
         if (! empty($validated['category'])) {
             $categoryId = (int) $validated['category'];
-            $query->whereHas('curriculumItems.post.categories', fn ($categories) => $categories->whereKey($categoryId));
+            $query->whereHas('curriculumItems.post', fn ($posts) => $posts
+                ->published()
+                ->whereHas('categories', fn ($categories) => $categories->whereKey($categoryId)));
         }
 
         if (isset($validated['min_price'])) {
