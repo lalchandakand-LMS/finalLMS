@@ -15,13 +15,10 @@
         <p class="public-drawer-intro">{{ __('Find your next learning step, explore courses and access your classroom.') }}</p>
         <div class="public-drawer-links">
             <a href="{{ route('landing') }}"><span class="menu-icon">⌂</span>{{ __('Home') }}</a>
-            <a href="{{ route('courses.index') }}"><span class="menu-icon">▤</span>{{ __('All courses') }}</a>
+            <a href="{{ route('courses.index') }}"><span class="menu-icon">▤</span>{{ __('Courses') }}</a>
             @if(\Illuminate\Support\Facades\Schema::hasTable('flash_sales'))
                 <a href="{{ route('flash-sales.public') }}"><span class="menu-icon">🔥</span>{{ __('Flash Sale') }}</a>
             @endif
-            <a href="{{ route('contests.index') }}"><span class="menu-icon">✦</span>{{ __('Quiz & prizes') }}</a>
-            <a href="{{ route('live-classes.index') }}"><span class="menu-icon">◉</span>{{ __('Live classes') }}</a>
-            <a href="{{ route('news.index') }}"><span class="menu-icon">▧</span>{{ __('Blog & news') }}</a>
             @if(\Illuminate\Support\Facades\Schema::hasTable('website_pages'))
                 @foreach(\App\Models\WebsitePage::published()->where('show_in_menu', true)->orderBy('menu_order')->orderBy('title')->get() as $customPage)
                     <a href="{{ route('website-pages.show', $customPage->slug) }}"><span class="menu-icon">▤</span>{{ $customPage->menu_label ?: $customPage->title }}</a>
@@ -32,10 +29,6 @@
                     <a href="{{ $websiteLink['url'] }}"><span class="menu-icon">↗</span>{{ $websiteLink['label'] }}</a>
                 @endif
             @endforeach
-            <div class="public-drawer-section">{{ __('About the center') }}</div>
-            <a href="{{ route('pages.about') }}"><span class="menu-icon">ⓘ</span>{{ __('About us') }}</a>
-            <a href="{{ route('pages.contact') }}"><span class="menu-icon">✉</span>{{ __('Contact') }}</a>
-            <a href="{{ route('pages.faq') }}"><span class="menu-icon">?</span>{{ __('FAQ & help') }}</a>
             @auth
                 <div class="public-drawer-section">{{ __('My learning') }}</div>
                 <a href="{{ route('dashboard') }}"><span class="menu-icon">▦</span>{{ __('Dashboard') }}</a>
