@@ -16,12 +16,17 @@
         <div class="public-drawer-links">
             <a href="{{ route('landing') }}"><span class="menu-icon">⌂</span>{{ __('Home') }}</a>
             <a href="{{ route('courses.index') }}"><span class="menu-icon">▤</span>{{ __('All courses') }}</a>
-            @if(\Illuminate\Support\Facades\Schema::hasTable('flash_sales') && \App\Models\FlashSale::activeCampaigns()->isNotEmpty())
+            @if(\Illuminate\Support\Facades\Schema::hasTable('flash_sales'))
                 <a href="{{ route('landing') }}#flash-sale"><span class="menu-icon">🔥</span>{{ __('Flash Sale') }}</a>
             @endif
             <a href="{{ route('contests.index') }}"><span class="menu-icon">✦</span>{{ __('Quiz & prizes') }}</a>
             <a href="{{ route('live-classes.index') }}"><span class="menu-icon">◉</span>{{ __('Live classes') }}</a>
             <a href="{{ route('news.index') }}"><span class="menu-icon">▧</span>{{ __('Blog & news') }}</a>
+            @if(\Illuminate\Support\Facades\Schema::hasTable('website_pages'))
+                @foreach(\App\Models\WebsitePage::published()->where('show_in_menu', true)->orderBy('menu_order')->orderBy('title')->get() as $customPage)
+                    <a href="{{ route('website-pages.show', $customPage->slug) }}"><span class="menu-icon">▤</span>{{ $customPage->menu_label ?: $customPage->title }}</a>
+                @endforeach
+            @endif
             @foreach(is_array($websiteHeaderLinks ?? null) ? $websiteHeaderLinks : [] as $websiteLink)
                 @if(is_array($websiteLink) && !empty($websiteLink['label']) && !empty($websiteLink['url']))
                     <a href="{{ $websiteLink['url'] }}"><span class="menu-icon">↗</span>{{ $websiteLink['label'] }}</a>
@@ -54,6 +59,7 @@
                 @if(auth()->user()->isAdmin())
                     <div class="public-drawer-section">{{ __('Administration') }}</div>
                     <a href="{{ route('admin.website-builder.index') }}"><span class="menu-icon">▧</span>{{ __('Website builder') }}</a>
+                    <a href="{{ route('admin.website-pages.index') }}"><span class="menu-icon">📄</span>{{ __('Custom pages') }}</a>
                     <a href="{{ route('admin.settings.index') }}"><span class="menu-icon">⚙</span>{{ __('Settings') }}</a>
                 @endif
             @endauth
