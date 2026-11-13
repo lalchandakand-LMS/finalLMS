@@ -279,6 +279,7 @@ The student browser sign-in policy is now:
 - Additional or previously revoked browser device: SMS OTP plus Admin approval.
 - Approving a new browser device revokes the student's other approved browser devices.
 - Authenticated student web requests carry the approved device ID in the server session; revoked device sessions are logged out on their next protected request.
-- This policy describes the web/browser login flow. The separate mobile API bearer-token login has not yet been integrated with this OTP/Admin-approval device workflow and must not be represented as covered by it.
+- The mobile API now uses the same approved-device registry: Student login requires a persistent secure installation ID, SMS OTP for new/revoked devices, and Admin approval for additional devices. Tokens are issued only after approval and are bound to the approved device; Admin approval/revocation invalidates prior mobile tokens. Teacher API login remains password-based.
+- Mobile API endpoints: `POST /api/v1/auth/login`, `POST /api/v1/auth/verify-device`, and `POST /api/v1/auth/device-status`. The contract and client requirements are documented in `docs/mobile-api-v1.md`. The Flutter client still needs to implement secure device-ID storage, OTP screens and approval polling.
 
 Current work is on PR #116, branch `feature/aloms-premium-homepage-clean`. Keep PR #116 unmerged and do not deploy or change production data/payment settings without a separate explicit owner instruction. Re-fetch the PR head and exact-head Laravel CI/CodeQL/package runs before relying on any verification status.
