@@ -220,9 +220,8 @@
             @empty
                 <div class="home-empty"><strong>{{ __('No active batches at the moment') }}</strong><span>{{ __('New batch announcements will appear here when published by the admin.') }}</span></div>
             @endforelse
-                @if($batch->course)<a class="home-batch" href="{{ route('courses.show',$batch->course) }}"><span class="home-batch__icon">▣</span><span class="home-batch__details"><strong>{{ $batch->title }}</strong><small>{{ $batch->course->title }}@if($batch->teacher) · {{ $batch->teacher->name }}@endif</small></span><span>↗</span></a>@endif
-            @empty<div class="home-empty"><strong>{{ __('No active batches at the moment') }}</strong><span>{{ __('New batch announcements will appear here when published by the admin.') }}</span></div>@endforelse
             <a class="home-text-link" href="{{ route('courses.index') }}">{{ __('See all courses') }} →</a>
+        </div>
         </div>
         <div class="home-overview__panel home-overview__panel--stats"><span class="home-section-kicker">{{ $siteName }}</span><h2>{{ $homeStatsTitle }}</h2><p>{{ __('Live platform statistics') }}</p>
             <div class="home-stat-grid"><div class="home-stat"><span>▦</span><strong>{{ number_format($activeStudentCount) }}</strong><small>{{ __('Students') }}</small></div><div class="home-stat"><span>▶</span><strong>{{ number_format($publishedCourseCount) }}</strong><small>{{ __('Courses') }}</small></div><div class="home-stat"><span>♙</span><strong>{{ number_format($teacherCount) }}</strong><small>{{ __('Teachers') }}</small></div><div class="home-stat"><span>▣</span><strong>{{ number_format($publishedLessonCount) }}</strong><small>{{ __('Videos / lessons') }}</small></div></div>
