@@ -17,7 +17,7 @@
             <a href="{{ route('landing') }}"><span class="menu-icon">⌂</span>{{ __('Home') }}</a>
             <a href="{{ route('courses.index') }}"><span class="menu-icon">▤</span>{{ __('All courses') }}</a>
             @if(\Illuminate\Support\Facades\Schema::hasTable('flash_sales'))
-                <a href="{{ route('landing') }}#flash-sale"><span class="menu-icon">🔥</span>{{ __('Flash Sale') }}</a>
+                <a href="{{ route('flash-sales.public') }}"><span class="menu-icon">🔥</span>{{ __('Flash Sale') }}</a>
             @endif
             <a href="{{ route('contests.index') }}"><span class="menu-icon">✦</span>{{ __('Quiz & prizes') }}</a>
             <a href="{{ route('live-classes.index') }}"><span class="menu-icon">◉</span>{{ __('Live classes') }}</a>
