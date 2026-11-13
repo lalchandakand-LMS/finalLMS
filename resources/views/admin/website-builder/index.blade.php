@@ -137,12 +137,12 @@
 </section>
 <section class="panel" style="margin-bottom:20px;">
     <h2>Header navigation menu</h2>
-    <p class="muted">Add up to twenty custom links. When saved, these replace the default public links (Home, Courses, About, Contact, FAQ and Blog) while account controls remain available.</p>
+    <p class="muted">Manage public menu links here. Published custom pages with “Show in menu” are added automatically; clear a link to remove it.</p>
     @for($i = 0; $i < 20; $i++)
         @php($menuLink = old("header_links.$i", $headerLinks[$i] ?? []))
-        <div class="grid grid-2">
+        <div class="grid grid-2" data-header-link-row>
             <div><label>Menu item {{ $i + 1 }} label<input name="header_links[{{ $i }}][label]" maxlength="60" value="{{ $menuLink['label'] ?? '' }}"></label></div>
-            <div><label>Menu item {{ $i + 1 }} URL<input name="header_links[{{ $i }}][url]" maxlength="500" value="{{ $menuLink['url'] ?? '' }}" placeholder="/courses"></label></div>
+            <div><label>Menu item {{ $i + 1 }} URL<input name="header_links[{{ $i }}][url]" maxlength="500" value="{{ $menuLink['url'] ?? '' }}" placeholder="/courses"></label><div class="cta-row"><button type="button" class="btn secondary" data-clear-link>Remove link</button></div></div>
         </div>
     @endfor
 </section>
@@ -152,12 +152,12 @@
         <div><label for="footer-title">Footer heading</label><input id="footer-title" name="footer_title" maxlength="120" value="{{ old('footer_title', $settings['footer_title'] ?? $settings['site_name'] ?? config('app.name')) }}"></div>
         <div><label for="footer-text">Footer description</label><textarea id="footer-text" name="footer_text" rows="2" maxlength="500">{{ old('footer_text', $settings['footer_text'] ?? '') }}</textarea></div>
     </div>
-    <p class="muted">Add up to twenty footer links. Use internal paths such as /courses or full https:// URLs.</p>
+    <p class="muted">Manage footer links. Clear a link to remove it; use internal paths or trusted https:// URLs.</p>
     @for($i = 0; $i < 20; $i++)
         @php($link = old("footer_links.$i", $footerLinks[$i] ?? []))
-        <div class="grid grid-2">
+        <div class="grid grid-2" data-footer-link-row>
             <div><label>Link {{ $i + 1 }} label<input name="footer_links[{{ $i }}][label]" maxlength="60" value="{{ $link['label'] ?? '' }}"></label></div>
-            <div><label>Link {{ $i + 1 }} URL<input name="footer_links[{{ $i }}][url]" maxlength="500" value="{{ $link['url'] ?? '' }}" placeholder="/courses"></label></div>
+            <div><label>Link {{ $i + 1 }} URL<input name="footer_links[{{ $i }}][url]" maxlength="500" value="{{ $link['url'] ?? '' }}" placeholder="/courses"></label><div class="cta-row"><button type="button" class="btn secondary" data-clear-link>Remove link</button></div></div>
         </div>
     @endfor
 </section>
@@ -183,6 +183,12 @@
 @push('scripts')
 <script>
 (() => {
+    document.querySelectorAll('[data-clear-link]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const row = button.closest('[data-header-link-row], [data-footer-link-row]');
+            row?.querySelectorAll('input').forEach((field) => field.value = '');
+        });
+    });
     const list = document.querySelector('[data-section-list]');
     if (!list) return;
     const csrf = document.querySelector('meta[name="csrf-token"]')?.content || document.querySelector('input[name="_token"]')?.value || '';
