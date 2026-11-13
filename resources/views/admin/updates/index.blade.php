@@ -142,4 +142,31 @@
         <p class="muted">{{ __('No update checks have been performed yet.') }}</p>
     @endforelse
 </div>
+<div class="panel" style="margin-top:20px;">
+    <h2>{{ __('Update activity & audit trail') }}</h2>
+    <p class="muted">{{ __('The latest 30 update actions are stored in the database and remain available after refreshing or leaving this page.') }}</p>
+    @forelse($events as $event)
+        <div class="course-item" style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap;">
+            <div style="min-width:240px;flex:1;">
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                    <strong>{{ str_replace('_', ' ', ucfirst($event->event)) }}</strong>
+                    <span class="badge {{ $event->status === 'success' ? 'success' : ($event->status === 'failed' || $event->status === 'blocked' ? 'error' : 'warning') }}">{{ ucfirst($event->status) }}</span>
+                    @if($event->preparation)
+                        <span class="badge info">{{ __('Release') }} {{ $event->preparation->version }}</span>
+                    @endif
+                </div>
+                <p class="muted">{{ $event->message }}</p>
+                <small class="muted">
+                    {{ $event->created_at?->format('d M Y H:i:s') }}
+                    · {{ __('By') }} {{ $event->performedBy?->name ?? __('System / unavailable account') }}
+                </small>
+                @if(!empty($event->context['git_commit']))
+                    <p><small class="muted">{{ __('Commit') }}: <code>{{ $event->context['git_commit'] }}</code></small></p>
+                @endif
+            </div>
+        </div>
+    @empty
+        <p class="muted">{{ __('No update activity has been recorded yet.') }}</p>
+    @endforelse
+</div>
 @endsection
