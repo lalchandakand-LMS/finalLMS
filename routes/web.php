@@ -37,6 +37,7 @@ use App\Http\Controllers\BackupController;
 use App\Http\Controllers\InstallController;
 use App\Http\Controllers\QuizContestController;
 use App\Http\Controllers\FlashSaleController;
+use App\Http\Controllers\GuardianController;
 use App\Http\Controllers\AdminAnalyticsController;
 use App\Http\Controllers\AdminCommentController;
 use App\Http\Controllers\AdminDashboardAnnouncementController;
@@ -104,6 +105,18 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group(function () {
+    Route::middleware('role:guardian')->prefix('guardian')->name('guardian.')->group(function () {
+        Route::get('/links', [GuardianController::class, 'links'])->name('links.index');
+        Route::post('/links', [GuardianController::class, 'requestLink'])->middleware('throttle:5,10')->name('links.store');
+        Route::post('/links/{link}/revoke', [GuardianController::class, 'revoke'])->name('links.revoke');
+        Route::get('/students/{student}/summary', [GuardianController::class, 'summary'])->name('students.summary');
+    });
+
+    Route::middleware('role:student')->prefix('student/guardian-requests')->name('student.guardian-requests.')->group(function () {
+        Route::get('/', [GuardianController::class, 'incomingRequests'])->name('index');
+        Route::post('/{link}/respond', [GuardianController::class, 'respond'])->middleware('throttle:10,1')->name('respond');
+        Route::post('/{link}/revoke', [GuardianController::class, 'revoke'])->name('revoke');
+    });
     Route::get('/live-classes', [LiveClassController::class, 'index'])->name('live-classes.index');
     Route::get('/invoice-payments/{payment}/receipt', [InvoiceController::class, 'receipt'])
         ->middleware('role:admin,accountant')
