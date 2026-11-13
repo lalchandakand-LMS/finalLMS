@@ -79,6 +79,7 @@ Route::post('/courses/{course}/comments', [CommentController::class, 'storeCours
 Route::post('/language', [LocaleController::class, 'update'])->middleware('throttle:20,1')->name('locale.update');
 Route::get('/payments/bkash/callback', [BkashPaymentController::class, 'callback'])->middleware('throttle:30,1')->name('payments.bkash.callback');
 
+Route::get('/flash-sale', [FlashSaleController::class, 'publicIndex'])->name('flash-sales.public');
 Route::get('/contests', [QuizContestController::class, 'index'])->name('contests.index');
 Route::get('/contests/{contest}', [QuizContestController::class, 'show'])->name('contests.show');
 
