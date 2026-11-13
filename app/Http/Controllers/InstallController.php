@@ -110,7 +110,6 @@ class InstallController extends Controller
                 $environment = $updated;
             }
 
-            $this->writeEnvironment($envPath, $environment);
             config([
                 'app.name' => $validated['site_name'],
                 'app.url' => rtrim($validated['app_url'], '/'),
@@ -128,9 +127,14 @@ class InstallController extends Controller
             DB::purge('mysql');
             DB::connection('mysql')->getPdo();
 
-            if (Schema::connection('mysql')->hasTable('migrations') || Schema::connection('mysql')->hasTable('users')) {
-                throw new RuntimeException('The selected database is not empty.');
+            // The fresh installer must never share a database with another app or a partial install.
+            // SHOW FULL TABLES includes both base tables and views on MySQL/MariaDB.
+            if (DB::connection('mysql')->select('SHOW FULL TABLES') !== []) {
+                throw new RuntimeException('The selected database is not empty. Create a brand-new empty database and try again.');
             }
+
+            // Persist credentials only after connectivity and the empty-database guard pass.
+            $this->writeEnvironment($envPath, $environment);
 
             if (Artisan::call('migrate', ['--force' => true]) !== 0) {
                 throw new RuntimeException('Database migrations did not complete.');
