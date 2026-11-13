@@ -187,6 +187,7 @@ class MobileApiFoundationTest extends TestCase
             'email' => $admin->email,
             'password' => 'correct-password',
             'device_name' => 'Admin device',
+            'device_id' => str_repeat('f', 64),
         ])->assertForbidden();
 
         $this->assertDatabaseCount('api_tokens', 0);
