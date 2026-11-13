@@ -50,4 +50,42 @@
         <div class="flash">{{ __('Google Drive connection and verified file migration are a separate integration step. Google account storage is shared by Drive, Gmail and Photos; it is not connected by this quota panel yet.') }}</div>
     </section>
 </div>
+
+<div class="panel" style="margin-top:20px;">
+    <h2>{{ __('Google account storage (Drive, Gmail and Photos)') }}</h2>
+    @if($driveQuota['connected'] && $driveQuota['available'])
+        <p class="muted">{{ $driveQuota['email'] }} · {{ __('Google account storage is shared across Drive, Gmail and Photos.') }}</p>
+        <div class="metric">{{ number_format($driveQuota['used_bytes'] / 1073741824, 2) }} GB {{ __('used') }}</div>
+        @if(!empty($driveQuota['unlimited']))
+            <p class="muted">{{ __('Google reports no fixed storage limit for this account.') }}</p>
+        @else
+            <p class="muted">{{ number_format(($driveQuota['limit_bytes'] ?? 0) / 1073741824, 2) }} GB {{ __('total') }} · {{ number_format(($driveQuota['free_bytes'] ?? 0) / 1073741824, 2) }} GB {{ __('remaining') }}</p>
+            <div class="progress" role="progressbar" aria-label="{{ __('Google account storage usage') }}" aria-valuenow="{{ $driveQuota['usage_percent'] ?? 0 }}" aria-valuemin="0" aria-valuemax="100">
+                <span style="width: {{ $driveQuota['usage_percent'] ?? 0 }}%"></span>
+            </div>
+            <p>{{ $driveQuota['usage_percent'] ?? 0 }}% {{ __('of Google account storage is used.') }}</p>
+        @endif
+        <p class="muted">{{ __('Quota source: Google Drive API') }} · {{ $driveQuota['checked_at'] }}</p>
+    @elseif($driveQuota['connected'])
+        <div class="flash">{{ $driveQuota['reason'] ?? __('Google storage information is unavailable.') }}</div>
+        <p class="muted">{{ $driveQuota['email'] ?? '' }}</p>
+    @else
+        <p class="muted">{{ __('Connect a dedicated Google account to view its shared Drive/Gmail/Photos storage quota. The LMS requests limited per-file Drive access, not full access to every personal file.') }}</p>
+    @endif
+
+    @if($driveQuota['connected'] && !$driveQuota['available'] && $googleDriveConfigured)
+        <a class="btn primary" href="{{ route('admin.storage.google.connect') }}">{{ __('Reconnect Google Drive') }}</a>
+    @endif
+
+    @if($driveQuota['connected'])
+        <form method="POST" action="{{ route('admin.storage.google.disconnect') }}" onsubmit="return confirm('{{ __('Disconnect this Google account? Existing Drive files will not be deleted.') }}')">
+            @csrf
+            <button class="btn secondary" type="submit">{{ __('Disconnect Google account') }}</button>
+        </form>
+    @elseif($googleDriveConfigured)
+        <a class="btn primary" href="{{ route('admin.storage.google.connect') }}">{{ __('Connect Google Drive') }}</a>
+    @else
+        <div class="flash">{{ __('Google OAuth is not configured. Add GOOGLE_DRIVE_CLIENT_ID, GOOGLE_DRIVE_CLIENT_SECRET and GOOGLE_DRIVE_REDIRECT_URI to the server environment first.') }}</div>
+    @endif
+</div>
 @endsection
