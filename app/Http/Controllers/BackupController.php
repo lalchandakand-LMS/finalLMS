@@ -69,7 +69,7 @@ class BackupController extends Controller
     public function create(UpdateOperationLock $operationLock): RedirectResponse
     {
         try {
-            $filename = $operationLock->run('manual_backup', request()->user(), function (): string {
+            $filename = $operationLock->run('manual_backup', auth()->user(), function (): string {
                         $tableNames = $this->backupTableNames();
                         sort($tableNames);
                         $tables = [];
@@ -182,7 +182,7 @@ class BackupController extends Controller
             });
 
             SystemUpdateEvent::create([
-                'performed_by' => request()->user()->id,
+                'performed_by' => auth()->user()->id,
                 'event' => 'manual_backup',
                 'status' => 'success',
                 'message' => 'A complete database and media backup was published after integrity verification.',
@@ -193,7 +193,7 @@ class BackupController extends Controller
         } catch (Throwable $exception) {
             report($exception);
             SystemUpdateEvent::create([
-                'performed_by' => request()->user()->id,
+                'performed_by' => auth()->user()->id,
                 'event' => 'manual_backup',
                 'status' => 'failed',
                 'message' => 'Manual database/media backup failed; inspect the server log.',
