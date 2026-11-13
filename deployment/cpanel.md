@@ -10,6 +10,10 @@ This guide covers a fresh Laravel 12 installation on PHP 8.3+ with MySQL/MariaDB
 - Writable `storage`, `bootstrap/cache`, and application-root directories during installation
 - Composer 2 only if installing from source; the CI release ZIP already includes production `vendor` dependencies and built assets
 
+## Owner's clean-install plan
+
+For the owner's selected plan (retain the old site backup, then install the LMS with a brand-new database), follow the [Clean cPanel Installation Runbook](../docs/CPANEL_CLEAN_INSTALL_RUNBOOK.md) from beginning to end. Do not remove the old site or database until the backup gate is passed and the new LMS has completed acceptance checks.
+
 ## Staging before production
 
 Use the [cPanel staging acceptance and release runbook](../docs/CPANEL_STAGING_RUNBOOK.md) to validate a separate staging subdomain, empty test database, role-based access, file privacy, backups, and rollback before any production release. Do not use the live database as a staging substitute.
@@ -21,7 +25,7 @@ Use the [cPanel staging acceptance and release runbook](../docs/CPANEL_STAGING_R
 3. Set the domain document root to the application's `public` directory. Never expose the application root, `.env`, `vendor`, or `storage` through the web server.
 4. Ensure the application root and Laravel writable directories are writable by the PHP account for the installation. Restrict permissions again after setup where your host permits.
 5. Visit `https://your-domain.example/install`. Enter the site URL, database credentials, and a unique administrator email/password (minimum 12 characters).
-6. The installer tests the database connection, refuses a database that already has a `migrations` or `users` table, creates a random application key, writes a private `.env` file with restrictive permissions, runs migrations and safe production seeders, creates the administrator, and locks installation.
+6. The installer tests the database connection, refuses a database containing any existing table or view, creates a random application key, writes a private `.env` file with restrictive permissions, runs migrations and safe production seeders, creates the administrator, and locks installation.
 7. Sign in at `/login`. The installer URL returns 404 after successful setup. Keep `.env` outside the public document root and never share its contents.
 
 If installation fails, inspect `storage/logs/laravel.log`, verify database privileges and PHP extensions, and retry. If the installer reports an existing manually-created `.env`, it will not overwrite it; remove that file only when you have confirmed this is a new installation and backed up any configuration you need.

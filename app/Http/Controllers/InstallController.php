@@ -3,12 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\FreshDatabaseInspector;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
@@ -24,7 +24,7 @@ class InstallController extends Controller
         return view('install.index');
     }
 
-    public function install(Request $request): RedirectResponse
+    public function install(Request $request, FreshDatabaseInspector $databaseInspector): RedirectResponse
     {
         abort_if($this->isInstalled(), 404);
 
@@ -110,7 +110,6 @@ class InstallController extends Controller
                 $environment = $updated;
             }
 
-            $this->writeEnvironment($envPath, $environment);
             config([
                 'app.name' => $validated['site_name'],
                 'app.url' => rtrim($validated['app_url'], '/'),
@@ -128,9 +127,11 @@ class InstallController extends Controller
             DB::purge('mysql');
             DB::connection('mysql')->getPdo();
 
-            if (Schema::connection('mysql')->hasTable('migrations') || Schema::connection('mysql')->hasTable('users')) {
-                throw new RuntimeException('The selected database is not empty.');
-            }
+            // The fresh installer must never share a database with another app or a partial install.
+            $databaseInspector->assertEmpty('mysql', $validated['db_database']);
+
+            // Persist credentials only after connectivity and the empty-database guard pass.
+            $this->writeEnvironment($envPath, $environment);
 
             if (Artisan::call('migrate', ['--force' => true]) !== 0) {
                 throw new RuntimeException('Database migrations did not complete.');

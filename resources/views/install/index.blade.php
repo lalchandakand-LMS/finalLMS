@@ -48,7 +48,7 @@
                     <div class="field"><label for="admin_password_confirmation">Confirm password</label><input id="admin_password_confirmation" name="admin_password_confirmation" type="password" minlength="12" required autocomplete="new-password"></div>
                 </div>
             </div>
-            <p class="hint">Installation refuses a database that already contains the LMS migrations or users table. It will never drop existing tables.</p>
+            <p class="hint">Installation refuses any database that already contains a table or view. Use a brand-new, completely empty database; the installer never drops existing data.</p>
             <button type="submit">Install LMS securely</button>
         </form>
     </main>
