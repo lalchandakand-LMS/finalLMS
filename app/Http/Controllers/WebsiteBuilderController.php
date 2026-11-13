@@ -91,13 +91,13 @@ class WebsiteBuilderController extends Controller
             'home_slides.*.button_url' => ['nullable', 'string', 'max:500'],
             'footer_title' => ['nullable', 'string', 'max:120'],
             'footer_text' => ['nullable', 'string', 'max:500'],
-            'footer_links' => ['nullable', 'array', 'max:5'],
+            'footer_links' => ['nullable', 'array', 'max:20'],
             'footer_links.*.label' => ['nullable', 'string', 'max:60'],
             'footer_links.*.url' => ['nullable', 'string', 'max:500'],
-            'header_links' => ['nullable', 'array', 'max:6'],
+            'header_links' => ['nullable', 'array', 'max:20'],
             'header_links.*.label' => ['nullable', 'string', 'max:60'],
             'header_links.*.url' => ['nullable', 'string', 'max:500'],
-            'sections' => ['nullable', 'array', 'max:12'],
+            'sections' => ['nullable', 'array', 'max:20'],
             'sections.*.title' => ['nullable', 'string', 'max:180'],
             'sections.*.body' => ['nullable', 'string', 'max:3000'],
             'sections.*.image_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
@@ -311,13 +311,13 @@ class WebsiteBuilderController extends Controller
             'home_slides.*.button_url' => ['nullable', 'string', 'max:500'],
             'footer_title' => ['nullable', 'string', 'max:120'],
             'footer_text' => ['nullable', 'string', 'max:500'],
-            'footer_links' => ['nullable', 'array', 'max:5'],
+            'footer_links' => ['nullable', 'array', 'max:20'],
             'footer_links.*.label' => ['nullable', 'string', 'max:60'],
             'footer_links.*.url' => ['nullable', 'string', 'max:500'],
-            'header_links' => ['nullable', 'array', 'max:6'],
+            'header_links' => ['nullable', 'array', 'max:20'],
             'header_links.*.label' => ['nullable', 'string', 'max:60'],
             'header_links.*.url' => ['nullable', 'string', 'max:500'],
-            'sections' => ['nullable', 'array', 'max:12'],
+            'sections' => ['nullable', 'array', 'max:20'],
             'sections.*.title' => ['nullable', 'string', 'max:180'],
             'sections.*.body' => ['nullable', 'string', 'max:3000'],
             'sections.*.image_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
@@ -379,7 +379,7 @@ class WebsiteBuilderController extends Controller
                 return null;
             }
             return ['label' => $label, 'url' => $url];
-        })->filter()->take(5)->values()->all();
+        })->filter()->take(20)->values()->all();
 
         $headerLinks = collect($validated['header_links'] ?? [])->map(function (array $link): ?array {
             $label = trim($link['label'] ?? '');
@@ -388,7 +388,7 @@ class WebsiteBuilderController extends Controller
                 return null;
             }
             return ['label' => $label, 'url' => $url];
-        })->filter()->take(6)->values()->all();
+        })->filter()->take(20)->values()->all();
 
         foreach (['homepage_template', 'site_name', 'site_logo_media_id', 'site_favicon_media_id', 'site_primary_color', 'site_background_color', 'site_background_style', 'site_font_family', 'site_heading_scale', 'site_body_scale', 'home_title', 'home_subtitle', 'home_featured_title', 'home_slider_autoplay', 'home_slider_interval', 'home_slider_arrows', 'home_slider_dots', 'home_slider_pause_hover', 'home_slider_height', 'home_slider_mobile_height', 'home_slider_overlay', 'footer_title', 'footer_text'] as $key) {
             if (array_key_exists($key, $validated)) {
