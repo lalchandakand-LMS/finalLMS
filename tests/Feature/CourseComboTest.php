@@ -15,6 +15,30 @@ class CourseComboTest extends TestCase
 {
     use RefreshDatabase;
 
+
+    public function test_admin_can_create_a_published_combo_from_multiple_published_courses(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $first = Course::factory()->create(['teacher_id' => $teacher->id]);
+        $second = Course::factory()->create(['teacher_id' => $teacher->id]);
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.course-combos.store'), [
+                'title' => 'Speaking and Grammar Bundle',
+                'description' => 'Two courses in one package.',
+                'price' => 1800,
+                'status' => 'published',
+                'course_ids' => [$first->id, $second->id],
+            ])
+            ->assertRedirect(route('admin.course-combos.index'))
+            ->assertSessionHas('success');
+
+        $combo = CourseCombo::query()->where('slug', 'speaking-and-grammar-bundle')->firstOrFail();
+        $this->assertSame(2, $combo->courses()->count());
+        $this->assertSame('published', $combo->status);
+    }
+
     public function test_public_combo_checkout_records_a_course_snapshot_and_approval_enrolls_that_snapshot(): void
     {
         $teacher = User::factory()->create(['role' => 'teacher']);
