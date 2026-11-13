@@ -263,6 +263,7 @@
             <a href="{{ route('admin.website-builder.index') }}"><span>🖥️</span><span class="nav-text">Website builder</span></a>
             <a href="{{ route('admin.website-pages.index') }}"><span>📄</span><span class="nav-text">Custom pages</span></a>
             <a href="{{ route('admin.media.index') }}"><span>🖼️</span><span class="nav-text">Media library</span></a>
+            <a href="{{ route('admin.storage.index') }}"><span>🗄️</span><span class="nav-text">Storage manager</span></a>
             <a href="{{ route('admin.news.index') }}"><span>📰</span><span class="nav-text">Blog & news</span></a>
             <a class="{{ request()->routeIs('admin.analytics.*') ? 'active' : '' }}" href="{{ route('admin.analytics.index') }}"><span>📈</span><span class="nav-text">Website analytics</span></a>
             <a class="{{ request()->routeIs('admin.comments.*') ? 'active' : '' }}" href="{{ route('admin.comments.index') }}"><span>💬</span><span class="nav-text">Comment moderation</span></a>
@@ -319,6 +320,7 @@
                         <a href="{{ route('admin.website-builder.index') }}">{{ __('Website Builder') }}</a>
                         <a href="{{ route('admin.backups.index') }}">{{ __('Backup & Restore') }}</a>
                         <a href="{{ route('admin.media.index') }}">{{ __('Media Library') }}</a>
+                        <a href="{{ route('admin.storage.index') }}">{{ __('Storage Manager') }}</a>
                         <a href="{{ route('admin.news.index') }}">{{ __('Blog & News') }}</a>
                         <a href="{{ route('admin.users.index') }}">Users</a>
                         <a href="{{ route('admin.courses.index') }}">Courses</a>
