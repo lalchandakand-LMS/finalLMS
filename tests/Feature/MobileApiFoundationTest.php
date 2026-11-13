@@ -86,6 +86,95 @@ class MobileApiFoundationTest extends TestCase
         $this->assertNotNull(ApiToken::query()->firstOrFail()->revoked_at);
     }
 
+
+    public function test_additional_mobile_device_requires_admin_approval_and_invalidates_previous_app_token(): void
+    {
+        config([
+            'services.twilio.sid' => 'AC-test-account',
+            'services.twilio.token' => 'test-auth-token',
+            'services.twilio.from' => '+15005550006',
+        ]);
+        $code = null;
+        Http::fake(function ($request) use (&$code) {
+            preg_match('/code is ([0-9]{6})/', $request['Body'], $matches);
+            $code = $matches[1] ?? null;
+
+            return Http::response(['sid' => 'SM-test'], 201);
+        });
+
+        $student = User::factory()->create([
+            'role' => 'student',
+            'email_verified_at' => now(),
+            'phone_number' => '+8801712345678',
+            'phone_verified_at' => now(),
+        ]);
+        $oldToken = $this->createStudentApiToken(
+            $student,
+            'old-approved-device-token-0123456789012345678901234567890123456789'
+        );
+        $newDeviceId = str_repeat('d', 64);
+
+        $login = $this->postJson('/api/v1/auth/login', [
+            'email' => $student->email,
+            'password' => 'password',
+            'device_name' => 'New Android phone',
+            'device_id' => $newDeviceId,
+        ])->assertStatus(202)->assertJsonPath('status', 'phone_verification_required');
+
+        $challenge = $login->json('challenge_token');
+        $newDevice = StudentDevice::query()
+            ->where('user_id', $student->id)
+            ->where('device_hash', hash('sha256', $newDeviceId))
+            ->firstOrFail();
+
+        $this->postJson('/api/v1/auth/verify-device', [
+            'challenge_token' => $challenge,
+            'code' => $code,
+        ])->assertStatus(202)
+            ->assertJsonPath('status', 'pending_admin_approval');
+
+        $this->postJson('/api/v1/auth/device-status', ['challenge_token' => $challenge])
+            ->assertStatus(202)
+            ->assertJsonPath('status', 'pending_admin_approval');
+
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $this->actingAs($admin)
+            ->post(route('admin.student-devices.approve', $newDevice))
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertSame('revoked', $oldToken->studentDevice->fresh()->status);
+        $this->assertNotNull($oldToken->fresh()->revoked_at);
+
+        auth()->logout();
+        $tokenResponse = $this->postJson('/api/v1/auth/device-status', ['challenge_token' => $challenge])
+            ->assertOk()
+            ->assertJsonPath('user.id', $student->id);
+
+        $newToken = $tokenResponse->json('access_token');
+        $this->assertDatabaseHas('api_tokens', [
+            'user_id' => $student->id,
+            'student_device_id' => $newDevice->id,
+            'token_hash' => hash('sha256', $newToken),
+            'revoked_at' => null,
+        ]);
+        $this->withToken($newToken)->getJson('/api/v1/auth/me')->assertOk();
+    }
+
+    public function test_student_api_rejects_legacy_tokens_that_are_not_bound_to_an_approved_device(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $plainToken = 'legacy-student-token-0123456789012345678901234567890123456789';
+        $token = $student->apiTokens()->create([
+            'name' => 'Legacy device',
+            'token_hash' => hash('sha256', $plainToken),
+            'expires_at' => now()->addDay(),
+        ]);
+
+        $this->withToken($plainToken)->getJson('/api/v1/auth/me')->assertUnauthorized();
+        $this->assertNotNull($token->fresh()->revoked_at);
+    }
+
     public function test_admin_accounts_cannot_login_to_student_or_instructor_mobile_apps(): void
     {
         $admin = User::factory()->create([
