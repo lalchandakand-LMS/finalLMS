@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', $page->exists ? 'Edit Website Page' : 'Create Website Page')
 @section('content')
-<div class="page-header"><div><span class="badge info">Admin CMS</span><h1>{{ $page->exists ? 'Edit Page' : 'Create Page' }}</h1><p class="muted">Build a page with reorderable content blocks, custom design, SEO and menu visibility.</p></div><a class="btn secondary" href="{{ route('admin.website-pages.index') }}">Back to Pages</a></div>
+<div class="page-header"><div><span class="badge info">Admin CMS</span><h1>{{ $page->exists ? 'Edit Page' : 'Create Page' }}</h1><p class="muted">Build a page with reorderable content blocks, custom design, SEO and menu visibility.</p></div><div class="cta-row">@if($page->exists)<a class="btn secondary" target="_blank" rel="noopener" href="{{ route('admin.website-pages.preview', $page) }}">Preview</a>@endif<a class="btn secondary" href="{{ route('admin.website-pages.index') }}">Back to Pages</a></div></div>
 <form method="POST" action="{{ $page->exists ? route('admin.website-pages.update', $page) : route('admin.website-pages.store') }}">
     @csrf
     @if($page->exists) @method('PUT') @endif
