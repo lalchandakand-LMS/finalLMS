@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\SystemUpdateEvent;
+use App\Services\UpdateOperationLock;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -64,119 +66,142 @@ class BackupController extends Controller
         return view('admin.backups.index', compact('files'));
     }
 
-    public function create(): RedirectResponse
+    public function create(UpdateOperationLock $operationLock): RedirectResponse
     {
-        $tableNames = $this->backupTableNames();
-        sort($tableNames);
-        $tables = [];
-        foreach ($tableNames as $table) {
-            $tables[$table] = DB::table($table)->get()->map(fn ($row) => (array) $row)->all();
-        }
-
-        // Back up every file on the public upload disk, not only Media Library
-        // records. Course images and lesson thumbnails are stored separately.
-        $mediaFiles = [];
-        foreach (Storage::disk('public')->allFiles() as $path) {
-            $mediaFiles[$path] = base64_encode(Storage::disk('public')->get($path));
-        }
-
-        // Preserve media assets stored on an explicitly configured disk too.
-        if (in_array('media_assets', $tableNames, true)) {
-            foreach ($tables['media_assets'] as $asset) {
-                $disk = $asset['disk'] ?? 'public';
-                $path = $asset['path'] ?? '';
-                if ($path !== '' && ! array_key_exists($path, $mediaFiles) && Storage::disk($disk)->exists($path)) {
-                    $mediaFiles[$path] = base64_encode(Storage::disk($disk)->get($path));
-                }
-            }
-        }
-
-        // The local disk is the private user-data root. Include every private
-        // upload (payment proofs, teacher documents, assignment submissions,
-        // lesson attachments and course videos), but never nest backups or
-        // updater staging snapshots inside another backup.
-        $privateFiles = [];
-        foreach (Storage::disk('local')->allFiles() as $privatePath) {
-            if (str_starts_with($privatePath, 'backups/') || str_starts_with($privatePath, 'updates/')) {
-                continue;
-            }
-            $privateFiles[$privatePath] = base64_encode(Storage::disk('local')->get($privatePath));
-        }
-
-        $payload = json_encode([
-            'format_version' => 1,
-            'created_at' => now()->toIso8601String(),
-            'tables' => $tables,
-            'public_media' => $mediaFiles,
-            'private_files' => $privateFiles,
-        ], JSON_THROW_ON_ERROR);
-
-        $signature = hash_hmac('sha256', $payload, (string) config('app.key'));
-        $archive = gzencode(json_encode([
-            'payload' => base64_encode($payload),
-            'signature' => $signature,
-        ], JSON_THROW_ON_ERROR), 9);
-
-        if (! is_string($archive) || $archive === '') {
-            throw new \\RuntimeException('The database/media backup archive could not be compressed.');
-        }
-
-        // Publish only a complete, readable and HMAC-verifiable archive. Write to
-        // a private temporary name first so interrupted writes never look like
-        // finished backups in the Admin UI or updater preflight.
-        $disk = Storage::disk('local');
-        $filename = 'aloms-lms-backup-'.now()->format('Ymd-His').'-'.Str::lower(Str::random(5)).'.json.gz';
-        $finalPath = 'backups/'.$filename;
-        $temporaryPath = 'backups/.'.$filename.'.'.Str::lower(Str::random(10)).'.tmp';
-        $published = false;
-
         try {
-            if (! $disk->put($temporaryPath, $archive)) {
-                throw new \\RuntimeException('The temporary database/media backup could not be written to private storage.');
-            }
+            $filename = $operationLock->run('manual_backup', request()->user(), function (): string {
+                        $tableNames = $this->backupTableNames();
+                        sort($tableNames);
+                        $tables = [];
+                        foreach ($tableNames as $table) {
+                            $tables[$table] = DB::table($table)->get()->map(fn ($row) => (array) $row)->all();
+                        }
+                
+                        // Back up every file on the public upload disk, not only Media Library
+                        // records. Course images and lesson thumbnails are stored separately.
+                        $mediaFiles = [];
+                        foreach (Storage::disk('public')->allFiles() as $path) {
+                            $mediaFiles[$path] = base64_encode(Storage::disk('public')->get($path));
+                        }
+                
+                        // Preserve media assets stored on an explicitly configured disk too.
+                        if (in_array('media_assets', $tableNames, true)) {
+                            foreach ($tables['media_assets'] as $asset) {
+                                $disk = $asset['disk'] ?? 'public';
+                                $path = $asset['path'] ?? '';
+                                if ($path !== '' && ! array_key_exists($path, $mediaFiles) && Storage::disk($disk)->exists($path)) {
+                                    $mediaFiles[$path] = base64_encode(Storage::disk($disk)->get($path));
+                                }
+                            }
+                        }
+                
+                        // The local disk is the private user-data root. Include every private
+                        // upload (payment proofs, teacher documents, assignment submissions,
+                        // lesson attachments and course videos), but never nest backups or
+                        // updater staging snapshots inside another backup.
+                        $privateFiles = [];
+                        foreach (Storage::disk('local')->allFiles() as $privatePath) {
+                            if (str_starts_with($privatePath, 'backups/') || str_starts_with($privatePath, 'updates/')) {
+                                continue;
+                            }
+                            $privateFiles[$privatePath] = base64_encode(Storage::disk('local')->get($privatePath));
+                        }
+                
+                        $payload = json_encode([
+                            'format_version' => 1,
+                            'created_at' => now()->toIso8601String(),
+                            'tables' => $tables,
+                            'public_media' => $mediaFiles,
+                            'private_files' => $privateFiles,
+                        ], JSON_THROW_ON_ERROR);
+                
+                        $signature = hash_hmac('sha256', $payload, (string) config('app.key'));
+                        $archive = gzencode(json_encode([
+                            'payload' => base64_encode($payload),
+                            'signature' => $signature,
+                        ], JSON_THROW_ON_ERROR), 9);
+                
+                        if (! is_string($archive) || $archive === '') {
+                            throw new \\RuntimeException('The database/media backup archive could not be compressed.');
+                        }
+                
+                        // Publish only a complete, readable and HMAC-verifiable archive. Write to
+                        // a private temporary name first so interrupted writes never look like
+                        // finished backups in the Admin UI or updater preflight.
+                        $disk = Storage::disk('local');
+                        $filename = 'aloms-lms-backup-'.now()->format('Ymd-His').'-'.Str::lower(Str::random(5)).'.json.gz';
+                        $finalPath = 'backups/'.$filename;
+                        $temporaryPath = 'backups/.'.$filename.'.'.Str::lower(Str::random(10)).'.tmp';
+                        $published = false;
+                
+                        try {
+                            if (! $disk->put($temporaryPath, $archive)) {
+                                throw new \\RuntimeException('The temporary database/media backup could not be written to private storage.');
+                            }
+                
+                            $storedArchive = $disk->get($temporaryPath);
+                            $storedEnvelopeJson = @gzdecode($storedArchive, 536870912);
+                            if (! is_string($storedEnvelopeJson)) {
+                                throw new \\RuntimeException('The written database/media backup failed its compression integrity check.');
+                            }
+                
+                            $storedEnvelope = json_decode($storedEnvelopeJson, true, 512, JSON_THROW_ON_ERROR);
+                            $storedPayload = base64_decode($storedEnvelope['payload'] ?? '', true);
+                            $storedSignature = $storedEnvelope['signature'] ?? null;
+                            $expectedSignature = is_string($storedPayload)
+                                ? hash_hmac('sha256', $storedPayload, (string) config('app.key'))
+                                : '';
+                
+                            if (! is_string($storedPayload)
+                                || ! is_string($storedSignature)
+                                || ! hash_equals(hash('sha256', $payload), hash('sha256', $storedPayload))
+                                || ! hash_equals($expectedSignature, $storedSignature)) {
+                                throw new \\RuntimeException('The written database/media backup failed its payload or HMAC integrity check.');
+                            }
+                
+                            if (! $disk->move($temporaryPath, $finalPath)) {
+                                throw new \\RuntimeException('The verified database/media backup could not be published.');
+                            }
+                
+                            $publishedBytes = $disk->get($finalPath);
+                            if (! hash_equals(hash('sha256', $archive), hash('sha256', $publishedBytes))) {
+                                throw new \\RuntimeException('The published database/media backup failed its final file integrity check.');
+                            }
+                
+                            $published = true;
+                        } finally {
+                            if ($disk->exists($temporaryPath)) {
+                                $disk->delete($temporaryPath);
+                            }
+                            if (! $published && $disk->exists($finalPath)) {
+                                $disk->delete($finalPath);
+                            }
+                        }
+                
+                        return $filename;
+            });
 
-            $storedArchive = $disk->get($temporaryPath);
-            $storedEnvelopeJson = @gzdecode($storedArchive, 536870912);
-            if (! is_string($storedEnvelopeJson)) {
-                throw new \\RuntimeException('The written database/media backup failed its compression integrity check.');
-            }
+            SystemUpdateEvent::create([
+                'performed_by' => request()->user()->id,
+                'event' => 'manual_backup',
+                'status' => 'success',
+                'message' => 'A complete database and media backup was published after integrity verification.',
+                'context' => ['filename' => $filename],
+            ]);
 
-            $storedEnvelope = json_decode($storedEnvelopeJson, true, 512, JSON_THROW_ON_ERROR);
-            $storedPayload = base64_decode($storedEnvelope['payload'] ?? '', true);
-            $storedSignature = $storedEnvelope['signature'] ?? null;
-            $expectedSignature = is_string($storedPayload)
-                ? hash_hmac('sha256', $storedPayload, (string) config('app.key'))
-                : '';
+            return redirect()->route('admin.backups.index')->with('success', 'Database and uploaded media backup created and integrity-verified.');
+        } catch (Throwable $exception) {
+            report($exception);
+            SystemUpdateEvent::create([
+                'performed_by' => request()->user()->id,
+                'event' => 'manual_backup',
+                'status' => 'failed',
+                'message' => 'Manual database/media backup failed; inspect the server log.',
+            ]);
 
-            if (! is_string($storedPayload)
-                || ! is_string($storedSignature)
-                || ! hash_equals(hash('sha256', $payload), hash('sha256', $storedPayload))
-                || ! hash_equals($expectedSignature, $storedSignature)) {
-                throw new \\RuntimeException('The written database/media backup failed its payload or HMAC integrity check.');
-            }
-
-            if (! $disk->move($temporaryPath, $finalPath)) {
-                throw new \\RuntimeException('The verified database/media backup could not be published.');
-            }
-
-            $publishedBytes = $disk->get($finalPath);
-            if (! hash_equals(hash('sha256', $archive), hash('sha256', $publishedBytes))) {
-                throw new \\RuntimeException('The published database/media backup failed its final file integrity check.');
-            }
-
-            $published = true;
-        } finally {
-            if ($disk->exists($temporaryPath)) {
-                $disk->delete($temporaryPath);
-            }
-            if (! $published && $disk->exists($finalPath)) {
-                $disk->delete($finalPath);
-            }
+            return redirect()->route('admin.backups.index')->with('error', 'The backup could not be completed safely. No incomplete backup was published; review the server log.');
         }
-
-        return redirect()->route('admin.backups.index')->with('success', 'Database and uploaded media backup created and integrity-verified.');
     }
-
     public function download(string $filename)
     {
         abort_unless($filename === basename($filename) && preg_match('/^aloms-lms-backup-[0-9]{8}-[0-9]{6}-[a-z0-9]{5}\.json\.gz$/', $filename), 404);
