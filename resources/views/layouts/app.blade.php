@@ -39,7 +39,7 @@
         if (!in_array($themeBodyScale, ['0.9', '1', '1.05', '1.1'], true)) $themeBodyScale = '1';
     @endphp
     <title>@yield('title', config('app.name'))</title>
-    <meta name="description" content="{{ $seoDescription }}">
+    <meta name="description" content="@yield('meta_description', $seoDescription)">
     <meta name="keywords" content="{{ $seoKeywords }}">
     <meta property="og:title" content="{{ $seoTitle }}">
     <meta property="og:description" content="{{ $seoDescription }}">
