@@ -152,15 +152,15 @@ class _StudentLoginState extends State<StudentLogin> {
       final outcome = await widget.api.checkDeviceStatus();
       _handleOutcome(outcome);
     } on ApiException catch (exception) {
-      if (mounted && !silent) {
+      if (mounted && (exception.statusCode == 403 || exception.statusCode == 410)) {
+        approvalTimer?.cancel();
+        await widget.api.clearLoginChallenge();
         setState(() {
+          stage = _LoginStage.credentials;
           error = exception.toString();
-          if (exception.statusCode == 403 || exception.statusCode == 410) {
-            stage = _LoginStage.credentials;
-            approvalTimer?.cancel();
-            widget.api.clearLoginChallenge();
-          }
         });
+      } else if (mounted && !silent) {
+        setState(() => error = exception.toString());
       }
     } catch (exception) {
       if (mounted && !silent) setState(() => error = exception.toString());
