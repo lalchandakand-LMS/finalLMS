@@ -236,11 +236,22 @@ class CourseController extends Controller
             ->withCount('enrollments')
             ->orderBy('starts_at')
             ->get();
-        $demoLesson = $course->curriculumItems->first(
-            fn ($curriculumItem) => $curriculumItem->is_preview && $curriculumItem->post?->video_embed_url
-        );
+        $demoLesson = $course->curriculumItems->first(function ($curriculumItem): bool {
+            $post = $curriculumItem->post;
+
+            return $curriculumItem->is_preview
+                && $post
+                && $post->status === 'published'
+                && $post->published_at?->lte(now())
+                && $post->video_embed_url;
+        });
         $studentCount = $course->enrollments->whereIn('status', ['active', 'completed'])->count();
-        $courseContentCount = $course->curriculumItems->count() + $course->lessons->count();
+        $publishedPostCount = $course->curriculumItems->filter(function ($curriculumItem): bool {
+            $post = $curriculumItem->post;
+
+            return $post && $post->status === 'published' && $post->published_at?->lte(now());
+        })->count();
+        $courseContentCount = $publishedPostCount + $course->lessons->count();
 
         return view('courses.show', compact(
             'course', 'enrollment', 'payment', 'paymentMethods', 'batches',
