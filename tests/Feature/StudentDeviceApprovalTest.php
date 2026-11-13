@@ -71,7 +71,7 @@ class StudentDeviceApprovalTest extends TestCase
             'phone_number' => '+8801712345678',
             'phone_verified_at' => now(),
         ]);
-        StudentDevice::create([
+        $existingDevice = StudentDevice::create([
             'user_id' => $student->id,
             'device_hash' => hash('sha256', str_repeat('a', 64)),
             'device_name' => 'Android · Chrome',
@@ -108,13 +108,13 @@ class StudentDeviceApprovalTest extends TestCase
             'approved_by' => $admin->id,
         ]);
         $this->assertDatabaseHas('student_devices', [
-            'id' => $student->devices()->value('id'),
+            'id' => $existingDevice->id,
             'status' => 'revoked',
         ]);
 
         auth()->logout();
         $this->actingAs($student)
-            ->withSession(['student_device_id' => $student->devices()->where('status', 'revoked')->value('id')])
+            ->withSession(['student_device_id' => $existingDevice->id])
             ->get('/dashboard')
             ->assertRedirect(route('login'))
             ->assertSessionHas('warning');
