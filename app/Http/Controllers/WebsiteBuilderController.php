@@ -97,7 +97,7 @@ class WebsiteBuilderController extends Controller
             'header_links' => ['nullable', 'array', 'max:20'],
             'header_links.*.label' => ['nullable', 'string', 'max:60'],
             'header_links.*.url' => ['nullable', 'string', 'max:500'],
-            'sections' => ['nullable', 'array', 'max:12'],
+            'sections' => ['nullable', 'array', 'max:20'],
             'sections.*.title' => ['nullable', 'string', 'max:180'],
             'sections.*.body' => ['nullable', 'string', 'max:3000'],
             'sections.*.image_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
