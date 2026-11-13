@@ -20,7 +20,9 @@ class BackupMediaCoverageTest extends TestCase
         Storage::fake('local');
         Storage::fake('public');
 
-        $admin = User::factory()->create(['role' => 'admin']);\n        $this->actingAs($admin);\n        $teacher = User::factory()->create(['role' => 'teacher']);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($admin);
+        $teacher = User::factory()->create(['role' => 'teacher']);
         $course = Course::factory()->create([
             'teacher_id' => $teacher->id,
             'image_path' => 'courses/backup-course.png',
@@ -131,7 +133,8 @@ class BackupMediaCoverageTest extends TestCase
         Storage::disk('local')->put($lesson->attachment_path, 'lesson-attachment');
         Storage::disk('local')->put('payment-proofs/restore-proof.png', 'payment-proof');
 
-        $this->actingAs($admin);\n        app(BackupController::class)->create(app(UpdateOperationLock::class));
+        $this->actingAs($admin);
+        app(BackupController::class)->create(app(UpdateOperationLock::class));
         $backupPath = collect(Storage::disk('local')->files('backups'))->first();
         $this->assertNotNull($backupPath);
         $archiveBytes = Storage::disk('local')->get($backupPath);
