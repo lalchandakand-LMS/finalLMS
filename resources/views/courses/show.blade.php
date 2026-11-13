@@ -13,9 +13,50 @@
         </div>
     </div>
 
-    <div class="grid grid-2">
+    <style>
+        .course-detail-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 20px;padding:8px;border:1px solid var(--border);border-radius:13px;background:#fff}
+        .course-detail-tabs a{padding:9px 14px;border-radius:9px;color:#31536c;font-size:.85rem;font-weight:800}
+        .course-detail-tabs a:hover{background:#edf4fb}
+        .course-detail-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:18px 0}
+        .course-detail-stat{padding:13px;border-radius:11px;background:#f0f6fb}
+        .course-detail-stat strong{display:block;color:#153e62;font-size:1.15rem}
+        .course-detail-stat small{color:var(--muted)}
+        .course-demo-frame{position:relative;aspect-ratio:16/9;overflow:hidden;border-radius:15px;background:#10213d}
+        .course-demo-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+        @media(max-width:600px){.course-detail-stats{grid-template-columns:1fr 1fr}.course-detail-tabs{gap:4px}.course-detail-tabs a{padding:8px 10px}}
+    </style>
+    <nav class="course-detail-tabs" aria-label="{{ __('Course sections') }}">
+        <a href="#overview">{{ __('Overview') }}</a>
+        @if($demoLesson)
+            <a href="#demo-class">{{ __('Demo Class') }}</a>
+        @endif
+        <a href="#course-content">{{ __('Course Content') }}</a>
+        <a href="#enrollment">{{ __('Enroll') }}</a>
+    </nav>
+
+    @if($demoLesson?->post?->video_embed_url)
+        <section id="demo-class" class="panel" style="margin-bottom:20px;">
+            <div class="page-header" style="margin-bottom:14px;">
+                <div><span class="badge info">{{ __('Free preview') }}</span><h2 style="margin:8px 0 0;">{{ __('Demo Class') }}</h2><p class="muted">{{ $demoLesson->post->title }}</p></div>
+                <a class="btn secondary" href="{{ route('courses.content.show', [$course, $demoLesson->post]) }}">{{ __('Open demo lesson') }}</a>
+            </div>
+            <div class="course-demo-frame">
+                <iframe src="{{ $demoLesson->post->video_embed_url }}" title="{{ $demoLesson->post->title }}" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+            </div>
+        </section>
+    @endif
+
+    <div class="grid grid-2" id="overview">
         <div class="panel">
+            @if($course->image_path)
+                <img src="{{ \\Illuminate\\Support\\Facades\\Storage::disk('public')->url($course->image_path) }}" alt="{{ $course->title }}" loading="lazy" style="width:100%;max-height:300px;aspect-ratio:16/9;object-fit:cover;border-radius:14px;margin-bottom:16px;">
+            @endif
             <p class="muted">{{ __('Instructor:') }} {{ $course->teacher?->name ?? __('N/A') }}</p>
+            <div class="course-detail-stats">
+                <div class="course-detail-stat"><strong>{{ number_format($studentCount) }}</strong><small>{{ __('Students') }}</small></div>
+                <div class="course-detail-stat"><strong>{{ number_format($courseContentCount) }}</strong><small>{{ __('Lessons') }}</small></div>
+                <div class="course-detail-stat"><strong>{{ $course->teacher?->name ? __('Available') : __('Coming soon') }}</strong><small>{{ __('Instructor') }}</small></div>
+            </div>
             <p>{{ $course->description }}</p>
             @if(auth()->check() && auth()->user()->isAdmin())
                 <a class="btn secondary" href="{{ route('admin.courses.lessons.index', $course) }}">{{ __('Manage lessons') }}</a>
@@ -88,7 +129,7 @@
             </div>
         </div>
 
-        <div class="panel">
+        <div class="panel" id="enrollment">
             <h2 style="margin-top:0;">{{ __('Enrollment') }}</h2>
             @auth
                 @if(auth()->user()->isStudent())
