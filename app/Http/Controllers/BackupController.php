@@ -117,10 +117,64 @@ class BackupController extends Controller
             'signature' => $signature,
         ], JSON_THROW_ON_ERROR), 9);
 
-        $filename = 'aloms-lms-backup-'.now()->format('Ymd-His').'-'.Str::lower(Str::random(5)).'.json.gz';
-        Storage::disk('local')->put('backups/'.$filename, $archive);
+        if (! is_string($archive) || $archive === '') {
+            throw new \\RuntimeException('The database/media backup archive could not be compressed.');
+        }
 
-        return redirect()->route('admin.backups.index')->with('success', 'Database and uploaded media backup created.');
+        // Publish only a complete, readable and HMAC-verifiable archive. Write to
+        // a private temporary name first so interrupted writes never look like
+        // finished backups in the Admin UI or updater preflight.
+        $disk = Storage::disk('local');
+        $filename = 'aloms-lms-backup-'.now()->format('Ymd-His').'-'.Str::lower(Str::random(5)).'.json.gz';
+        $finalPath = 'backups/'.$filename;
+        $temporaryPath = 'backups/.'.$filename.'.'.Str::lower(Str::random(10)).'.tmp';
+        $published = false;
+
+        try {
+            if (! $disk->put($temporaryPath, $archive)) {
+                throw new \\RuntimeException('The temporary database/media backup could not be written to private storage.');
+            }
+
+            $storedArchive = $disk->get($temporaryPath);
+            $storedEnvelopeJson = @gzdecode($storedArchive, 536870912);
+            if (! is_string($storedEnvelopeJson)) {
+                throw new \\RuntimeException('The written database/media backup failed its compression integrity check.');
+            }
+
+            $storedEnvelope = json_decode($storedEnvelopeJson, true, 512, JSON_THROW_ON_ERROR);
+            $storedPayload = base64_decode($storedEnvelope['payload'] ?? '', true);
+            $storedSignature = $storedEnvelope['signature'] ?? null;
+            $expectedSignature = is_string($storedPayload)
+                ? hash_hmac('sha256', $storedPayload, (string) config('app.key'))
+                : '';
+
+            if (! is_string($storedPayload)
+                || ! is_string($storedSignature)
+                || ! hash_equals(hash('sha256', $payload), hash('sha256', $storedPayload))
+                || ! hash_equals($expectedSignature, $storedSignature)) {
+                throw new \\RuntimeException('The written database/media backup failed its payload or HMAC integrity check.');
+            }
+
+            if (! $disk->move($temporaryPath, $finalPath)) {
+                throw new \\RuntimeException('The verified database/media backup could not be published.');
+            }
+
+            $publishedBytes = $disk->get($finalPath);
+            if (! hash_equals(hash('sha256', $archive), hash('sha256', $publishedBytes))) {
+                throw new \\RuntimeException('The published database/media backup failed its final file integrity check.');
+            }
+
+            $published = true;
+        } finally {
+            if ($disk->exists($temporaryPath)) {
+                $disk->delete($temporaryPath);
+            }
+            if (! $published && $disk->exists($finalPath)) {
+                $disk->delete($finalPath);
+            }
+        }
+
+        return redirect()->route('admin.backups.index')->with('success', 'Database and uploaded media backup created and integrity-verified.');
     }
 
     public function download(string $filename)
