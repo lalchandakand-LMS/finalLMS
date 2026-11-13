@@ -41,10 +41,13 @@ class BackupMediaCoverageTest extends TestCase
         Storage::disk('local')->put('assignment-submissions/submission.pdf', 'submission-bytes');
         Storage::disk('local')->put('payment-proofs/payment-proof.png', 'payment-proof-bytes');
 
-        app(BackupController::class)->create();
+        $response = app(BackupController::class)->create();
+        $response->assertSessionHas('success', 'Database and uploaded media backup created and integrity-verified.');
 
-        $backupPath = collect(Storage::disk('local')->files('backups'))->first();
-        $this->assertNotNull($backupPath);
+        $backupFiles = Storage::disk('local')->files('backups');
+        $this->assertCount(1, $backupFiles, 'Only the completed backup should be visible; temporary files must be cleaned up.');
+        $backupPath = $backupFiles[0];
+        $this->assertStringEndsWith('.json.gz', $backupPath);
 
         $compressed = Storage::disk('local')->get($backupPath);
         $envelopeJson = gzdecode($compressed);
