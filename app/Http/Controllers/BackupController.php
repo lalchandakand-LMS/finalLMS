@@ -53,6 +53,30 @@ class BackupController extends Controller
         throw new \RuntimeException('Database driver is not supported by backup and restore.');
     }
 
+    private function validateBackupFileMap(array $files, bool $private): int
+    {
+        foreach ($files as $path => $encoded) {
+            $segments = is_string($path) ? explode('/', $path) : [];
+            $safePath = is_string($path)
+                && $path !== ''
+                && ! str_starts_with($path, '/')
+                && ! str_contains($path, '\\\\')
+                && ! str_contains($path, "\\0")
+                && ! in_array('', $segments, true)
+                && ! in_array('.', $segments, true)
+                && ! in_array('..', $segments, true);
+
+            if ($private) {
+                $safePath = $safePath && ! in_array($segments[0] ?? '', ['backups', 'updates'], true);
+            }
+
+            abort_unless($safePath, 422, $private ? 'Unsafe private file path in backup.' : 'Unsafe media path in backup.');
+            abort_unless(is_string($encoded) && base64_decode($encoded, true) !== false, 422, $private ? 'A private file in this backup is damaged.' : 'A media file in this backup is damaged.');
+        }
+
+        return count($files);
+    }
+
     public function index(): View
     {
         $files = collect(Storage::disk('local')->files('backups'))
@@ -246,40 +270,11 @@ class BackupController extends Controller
             $missingTables = array_values(array_diff($currentTables, $backupTables));
             abort_unless($missingTables === [], 422, 'This backup does not contain every table required by the installed LMS version. Update or downgrade the application before restoring.');
 
-            $mediaToRestore = [];
-            foreach (($payload['public_media'] ?? []) as $mediaPath => $encoded) {
-                $segments = is_string($mediaPath) ? explode('/', $mediaPath) : [];
-                $safePath = is_string($mediaPath)
-                    && $mediaPath !== ''
-                    && ! str_starts_with($mediaPath, '/')
-                    && ! str_contains($mediaPath, '\\')
-                    && ! str_contains($mediaPath, "\0")
-                    && ! in_array('', $segments, true)
-                    && ! in_array('.', $segments, true)
-                    && ! in_array('..', $segments, true);
-                abort_unless($safePath, 422, 'Unsafe media path in backup.');
-                $contents = base64_decode($encoded, true);
-                abort_unless(is_string($contents), 422, 'A media file in this backup is damaged.');
-                $mediaToRestore[$mediaPath] = $contents;
-            }
-
-            $privateFilesToRestore = [];
-            foreach (($payload['private_files'] ?? []) as $privatePath => $encoded) {
-                $segments = is_string($privatePath) ? explode('/', $privatePath) : [];
-                $safePath = is_string($privatePath)
-                    && $privatePath !== ''
-                    && ! str_starts_with($privatePath, '/')
-                    && ! str_contains($privatePath, '\\')
-                    && ! str_contains($privatePath, "\0")
-                    && ! in_array('', $segments, true)
-                    && ! in_array('.', $segments, true)
-                    && ! in_array('..', $segments, true)
-                    && ! in_array($segments[0] ?? '', ['backups', 'updates'], true);
-                abort_unless($safePath, 422, 'Unsafe private file path in backup.');
-                $contents = base64_decode($encoded, true);
-                abort_unless(is_string($contents), 422, 'A private file in this backup is damaged.');
-                $privateFilesToRestore[$privatePath] = $contents;
-            }
+            // Validate each encoded file without retaining a second copy of the
+            // entire media library in memory. The restore service decodes one file
+            // at a time when it writes the target snapshot.
+            $publicFileCount = $this->validateBackupFileMap($payload['public_media'] ?? [], false);
+            $privateFileCount = $this->validateBackupFileMap($payload['private_files'] ?? [], true);
 
             $safetySnapshotFilename = $operationLock->run('backup_restore', $request->user(), function () use ($currentTables, $payload): string {
                 return app(BackupRestoreRecovery::class)->applyWithRecovery($currentTables, $payload);
@@ -292,8 +287,8 @@ class BackupController extends Controller
                 'message' => 'A signed backup was restored under the exclusive operation lock after a verified pre-restore safety snapshot was retained.',
                 'context' => [
                     'table_count' => count($currentTables),
-                    'public_file_count' => count($mediaToRestore),
-                    'private_file_count' => count($privateFilesToRestore),
+                    'public_file_count' => $publicFileCount,
+                    'private_file_count' => $privateFileCount,
                     'safety_snapshot' => $safetySnapshotFilename,
                 ],
             ]);
