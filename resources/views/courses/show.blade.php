@@ -209,7 +209,7 @@
                     <p class="muted">{{ __('This action is designed for students.') }}</p>
                 @endif
             @else
-                <a href="{{ route('login') }}" class="btn primary">{{ __('Login to enroll') }}</a>
+                <a href="{{ route('login', ['continue' => route('courses.show', $course, false)]) }}" class="btn primary">{{ __('Login to enroll') }}</a>
             @endauth
         </div>
     </div>
@@ -243,7 +243,7 @@
         <small class="muted">{{ __('Comments appear after admin approval.') }}</small>
     </form>
     @else
-    <p class="muted"><a href="{{ route('login') }}">{{ __('Log in') }}</a> {{ __('to join the discussion.') }}</p>
+    <p class="muted"><a href="{{ route('login', ['continue' => route('courses.show', $course, false)]) }}">{{ __('Log in') }}</a> {{ __('to join the discussion.') }}</p>
     @endauth
     @forelse($comments as $comment)
         <div class="course-item" style="margin-bottom:10px;"><strong>{{ $comment->author?->name ?? __('User') }}</strong><small class="muted"> · {{ $comment->created_at->format('d M Y') }}</small><p style="margin-bottom:0;">{{ $comment->body }}</p></div>
