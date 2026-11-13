@@ -1,18 +1,18 @@
 <?php
 
-namespace App\\Http\\Controllers;
+namespace App\Http\Controllers;
 
-use App\\Models\\SystemUpdateBackup;
-use App\\Models\\SystemUpdateCheck;
-use App\\Models\\SystemUpdateEvent;
-use App\\Models\\SystemUpdatePreparation;
-use App\\Models\\SystemUpdatePreflight;
-use App\\Services\\ReleaseActivationPreflight;
-use App\\Services\\ReleaseManifestChecker;
-use App\\Services\\UpdateBackupCoordinator;
-use App\\Services\\ReleasePackageStager;
-use Illuminate\\Http\\RedirectResponse;
-use Illuminate\\View\\View;
+use App\Models\SystemUpdateBackup;
+use App\Models\SystemUpdateCheck;
+use App\Models\SystemUpdateEvent;
+use App\Models\SystemUpdatePreparation;
+use App\Models\SystemUpdatePreflight;
+use App\Services\ReleaseActivationPreflight;
+use App\Services\ReleaseManifestChecker;
+use App\Services\UpdateBackupCoordinator;
+use App\Services\ReleasePackageStager;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
 use RuntimeException;
 use Throwable;
 
