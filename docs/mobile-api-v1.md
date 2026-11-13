@@ -76,5 +76,5 @@ Course ownership is checked server-side. The API does not accept a client-suppli
 - Student web sessions and mobile API tokens share the same approved-device registry, enforcing one active student device across the web and app. A revoked device's web session is ended on its next protected web request; its mobile token is rejected on its next API request.
 - Teacher API login remains password-based and is not subject to the student SMS device policy.
 - Token hashes, not bearer values, are persisted. Expired and revoked tokens are rejected.
-- This API contract does not itself provide the Flutter screens or secure-storage implementation; the mobile app must implement the challenge/OTP/polling flow above.
+- The Student Flutter app now implements secure installation-ID and bearer-token storage, OTP entry, Admin-approval waiting UI, 15-second approval polling, session restoration and server-side logout. Flutter analyze/tests must pass for each release; real SMS and end-to-end approval still require isolated staging acceptance.
 - Enrollment purchase, cart/coupons, reviews, quizzes, assignments, live-class operations, notifications, and complete Flutter user interfaces are separate remaining deliverables.
