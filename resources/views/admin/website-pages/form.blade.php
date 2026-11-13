@@ -51,6 +51,14 @@
         reindex();
     });
     list.addEventListener('click', event => {
+        const move = event.target.closest('[data-move-section]');
+        if (move) {
+            const card = move.closest('[data-page-section]');
+            if (move.dataset.moveSection === 'up' && card.previousElementSibling) list.insertBefore(card, card.previousElementSibling);
+            if (move.dataset.moveSection === 'down' && card.nextElementSibling) list.insertBefore(card.nextElementSibling, card);
+            reindex();
+            return;
+        }
         const remove = event.target.closest('[data-remove-page-section]');
         if (!remove) return;
         remove.closest('[data-page-section]')?.remove();
