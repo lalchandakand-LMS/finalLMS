@@ -87,7 +87,7 @@ class WebsiteCmsAndMediaTest extends TestCase
         $this->get(route('news.show', 'draft-update'))->assertNotFound();
     }
 
-    public function test_admin_can_save_homepage_sections_and_limit_them_to_twelve(): void
+    public function test_admin_can_save_homepage_sections_and_limit_them_to_twenty(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
 
@@ -101,7 +101,7 @@ class WebsiteCmsAndMediaTest extends TestCase
         $this->assertSame('Welcome', $saved[0]['title']);
         $this->assertTrue($saved[0]['enabled']);
 
-        $tooMany = array_fill(0, 13, ['title' => 'Section', 'enabled' => '1']);
+        $tooMany = array_fill(0, 21, ['title' => 'Section', 'enabled' => '1']);
         $this->post(route('admin.website-builder.update'), ['sections' => $tooMany])
             ->assertSessionHasErrors('sections');
     }
