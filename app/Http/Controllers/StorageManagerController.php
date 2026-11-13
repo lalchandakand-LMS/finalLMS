@@ -7,7 +7,6 @@ use App\Services\CPanelQuotaService;
 use App\Services\GoogleDriveQuotaService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -26,7 +25,7 @@ class StorageManagerController extends Controller
         ]);
     }
 
-    public function connectGoogleDrive(Request $request): RedirectResponse|\Illuminate\Http\RedirectResponse
+    public function connectGoogleDrive(Request $request): RedirectResponse
     {
         $clientId = (string) config('services.google_drive.client_id');
         $clientSecret = (string) config('services.google_drive.client_secret');
