@@ -254,10 +254,15 @@
         <div class="home-paths__footer"><a class="home-button home-button--primary" href="{{ route('courses.index') }}">{{ __('Browse all courses') }}</a></div>
     </section>
     @if($learnerVoices->isNotEmpty())
-        @php($testimonialRows=[$learnerVoices->values()->slice(0,6),$learnerVoices->values()->slice(6,6)])
-        @if($testimonialRows[1]->isEmpty())
-            @php($testimonialRows[1] = $testimonialRows[0])
-        @endif
+        @php
+            $testimonialRows = [
+                $learnerVoices->values()->slice(0, 6),
+                $learnerVoices->values()->slice(6, 6),
+            ];
+            if ($testimonialRows[1]->isEmpty()) {
+                $testimonialRows[1] = $testimonialRows[0];
+            }
+        @endphp
         <section class="home-testimonials"><div class="home-section-heading home-section-heading--dark"><span class="home-heading-kicker">{{ __('Student reviews') }}</span><h2>{{ $homeReviewsTitle }}</h2><p>{{ __('Approved feedback from our learners') }}</p></div>
             @foreach($testimonialRows as $rowIndex => $row)
                 <div class="home-testimonial-viewport">
