@@ -56,6 +56,27 @@ class UpdateOperationLockTest extends TestCase
     }
 
 
+
+    public function test_admin_update_center_displays_the_active_operation_lease(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        SystemUpdateLock::query()->whereKey(1)->update([
+            'operation' => 'private_extract',
+            'token' => str_repeat('b', 64),
+            'locked_by' => $admin->id,
+            'acquired_at' => now(),
+            'expires_at' => now()->addMinutes(90),
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.updates.index'))
+            ->assertOk()
+            ->assertSee('An update operation is currently in progress.')
+            ->assertSee('private extract')
+            ->assertSee($admin->name);
+    }
+
     public function test_admin_update_action_is_rejected_while_another_operation_holds_the_lease(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
