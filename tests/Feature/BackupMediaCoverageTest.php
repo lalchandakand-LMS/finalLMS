@@ -83,4 +83,58 @@ class BackupMediaCoverageTest extends TestCase
             $payload['private_files']['payment-proofs/payment-proof.png']
         );
     }
+    public function test_backup_restore_restores_course_images_private_lesson_media_and_payment_proofs(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $course = Course::factory()->create([
+            'teacher_id' => $teacher->id,
+            'image_path' => 'courses/restore-course.png',
+        ]);
+        $lesson = $course->lessons()->create([
+            'title' => 'Restore protected lesson',
+            'content' => 'Restore fixture.',
+            'duration_minutes' => 10,
+            'order' => 1,
+            'video_path' => 'restore-video.mp4',
+            'thumbnail_path' => 'course-thumbnails/restore-lesson.png',
+            'attachment_path' => 'course-media/'.$course->id.'/1/restore-notes.pdf',
+        ]);
+
+        Storage::disk('public')->put($course->image_path, 'course-image');
+        Storage::disk('public')->put($lesson->thumbnail_path, 'lesson-thumbnail');
+        Storage::disk('local')->put('course-videos/'.$lesson->video_path, 'private-video');
+        Storage::disk('local')->put($lesson->attachment_path, 'lesson-attachment');
+        Storage::disk('local')->put('payment-proofs/restore-proof.png', 'payment-proof');
+
+        app(BackupController::class)->create();
+        $backupPath = collect(Storage::disk('local')->files('backups'))->first();
+        $this->assertNotNull($backupPath);
+        $archiveBytes = Storage::disk('local')->get($backupPath);
+
+        Storage::disk('public')->delete($course->image_path);
+        Storage::disk('public')->delete($lesson->thumbnail_path);
+        Storage::disk('local')->delete('course-videos/'.$lesson->video_path);
+        Storage::disk('local')->delete($lesson->attachment_path);
+        Storage::disk('local')->delete('payment-proofs/restore-proof.png');
+
+        $response = $this->actingAs($admin)->post(route('admin.backups.restore'), [
+            'backup_file' => UploadedFile::fake()->createWithContent('restore.json.gz', $archiveBytes),
+            'confirmation' => 'RESTORE',
+            'password' => 'password',
+        ]);
+
+        $response->assertRedirect(route('admin.backups.index'));
+        $response->assertSessionHas('success');
+        Storage::disk('public')->assertExists($course->image_path);
+        Storage::disk('public')->assertExists($lesson->thumbnail_path);
+        Storage::disk('local')->assertExists('course-videos/'.$lesson->video_path);
+        Storage::disk('local')->assertExists($lesson->attachment_path);
+        Storage::disk('local')->assertExists('payment-proofs/restore-proof.png');
+        $this->assertSame('private-video', Storage::disk('local')->get('course-videos/'.$lesson->video_path));
+    }
+
 }
