@@ -34,6 +34,12 @@ return [
     |
     */
 
+    'google_drive' => [
+        'client_id' => env('GOOGLE_DRIVE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_DRIVE_CLIENT_SECRET'),
+        'redirect_uri' => env('GOOGLE_DRIVE_REDIRECT_URI', rtrim((string) env('APP_URL', 'http://localhost'), '/').'/admin/storage/google/callback'),
+    ],
+
     'lms_updates' => [
         'enabled' => (bool) env('LMS_UPDATES_ENABLED', false),
         'manifest_url' => env('LMS_UPDATES_MANIFEST_URL'),
