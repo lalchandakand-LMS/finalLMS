@@ -40,6 +40,9 @@
             @if(session('success'))
                 <div class="flash success" role="status">{{ session('success') }}</div>
             @endif
+            @if(session('info'))
+                <div class="flash info" role="status">{{ session('info') }}</div>
+            @endif
             @if(session('warning'))
                 <div class="flash warning" role="status">{{ session('warning') }}</div>
             @endif
