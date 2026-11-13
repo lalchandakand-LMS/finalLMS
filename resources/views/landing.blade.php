@@ -46,6 +46,22 @@
         })->filter()->values();
         $homepageTemplate = (string) ($hasSettingsTable ? \App\Models\Setting::value('homepage_template', 'academy-modern') : 'academy-modern');
         $homepageTemplate = array_key_exists($homepageTemplate, \App\Http\Controllers\WebsiteBuilderController::homepageTemplates()) ? $homepageTemplate : 'academy-modern';
+
+        $homeBatchesTitle = $hasSettingsTable ? \\App\\Models\\Setting::value('home_batches_title', 'Online Batches are ongoing!') : 'Online Batches are ongoing!';
+        $homeStatsTitle = $hasSettingsTable ? \\App\\Models\\Setting::value('home_stats_title', 'See the stats!') : 'See the stats!';
+        $homePathsTitle = $hasSettingsTable ? \\App\\Models\\Setting::value('home_paths_title', 'Choose Your Learning Path') : 'Choose Your Learning Path';
+        $homeReviewsTitle = $hasSettingsTable ? \\App\\Models\\Setting::value('home_reviews_title', 'What Our Students Say') : 'What Our Students Say';
+        $openBatches = \\Illuminate\\Support\\Facades\\Schema::hasTable('batches')
+            ? \\App\\Models\\Batch::query()->with(['course','teacher'])->where('status','open')->orderBy('starts_at')->take(4)->get()
+            : collect();
+        $publishedCourses = $hasCoursesTable ? \\App\\Models\\Course::where('status','published')->with('teacher')->withCount('lessons')->latest()->take(6)->get() : collect();
+        $publishedCourseCount = $hasCoursesTable ? \\App\\Models\\Course::where('status','published')->count() : 0;
+        $activeStudentCount = $hasUsersTable ? \\App\\Models\\User::where('role','student')->count() : 0;
+        $teacherCount = $hasUsersTable ? \\App\\Models\\User::where('role','teacher')->count() : 0;
+        $publishedLessonCount = $hasCoursesTable && \\Illuminate\\Support\\Facades\\Schema::hasTable('lessons') ? \\App\\Models\\Lesson::whereHas('course',fn($q)=>$q->where('status','published'))->count() : 0;
+        $learnerVoices = \\Illuminate\\Support\\Facades\\Schema::hasTable('comments') && $hasCoursesTable
+            ? \\App\\Models\\Comment::with('author')->where('commentable_type',\\App\\Models\\Course::class)->where('status','approved')->whereIn('commentable_id',\\App\\Models\\Course::where('status','published')->select('id'))->latest()->take(12)->get()
+            : collect();
     @endphp
 
     <div class="homepage-template homepage-template--{{ $homepageTemplate }}">
@@ -69,6 +85,13 @@
         .home-carousel__dots button[aria-current="true"] { width:26px; opacity:1; }
         @media(max-width:700px) { .home-carousel__viewport { height:var(--carousel-mobile-height); border-radius:16px; } .home-carousel__content { width:100%; padding:24px; } .home-carousel__arrow { width:36px;height:36px;font-size:25px; } .home-carousel__arrow--prev { left:10px; } .home-carousel__arrow--next { right:10px; } }
         @media(prefers-reduced-motion:reduce) { .home-carousel__track,.home-carousel__dots button { transition:none; } }
+
+        .home-welcome{display:grid;grid-template-columns:1.1fr .9fr;align-items:center;min-height:330px;margin-bottom:26px;padding:clamp(30px,5vw,66px);overflow:hidden;border-radius:24px;color:#fff;background:radial-gradient(circle at 78% 20%,#1b8eaa,transparent 34%),linear-gradient(120deg,#062f43,#07566b 58%,#073d5a);box-shadow:0 20px 45px #082b4430}.home-welcome__copy{position:relative;z-index:2}.home-eyebrow,.home-section-kicker,.home-heading-kicker{color:#8be5d1;font-size:.76rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.home-welcome h1{margin:14px 0;color:#fff;font-size:clamp(2.2rem,4.8vw,4.4rem);line-height:1.04}.home-welcome p{color:#d7edf3;line-height:1.75}.home-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:26px}.home-button{display:inline-flex;min-height:46px;align-items:center;justify-content:center;padding:12px 20px;border-radius:12px;font-weight:800;text-decoration:none}.home-button--light{color:#07384b;background:#fff}.home-button--outline{color:#fff;border:1px solid #ffffff70;background:#ffffff12}.home-button--primary{color:#fff;background:#087dbb}
+        .home-welcome__art{position:relative;min-height:235px;display:grid;place-items:center}.home-orbit{position:absolute;width:230px;height:230px;border:1px solid #ffffff30;border-radius:50%}.home-orbit--two{width:300px;height:300px}.home-book{z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;width:190px;height:180px;border:1px solid #ffffff80;border-radius:22px;color:#083b50;background:linear-gradient(145deg,#fff,#c7f5eb);box-shadow:0 24px 55px #001b2c55;transform:rotate(-7deg)}.home-book span{font-size:2.6rem;font-weight:900;color:#087bb4}.home-book strong{font-size:1.3rem}.home-book small{margin-top:7px;font-size:.65rem}.home-floating{position:absolute;z-index:2;display:grid;place-items:center;width:48px;height:48px;border-radius:15px;color:#fff;background:#087da9;font-weight:900}.home-floating--one{top:15%;right:10%}.home-floating--two{bottom:12%;left:10%;background:#0c9b70}
+        .home-overview{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:28px;padding:clamp(18px,3vw,28px);border-radius:22px;background:#06384b}.home-overview__panel{padding:22px;border:1px solid #ffffff1c;border-radius:16px;color:#fff;background:linear-gradient(145deg,#0a4c58,#0c3d5c)}.home-overview__panel--stats{background:linear-gradient(145deg,#0b4057,#123b69)}.home-overview h2{color:#fff}.home-overview p{color:#b7dce4}.home-batch{display:flex;align-items:center;gap:12px;margin:9px 0;padding:12px;border:1px solid #ffffff12;border-radius:11px;color:#fff;background:#ffffff0c;text-decoration:none}.home-batch__details{display:grid;gap:4px;flex:1}.home-batch__details small{color:#b7dce4}.home-text-link{display:inline-block;margin-top:12px;color:#68e0ca;font-size:.8rem;font-weight:800;text-decoration:none}.home-stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.home-stat{display:grid;grid-template-columns:34px 1fr;grid-template-rows:auto auto;align-items:center;gap:2px 10px;padding:12px;border:1px solid #ffffff12;border-radius:10px;background:#ffffff0c}.home-stat>span{grid-row:1/3;display:grid;place-items:center;width:34px;height:34px;border-radius:9px;background:#087ebd}.home-stat strong{color:#fff}.home-stat small{color:#b7dce4}.home-empty{display:grid;gap:7px;padding:17px;border:1px dashed #ffffff40;border-radius:12px;color:#fff}.home-empty span{color:#b7dce4;font-size:.83rem}.home-empty--light{max-width:700px;margin:auto;color:#18344a;text-align:center;border-color:#b7cde0;background:#fff}.home-empty--light span{color:#5b6e7e}
+        .home-paths{margin:0 -24px;padding:clamp(42px,6vw,70px) 24px;background:linear-gradient(135deg,#f1edff,#f5f1ff 55%,#eaf5ff)}.home-section-heading{max-width:760px;margin:0 auto 30px;text-align:center}.home-heading-kicker{color:#087dbb}.home-section-heading h2{color:#12344e;font-size:clamp(1.8rem,3vw,2.6rem)}.home-section-heading p{color:#607487}.home-course-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;max-width:1080px;margin:auto}.home-course-tile{display:flex;min-height:185px;flex-direction:column;padding:22px;border-radius:15px;color:#15344b;background:linear-gradient(145deg,#dcecff,#c8e2ff);text-decoration:none;transition:transform .2s}.home-course-tile:nth-child(3n+2){background:linear-gradient(145deg,#dcfce7,#c6f5d6)}.home-course-tile:nth-child(3n+3){background:linear-gradient(145deg,#f3e8ff,#e8d5ff)}.home-course-tile:hover{transform:translateY(-4px)}.home-course-tile__icon{display:grid;place-items:center;width:42px;height:42px;margin-bottom:15px;border-radius:12px;color:#fff;background:#1677d2;font-size:1.25rem}.home-course-tile strong{margin-bottom:7px}.home-course-tile>span:not(.home-course-tile__icon){color:#536b7e;font-size:.78rem;line-height:1.6}.home-course-tile small{display:flex;justify-content:space-between;margin-top:auto;padding-top:15px;color:#1264a2;font-weight:800}.home-paths__footer{text-align:center;margin-top:26px}
+        .home-testimonials{margin:0 -24px;padding:clamp(42px,6vw,64px) 0;overflow:hidden;color:#fff;background:linear-gradient(135deg,#111d31,#17263e 55%,#0c1b30)}.home-section-heading--dark h2{color:#fff}.home-section-heading--dark p{color:#b6c6d9}.home-section-heading--dark .home-heading-kicker{color:#58c5ef}.home-testimonial-viewport{overflow:hidden;margin:14px 0;mask-image:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent)}.home-testimonial-track{display:flex;width:max-content;gap:14px;padding:4px 0;animation:home-testimonial-left 48s linear infinite}.home-testimonial-track--reverse{animation-name:home-testimonial-right;animation-duration:54s}.home-testimonial-viewport:hover .home-testimonial-track{animation-play-state:paused}.home-quote-card{display:flex;width:300px;min-height:155px;flex-direction:column;padding:20px;border:1px solid #ffffff18;border-radius:13px;background:#ffffff0c}.home-quote-mark{color:#5ac8ee;font-size:2rem}.home-quote-card p{flex:1;color:#dbe6f3;font-size:.82rem;line-height:1.65}.home-quote-author{display:flex;align-items:center;gap:9px;color:#fff;font-size:.78rem}.home-quote-avatar{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;color:#082d49;background:#b9e8f6;font-weight:900}@keyframes home-testimonial-left{to{transform:translateX(-50%)}}@keyframes home-testimonial-right{from{transform:translateX(-50%)}to{transform:translateX(0)}}
+        @media(max-width:820px){.home-welcome{grid-template-columns:1fr}.home-overview{grid-template-columns:1fr}.home-course-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.home-welcome{padding:26px 20px}.home-welcome__art{min-height:150px}.home-book{width:150px;height:140px}.home-overview{padding:12px}.home-overview__panel{padding:17px}.home-course-grid{grid-template-columns:1fr}.home-course-tile{min-height:155px}.home-paths,.home-testimonials{margin-left:-12px;margin-right:-12px}.home-paths{padding-left:16px;padding-right:16px}.home-quote-card{width:260px}}@media(prefers-reduced-motion:reduce){.home-testimonial-track,.home-course-tile{animation:none;transition:none}}
         .homepage-template .hero { gap: clamp(20px,4vw,48px); }
         .homepage-template .hero > div:first-child { padding: clamp(8px,2vw,22px); }
         .homepage-template .hero h1 { letter-spacing: -.035em; }
@@ -168,107 +191,39 @@
         </section>
     @endif
 
-    <section class="hero">
-        <div>
-            <span class="badge info">{{ $siteName }}</span>
-            <h1>{{ $homeTitle }}</h1>
-            <p>{{ $homeSubtitle }}</p>
-            <div class="cta-row">
-                <a href="{{ route('courses.index') }}" class="btn primary">{{ $homePrimaryLabel }}</a>
-                @guest
-                    <a href="{{ route('login') }}" class="btn secondary">{{ $homeSecondaryLabel }}</a>
-                @endguest
-            </div>
 
-            <div class="stats">
-                <div class="stat">
-                    <strong>{{ $metricOneValue ?: $courseCount }}</strong>
-                    <span class="muted">{{ $metricOneLabel }}</span>
-                </div>
-                <div class="stat">
-                    <strong>{{ $metricTwoValue ?: $studentCount }}</strong>
-                    <span class="muted">{{ $metricTwoLabel }}</span>
-                </div>
-                <div class="stat">
-                    <strong>{{ $metricThreeValue ?: $certificateCount }}</strong>
-                    <span class="muted">{{ $metricThreeLabel }}</span>
-                </div>
+    <section class="home-welcome">
+        <div class="home-welcome__copy"><span class="home-eyebrow">{{ $siteName }}</span><h1>{{ $homeTitle }}</h1><p>{{ $homeSubtitle }}</p>
+            <div class="home-actions"><a href="{{ route('courses.index') }}" class="home-button home-button--light">{{ $homePrimaryLabel }}</a>
+                @guest<a href="{{ route('register') }}" class="home-button home-button--outline">{{ __('Create student account') }}</a>@else<a href="{{ url('/dashboard') }}" class="home-button home-button--outline">{{ __('Go to dashboard') }}</a>@endguest
             </div>
         </div>
-
-        <div class="panel">
-            <h2 style="margin-top:0;">{{ __('Platform overview') }}</h2>
-            <div class="grid grid-2">
-                <div class="card">
-                    <h3>{{ __('For students') }}</h3>
-                    <p class="muted">{{ __('Enroll in courses, follow structured lessons, and earn digital certificates.') }}</p>
-                </div>
-                <div class="card">
-                    <h3>{{ __('For teachers') }}</h3>
-                    <p class="muted">{{ __('Manage learning tracks, create lesson flow, and keep learners progressing.') }}</p>
-                </div>
-                <div class="card">
-                    <h3>{{ __('For admins') }}</h3>
-                    <p class="muted">{{ __('Review course access, maintain enrollment health, and control platform operations.') }}</p>
-                </div>
-                <div class="card">
-                    <h3>{{ __('Built for growth') }}</h3>
-                    <p class="muted">{{ __('The experience is designed to feel clean, polished, and easy to use daily.') }}</p>
-                </div>
-            </div>
+        <div class="home-welcome__art" aria-hidden="true"><div class="home-orbit"></div><div class="home-orbit home-orbit--two"></div><div class="home-book"><span>ABC</span><strong>{{ __('Learn') }}</strong><small>{{ __('Practice · Improve · Succeed') }}</small></div><div class="home-floating home-floating--one">Aa</div><div class="home-floating home-floating--two">✓</div></div>
+    </section>
+    <section class="home-overview">
+        <div class="home-overview__panel home-overview__panel--batches"><span class="home-section-kicker">{{ __('Admissions & batches') }}</span><h2>{{ $homeBatchesTitle }}</h2><p>{{ __('Book your seat in an available class.') }}</p>
+            @forelse($openBatches as $batch)
+                @if($batch->course)<a class="home-batch" href="{{ route('courses.show',$batch->course) }}"><span class="home-batch__icon">▣</span><span class="home-batch__details"><strong>{{ $batch->title }}</strong><small>{{ $batch->course->title }}@if($batch->teacher) · {{ $batch->teacher->name }}@endif</small></span><span>↗</span></a>@endif
+            @empty<div class="home-empty"><strong>{{ __('No active batches at the moment') }}</strong><span>{{ __('New batch announcements will appear here when published by the admin.') }}</span></div>@endforelse
+            <a class="home-text-link" href="{{ route('courses.index') }}">{{ __('See all courses') }} →</a>
+        </div>
+        <div class="home-overview__panel home-overview__panel--stats"><span class="home-section-kicker">{{ $siteName }}</span><h2>{{ $homeStatsTitle }}</h2><p>{{ __('Live platform statistics') }}</p>
+            <div class="home-stat-grid"><div class="home-stat"><span>▦</span><strong>{{ number_format($activeStudentCount) }}</strong><small>{{ __('Students') }}</small></div><div class="home-stat"><span>▶</span><strong>{{ number_format($publishedCourseCount) }}</strong><small>{{ __('Courses') }}</small></div><div class="home-stat"><span>♙</span><strong>{{ number_format($teacherCount) }}</strong><small>{{ __('Teachers') }}</small></div><div class="home-stat"><span>▣</span><strong>{{ number_format($publishedLessonCount) }}</strong><small>{{ __('Videos / lessons') }}</small></div></div>
+            <a class="home-text-link" href="{{ route('courses.index') }}">{{ __('See all courses') }} →</a>
         </div>
     </section>
-
-    <section style="margin-top: 28px;">
-        <div class="page-header" style="margin-bottom: 16px;">
-            <div>
-                <span class="badge info">{{ __('Featured') }}</span>
-                <h2 style="margin: 12px 0 0;">{{ $homeFeaturedTitle }}</h2>
-            </div>
-        </div>
-
-        <div class="grid grid-3">
-            @foreach($featuredCourses as $course)
-                <div class="card">
-                    <span class="badge success">{{ ucfirst($course->status) }}</span>
-                    <h3 style="margin: 14px 0 8px;">{{ $course->title }}</h3>
-                    <p class="muted" style="margin: 0 0 14px;">{{ \Illuminate\Support\Str::limit($course->description, 100) }}</p>
-                    <div class="muted">{{ __('Teacher:') }} {{ $course->teacher?->name ?? 'N/A' }}</div>
-                    <div class="meta-row" style="margin-top: 14px;">
-                        <span class="muted">{{ $course->lessons_count }} {{ __('lessons') }}</span>
-                        <strong>BDT {{ number_format($course->price, 2) }}</strong>
-                    </div>
-                    <div style="margin-top: 16px;">
-                        <a href="{{ route('courses.show', $course) }}" class="btn secondary" style="width: 100%;">{{ __('View course') }}</a>
-                    </div>
-                </div>
-            @endforeach
-        </div>
+    <section class="home-paths"><div class="home-section-heading"><span class="home-heading-kicker">{{ __('Start learning today') }}</span><h2>{{ $homePathsTitle }}</h2><p>{{ __('Explore courses published by Alom’s English Center.') }}</p></div>
+        @if($publishedCourses->isNotEmpty())<div class="home-course-grid">@foreach($publishedCourses as $course)<a class="home-course-tile" href="{{ route('courses.show',$course) }}"><span class="home-course-tile__icon">{{ ['✦','▤','◈','⌘','◎','✎'][$loop->index % 6] }}</span><strong>{{ $course->title }}</strong><span>{{ \\Illuminate\\Support\\Str::limit(strip_tags($course->description),88) }}</span><small>{{ $course->lessons_count }} {{ __('lessons') }} <b>↗</b></small></a>@endforeach</div>
+        @else<div class="home-empty home-empty--light"><strong>{{ __('Our learning paths are being prepared') }}</strong><span>{{ __('Published courses will appear here automatically.') }}</span></div>@endif
+        <div class="home-paths__footer"><a class="home-button home-button--primary" href="{{ route('courses.index') }}">{{ __('Browse all courses') }}</a></div>
     </section>
-
-    <section style="margin-top: 28px;">
-        <div class="page-header" style="margin-bottom: 16px;">
-            <div>
-                <span class="badge info">{{ __('Why learners stay') }}</span>
-                <h2 style="margin: 12px 0 0;">{{ $homeReasonTitle }}</h2>
-            </div>
-        </div>
-
-        <div class="grid grid-3">
-            <div class="card">
-                <h3>{{ __('Flexible learning') }}</h3>
-                <p class="muted">{{ __('Learn at your own pace with lessons that fit your schedule and workflow.') }}</p>
-            </div>
-            <div class="card">
-                <h3>{{ __('Clear progress') }}</h3>
-                <p class="muted">{{ __('Track enrollments, completions, and certificate progress in one dashboard.') }}</p>
-            </div>
-            <div class="card">
-                <h3>{{ __('Professional structure') }}</h3>
-                <p class="muted">{{ __('Course pathways feel organized and simple for students, teachers, and admins alike.') }}</p>
-            </div>
-        </div>
-    </section>
+    @if($learnerVoices->isNotEmpty())
+        @php($testimonialRows=[$learnerVoices->values()->slice(0,6),$learnerVoices->values()->slice(6,6)])
+        @if($testimonialRows[1]->isEmpty()) @php($testimonialRows[1]=$testimonialRows[0]) @endif
+        <section class="home-testimonials"><div class="home-section-heading home-section-heading--dark"><span class="home-heading-kicker">{{ __('Student reviews') }}</span><h2>{{ $homeReviewsTitle }}</h2><p>{{ __('Approved feedback from our learners') }}</p></div>
+            @foreach($testimonialRows as $rowIndex=>$row)<div class="home-testimonial-viewport"><div class="home-testimonial-track {{ $rowIndex===1?'home-testimonial-track--reverse':'' }}">@foreach([0,1] as $copy)@foreach($row as $comment)<article class="home-quote-card" @if($copy===1) aria-hidden="true" @endif><span class="home-quote-mark">“</span><p>{{ \\Illuminate\\Support\\Str::limit(strip_tags($comment->body),190) }}</p><div class="home-quote-author"><span class="home-quote-avatar">{{ mb_strtoupper(mb_substr($comment->author?->name ?? 'S',0,1)) }}</span><strong>{{ $comment->author?->name ?? __('Student') }}</strong></div></article>@endforeach @endforeach</div></div>@endforeach
+        </section>
+    @endif
 
     @php
         $builderSections = $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('website_sections', '[]'), true) : [];
