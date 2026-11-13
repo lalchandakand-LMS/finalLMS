@@ -61,11 +61,26 @@ class CourseDiscoveryTest extends TestCase
             'position' => 1,
             'is_preview' => true,
         ]);
+        $scheduledPost = CourseContentPost::create([
+            'author_id' => $course->teacher_id,
+            'title' => 'Future demo lesson',
+            'slug' => 'future-demo-lesson',
+            'long_description' => 'This lesson is not published yet.',
+            'video_url' => 'https://youtu.be/9bZkp7q19f0',
+            'status' => 'published',
+            'published_at' => now()->addDay(),
+        ]);
+        $course->curriculumItems()->create([
+            'course_content_post_id' => $scheduledPost->id,
+            'position' => 2,
+            'is_preview' => true,
+        ]);
 
         $this->get(route('courses.show', $course))
             ->assertOk()
             ->assertSee('Demo Class')
-            ->assertSee('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ');
+            ->assertSee('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ')
+            ->assertDontSee('Future demo lesson');
     }
 
     public function test_guest_opening_a_locked_course_post_is_sent_to_login_and_back_to_course(): void
