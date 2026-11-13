@@ -39,7 +39,7 @@ class AdminUpdateController extends Controller
             'preflight' => $latestPreparation
                 ? SystemUpdatePreflight::query()->where('preparation_id', $latestPreparation->id)->latest('checked_at')->first()
                 : null,
-            'operationLock' => SystemUpdateLock::query()->find(1),
+            'operationLock' => SystemUpdateLock::query()->with('lockedBy:id,name')->find(1),
             'events' => SystemUpdateEvent::query()
                 ->with(['performedBy:id,name', 'preparation:id,version'])
                 ->latest()
