@@ -199,7 +199,23 @@ class BackupMediaCoverageTest extends TestCase
             ->filter(fn (string $path) => str_ends_with($path, '.json.gz'))
             ->values();
         $this->assertCount(2, $safetySnapshots, 'The original backup and verified pre-restore safety snapshot must both be retained.');
-        $safetyArchive = Storage::disk('local')->get($safetySnapshots->last());
+        $safetySnapshotPath = $safetySnapshots->first(function (string $path): bool {
+            $archive = Storage::disk('local')->get($path);
+            $envelopeJson = gzdecode($archive);
+            if (! is_string($envelopeJson)) {
+                return false;
+            }
+            $envelope = json_decode($envelopeJson, true, 512, JSON_THROW_ON_ERROR);
+            $payloadJson = base64_decode($envelope['payload'] ?? '', true);
+            if (! is_string($payloadJson)) {
+                return false;
+            }
+            $payload = json_decode($payloadJson, true, 512, JSON_THROW_ON_ERROR);
+
+            return ($payload['snapshot_type'] ?? null) === 'pre_restore_safety';
+        });
+        $this->assertNotNull($safetySnapshotPath);
+        $safetyArchive = Storage::disk('local')->get($safetySnapshotPath);
         $safetyEnvelope = json_decode(gzdecode($safetyArchive), true, 512, JSON_THROW_ON_ERROR);
         $safetyPayloadJson = base64_decode($safetyEnvelope['payload'], true);
         $this->assertIsString($safetyPayloadJson);
