@@ -14,6 +14,34 @@ class BackupRestoreRecoveryTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_restore_is_not_started_when_pre_restore_snapshot_cannot_be_published(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+
+        $user = User::factory()->create(['role' => 'admin']);
+        $localDisk = Storage::disk('local');
+        $publicDisk = Storage::disk('public');
+        $failingLocalDisk = Mockery::mock($localDisk)->makePartial();
+        $failingLocalDisk->shouldReceive('put')->andReturn(false);
+
+        Storage::shouldReceive('disk')->with('local')->andReturn($failingLocalDisk);
+        Storage::shouldReceive('disk')->with('public')->andReturn($publicDisk);
+
+        try {
+            app(BackupRestoreRecovery::class)->applyWithRecovery(['users'], [
+                'tables' => ['users' => []],
+                'public_media' => [],
+                'private_files' => [],
+            ]);
+            $this->fail('Restore must stop if the pre-restore safety snapshot cannot be persisted.');
+        } catch (RuntimeException $exception) {
+            $this->assertStringContainsString('pre-restore safety snapshot could not be written', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('users', ['id' => $user->id, 'email' => $user->email]);
+    }
+
     public function test_failed_media_restore_compensates_database_and_files_from_retained_safety_snapshot(): void
     {
         Storage::fake('local');
