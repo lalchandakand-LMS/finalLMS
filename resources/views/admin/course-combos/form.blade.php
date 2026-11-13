@@ -33,7 +33,7 @@
                 @php($selectedCourseIds = array_map('strval', old('course_ids', $courseCombo->exists ? $courseCombo->courses->pluck('id')->all() : [])))
                 <select name="course_ids[]" multiple size="10" required style="min-height:230px;">
                     @foreach($courses as $course)
-                        <option value="{{ $course->id }}" @selected(in_array((string) $course->id, $selectedCourseIds, true))>
+                        <option value="{{ $course->id }}" @selected(in_array((string) $course->id, $selectedCourseIds, true)) @disabled($course->open_batches_count > 0)>
                             {{ $course->title }} · ৳{{ number_format((float) $course->price, 2) }}{{ $course->open_batches_count ? ' · '.__('Has open batch — unavailable for combos') : '' }}
                         </option>
                     @endforeach
