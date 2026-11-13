@@ -46,7 +46,7 @@
         <h2>{{ __('LMS storage target') }}</h2>
         <div class="metric">{{ number_format($configuredLocalQuotaBytes / 1073741824, 2) }} GB</div>
         <p class="muted">{{ __('Configured planning quota for LMS-managed files. This is not a live measurement of account-wide hosting usage.') }}</p>
-        <p class="muted">{{ __('Warning thresholds: :thresholds%', ['thresholds' => implode('%, ', $warningThresholds)]) }}%</p>
+        <p class="muted">{{ __('Warning thresholds: :thresholds%', ['thresholds' => implode(', ', $warningThresholds)]) }}%</p>
         <div class="flash">{{ __('Google Drive connection and verified file migration are a separate integration step. Google account storage is shared by Drive, Gmail and Photos; it is not connected by this quota panel yet.') }}</div>
     </section>
 </div>
