@@ -8,7 +8,10 @@ class InstallerTest extends TestCase
 {
     public function test_installation_page_is_available_before_setup(): void
     {
-        $this->get(route('install.index'))->assertOk()->assertSee('Install LMS securely');
+        $this->get(route('install.index'))->assertOk()
+            ->assertSee('Install LMS securely')
+            ->assertSee('any table or view')
+            ->assertSee('brand-new, completely empty database');
     }
 
     public function test_installer_requires_valid_site_database_and_admin_details(): void
