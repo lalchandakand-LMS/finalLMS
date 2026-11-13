@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Http\Controllers\BackupController;
 use App\Models\Course;
+use App\Models\SystemUpdateEvent;
 use App\Models\User;
 use App\Services\UpdateOperationLock;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -104,6 +105,40 @@ class BackupMediaCoverageTest extends TestCase
 
         $this->assertNotEmpty(session('error'));
         $this->assertSame([], Storage::disk('local')->files('backups'));
+    }
+
+    public function test_backup_restore_is_rejected_while_an_update_operation_lease_is_active(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $originalCourse = Course::factory()->create(['teacher_id' => $teacher->id]);
+        $this->actingAs($admin);
+        app(BackupController::class)->create(app(UpdateOperationLock::class));
+
+        $backupPath = collect(Storage::disk('local')->files('backups'))->first();
+        $this->assertNotNull($backupPath);
+        $archiveBytes = Storage::disk('local')->get($backupPath);
+
+        $laterCourse = Course::factory()->create(['teacher_id' => $teacher->id]);
+
+        app(UpdateOperationLock::class)->run('package_prepare', $admin, function () use ($admin, $archiveBytes): void {
+            $this->actingAs($admin)->post(route('admin.backups.restore'), [
+                'backup_file' => UploadedFile::fake()->createWithContent('restore.json.gz', $archiveBytes),
+                'confirmation' => 'RESTORE',
+                'password' => 'password',
+            ])->assertStatus(422);
+        });
+
+        $this->assertDatabaseHas('courses', ['id' => $originalCourse->id]);
+        $this->assertDatabaseHas('courses', ['id' => $laterCourse->id]);
+        $this->assertDatabaseHas('system_update_events', [
+            'event' => 'backup_restore',
+            'status' => 'failed',
+            'performed_by' => $admin->id,
+        ]);
     }
 
     public function test_backup_restore_restores_course_images_private_lesson_media_and_payment_proofs(): void
