@@ -135,7 +135,7 @@ class BackupController extends Controller
     public function restore(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'backup_file' => ['required', 'file', 'max:102400'],
+            'backup_file' => ['required', 'file', 'max:524288'],
             'confirmation' => ['required', 'in:RESTORE'],
             'password' => ['required', 'string'],
         ]);
