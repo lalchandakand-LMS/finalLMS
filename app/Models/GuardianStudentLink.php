@@ -16,7 +16,7 @@ class GuardianStudentLink extends Model {
    if($link->status==='pending' && ($link->reviewed_by!==null || $link->reviewed_at!==null)) throw ValidationException::withMessages(['status'=>'Pending relationships cannot contain review metadata.']);
    if(in_array($link->status,['active','rejected'],true) && ((int)$link->reviewed_by!==(int)$student->id || !$link->reviewed_at)) throw ValidationException::withMessages(['reviewed_by'=>'Only the linked student can accept or reject this request.']);
    if($link->status==='revoked' && (!in_array((int)$link->reviewed_by,[(int)$guardian->id,(int)$student->id],true) || !$link->reviewed_at)) throw ValidationException::withMessages(['reviewed_by'=>'Only either linked account can revoke this relationship.']);
-   if($guardian->branch_id!==$student->branch_id) throw ValidationException::withMessages(['student_id'=>'Guardian and student must belong to the same branch.']);
+   if(($guardian->branch_id===null)!==($student->branch_id===null) || ($guardian->branch_id!==null && (int)$guardian->branch_id!==(int)$student->branch_id)) throw ValidationException::withMessages(['student_id'=>'Guardian and student must belong to the same branch.']);
    if($guardian->branch_id!==null && !Branch::query()->whereKey($guardian->branch_id)->where('is_active',true)->exists()) throw ValidationException::withMessages(['student_id'=>'The assigned branch is inactive.']);
   });
  }
