@@ -13,9 +13,9 @@ Mobile clients must generate a cryptographically random 32-byte installation ide
 Body:
 - `email`, `password`
 - `device_name` (2–100 characters)
-- `device_id` (required; 64 lowercase hexadecimal characters)
+- `device_id` (required for students; 64 lowercase hexadecimal characters; omitted for teachers)
 
-Teachers with valid credentials receive a bearer token as before. Student accounts must have a registered mobile number:
+Teachers with valid credentials receive a bearer token as before and do not need a device ID. Student accounts must send the secure installation ID and have a registered mobile number:
 - A previously approved installation receives a device-bound token.
 - A new, unknown, or revoked installation receives HTTP 202 with `status=phone_verification_required`, a one-time `challenge_token`, and `expires_in=600`. No API bearer token is issued at this stage. A six-digit OTP is sent to the phone number registered by the academy.
 - If SMS is not configured or sending fails, the endpoint returns HTTP 503 and issues no token.
