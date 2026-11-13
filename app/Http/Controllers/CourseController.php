@@ -25,12 +25,16 @@ class CourseController extends Controller
         $validated = $request->validate([
             'q' => ['nullable', 'string', 'max:120'],
             'teacher' => ['nullable', 'integer', 'min:1'],
+            'category' => ['nullable', 'integer', 'min:1'],
             'min_price' => ['nullable', 'numeric', 'min:0', 'max:100000000'],
             'max_price' => ['nullable', 'numeric', 'min:0', 'max:100000000', 'gte:min_price'],
             'sort' => ['nullable', 'in:latest,oldest,price_low,price_high,title'],
         ]);
 
-        $query = Course::query()->with('teacher')->where('status', 'published');
+        $query = Course::query()
+            ->with(['teacher', 'curriculumItems.post.categories'])
+            ->withCount(['enrollments as students_count' => fn ($enrollments) => $enrollments->whereIn('status', ['active', 'completed'])])
+            ->where('status', 'published');
 
         if (! empty($validated['q'])) {
             $term = trim($validated['q']);
@@ -44,6 +48,11 @@ class CourseController extends Controller
         if (! empty($validated['teacher'])) {
             $query->where('teacher_id', $validated['teacher']);
         }
+        if (! empty($validated['category'])) {
+            $categoryId = (int) $validated['category'];
+            $query->whereHas('curriculumItems.post.categories', fn ($categories) => $categories->whereKey($categoryId));
+        }
+
         if (isset($validated['min_price'])) {
             $query->where('price', '>=', $validated['min_price']);
         }
@@ -64,8 +73,14 @@ class CourseController extends Controller
             ->whereIn('id', Course::query()->where('status', 'published')->select('teacher_id'))
             ->orderBy('name')
             ->get(['id', 'name']);
+        $categories = CourseCategory::query()
+            ->where('is_visible', true)
+            ->whereHas('posts', fn ($posts) => $posts->published()->whereHas('courses', fn ($relatedCourses) => $relatedCourses->where('status', 'published')))
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['id', 'name']);
 
-        return view('courses.index', compact('courses', 'teachers'));
+        return view('courses.index', compact('courses', 'teachers', 'categories'));
     }
 
     public function myCourses(): View
