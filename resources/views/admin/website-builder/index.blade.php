@@ -193,7 +193,7 @@
         if (move.dataset.moveLink === 'down' && row.nextElementSibling?.matches(selector)) row.parentElement.insertBefore(row.nextElementSibling, row);
         row.parentElement.querySelectorAll(selector).forEach((item, index) => {
             item.querySelectorAll('input').forEach((field) => {
-                field.name = field.name.replace(/(header_links|footer_links)\\[\\d+\\]/, '$1[' + index + ']');
+                field.name = field.name.replace(/(header_links|footer_links)\[\d+\]/, '$1[' + index + ']');
             });
         });
     });
