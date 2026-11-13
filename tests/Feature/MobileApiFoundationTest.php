@@ -6,40 +6,73 @@ use App\Models\ApiToken;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\LessonProgress;
+use App\Models\StudentDevice;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class MobileApiFoundationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_student_can_login_receive_a_hashed_device_token_and_revoke_it(): void
+    public function test_student_mobile_login_requires_sms_otp_before_issuing_a_device_bound_token(): void
     {
+        config([
+            'services.twilio.sid' => 'AC-test-account',
+            'services.twilio.token' => 'test-auth-token',
+            'services.twilio.from' => '+15005550006',
+        ]);
+        $code = null;
+        Http::fake(function ($request) use (&$code) {
+            preg_match('/code is ([0-9]{6})/', $request['Body'], $matches);
+            $code = $matches[1] ?? null;
+
+            return Http::response(['sid' => 'SM-test'], 201);
+        });
+
         $student = User::factory()->create([
             'role' => 'student',
             'email' => 'mobile-student@example.test',
             'password' => Hash::make('correct-password'),
+            'phone_number' => '+8801712345678',
         ]);
+        $deviceId = str_repeat('a', 64);
 
-        $response = $this->postJson('/api/v1/auth/login', [
+        $login = $this->postJson('/api/v1/auth/login', [
             'email' => $student->email,
             'password' => 'correct-password',
             'device_name' => 'Student Android',
+            'device_id' => $deviceId,
+        ])->assertStatus(202)
+            ->assertJsonPath('status', 'phone_verification_required');
+
+        $challenge = $login->json('challenge_token');
+        $device = StudentDevice::query()->where('user_id', $student->id)->firstOrFail();
+        $this->assertSame('pending_phone_verification', $device->status);
+        $this->assertDatabaseCount('api_tokens', 0);
+        $this->assertNotNull($code);
+
+        $verified = $this->postJson('/api/v1/auth/verify-device', [
+            'challenge_token' => $challenge,
+            'code' => $code,
         ])->assertOk()
             ->assertJsonPath('token_type', 'Bearer')
             ->assertJsonPath('user.role', 'student');
 
-        $plainToken = $response->json('access_token');
+        $plainToken = $verified->json('access_token');
         $this->assertIsString($plainToken);
         $this->assertDatabaseHas('api_tokens', [
             'user_id' => $student->id,
+            'student_device_id' => $device->id,
             'token_hash' => hash('sha256', $plainToken),
             'name' => 'Student Android',
             'revoked_at' => null,
         ]);
         $this->assertDatabaseMissing('api_tokens', ['token_hash' => $plainToken]);
+        $this->assertSame('approved', $device->fresh()->status);
 
         $this->withToken($plainToken)->getJson('/api/v1/auth/me')
             ->assertOk()
@@ -73,16 +106,8 @@ class MobileApiFoundationTest extends TestCase
     public function test_student_can_revoke_all_mobile_device_sessions(): void
     {
         $student = User::factory()->create(['role' => 'student']);
-        $first = $student->apiTokens()->create([
-            'name' => 'Phone',
-            'token_hash' => hash('sha256', 'first-device-token-0123456789012345678901234567890123456789'),
-            'expires_at' => now()->addDay(),
-        ]);
-        $student->apiTokens()->create([
-            'name' => 'Tablet',
-            'token_hash' => hash('sha256', 'second-device-token-0123456789012345678901234567890123456789'),
-            'expires_at' => now()->addDay(),
-        ]);
+        $first = $this->createStudentApiToken($student, 'first-device-token-0123456789012345678901234567890123456789', 'Phone');
+        $this->createStudentApiToken($student, 'second-device-token-0123456789012345678901234567890123456789', 'Phone', $first->studentDevice);
 
         $this->withToken('first-device-token-0123456789012345678901234567890123456789')->postJson('/api/v1/auth/logout-all')
             ->assertOk();
@@ -128,11 +153,7 @@ class MobileApiFoundationTest extends TestCase
         Enrollment::create(['user_id' => $student->id, 'course_id' => $course->id, 'status' => 'active']);
         Enrollment::create(['user_id' => $otherStudent->id, 'course_id' => $course->id, 'status' => 'active']);
         LessonProgress::create(['user_id' => $student->id, 'lesson_id' => $lesson->id, 'completed_at' => now()]);
-        $token = $student->apiTokens()->create([
-            'name' => 'Student app',
-            'token_hash' => hash('sha256', 'student-course-token-0123456789012345678901234567890123456789'),
-            'expires_at' => now()->addDay(),
-        ]);
+        $token = $this->createStudentApiToken($student, 'student-course-token-0123456789012345678901234567890123456789');
 
         $this->withToken('student-course-token-0123456789012345678901234567890123456789')->getJson('/api/v1/my/courses')
             ->assertOk()
@@ -161,11 +182,7 @@ class MobileApiFoundationTest extends TestCase
             ->assertJsonMissing(['id' => $locked->id]);
 
         Enrollment::create(['user_id' => $student->id, 'course_id' => $course->id, 'status' => 'active']);
-        $student->apiTokens()->create([
-            'name' => 'Student app',
-            'token_hash' => hash('sha256', 'enrolled-course-token-0123456789012345678901234567890123456789'),
-            'expires_at' => now()->addDay(),
-        ]);
+        $this->createStudentApiToken($student, 'enrolled-course-token-0123456789012345678901234567890123456789');
 
         $this->withToken('enrolled-course-token-0123456789012345678901234567890123456789')->getJson('/api/v1/courses/'.$course->slug)
             ->assertOk()
@@ -185,11 +202,7 @@ class MobileApiFoundationTest extends TestCase
             'order' => 1,
             'is_preview' => false,
         ]);
-        $student->apiTokens()->create([
-            'name' => 'Student app',
-            'token_hash' => hash('sha256', 'locked-lesson-token-0123456789012345678901234567890123456789'),
-            'expires_at' => now()->addDay(),
-        ]);
+        $this->createStudentApiToken($student, 'locked-lesson-token-0123456789012345678901234567890123456789');
 
         $this->withToken('locked-lesson-token-0123456789012345678901234567890123456789')
             ->getJson('/api/v1/courses/'.$course->slug.'/lessons/'.$lesson->id)
@@ -264,11 +277,7 @@ class MobileApiFoundationTest extends TestCase
             'title' => 'Complete from app', 'content' => 'Lesson', 'duration_minutes' => 10, 'order' => 1,
         ]);
         Enrollment::create(['user_id' => $student->id, 'course_id' => $course->id, 'status' => 'active']);
-        $student->apiTokens()->create([
-            'name' => 'Student app',
-            'token_hash' => hash('sha256', 'mobile-completion-token-0123456789012345678901234567890123456789'),
-            'expires_at' => now()->addDay(),
-        ]);
+        $this->createStudentApiToken($student, 'mobile-completion-token-0123456789012345678901234567890123456789');
         $url = '/api/v1/courses/'.$course->slug.'/lessons/'.$lesson->id.'/complete';
 
         $this->withToken('mobile-completion-token-0123456789012345678901234567890123456789')
@@ -283,13 +292,33 @@ class MobileApiFoundationTest extends TestCase
     public function test_expired_and_unknown_bearer_tokens_are_rejected(): void
     {
         $student = User::factory()->create(['role' => 'student']);
-        $student->apiTokens()->create([
-            'name' => 'Expired device',
-            'token_hash' => hash('sha256', 'expired-device-token-0123456789012345678901234567890123456789'),
-            'expires_at' => now()->subMinute(),
-        ]);
+        $this->createStudentApiToken($student, 'expired-device-token-0123456789012345678901234567890123456789', 'Expired device', null, now()->subMinute());
 
         $this->withToken('expired-device-token-0123456789012345678901234567890123456789')->getJson('/api/v1/auth/me')->assertUnauthorized();
         $this->withToken('not-a-valid-token-0123456789012345678901234567890123456789')->getJson('/api/v1/auth/me')->assertUnauthorized();
     }
+    private function createStudentApiToken(
+        User $student,
+        string $plainToken,
+        string $name = 'Student app',
+        ?StudentDevice $device = null,
+        ?\DateTimeInterface $expiresAt = null
+    ): ApiToken {
+        $device ??= StudentDevice::create([
+            'user_id' => $student->id,
+            'device_hash' => hash('sha256', Str::random(64)),
+            'device_name' => $name,
+            'status' => 'approved',
+            'phone_verified_at' => now(),
+            'approved_at' => now(),
+        ]);
+
+        return $student->apiTokens()->create([
+            'student_device_id' => $device->id,
+            'name' => $name,
+            'token_hash' => hash('sha256', $plainToken),
+            'expires_at' => $expiresAt ?? now()->addDay(),
+        ]);
+    }
+
 }
