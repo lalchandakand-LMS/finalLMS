@@ -195,6 +195,21 @@ class BackupMediaCoverageTest extends TestCase
 
         $response->assertRedirect(route('admin.backups.index'));
         $response->assertSessionHas('success');
+        $safetySnapshots = collect(Storage::disk('local')->files('backups'))
+            ->filter(fn (string $path) => str_ends_with($path, '.json.gz'))
+            ->values();
+        $this->assertCount(2, $safetySnapshots, 'The original backup and verified pre-restore safety snapshot must both be retained.');
+        $safetyArchive = Storage::disk('local')->get($safetySnapshots->last());
+        $safetyEnvelope = json_decode(gzdecode($safetyArchive), true, 512, JSON_THROW_ON_ERROR);
+        $safetyPayloadJson = base64_decode($safetyEnvelope['payload'], true);
+        $this->assertIsString($safetyPayloadJson);
+        $this->assertSame(
+            hash_hmac('sha256', $safetyPayloadJson, (string) config('app.key')),
+            $safetyEnvelope['signature']
+        );
+        $safetyPayload = json_decode($safetyPayloadJson, true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('pre_restore_safety', $safetyPayload['snapshot_type']);
+        $this->assertArrayHasKey('system_update_events', $safetyPayload['tables']) === false;
         Storage::disk('public')->assertExists($course->image_path);
         Storage::disk('public')->assertExists($lesson->thumbnail_path);
         Storage::disk('local')->assertExists('course-videos/'.$lesson->video_path);
