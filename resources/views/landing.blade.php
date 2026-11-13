@@ -62,6 +62,12 @@
         $learnerVoices = \Illuminate\Support\Facades\Schema::hasTable('comments') && $hasCoursesTable
             ? \App\Models\Comment::with('author')->where('commentable_type',\App\Models\Course::class)->where('status','approved')->whereIn('commentable_id',\App\Models\Course::where('status','published')->select('id'))->latest()->take(12)->get()
             : collect();
+        $hasHomeSlides = $homeSlides->isNotEmpty();
+        $showSliderArrows = $homeSlides->count() > 1 && $sliderOptions['arrows'];
+        $showSliderDots = $homeSlides->count() > 1 && $sliderOptions['dots'];
+        $isGuest = auth()->guest();
+        $hasPublishedCourses = $publishedCourses->isNotEmpty();
+        $hasLearnerVoices = $learnerVoices->isNotEmpty();
     @endphp
 
     <div class="homepage-template homepage-template--{{ $homepageTemplate }}">
@@ -158,7 +164,7 @@
 
     @include('partials.flash-sales', ['flashSales' => $flashSales])
 
-    @if($homeSlides->isNotEmpty())
+    @if($hasHomeSlides)
         <section class="home-carousel" aria-label="{{ __('Homepage highlights') }}" data-home-carousel data-autoplay="{{ $sliderOptions['autoplay'] ? 'true' : 'false' }}" data-interval="{{ $sliderOptions['interval'] }}" data-pause-hover="{{ $sliderOptions['pauseHover'] ? 'true' : 'false' }}" style="--carousel-height:{{ $sliderOptions['height'] }}px;--carousel-mobile-height:{{ $sliderOptions['mobileHeight'] }}px;--carousel-overlay:{{ $sliderOptions['overlay'] / 100 }};margin-bottom:28px;">
             <div class="home-carousel__viewport" data-carousel-viewport tabindex="0" aria-roledescription="carousel">
                 <div class="home-carousel__track" data-carousel-track>
@@ -167,25 +173,30 @@
                             <img src="{{ $slide['asset']->url }}" alt="{{ $slide['asset']->alt_text ?: $slide['title'] }}" loading="{{ $index === 0 ? 'eager' : 'lazy' }}">
                             <div class="home-carousel__shade"></div>
                             <div class="home-carousel__content">
-                                @if($slide['title'] !== '')
+                                @php
+                                    $hasSlideTitle = $slide['title'] !== '';
+                                    $hasSlideSubtitle = $slide['subtitle'] !== '';
+                                    $hasSlideButton = $slide['button_label'] !== '' && $slide['button_url'] !== '';
+                                @endphp
+                                @if($hasSlideTitle)
                                     <h2>{{ $slide['title'] }}</h2>
                                 @endif
-                                @if($slide['subtitle'] !== '')
+                                @if($hasSlideSubtitle)
                                     <p>{{ $slide['subtitle'] }}</p>
                                 @endif
-                                @if($slide['button_label'] !== '' && $slide['button_url'] !== '')
+                                @if($hasSlideButton)
                                     <a class="btn primary" href="{{ $slide['button_url'] }}" rel="noopener">{{ $slide['button_label'] }}</a>
                                 @endif
                             </div>
                         </article>
                     @endforeach
                 </div>
-                @if($homeSlides->count() > 1 && $sliderOptions['arrows'])
+                @if($showSliderArrows)
                     <button type="button" class="home-carousel__arrow home-carousel__arrow--prev" data-carousel-prev aria-label="{{ __('Previous slide') }}">‹</button>
                     <button type="button" class="home-carousel__arrow home-carousel__arrow--next" data-carousel-next aria-label="{{ __('Next slide') }}">›</button>
                 @endif
             </div>
-            @if($homeSlides->count() > 1 && $sliderOptions['dots'])
+            @if($showSliderDots)
                 <nav class="home-carousel__dots" aria-label="{{ __('Slider navigation') }}" data-carousel-dots>
                     @foreach($homeSlides as $index => $slide)
                         <button type="button" data-carousel-dot="{{ $index }}" aria-label="{{ __('Go to slide') }} {{ $index + 1 }}" aria-current="{{ $index === 0 ? 'true' : 'false' }}"></button>
@@ -199,7 +210,7 @@
     <section class="home-welcome">
         <div class="home-welcome__copy"><span class="home-eyebrow">{{ $siteName }}</span><h1>{{ $homeTitle }}</h1><p>{{ $homeSubtitle }}</p>
             <div class="home-actions"><a href="{{ route('courses.index') }}" class="home-button home-button--light">{{ $homePrimaryLabel }}</a>
-                @if(auth()->guest())
+                @if($isGuest)
                     <a href="{{ route('register') }}" class="home-button home-button--outline">{{ __('Create student account') }}</a>
                 @else
                     <a href="{{ url('/dashboard') }}" class="home-button home-button--outline">{{ __('Go to dashboard') }}</a>
@@ -233,7 +244,7 @@
         </div>
     </section>
     <section class="home-paths"><div class="home-section-heading"><span class="home-heading-kicker">{{ __('Start learning today') }}</span><h2>{{ $homePathsTitle }}</h2><p>{{ __('Explore courses published by Alom’s English Center.') }}</p></div>
-        @if($publishedCourses->isNotEmpty())
+        @if($hasPublishedCourses)
             <div class="home-course-grid">
                 @foreach($publishedCourses as $course)
                     <a class="home-course-tile" href="{{ route('courses.show',$course) }}">
@@ -253,7 +264,7 @@
         @endif
         <div class="home-paths__footer"><a class="home-button home-button--primary" href="{{ route('courses.index') }}">{{ __('Browse all courses') }}</a></div>
     </section>
-    @if($learnerVoices->isNotEmpty())
+    @if($hasLearnerVoices)
         @php
             $testimonialRows = [
                 $learnerVoices->values()->slice(0, 6),
@@ -302,21 +313,25 @@
                 $sectionSpacing = ['compact' => '16px', 'normal' => '24px', 'airy' => '40px'][$section['spacing'] ?? 'normal'] ?? '24px';
                 $sectionLayout = in_array($section['layout'] ?? 'standard', ['standard', 'reversed', 'centered'], true) ? ($section['layout'] ?? 'standard') : 'standard';
                 $sectionGridStyle = $sectionLayout === 'centered' ? 'grid-template-columns:1fr;text-align:center;' : ($sectionLayout === 'reversed' ? 'direction:rtl;' : '');
+                $sectionHasTitle = trim((string) ($section['title'] ?? '')) !== '';
+                $sectionHasBody = trim((string) ($section['body'] ?? '')) !== '';
+                $sectionHasButton = ! empty($section['button_label']) && ! empty($section['button_url']);
+                $sectionHasImage = $sectionImage && str_starts_with($sectionImage->mime_type, 'image/');
             @endphp
             <section class="panel" style="margin-top:28px;background-color:{{ $sectionBackground }};color:{{ $sectionTextColor }};padding:{{ $sectionSpacing }};">
                 <div class="grid grid-2" style="align-items:center;{{ $sectionGridStyle }}">
                     <div style="direction:ltr;text-align:{{ $sectionLayout === 'centered' ? 'center' : 'left' }};">
-                        @if(!empty($section['title']))
+                        @if($sectionHasTitle)
                             <h2>{{ $section['title'] }}</h2>
                         @endif
-                        @if(!empty($section['body']))
+                        @if($sectionHasBody)
                             <p style="white-space:pre-line;line-height:1.8;">{{ $section['body'] }}</p>
                         @endif
-                        @if(!empty($section['button_label']) && !empty($section['button_url']))
+                        @if($sectionHasButton)
                             <a class="btn primary" href="{{ $section['button_url'] }}" rel="nofollow noopener">{{ $section['button_label'] }}</a>
                         @endif
                     </div>
-                    @if($sectionImage && str_starts_with($sectionImage->mime_type, 'image/'))
+                    @if($sectionHasImage)
                         <div style="direction:ltr;{{ $sectionLayout === 'centered' ? 'text-align:center;' : '' }}"><img src="{{ $sectionImage->url }}" alt="{{ $sectionImage->alt_text }}" loading="lazy" style="width:100%;max-width:{{ $sectionLayout === 'centered' ? '560px' : '100%' }};max-height:340px;object-fit:cover;border-radius:14px;"></div>
                     @endif
                 </div>
