@@ -18,7 +18,7 @@ use ZipArchive;
 
 class UpdateBackupCoordinator
 {
-    private const IGNORED_TABLES = ['migrations', 'cache', 'cache_locks', 'sessions', 'jobs', 'job_batches', 'failed_jobs'];
+    private const IGNORED_TABLES = ['migrations', 'cache', 'cache_locks', 'sessions', 'jobs', 'job_batches', 'failed_jobs', 'system_update_locks', 'system_update_events'];
 
     public function create(SystemUpdatePreparation $preparation, User $admin): SystemUpdateBackup
     {
