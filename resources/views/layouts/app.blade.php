@@ -244,6 +244,7 @@
             <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><span>▦</span><span class="nav-text">Dashboard</span></a>
             <div class="admin-sidebar-label">Academy</div>
             <a href="{{ route('admin.courses.index') }}"><span>📚</span><span class="nav-text">Courses & lessons</span></a>
+            <a class="{{ request()->routeIs('admin.course-combos.*') ? 'active' : '' }}" href="{{ route('admin.course-combos.index') }}"><span>🎁</span><span class="nav-text">Course combos</span></a>
             <a class="{{ request()->routeIs('admin.course-categories.*') ? 'active' : '' }}" href="{{ route('admin.course-categories.index') }}"><span>🗂️</span><span class="nav-text">Course categories</span></a>
             <a class="{{ request()->routeIs('admin.course-content-posts.*') ? 'active' : '' }}" href="{{ route('admin.course-content-posts.index') }}"><span>📝</span><span class="nav-text">Course content studio</span></a>
             <a href="{{ route('admin.flash-sales.index') }}"><span>🔥</span><span class="nav-text">Flash Sale</span></a>
