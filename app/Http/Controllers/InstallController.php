@@ -129,7 +129,7 @@ class InstallController extends Controller
 
             // The fresh installer must never share a database with another app or a partial install.
             $schema = Schema::connection('mysql');
-            if ($schema->getTables() !== [] || $schema->getViews() !== []) {
+            if ($schema->getTables($validated['db_database']) !== [] || $schema->getViews($validated['db_database']) !== []) {
                 throw new RuntimeException('The selected database is not empty. Create a brand-new empty database and try again.');
             }
 
