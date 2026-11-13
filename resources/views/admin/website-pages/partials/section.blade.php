@@ -1,5 +1,5 @@
 <section class="card" data-page-section style="margin-bottom:14px;">
-    <div class="page-header"><h3>Section <span data-section-number>{{ is_numeric($i) ? $i + 1 : '' }}</span></h3><button class="btn danger" type="button" data-remove-page-section>Remove</button></div>
+    <div class="page-header"><h3>Section <span data-section-number>{{ is_numeric($i) ? $i + 1 : '' }}</span></h3><div class="cta-row"><button class="btn secondary" type="button" data-move-section="up">↑</button><button class="btn secondary" type="button" data-move-section="down">↓</button><button class="btn danger" type="button" data-remove-page-section>Remove</button></div></div>
     <div class="grid grid-2">
         <label>Block type<select name="sections[{{ $i }}][type]">@foreach(['hero'=>'Hero banner','text'=>'Text content','image'=>'Image section','feature'=>'Feature / highlights','cta'=>'Call to action'] as $value=>$label)<option value="{{ $value }}" @selected(($section['type'] ?? 'text')===$value)>{{ $label }}</option>@endforeach</select></label>
         <label>Heading<input name="sections[{{ $i }}][title]" maxlength="180" value="{{ $section['title'] ?? '' }}"></label>
