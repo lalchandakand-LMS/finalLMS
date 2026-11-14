@@ -9,6 +9,7 @@ use App\Models\LessonProgress;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class CourseController extends Controller
@@ -58,15 +59,20 @@ class CourseController extends Controller
         abort_unless($course->status === 'published' || $isInstructor, 404);
         $enrolled = $user && $user->isStudent()
             && $course->enrollments()->where('user_id', $user->id)->whereIn('status', ['active', 'completed'])->exists();
-        abort_unless($course->status === 'published' || $isInstructor, 404);
 
         $course->load(['teacher:id,name', 'lessons']);
         $lessons = $course->lessons
             ->filter(fn (Lesson $lesson) => $enrolled || $isInstructor || $lesson->is_preview)
             ->values();
 
+        $isWishlisted = $user && $user->isStudent() && DB::table('course_wishlists')
+            ->where('user_id', $user->id)
+            ->where('course_id', $course->id)
+            ->exists();
+
         return response()->json([
             'course' => $this->coursePayload($course),
+            'is_wishlisted' => (bool) $isWishlisted,
             'lessons' => $lessons->map(fn (Lesson $lesson) => [
                 'id' => $lesson->id,
                 'title' => $lesson->title,
@@ -210,6 +216,62 @@ class CourseController extends Controller
             'completed' => true,
             'completed_at' => $progress->completed_at?->toIso8601String(),
         ]);
+    }
+
+    public function wishlist(Request $request): JsonResponse
+    {
+        $student = $request->user();
+        abort_unless($student->isStudent(), 403);
+
+        $courses = Course::query()
+            ->join('course_wishlists', function ($join) use ($student): void {
+                $join->on('courses.id', '=', 'course_wishlists.course_id')
+                    ->where('course_wishlists.user_id', '=', $student->id);
+            })
+            ->where('courses.status', 'published')
+            ->with('teacher:id,name')
+            ->orderByDesc('course_wishlists.created_at')
+            ->select('courses.*')
+            ->paginate(20);
+
+        return response()->json([
+            'data' => $courses->getCollection()->map(fn (Course $course) => $this->coursePayload($course)),
+            'meta' => [
+                'current_page' => $courses->currentPage(),
+                'last_page' => $courses->lastPage(),
+                'per_page' => $courses->perPage(),
+                'total' => $courses->total(),
+            ],
+        ]);
+    }
+
+    public function addToWishlist(Request $request, Course $course): JsonResponse
+    {
+        $student = $request->user();
+        abort_unless($student->isStudent(), 403);
+        abort_unless($course->status === 'published', 404);
+
+        DB::table('course_wishlists')->insertOrIgnore([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return response()->json(['wishlisted' => true]);
+    }
+
+    public function removeFromWishlist(Request $request, Course $course): JsonResponse
+    {
+        $student = $request->user();
+        abort_unless($student->isStudent(), 403);
+
+        DB::table('course_wishlists')
+            ->where('user_id', $student->id)
+            ->where('course_id', $course->id)
+            ->delete();
+
+        return response()->json(['wishlisted' => false]);
     }
 
     public function teachingCourses(Request $request): JsonResponse
