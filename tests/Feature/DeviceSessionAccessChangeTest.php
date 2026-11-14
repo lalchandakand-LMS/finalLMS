@@ -15,7 +15,7 @@ class DeviceSessionAccessChangeTest extends TestCase
     {
         $admin = User::factory()->create(['role' => 'admin']);
         $student = User::factory()->create(['role' => 'student']);
-        $branch = \\App\\Models\\Branch::create([
+        $branch = \App\Models\Branch::create([
             'name' => 'Session Security Branch',
             'slug' => 'session-security-branch',
             'is_active' => true,
