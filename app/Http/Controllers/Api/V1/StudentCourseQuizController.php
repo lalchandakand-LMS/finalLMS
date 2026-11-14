@@ -209,11 +209,22 @@ class StudentCourseQuizController extends Controller
         });
 
         $attempt->load('questions');
+        $pivot = DB::table('course_question_set')
+            ->where('course_id', $course->id)
+            ->where('question_set_id', $questionSet->id)
+            ->first();
+        $used = QuestionSetAttempt::query()
+            ->where('course_id', $course->id)
+            ->where('question_set_id', $questionSet->id)
+            ->where('student_id', $student->id)
+            ->count();
+        $maximum = $pivot?->max_attempts === null ? null : (int) $pivot->max_attempts;
 
         return response()->json([
             'data' => [
                 'attempt' => $this->attemptSummary($attempt),
                 'questions' => $this->questionPayload($attempt),
+                'attempts_remaining' => $maximum === null ? null : max(0, $maximum - $used),
             ],
         ], 201);
     }
