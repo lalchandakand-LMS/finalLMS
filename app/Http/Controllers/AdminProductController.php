@@ -217,6 +217,9 @@ class AdminProductController extends Controller
         }
         if ($result['pdf']) Storage::disk('local')->delete($result['pdf']);
         if ($result['image']) Storage::disk('public')->delete($result['image']);
+        foreach ($result['previews'] as $previewPath) {
+            Storage::disk('local')->delete($previewPath);
+        }
 
         return back()->with('success', 'eBook deleted.');
     }
