@@ -289,7 +289,10 @@ class BkashPaymentController extends Controller
                 || (isset($verified['currency']) && strtoupper((string) $verified['currency']) !== 'BDT')
                 || ! is_string($transactionId)
                 || $transactionId === ''
-                || ($invoice !== null && $invoice !== $payment->transaction_reference)) {
+                || ($invoice !== null && $invoice !== $payment->transaction_reference)
+                || ($payment->order_id && $invoice !== $payment->transaction_reference)
+                || ($payment->order_id && ! isset($verified['paymentID']))
+                || ($payment->order_id && (! isset($verified['currency']) || strtoupper((string) $verified['currency']) !== 'BDT'))) {
                 throw new \RuntimeException('bKash transaction verification did not match the local payment.');
             }
 
