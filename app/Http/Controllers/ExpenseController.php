@@ -10,11 +10,26 @@ use Illuminate\View\View;
 
 class ExpenseController extends Controller
 {
+    private function activeAccountantBranch(Request $request): ?int
+    {
+        if (! $request->user()->isAccountant()) {
+            return null;
+        }
+
+        $branchId = $request->user()->branch_id;
+        abort_unless(
+            $branchId && Branch::query()->whereKey($branchId)->where('is_active', true)->exists(),
+            403,
+            'No active branch is assigned to this account.'
+        );
+
+        return (int) $branchId;
+    }
+
     private function branchScope(Request $request, $query): void
     {
-        if ($request->user()->isAccountant()) {
-            $branchId = $request->user()->branch_id;
-            abort_unless($branchId && Branch::whereKey($branchId)->where('is_active', true)->exists(), 403);
+        $branchId = $this->activeAccountantBranch($request);
+        if ($branchId !== null) {
             $query->where('branch_id', $branchId);
         }
     }
@@ -63,11 +78,7 @@ class ExpenseController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $isAccountant = $request->user()->isAccountant();
-        if ($isAccountant) {
-            $branchId = $request->user()->branch_id;
-            abort_unless($branchId && Branch::whereKey($branchId)->where('is_active', true)->exists(), 403);
-        }
+        $branchId = $this->activeAccountantBranch($request);
 
         $validated = $request->validate([
             'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
@@ -80,8 +91,8 @@ class ExpenseController extends Controller
             'expense_date' => ['required', 'date'],
         ]);
 
-        if ($isAccountant) {
-            $validated['branch_id'] = $request->user()->branch_id;
+        if ($branchId !== null) {
+            $validated['branch_id'] = $branchId;
         } elseif (! empty($validated['branch_id'])) {
             abort_unless(Branch::whereKey($validated['branch_id'])->where('is_active', true)->exists(), 422);
         }
@@ -122,15 +133,13 @@ class ExpenseController extends Controller
 
     private function authorizeExpense(Expense $expense, Request $request): void
     {
-        if ($request->user()->isAccountant()) {
-            $branchId = $request->user()->branch_id;
-            abort_unless(
-                $branchId && Branch::whereKey($branchId)->where('is_active', true)->exists()
-                    && (int) $expense->branch_id === (int) $branchId,
-                404
-            );
-        } else {
-            abort_unless($request->user()->isAdmin(), 403);
+        $branchId = $this->activeAccountantBranch($request);
+        if ($branchId !== null) {
+            abort_unless((int) $expense->branch_id === $branchId, 404);
+
+            return;
         }
+
+        abort_unless($request->user()->isAdmin(), 403);
     }
 }
