@@ -43,7 +43,7 @@ class StaffRoleScopeTest extends TestCase
         }
 
         $this->actingAs($manager)
-            ->get(route('branch-manager.batches.index'))
+            ->get(route('admin.branch-workspace.batches.index'))
             ->assertOk()
             ->assertSee('Visible Batch')
             ->assertDontSee('Hidden Batch');
@@ -62,9 +62,9 @@ class StaffRoleScopeTest extends TestCase
         $manager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $assigned->id]);
         $foreignBatch = Batch::create(['branch_id' => $other->id, 'course_id' => $course->id, 'teacher_id' => $teacher->id, 'title' => 'Foreign Batch', 'capacity' => 20, 'starts_at' => now(), 'ends_at' => now()->addMonth(), 'fee' => 1000, 'status' => 'open']);
         $payload = ['course_id' => $course->id, 'teacher_id' => $teacher->id, 'title' => 'New Local Batch', 'capacity' => 15, 'starts_at' => now()->addDay()->format('Y-m-d H:i:s'), 'ends_at' => now()->addMonth()->format('Y-m-d H:i:s'), 'fee' => 1200];
-        $this->actingAs($manager)->post(route('branch-manager.batches.store'), $payload)->assertRedirect();
+        $this->actingAs($manager)->post(route('admin.branch-workspace.batches.store'), $payload)->assertRedirect();
         $this->assertDatabaseHas('batches', ['title' => 'New Local Batch', 'branch_id' => $assigned->id]);
-        $this->put(route('branch-manager.batches.update', $foreignBatch), ['title' => 'Tampered', 'capacity' => 20, 'starts_at' => now()->addDay(), 'ends_at' => now()->addMonth(), 'fee' => 1000, 'status' => 'closed'])->assertNotFound();
+        $this->put(route('admin.branch-workspace.batches.update', $foreignBatch), ['title' => 'Tampered', 'capacity' => 20, 'starts_at' => now()->addDay(), 'ends_at' => now()->addMonth(), 'fee' => 1000, 'status' => 'closed'])->assertNotFound();
         $this->assertDatabaseHas('batches', ['id' => $foreignBatch->id, 'title' => 'Foreign Batch']);
     }
 
@@ -75,11 +75,11 @@ class StaffRoleScopeTest extends TestCase
         $student = User::factory()->create(['role' => 'student', 'branch_id' => $branch->id]);
 
         $this->actingAs($accountant)
-            ->get(route('accountant.invoices.index'))
+            ->get(route('admin.finance.invoices.index'))
             ->assertOk()
             ->assertSee('Invoices & installments');
 
-        $this->post(route('accountant.invoices.store'), [
+        $this->post(route('admin.finance.invoices.store'), [
             'user_id' => $student->id,
             'title' => 'Tuition installment',
             'amount' => 1200,
