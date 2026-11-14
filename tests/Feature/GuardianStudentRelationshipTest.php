@@ -41,4 +41,25 @@ class GuardianStudentRelationshipTest extends TestCase {
   $this->expectException(\Illuminate\Database\QueryException::class);
   GuardianStudentLink::create(['guardian_id'=>$g->id,'student_id'=>$s->id,'relationship'=>'Parent','status'=>'pending','requested_by'=>$g->id,'requested_at'=>now()]);
  }
+
+ public function test_guardian_dashboard_lists_only_the_guardians_own_pending_and_active_links(): void {
+  $g=User::factory()->create(['role'=>'guardian','email_verified_at'=>now()]);
+  $other=User::factory()->create(['role'=>'guardian','email_verified_at'=>now()]);
+  $student=User::factory()->create(['role'=>'student','email_verified_at'=>now()]);
+  $otherStudent=User::factory()->create(['role'=>'student','email_verified_at'=>now()]);
+  GuardianStudentLink::create(['guardian_id'=>$g->id,'student_id'=>$student->id,'relationship'=>'Parent','status'=>'pending','requested_by'=>$g->id,'requested_at'=>now()]);
+  GuardianStudentLink::create(['guardian_id'=>$other->id,'student_id'=>$otherStudent->id,'relationship'=>'Parent','status'=>'pending','requested_by'=>$other->id,'requested_at'=>now()]);
+  $this->actingAs($g)->get(route('guardian.dashboard'))->assertOk()->assertSee($student->name)->assertDontSee($otherStudent->name);
+ }
+
+ public function test_student_consent_inbox_shows_only_requests_for_the_signed_in_student(): void {
+  $student=User::factory()->create(['role'=>'student','email_verified_at'=>now()]);
+  $otherStudent=User::factory()->create(['role'=>'student','email_verified_at'=>now()]);
+  $guardian=User::factory()->create(['role'=>'guardian','email_verified_at'=>now()]);
+  $otherGuardian=User::factory()->create(['role'=>'guardian','email_verified_at'=>now()]);
+  GuardianStudentLink::create(['guardian_id'=>$guardian->id,'student_id'=>$student->id,'relationship'=>'Parent','status'=>'pending','requested_by'=>$guardian->id,'requested_at'=>now()]);
+  GuardianStudentLink::create(['guardian_id'=>$otherGuardian->id,'student_id'=>$otherStudent->id,'relationship'=>'Parent','status'=>'pending','requested_by'=>$otherGuardian->id,'requested_at'=>now()]);
+  $this->actingAs($student)->get(route('student.guardian-requests.page'))->assertOk()->assertSee($guardian->name)->assertDontSee($otherGuardian->name);
+ }
+
 }
