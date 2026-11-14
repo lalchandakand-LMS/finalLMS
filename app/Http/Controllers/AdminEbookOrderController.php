@@ -20,7 +20,10 @@ class AdminEbookOrderController extends Controller
     public function proof(Order $order)
     {
         abort_unless($order->payment_proof_path && Storage::disk('local')->exists($order->payment_proof_path), 404);
-        return Storage::disk('local')->download($order->payment_proof_path, 'payment-proof');
+        return Storage::disk('local')->download($order->payment_proof_path, 'payment-proof', [
+            'Cache-Control' => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 
     public function approve(Order $order, EbookOrderFulfillmentService $fulfillment): RedirectResponse
