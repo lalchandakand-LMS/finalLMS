@@ -48,11 +48,17 @@
                 @endforeach
             @endif
             @if($order->status === 'pending')
-                <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
-                    <form method="POST" action="{{ route('admin.ebooks.orders.approve',$order) }}">@csrf<button class="btn primary" type="submit">{{ __('Verify & grant download') }}</button></form>
-                    <form method="POST" action="{{ route('admin.ebooks.orders.reject',$order) }}">@csrf<button class="btn secondary" type="submit">{{ __('Reject order') }}</button></form>
-                </div>
-            @elseif($order->status === 'completed' && (float) $order->total > 0 && $order->refunds->isEmpty())
+                @if($order->payment_method === 'bkash' || $order->payments->contains(fn ($payment) => filled($payment->gateway_provider)))
+                    <div class="flash warning">{{ __('Waiting for authoritative bKash server-side verification. Manual approval is disabled.') }}</div>
+                @else
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+                        <form method="POST" action="{{ route('admin.ebooks.orders.approve',$order) }}">@csrf<button class="btn primary" type="submit">{{ __('Verify & grant download') }}</button></form>
+                        <form method="POST" action="{{ route('admin.ebooks.orders.reject',$order) }}">@csrf<button class="btn secondary" type="submit">{{ __('Reject order') }}</button></form>
+                    </div>
+                @endif
+            @elseif(in_array($order->status, ['completed', 'cancelled'], true)
+                && (float) $order->total > 0 && $order->refunds->isEmpty()
+                && ($order->status === 'completed' || $order->payments->contains(fn ($payment) => filled($payment->gateway_transaction_id))))
                 <form method="POST" action="{{ route('admin.ebooks.orders.refund',$order) }}" class="panel" style="margin-top:12px;background:var(--surface-muted)">
                     @csrf
                     <h3>{{ __('Record full refund') }}</h3>
