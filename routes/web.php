@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AddonRegistryController;
+use App\Http\Controllers\AiDeveloperController;
 use App\Http\Controllers\AdminSettingsController;
 use App\Http\Controllers\AdminUpdateController;
 use App\Http\Controllers\AuthController;
@@ -310,6 +311,8 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::post('/student-devices/{device}/reject', [StudentDeviceAccessController::class, 'reject'])->name('admin.student-devices.reject');
         Route::post('/student-devices/{device}/revoke', [StudentDeviceAccessController::class, 'revoke'])->name('admin.student-devices.revoke');
         Route::get('/addons', [AddonRegistryController::class, 'index'])->name('admin.addons.index');
+        Route::get('/ai-developer', [AiDeveloperController::class, 'index'])->name('admin.ai-developer.index');
+        Route::post('/ai-developer/analyze', [AiDeveloperController::class, 'analyze'])->middleware('throttle:3,1')->name('admin.ai-developer.analyze');
         Route::patch('/addons/{key}', [AddonRegistryController::class, 'update'])->middleware('throttle:20,1')->name('admin.addons.update');
         Route::get('/updates', [AdminUpdateController::class, 'index'])->name('admin.updates.index');
         Route::post('/updates/check', [AdminUpdateController::class, 'check'])->middleware('throttle:3,10')->name('admin.updates.check');
