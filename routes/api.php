@@ -16,7 +16,7 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/auth/me', [AuthController::class, 'me']);
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::post('/auth/logout-all', [AuthController::class, 'logoutAll']);
-        Route::get('/my/courses', [CourseController::class, 'myCourses']);
+        Route::get('/my/courses', [CourseController::class, 'myCourses']);\n        Route::get('/my/assignments', [StudentAssignmentController::class, 'index']);\n        Route::post('/assignments/{assignment}/submission', [StudentAssignmentController::class, 'submit']);
         Route::get('/my/wishlist', [CourseController::class, 'wishlist']);
         Route::post('/courses/{course:slug}/wishlist', [CourseController::class, 'addToWishlist']);
         Route::delete('/courses/{course:slug}/wishlist', [CourseController::class, 'removeFromWishlist']);
