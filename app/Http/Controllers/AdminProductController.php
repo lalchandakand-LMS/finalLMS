@@ -16,7 +16,7 @@ class AdminProductController extends Controller
     public function index(): View
     {
         return view('admin.products.index', [
-            'products' => Product::with('categories')->latest()->paginate(20),
+            'products' => Product::query()->where('type', 'ebook')->with('categories')->latest()->paginate(20),
             'categories' => ProductCategory::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(),
         ]);
     }
@@ -42,26 +42,28 @@ class AdminProductController extends Controller
         $imagePath = $request->file('image')?->store('ebooks', 'public');
 
         try {
-            $product = Product::create([
-                'type' => 'ebook',
-                'name' => $data['name'],
-                'slug' => $this->uniqueSlug($data['name']),
-                'short_description' => $data['short_description'] ?? null,
-                'description' => $data['description'] ?? null,
-                'regular_price' => $data['regular_price'],
-                'sale_price' => $data['sale_price'] ?? null,
-                'currency' => 'BDT',
-                'is_downloadable' => true,
-                'download_path' => $pdfPath,
-                'download_limit' => $data['download_limit'] ?? null,
-                'download_expires_at' => $data['download_expires_at'] ?? null,
-                'image_path' => $imagePath,
-                'status' => $data['status'],
-                'published_at' => $data['status'] === 'published' ? now() : null,
-                'created_by' => $request->user()->id,
-            ]);
-            $product->categories()->sync($data['category_ids'] ?? []);
-        } catch (\Throwable $exception) {
+            DB::transaction(function () use ($data, $pdfPath, $imagePath, $request): void {
+                $product = Product::create([
+                    'type' => 'ebook',
+                    'name' => $data['name'],
+                    'slug' => $this->uniqueSlug($data['name']),
+                    'short_description' => $data['short_description'] ?? null,
+                    'description' => $data['description'] ?? null,
+                    'regular_price' => $data['regular_price'],
+                    'sale_price' => $data['sale_price'] ?? null,
+                    'currency' => 'BDT',
+                    'is_downloadable' => true,
+                    'download_path' => $pdfPath,
+                    'download_limit' => $data['download_limit'] ?? null,
+                    'download_expires_at' => $data['download_expires_at'] ?? null,
+                    'image_path' => $imagePath,
+                    'status' => $data['status'],
+                    'published_at' => $data['status'] === 'published' ? now() : null,
+                    'created_by' => $request->user()->id,
+                ]);
+                $product->categories()->sync($data['category_ids'] ?? []);
+            });
+        } catch (\\Throwable $exception) {
             Storage::disk('local')->delete($pdfPath);
             if ($imagePath) Storage::disk('public')->delete($imagePath);
             throw $exception;
@@ -81,7 +83,7 @@ class AdminProductController extends Controller
             'regular_price' => ['required', 'numeric', 'min:0', 'max:999999999'],
             'sale_price' => ['nullable', 'numeric', 'gte:0', 'lt:regular_price'],
             'download_limit' => ['nullable', 'integer', 'min:1', 'max:1000'],
-            'download_expires_at' => ['nullable', 'date'],
+            'download_expires_at' => ['nullable', 'date', 'after:now'],
             'status' => ['required', 'in:draft,published,archived'],
             'category_ids' => ['nullable', 'array', 'max:30'],
             'category_ids.*' => ['integer', 'distinct', 'exists:product_categories,id'],
