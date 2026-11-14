@@ -79,7 +79,7 @@ class Course extends Model
     public function questionSets(): BelongsToMany
     {
         return $this->belongsToMany(QuestionSet::class, 'course_question_set')
-            ->withPivot(['section_title', 'position', 'max_attempts', 'randomize_questions', 'available_from'])
+            ->withPivot(['section_title', 'position', 'max_attempts', 'time_limit_minutes', 'questions_per_attempt', 'randomize_questions', 'available_from'])
             ->withTimestamps()
             ->orderByPivot('position');
     }

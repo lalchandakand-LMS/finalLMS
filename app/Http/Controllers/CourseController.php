@@ -8,6 +8,7 @@ use App\Models\CourseCategory;
 use App\Models\Lesson;
 use App\Models\LessonProgress;
 use App\Models\PageView;
+use App\Models\QuestionSetAttempt;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -199,6 +200,13 @@ class CourseController extends Controller
             return back()->with('error', 'This course has payment history. Archive it instead of deleting it.');
         }
 
+        if (DB::table('question_set_attempts')->where('course_id', $course->id)->exists()) {
+            $course->update(['status' => 'archived']);
+
+            return redirect()->route('admin.courses.index')
+                ->with('success', __('This course has quiz attempt history and was archived instead of deleted.'));
+        }
+
         $course->load('lessons');
         $videoPaths = $course->lessons->pluck('video_path')->filter()->all();
         $thumbnailPaths = $course->lessons->pluck('thumbnail_path')->filter()->all();
@@ -222,6 +230,21 @@ class CourseController extends Controller
         $course->views_count = PageView::where('view_type', 'course')->where('viewable_id', $course->id)->count();
         $comments = $course->comments()->with('author')->latest()->paginate(10, ['*'], 'comments_page');
         $course->load('teacher', 'enrollments.user', 'lessons', 'curriculumItems.post.categories', 'curriculumItems.post.thumbnail');
+        $course->load(['questionSets' => fn ($sets) => $sets->published()->withCount('questions')]);
+        if ($user?->isStudent()) {
+            $attemptsBySet = QuestionSetAttempt::query()
+                ->where('course_id', $course->id)
+                ->where('student_id', $user->id)
+                ->latest('id')
+                ->get()
+                ->groupBy('question_set_id');
+
+            $course->questionSets->each(function ($set) use ($attemptsBySet): void {
+                $attempts = $attemptsBySet->get($set->id, collect());
+                $set->student_attempt_count = $attempts->count();
+                $set->student_active_attempt = $attempts->firstWhere('status', 'in_progress');
+            });
+        }
 
         $isWishlisted = $user?->isStudent() && DB::table('course_wishlists')
             ->where('user_id', $user->id)
@@ -270,7 +293,7 @@ class CourseController extends Controller
 
         return view('courses.show', compact(
             'course', 'enrollment', 'payment', 'paymentMethods', 'batches',
-            'canViewLessons', 'lessonProgress', 'isWishlisted', 'comments',
+            'canViewLessons', 'isEnrolled', 'lessonProgress', 'isWishlisted', 'comments',
             'demoLesson', 'studentCount', 'courseContentCount'
         ));
     }
