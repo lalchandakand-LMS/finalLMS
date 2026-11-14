@@ -94,6 +94,7 @@ Route::get('/contests', [QuizContestController::class, 'index'])->name('contests
 Route::get('/contests/{contest}', [QuizContestController::class, 'show'])->name('contests.show');
 
 Route::get('/ebooks', [EbookStoreController::class, 'index'])->name('ebooks.index');
+Route::get('/ebooks/{product:slug}/preview/{previewPage}', [EbookStoreController::class, 'preview'])->name('ebooks.preview');
 Route::get('/ebooks/{product:slug}', [EbookStoreController::class, 'show'])->name('ebooks.show');
 Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
 Route::get('/course-combos', [CourseComboController::class, 'publicIndex'])->name('course-combos.index');
@@ -244,6 +245,8 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::get('/ebooks', [AdminProductController::class, 'index'])->name('admin.ebooks.index');
         Route::post('/ebooks', [AdminProductController::class, 'store'])->name('admin.ebooks.store');
         Route::put('/ebooks/{product}', [AdminProductController::class, 'update'])->name('admin.ebooks.update');
+        Route::post('/ebooks/{product}/preview-pages', [AdminProductController::class, 'storePreviewPage'])->middleware('throttle:10,1')->name('admin.ebooks.preview-pages.store');
+        Route::delete('/ebooks/{product}/preview-pages/{previewPage}', [AdminProductController::class, 'destroyPreviewPage'])->name('admin.ebooks.preview-pages.destroy');
         Route::delete('/ebooks/{product}', [AdminProductController::class, 'destroy'])->name('admin.ebooks.destroy');
         Route::post('/ebook-categories', [AdminProductController::class, 'storeCategory'])->name('admin.ebooks.categories.store');
         Route::delete('/ebook-categories/{category}', [AdminProductController::class, 'destroyCategory'])->name('admin.ebooks.categories.destroy');
