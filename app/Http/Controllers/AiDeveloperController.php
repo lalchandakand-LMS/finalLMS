@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AiDeveloperTask;
 use App\Services\AiDeveloperRepositoryReader;
+use App\Services\AiDeveloperProviderEndpoint;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -78,6 +79,8 @@ Clearly label assumptions and ask for sanitized error excerpts when needed. Repl
 PROMPT;
 
         try {
+            // Resolve and pin the allow-listed provider to validated public IPs before connecting.
+            $providerCurlOptions = app(AiDeveloperProviderEndpoint::class)->curlOptionsFor($baseUrl);
             // Repository context is opt-in, read-only, bounded, and limited to server-configured paths.
             $repositoryFiles = app(AiDeveloperRepositoryReader::class)->readConfiguredFiles();
             $messages = [
@@ -96,7 +99,7 @@ PROMPT;
             $response = Http::withToken($apiKey)
                 ->acceptJson()
                 ->timeout(45)
-                ->withOptions(['allow_redirects' => false])
+                ->withOptions(array_merge(['allow_redirects' => false], $providerCurlOptions))
                 ->post($baseUrl.'/chat/completions', [
                     'model' => $model,
                     'temperature' => 0.2,

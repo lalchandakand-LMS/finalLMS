@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\AiDeveloperTask;
 use App\Models\User;
+use App\Services\AiDeveloperProviderEndpoint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
@@ -12,6 +13,15 @@ use Tests\TestCase;
 class AiDeveloperAdminTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->app->bind(AiDeveloperProviderEndpoint::class, static fn () => new AiDeveloperProviderEndpoint(
+            static fn (string $host): array => [['type' => 'A', 'ip' => '93.184.216.34']]
+        ));
+    }
 
     public function test_only_admin_can_open_ai_developer(): void
     {
