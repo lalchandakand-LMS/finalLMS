@@ -83,12 +83,10 @@ class GuardianStudentRelationshipTest extends TestCase {
    'requested_at'=>now(),'reviewed_at'=>now(),
   ]);
 
-  $this->actingAs($guardian)->getJson(route('guardian.links.index'))
-   ->assertOk()
-   ->assertJsonCount(2,'data')
-   ->assertJsonFragment(['id'=>$first->id])
-   ->assertJsonFragment(['id'=>$second->id])
-   ->assertJsonMissing(['id'=>$unlinked->id]);
+  $linksResponse=$this->actingAs($guardian)->getJson(route('guardian.links.index'));
+  $linksResponse->assertOk()->assertJsonCount(2,'data');
+  $listedStudentIds=array_map(fn (array $row): int => (int) $row['student']['id'], $linksResponse->json('data'));
+  $this->assertEqualsCanonicalizing([$first->id,$second->id],$listedStudentIds);
 
   $this->actingAs($guardian)->getJson(route('guardian.students.summary',$first))
    ->assertOk()->assertJsonPath('data.student.id',$first->id);
