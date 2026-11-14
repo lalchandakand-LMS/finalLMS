@@ -288,7 +288,9 @@ class _InstructorHomeState extends State<InstructorHome> {
       final response = await widget.api.get(
         '/instructor/assignments/${assignment['id']}/submissions',
       );
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       final submissions = response['data'] as List<dynamic>? ?? [];
       await showModalBottomSheet<void>(
         context: context,
@@ -326,7 +328,9 @@ class _InstructorHomeState extends State<InstructorHome> {
         ),
       );
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
     }
   }
 
@@ -382,7 +386,9 @@ class _InstructorHomeState extends State<InstructorHome> {
     );
     score.dispose();
     feedback.dispose();
-    if (payload == null) return;
+    if (payload == null) {
+      return;
+    }
     try {
       await widget.api.patchJson(
         '/instructor/assignments/${assignment['id']}/submissions/${submission['id']}',
