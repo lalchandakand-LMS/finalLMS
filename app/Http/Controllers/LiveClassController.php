@@ -22,17 +22,37 @@ class LiveClassController extends Controller
         if ($user->isTeacher()) {
             $query->whereHas('batch', fn ($batches) => $batches->where('teacher_id', $user->id));
         } elseif ($user->isStudent()) {
-            $query->whereHas('batch.enrollments', fn ($enrollments) => $enrollments
-                ->where('user_id', $user->id)
-                ->where('status', 'active'));
+            // Active students can see their batch sessions. Completed students retain
+            // access only to recordings that the teacher has already published.
+            $query->where(function ($classes) use ($user): void {
+                $classes->whereHas('batch.enrollments', fn ($enrollments) => $enrollments
+                    ->where('user_id', $user->id)
+                    ->where('status', 'active'))
+                    ->orWhere(function ($recordedClasses) use ($user): void {
+                        $recordedClasses
+                            ->whereNotNull('recording_url')
+                            ->whereNotNull('recording_published_at')
+                            ->where('recording_published_at', '<=', now())
+                            ->whereHas('batch.enrollments', fn ($enrollments) => $enrollments
+                                ->where('user_id', $user->id)
+                                ->where('status', 'completed'));
+                    });
+            });
+
+            $query->with(['batch.enrollments' => fn ($enrollments) => $enrollments
+                ->where('user_id', $user->id)]);
         }
 
         $liveClasses = $query->paginate(25);
         $liveClasses->getCollection()->each(function (LiveClass $liveClass) use ($user): void {
             $canManage = $user->isAdmin() || ($user->isTeacher() && $liveClass->batch->teacher_id === $user->id);
+            $hasActiveEnrollment = $user->isStudent()
+                && $liveClass->batch->enrollments->contains(fn ($enrollment) => $enrollment->status === 'active');
             $isPublished = $liveClass->recording_url
                 && $liveClass->recording_published_at
                 && $liveClass->recording_published_at->isPast();
+
+            $liveClass->setAttribute('student_has_active_enrollment', $hasActiveEnrollment);
             $liveClass->setAttribute('recording_embed_url', ($canManage || $user->isStudent()) && $isPublished
                 ? $this->recordingEmbedUrl($liveClass->recording_url)
                 : null);
