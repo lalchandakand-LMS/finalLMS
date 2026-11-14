@@ -154,6 +154,21 @@ class StudentQuestionSetAttemptTest extends TestCase
         $this->assertDatabaseCount('question_set_attempts', 1);
     }
 
+    public function test_course_with_quiz_attempt_history_is_archived_not_deleted(): void
+    {
+        [$course, $set, $student] = $this->fixture();
+        $this->actingAs($student)->post(route('student.question-sets.start', [$course, $set]));
+        $attempt = QuestionSetAttempt::firstOrFail();
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->delete(route('admin.courses.destroy', $course))
+            ->assertRedirect(route('admin.courses.index'));
+
+        $this->assertDatabaseHas('courses', ['id' => $course->id, 'status' => 'archived']);
+        $this->assertDatabaseHas('question_set_attempts', ['id' => $attempt->id, 'course_id' => $course->id]);
+    }
+
     public function test_question_set_with_attempt_history_is_archived_not_deleted(): void
     {
         [$course, $set, $student] = $this->fixture();
