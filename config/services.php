@@ -9,6 +9,7 @@ return [
         'api_key' => env('AI_DEVELOPER_API_KEY'),
         'model' => env('AI_DEVELOPER_MODEL'),
         'max_tokens' => env('AI_DEVELOPER_MAX_TOKENS', 1200),
+        'max_response_bytes' => env('AI_DEVELOPER_MAX_RESPONSE_BYTES', 262144),
         'repository_context_enabled' => env('AI_DEVELOPER_REPOSITORY_CONTEXT_ENABLED', false),
         'github_token' => env('AI_DEVELOPER_GITHUB_TOKEN'),
         'github_repository' => env('AI_DEVELOPER_GITHUB_REPOSITORY'),
