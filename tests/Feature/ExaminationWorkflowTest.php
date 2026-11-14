@@ -506,6 +506,144 @@ class ExaminationWorkflowTest extends TestCase
             'exam_question_id' => $ownedQuestion->id,
         ]);
     }
+
+    public function test_repeated_exam_autosaves_replace_the_same_answer_without_duplicate_rows(): void
+    {
+        [$teacher, $student, $batch] = $this->makeBatchWithStudent();
+        $exam = Exam::create([
+            'batch_id' => $batch->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Repeated autosave test',
+            'starts_at' => now()->subMinute(),
+            'ends_at' => now()->addHour(),
+            'duration_minutes' => 30,
+            'pass_marks' => 1,
+            'status' => 'published',
+        ]);
+        $question = ExamQuestion::create([
+            'exam_id' => $exam->id,
+            'question' => 'Choose the current answer?',
+            'options' => ['A', 'B', 'C', 'D'],
+            'correct_option' => 2,
+            'marks' => 1,
+            'position' => 1,
+        ]);
+
+        $this->actingAs($student)->post(route('student.exams.start', $exam))->assertRedirect();
+        $attempt = ExamAttempt::where('exam_id', $exam->id)->where('student_id', $student->id)->firstOrFail();
+
+        $this->postJson(route('student.exams.answers.save', $attempt), [
+            'answers' => [$question->id => 0],
+        ])->assertOk()->assertJsonPath('saved', 1);
+
+        $this->postJson(route('student.exams.answers.save', $attempt), [
+            'answers' => [$question->id => 2],
+        ])->assertOk()->assertJsonPath('saved', 1);
+
+        $this->assertDatabaseCount('exam_answers', 1);
+        $this->assertDatabaseHas('exam_answers', [
+            'exam_attempt_id' => $attempt->id,
+            'exam_question_id' => $question->id,
+            'selected_option' => 2,
+            'is_correct' => false,
+            'marks_awarded' => 0,
+        ]);
+    }
+
+    public function test_exam_autosave_accepts_the_grace_deadline_but_rejects_requests_after_it(): void
+    {
+        [$teacher, $student, $batch] = $this->makeBatchWithStudent();
+        $exam = Exam::create([
+            'batch_id' => $batch->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Autosave deadline test',
+            'starts_at' => now()->subMinute(),
+            'ends_at' => now()->addHour(),
+            'duration_minutes' => 10,
+            'pass_marks' => 0,
+            'status' => 'published',
+        ]);
+        $question = ExamQuestion::create([
+            'exam_id' => $exam->id,
+            'question' => 'Deadline question?',
+            'options' => ['A', 'B', 'C', 'D'],
+            'correct_option' => 0,
+            'marks' => 1,
+            'position' => 1,
+        ]);
+
+        $this->actingAs($student)->post(route('student.exams.start', $exam))->assertRedirect();
+        $attempt = ExamAttempt::where('exam_id', $exam->id)->where('student_id', $student->id)->firstOrFail();
+        $graceDeadline = $attempt->started_at->copy()->addMinutes(10)->addSeconds(15);
+
+        $this->travelTo($graceDeadline);
+        $this->postJson(route('student.exams.answers.save', $attempt), [
+            'answers' => [$question->id => 1],
+        ])->assertOk();
+
+        $this->travelTo($graceDeadline->copy()->addSecond());
+        $this->postJson(route('student.exams.answers.save', $attempt), [
+            'answers' => [$question->id => 2],
+        ])->assertStatus(409);
+
+        $this->assertDatabaseHas('exam_answers', [
+            'exam_attempt_id' => $attempt->id,
+            'exam_question_id' => $question->id,
+            'selected_option' => 1,
+        ]);
+        $this->assertDatabaseCount('exam_answers', 1);
+    }
+
+    public function test_failed_exam_autosave_does_not_prevent_final_submission_from_form_answers(): void
+    {
+        [$teacher, $student, $batch] = $this->makeBatchWithStudent();
+        $exam = Exam::create([
+            'batch_id' => $batch->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Autosave recovery test',
+            'starts_at' => now()->subMinute(),
+            'ends_at' => now()->addHour(),
+            'duration_minutes' => 30,
+            'pass_marks' => 1,
+            'status' => 'published',
+        ]);
+        $question = ExamQuestion::create([
+            'exam_id' => $exam->id,
+            'question' => 'Recovery question?',
+            'options' => ['A', 'B', 'C', 'D'],
+            'correct_option' => 2,
+            'marks' => 1,
+            'position' => 1,
+        ]);
+
+        $this->actingAs($student)->post(route('student.exams.start', $exam))->assertRedirect();
+        $attempt = ExamAttempt::where('exam_id', $exam->id)->where('student_id', $student->id)->firstOrFail();
+
+        $this->postJson(route('student.exams.answers.save', $attempt), [
+            'answers' => [$question->id => 4],
+        ])->assertUnprocessable();
+
+        $this->assertDatabaseCount('exam_answers', 0);
+
+        $this->post(route('student.exams.submit', $attempt), [
+            'answers' => [$question->id => 2],
+        ])->assertRedirect(route('student.exams.show', $exam));
+
+        $this->assertDatabaseHas('exam_attempts', [
+            'id' => $attempt->id,
+            'status' => 'submitted',
+            'score' => 1,
+        ]);
+        $this->assertDatabaseHas('exam_answers', [
+            'exam_attempt_id' => $attempt->id,
+            'exam_question_id' => $question->id,
+            'selected_option' => 2,
+            'is_correct' => true,
+            'marks_awarded' => 1,
+        ]);
+        $this->assertDatabaseCount('exam_answers', 1);
+    }
+
     private function makeBatchWithStudent(bool $enroll = true): array
     {
         $teacher = User::factory()->create(['role' => 'teacher']);
