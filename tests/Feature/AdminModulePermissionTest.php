@@ -92,4 +92,21 @@ class AdminModulePermissionTest extends TestCase
         $this->assertTrue($admin->hasAdminPermission('branch.batches'));
         $this->assertTrue($admin->hasAdminPermission('finance.expenses'));
     }
+    public function test_changing_a_staff_role_without_permission_fields_clears_old_module_grants(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $branch = Branch::create(['name' => 'Role Change Branch', 'slug' => 'role-change-branch', 'is_active' => true]);
+        $manager = User::factory()->create([
+            'role' => 'branch_manager',
+            'branch_id' => $branch->id,
+            'admin_permissions' => ['branch.batches', 'branch.students'],
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.users.updateRole', $manager), [
+            'role' => 'teacher',
+        ])->assertRedirect(route('admin.users.index'));
+
+        $this->assertSame([], $manager->fresh()->admin_permissions);
+    }
+
 }
