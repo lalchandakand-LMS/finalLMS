@@ -143,6 +143,8 @@ class StudentQuestionSetAttemptTest extends TestCase
         $this->travel(2)->minutes();
 
         $this->get(route('student.question-sets.show', [$course, $set, $attempt]))
+            ->assertRedirect(route('student.question-sets.show', [$course, $set, $attempt]));
+        $this->get(route('student.question-sets.show', [$course, $set, $attempt]))
             ->assertOk()
             ->assertSee('Awaiting teacher review');
         $this->assertSame('awaiting_manual', $attempt->fresh()->status);
