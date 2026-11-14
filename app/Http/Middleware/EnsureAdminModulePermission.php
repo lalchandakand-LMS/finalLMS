@@ -19,6 +19,10 @@ class EnsureAdminModulePermission
             return $next($request);
         }
 
+        if ($permissions === []) {
+            abort(403, 'No module permission was specified.');
+        }
+
         foreach ($permissions as $permission) {
             if (! $user->hasAdminPermission($permission)) {
                 abort(403, 'You do not have permission to access this module.');
