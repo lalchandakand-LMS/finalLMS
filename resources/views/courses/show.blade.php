@@ -2,7 +2,7 @@
 
 @section('title', ($course->seo_title ?: $course->title) . ' | ' . config('app.name'))
 @section('seo_title', $course->seo_title ?: $course->title)
-@section('seo_description', $course->seo_description ?: ($course->short_description ?: \\Illuminate\\Support\\Str::limit(strip_tags($course->description), 160)))
+@section('seo_description', $course->seo_description ?: ($course->short_description ?: \Illuminate\Support\Str::limit(strip_tags($course->description), 160)))
 
 @section('content')
     @php($activeFlashSale = \App\Models\FlashSale::activeForCourse($course->id, auth()->id()))
