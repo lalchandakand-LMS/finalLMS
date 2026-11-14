@@ -638,5 +638,7 @@
     "Branch students": "Branch students",
     "Finance invoices": "Finance invoices",
     "Finance refunds": "Finance refunds",
-    "Finance expenses": "Finance expenses"
+    "Finance expenses": "Finance expenses",
+    "You can manage only the branch modules explicitly assigned to your account.": "You can manage only the branch modules explicitly assigned to your account.",
+    "Only explicitly assigned finance modules are available within your branch.": "Only explicitly assigned finance modules are available within your branch."
 }
