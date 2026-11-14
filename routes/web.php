@@ -38,6 +38,7 @@ use App\Http\Controllers\InstallController;
 use App\Http\Controllers\QuizContestController;
 use App\Http\Controllers\FlashSaleController;
 use App\Http\Controllers\AdminProductController;
+use App\Http\Controllers\AdminQuestionSetController;
 use App\Http\Controllers\EbookStoreController;
 use App\Http\Controllers\AdminEbookOrderController;
 use App\Http\Controllers\GuardianController;
@@ -342,6 +343,12 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::get('/users', [UserController::class, 'index'])->name('admin.users.index');
         Route::post('/users/{user}/role', [UserController::class, 'updateRole'])->name('admin.users.updateRole');
 
+        Route::get('/question-sets', [AdminQuestionSetController::class, 'index'])->name('admin.question-sets.index');
+        Route::get('/question-sets/create', [AdminQuestionSetController::class, 'create'])->name('admin.question-sets.create');
+        Route::post('/question-sets', [AdminQuestionSetController::class, 'store'])->name('admin.question-sets.store');
+        Route::get('/question-sets/{questionSet}/edit', [AdminQuestionSetController::class, 'edit'])->name('admin.question-sets.edit');
+        Route::put('/question-sets/{questionSet}', [AdminQuestionSetController::class, 'update'])->name('admin.question-sets.update');
+        Route::delete('/question-sets/{questionSet}', [AdminQuestionSetController::class, 'destroy'])->name('admin.question-sets.destroy');
         Route::get('/course-categories', [AdminCourseCategoryController::class, 'index'])->name('admin.course-categories.index');
         Route::post('/course-categories', [AdminCourseCategoryController::class, 'store'])->name('admin.course-categories.store');
         Route::get('/course-categories/{courseCategory}/edit', [AdminCourseCategoryController::class, 'edit'])->name('admin.course-categories.edit');
