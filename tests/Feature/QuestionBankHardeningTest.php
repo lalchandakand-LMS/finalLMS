@@ -214,6 +214,221 @@ class QuestionBankHardeningTest extends TestCase
         $this->assertCount(2, $secondAttempt->attemptQuestions);
     }
 
+    public function test_admin_can_manage_assigned_teachers_question_bank_and_create_exam_from_it(): void
+    {
+        [$teacher, , $batch] = $this->makeBatchWithStudent();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $ownedQuestion = QuestionBankQuestion::create([
+            'teacher_id' => $teacher->id,
+            'subject' => 'Grammar',
+            'category' => 'Tenses',
+            'difficulty' => 'easy',
+            'question' => 'Admin-managed past tense question?',
+            'options' => ['go', 'went', 'gone', 'going'],
+            'correct_option' => 1,
+            'marks' => 2,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.batches.question-bank.index', $batch))
+            ->assertOk()
+            ->assertSee('Admin-managed past tense question?');
+
+        $this->actingAs($admin)
+            ->post(route('admin.batches.question-bank.store', $batch), [
+                'subject' => 'Vocabulary',
+                'category' => 'Word meaning',
+                'difficulty' => 'medium',
+                'question' => 'Meaning of diligent?',
+                'options' => ['lazy', 'hardworking', 'careless', 'slow'],
+                'correct_option' => 1,
+                'marks' => 1,
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('question_bank_questions', [
+            'teacher_id' => $teacher->id,
+            'question' => 'Meaning of diligent?',
+        ]);
+
+        $this->actingAs($admin)
+            ->put(route('admin.batches.question-bank.update', [$batch, $ownedQuestion]), [
+                'subject' => 'Grammar',
+                'category' => 'Past tense',
+                'difficulty' => 'hard',
+                'question' => 'Select the correct past tense form?',
+                'options' => ['go', 'went', 'gone', 'going'],
+                'correct_option' => 1,
+                'marks' => 3,
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('question_bank_questions', [
+            'id' => $ownedQuestion->id,
+            'teacher_id' => $teacher->id,
+            'category' => 'Past tense',
+            'difficulty' => 'hard',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.batches.exams.store', $batch), [
+                'title' => 'Admin Question Bank Exam',
+                'instructions' => 'Generated from the assigned teacher question bank.',
+                'starts_at' => now()->addHour()->format('Y-m-d H:i:s'),
+                'ends_at' => now()->addHours(2)->format('Y-m-d H:i:s'),
+                'duration_minutes' => 30,
+                'pass_marks' => 3,
+                'question_bank_ids' => [$ownedQuestion->id],
+                'random_question_count' => 1,
+                'questions_per_attempt' => 1,
+            ])
+            ->assertRedirect();
+
+        $exam = Exam::where('title', 'Admin Question Bank Exam')->firstOrFail();
+        $this->assertSame((int) $teacher->id, (int) $exam->teacher_id);
+        $this->assertDatabaseHas('exam_questions', [
+            'exam_id' => $exam->id,
+            'question_bank_question_id' => $ownedQuestion->id,
+            'question' => 'Select the correct past tense form?',
+            'marks' => 3,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.batches.exams.index', $batch))
+            ->assertOk()
+            ->assertSee('Admin Question Bank Exam');
+
+        $this->actingAs($admin)
+            ->delete(route('admin.batches.question-bank.destroy', [$batch, $ownedQuestion]))
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('question_bank_questions', ['id' => $ownedQuestion->id]);
+        // The exam stores an immutable snapshot and remains valid after the source bank item is removed.
+        $this->assertDatabaseHas('exam_questions', [
+            'exam_id' => $exam->id,
+            'question_bank_question_id' => null,
+            'question' => 'Select the correct past tense form?',
+        ]);
+    }
+
+    public function test_exam_can_combine_manual_questions_with_random_question_bank_selections(): void
+    {
+        [$teacher, , $batch] = $this->makeBatchWithStudent();
+        $bankQuestion = QuestionBankQuestion::create([
+            'teacher_id' => $teacher->id,
+            'subject' => 'Vocabulary',
+            'category' => 'Meaning',
+            'difficulty' => 'easy',
+            'question' => 'Bank-sourced question?',
+            'options' => ['A', 'B', 'C', 'D'],
+            'correct_option' => 1,
+            'marks' => 2,
+        ]);
+
+        $this->actingAs($teacher)
+            ->post(route('teacher.batches.exams.store', $batch), [
+                'title' => 'Mixed source exam',
+                'starts_at' => now()->addHour()->format('Y-m-d H:i:s'),
+                'ends_at' => now()->addHours(2)->format('Y-m-d H:i:s'),
+                'duration_minutes' => 30,
+                'pass_marks' => 2,
+                'questions' => [[
+                    'question' => 'Manually authored question?',
+                    'options' => ['One', 'Two', 'Three', 'Four'],
+                    'correct_option' => 0,
+                    'marks' => 1,
+                ]],
+                'question_bank_ids' => [$bankQuestion->id],
+                'random_question_count' => 1,
+            ])
+            ->assertRedirect();
+
+        $exam = Exam::where('title', 'Mixed source exam')->firstOrFail();
+        $this->assertDatabaseHas('exam_questions', [
+            'exam_id' => $exam->id,
+            'question' => 'Manually authored question?',
+            'question_bank_question_id' => null,
+        ]);
+        $this->assertDatabaseHas('exam_questions', [
+            'exam_id' => $exam->id,
+            'question' => 'Bank-sourced question?',
+            'question_bank_question_id' => $bankQuestion->id,
+        ]);
+        $this->assertSame(2, $exam->questions()->count());
+    }
+
+    public function test_admin_cannot_access_or_use_question_bank_items_owned_by_another_batches_teacher(): void
+    {
+        [$teacher, , $batch] = $this->makeBatchWithStudent();
+        $otherTeacher = User::factory()->create(['role' => 'teacher']);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $foreignQuestion = QuestionBankQuestion::create([
+            'teacher_id' => $otherTeacher->id,
+            'subject' => 'Private',
+            'category' => 'Restricted',
+            'difficulty' => 'hard',
+            'question' => 'Question belonging to another teacher?',
+            'options' => ['A', 'B', 'C', 'D'],
+            'correct_option' => 0,
+            'marks' => 1,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.batches.question-bank.index', $batch))
+            ->assertOk()
+            ->assertDontSee('Question belonging to another teacher?');
+
+        $this->actingAs($admin)
+            ->put(route('admin.batches.question-bank.update', [$batch, $foreignQuestion]), [
+                'subject' => 'Changed',
+                'category' => 'Changed',
+                'difficulty' => 'easy',
+                'question' => 'Attempted takeover?',
+                'options' => ['A', 'B', 'C', 'D'],
+                'correct_option' => 0,
+                'marks' => 1,
+            ])
+            ->assertForbidden();
+
+        $this->delete(route('admin.batches.question-bank.destroy', [$batch, $foreignQuestion]))
+            ->assertForbidden();
+
+        $this->post(route('admin.batches.exams.store', $batch), [
+            'title' => 'Foreign question exam',
+            'starts_at' => now()->addHour()->format('Y-m-d H:i:s'),
+            'ends_at' => now()->addHours(2)->format('Y-m-d H:i:s'),
+            'duration_minutes' => 30,
+            'pass_marks' => 0,
+            'question_bank_ids' => [$foreignQuestion->id],
+            'random_question_count' => 1,
+        ])->assertForbidden();
+
+        $this->assertDatabaseHas('question_bank_questions', [
+            'id' => $foreignQuestion->id,
+            'teacher_id' => $otherTeacher->id,
+            'question' => 'Question belonging to another teacher?',
+        ]);
+        $this->assertDatabaseCount('exams', 0);
+        $this->assertSame((int) $teacher->id, (int) $batch->teacher_id);
+    }
+
+    public function test_question_bank_rejects_duplicate_mcq_options(): void
+    {
+        [$teacher, , $batch] = $this->makeBatchWithStudent();
+
+        $this->actingAs($teacher)
+            ->from(route('teacher.batches.question-bank.index', $batch))
+            ->post(route('teacher.batches.question-bank.store', $batch), [
+                'subject' => 'Grammar',
+                'question' => 'Duplicate choices?',
+                'options' => ['Same', 'Same', 'Other', 'Last'],
+                'correct_option' => 0,
+                'marks' => 1,
+            ])
+            ->assertSessionHasErrors('options.1');
+
+        $this->assertDatabaseCount('question_bank_questions', 0);
+    }
     private function makeBatchWithStudent(): array
     {
         $teacher = User::factory()->create(['role' => 'teacher']);
