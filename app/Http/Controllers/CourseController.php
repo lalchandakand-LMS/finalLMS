@@ -200,6 +200,13 @@ class CourseController extends Controller
             return back()->with('error', 'This course has payment history. Archive it instead of deleting it.');
         }
 
+        if (DB::table('question_set_attempts')->where('course_id', $course->id)->exists()) {
+            $course->update(['status' => 'archived']);
+
+            return redirect()->route('admin.courses.index')
+                ->with('success', __('This course has quiz attempt history and was archived instead of deleted.'));
+        }
+
         $course->load('lessons');
         $videoPaths = $course->lessons->pluck('video_path')->filter()->all();
         $thumbnailPaths = $course->lessons->pluck('thumbnail_path')->filter()->all();
