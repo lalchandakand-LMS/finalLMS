@@ -419,6 +419,134 @@ class PrivateEbookStoreTest extends TestCase
         return [$order, $item, $permission];
     }
 
+    public function test_admin_can_upload_and_remove_private_ebook_preview_pages(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = $this->ebook($admin);
+
+        $this->actingAs($admin)->post(route('admin.ebooks.preview-pages.store', $product), [
+            'page_image' => UploadedFile::fake()->image('sample-page.png', 600, 800),
+            'alt_text' => 'Sample grammar page',
+        ])->assertRedirect();
+
+        $page = $product->previewPages()->firstOrFail();
+        $this->assertSame(1, $page->page_number);
+        $this->assertSame('Sample grammar page', $page->alt_text);
+        $this->assertSame($admin->id, $page->created_by);
+        $this->assertStringStartsWith('private/ebook-previews/'.$product->id.'/', $page->file_path);
+        Storage::disk('local')->assertExists($page->file_path);
+        $this->assertSame([], Storage::disk('public')->allFiles());
+
+        $this->actingAs($admin)->get(route('admin.ebooks.index'))
+            ->assertOk()
+            ->assertSee('Manage sample preview pages')
+            ->assertSee('Sample grammar page');
+
+        $this->actingAs($admin)->delete(route('admin.ebooks.preview-pages.destroy', [$product, $page]))
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('ebook_preview_pages', ['id' => $page->id]);
+        Storage::disk('local')->assertMissing($page->file_path);
+    }
+
+    public function test_public_ebook_preview_is_available_only_for_active_pages_of_published_products(): void
+    {
+        Storage::fake('local');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = $this->ebook($admin);
+        $path = 'private/ebook-previews/'.$product->id.'/sample.png';
+        Storage::disk('local')->put($path, UploadedFile::fake()->image('sample.png')->getContent());
+        $page = $product->previewPages()->create([
+            'page_number' => 1,
+            'file_path' => $path,
+            'alt_text' => 'Public sample',
+            'is_active' => true,
+            'created_by' => $admin->id,
+        ]);
+
+        $this->get(route('ebooks.preview', [$product->slug, $page]))
+            ->assertOk()
+            ->assertHeader('Cache-Control', 'max-age=0, no-store, private')
+            ->assertHeader('X-Content-Type-Options', 'nosniff')
+            ->assertHeader('Referrer-Policy', 'no-referrer');
+
+        $this->get(route('ebooks.show', $product->slug))
+            ->assertOk()
+            ->assertSee('Preview sample pages')
+            ->assertSee('Public sample');
+
+        $inactive = $product->previewPages()->create([
+            'page_number' => 2,
+            'file_path' => $path,
+            'is_active' => false,
+        ]);
+        $this->get(route('ebooks.preview', [$product->slug, $inactive]))->assertNotFound();
+
+        $draft = $this->ebook($admin, [
+            'name' => 'Draft workbook',
+            'slug' => 'draft-workbook',
+            'status' => 'draft',
+            'published_at' => null,
+        ]);
+        $draftPage = $draft->previewPages()->create([
+            'page_number' => 1,
+            'file_path' => $path,
+            'is_active' => true,
+        ]);
+        $this->get(route('ebooks.preview', [$draft->slug, $draftPage]))->assertNotFound();
+        $this->actingAs($admin)->get(route('ebooks.preview', [$draft->slug, $draftPage]))
+            ->assertOk()
+            ->assertHeader('X-Content-Type-Options', 'nosniff');
+
+        $otherProduct = $this->ebook($admin, [
+            'name' => 'Other workbook',
+            'slug' => 'other-workbook',
+        ]);
+        $this->get(route('ebooks.preview', [$otherProduct->slug, $page]))->assertNotFound();
+    }
+
+    public function test_preview_upload_is_admin_only_and_enforces_ten_page_limit_without_orphan_files(): void
+    {
+        Storage::fake('local');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $product = $this->ebook($admin);
+
+        $this->actingAs($student)->post(route('admin.ebooks.preview-pages.store', $product), [
+            'page_image' => UploadedFile::fake()->image('blocked.png'),
+        ])->assertForbidden();
+
+        $foreignPage = $product->previewPages()->create([
+            'page_number' => 1,
+            'file_path' => 'private/ebook-previews/forbidden.png',
+            'is_active' => true,
+        ]);
+        $this->actingAs($student)
+            ->delete(route('admin.ebooks.preview-pages.destroy', [$product, $foreignPage]))
+            ->assertForbidden();
+        $this->assertDatabaseHas('ebook_preview_pages', ['id' => $foreignPage->id]);
+
+        $foreignPage->delete();
+        for ($pageNumber = 1; $pageNumber <= 10; $pageNumber++) {
+            $path = 'private/ebook-previews/'.$product->id.'/page-'.$pageNumber.'.png';
+            Storage::disk('local')->put($path, 'preview-'.$pageNumber);
+            $product->previewPages()->create([
+                'page_number' => $pageNumber,
+                'file_path' => $path,
+                'is_active' => true,
+            ]);
+        }
+
+        $this->actingAs($admin)->post(route('admin.ebooks.preview-pages.store', $product), [
+            'page_image' => UploadedFile::fake()->image('eleventh.png'),
+        ])->assertUnprocessable();
+
+        $this->assertDatabaseCount('ebook_preview_pages', 10);
+        $this->assertCount(10, Storage::disk('local')->allFiles('private/ebook-previews/'.$product->id));
+    }
+
     public function test_admin_payment_proof_is_served_without_public_cache(): void
     {
         Storage::fake('local');
