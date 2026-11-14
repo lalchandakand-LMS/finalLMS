@@ -281,17 +281,33 @@
             @elseif(auth()->user()->isBranchManager())
                 <div class="admin-sidebar-label">Overview</div>
                 <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><span>▦</span><span class="nav-text">Dashboard</span></a>
-                <div class="admin-sidebar-label">Branch workspace</div>
-                <a class="{{ request()->routeIs('admin.branch-workspace.batches.*') ? 'active' : '' }}" href="{{ route('admin.branch-workspace.batches.index') }}"><span>🗓️</span><span class="nav-text">My branch batches</span></a>
-                <a class="{{ request()->routeIs('admin.branch-workspace.students.*') ? 'active' : '' }}" href="{{ route('admin.branch-workspace.students.index') }}"><span>👥</span><span class="nav-text">Branch students</span></a>
+                @if(auth()->user()->hasAdminPermission('branch.batches') || auth()->user()->hasAdminPermission('branch.students'))
+                    <div class="admin-sidebar-label">Branch workspace</div>
+                    @if(auth()->user()->hasAdminPermission('branch.batches'))
+                        <a class="{{ request()->routeIs('admin.branch-workspace.batches.*') ? 'active' : '' }}" href="{{ route('admin.branch-workspace.batches.index') }}"><span>🗓️</span><span class="nav-text">My branch batches</span></a>
+                    @endif
+                    @if(auth()->user()->hasAdminPermission('branch.students'))
+                        <a class="{{ request()->routeIs('admin.branch-workspace.students.*') ? 'active' : '' }}" href="{{ route('admin.branch-workspace.students.index') }}"><span>👥</span><span class="nav-text">Branch students</span></a>
+                    @endif
+                @endif
             @elseif(auth()->user()->isAccountant())
                 <div class="admin-sidebar-label">Overview</div>
                 <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><span>▦</span><span class="nav-text">Dashboard</span></a>
-                <div class="admin-sidebar-label">Finance workspace</div>
-                <a class="{{ request()->routeIs('admin.finance.invoices.*') ? 'active' : '' }}" href="{{ route('admin.finance.invoices.index') }}"><span>🧾</span><span class="nav-text">Branch invoices</span></a>
-                <a class="{{ request()->routeIs('admin.finance.refunds.*') ? 'active' : '' }}" href="{{ route('admin.finance.refunds.index') }}"><span>↩️</span><span class="nav-text">Refund requests</span></a>
-                <a class="{{ request()->routeIs('admin.finance.expenses.*') ? 'active' : '' }}" href="{{ route('admin.finance.expenses.index') }}"><span>💸</span><span class="nav-text">Branch expenses</span></a>
-                <a class="{{ request()->routeIs('admin.finance.reports.*') ? 'active' : '' }}" href="{{ route('admin.finance.reports.index') }}"><span>📊</span><span class="nav-text">Branch finance reports</span></a>
+                @if(auth()->user()->hasAdminPermission('finance.invoices') || auth()->user()->hasAdminPermission('finance.refunds') || auth()->user()->hasAdminPermission('finance.expenses') || auth()->user()->hasAdminPermission('finance.reports'))
+                    <div class="admin-sidebar-label">Finance workspace</div>
+                    @if(auth()->user()->hasAdminPermission('finance.invoices'))
+                        <a class="{{ request()->routeIs('admin.finance.invoices.*') ? 'active' : '' }}" href="{{ route('admin.finance.invoices.index') }}"><span>🧾</span><span class="nav-text">Branch invoices</span></a>
+                    @endif
+                    @if(auth()->user()->hasAdminPermission('finance.refunds'))
+                        <a class="{{ request()->routeIs('admin.finance.refunds.*') ? 'active' : '' }}" href="{{ route('admin.finance.refunds.index') }}"><span>↩️</span><span class="nav-text">Refund requests</span></a>
+                    @endif
+                    @if(auth()->user()->hasAdminPermission('finance.expenses'))
+                        <a class="{{ request()->routeIs('admin.finance.expenses.*') ? 'active' : '' }}" href="{{ route('admin.finance.expenses.index') }}"><span>💸</span><span class="nav-text">Branch expenses</span></a>
+                    @endif
+                    @if(auth()->user()->hasAdminPermission('finance.reports'))
+                        <a class="{{ request()->routeIs('admin.finance.reports.*') ? 'active' : '' }}" href="{{ route('admin.finance.reports.index') }}"><span>📊</span><span class="nav-text">Branch finance reports</span></a>
+                    @endif
+                @endif
             @endif
             <div class="admin-sidebar-footer">Alom’s English Center<br>Learning Management System</div>
         </aside>
