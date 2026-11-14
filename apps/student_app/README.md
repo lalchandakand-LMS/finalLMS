@@ -35,4 +35,4 @@ The authenticated API exposes the following student-only endpoints:
 - `PUT /exam-attempts/{attempt}/answers` — saves selected option indexes for questions assigned to that attempt.
 - `POST /exam-attempts/{attempt}/submit` — submits answers and returns the server-calculated score.
 
-Correct answer indexes are never included in the question payload. The API checks student role, active enrollment, attempt ownership, assigned question IDs and the server-side deadline; scoring is performed on the server. The Flutter exam-taking screens are not included in this backend-only change and must be completed and tested before marking the mobile exam workflow finished.
+Correct answer indexes are never included in the question payload. The API checks student role, active enrollment, attempt ownership, assigned question IDs and the server-side deadline; scoring is performed on the server. The Student app includes an exam list and timed attempt screen with start/resume, saved answer selection, explicit answer saving, server-timed countdown, submission and result display. The server remains authoritative for deadlines and scoring.
