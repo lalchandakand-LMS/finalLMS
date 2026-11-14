@@ -63,19 +63,18 @@ class AdminDeviceSessionManagementTest extends TestCase
 
     public function test_revoked_tracked_session_is_logged_out_on_its_next_request(): void
     {
-        $student = User::factory()->create(['role' => 'student']);
-        $this->actingAs($student);
-        $sessionHash = hash('sha256', $this->app['session']->getId());
-
-        DeviceSession::create([
-            'user_id' => $student->id,
-            'session_hash' => $sessionHash,
-            'device_name' => 'Windows · Edge',
-            'logged_in_at' => now()->subHour(),
-            'last_seen_at' => now(),
-            'revoked_at' => now(),
-            'revoke_reason' => 'Test revocation',
+        $teacher = User::factory()->create([
+            'role' => 'teacher',
+            'email_verified_at' => now(),
         ]);
+
+        $this->post(route('login.post'), [
+            'email' => $teacher->email,
+            'password' => 'password',
+        ])->assertRedirect('/dashboard');
+
+        $session = DeviceSession::where('user_id', $teacher->id)->firstOrFail();
+        $session->forceFill(['revoked_at' => now(), 'revoke_reason' => 'Test revocation'])->save();
 
         $this->get('/dashboard')
             ->assertRedirect(route('login'))
@@ -86,19 +85,41 @@ class AdminDeviceSessionManagementTest extends TestCase
 
     public function test_admin_cannot_revoke_the_session_currently_used_to_manage_the_lms(): void
     {
-        $admin = User::factory()->create(['role' => 'admin']);
-        $this->actingAs($admin);
-        $session = DeviceSession::create([
-            'user_id' => $admin->id,
-            'session_hash' => hash('sha256', $this->app['session']->getId()),
-            'device_name' => 'Windows · Chrome',
-            'logged_in_at' => now(),
-            'last_seen_at' => now(),
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'email_verified_at' => now(),
         ]);
+
+        $this->post(route('login.post'), [
+            'email' => $admin->email,
+            'password' => 'password',
+        ])->assertRedirect('/dashboard');
+
+        $session = DeviceSession::where('user_id', $admin->id)->firstOrFail();
 
         $this->patch(route('admin.security.sessions.revoke', $session))
             ->assertStatus(422);
 
         $this->assertNull($session->fresh()->revoked_at);
+    }
+
+    public function test_logout_marks_the_current_tracked_session_as_revoked(): void
+    {
+        $teacher = User::factory()->create([
+            'role' => 'teacher',
+            'email_verified_at' => now(),
+        ]);
+
+        $this->post(route('login.post'), [
+            'email' => $teacher->email,
+            'password' => 'password',
+        ])->assertRedirect('/dashboard');
+
+        $session = DeviceSession::where('user_id', $teacher->id)->firstOrFail();
+
+        $this->post(route('logout'))->assertRedirect('/');
+
+        $this->assertNotNull($session->fresh()->revoked_at);
+        $this->assertSame('User logged out', $session->fresh()->revoke_reason);
     }
 }
