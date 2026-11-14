@@ -337,15 +337,14 @@ class _InstructorHomeState extends State<InstructorHome> {
   }
 
   Future<void> showStudents(Map<String, dynamic> course) async {
-    final pageContext = context;
-    final messenger = ScaffoldMessenger.of(pageContext);
+    final messenger = ScaffoldMessenger.of(context);
     try {
       final response = await widget.api.get("/instructor/courses/${course['slug']}/students");
-      if (!mounted || !pageContext.mounted) {
+      if (!mounted) {
         return;
       }
       final students = response['data'] as List<dynamic>? ?? [];
-      showModalBottomSheet<void>(context: pageContext, builder: (sheetContext) => SafeArea(child: ListView(
+      showModalBottomSheet<void>(context: context, builder: (sheetContext) => SafeArea(child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           Text('Students — ${course['title']}', style: Theme.of(sheetContext).textTheme.titleLarge),
@@ -541,21 +540,20 @@ class _InstructorHomeState extends State<InstructorHome> {
   }
 
   Future<DateTime?> _pickDateTime(DateTime initial) async {
-    final pickerContext = context;
     final date = await showDatePicker(
-      context: pickerContext,
+      context: context,
       initialDate: initial,
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    if (!pickerContext.mounted) {
+    if (!mounted) {
       return null;
     }
     if (date == null) {
       return null;
     }
     final time = await showTimePicker(
-      context: pickerContext,
+      context: context,
       initialTime: TimeOfDay.fromDateTime(initial),
     );
     if (time == null) {
@@ -682,7 +680,7 @@ class _InstructorHomeState extends State<InstructorHome> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         const SnackBar(content: Text('Live class scheduled.')),
       );
       await load();
