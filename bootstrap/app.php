@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('web', \App\Http\Middleware\EnsureDeviceSessionActive::class);
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
+            'admin.permission' => \App\Http\Middleware\EnsureAdminModulePermission::class,
             'activity.log' => \App\Http\Middleware\LogUserActivity::class,
             'student.device' => \App\Http\Middleware\EnsureStudentDeviceIsApproved::class,
             'api.token' => \App\Http\Middleware\AuthenticateApiToken::class,

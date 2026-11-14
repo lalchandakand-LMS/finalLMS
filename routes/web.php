@@ -140,7 +140,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
     });
     Route::get('/live-classes', [LiveClassController::class, 'index'])->name('live-classes.index');
     Route::get('/admin/finance/invoice-payments/{payment}/receipt', [InvoiceController::class, 'receipt'])
-        ->middleware('role:admin,accountant')
+        ->middleware(['role:admin,accountant', 'admin.permission:finance.invoices'])
         ->name('admin.finance.invoice-payments.receipt');
     Route::get('/invoice-payments/{payment}/receipt', fn ($payment) => redirect()->route('admin.finance.invoice-payments.receipt', $payment, 301))
         ->middleware('role:admin,accountant')
@@ -151,26 +151,26 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         ->prefix('admin/branch-workspace')
         ->name('admin.branch-workspace.')
         ->group(function () {
-            Route::get('/batches', [BatchController::class, 'branchManagerIndex'])->name('batches.index');
-            Route::get('/students', [BatchController::class, 'branchManagerStudents'])->name('students.index');
-            Route::post('/batches', [BatchController::class, 'branchManagerStore'])->name('batches.store');
-            Route::put('/batches/{batch}', [BatchController::class, 'branchManagerUpdate'])->name('batches.update');
+            Route::get('/batches', [BatchController::class, 'branchManagerIndex'])->middleware('admin.permission:branch.batches')->name('batches.index');
+            Route::get('/students', [BatchController::class, 'branchManagerStudents'])->middleware('admin.permission:branch.students')->name('students.index');
+            Route::post('/batches', [BatchController::class, 'branchManagerStore'])->middleware('admin.permission:branch.batches')->name('batches.store');
+            Route::put('/batches/{batch}', [BatchController::class, 'branchManagerUpdate'])->middleware('admin.permission:branch.batches')->name('batches.update');
         });
 
     Route::middleware('role:accountant')
         ->prefix('admin/finance')
         ->name('admin.finance.')
         ->group(function () {
-            Route::get('/invoices', [InvoiceController::class, 'accountantIndex'])->name('invoices.index');
-            Route::post('/invoices', [InvoiceController::class, 'store'])->name('invoices.store');
-            Route::post('/invoices/{invoice}/payments', [InvoiceController::class, 'receivePayment'])->name('invoices.payments.store');
-            Route::get('/refunds', [InvoiceRefundController::class, 'index'])->name('refunds.index');
-            Route::post('/refunds', [InvoiceRefundController::class, 'store'])->name('refunds.store');
-            Route::get('/reports', [FinanceReportController::class, 'index'])->name('reports.index');
-            Route::get('/expenses', [ExpenseController::class, 'index'])->name('expenses.index');
-            Route::post('/expenses', [ExpenseController::class, 'store'])->name('expenses.store');
-            Route::put('/expenses/{expense}', [ExpenseController::class, 'update'])->name('expenses.update');
-            Route::delete('/expenses/{expense}', [ExpenseController::class, 'destroy'])->name('expenses.destroy');
+            Route::get('/invoices', [InvoiceController::class, 'accountantIndex'])->middleware('admin.permission:finance.invoices')->name('invoices.index');
+            Route::post('/invoices', [InvoiceController::class, 'store'])->middleware('admin.permission:finance.invoices')->name('invoices.store');
+            Route::post('/invoices/{invoice}/payments', [InvoiceController::class, 'receivePayment'])->middleware('admin.permission:finance.invoices')->name('invoices.payments.store');
+            Route::get('/refunds', [InvoiceRefundController::class, 'index'])->middleware('admin.permission:finance.refunds')->name('refunds.index');
+            Route::post('/refunds', [InvoiceRefundController::class, 'store'])->middleware('admin.permission:finance.refunds')->name('refunds.store');
+            Route::get('/reports', [FinanceReportController::class, 'index'])->middleware('admin.permission:finance.reports')->name('reports.index');
+            Route::get('/expenses', [ExpenseController::class, 'index'])->middleware('admin.permission:finance.expenses')->name('expenses.index');
+            Route::post('/expenses', [ExpenseController::class, 'store'])->middleware('admin.permission:finance.expenses')->name('expenses.store');
+            Route::put('/expenses/{expense}', [ExpenseController::class, 'update'])->middleware('admin.permission:finance.expenses')->name('expenses.update');
+            Route::delete('/expenses/{expense}', [ExpenseController::class, 'destroy'])->middleware('admin.permission:finance.expenses')->name('expenses.destroy');
         });
 
     // Legacy bookmarks now land inside the unified Admin Panel.

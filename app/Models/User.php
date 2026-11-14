@@ -13,13 +13,15 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'role', 'phone_number', 'sms_marketing_opt_in', 'branch_id'])]
-#[Hidden(['password', 'remember_token', 'phone_verification_code'])]
+#[Fillable(['name', 'email', 'password', 'role', 'phone_number', 'sms_marketing_opt_in', 'branch_id', 'admin_permissions'])]
+#[Hidden(['password', 'remember_token', 'phone_verification_code', 'admin_permissions'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
+    protected $hidden = ['password', 'remember_token', 'phone_verification_code', 'admin_permissions'];
+
     use HasFactory, MustVerifyEmailTrait, Notifiable;
 
-    protected $fillable = ['name', 'email', 'password', 'role', 'phone_number', 'sms_marketing_opt_in', 'branch_id'];
+    protected $fillable = ['name', 'email', 'password', 'role', 'phone_number', 'sms_marketing_opt_in', 'branch_id', 'admin_permissions'];
 
     public function apiTokens(): HasMany
     {
@@ -96,6 +98,16 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->role === 'accountant';
     }
 
+    /** Root admins bypass module grants; staff require an explicit grant. */
+    public function hasAdminPermission(string $permission): bool
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        return in_array($permission, $this->admin_permissions ?? [], true);
+    }
+
     protected function casts(): array
     {
         return [
@@ -105,6 +117,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'sms_marketing_opt_in' => 'boolean',
             'password' => 'hashed',
             'role' => 'string',
+            'admin_permissions' => 'array',
         ];
     }
 }

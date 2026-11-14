@@ -16,8 +16,10 @@ class StaffRoleScopeTest extends TestCase
     public function test_staff_subroles_use_the_shared_admin_shell_with_only_their_modules(): void
     {
         $branch = Branch::create(['name' => 'Workspace Branch', 'slug' => 'workspace-branch']);
-        $manager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $branch->id]);
-        $accountant = User::factory()->create(['role' => 'accountant', 'branch_id' => $branch->id]);
+        $manager = User::factory()->create(['role' => 'branch_manager',
+            'admin_permissions' => ['branch.batches', 'branch.students'], 'branch_id' => $branch->id]);
+        $accountant = User::factory()->create(['role' => 'accountant',
+            'admin_permissions' => ['finance.invoices', 'finance.refunds', 'finance.reports', 'finance.expenses'], 'branch_id' => $branch->id]);
 
         $this->actingAs($manager)->get(route('dashboard'))
             ->assertOk()
@@ -42,8 +44,10 @@ class StaffRoleScopeTest extends TestCase
     public function test_staff_subroles_with_inactive_branch_assignments_are_denied(): void
     {
         $branch = Branch::create(['name' => 'Inactive Branch', 'slug' => 'inactive-branch', 'is_active' => false]);
-        $manager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $branch->id]);
-        $accountant = User::factory()->create(['role' => 'accountant', 'branch_id' => $branch->id]);
+        $manager = User::factory()->create(['role' => 'branch_manager',
+            'admin_permissions' => ['branch.batches', 'branch.students'], 'branch_id' => $branch->id]);
+        $accountant = User::factory()->create(['role' => 'accountant',
+            'admin_permissions' => ['finance.invoices', 'finance.refunds', 'finance.reports', 'finance.expenses'], 'branch_id' => $branch->id]);
 
         $this->actingAs($manager)->get(route('admin.branch-workspace.batches.index'))->assertForbidden();
         $this->actingAs($accountant)->get(route('admin.finance.invoices.index'))->assertForbidden();
@@ -52,8 +56,10 @@ class StaffRoleScopeTest extends TestCase
     public function test_legacy_staff_urls_redirect_into_the_shared_admin_modules(): void
     {
         $branch = Branch::create(['name' => 'Legacy Branch', 'slug' => 'legacy-branch']);
-        $manager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $branch->id]);
-        $accountant = User::factory()->create(['role' => 'accountant', 'branch_id' => $branch->id]);
+        $manager = User::factory()->create(['role' => 'branch_manager',
+            'admin_permissions' => ['branch.batches', 'branch.students'], 'branch_id' => $branch->id]);
+        $accountant = User::factory()->create(['role' => 'accountant',
+            'admin_permissions' => ['finance.invoices', 'finance.refunds', 'finance.reports', 'finance.expenses'], 'branch_id' => $branch->id]);
 
         $this->actingAs($manager)->get('/branch-manager/batches')
             ->assertRedirect(route('admin.branch-workspace.batches.index'));
@@ -76,7 +82,8 @@ class StaffRoleScopeTest extends TestCase
         ]);
         $assigned = Branch::create(['name' => 'Assigned Branch', 'slug' => 'assigned-branch']);
         $other = Branch::create(['name' => 'Other Branch', 'slug' => 'other-branch']);
-        $manager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $assigned->id]);
+        $manager = User::factory()->create(['role' => 'branch_manager',
+            'admin_permissions' => ['branch.batches', 'branch.students'], 'branch_id' => $assigned->id]);
 
         foreach ([[$assigned, 'Visible Batch'], [$other, 'Hidden Batch']] as [$branch, $title]) {
             Batch::create([
@@ -109,7 +116,8 @@ class StaffRoleScopeTest extends TestCase
         $teacher = User::factory()->create(['role' => 'teacher', 'branch_id' => $assigned->id]);
         $course = Course::create(['teacher_id' => $teacher->id, 'title' => 'Branch English', 'slug' => 'branch-english', 'description' => 'Branch course', 'price' => 1000, 'status' => 'published']);
         $other = Branch::create(['name' => 'Foreign Branch', 'slug' => 'foreign-branch']);
-        $manager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $assigned->id]);
+        $manager = User::factory()->create(['role' => 'branch_manager',
+            'admin_permissions' => ['branch.batches', 'branch.students'], 'branch_id' => $assigned->id]);
         $foreignBatch = Batch::create(['branch_id' => $other->id, 'course_id' => $course->id, 'teacher_id' => $teacher->id, 'title' => 'Foreign Batch', 'capacity' => 20, 'starts_at' => now(), 'ends_at' => now()->addMonth(), 'fee' => 1000, 'status' => 'open']);
         $payload = ['course_id' => $course->id, 'teacher_id' => $teacher->id, 'title' => 'New Local Batch', 'capacity' => 15, 'starts_at' => now()->addDay()->format('Y-m-d H:i:s'), 'ends_at' => now()->addMonth()->format('Y-m-d H:i:s'), 'fee' => 1200];
         $this->actingAs($manager)->post(route('admin.branch-workspace.batches.store'), $payload)->assertRedirect();
@@ -121,7 +129,8 @@ class StaffRoleScopeTest extends TestCase
     public function test_accountant_can_manage_invoice_ledger_but_cannot_open_admin_payment_review(): void
     {
         $branch = Branch::create(['name' => 'Accountant Branch', 'slug' => 'accountant-branch']);
-        $accountant = User::factory()->create(['role' => 'accountant', 'branch_id' => $branch->id]);
+        $accountant = User::factory()->create(['role' => 'accountant',
+            'admin_permissions' => ['finance.invoices', 'finance.refunds', 'finance.reports', 'finance.expenses'], 'branch_id' => $branch->id]);
         $student = User::factory()->create(['role' => 'student', 'branch_id' => $branch->id]);
 
         $this->actingAs($accountant)

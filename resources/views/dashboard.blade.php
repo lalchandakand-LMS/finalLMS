@@ -124,31 +124,39 @@
             <p class="muted" style="margin:12px 0 0;">{{ __('Keep momentum going with a clear set of next actions, from enrollment to course completion.') }}</p>
         </div>
 
-        @if($user->isBranchManager())
+        @if($user->isBranchManager() && ($user->hasAdminPermission('branch.batches') || $user->hasAdminPermission('branch.students')))
             <section class="panel" style="margin-bottom:20px;">
                 <div class="page-header" style="margin-bottom:10px;">
                     <div>
                         <span class="badge info">{{ __('Admin Panel · Branch workspace') }}</span>
                         <h2 style="margin:10px 0 0;">{{ __('Manage your assigned branch') }}</h2>
-                        <p class="muted">{{ __('You can manage only batches and students assigned to your active branch.') }}</p>
+                        <p class="muted">{{ __('You can manage only the branch modules explicitly assigned to your account.') }}</p>
                     </div>
-                    <a href="{{ route('admin.branch-workspace.batches.index') }}" class="btn primary">{{ __('Open branch batches') }}</a>
+                    @if($user->hasAdminPermission('branch.batches'))
+                        <a href="{{ route('admin.branch-workspace.batches.index') }}" class="btn primary">{{ __('Open branch batches') }}</a>
+                    @endif
                 </div>
-                <a href="{{ route('admin.branch-workspace.students.index') }}" class="btn secondary">{{ __('View branch students') }}</a>
+                @if($user->hasAdminPermission('branch.students'))
+                    <a href="{{ route('admin.branch-workspace.students.index') }}" class="btn secondary">{{ __('View branch students') }}</a>
+                @endif
             </section>
         @endif
 
-        @if($user->isAccountant())
+        @if($user->isAccountant() && ($user->hasAdminPermission('finance.invoices') || $user->hasAdminPermission('finance.refunds') || $user->hasAdminPermission('finance.expenses') || $user->hasAdminPermission('finance.reports')))
             <section class="panel" style="margin-bottom:20px;">
                 <div class="page-header" style="margin-bottom:10px;">
                     <div>
                         <span class="badge info">{{ __('Admin Panel · Finance workspace') }}</span>
                         <h2 style="margin:10px 0 0;">{{ __('Manage your branch finances') }}</h2>
-                        <p class="muted">{{ __('Invoices, refunds, expenses and reports are restricted to your assigned active branch.') }}</p>
+                        <p class="muted">{{ __('Only explicitly assigned finance modules are available within your branch.') }}</p>
                     </div>
-                    <a href="{{ route('admin.finance.invoices.index') }}" class="btn primary">{{ __('Open branch invoices') }}</a>
+                    @if($user->hasAdminPermission('finance.invoices'))
+                        <a href="{{ route('admin.finance.invoices.index') }}" class="btn primary">{{ __('Open branch invoices') }}</a>
+                    @endif
                 </div>
-                <a href="{{ route('admin.finance.reports.index') }}" class="btn secondary">{{ __('View branch finance reports') }}</a>
+                @if($user->hasAdminPermission('finance.reports'))
+                    <a href="{{ route('admin.finance.reports.index') }}" class="btn secondary">{{ __('View branch finance reports') }}</a>
+                @endif
             </section>
         @endif
 

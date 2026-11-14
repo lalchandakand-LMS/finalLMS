@@ -631,5 +631,14 @@
     "Upload sample page": "Upload sample page",
     "The maximum of ten sample pages has been reached.": "The maximum of ten sample pages has been reached.",
     "Preview sample pages": "Preview sample pages",
-    "View sample pages before purchasing. Full PDF access remains protected by your order entitlement.": "View sample pages before purchasing. Full PDF access remains protected by your order entitlement."
+    "View sample pages before purchasing. Full PDF access remains protected by your order entitlement.": "View sample pages before purchasing. Full PDF access remains protected by your order entitlement.",
+    "Staff module permissions": "Staff module permissions",
+    "These permissions apply only to Branch Manager and Accountant roles. Unchecked modules are denied server-side.": "These permissions apply only to Branch Manager and Accountant roles. Unchecked modules are denied server-side.",
+    "Branch batches": "Branch batches",
+    "Branch students": "Branch students",
+    "Finance invoices": "Finance invoices",
+    "Finance refunds": "Finance refunds",
+    "Finance expenses": "Finance expenses",
+    "You can manage only the branch modules explicitly assigned to your account.": "You can manage only the branch modules explicitly assigned to your account.",
+    "Only explicitly assigned finance modules are available within your branch.": "Only explicitly assigned finance modules are available within your branch."
 }

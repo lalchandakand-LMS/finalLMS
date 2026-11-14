@@ -62,6 +62,19 @@
                                         <option value="{{ $branch->id }}" @selected($user->branch_id === $branch->id)>{{ $branch->name }}</option>
                                     @endforeach
                                 </select>
+                                <fieldset style="flex-basis:100%;border:1px solid var(--border);border-radius:10px;padding:10px;">
+                                    <legend style="padding:0 6px;font-size:.82rem;font-weight:700;">{{ __('Staff module permissions') }}</legend>
+                                    <input type="hidden" name="admin_permissions_present" value="1">
+                                    <small class="muted" style="display:block;margin-bottom:8px;">{{ __('These permissions apply only to Branch Manager and Accountant roles. Unchecked modules are denied server-side.') }}</small>
+                                    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                                        <label style="display:flex;gap:6px;align-items:center;"><input type="checkbox" name="admin_permissions[]" value="branch.batches" @checked(in_array('branch.batches', $user->admin_permissions ?? [], true))> {{ __('Branch batches') }}</label>
+                                        <label style="display:flex;gap:6px;align-items:center;"><input type="checkbox" name="admin_permissions[]" value="branch.students" @checked(in_array('branch.students', $user->admin_permissions ?? [], true))> {{ __('Branch students') }}</label>
+                                        <label style="display:flex;gap:6px;align-items:center;"><input type="checkbox" name="admin_permissions[]" value="finance.invoices" @checked(in_array('finance.invoices', $user->admin_permissions ?? [], true))> {{ __('Finance invoices') }}</label>
+                                        <label style="display:flex;gap:6px;align-items:center;"><input type="checkbox" name="admin_permissions[]" value="finance.refunds" @checked(in_array('finance.refunds', $user->admin_permissions ?? [], true))> {{ __('Finance refunds') }}</label>
+                                        <label style="display:flex;gap:6px;align-items:center;"><input type="checkbox" name="admin_permissions[]" value="finance.reports" @checked(in_array('finance.reports', $user->admin_permissions ?? [], true))> {{ __('Finance reports') }}</label>
+                                        <label style="display:flex;gap:6px;align-items:center;"><input type="checkbox" name="admin_permissions[]" value="finance.expenses" @checked(in_array('finance.expenses', $user->admin_permissions ?? [], true))> {{ __('Finance expenses') }}</label>
+                                    </div>
+                                </fieldset>
                                 <button type="submit" class="btn secondary" style="padding:9px 12px;">{{ __('Save') }}</button>
                             </form>
                         </td>

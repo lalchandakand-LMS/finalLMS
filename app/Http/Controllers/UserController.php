@@ -46,6 +46,9 @@ class UserController extends Controller
             'role' => ['required', 'in:admin,branch_manager,accountant,teacher,student,guardian'],
             'branch_id' => ['nullable', Rule::exists('branches', 'id')->where('is_active', true)],
             'phone_number' => ['nullable', 'string', 'regex:/^\+[1-9][0-9]{7,14}$/', Rule::unique('users', 'phone_number')->ignore($user->id)],
+            'admin_permissions_present' => ['sometimes', 'accepted'],
+            'admin_permissions' => ['sometimes', 'array'],
+            'admin_permissions.*' => ['string', Rule::in(['branch.batches', 'branch.students', 'finance.invoices', 'finance.refunds', 'finance.reports', 'finance.expenses'])],
         ]);
 
         if ($user->id === Auth::id() && $validated['role'] !== 'admin') {
@@ -60,7 +63,10 @@ class UserController extends Controller
             return back()->withErrors(['branch_id' => 'Select an active branch for this staff account.']);
         }
 
+        $previousRole = $user->role;
+        $previousPermissions = $user->admin_permissions ?? [];
         $phoneChanged = array_key_exists('phone_number', $validated) && $user->phone_number !== $validated['phone_number'];
+        $roleChanged = $user->role !== $validated['role'];
         $roleChangedAwayFromStudent = $user->isStudent() && $validated['role'] !== 'student';
 
         $user->update([
@@ -68,6 +74,39 @@ class UserController extends Controller
             'branch_id' => in_array($validated['role'], ['branch_manager', 'accountant', 'student'], true) ? ($validated['branch_id'] ?? null) : null,
             'phone_number' => $validated['phone_number'] ?? null,
         ]);
+
+        if ($request->boolean('admin_permissions_present') || $roleChanged) {
+            $allowedByRole = [
+                'branch_manager' => ['branch.batches', 'branch.students'],
+                'accountant' => ['finance.invoices', 'finance.refunds', 'finance.reports', 'finance.expenses'],
+            ];
+            $requestedPermissions = $request->boolean('admin_permissions_present')
+                ? ($validated['admin_permissions'] ?? [])
+                : [];
+            $user->forceFill([
+                'admin_permissions' => array_values(array_intersect(
+                    $requestedPermissions,
+                    $allowedByRole[$validated['role']] ?? []
+                )),
+            ])->save();
+        }
+
+        $currentPermissions = $user->fresh()->admin_permissions ?? [];
+        if ($previousRole !== $validated['role'] || $previousPermissions !== $currentPermissions) {
+            \App\Models\ActivityLog::create([
+                'user_id' => Auth::id(),
+                'event' => 'admin.user_access.updated',
+                'description' => substr(
+                    'Updated access for user #'.$user->id.' ('.$previousRole.' to '.$validated['role'].'). Modules: '.implode(', ', $currentPermissions),
+                    0,
+                    255
+                ),
+                'method' => strtoupper($request->method()),
+                'route' => substr($request->route()?->getName() ?? $request->path(), 0, 190),
+                'ip_address' => $request->ip(),
+                'user_agent' => substr((string) $request->userAgent(), 0, 1000),
+            ]);
+        }
 
         if ($phoneChanged) {
             $user->forceFill([
