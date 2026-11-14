@@ -37,7 +37,7 @@ class CourseContentLearningProgressTest extends TestCase
         $this->get(route('student.courses.index'))
             ->assertOk()
             ->assertSee('100%')
-            ->assertSee('Review last lesson');
+            ->assertSee('Mark as complete');
     }
 
     public function test_course_completion_requires_all_published_curriculum_posts_and_issues_certificate_afterward(): void
