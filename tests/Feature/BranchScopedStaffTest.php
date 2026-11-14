@@ -19,7 +19,8 @@ class BranchScopedStaffTest extends TestCase
     {
         $branch = Branch::create(['name' => 'Dhaka Branch', 'slug' => 'dhaka-branch']);
         $otherBranch = Branch::create(['name' => 'Chattogram Branch', 'slug' => 'chattogram-branch']);
-        $manager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $branch->id]);
+        $manager = User::factory()->create(['role' => 'branch_manager',
+            'admin_permissions' => ['branch.batches', 'branch.students'], 'branch_id' => $branch->id]);
         $localTeacher = User::factory()->create(['role' => 'teacher', 'branch_id' => $branch->id]);
         $remoteTeacher = User::factory()->create(['role' => 'teacher', 'branch_id' => $otherBranch->id]);
         $localCourse = Course::factory()->create(['status' => 'published']);
@@ -57,7 +58,8 @@ class BranchScopedStaffTest extends TestCase
     {
         $branch = Branch::create(['name' => 'Dhaka Branch', 'slug' => 'dhaka-branch']);
         $otherBranch = Branch::create(['name' => 'Chattogram Branch', 'slug' => 'chattogram-branch']);
-        $accountant = User::factory()->create(['role' => 'accountant', 'branch_id' => $branch->id]);
+        $accountant = User::factory()->create(['role' => 'accountant',
+            'admin_permissions' => ['finance.invoices', 'finance.refunds', 'finance.reports', 'finance.expenses'], 'branch_id' => $branch->id]);
         $admin = User::factory()->create(['role' => 'admin']);
         $localStudent = User::factory()->create(['role' => 'student', 'branch_id' => $branch->id]);
         $remoteStudent = User::factory()->create(['role' => 'student', 'branch_id' => $otherBranch->id]);
@@ -88,7 +90,8 @@ class BranchScopedStaffTest extends TestCase
     {
         $localBranch = Branch::create(['name' => 'Local Branch', 'slug' => 'local-branch']);
         $remoteBranch = Branch::create(['name' => 'Remote Branch', 'slug' => 'remote-branch']);
-        $accountant = User::factory()->create(['role' => 'accountant', 'branch_id' => $localBranch->id]);
+        $accountant = User::factory()->create(['role' => 'accountant',
+            'admin_permissions' => ['finance.invoices', 'finance.refunds', 'finance.reports', 'finance.expenses'], 'branch_id' => $localBranch->id]);
         $localStudent = User::factory()->create(['role' => 'student', 'branch_id' => $localBranch->id]);
         $remoteTeacher = User::factory()->create(['role' => 'teacher', 'branch_id' => $remoteBranch->id]);
         $course = Course::factory()->create(['teacher_id' => $remoteTeacher->id, 'status' => 'published']);
@@ -119,7 +122,8 @@ class BranchScopedStaffTest extends TestCase
     {
         $branch = Branch::create(['name' => 'Dhaka Branch', 'slug' => 'dhaka-branch']);
         $otherBranch = Branch::create(['name' => 'Sylhet Branch', 'slug' => 'sylhet-branch']);
-        $manager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $branch->id]);
+        $manager = User::factory()->create(['role' => 'branch_manager',
+            'admin_permissions' => ['branch.batches', 'branch.students'], 'branch_id' => $branch->id]);
         $localStudent = User::factory()->create(['role' => 'student', 'branch_id' => $branch->id]);
         $enrolledStudent = User::factory()->create(['role' => 'student', 'branch_id' => $otherBranch->id]);
         $remoteStudent = User::factory()->create(['role' => 'student', 'branch_id' => $otherBranch->id]);
