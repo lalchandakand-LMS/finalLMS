@@ -1011,5 +1011,12 @@
     "Finance refunds": "ফাইন্যান্স রিফান্ড",
     "Finance expenses": "ফাইন্যান্স খরচ",
     "You can manage only the branch modules explicitly assigned to your account.": "আপনার অ্যাকাউন্টে নির্দিষ্টভাবে দেওয়া শাখার মডিউলগুলোই পরিচালনা করতে পারবেন।",
-    "Only explicitly assigned finance modules are available within your branch.": "আপনার শাখায় কেবল নির্দিষ্টভাবে অনুমোদিত ফাইন্যান্স মডিউলগুলো ব্যবহার করা যাবে।"
+    "Only explicitly assigned finance modules are available within your branch.": "আপনার শাখায় কেবল নির্দিষ্টভাবে অনুমোদিত ফাইন্যান্স মডিউলগুলো ব্যবহার করা যাবে।",
+    "Resume learning": "শেখা চালিয়ে যান",
+    "Review last lesson": "শেষ দেখা পাঠটি আবার দেখুন",
+    "Course progress": "কোর্সের অগ্রগতি",
+    "Lesson navigation": "পাঠ নেভিগেশন",
+    "Previous lesson": "আগের পাঠ",
+    "Next lesson": "পরের পাঠ",
+    "lessons completed": "টি পাঠ সম্পন্ন"
 }
