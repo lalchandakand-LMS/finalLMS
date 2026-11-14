@@ -34,8 +34,11 @@ class DeviceSession extends Model
 
     public static function register($request, User $user, ?StudentDevice $device = null): self
     {
+        $sessionHash = hash('sha256', $request->session()->getId());
+        $request->session()->put('device_session_hash', $sessionHash);
+
         return self::updateOrCreate(
-            ['session_hash' => hash('sha256', $request->session()->getId())],
+            ['session_hash' => $sessionHash],
             [
                 'user_id' => $user->id,
                 'student_device_id' => $device?->id,
