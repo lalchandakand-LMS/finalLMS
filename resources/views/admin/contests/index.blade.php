@@ -51,6 +51,9 @@
         @forelse($contests as $contest)
             <tr style="border-bottom:1px solid var(--border);">
                 <td style="padding:12px 10px;"><strong>{{ $contest->title }}</strong><br><small class="muted">{{ $contest->starts_at->format('d M Y H:i') }} – {{ $contest->ends_at->format('d M Y H:i') }}</small><br><a href="{{ route('contests.show', $contest) }}">View public page</a>
+                    @if($contest->entries_count > 0)
+                        <br><a class="btn secondary" href="{{ route('admin.contests.entries', $contest) }}">{{ __('Review submissions') }}</a>
+                    @endif
                     @if(!$contest->drawn_at && $contest->entries_count === 0 && now()->lessThan($contest->starts_at))
                         <br><a class="btn secondary" href="{{ route('admin.contests.edit', $contest) }}">Edit before opening</a>
                     @endif
