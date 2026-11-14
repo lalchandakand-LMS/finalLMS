@@ -18,6 +18,9 @@ class EbookOrderFulfillmentService
 
             if ($locked->status === 'completed') return 'reviewed';
             if ($locked->status !== 'pending') return 'closed';
+            if ($locked->payment_method === 'bkash' || $locked->payments()->whereNotNull('gateway_provider')->exists()) {
+                return 'gateway';
+            }
             if ($locked->items->isEmpty()) return 'invalid';
 
             foreach ($locked->items as $item) {

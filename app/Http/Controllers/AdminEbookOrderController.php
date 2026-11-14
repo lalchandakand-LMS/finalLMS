@@ -18,7 +18,7 @@ class AdminEbookOrderController extends Controller
     {
         $orders = Order::query()
             ->whereHas('items', fn ($query) => $query->where('product_type', 'ebook'))
-            ->with(['user', 'items.downloadPermission', 'refunds.processor'])
+            ->with(['user', 'items.downloadPermission', 'refunds.processor', 'payments'])
             ->latest()
             ->paginate(25);
 
@@ -45,6 +45,7 @@ class AdminEbookOrderController extends Controller
             'approved' => back()->with('success', __('Payment verified and private eBook access granted.')),
             'reviewed' => back()->with('info', __('This order has already been completed.')),
             'closed' => back()->with('error', __('Only pending orders can be approved.')),
+            'gateway' => back()->with('error', __('Gateway orders must be completed by verified provider callback.')),
             default => back()->with('error', __('The eBook file or order item is invalid. No access was granted.')),
         };
     }
@@ -52,6 +53,9 @@ class AdminEbookOrderController extends Controller
     public function reject(Order $order): RedirectResponse
     {
         abort_unless($order->items()->where('product_type', 'ebook')->exists(), 404);
+        if ($order->payment_method === 'bkash' || $order->payments()->whereNotNull('gateway_provider')->exists()) {
+            return back()->with('error', __('Gateway orders cannot be manually rejected. Reconcile them with the provider.'));
+        }
         $cancelled = DB::transaction(function () use ($order): bool {
             $locked = Order::query()->lockForUpdate()->findOrFail($order->id);
             if ($locked->status !== 'pending') {
@@ -106,7 +110,9 @@ class AdminEbookOrderController extends Controller
             if ($locked->refunds()->exists()) {
                 return 'already_refunded';
             }
-            if ($locked->status !== 'completed') {
+            $verifiedGatewayPayment = $locked->payments()->whereNotNull('gateway_transaction_id')->exists();
+            if ($locked->status !== 'completed'
+                && ! ($locked->status === 'cancelled' && $verifiedGatewayPayment)) {
                 return 'not_refundable';
             }
 
@@ -144,7 +150,7 @@ class AdminEbookOrderController extends Controller
             'refunded' => back()->with('success', __('Full refund recorded and eBook access revoked.')),
             'already_refunded' => back()->with('info', __('A refund has already been recorded for this order.')),
             'unsupported_order' => back()->with('error', __('Only a single paid eBook item can be refunded through this workflow.')),
-            default => back()->with('error', __('Only completed eBook orders can be refunded. Verify that the external refund has been sent first.')),
+            default => back()->with('error', __('Only completed eBook orders or cancelled orders with a verified gateway transaction can be refunded. Verify that the external refund has been sent first.')),
         };
     }
 

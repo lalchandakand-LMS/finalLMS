@@ -303,7 +303,9 @@ class PaymentController extends Controller
 
     public function index(): View
     {
-        $payments = Payment::with(['user', 'course', 'courseCombo', 'comboCourses', 'reviewer'])
+        $payments = Payment::query()
+            ->where(fn ($query) => $query->whereNotNull('course_id')->orWhereNotNull('course_combo_id'))
+            ->with(['user', 'course', 'courseCombo', 'comboCourses', 'reviewer'])
             ->latest()
             ->paginate(20);
 
@@ -312,6 +314,9 @@ class PaymentController extends Controller
 
     public function approve(Payment $payment): RedirectResponse
     {
+        if ($payment->order_id) {
+            return back()->with('error', 'eBook order payments must be fulfilled through verified eBook checkout.');
+        }
         if (filled($payment->gateway_provider)) {
             return back()->with('error', 'Gateway payments can only be approved after server-side verification.');
         }

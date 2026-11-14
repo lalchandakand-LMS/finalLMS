@@ -26,7 +26,15 @@ class EbookStoreController extends Controller
         abort_unless($product->type === 'ebook' && $product->status === 'published'
             && $product->published_at && $product->published_at->lte(now()) && $product->is_downloadable, 404);
         $product->load('categories');
-        return view('ebooks.show', compact('product'));
+        $bkashAvailable = strtoupper((string) ($product->currency ?: 'BDT')) === 'BDT'
+            && (bool) config('services.bkash.enabled')
+            && filled(config('services.bkash.base_url'))
+            && filled(config('services.bkash.username'))
+            && filled(config('services.bkash.password'))
+            && filled(config('services.bkash.app_key'))
+            && filled(config('services.bkash.app_secret'));
+
+        return view('ebooks.show', compact('product', 'bkashAvailable'));
     }
 
     public function checkout(Product $product, Request $request): RedirectResponse
@@ -121,7 +129,7 @@ class EbookStoreController extends Controller
 
     public function orders(Request $request): View
     {
-        $orders = Order::with(['items.product'])
+        $orders = Order::with(['items.product', 'payments'])
             ->where('user_id', $request->user()->id)
             ->latest()->paginate(15);
         $permissions = DownloadPermission::query()->where('user_id', $request->user()->id)
