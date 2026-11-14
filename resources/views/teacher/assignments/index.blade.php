@@ -1,12 +1,12 @@
 @extends('layouts.app')
 
-@section('title', 'Assignments | ' . config('app.name'))
+@section('title', __('Assignments') . ' | ' . config('app.name'))
 
 @section('content')
     <div class="page-header">
         <div>
             <span class="badge info">{{ $batch->course->title }}</span>
-            <h1 style="margin:12px 0 0;">{{ $batch->title }} assignments</h1>
+            <h1 style="margin:12px 0 0;">{{ $batch->title }} {{ __('assignments') }}</h1>
         </div>
         <a href="{{ $isAdmin ? route('admin.batches.index') : route('teacher.batches.index') }}" class="btn secondary">{{ $isAdmin ? __('All batches') : __('My batches') }}</a>
     </div>
@@ -27,14 +27,14 @@
     <div class="course-list">
         @forelse($assignments as $assignment)
             <article class="course-item">
-                <span class="badge info">{{ $assignment->submissions_count }} submissions</span>
+                <span class="badge info">{{ $assignment->submissions_count }} {{ __('submissions') }}</span>
                 <h2 style="margin:10px 0 6px;">{{ $assignment->title }}</h2>
                 <p>{{ $assignment->instructions }}</p>
-                <div class="muted">Due {{ $assignment->due_at->format('M j, Y H:i') }} · {{ $assignment->max_marks }} marks</div>
+                <div class="muted">{{ __('Due') }} {{ $assignment->due_at->format('M j, Y H:i') }} · {{ $assignment->max_marks }} {{ __('marks') }}</div>
                 @foreach($assignment->submissions as $submission)
                     <div class="course-item" style="margin-top:12px;">
                         <strong>{{ $submission->student->name }}</strong>
-                        <span class="badge {{ $submission->status === 'graded' ? 'success' : 'warning' }}">{{ ucfirst($submission->status) }}</span>
+                        <span class="badge {{ $submission->status === 'graded' ? 'success' : 'warning' }}">{{ __($submission->status === 'graded' ? 'Graded' : 'Submitted') }}</span>
                         <div class="muted">{{ __('Submitted') }}: {{ $submission->submitted_at?->format('M j, Y H:i') ?? '—' }}</div>
                         <p>{{ $submission->answer }}</p>
                         @if($submission->attachment_path)<a class="btn secondary" href="{{ route('assignment-submissions.attachment', $submission) }}">{{ __('Download student attachment') }}: {{ $submission->attachment_name }}</a>@endif
