@@ -79,7 +79,7 @@ class StudentCourseQuizController extends Controller
     public function show(Request $request, Course $course, QuestionSet $questionSet): JsonResponse
     {
         $student = $request->user();
-        $this->authorizeCourseQuiz($student, $course, $questionSet);
+        $pivot = $this->authorizeCourseQuiz($student, $course, $questionSet);
 
         $attempt = QuestionSetAttempt::query()
             ->where('course_id', $course->id)
@@ -98,6 +98,12 @@ class StudentCourseQuizController extends Controller
         }
 
         $attempt?->load('questions');
+        $used = QuestionSetAttempt::query()
+            ->where('course_id', $course->id)
+            ->where('question_set_id', $questionSet->id)
+            ->where('student_id', $student->id)
+            ->count();
+        $maximum = $pivot->max_attempts === null ? null : (int) $pivot->max_attempts;
 
         return response()->json([
             'data' => [
@@ -107,8 +113,13 @@ class StudentCourseQuizController extends Controller
                     'title' => $questionSet->title,
                     'description' => $questionSet->description,
                     'question_count' => $questionSet->questions()->count(),
+                    'time_limit_minutes' => $pivot->time_limit_minutes,
                 ],
                 'attempt' => $this->attemptPayload($attempt),
+                'available_from' => $pivot->available_from,
+                'max_attempts' => $maximum,
+                'attempts_used' => $used,
+                'attempts_remaining' => $maximum === null ? null : max(0, $maximum - $used),
             ],
         ]);
     }
