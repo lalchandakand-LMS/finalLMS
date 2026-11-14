@@ -358,14 +358,18 @@ class BkashPaymentFlowTest extends TestCase
                 'amount' => '350.00',
                 'currency' => 'BDT',
             ], 200),
-            '*/tokenized/checkout/payment/status' => Http::response([
-                'transactionStatus' => 'Completed',
-                'paymentID' => 'BKASH-EBOOK-PAY-001',
-                'trxID' => 'BKASH-EBOOK-TRX-001',
-                'amount' => '350.00',
-                'currency' => 'BDT',
-                'merchantInvoiceNumber' => 'BKASH-EBOOK-REF-001',
-            ], 200),
+            '*/tokenized/checkout/payment/status' => function (Request $request) {
+                $payment = Payment::where('gateway_payment_id', $request['paymentID'])->firstOrFail();
+
+                return Http::response([
+                    'transactionStatus' => 'Completed',
+                    'paymentID' => 'BKASH-EBOOK-PAY-001',
+                    'trxID' => 'BKASH-EBOOK-TRX-001',
+                    'amount' => '350.00',
+                    'currency' => 'BDT',
+                    'merchantInvoiceNumber' => $payment->transaction_reference,
+                ], 200);
+            },
         ]);
 
         $this->actingAs($student)
@@ -420,14 +424,18 @@ class BkashPaymentFlowTest extends TestCase
                 'trxID' => 'BKASH-EBOOK-TRX-002',
                 'amount' => '350.00',
             ], 200),
-            '*/tokenized/checkout/payment/status' => Http::response([
-                'transactionStatus' => 'Completed',
-                'paymentID' => 'BKASH-EBOOK-PAY-002',
-                'trxID' => 'BKASH-EBOOK-TRX-002',
-                'amount' => '1.00',
-                'currency' => 'BDT',
-                'merchantInvoiceNumber' => 'BKASH-EBOOK-REF-002',
-            ], 200),
+            '*/tokenized/checkout/payment/status' => function (Request $request) {
+                $payment = Payment::where('gateway_payment_id', $request['paymentID'])->firstOrFail();
+
+                return Http::response([
+                    'transactionStatus' => 'Completed',
+                    'paymentID' => 'BKASH-EBOOK-PAY-002',
+                    'trxID' => 'BKASH-EBOOK-TRX-002',
+                    'amount' => '1.00',
+                    'currency' => 'BDT',
+                    'merchantInvoiceNumber' => $payment->transaction_reference,
+                ], 200);
+            },
         ]);
 
         $this->actingAs($student)->post(route('ebooks.checkout.bkash', $product->slug))->assertRedirect();
