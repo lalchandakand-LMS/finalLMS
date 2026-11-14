@@ -737,5 +737,12 @@
     "completed": "Completed",
     "needs_configuration": "Needs configuration",
     "processing": "Processing",
-    "queued": "Queued"
+    "queued": "Queued",
+    "S3-compatible Object Storage": "S3-compatible Object Storage",
+    "Private object storage for uploads and backups": "Private object storage for uploads and backups",
+    "Missing S3 access key, secret, region or bucket": "Missing S3 access key, secret, region or bucket",
+    "S3-compatible endpoint must use HTTPS": "S3-compatible endpoint must use HTTPS",
+    "S3 configuration ready; live bucket verification still required": "S3 configuration ready; live bucket verification still required",
+    "S3 credentials present; set FILESYSTEM_DISK=s3 to activate": "S3 credentials present; set FILESYSTEM_DISK=s3 to activate",
+    "FILESYSTEM_DISK=s3, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION and AWS_BUCKET; optional HTTPS AWS_ENDPOINT": "FILESYSTEM_DISK=s3, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION and AWS_BUCKET; optional HTTPS AWS_ENDPOINT"
 }
