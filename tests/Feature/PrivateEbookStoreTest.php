@@ -222,6 +222,11 @@ class PrivateEbookStoreTest extends TestCase
         $permission = DownloadPermission::where('user_id', $student->id)->firstOrFail();
         $this->assertNull($permission->downloads_remaining);
         $this->actingAs($student)->get(route('ebooks.download', $permission))->assertOk();
+
+        $this->actingAs($student)->post(route('ebooks.checkout', $product->slug), [])
+            ->assertStatus(409);
+        $this->assertDatabaseCount('orders', 1);
+        $this->assertDatabaseCount('download_permissions', 1);
     }
 
     public function test_admin_cannot_replace_pdf_after_order_history_exists(): void
