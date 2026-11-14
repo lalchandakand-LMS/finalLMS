@@ -8,6 +8,7 @@ use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\Exam;
 use App\Models\ExamAttempt;
+use App\Models\ExamQuestion;
 use App\Models\QuestionBankQuestion;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -292,6 +293,219 @@ class ExaminationWorkflowTest extends TestCase
             ->assertOk()->assertDontSee('Private teacher question');
     }
 
+    public function test_attempt_cannot_submit_answers_for_questions_outside_its_frozen_paper(): void
+    {
+        [$teacher, $student, $batch] = $this->makeBatchWithStudent();
+        $exam = Exam::create([
+            'batch_id' => $batch->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Frozen paper test',
+            'starts_at' => now()->subMinute(),
+            'ends_at' => now()->addHour(),
+            'duration_minutes' => 30,
+            'pass_marks' => 0,
+            'status' => 'published',
+        ]);
+        $assignedQuestion = ExamQuestion::create([
+            'exam_id' => $exam->id,
+            'question' => 'Assigned question?',
+            'options' => ['A', 'B', 'C', 'D'],
+            'correct_option' => 0,
+            'marks' => 1,
+            'position' => 1,
+        ]);
+        $foreignExam = Exam::create([
+            'batch_id' => $batch->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Another paper',
+            'starts_at' => now()->subMinute(),
+            'ends_at' => now()->addHour(),
+            'duration_minutes' => 30,
+            'pass_marks' => 0,
+            'status' => 'published',
+        ]);
+        $foreignQuestion = ExamQuestion::create([
+            'exam_id' => $foreignExam->id,
+            'question' => 'Foreign question?',
+            'options' => ['A', 'B', 'C', 'D'],
+            'correct_option' => 0,
+            'marks' => 1,
+            'position' => 1,
+        ]);
+
+        $this->actingAs($student)
+            ->post(route('student.exams.start', $exam))
+            ->assertRedirect();
+
+        $attempt = ExamAttempt::where('exam_id', $exam->id)->where('student_id', $student->id)->firstOrFail();
+
+        $this->post(route('student.exams.submit', $attempt), [
+            'answers' => [$foreignQuestion->id => 0],
+        ])->assertUnprocessable();
+
+        $this->assertDatabaseHas('exam_attempt_questions', [
+            'exam_attempt_id' => $attempt->id,
+            'exam_question_id' => $assignedQuestion->id,
+        ]);
+        $this->assertDatabaseHas('exam_attempts', ['id' => $attempt->id, 'status' => 'in_progress']);
+        $this->assertDatabaseCount('exam_answers', 0);
+    }
+
+    public function test_submitted_exam_attempt_cannot_be_submitted_twice(): void
+    {
+        [$teacher, $student, $batch] = $this->makeBatchWithStudent();
+        $exam = Exam::create([
+            'batch_id' => $batch->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Single submission test',
+            'starts_at' => now()->subMinute(),
+            'ends_at' => now()->addHour(),
+            'duration_minutes' => 30,
+            'pass_marks' => 1,
+            'status' => 'published',
+        ]);
+        $question = ExamQuestion::create([
+            'exam_id' => $exam->id,
+            'question' => 'One plus one?',
+            'options' => ['1', '2', '3', '4'],
+            'correct_option' => 1,
+            'marks' => 1,
+            'position' => 1,
+        ]);
+
+        $this->actingAs($student)->post(route('student.exams.start', $exam))->assertRedirect();
+        $attempt = ExamAttempt::where('exam_id', $exam->id)->where('student_id', $student->id)->firstOrFail();
+
+        $this->post(route('student.exams.submit', $attempt), [
+            'answers' => [$question->id => 1],
+        ])->assertRedirect();
+
+        $this->post(route('student.exams.submit', $attempt), [
+            'answers' => [$question->id => 0],
+        ])->assertForbidden();
+
+        $this->assertDatabaseHas('exam_attempts', ['id' => $attempt->id, 'score' => 1, 'status' => 'submitted']);
+        $this->assertDatabaseCount('exam_answers', 1);
+    }
+
+    public function test_enrolled_student_cannot_open_a_draft_exam_by_guessing_its_url(): void
+    {
+        [$teacher, $student, $batch] = $this->makeBatchWithStudent();
+        $exam = Exam::create([
+            'batch_id' => $batch->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Private draft exam',
+            'starts_at' => now()->addHour(),
+            'ends_at' => now()->addHours(2),
+            'duration_minutes' => 30,
+            'pass_marks' => 0,
+            'status' => 'draft',
+        ]);
+
+        $this->actingAs($student)
+            ->get(route('student.exams.show', $exam))
+            ->assertNotFound();
+    }
+
+    public function test_student_can_autosave_exam_answers_and_resume_with_saved_selections(): void
+    {
+        [$teacher, $student, $batch] = $this->makeBatchWithStudent();
+        $exam = Exam::create([
+            'batch_id' => $batch->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Autosave and resume test',
+            'starts_at' => now()->subMinute(),
+            'ends_at' => now()->addHour(),
+            'duration_minutes' => 30,
+            'pass_marks' => 1,
+            'status' => 'published',
+        ]);
+        $question = ExamQuestion::create([
+            'exam_id' => $exam->id,
+            'question' => 'Choose the correct answer?',
+            'options' => ['A', 'B', 'C', 'D'],
+            'correct_option' => 2,
+            'marks' => 1,
+            'position' => 1,
+        ]);
+
+        $this->actingAs($student)->post(route('student.exams.start', $exam))->assertRedirect();
+        $attempt = ExamAttempt::where('exam_id', $exam->id)->where('student_id', $student->id)->firstOrFail();
+
+        $this->postJson(route('student.exams.answers.save', $attempt), [
+            'answers' => [$question->id => 2],
+        ])->assertOk()->assertJson(['saved' => 1]);
+
+        $this->assertDatabaseHas('exam_answers', [
+            'exam_attempt_id' => $attempt->id,
+            'exam_question_id' => $question->id,
+            'selected_option' => 2,
+            'is_correct' => false,
+            'marks_awarded' => 0,
+        ]);
+
+        $this->get(route('student.exams.show', $exam))
+            ->assertOk()
+            ->assertSee('value="2" checked', false);
+
+        $this->post(route('student.exams.submit', $attempt), [
+            'answers' => [$question->id => 2],
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('exam_answers', [
+            'exam_attempt_id' => $attempt->id,
+            'exam_question_id' => $question->id,
+            'selected_option' => 2,
+            'is_correct' => true,
+            'marks_awarded' => 1,
+        ]);
+        $this->assertDatabaseHas('exam_attempts', ['id' => $attempt->id, 'score' => 1, 'status' => 'submitted']);
+        $this->assertDatabaseCount('exam_answers', 1);
+    }
+
+    public function test_student_cannot_autosave_an_answer_for_a_question_outside_the_frozen_attempt(): void
+    {
+        [$teacher, $student, $batch] = $this->makeBatchWithStudent();
+        $exam = Exam::create([
+            'batch_id' => $batch->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Autosave isolation test',
+            'starts_at' => now()->subMinute(),
+            'ends_at' => now()->addHour(),
+            'duration_minutes' => 30,
+            'pass_marks' => 0,
+            'status' => 'published',
+        ]);
+        $ownedQuestion = ExamQuestion::create([
+            'exam_id' => $exam->id, 'question' => 'Owned?', 'options' => ['A', 'B', 'C', 'D'],
+            'correct_option' => 0, 'marks' => 1, 'position' => 1,
+        ]);
+        $otherExam = Exam::create([
+            'batch_id' => $batch->id, 'teacher_id' => $teacher->id, 'title' => 'Different exam',
+            'starts_at' => now()->subMinute(), 'ends_at' => now()->addHour(),
+            'duration_minutes' => 30, 'pass_marks' => 0, 'status' => 'published',
+        ]);
+        $foreignQuestion = ExamQuestion::create([
+            'exam_id' => $otherExam->id, 'question' => 'Not assigned?', 'options' => ['A', 'B', 'C', 'D'],
+            'correct_option' => 0, 'marks' => 1, 'position' => 1,
+        ]);
+
+        $this->actingAs($student)->post(route('student.exams.start', $exam))->assertRedirect();
+        $attempt = ExamAttempt::where('exam_id', $exam->id)->where('student_id', $student->id)->firstOrFail();
+
+        $this->postJson(route('student.exams.answers.save', $attempt), [
+            'answers' => [$foreignQuestion->id => 0],
+        ])->assertUnprocessable();
+
+        $this->assertDatabaseMissing('exam_answers', [
+            'exam_attempt_id' => $attempt->id,
+            'exam_question_id' => $foreignQuestion->id,
+        ]);
+        $this->assertDatabaseHas('exam_attempt_questions', [
+            'exam_attempt_id' => $attempt->id,
+            'exam_question_id' => $ownedQuestion->id,
+        ]);
+    }
     private function makeBatchWithStudent(bool $enroll = true): array
     {
         $teacher = User::factory()->create(['role' => 'teacher']);

@@ -5,14 +5,14 @@
 @section('content')
     <div class="page-header">
         <div><span class="badge info">{{ $batch->course->title }}</span><h1 style="margin:12px 0 0;">{{ $batch->title }} exams</h1></div>
-        <a href="{{ route('teacher.batches.index') }}" class="btn secondary">My batches</a>
+        <a href="{{ $isAdmin ? route('admin.batches.index') : route('teacher.batches.index') }}" class="btn secondary">{{ $isAdmin ? __('All batches') : __('My batches') }}</a>
     </div>
 
     <div class="panel" style="margin-bottom:20px;">
         <h2 style="margin-top:0;">{{ __('Create multiple-choice exam') }}</h2>
-        <p><a class="btn secondary" href="{{ route('teacher.batches.question-bank.index', $batch) }}">{{ __('Manage Question Bank') }}</a></p>
+        <p><a class="btn secondary" href="{{ $isAdmin ? route('admin.batches.question-bank.index', $batch) : route('teacher.batches.question-bank.index', $batch) }}">{{ __('Manage Question Bank') }}</a></p>
         <p class="muted">Add one or more questions. Each question has four options and one correct answer. Marks are awarded automatically.</p>
-        <form method="POST" action="{{ route('teacher.batches.exams.store', $batch) }}">
+        <form method="POST" action="{{ $isAdmin ? route('admin.batches.exams.store', $batch) : route('teacher.batches.exams.store', $batch) }}">
             @csrf
             <label>{{ __('Exam title') }}<input name="title" maxlength="180" required></label>
             <label>{{ __('Instructions') }}<textarea name="instructions" maxlength="5000"></textarea></label>
@@ -29,7 +29,7 @@
                 @forelse($bankQuestions as $bankQuestion)
                     <label style="display:block;"><input type="checkbox" name="question_bank_ids[]" value="{{ $bankQuestion->id }}"> {{ $bankQuestion->subject ?: 'General' }} — {{ Str::limit($bankQuestion->question, 120) }} ({{ $bankQuestion->marks }} marks)</label>
                 @empty
-                    <p class="muted">Question Bank is empty. <a href="{{ route('teacher.batches.question-bank.index', $batch) }}">Add questions</a>.</p>
+                    <p class="muted">Question Bank is empty. <a href="{{ $isAdmin ? route('admin.batches.question-bank.index', $batch) : route('teacher.batches.question-bank.index', $batch) }}">Add questions</a>.</p>
                 @endforelse
             </div>
             <div id="manual-question-area">
@@ -62,7 +62,7 @@
                 <h2>{{ $exam->title }}</h2>
                 <p class="muted">{{ $exam->questions_count }} questions · {{ $exam->attempts_count }} attempts · {{ $exam->duration_minutes }} minutes</p>
                 <p class="muted">{{ $exam->starts_at->format('M j, Y H:i') }} – {{ $exam->ends_at->format('M j, Y H:i') }}</p>
-                <a class="btn secondary" href="{{ route('teacher.exams.results', $exam) }}">{{ __('View results') }}</a>
+                <a class="btn secondary" href="{{ $isAdmin ? route('admin.exams.results', $exam) : route('teacher.exams.results', $exam) }}">{{ __('View results') }}</a>
             </article>
         @empty
             <div class="panel"><p class="muted">{{ __('No exams have been published for this batch.') }}</p></div>
@@ -81,13 +81,46 @@
     const syncQuestionMode = () => {
         const useBank = bankToggle.checked;
         bankArea.hidden = !useBank;
-        manualArea.hidden = useBank;
-        manualArea.querySelectorAll('input, textarea, select').forEach(field => field.disabled = useBank);
-        button.hidden = useBank;
         bankArea.querySelectorAll('input').forEach(field => field.disabled = !useBank);
+        manualArea.hidden = false;
+
+        manualArea.querySelectorAll('.exam-question').forEach(card => {
+            const questionField = card.querySelector('textarea[name$="[question]"]');
+            const optionFields = [...card.querySelectorAll('input[name*="[options]"]')];
+            const hasManualContent = Boolean(
+                questionField?.value.trim() || optionFields.some(field => field.value.trim())
+            );
+
+            card.querySelectorAll('input, textarea, select').forEach(field => {
+                field.disabled = false;
+                if (field.matches('textarea[name$="[question]"], input[name*="[options]"], input[name$="[marks]"]')) {
+                    field.required = !useBank || hasManualContent;
+                }
+            });
+        });
+
+        button.hidden = false;
     };
     bankToggle.addEventListener('change', syncQuestionMode);
+    manualArea.addEventListener('input', syncQuestionMode);
     syncQuestionMode();
+
+    const examForm = bankToggle.closest('form');
+    examForm.addEventListener('submit', () => {
+        if (!bankToggle.checked) return;
+
+        manualArea.querySelectorAll('.exam-question').forEach(card => {
+            const questionField = card.querySelector('textarea[name$="[question]"]');
+            const optionFields = [...card.querySelectorAll('input[name*="[options]"]')];
+            const hasManualContent = Boolean(
+                questionField?.value.trim() || optionFields.some(field => field.value.trim())
+            );
+
+            if (!hasManualContent) {
+                card.querySelectorAll('input, textarea, select').forEach(field => field.disabled = true);
+            }
+        });
+    });
     if (!container || !button) return;
     button.addEventListener('click', () => {
         const index = container.querySelectorAll('.exam-question').length;
@@ -108,6 +141,7 @@
             </div>
             <button type="button" class="btn secondary remove-question">Remove question</button>`;
         container.appendChild(card);
+        syncQuestionMode();
     });
     container.addEventListener('click', event => {
         if (event.target.classList.contains('remove-question')) event.target.closest('.exam-question').remove();
