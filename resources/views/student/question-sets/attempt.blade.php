@@ -57,6 +57,11 @@
                 <h2>{{ __('Your answers have been submitted') }}</h2>
                 <p>{{ __('Objective questions have been checked. Your final result will appear after the written answers are reviewed.') }}</p>
                 <p>{{ __('Objective score:') }} <strong>{{ $attempt->auto_score }} / {{ $attempt->max_score }}</strong></p>
+            @elseif($attempt->status === 'graded')
+                <span class="badge success">{{ __('Graded') }}</span>
+                <h2>{{ __('Final quiz result') }}</h2>
+                <p>{{ __('Score:') }} <strong>{{ $attempt->final_score }} / {{ $attempt->max_score }}</strong></p>
+                @if($attempt->teacher_feedback)<p><strong>{{ __('Teacher feedback:') }}</strong> {{ $attempt->teacher_feedback }}</p>@endif
             @else
                 <span class="badge success">{{ __('Submitted') }}</span>
                 <h2>{{ __('Quiz result') }}</h2>
@@ -73,7 +78,12 @@
                             <p class="muted">{{ __('Marks awarded:') }} {{ $question['marks_awarded'] }} / {{ $question['marks'] }}</p>
                         @else
                             <p>{{ $question['answer_text'] ?: __('Not answered') }}</p>
-                            <p class="muted">{{ __('Written answer pending teacher review.') }}</p>
+                            @if($attempt->status === 'graded')
+                                <p class="muted">{{ __('Marks awarded:') }} {{ $question['marks_awarded'] }} / {{ $question['marks'] }}</p>
+                                @if($question['manual_feedback'])<p><strong>{{ __('Teacher feedback:') }}</strong> {{ $question['manual_feedback'] }}</p>@endif
+                            @else
+                                <p class="muted">{{ __('Written answer pending teacher review.') }}</p>
+                            @endif
                         @endif
                     </div>
                 @endforeach
