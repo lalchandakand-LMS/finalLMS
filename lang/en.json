@@ -597,5 +597,10 @@
     "bKash payment verified. Your eBook is now available in your library.": "bKash payment verified. Your eBook is now available in your library.",
     "bKash payment succeeded, but the eBook could not be fulfilled. The academy must arrange a manual refund.": "bKash payment succeeded, but the eBook could not be fulfilled. The academy must arrange a manual refund.",
     "This eBook payment is no longer eligible for automatic fulfillment. Please contact the academy.": "This eBook payment is no longer eligible for automatic fulfillment. Please contact the academy.",
-    "Your bKash payment is awaiting server-side verification. Do not pay again; contact the academy if this message remains.": "Your bKash payment is awaiting server-side verification. Do not pay again; contact the academy if this message remains."
+    "Your bKash payment is awaiting server-side verification. Do not pay again; contact the academy if this message remains.": "Your bKash payment is awaiting server-side verification. Do not pay again; contact the academy if this message remains.",
+    "Waiting for authoritative bKash server-side verification. Manual approval is disabled.": "Waiting for authoritative bKash server-side verification. Manual approval is disabled.",
+    "Waiting for bKash server-side verification.": "Waiting for bKash server-side verification.",
+    "Only completed eBook orders or cancelled orders with a verified gateway transaction can be refunded. Verify that the external refund has been sent first.": "Only completed eBook orders or cancelled orders with a verified gateway transaction can be refunded. Verify that the external refund has been sent first.",
+    "Gateway orders must be completed by verified provider callback.": "Gateway orders must be completed by verified provider callback.",
+    "Gateway orders cannot be manually rejected. Reconcile them with the provider.": "Gateway orders cannot be manually rejected. Reconcile them with the provider."
 }
