@@ -255,7 +255,9 @@ class BkashPaymentController extends Controller
             ->firstOrFail();
 
         if ($payment->status === 'approved') {
-            return redirect()->route('courses.show', $payment->course)->with('success', 'Your payment is already verified.');
+            return $payment->order_id
+                ? redirect()->route('ebooks.orders')->with('success', 'Your eBook payment is already verified.')
+                : redirect()->route('courses.show', $payment->course)->with('success', 'Your payment is already verified.');
         }
 
         // The browser callback query string is not proof of payment success or failure.
@@ -302,6 +304,69 @@ class BkashPaymentController extends Controller
                     return 'closed';
                 }
 
+                if ($lockedPayment->order_id) {
+                    $order = Order::query()->with('items.product')->lockForUpdate()->findOrFail($lockedPayment->order_id);
+                    if ($order->status === 'completed') {
+                        $lockedPayment->update([
+                            'status' => 'approved',
+                            'gateway_transaction_id' => $transactionId,
+                            'reviewed_at' => now(),
+                            'admin_note' => null,
+                        ]);
+
+                        return 'already';
+                    }
+                    if ($order->status !== 'pending') {
+                        return 'closed';
+                    }
+
+                    $items = $order->items;
+                    $validOrder = (int) $order->user_id === (int) $lockedPayment->user_id
+                        && $order->payment_reference === $lockedPayment->transaction_reference
+                        && abs((float) $order->total - (float) $lockedPayment->amount) < 0.01
+                        && $items->isNotEmpty()
+                        && $items->every(fn (OrderItem $item): bool => $item->product_type === 'ebook'
+                            && (int) $item->quantity === 1
+                            && $item->product
+                            && $item->product->is_downloadable
+                            && $item->product->download_path
+                            && Storage::disk('local')->exists($item->product->download_path));
+
+                    if (! $validOrder) {
+                        $lockedPayment->update([
+                            'status' => 'rejected',
+                            'gateway_transaction_id' => $transactionId,
+                            'reviewed_at' => now(),
+                            'admin_note' => 'bKash payment succeeded but the eBook order could not be fulfilled. Manual refund is required.',
+                        ]);
+                        $order->update(['status' => 'cancelled']);
+
+                        return 'ebook_unavailable';
+                    }
+
+                    foreach ($items as $item) {
+                        DownloadPermission::firstOrCreate(
+                            ['order_item_id' => $item->id],
+                            [
+                                'user_id' => $lockedPayment->user_id,
+                                'product_id' => $item->product_id,
+                                'downloads_remaining' => $item->product->download_limit,
+                                'expires_at' => $item->product->download_expires_at,
+                            ]
+                        );
+                    }
+
+                    $order->update(['status' => 'completed', 'paid_at' => now(), 'completed_at' => now()]);
+                    $lockedPayment->update([
+                        'status' => 'approved',
+                        'gateway_transaction_id' => $transactionId,
+                        'reviewed_at' => now(),
+                        'admin_note' => null,
+                    ]);
+
+                    return 'ebook_approved';
+                }
+
                 if ($lockedPayment->batch_id) {
                     $batch = Batch::query()->lockForUpdate()->findOrFail($lockedPayment->batch_id);
                     $enrollments = Enrollment::query()
@@ -340,6 +405,17 @@ class BkashPaymentController extends Controller
                 return 'approved';
             });
 
+            if ($payment->order_id) {
+                return match ($result) {
+                    'ebook_approved', 'already' => redirect()->route('ebooks.orders')
+                        ->with('success', 'bKash payment verified. Your eBook is now available in your library.'),
+                    'ebook_unavailable' => redirect()->route('ebooks.orders')
+                        ->with('error', 'bKash payment succeeded, but the eBook could not be fulfilled. The academy must arrange a manual refund.'),
+                    default => redirect()->route('ebooks.orders')
+                        ->with('error', 'This eBook payment is no longer eligible for automatic fulfillment. Please contact the academy.'),
+                };
+            }
+
             if ($result === 'full') {
                 return redirect()->route('courses.show', $payment->course)
                     ->with('error', 'Your bKash payment succeeded, but the selected batch is full. Please contact the academy for a refund or another batch.');
@@ -353,8 +429,9 @@ class BkashPaymentController extends Controller
             return redirect()->route('courses.show', $payment->course)
                 ->with('success', 'bKash payment verified. Your course enrollment is now active.');
         } catch (Throwable) {
-            return redirect()->route('courses.show', $payment->course)
-                ->with('warning', 'Your bKash payment is awaiting server-side verification. Do not pay again; contact the academy if this message remains.');
+            return $payment->order_id
+                ? redirect()->route('ebooks.orders')->with('warning', 'Your bKash payment is awaiting server-side verification. Do not pay again; contact the academy if this message remains.')
+                : redirect()->route('courses.show', $payment->course)->with('warning', 'Your bKash payment is awaiting server-side verification. Do not pay again; contact the academy if this message remains.');
         }
     }
 
