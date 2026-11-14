@@ -228,8 +228,16 @@ class StudentExamController extends Controller
             return $total;
         });
 
+        $exam = $attempt->exam;
+
         return response()->json([
-            'data' => ['score' => $score, 'submitted_at' => now()->toIso8601String(), 'status' => 'submitted'],
+            'data' => [
+                'score' => $score,
+                'pass_marks' => (int) $exam->pass_marks,
+                'passed' => $score >= (int) $exam->pass_marks,
+                'submitted_at' => now()->toIso8601String(),
+                'status' => 'submitted',
+            ],
         ]);
     }
 
