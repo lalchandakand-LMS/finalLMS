@@ -71,6 +71,36 @@
                     <button class="btn primary" type="submit">Update eBook</button>
                 </form>
             </details>
+            <details style="margin-top:12px">
+                <summary>{{ __('Manage sample preview pages') }} ({{ $product->previewPages->count() }}/10)</summary>
+                <p class="muted">{{ __('Upload up to ten sample page images. They are stored privately and served through a controlled preview route.') }}</p>
+                @if($product->previewPages->isNotEmpty())
+                    <div class="grid grid-3" style="margin:12px 0">
+                        @foreach($product->previewPages as $previewPage)
+                            <article class="course-item">
+                                <a href="{{ route('ebooks.preview', [$product->slug, $previewPage]) }}" target="_blank" rel="noopener noreferrer">
+                                    <img src="{{ route('ebooks.preview', [$product->slug, $previewPage]) }}" alt="{{ $previewPage->alt_text ?: __('Sample page :number', ['number' => $previewPage->page_number]) }}" loading="lazy" style="width:100%;max-height:220px;object-fit:contain;border-radius:8px">
+                                </a>
+                                <p class="muted">{{ __('Page :number', ['number' => $previewPage->page_number]) }}</p>
+                                <form method="POST" action="{{ route('admin.ebooks.preview-pages.destroy', [$product, $previewPage]) }}" onsubmit="return confirm('{{ __('Remove this sample page?') }}')">
+                                    @csrf @method('DELETE')
+                                    <button class="btn secondary" type="submit">{{ __('Remove page') }}</button>
+                                </form>
+                            </article>
+                        @endforeach
+                    </div>
+                @endif
+                @if($product->previewPages->count() < 10)
+                    <form method="POST" action="{{ route('admin.ebooks.preview-pages.store', $product) }}" enctype="multipart/form-data">
+                        @csrf
+                        <label>{{ __('Sample page image') }}<input type="file" name="page_image" accept="image/jpeg,image/png,image/webp" required></label>
+                        <label>{{ __('Alternative text (optional)') }}<input type="text" name="alt_text" maxlength="180"></label>
+                        <button class="btn primary" type="submit">{{ __('Upload sample page') }}</button>
+                    </form>
+                @else
+                    <p class="muted">{{ __('The maximum of ten sample pages has been reached.') }}</p>
+                @endif
+            </details>
         </section>
     @empty
         <p>No eBooks created yet.</p>
