@@ -176,14 +176,15 @@ class CourseController extends Controller
             'video/quicktime',
         ], true), 404);
 
+        $extension = match ($mime) {
+            'video/webm' => 'webm',
+            'video/ogg' => 'ogv',
+            'video/quicktime' => 'mov',
+            default => 'mp4',
+        };
         $response = response()->file($disk->path($lesson->video_path), [
             'Content-Type' => $mime,
-            'Content-Disposition' => 'inline; filename="lesson-'.$lesson->id.'.'.match ($mime) {
-                'video/webm' => 'webm',
-                'video/ogg' => 'ogv',
-                'video/quicktime' => 'mov',
-                default => 'mp4',
-            }.'"',
+            'Content-Disposition' => 'inline; filename="lesson-'.$lesson->id.'.'.$extension.'"',
             'Accept-Ranges' => 'bytes',
             'X-Content-Type-Options' => 'nosniff',
             'Referrer-Policy' => 'no-referrer',
