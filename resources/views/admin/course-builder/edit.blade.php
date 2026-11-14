@@ -2,6 +2,7 @@
 @section('title', __('Course curriculum builder'))
 @section('content')
 <div class="page-header"><div><span class="badge info">{{ __('Admin') }}</span><h1>{{ __('Course curriculum builder') }}</h1><p class="muted">{{ $course->title }} · {{ __('Select lessons and question sets for this course.') }}</p></div><a class="btn secondary" href="{{ route('admin.courses.index') }}">{{ __('Back to courses') }}</a></div>
+<p class="muted">{{ __('Published posts can be added to a course. Existing attached draft or archived posts remain visible here so saving the curriculum does not silently remove them.') }}</p>
 <div class="panel">
 <form method="POST" action="{{ route('admin.course-builder.update', $course) }}">@csrf @method('PUT')
 @php($current = $course->curriculumItems->keyBy('course_content_post_id'))
@@ -12,7 +13,7 @@
 @foreach($availablePosts as $post)
 @php($item = $current->get($post->id))
 <tr style="border-top:1px solid var(--border);"><td style="padding:12px;"><input type="checkbox" name="post_ids[]" value="{{ $post->id }}" @checked($item) style="width:auto;"></td>
-<td><strong>{{ $post->title }}</strong><div class="muted">{{ $post->categories->pluck('name')->join(', ') }}</div></td>
+<td><strong>{{ $post->title }}</strong><div class="muted">{{ $post->categories->pluck('name')->join(', ') }} · {{ __(ucfirst($post->status)) }}</div></td>
 <td><input name="section_titles[{{ $post->id }}]" maxlength="120" value="{{ old('section_titles.'.$post->id, $item?->section_title) }}" placeholder="{{ __('e.g. Module 1') }}"></td>
 <td><input type="number" name="positions[{{ $post->id }}]" min="0" max="100000" value="{{ old('positions.'.$post->id, $item?->position ?? (($loop->iteration) * 10)) }}" style="width:90px;"></td>
 <td><input type="number" name="durations[{{ $post->id }}]" min="1" max="600" value="{{ old('durations.'.$post->id, $item?->duration_minutes) }}" style="width:90px;"></td>
