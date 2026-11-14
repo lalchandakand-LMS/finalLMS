@@ -100,6 +100,7 @@ class CourseController extends Controller
         $completed = LessonProgress::query()
             ->where('user_id', $request->user()->id)
             ->whereIn('lesson_id', $lessonIds)
+            ->whereNotNull('completed_at')
             ->pluck('completed_at', 'lesson_id');
 
         return response()->json([
@@ -135,7 +136,7 @@ class CourseController extends Controller
         abort_unless($lesson->is_preview || $enrolled || $isInstructor, 403);
 
         $progress = $user?->isStudent()
-            ? LessonProgress::query()->where('user_id', $user->id)->where('lesson_id', $lesson->id)->exists()
+            ? LessonProgress::query()->where('user_id', $user->id)->where('lesson_id', $lesson->id)->whereNotNull('completed_at')->exists()
             : false;
 
         return response()->json([
@@ -211,6 +212,10 @@ class CourseController extends Controller
             ['user_id' => $student->id, 'lesson_id' => $lesson->id],
             ['completed_at' => now()]
         );
+
+        if (! $progress->completed_at) {
+            $progress->forceFill(['completed_at' => now()])->save();
+        }
 
         return response()->json([
             'completed' => true,
