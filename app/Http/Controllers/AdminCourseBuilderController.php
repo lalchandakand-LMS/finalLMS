@@ -16,7 +16,12 @@ class AdminCourseBuilderController extends Controller
     public function edit(Course $course): View
     {
         $course->load(['teacher', 'curriculumItems.post.categories', 'questionSets.questions']);
-        $availablePosts = CourseContentPost::published()->with('categories')->orderBy('title')->get();
+        $attachedPostIds = $course->curriculumItems->pluck('course_content_post_id')->all();
+        $availablePosts = CourseContentPost::query()
+            ->where(fn ($query) => $query->published()->orWhereIn('id', $attachedPostIds))
+            ->with('categories')
+            ->orderBy('title')
+            ->get();
         $availableQuestionSets = QuestionSet::query()
             ->where(fn ($query) => $query->where('status', 'published')
                 ->orWhereHas('courses', fn ($courses) => $courses->where('courses.id', $course->id)))
@@ -29,10 +34,17 @@ class AdminCourseBuilderController extends Controller
 
     public function update(Request $request, Course $course): RedirectResponse
     {
+        $attachedPostIds = $course->curriculumItems()->pluck('course_content_post_id')->all();
         $attachedQuestionSetIds = $course->questionSets()->pluck('question_sets.id')->all();
         $data = $request->validate([
             'post_ids' => ['nullable', 'array', 'max:300'],
-            'post_ids.*' => ['integer', 'distinct', Rule::exists('course_content_posts', 'id')->where(fn ($query) => $query->where('status', 'published')->whereNotNull('published_at')->where('published_at', '<=', now()))],
+            'post_ids.*' => ['integer', 'distinct', Rule::exists('course_content_posts', 'id')->where(fn ($query) => $query->where(function ($eligible) use ($attachedPostIds) {
+                $eligible->where(function ($published) {
+                    $published->where('status', 'published')
+                        ->whereNotNull('published_at')
+                        ->where('published_at', '<=', now());
+                })->orWhereIn('id', $attachedPostIds);
+            }))],
             'section_titles' => ['nullable', 'array'],
             'section_titles.*' => ['nullable', 'string', 'max:120'],
             'positions' => ['nullable', 'array'],
