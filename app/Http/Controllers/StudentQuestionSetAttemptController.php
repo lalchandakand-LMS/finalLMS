@@ -191,7 +191,10 @@ class StudentQuestionSetAttemptController extends Controller
             }
 
             foreach ($questions as $question) {
-                $answer = $answers[$question->id] ?? [];
+                if (! array_key_exists($question->id, $answers)) {
+                    continue;
+                }
+                $answer = $answers[$question->id];
                 if (in_array($question->type, ['mcq', 'true_false'], true)) {
                     $question->update([
                         'selected_option' => isset($answer['selected_option']) ? (int) $answer['selected_option'] : null,
