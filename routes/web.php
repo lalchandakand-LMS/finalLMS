@@ -107,6 +107,7 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group(function () {
     Route::middleware('role:guardian')->prefix('guardian')->name('guardian.')->group(function () {
+        Route::get('/dashboard', [GuardianController::class, 'dashboard'])->name('dashboard');
         Route::get('/links', [GuardianController::class, 'links'])->name('links.index');
         Route::post('/links', [GuardianController::class, 'requestLink'])->middleware('throttle:5,10')->name('links.store');
         Route::post('/links/{link}/revoke', [GuardianController::class, 'revoke'])->name('links.revoke');
@@ -114,6 +115,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
     });
 
     Route::middleware('role:student')->prefix('student/guardian-requests')->name('student.guardian-requests.')->group(function () {
+        Route::get('/manage', [GuardianController::class, 'requestsPage'])->name('page');
         Route::get('/', [GuardianController::class, 'incomingRequests'])->name('index');
         Route::post('/{link}/respond', [GuardianController::class, 'respond'])->middleware('throttle:10,1')->name('respond');
         Route::post('/{link}/revoke', [GuardianController::class, 'revoke'])->name('revoke');
