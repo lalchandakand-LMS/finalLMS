@@ -62,7 +62,7 @@ class BkashPaymentController extends Controller
             $sale = FlashSale::activeForCourse($lockedCourse->id, $user->id);
             if ($sale) {
                 $sale = FlashSale::query()->lockForUpdate()->find($sale->id);
-                abort_unless($sale && $sale->courses()->whereKey($lockedCourse->id)->exists() && $sale->isAvailableFor($user->id), 409, 'This Flash Sale has ended or reached its purchase limit.');
+                abort_unless($sale && $sale->targetsCourse($lockedCourse->id) && $sale->isAvailableFor($user->id), 409, 'This Flash Sale has ended or reached its purchase limit.');
             }
 
             $baseAmount = $batch && (float) $batch->fee > 0 ? (float) $batch->fee : (float) $lockedCourse->price;
