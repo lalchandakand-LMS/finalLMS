@@ -71,6 +71,11 @@ Wishlist routes are student-only. Course visibility and user ownership are enfor
 
 ## Instructor endpoints
 
+- `GET /instructor/batches`: paginated batches assigned to the authenticated instructor, including course title and assignment count.
+- `GET /instructor/assignments`: paginated assignments created for the authenticated instructor, with batch/course labels and submission counts.
+- `POST /instructor/batches/{batch_id}/assignments`: publish an assignment to an owned batch. Requires title, instructions, future `due_at`, and `max_marks`; optional `allow_late`.
+- `GET /instructor/assignments/{assignment_id}/submissions`: list submissions and student identity for an assignment owned by the authenticated instructor.
+- `PATCH /instructor/assignments/{assignment_id}/submissions/{submission_id}`: grade or re-grade a submission with a score bounded by the assignment's maximum marks and optional feedback.
 - `GET /instructor/courses`: courses assigned to the authenticated instructor.
 - `GET /instructor/courses/{course_slug}/students`: active/completed students in that instructor's own course only.
 
