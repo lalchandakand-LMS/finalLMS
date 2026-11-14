@@ -39,6 +39,7 @@ use App\Http\Controllers\QuizContestController;
 use App\Http\Controllers\FlashSaleController;
 use App\Http\Controllers\AdminProductController;
 use App\Http\Controllers\AdminQuestionSetController;
+use App\Http\Controllers\StudentQuestionSetAttemptController;
 use App\Http\Controllers\EbookStoreController;
 use App\Http\Controllers\AdminEbookOrderController;
 use App\Http\Controllers\GuardianController;
