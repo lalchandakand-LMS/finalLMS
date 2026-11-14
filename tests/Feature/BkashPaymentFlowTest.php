@@ -426,6 +426,7 @@ class BkashPaymentFlowTest extends TestCase
                 'trxID' => 'BKASH-EBOOK-TRX-002',
                 'amount' => '1.00',
                 'currency' => 'BDT',
+                'merchantInvoiceNumber' => 'BKASH-EBOOK-REF-002',
             ], 200),
         ]);
 
