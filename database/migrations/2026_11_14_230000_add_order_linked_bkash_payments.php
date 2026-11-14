@@ -13,7 +13,6 @@ return new class extends Migration {
             $table->unsignedBigInteger('course_id')->nullable()->change();
             $table->foreign('course_id')->references('id')->on('courses')->cascadeOnDelete();
             $table->foreignId('order_id')->nullable()->after('course_id')->constrained('orders')->cascadeOnDelete();
-            $table->index('order_id');
         });
     }
 
@@ -24,9 +23,7 @@ return new class extends Migration {
         }
 
         Schema::table('payments', function (Blueprint $table) {
-            $table->dropForeign(['order_id']);
-            $table->dropIndex(['order_id']);
-            $table->dropColumn('order_id');
+            $table->dropConstrainedForeignId('order_id');
             $table->dropForeign(['course_id']);
             $table->unsignedBigInteger('course_id')->nullable(false)->change();
             $table->foreign('course_id')->references('id')->on('courses')->cascadeOnDelete();
