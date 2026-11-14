@@ -16,7 +16,7 @@ class AdminProductController extends Controller
     public function index(): View
     {
         return view('admin.products.index', [
-            'products' => Product::query()->where('type', 'ebook')->with('categories')->latest()->paginate(20),
+            'products' => Product::query()->where('type', 'ebook')->with(['categories', 'previewPages'])->latest()->paginate(20),
             'categories' => ProductCategory::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(),
         ]);
     }
@@ -197,7 +197,15 @@ class AdminProductController extends Controller
                 return ['archived' => true, 'pdf' => null, 'image' => null];
             }
 
-            $paths = ['archived' => false, 'pdf' => $locked->download_path, 'image' => $locked->image_path];
+            $paths = [
+                'archived' => false,
+                'pdf' => $locked->download_path,
+                'image' => $locked->image_path,
+                'previews' => $locked->previewPages()->pluck('file_path')->all(),
+            ];
+            // Soft-deleting the product does not trigger the database cascade.
+            // Remove preview metadata in the same transaction, then delete files after commit.
+            $locked->previewPages()->delete();
             $locked->categories()->detach();
             $locked->delete();
 
@@ -209,6 +217,9 @@ class AdminProductController extends Controller
         }
         if ($result['pdf']) Storage::disk('local')->delete($result['pdf']);
         if ($result['image']) Storage::disk('public')->delete($result['image']);
+        foreach ($result['previews'] as $previewPath) {
+            Storage::disk('local')->delete($previewPath);
+        }
 
         return back()->with('success', 'eBook deleted.');
     }
