@@ -88,7 +88,9 @@ class QuizContestLotteryTest extends TestCase
 
         $this->assertDatabaseCount('quiz_contest_winners', 2);
         $this->assertDatabaseHas('quiz_contests', ['id' => $contest->id, 'status' => 'closed']);
-        $this->post(route('admin.contests.draw', $contest))->assertStatus(409);
+        $this->assertDatabaseHas('quiz_contest_winners', ['quiz_contest_id' => $contest->id, 'quiz_contest_entry_id' => $entries[2]->id, 'rank' => 1]);
+        $this->assertDatabaseHas('quiz_contest_winners', ['quiz_contest_id' => $contest->id, 'quiz_contest_entry_id' => $entries[1]->id, 'rank' => 2]);
+        $this->post(route('admin.contests.results.publish', $contest))->assertStatus(409);
         $this->assertDatabaseCount('quiz_contest_winners', 2);
     }
 
@@ -105,7 +107,7 @@ class QuizContestLotteryTest extends TestCase
             'submitted_at' => now(),
         ]);
 
-        $this->actingAs($admin)->post(route('admin.contests.draw', $contest))->assertStatus(422);
+        $this->actingAs($admin)->post(route('admin.contests.results.publish', $contest))->assertStatus(422);
         $this->assertDatabaseCount('quiz_contest_winners', 0);
     }
 
