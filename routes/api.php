@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CourseController;
 use App\Http\Controllers\Api\V1\InstructorAssignmentController;
+use App\Http\Controllers\Api\V1\InstructorLiveClassController;
 use App\Http\Controllers\Api\V1\StudentAssignmentController;
 use App\Http\Controllers\Api\V1\StudentExamController;
 use Illuminate\Support\Facades\Route;
@@ -29,6 +30,9 @@ Route::prefix('v1')->group(function (): void {
         Route::delete('/courses/{course:slug}/wishlist', [CourseController::class, 'removeFromWishlist']);
         Route::get('/instructor/batches', [InstructorAssignmentController::class, 'batches']);
         Route::get('/instructor/assignments', [InstructorAssignmentController::class, 'index']);
+        Route::get('/instructor/live-classes', [InstructorLiveClassController::class, 'index']);
+        Route::post('/instructor/batches/{batch}/live-classes', [InstructorLiveClassController::class, 'store'])->middleware('throttle:10,1');
+        Route::patch('/instructor/live-classes/{liveClass}', [InstructorLiveClassController::class, 'update'])->middleware('throttle:20,1');
         Route::post('/instructor/batches/{batch}/assignments', [InstructorAssignmentController::class, 'store'])->middleware('throttle:10,1');
         Route::get('/instructor/assignments/{assignment}/submissions', [InstructorAssignmentController::class, 'submissions']);
         Route::patch('/instructor/assignments/{assignment}/submissions/{submission}', [InstructorAssignmentController::class, 'grade'])->middleware('throttle:20,1');
