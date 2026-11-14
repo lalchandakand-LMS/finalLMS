@@ -640,5 +640,11 @@
     "Finance refunds": "Finance refunds",
     "Finance expenses": "Finance expenses",
     "You can manage only the branch modules explicitly assigned to your account.": "You can manage only the branch modules explicitly assigned to your account.",
-    "Only explicitly assigned finance modules are available within your branch.": "Only explicitly assigned finance modules are available within your branch."
+    "Only explicitly assigned finance modules are available within your branch.": "Only explicitly assigned finance modules are available within your branch.",
+    "Resume learning": "Resume learning",
+    "Review last lesson": "Review last lesson",
+    "Course progress": "Course progress",
+    "Lesson navigation": "Lesson navigation",
+    "Previous lesson": "Previous lesson",
+    "Next lesson": "Next lesson"
 }
