@@ -276,6 +276,55 @@ class StudentDeviceApprovalTest extends TestCase
     }
 
 
+
+    public function test_signing_in_with_one_approved_device_revokes_other_device_web_sessions(): void
+    {
+        $teacher = User::factory()->create([
+            'role' => 'teacher',
+            'email_verified_at' => now(),
+            'phone_number' => '+8801712345678',
+        ]);
+        $oldToken = str_repeat('a', 64);
+        $currentToken = str_repeat('b', 64);
+        $oldDevice = StudentDevice::create([
+            'user_id' => $teacher->id,
+            'device_hash' => hash('sha256', $oldToken),
+            'device_name' => 'Old trusted device',
+            'status' => 'approved',
+            'phone_verified_at' => now(),
+            'approved_at' => now(),
+        ]);
+        $currentDevice = StudentDevice::create([
+            'user_id' => $teacher->id,
+            'device_hash' => hash('sha256', $currentToken),
+            'device_name' => 'Current trusted device',
+            'status' => 'approved',
+            'phone_verified_at' => now(),
+            'approved_at' => now(),
+        ]);
+        $oldSession = DeviceSession::create([
+            'user_id' => $teacher->id,
+            'student_device_id' => $oldDevice->id,
+            'session_hash' => hash('sha256', 'old-teacher-session'),
+            'device_name' => 'Old trusted device',
+            'logged_in_at' => now()->subHour(),
+            'last_seen_at' => now(),
+        ]);
+
+        $this->withCookie('lms_student_device', $currentToken)
+            ->post(route('login.post'), ['email' => $teacher->email, 'password' => 'password'])
+            ->assertRedirect('/dashboard');
+
+        $this->assertSame('revoked', $oldDevice->fresh()->status);
+        $this->assertNotNull($oldSession->fresh()->revoked_at);
+        $this->assertSame('approved', $currentDevice->fresh()->status);
+        $this->assertDatabaseHas('device_sessions', [
+            'user_id' => $teacher->id,
+            'student_device_id' => $currentDevice->id,
+            'revoked_at' => null,
+        ]);
+    }
+
     public function test_admin_password_login_remains_available_without_sms_for_recovery(): void
     {
         Http::fake();
