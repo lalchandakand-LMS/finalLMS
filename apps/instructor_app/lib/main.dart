@@ -26,11 +26,9 @@ class _InstructorGateState extends State<InstructorGate> {
   @override
   void initState() {
     super.initState();
-    api.readToken().then((token) {
-      if (!mounted) {
-        return;
-      }
-      setState(() { signedIn = token != null; loading = false; });
+    api.restoreSession().then((restored) {
+      if (!mounted) return;
+      setState(() { signedIn = restored; loading = false; });
     });
   }
   @override
@@ -63,8 +61,11 @@ class _InstructorLoginState extends State<InstructorLogin> {
     try {
       await widget.api.login(email.text.trim(), password.text, 'Aloms Instructor App');
       widget.onLogin();
-    } catch (e) { setState(() => error = e.toString()); }
-    finally { if (mounted) setState(() => busy = false); }
+    } catch (e) {
+      if (mounted) setState(() => error = e.toString());
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
   }
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -107,16 +108,17 @@ class _InstructorHomeState extends State<InstructorHome> {
     setState(() { loading = true; error = null; });
     try {
       final response = await widget.api.get('/instructor/courses');
-      setState(() => courses = response['data'] as List<dynamic>? ?? []);
-    } catch (e) { setState(() => error = e.toString()); }
-    finally { if (mounted) setState(() => loading = false); }
+      if (mounted) setState(() => courses = response['data'] as List<dynamic>? ?? []);
+    } catch (e) {
+      if (mounted) setState(() => error = e.toString());
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
   }
   Future<void> showStudents(Map<String, dynamic> course) async {
     try {
       final response = await widget.api.get("/instructor/courses/${course['slug']}/students");
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       final students = response['data'] as List<dynamic>? ?? [];
       showModalBottomSheet<void>(context: context, builder: (context) => SafeArea(child: ListView(
         padding: const EdgeInsets.all(16),
@@ -130,7 +132,9 @@ class _InstructorHomeState extends State<InstructorHome> {
         ],
       )));
     } catch (e) {
-      if (!mounted) {
+      if (!mounted) return;
+      if (e is ApiException && (e.statusCode == 401 || e.statusCode == 403)) {
+        widget.onLogout();
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
