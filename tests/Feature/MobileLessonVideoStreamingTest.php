@@ -22,7 +22,8 @@ class MobileLessonVideoStreamingTest extends TestCase
         Storage::disk('lesson_videos')->put('lessons/preview.mp4', '0123456789abcdef');
 
         $student = User::factory()->create(['role' => 'student']);
-        $course = Course::factory()->create(['status' => 'published']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $course = Course::factory()->create(['teacher_id' => $teacher->id, 'status' => 'published']);
         $lesson = $course->lessons()->create([
             'title' => 'Preview video',
             'content' => 'Watch this sample.',
@@ -45,6 +46,11 @@ class MobileLessonVideoStreamingTest extends TestCase
             ->assertHeader('Cache-Control', 'max-age=0, no-store, private')
             ->assertHeader('X-Content-Type-Options', 'nosniff')
             ->assertHeader('Referrer-Policy', 'no-referrer');
+
+        $this->withToken($token)->withHeaders(['Range' => 'bytes=0-3'])
+            ->get($url)
+            ->assertStatus(206)
+            ->assertHeader('Content-Range', 'bytes 0-3/16');
     }
 
     public function test_full_lesson_video_requires_enrollment_and_course_lesson_ownership(): void
