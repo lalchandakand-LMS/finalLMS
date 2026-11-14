@@ -210,6 +210,10 @@ class StudentDeviceApprovalTest extends TestCase
                 ->assertRedirect(route('student-device.verify'))
                 ->assertSessionHas('student_device_request_id');
 
+            // Give each role an isolated client IP so the route's real 5/minute
+            // throttle does not make this role-matrix test order-dependent.
+            $this->withServerVariables(['REMOTE_ADDR' => '192.0.2.'.($index + 1)]);
+
             $device = StudentDevice::where('user_id', $user->id)->firstOrFail();
             $this->assertSame('pending_phone_verification', $device->status);
             $this->assertNotNull($code);
