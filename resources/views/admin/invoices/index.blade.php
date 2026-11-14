@@ -108,7 +108,7 @@
                     <details style="margin-top:14px;">
                         <summary>{{ __('Payment history') }} ({{ $invoice->payments->count() }})</summary>
                         @foreach($invoice->payments as $receipt)
-                            <p class="muted">৳{{ number_format((float) $receipt->amount, 2) }} · {{ __(ucfirst($receipt->method)) }} · {{ $receipt->paid_at->format('d M Y H:i') }} · {{ $receipt->reference ?: __('No reference') }} · <a href="{{ route(auth()->user()->isAccountant() ? 'admin.finance.invoice-payments.receipt' : 'invoice-payments.receipt', $receipt) }}" target="_blank" rel="noopener">{{ __('Print receipt') }}</a></p>
+                            <p class="muted">৳{{ number_format((float) $receipt->amount, 2) }} · {{ __(ucfirst($receipt->method)) }} · {{ $receipt->paid_at->format('d M Y H:i') }} · {{ $receipt->reference ?: __('No reference') }} · <a href="{{ route('admin.finance.invoice-payments.receipt', $receipt) }}" target="_blank" rel="noopener">{{ __('Print receipt') }}</a></p>
                         @endforeach
                     </details>
                 @endif
