@@ -275,6 +275,30 @@
     @endforeach
 </section>
 @endif
+@if($canViewLessons && $course->questionSets->isNotEmpty())
+<section class="panel" style="margin-top:22px;">
+    <div class="page-header" style="margin-bottom:12px;"><h2>{{ __('Quizzes and assessments') }}</h2><span class="muted">{{ $course->questionSets->count() }} {{ __('quizzes') }}</span></div>
+    @foreach($course->questionSets as $questionSet)
+        <div class="course-item" style="display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:10px;">
+            <div>
+                <strong>{{ $questionSet->title }}</strong>
+                @if($questionSet->pivot->section_title)<div class="muted">{{ $questionSet->pivot->section_title }}</div>@endif
+                <small class="muted">{{ $questionSet->questions_count }} {{ __('questions') }}
+                    @if($questionSet->pivot->time_limit_minutes) · {{ $questionSet->pivot->time_limit_minutes }} {{ __('minutes') }} @endif
+                    @if($questionSet->pivot->max_attempts) · {{ $questionSet->pivot->max_attempts }} {{ __('attempts allowed') }} @endif
+                </small>
+            </div>
+            @auth
+                @if(auth()->user()->isStudent() && $canViewLessons)
+                    <a class="btn primary" href="{{ route('student.question-sets.show', [$course, $questionSet]) }}">{{ __('Open quiz') }}</a>
+                @elseif(auth()->user()->isAdmin() || (auth()->user()->isTeacher() && $course->teacher_id === auth()->id()))
+                    <a class="btn secondary" href="{{ route('question-sets.review.index', [$course, $questionSet]) }}">{{ __('Review submissions') }}</a>
+                @endif
+            @endauth
+        </div>
+    @endforeach
+</section>
+@endif
 <section class="panel" style="margin-top:22px;">
     <div class="page-header" style="margin-bottom:10px;"><h2>{{ __('Course discussion') }}</h2><span class="badge info">{{ number_format($course->views_count) }} {{ __('views') }}</span></div>
     @auth
