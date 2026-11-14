@@ -6,6 +6,7 @@ use App\Models\AiDeveloperTask;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class AiDeveloperAdminTest extends TestCase
@@ -82,6 +83,11 @@ class AiDeveloperAdminTest extends TestCase
         $this->assertSame('Student login error. Contact [REDACTED_EMAIL] at [REDACTED_PHONE]. Bearer [REDACTED] and [REDACTED_SECRET] should be hidden.', $task->instruction);
         $this->assertSame('সমস্যার কারণ [REDACTED_EMAIL] এবং [REDACTED_PHONE]; route configuration.', $task->response);
         $this->assertDatabaseMissing('ai_developer_tasks', ['instruction' => $rawInstruction]);
+        $storedTask = DB::table('ai_developer_tasks')->where('id', $task->id)->first();
+        $this->assertStringNotContainsString('student@example.com', $storedTask->instruction);
+        $this->assertStringNotContainsString('01712345678', $storedTask->instruction);
+        $this->assertStringNotContainsString('student@example.com', $storedTask->response);
+        $this->assertStringNotContainsString('01712345678', $storedTask->response);
 
         Http::assertSent(function ($request) {
             $message = $request['messages'][1]['content'];
