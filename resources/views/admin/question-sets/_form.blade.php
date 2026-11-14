@@ -46,7 +46,7 @@
                 </div>
                 <label>{{ __('Question type') }}<select name="questions[{{ $index }}][type]" data-question-type>@foreach(['mcq' => 'Multiple choice', 'true_false' => 'True / False', 'short_answer' => 'Short answer'] as $value => $label)<option value="{{ $value }}" @selected($type === $value)>{{ __($label) }}</option>@endforeach</select></label>
                 <label>{{ __('Question text') }}<textarea name="questions[{{ $index }}][question]" maxlength="3000" required>{{ data_get($question, 'question') }}</textarea></label>
-                <label>{{ __('Order') }}<input type="number" name="questions[{{ $index }}][position]" min="0" max="100000" value="{{ old('questions.'.$index.'.position', data_get($question, 'position', ((count($selectedSourceIds) + $loop->iteration) * 10))) }}" style="width:100px;"></label>
+                <label>{{ __('Order') }}<input type="number" name="questions[{{ $index }}][position]" min="0" max="100000" value="{{ old('questions.'.$index.'.position', data_get($question, 'position', (($bankQuestions->count() + $loop->iteration) * 10))) }}" style="width:100px;"></label>
                 <div data-mcq-fields>
                     <div class="grid grid-2">
                         @foreach(range(0, 3) as $optionIndex)
@@ -83,7 +83,7 @@
     const container = document.getElementById('set-questions');
     const addButton = document.getElementById('add-set-question');
     if (!container || !addButton) return;
-    const sourceCount = {{ count($selectedSourceIds) }};
+    const sourceCount = {{ $bankQuestions->count() }};
 
     const syncCard = card => {
         const type = card.querySelector('[data-question-type]').value;
