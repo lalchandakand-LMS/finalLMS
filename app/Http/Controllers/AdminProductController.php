@@ -16,7 +16,7 @@ class AdminProductController extends Controller
     public function index(): View
     {
         return view('admin.products.index', [
-            'products' => Product::query()->where('type', 'ebook')->with('categories')->latest()->paginate(20),
+            'products' => Product::query()->where('type', 'ebook')->with(['categories', 'previewPages'])->latest()->paginate(20),
             'categories' => ProductCategory::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(),
         ]);
     }
