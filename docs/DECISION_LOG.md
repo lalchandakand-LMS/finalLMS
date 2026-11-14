@@ -94,3 +94,12 @@ This file records decisions that should not be casually reversed by a developer 
 - Student web/browser sign-in allows one approved browser device at a time. First browser device is activated after SMS OTP; additional or previously revoked devices require SMS OTP and Admin approval. Approving a new device revokes the previous approved browser device, and its server-side web session is invalidated on the next protected request.
 - The mobile API shares this approved-device registry. Student mobile login requires a secure 64-character installation ID; new/revoked devices require SMS OTP and additional devices require Admin approval. Student bearer tokens are bound to an approved device and are rejected/revoked if that device is no longer approved. Admin approval/revocation invalidates prior mobile tokens. Teacher API login remains password-based.
 - Flutter client UI/secure storage/polling implementation and real SMS delivery on staging remain separate acceptance checks.
+## D-015 — eBook store implementation tranche (2026-11-14)
+
+- The approved eBook/PDF store scope in D-007 is being implemented in a focused Laravel PR, not by merging the stale broad commerce PR.
+- Paid eBook access must remain private and must be granted only after an Admin independently verifies the manual payment. Free eBooks may be fulfilled immediately.
+- A student must not be able to repeatedly check out an already-active entitlement to reset its download limit. Expired or exhausted entitlements may be repurchased.
+- A purchased PDF cannot be replaced or deleted while order history exists; archive the product instead. Store PDF files and payment proofs on the private local disk and serve them only through authorization-checked controllers.
+- PR #124 is an implementation tranche, not a complete commerce system. It does not activate bKash/Nagad/SSLCommerz, automate payment verification, provide refunds/revocation UI, or satisfy staging/production acceptance.
+- Merge only after exact latest-head Laravel CI, CodeQL, full diff review and migration compatibility checks pass. Production rollout remains a separate release gate.
+
