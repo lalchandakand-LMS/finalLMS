@@ -131,3 +131,15 @@ Course ownership is checked server-side. The API does not accept a client-suppli
 - Token hashes, not bearer values, are persisted. Expired and revoked tokens are rejected.
 - The Student Flutter app now implements secure installation-ID and bearer-token storage, OTP entry, Admin-approval waiting UI, 15-second approval polling, session restoration and server-side logout. Flutter analyze/tests must pass for each release; real SMS and end-to-end approval still require isolated staging acceptance.
 - Enrollment purchase, cart/coupons, reviews, quizzes, assignments, live-class operations, notifications, and complete Flutter user interfaces are separate remaining deliverables.
+
+
+## Student course quiz endpoints
+
+- `GET /my/quizzes`: list published Question Sets attached to courses where the student has an active or completed enrollment, including attempt counts and the latest attempt summary.
+- `GET /courses/{course:slug}/question-sets/{questionSet}`: show the quiz and the student's latest attempt.
+- `POST /courses/{course:slug}/question-sets/{questionSet}/start`: start or resume an attempt using the course attachment's availability, attempt limit, time limit, question count and randomization settings.
+- `GET /question-set-attempts/{attempt}`: view the authenticated student's own attempt.
+- `PUT /question-set-attempts/{attempt}/answers`: save answers only for questions in that frozen attempt.
+- `POST /question-set-attempts/{attempt}/submit`: submit and server-score objective questions; short answers enter `awaiting_manual` until a teacher grades them.
+
+Correct options, model answers and explanations are never returned by these mobile endpoints. The API enforces student role, course enrollment, course/quiz publication, attempt ownership, assigned question membership, attempt limits and server-side deadlines.
