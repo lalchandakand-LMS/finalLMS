@@ -244,6 +244,8 @@
             <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><span>▦</span><span class="nav-text">Dashboard</span></a>
             <div class="admin-sidebar-label">Academy</div>
             <a href="{{ route('admin.courses.index') }}"><span>📚</span><span class="nav-text">Courses & lessons</span></a>
+            <a class="{{ request()->routeIs('admin.ebooks.*') ? 'active' : '' }}" href="{{ route('admin.ebooks.index') }}"><span>📕</span><span class="nav-text">eBook management</span></a>
+            <a class="{{ request()->routeIs('admin.ebooks.orders.*') ? 'active' : '' }}" href="{{ route('admin.ebooks.orders.index') }}"><span>🧾</span><span class="nav-text">eBook orders</span></a>
             <a class="{{ request()->routeIs('admin.course-combos.*') ? 'active' : '' }}" href="{{ route('admin.course-combos.index') }}"><span>🎁</span><span class="nav-text">Course combos</span></a>
             <a class="{{ request()->routeIs('admin.course-categories.*') ? 'active' : '' }}" href="{{ route('admin.course-categories.index') }}"><span>🗂️</span><span class="nav-text">Course categories</span></a>
             <a class="{{ request()->routeIs('admin.course-content-posts.*') ? 'active' : '' }}" href="{{ route('admin.course-content-posts.index') }}"><span>📝</span><span class="nav-text">Course content studio</span></a>
@@ -291,6 +293,7 @@
                 </form>
                 <a href="/">{{ __('Home') }}</a>
                 <a href="{{ route('courses.index') }}">{{ __('Courses') }}</a>
+                <a href="{{ route('ebooks.index') }}">eBooks</a>
                 @if(\Illuminate\Support\Facades\Schema::hasTable('flash_sales') && \App\Models\FlashSale::activeCampaigns()->isNotEmpty())<a href="{{ route('landing') }}#flash-sale">🔥 {{ __('Flash Sale') }}</a>@endif
                 <a href="{{ route('contests.index') }}">Quiz & prizes</a>
                 <a href="{{ route('pages.about') }}">{{ __('About') }}</a>
@@ -307,6 +310,9 @@
                     <a href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a>
                     <a href="{{ route('profile.edit') }}">{{ __('Profile') }}</a>
                     <a href="{{ route('live-classes.index') }}">{{ __('Live classes') }}</a>
+                    @if(auth()->user()->isStudent())
+                        <a href="{{ route('ebooks.orders') }}">My eBook library</a>
+                    @endif
                     @if(auth()->user()->isAdmin())
                         <a href="{{ route('admin.batches.index') }}">Batches</a>
                         <a href="{{ route('admin.sms-campaigns.index') }}">SMS</a>
