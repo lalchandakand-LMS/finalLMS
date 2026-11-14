@@ -10,7 +10,7 @@
             @csrf
             <label>{{ __('Student verified email') }}<input type="email" name="student_email" required maxlength="190" autocomplete="email" style="width:100%"></label>
             <label>{{ __('Relationship') }}<input type="text" name="relationship" maxlength="60" placeholder="{{ __('Parent / Guardian') }}" style="width:100%"></label>
-            <button class="btn btn-primary" type="submit">{{ __('Send request') }}</button>
+            <button class="btn primary" type="submit">{{ __('Send request') }}</button>
         </form>
     </section>
 
@@ -23,12 +23,12 @@
             </div>
             <p>{{ __('Relationship') }}: {{ $link->relationship }}</p>
             @if($link->status === 'active')
-                <button class="btn btn-primary guardian-summary" type="button" data-url="{{ route('guardian.students.summary',$link->student_id) }}">{{ __('View student summary') }}</button>
+                <button class="btn primary guardian-summary" type="button" data-url="{{ route('guardian.students.summary',$link->student_id) }}">{{ __('View student summary') }}</button>
             @else
                 <p class="muted">{{ __('Waiting for the student to approve. No student data is visible yet.') }}</p>
             @endif
             <form class="guardian-revoke-form" method="POST" action="{{ route('guardian.links.revoke',$link) }}" style="margin-top:10px">
-                @csrf<button class="btn btn-secondary" type="submit">{{ __('Revoke access') }}</button>
+                @csrf<button class="btn secondary" type="submit">{{ __('Revoke access') }}</button>
             </form>
         </article>
     @empty
@@ -36,7 +36,7 @@
     @endforelse
     </div>
     <section id="guardian-summary" class="panel" hidden style="padding:20px;margin-top:20px">
-        <div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><h2>{{ __('Student learning summary') }}</h2><button type="button" id="close-summary" class="btn btn-secondary">{{ __('Close') }}</button></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><h2>{{ __('Student learning summary') }}</h2><button type="button" id="close-summary" class="btn secondary">{{ __('Close') }}</button></div>
         <pre id="guardian-summary-data" style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:560px;overflow:auto"></pre>
     </section>
 </div>
