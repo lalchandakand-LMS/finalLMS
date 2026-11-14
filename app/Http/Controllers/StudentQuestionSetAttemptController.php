@@ -142,6 +142,7 @@ class StudentQuestionSetAttemptController extends Controller
             'selected_option' => $question->selected_option,
             'answer_text' => $question->answer_text,
             'marks_awarded' => $question->marks_awarded,
+            'manual_feedback' => $question->manual_feedback,
         ]);
 
         return view('student.question-sets.attempt', compact('course', 'questionSet', 'attempt', 'questions'));

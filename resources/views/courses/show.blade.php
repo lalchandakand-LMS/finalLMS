@@ -291,6 +291,22 @@
     @empty<p class="muted">{{ __('No approved comments yet.') }}</p>@endforelse
     {{ $comments->links() }}
 </section>
+    @if($canManageCourse && $course->questionSets->isNotEmpty())
+        <section class="panel" id="quiz-review" style="margin-top:20px;">
+            <h2 style="margin-top:0;">{{ __('Quiz grading workspace') }}</h2>
+            <p class="muted">{{ __('Review student written answers and publish final quiz results.') }}</p>
+            <div class="grid grid-2">
+                @foreach($course->questionSets as $questionSet)
+                    <article class="course-item">
+                        <h3 style="margin-top:0;">{{ $questionSet->title }}</h3>
+                        <p class="muted">{{ $questionSet->questions_count }} {{ __('questions') }}</p>
+                        <a class="btn secondary" href="{{ route('teacher.question-set-attempts.index', [$course, $questionSet]) }}">{{ __('Review submissions') }}</a>
+                    </article>
+                @endforeach
+            </div>
+        </section>
+    @endif
+
     @if(auth()->check() && auth()->user()->isStudent() && $isEnrolled && $course->questionSets->isNotEmpty())
         <section class="panel" id="course-quizzes" style="margin-top:20px;">
             <h2 style="margin-top:0;">{{ __('Course quizzes') }}</h2>
