@@ -63,7 +63,7 @@ class AdminProductController extends Controller
                 ]);
                 $product->categories()->sync($data['category_ids'] ?? []);
             });
-        } catch (\\Throwable $exception) {
+        } catch (\Throwable $exception) {
             Storage::disk('local')->delete($pdfPath);
             if ($imagePath) Storage::disk('public')->delete($imagePath);
             throw $exception;
