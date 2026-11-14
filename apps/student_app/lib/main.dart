@@ -648,7 +648,7 @@ class _WishlistPageState extends State<WishlistPage> {
       if (!mounted) return;
       setState(() => courses = response['data'] as List<dynamic>? ?? []);
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
       if (mounted) setState(() => loading = false);
     }
@@ -1233,18 +1233,18 @@ class _AssignmentDetailPageState extends State<AssignmentDetailPage> {
         allowedExtensions: ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'],
         withData: true,
       );
-      if (result == null || result.files.isEmpty) return;
+      if (result == null || result.files.isEmpty) { return; }
       final picked = result.files.first;
       final bytes = picked.bytes;
       if (bytes == null) {
-        if (mounted) setState(() => error = 'The selected file could not be read.');
+        if (mounted) { setState(() => error = 'The selected file could not be read.'); }
         return;
       }
       if (bytes.lengthInBytes > 10 * 1024 * 1024) {
-        if (mounted) setState(() => error = 'Attachment must be 10 MB or smaller.');
+        if (mounted) { setState(() => error = 'Attachment must be 10 MB or smaller.'); }
         return;
       }
-      if (mounted) setState(() { attachment = picked; error = null; });
+      if (mounted) { setState(() { attachment = picked; error = null; }); }
     } catch (exception) {
       if (mounted) setState(() => error = exception.toString());
     }
