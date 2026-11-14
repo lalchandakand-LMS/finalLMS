@@ -24,7 +24,7 @@ class AdminCourseBuilderController extends Controller
     {
         $data = $request->validate([
             'post_ids' => ['nullable', 'array', 'max:300'],
-            'post_ids.*' => ['integer', 'distinct', Rule::exists('course_content_posts', 'id')->where(fn ($query) => $query->where('status', 'published'))],
+            'post_ids.*' => ['integer', 'distinct', Rule::exists('course_content_posts', 'id')->where(fn ($query) => $query->where('status', 'published')->whereNotNull('published_at')->where('published_at', '<=', now()))],
             'section_titles' => ['nullable', 'array'],
             'section_titles.*' => ['nullable', 'string', 'max:120'],
             'positions' => ['nullable', 'array'],
