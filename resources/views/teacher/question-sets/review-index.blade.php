@@ -3,7 +3,7 @@
 @section('content')
 <div class="page-header">
     <div><span class="badge info">{{ __('Teacher review') }}</span><h1>{{ __('Quiz submissions') }}</h1><p class="muted">{{ $course->title }} · {{ $questionSet->title }}</p></div>
-    <a class="btn secondary" href="{{ route('admin.course-builder.edit', $course) }}">{{ __('Course builder') }}</a>
+    <a class="btn secondary" href="{{ route('courses.show', $course) }}">{{ __('Back to course') }}</a>
 </div>
 <div class="panel">
     @forelse($attempts as $attempt)
