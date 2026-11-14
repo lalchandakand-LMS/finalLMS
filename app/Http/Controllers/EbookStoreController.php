@@ -26,7 +26,8 @@ class EbookStoreController extends Controller
         abort_unless($product->type === 'ebook' && $product->status === 'published'
             && $product->published_at && $product->published_at->lte(now()) && $product->is_downloadable, 404);
         $product->load('categories');
-        $bkashAvailable = (bool) config('services.bkash.enabled')
+        $bkashAvailable = strtoupper((string) ($product->currency ?: 'BDT')) === 'BDT'
+            && (bool) config('services.bkash.enabled')
             && filled(config('services.bkash.base_url'))
             && filled(config('services.bkash.username'))
             && filled(config('services.bkash.password'))
