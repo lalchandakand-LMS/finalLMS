@@ -117,6 +117,7 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group(function () {
     Route::middleware('role:student')->group(function () {
         Route::post('/ebooks/{product:slug}/checkout', [EbookStoreController::class, 'checkout'])->middleware('throttle:5,1')->name('ebooks.checkout');
+        Route::post('/ebooks/{product:slug}/checkout/bkash', [BkashPaymentController::class, 'initiateEbook'])->middleware('throttle:5,1')->name('ebooks.checkout.bkash');
         Route::get('/my/ebooks/orders', [EbookStoreController::class, 'orders'])->name('ebooks.orders');
         Route::get('/my/ebooks/downloads/{permission}', [EbookStoreController::class, 'download'])->middleware('throttle:10,1')->name('ebooks.download');
     });
