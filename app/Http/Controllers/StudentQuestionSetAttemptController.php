@@ -145,6 +145,68 @@ class StudentQuestionSetAttemptController extends Controller
         return view('student.question-sets.attempt', compact('course', 'questionSet', 'attempt', 'questions'));
     }
 
+    public function save(Request $request, Course $course, QuestionSet $questionSet, QuestionSetAttempt $attempt): \Illuminate\Http\JsonResponse
+    {
+        $student = $request->user();
+        abort_unless($student?->isStudent(), 403);
+        abort_unless($attempt->student_id === $student->id
+            && $attempt->course_id === $course->id
+            && $attempt->question_set_id === $questionSet->id, 404);
+        abort_unless($course->enrollments()
+            ->where('user_id', $student->id)
+            ->whereIn('status', ['active', 'completed'])
+            ->exists(), 403);
+
+        return DB::transaction(function () use ($request, $attempt) {
+            $lockedAttempt = QuestionSetAttempt::query()->whereKey($attempt->id)->lockForUpdate()->firstOrFail();
+            abort_unless($lockedAttempt->status === 'in_progress', 409, __('This attempt is no longer accepting answers.'));
+
+            if ($lockedAttempt->deadline_at && now()->gte($lockedAttempt->deadline_at)) {
+                $this->finalizeExpiredAttempt($lockedAttempt);
+
+                return response()->json(['saved' => false, 'expired' => true], 409);
+            }
+
+            $questions = $lockedAttempt->questions()->lockForUpdate()->get();
+            $rules = [
+                'answers' => ['nullable', 'array'],
+                'answers.*' => ['array'],
+            ];
+            foreach ($questions as $question) {
+                if (in_array($question->type, ['mcq', 'true_false'], true)) {
+                    $maxOption = max(0, count($question->options ?? []) - 1);
+                    $rules['answers.'.$question->id.'.selected_option'] = ['nullable', 'integer', 'min:0', 'max:'.$maxOption];
+                } elseif ($question->type === 'short_answer') {
+                    $rules['answers.'.$question->id.'.answer_text'] = ['nullable', 'string', 'max:5000'];
+                }
+            }
+
+            $validated = $request->validate($rules);
+            $answers = $validated['answers'] ?? [];
+            $allowedIds = $questions->pluck('id')->map(fn ($id) => (string) $id)->all();
+            if (array_diff(array_map('strval', array_keys($answers)), $allowedIds) !== []) {
+                throw ValidationException::withMessages([
+                    'answers' => __('The saved answers contain questions outside this attempt.'),
+                ]);
+            }
+
+            foreach ($questions as $question) {
+                $answer = $answers[$question->id] ?? [];
+                if (in_array($question->type, ['mcq', 'true_false'], true)) {
+                    $question->update([
+                        'selected_option' => isset($answer['selected_option']) ? (int) $answer['selected_option'] : null,
+                    ]);
+                } else {
+                    $question->update([
+                        'answer_text' => trim((string) ($answer['answer_text'] ?? '')) ?: null,
+                    ]);
+                }
+            }
+
+            return response()->json(['saved' => true, 'saved_at' => now()->toIso8601String()]);
+        });
+    }
+
     public function submit(Request $request, Course $course, QuestionSet $questionSet, QuestionSetAttempt $attempt): RedirectResponse
     {
         $student = auth()->user();
