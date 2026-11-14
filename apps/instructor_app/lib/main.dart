@@ -254,7 +254,7 @@ class _InstructorHomeState extends State<InstructorHome> {
                             await refreshLessons(setSheetState);
                           } catch (e) {
                             if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                              ScaffoldMessenger.of(this.context).showSnackBar(SnackBar(content: Text(e.toString())));
                             }
                           }
                         },
