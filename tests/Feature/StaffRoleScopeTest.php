@@ -13,6 +13,46 @@ class StaffRoleScopeTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_staff_subroles_use_the_shared_admin_shell_with_only_their_modules(): void
+    {
+        $branch = Branch::create(['name' => 'Workspace Branch', 'slug' => 'workspace-branch']);
+        $manager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $branch->id]);
+        $accountant = User::factory()->create(['role' => 'accountant', 'branch_id' => $branch->id]);
+
+        $this->actingAs($manager)->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('admin-sidebar', false)
+            ->assertSee('Branch workspace')
+            ->assertSee('My branch batches')
+            ->assertDontSee('Finance workspace')
+            ->assertDontSee('Admin users');
+
+        $this->actingAs($accountant)->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('admin-sidebar', false)
+            ->assertSee('Finance workspace')
+            ->assertSee('Branch invoices')
+            ->assertDontSee('Branch workspace')
+            ->assertDontSee('Admin users');
+
+        $this->actingAs($manager)->get(route('admin.finance.invoices.index'))->assertForbidden();
+        $this->actingAs($accountant)->get(route('admin.branch-workspace.batches.index'))->assertForbidden();
+    }
+
+    public function test_legacy_staff_urls_redirect_into_the_shared_admin_modules(): void
+    {
+        $branch = Branch::create(['name' => 'Legacy Branch', 'slug' => 'legacy-branch']);
+        $manager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $branch->id]);
+        $accountant = User::factory()->create(['role' => 'accountant', 'branch_id' => $branch->id]);
+
+        $this->actingAs($manager)->get('/branch-manager/batches')
+            ->assertRedirect(route('admin.branch-workspace.batches.index'));
+        $this->actingAs($accountant)->get('/accountant/invoices')
+            ->assertRedirect(route('admin.finance.invoices.index'));
+        $this->actingAs($accountant)->get('/accountant/finance-reports')
+            ->assertRedirect(route('admin.finance.reports.index'));
+    }
+
     public function test_branch_manager_can_only_view_batches_from_their_assigned_branch(): void
     {
         $teacher = User::factory()->create(['role' => 'teacher']);
