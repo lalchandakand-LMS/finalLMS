@@ -18,7 +18,7 @@ class AdminEbookOrderController extends Controller
     {
         $orders = Order::query()
             ->whereHas('items', fn ($query) => $query->where('product_type', 'ebook'))
-            ->with(['user', 'items.downloadPermission', 'refunds.processor'])
+            ->with(['user', 'items.downloadPermission', 'refunds.processor', 'payments'])
             ->latest()
             ->paginate(25);
 
