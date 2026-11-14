@@ -1577,13 +1577,11 @@ class _ExamDetailPageState extends State<ExamDetailPage> {
             const SizedBox(height: 8),
             RadioGroup<int>(
               groupValue: selected,
-              onChanged: saving || submitting
-                  ? null
-                  : (value) {
-                      if (value != null) {
-                        setState(() => answers[id] = value);
-                      }
-                    },
+              onChanged: (value) {
+                if (value != null && !saving && !submitting) {
+                  setState(() => answers[id] = value);
+                }
+              },
               child: Column(
                 children: List.generate(options.length, (index) => RadioListTile<int>(
                   contentPadding: EdgeInsets.zero,
