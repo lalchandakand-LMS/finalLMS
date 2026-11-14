@@ -459,7 +459,7 @@
     "Other": "অন্যান্য",
     "Branch finance report": "শাখার আর্থিক প্রতিবেদন",
     "Organization finance report": "প্রতিষ্ঠানের আর্থিক প্রতিবেদন",
-    "Finance reports": "আর্থিক প্রতিবেদন",
+    "Finance reports": "ফাইন্যান্স রিপোর্ট",
     "Collection is filtered by payment date; outstanding is the current balance.": "আদায় পেমেন্টের তারিখ অনুযায়ী ফিল্টার করা হয়েছে; বকেয়া বর্তমান ব্যালেন্স।",
     "Print report": "প্রতিবেদন প্রিন্ট করুন",
     "From date": "শুরুর তারিখ",
@@ -1003,5 +1003,11 @@
     "Branch students": "শাখার শিক্ষার্থী",
     "Branch invoices": "শাখার ইনভয়েস",
     "Refund requests": "রিফান্ড অনুরোধ",
-    "Branch finance reports": "শাখার আর্থিক রিপোর্ট"
+    "Branch finance reports": "শাখার আর্থিক রিপোর্ট",
+    "Staff module permissions": "কর্মীদের মডিউল অনুমতি",
+    "These permissions apply only to Branch Manager and Accountant roles. Unchecked modules are denied server-side.": "এই অনুমতিগুলো শুধু Branch Manager ও Accountant পদের জন্য। চেক না করা মডিউল সার্ভার থেকেও বন্ধ থাকবে।",
+    "Branch batches": "শাখার ব্যাচসমূহ",
+    "Finance invoices": "ফাইন্যান্স ইনভয়েস",
+    "Finance refunds": "ফাইন্যান্স রিফান্ড",
+    "Finance expenses": "ফাইন্যান্স খরচ"
 }
