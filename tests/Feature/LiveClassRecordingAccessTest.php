@@ -168,6 +168,71 @@ class LiveClassRecordingAccessTest extends TestCase
             ->assertDontSee('youtube-nocookie.com/embed/abcdefghijk', false);
     }
 
+    public function test_completed_student_can_watch_published_recording_without_receiving_meeting_link(): void
+    {
+        [$teacher, $batch, $course] = $this->makeBatch();
+        $student = User::factory()->create(['role' => 'student']);
+        Enrollment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'batch_id' => $batch->id,
+            'status' => 'completed',
+            'completed_at' => now()->subDay(),
+        ]);
+
+        LiveClass::create([
+            'batch_id' => $batch->id,
+            'title' => 'Course completion recording',
+            'meeting_url' => 'https://meet.example.com/private-completed-session',
+            'recording_url' => 'https://youtu.be/abcdefghijk',
+            'recording_published_at' => now()->subMinute(),
+            'recording_notes' => 'Revision material for graduates.',
+            'starts_at' => now()->subDays(2),
+            'ends_at' => now()->subDays(2)->addHour(),
+            'status' => 'completed',
+            'created_by' => $teacher->id,
+        ]);
+
+        $this->actingAs($student)->get(route('live-classes.index'))
+            ->assertOk()
+            ->assertSee('Course completion recording')
+            ->assertSee('https://www.youtube-nocookie.com/embed/abcdefghijk', false)
+            ->assertSee('Revision material for graduates.')
+            ->assertDontSee('https://meet.example.com/private-completed-session')
+            ->assertDontSee('Join live class');
+    }
+
+    public function test_completed_student_cannot_access_unpublished_recording_or_future_meeting(): void
+    {
+        [$teacher, $batch, $course] = $this->makeBatch();
+        $student = User::factory()->create(['role' => 'student']);
+        Enrollment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'batch_id' => $batch->id,
+            'status' => 'completed',
+            'completed_at' => now()->subDay(),
+        ]);
+
+        LiveClass::create([
+            'batch_id' => $batch->id,
+            'title' => 'Private upcoming session',
+            'meeting_url' => 'https://meet.example.com/future-private-session',
+            'recording_url' => 'https://youtu.be/abcdefghijk',
+            'recording_published_at' => now()->addDay(),
+            'starts_at' => now()->addDays(2),
+            'ends_at' => now()->addDays(2)->addHour(),
+            'status' => 'scheduled',
+            'created_by' => $teacher->id,
+        ]);
+
+        $this->actingAs($student)->get(route('live-classes.index'))
+            ->assertOk()
+            ->assertDontSee('Private upcoming session')
+            ->assertDontSee('https://meet.example.com/future-private-session')
+            ->assertDontSee('youtube-nocookie.com/embed/abcdefghijk', false);
+    }
+
     private function makeBatch(): array
     {
         $teacher = User::factory()->create(['role' => 'teacher']);
