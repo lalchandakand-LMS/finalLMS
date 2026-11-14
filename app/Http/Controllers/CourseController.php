@@ -159,9 +159,15 @@ class CourseController extends Controller
             $nextIncompleteLesson = $lessons->first(
                 fn ($lesson) => ! $completedByLesson->has($lesson->id)
             );
+            $nextIncompleteAfterLastViewed = $lastViewedLesson
+                ? $lessons->first(fn ($lesson) => (
+                    $lesson->order > $lastViewedLesson->order
+                    || ($lesson->order === $lastViewedLesson->order && $lesson->id > $lastViewedLesson->id)
+                ) && ! $completedByLesson->has($lesson->id))
+                : null;
             $enrollment->resume_lesson = $lastViewedLesson && ! $completedByLesson->has($lastViewedLesson->id)
                 ? $lastViewedLesson
-                : ($nextIncompleteLesson ?? $lastViewedLesson ?? $lessons->first());
+                : ($nextIncompleteAfterLastViewed ?? $nextIncompleteLesson ?? $lastViewedLesson ?? $lessons->first());
         });
 
         return view('student.courses.index', compact('enrollments'));
@@ -522,9 +528,9 @@ class CourseController extends Controller
             ['completed_at' => now(), 'last_viewed_at' => now()]
         );
 
-        if (! $progress->completed_at) {
+        if (! $progress->completed_at || ! $progress->last_viewed_at) {
             $progress->forceFill([
-                'completed_at' => now(),
+                'completed_at' => $progress->completed_at ?? now(),
                 'last_viewed_at' => $progress->last_viewed_at ?? now(),
             ])->save();
         }
