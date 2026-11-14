@@ -355,7 +355,7 @@ class _InstructorHomeState extends State<InstructorHome> {
         ],
       )));
     } catch (e) {
-      if (!context.mounted) {
+      if (!mounted) {
         return;
       }
       if (e is ApiException && (e.statusCode == 401 || e.statusCode == 403)) {
@@ -546,7 +546,10 @@ class _InstructorHomeState extends State<InstructorHome> {
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    if (date == null || !mounted) {
+    if (date == null) {
+      return null;
+    }
+    if (!mounted) {
       return null;
     }
     final time = await showTimePicker(
