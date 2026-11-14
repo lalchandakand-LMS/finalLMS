@@ -206,7 +206,7 @@ class _InstructorHomeState extends State<InstructorHome> {
 
   Future<void> manageLessons(Map<String, dynamic> course) async {
     final slug = course['slug']?.toString();
-    if (slug == null || slug.isEmpty) return;
+    if (slug == null || slug.isEmpty) {\n      return;\n    }
     List<dynamic> lessons = [];
     bool busy = true;
     String? loadError;
@@ -222,7 +222,7 @@ class _InstructorHomeState extends State<InstructorHome> {
       }
     }
     await refreshLessons(setState);
-    if (!mounted) return;
+    if (!mounted) {\n      return;\n    }
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -240,7 +240,7 @@ class _InstructorHomeState extends State<InstructorHome> {
                       FilledButton.icon(
                         onPressed: busy ? null : () async {
                           final payload = await editLessonDialog(nextOrder: lessons.length + 1);
-                          if (payload == null) return;
+                          if (payload == null) {\n                            return;\n                          }
                           try {
                             await widget.api.postJson('/instructor/courses/$slug/lessons', payload);
                             await refreshLessons(setSheetState);
@@ -278,7 +278,7 @@ class _InstructorHomeState extends State<InstructorHome> {
                                 if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
                               }
                             } else {
-                              final confirmed = await showDialog<bool>(
+                              if (!sheetContext.mounted) {\n                                return;\n                              }\n                              final confirmed = await showDialog<bool>(
                                 context: sheetContext,
                                 builder: (dialogContext) => AlertDialog(
                                   title: const Text('Delete lesson?'),
