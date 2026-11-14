@@ -66,6 +66,20 @@ class QuizContestLotteryTest extends TestCase
         $this->assertDatabaseHas('quiz_contest_entries', ['user_id' => $teacher->id, 'quiz_contest_id' => $contest->id]);
     }
 
+    public function test_admin_contest_screen_discloses_compliance_restrictions(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.contests.index'))
+            ->assertOk()
+            ->assertSee('Compliance safeguard')
+            ->assertSee('Only free-entry, skill-based competitions are enabled.')
+            ->assertSee('Random winner selection and paid-entry collection are disabled')
+            ->assertSee('Results')
+            ->assertDontSee('Lottery');
+    }
+
     public function test_admin_can_publish_skill_based_results_once_after_contest_ends(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
