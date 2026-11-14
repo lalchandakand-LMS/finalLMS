@@ -20,7 +20,7 @@
                         <p><a class="btn primary" href="{{ route('ebooks.download',$permission) }}">Download PDF</a>
                         <small>Downloads used: {{ $permission->download_count }} @if($permission->downloads_remaining !== null) · Remaining: {{ $permission->downloads_remaining }} @else · Unlimited downloads @endif</small></p>
                     @elseif($order->status === 'pending')
-                        <p class="muted">Payment awaiting academy verification.</p>
+                        <p class="muted">{{ $order->payment_method === 'bkash' ? __('Waiting for bKash server-side verification.') : __('Payment awaiting academy verification.') }}</p>
                     @else
                         <p class="muted">No active download permission.</p>
                     @endif
