@@ -295,7 +295,7 @@ class CourseController extends Controller
 
         return view('courses.show', compact(
             'course', 'enrollment', 'payment', 'paymentMethods', 'batches',
-            'canViewLessons', 'isEnrolled', 'lessonProgress', 'isWishlisted', 'comments',
+            'canViewLessons', 'canManageCourse', 'isEnrolled', 'lessonProgress', 'isWishlisted', 'comments',
             'demoLesson', 'studentCount', 'courseContentCount'
         ));
     }
