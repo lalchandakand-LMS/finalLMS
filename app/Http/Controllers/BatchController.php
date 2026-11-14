@@ -27,15 +27,16 @@ class BatchController extends Controller
 
     public function branchManagerIndex(Request $request): View
     {
-        abort_unless($request->user()->branch_id, 403, 'No branch is assigned to this account.');
+        $branchId = $request->user()->branch_id;
+        abort_unless($branchId && Branch::whereKey($branchId)->where('is_active', true)->exists(), 403, 'No active branch is assigned to this account.');
 
         $batches = Batch::with(['branch', 'course', 'teacher'])->withCount('enrollments')
-            ->where('branch_id', $request->user()->branch_id)
+            ->where('branch_id', $branchId)
             ->latest('starts_at')
             ->paginate(25);
 
         $courses = Course::where('status', 'published')->orderBy('title')->get();
-        $teachers = User::where('role', 'teacher')->where('branch_id', $request->user()->branch_id)->orderBy('name')->get();
+        $teachers = User::where('role', 'teacher')->where('branch_id', $branchId)->orderBy('name')->get();
 
         return view('branch-manager.batches.index', compact('batches', 'courses', 'teachers'));
     }
@@ -59,7 +60,14 @@ class BatchController extends Controller
 
     public function branchManagerUpdate(Batch $batch, Request $request): RedirectResponse
     {
-        abort_unless($request->user()->branch_id && $batch->branch_id === $request->user()->branch_id, 404);
+        $branchId = $request->user()->branch_id;
+        abort_unless(
+            $branchId
+            && (int) $batch->branch_id === (int) $branchId
+            && Branch::whereKey($branchId)->where('is_active', true)->exists(),
+            404,
+            'The batch is not available to this active branch.'
+        );
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:160'],
             'capacity' => ['required', 'integer', 'min:1', 'max:1000'],
@@ -86,7 +94,9 @@ class BatchController extends Controller
             ->where('role', 'student')
             ->where(function ($query) use ($branchId): void {
                 $query->where('branch_id', $branchId)
-                    ->orWhereHas('enrollments.batch', fn ($batch) => $batch->where('branch_id', $branchId));
+                    ->orWhereHas('enrollments', fn ($enrollments) => $enrollments
+                        ->whereIn('status', ['active', 'completed'])
+                        ->whereHas('batch', fn ($batch) => $batch->where('branch_id', $branchId)));
             })
             ->with(['enrollments' => function ($query) use ($branchId): void {
                 $query->whereIn('status', ['active', 'completed'])
