@@ -54,6 +54,14 @@ jobs:
           cache: true
       - name: Generate Android platform scaffold
         run: flutter create --platforms=android --org com.alomsenglishcenter --project-name ${{ matrix.project_name }} .
+      - name: Enable built-in Kotlin for federated student plugins
+        if: matrix.app == 'student_app'
+        run: |
+          if grep -q '^android.builtInKotlin=' android/gradle.properties; then
+            sed -i 's/^android.builtInKotlin=.*/android.builtInKotlin=true/' android/gradle.properties
+          else
+            echo 'android.builtInKotlin=true' >> android/gradle.properties
+          fi
       - name: Resolve dependencies
         run: flutter pub get
       - name: Build release APK
