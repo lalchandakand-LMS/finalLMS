@@ -14,8 +14,8 @@
         $marketingConsent = request()->cookie('marketing_consent') === 'accepted';
         $isAdminLayout = auth()->check() && (auth()->user()->isAdmin() || auth()->user()->isBranchManager() || auth()->user()->isAccountant());
         $visitorPopup = null;
-        if (\\Illuminate\\Support\\Facades\\Schema::hasTable('visitor_popups') && ! $isAdminLayout) {
-            $visitorPopup = \\App\\Models\\VisitorPopup::currentlyActive()->with('image')
+        if (\Illuminate\Support\Facades\Schema::hasTable('visitor_popups') && ! $isAdminLayout) {
+            $visitorPopup = \App\Models\VisitorPopup::currentlyActive()->with('image')
                 ->where(function ($query) { $query->where('audience', 'all')->orWhere('audience', auth()->check() ? 'members' : 'guests'); })
                 ->orderByDesc('priority')->latest()->first();
         }
