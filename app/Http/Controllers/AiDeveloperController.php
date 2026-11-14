@@ -25,7 +25,7 @@ class AiDeveloperController extends Controller
     public function analyze(Request $request): RedirectResponse
     {
         if (AiDeveloperTask::query()->where('user_id', $request->user()->id)->whereDate('created_at', today())->count() >= 10) {
-            return redirect()->route('admin.ai-developer.index')->with('error', 'Daily AI diagnostic limit reached. Try again tomorrow.');
+            return redirect()->route('admin.ai-developer.index')->with('error', __('Daily AI diagnostic limit reached. Try again tomorrow.'));
         }
 
         $validated = $request->validate([
@@ -53,10 +53,10 @@ class AiDeveloperController extends Controller
         if (!$apiKey || !$baseUrl || !$model) {
             $task->update([
                 'status' => 'needs_configuration',
-                'error_message' => 'AI provider is not configured. Set AI_DEVELOPER_API_KEY, AI_DEVELOPER_BASE_URL and AI_DEVELOPER_MODEL in the server environment.',
+                'error_message' => __('AI provider is not configured. Set AI_DEVELOPER_API_KEY, AI_DEVELOPER_BASE_URL and AI_DEVELOPER_MODEL in the server environment.'),
             ]);
 
-            return redirect()->route('admin.ai-developer.index')->with('warning', 'AI connection is not configured yet. No external request was made.');
+            return redirect()->route('admin.ai-developer.index')->with('warning', __('AI connection is not configured yet. No external request was made.'));
         }
 
         if (!$this->isAllowedProviderUrl($baseUrl)) {
@@ -65,7 +65,7 @@ class AiDeveloperController extends Controller
                 'error_message' => 'The configured AI provider URL is not HTTPS or is not in the server-side allowed-host list.',
             ]);
 
-            return redirect()->route('admin.ai-developer.index')->with('error', 'AI provider URL rejected. Use HTTPS and add its exact hostname to AI_DEVELOPER_ALLOWED_HOSTS on the server.');
+            return redirect()->route('admin.ai-developer.index')->with('error', __('AI provider URL rejected. Use HTTPS and add its exact hostname to AI_DEVELOPER_ALLOWED_HOSTS on the server.'));
         }
 
         $systemPrompt = <<<'PROMPT'
@@ -115,15 +115,15 @@ PROMPT;
 
             $task->update(['response' => $this->redactSensitiveText($answer), 'status' => 'completed', 'error_message' => null]);
 
-            return redirect()->route('admin.ai-developer.index')->with('success', 'AI diagnosis completed. Review the advice before making changes.');
+            return redirect()->route('admin.ai-developer.index')->with('success', __('AI diagnosis completed. Review the advice before making changes.'));
         } catch (Throwable $exception) {
             // Do not log provider request/response payloads or exception context that could contain secrets.
             $task->update([
                 'status' => 'failed',
-                'error_message' => 'The AI request failed. Check the provider configuration and application logs.',
+                'error_message' => __('The AI request failed. Check the provider configuration and application logs.'),
             ]);
 
-            return redirect()->route('admin.ai-developer.index')->with('error', 'AI analysis failed. No code or production data was changed.');
+            return redirect()->route('admin.ai-developer.index')->with('error', __('AI analysis failed. No code or production data was changed.'));
         }
     }
 
