@@ -140,6 +140,183 @@ class _InstructorHomeState extends State<InstructorHome> {
       }
     }
   }
+  Future<Map<String, dynamic>?> editLessonDialog({Map<String, dynamic>? lesson, required int nextOrder}) async {
+    final title = TextEditingController(text: lesson?['title']?.toString() ?? '');
+    final content = TextEditingController(text: lesson?['content']?.toString() ?? '');
+    final duration = TextEditingController(text: lesson?['duration_minutes']?.toString() ?? '15');
+    final order = TextEditingController(text: lesson?['order']?.toString() ?? nextOrder.toString());
+    final videoUrl = TextEditingController(text: lesson?['video_url']?.toString() ?? '');
+    bool preview = lesson?['is_preview'] == true;
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(lesson == null ? 'Create lesson' : 'Edit lesson'),
+          content: SizedBox(
+            width: 480,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(controller: title, decoration: const InputDecoration(labelText: 'Lesson title')),
+                  TextField(controller: content, minLines: 3, maxLines: 7, decoration: const InputDecoration(labelText: 'Lesson content / notes')),
+                  TextField(controller: duration, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Duration (minutes)')),
+                  TextField(controller: order, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Lesson order')),
+                  TextField(controller: videoUrl, keyboardType: TextInputType.url, decoration: const InputDecoration(labelText: 'YouTube / Vimeo HTTPS URL (optional)')),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Free preview lesson'),
+                    value: preview,
+                    onChanged: (value) => setDialogState(() => preview = value),
+                  ),
+                  const Text('Video uploads and PDF attachments are managed from the secure web lesson editor.', style: TextStyle(fontSize: 12)),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+            FilledButton(
+              onPressed: () {
+                final minutes = int.tryParse(duration.text.trim());
+                final position = int.tryParse(order.text.trim());
+                if (title.text.trim().isEmpty || content.text.trim().isEmpty || minutes == null || minutes < 1 || minutes > 600 || position == null || position < 1) return;
+                Navigator.pop(dialogContext, {
+                  'title': title.text.trim(),
+                  'content': content.text.trim(),
+                  'duration_minutes': minutes,
+                  'order': position,
+                  'video_url': videoUrl.text.trim(),
+                  'is_preview': preview,
+                });
+              },
+              child: Text(lesson == null ? 'Create' : 'Save changes'),
+            ),
+          ],
+        ),
+      ),
+    );
+    title.dispose();
+    content.dispose();
+    duration.dispose();
+    order.dispose();
+    videoUrl.dispose();
+    return result;
+  }
+
+  Future<void> manageLessons(Map<String, dynamic> course) async {
+    final slug = course['slug']?.toString();
+    if (slug == null || slug.isEmpty) return;
+    List<dynamic> lessons = [];
+    bool busy = true;
+    String? loadError;
+    Future<void> refreshLessons(void Function(void Function()) update) async {
+      update(() { busy = true; loadError = null; });
+      try {
+        final response = await widget.api.get('/instructor/courses/$slug/lessons');
+        lessons = response['data'] as List<dynamic>? ?? [];
+      } catch (e) {
+        loadError = e.toString();
+      } finally {
+        update(() => busy = false);
+      }
+    }
+    await refreshLessons(setState);
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) => SafeArea(
+          child: SizedBox(
+            height: MediaQuery.of(sheetContext).size.height * 0.82,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
+                  child: Row(
+                    children: [
+                      Expanded(child: Text('Lessons — ${course['title']}', style: Theme.of(sheetContext).textTheme.titleLarge)),
+                      FilledButton.icon(
+                        onPressed: busy ? null : () async {
+                          final payload = await editLessonDialog(nextOrder: lessons.length + 1);
+                          if (payload == null) return;
+                          try {
+                            await widget.api.postJson('/instructor/courses/$slug/lessons', payload);
+                            await refreshLessons(setSheetState);
+                          } catch (e) {
+                            if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                          }
+                        },
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add'),
+                      ),
+                    ],
+                  ),
+                ),
+                if (busy) const LinearProgressIndicator(),
+                if (loadError != null) ListTile(title: Text(loadError!), trailing: IconButton(onPressed: () => refreshLessons(setSheetState), icon: const Icon(Icons.refresh))),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: lessons.length,
+                    itemBuilder: (context, index) {
+                      final lesson = lessons[index] as Map<String, dynamic>;
+                      final lessonId = lesson['id'];
+                      return ListTile(
+                        leading: CircleAvatar(child: Text('${lesson['order']}')),
+                        title: Text(lesson['title']?.toString() ?? 'Lesson'),
+                        subtitle: Text('${lesson['duration_minutes'] ?? 0} min · ${lesson['is_preview'] == true ? 'Preview' : 'Enrolled students'}'),
+                        trailing: PopupMenuButton<String>(
+                          onSelected: (action) async {
+                            if (action == 'edit') {
+                              final payload = await editLessonDialog(lesson: lesson, nextOrder: index + 1);
+                              if (payload == null) return;
+                              try {
+                                await widget.api.putJson('/instructor/courses/$slug/lessons/$lessonId', payload);
+                                await refreshLessons(setSheetState);
+                              } catch (e) {
+                                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                              }
+                            } else {
+                              final confirmed = await showDialog<bool>(
+                                context: sheetContext,
+                                builder: (dialogContext) => AlertDialog(
+                                  title: const Text('Delete lesson?'),
+                                  content: Text('“${lesson['title']}” will be permanently removed.'),
+                                  actions: [
+                                    TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+                                    FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Delete')),
+                                  ],
+                                ),
+                              );
+                              if (confirmed == true) {
+                                try {
+                                  await widget.api.deleteJson('/instructor/courses/$slug/lessons/$lessonId');
+                                  await refreshLessons(setSheetState);
+                                } catch (e) {
+                                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                                }
+                              }
+                            }
+                          },
+                          itemBuilder: (context) => const [
+                            PopupMenuItem(value: 'edit', child: Text('Edit lesson')),
+                            PopupMenuItem(value: 'delete', child: Text('Delete lesson')),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                if (!busy && lessons.isEmpty && loadError == null) const Padding(padding: EdgeInsets.all(24), child: Text('No lessons yet. Add your first lesson.')),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> showStudents(Map<String, dynamic> course) async {
     try {
       final response = await widget.api.get("/instructor/courses/${course['slug']}/students");
@@ -696,7 +873,20 @@ class _InstructorHomeState extends State<InstructorHome> {
               leading: const Icon(Icons.menu_book),
               title: Text(course['title']?.toString() ?? 'Course'),
               subtitle: Text("${course['students_count'] ?? 0} enrolled students · ${course['status'] ?? ''}"),
-              trailing: const Icon(Icons.people_outline),
+              trailing: PopupMenuButton<String>(
+                tooltip: 'Course actions',
+                onSelected: (action) {
+                  if (action == 'lessons') {
+                    manageLessons(course);
+                  } else {
+                    showStudents(course);
+                  }
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(value: 'students', child: Text('View students')),
+                  PopupMenuItem(value: 'lessons', child: Text('Manage lessons')),
+                ],
+              ),
               onTap: () => showStudents(course),
             ));
           }),
