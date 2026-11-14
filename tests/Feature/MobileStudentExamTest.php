@@ -53,7 +53,8 @@ class MobileStudentExamTest extends TestCase
         $this->withToken($token)->postJson('/api/v1/exam-attempts/'.$start->json('data.attempt.id').'/submit', [
             'answers' => [$correctId => 1],
         ])->assertOk()->assertJsonPath('data.score', 5)
-            ->assertJsonPath('data.status', 'submitted');
+            ->assertJsonPath('data.status', 'submitted')
+            ->assertJsonPath('data.passed', true);
 
         $this->withToken($token)->postJson('/api/v1/exam-attempts/'.$start->json('data.attempt.id').'/submit')
             ->assertStatus(409);
