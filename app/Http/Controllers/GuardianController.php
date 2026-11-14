@@ -6,23 +6,27 @@ use Illuminate\Http\JsonResponse; use Illuminate\Http\Request; use Illuminate\Su
 class GuardianController extends Controller {
  public function dashboard(Request $request) {
   $g=$request->user(); abort_unless($g?->isGuardian(),403);
+  $this->requireActiveBranch($g);
   $links=GuardianStudentLink::where('guardian_id',$g->id)->whereIn('status',['pending','active'])
    ->with('student:id,name,email,branch_id')->latest('requested_at')->get();
   return view('guardian.dashboard',compact('links'));
  }
  public function requestsPage(Request $request) {
   $s=$request->user(); abort_unless($s?->isStudent(),403);
+  $this->requireActiveBranch($s);
   $requests=GuardianStudentLink::where('student_id',$s->id)->where('status','pending')
    ->with('guardian:id,name,email')->latest('requested_at')->get();
   return view('student.guardian-requests.index',compact('requests'));
  }
  public function links(Request $request): JsonResponse {
   $g=$request->user(); abort_unless($g?->isGuardian(),403);
+  $this->requireActiveBranch($g);
   $rows=GuardianStudentLink::where('guardian_id',$g->id)->whereIn('status',['pending','active'])->with('student:id,name,email,branch_id')->latest('requested_at')->get(['id','guardian_id','student_id','relationship','status','requested_at','reviewed_at']);
   return response()->json(['data'=>$rows]);
  }
  public function requestLink(Request $request): JsonResponse {
   $g=$request->user(); abort_unless($g?->isGuardian(),403);
+  $this->requireActiveBranch($g);
   $d=$request->validate(['student_email'=>['required','email:rfc','max:190'],'relationship'=>['nullable','string','min:1','max:60']]);
   $s=User::where('email',strtolower(trim($d['student_email'])))->where('role','student')->whereNotNull('email_verified_at')->first();
   if(!$s) throw ValidationException::withMessages(['student_email'=>'A verified student account with that email was not found.']);
@@ -40,11 +44,13 @@ class GuardianController extends Controller {
  }
  public function incomingRequests(Request $request): JsonResponse {
   $s=$request->user(); abort_unless($s?->isStudent(),403);
+  $this->requireActiveBranch($s);
   $rows=GuardianStudentLink::where('student_id',$s->id)->where('status','pending')->with('guardian:id,name,email')->latest('requested_at')->get(['id','guardian_id','student_id','relationship','status','requested_at']);
   return response()->json(['data'=>$rows]);
  }
  public function respond(Request $request,GuardianStudentLink $link): JsonResponse {
   $s=$request->user(); abort_unless($s?->isStudent() && (int)$link->student_id===(int)$s->id,404);
+  $this->requireActiveBranch($s);
   $d=$request->validate(['decision'=>['required','in:accept,reject']]);
   DB::transaction(function() use($request,$s,$link,$d): void {
    $row=GuardianStudentLink::whereKey($link->id)->lockForUpdate()->firstOrFail(); if($row->status!=='pending') abort(409);
@@ -55,11 +61,13 @@ class GuardianController extends Controller {
  }
  public function revoke(Request $request,GuardianStudentLink $link): JsonResponse {
   $a=$request->user(); abort_unless($a && (($a->isGuardian()&&(int)$link->guardian_id===(int)$a->id)||($a->isStudent()&&(int)$link->student_id===(int)$a->id)),404);
+  $this->requireActiveBranch($a);
   DB::transaction(function() use($request,$a,$link): void { $row=GuardianStudentLink::whereKey($link->id)->lockForUpdate()->firstOrFail(); $row->revokeBy($a); $this->audit($request,$a,'guardian_link.revoked',$row,'Guardian relationship was revoked.'); });
   return response()->json(['data'=>['id'=>$link->id,'status'=>'revoked']]);
  }
  public function summary(Request $request,User $student): JsonResponse {
   $g=$request->user(); abort_unless($g?->isGuardian(),403);
+  $this->requireActiveBranch($g);
   $link=GuardianStudentLink::where('guardian_id',$g->id)->where('student_id',$student->id)->where('status','active')->whereNotNull('reviewed_at')->first();
   abort_unless($link && $student->isStudent(),404); $this->sameBranch($g,$student);
   return response()->json(['data'=>[
@@ -73,11 +81,17 @@ class GuardianController extends Controller {
    'certificates'=>Certificate::where('user_id',$student->id)->with('course:id,title')->latest('issued_at')->limit(30)->get(['id','course_id','certificate_number','status','issued_at']),
   ]]);
  }
+ private function requireActiveBranch(User $user): void {
+  if($user->branch_id!==null && !Branch::query()->whereKey($user->branch_id)->where('is_active',true)->exists()) {
+   abort(403,'The assigned branch is inactive.');
+  }
+ }
  private function sameBranch(User $g,User $s): void {
   if(($g->branch_id===null)!==($s->branch_id===null) || ($g->branch_id!==null && (int)$g->branch_id!==(int)$s->branch_id)) abort(403,'Guardian and student must belong to the same branch.');
-  if($g->branch_id!==null && !Branch::whereKey($g->branch_id)->where('is_active',true)->exists()) abort(403,'The assigned branch is inactive.');
+  $this->requireActiveBranch($g);
+  $this->requireActiveBranch($s);
  }
  private function audit(Request $request,User $actor,string $event,GuardianStudentLink $link,string $description): void {
-  ActivityLog::create(['user_id'=>$actor->id,'event'=>$event,'description'=>substr($description.' Link #'.$link->id,0,255),'method'=>strtoupper($request->method()),'route'=>substr($request->route()?->getName()??$request->path(),0,190),'ip_address'=>$request->ip(),'user_agent'=>substr((string)$request->userAgent(),0,1000)]);
+  ActivityLog::create(['user_id'=>$actor->id,'event'=>$event,'description'=>substr($description.' Link #'.$link->id,0,255),'method'=>strtoupper($request->method()),'route'=>substr($request->route()?->getName() ?? $request->path(),0,255),'ip_address'=>$request->ip()]);
  }
 }
