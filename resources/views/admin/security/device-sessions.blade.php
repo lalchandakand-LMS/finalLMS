@@ -54,7 +54,7 @@
                     <td>{{ $session->last_seen_at?->format('d M Y, h:i A') ?? '—' }}</td>
                     <td><span class="badge {{ $session->revoked_at ? 'warning' : ($isActive ? 'success' : 'secondary') }}">{{ $session->revoked_at ? __('Revoked') : ($isActive ? __('Active') : __('Expired')) }}</span></td>
                     <td>
-                        @if(! $session->revoked_at && ! ($session->user_id === auth()->id() && hash_equals($session->session_hash, hash('sha256', request()->session()->getId()))))
+                        @if(! $session->revoked_at && ! ($session->user_id === auth()->id() && hash_equals($session->session_hash, request()->session()->get('device_session_hash', hash('sha256', request()->session()->getId())))))
                             <form method="POST" action="{{ route('admin.security.sessions.revoke', $session) }}" onsubmit="return confirm('{{ __('Sign out this session?') }}')">
                                 @csrf @method('PATCH')
                                 <button class="btn secondary" type="submit">{{ __('Revoke') }}</button>
