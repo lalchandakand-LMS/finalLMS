@@ -169,7 +169,10 @@ class StudentQuestionSetAttemptController extends Controller
             }
 
             $questions = $lockedAttempt->questions()->get();
-            $rules = ['answers' => ['nullable', 'array']];
+            $rules = [
+                'answers' => ['nullable', 'array'],
+                'answers.*' => ['array'],
+            ];
             foreach ($questions as $question) {
                 if (in_array($question->type, ['mcq', 'true_false'], true)) {
                     $maxOption = max(0, count($question->options ?? []) - 1);
