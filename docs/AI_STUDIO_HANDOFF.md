@@ -285,14 +285,14 @@ The student browser sign-in policy is now:
 Current work is on PR #116, branch `feature/aloms-premium-homepage-clean`. Keep PR #116 unmerged and do not deploy or change production data/payment settings without a separate explicit owner instruction. Re-fetch the PR head and exact-head Laravel CI/CodeQL/package runs before relying on any verification status.
 ## 2026-11-14 implementation handoff — eBook Store PR #124
 
-- Active branch: `feature/ebook-private-downloads-v1`.
-- PR: https://github.com/lalchandakand-LMS/finalLMS/pull/124 (draft; not merged).
-- Latest reviewed commit: `4affeb566c40ec755f838f37a0af4ebcafa2fc06`.
+- Source branch: `feature/ebook-private-downloads-v1` (merged; no longer active).
+- PR: https://github.com/lalchandakand-LMS/finalLMS/pull/124 (merged to `main` via `65c5e20b79bf9709ebd4a713552d9f531258cfe0`).
+- Merged source head: `0aba691c320cdf07c0ed5e416ba356c840505aed`; merge commit: `65c5e20b79bf9709ebd4a713552d9f531258cfe0`.
 - Scope: eBook-only catalog and categories; admin PDF upload to the private `local` disk; manual payment-reference checkout and private proof storage; admin approval/rejection; student order/library pages; owner-checked private downloads with expiry, revocation and download-count enforcement.
 - Free eBooks create completed orders and entitlements immediately. A student with an active entitlement cannot re-checkout to reset a download limit. Expired or exhausted entitlements can be purchased again.
 - Product creation plus category sync is transactional. Purchased PDFs cannot be replaced; products with order history are archived. Private payment-proof responses use no-store headers.
 - Tests in `tests/Feature/PrivateEbookStoreTest.php` cover private upload, approval, download limit, IDOR, expiry, rejection, archive/file immutability, free fulfillment and duplicate-free-entitlement prevention.
-- A previous PR head passed Laravel CI and CodeQL, but later hardening commits moved the head. Latest exact-head Laravel CI run #3913 and CodeQL #757 were running at the time of this note. Re-check the latest PR head and both checks before marking ready or merging.
+- Exact source head passed Laravel CI runs #3923 and #3924 (353 tests / 1,845 assertions, MySQL migrations, route listing and Vite build), cPanel ZIP packaging and CodeQL runs #762 and #763. Artifact `AlomsEnglishCenter-cpanel` ID `14104506122`.
 - No production deployment or live database changes. No gateway integration is claimed; paid checkout is manual Admin verification only.
-- Next: inspect exact-head CI logs/results; fix any failures; re-review migration compatibility and access control; only then mark ready and merge. After merge, schedule isolated cPanel staging validation before any production release.
+- Next: schedule isolated cPanel staging validation, test first install and upgrade paths, verify private storage permissions and exercise admin/student purchase/download flows. Do not deploy to production until backup, rollback and staging acceptance are documented.
 
