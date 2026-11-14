@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Batch;
 use App\Models\Exam;
 use App\Models\ExamAttempt;
-use App\Models\ExamAnswer;
 use App\Models\Enrollment;
 use App\Models\QuestionBankQuestion;
 use Illuminate\Http\RedirectResponse;
