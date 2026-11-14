@@ -1,14 +1,14 @@
 <?php
 
-namespace App\\Http\\Controllers\\Api\\V1;
+namespace App\Http\Controllers\Api\V1;
 
-use App\\Http\\Controllers\\Controller;
-use App\\Models\\Enrollment;
-use App\\Models\\Exam;
-use App\\Models\\ExamAttempt;
-use Illuminate\\Http\\JsonResponse;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Facades\\DB;
+use App\Http\Controllers\Controller;
+use App\Models\Enrollment;
+use App\Models\Exam;
+use App\Models\ExamAttempt;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class StudentExamController extends Controller
 {
@@ -226,7 +226,7 @@ class StudentExamController extends Controller
             ->exists(), 403);
     }
 
-    private function deadline(ExamAttempt $attempt): \\Illuminate\\Support\\Carbon
+    private function deadline(ExamAttempt $attempt): \Illuminate\Support\Carbon
     {
         $exam = $attempt->exam;
         $durationDeadline = $attempt->started_at->copy()->addMinutes($exam->duration_minutes);
