@@ -248,10 +248,7 @@ class MobileApi {
       ..fields.addAll(fields);
 
     if (attachment != null) {
-      final bytes = attachment.bytes;
-      if (bytes == null) {
-        throw const ApiException('The selected file could not be read.');
-      }
+      final bytes = await attachment.readAsBytes();
       request.files.add(http.MultipartFile.fromBytes(
         'attachment',
         bytes,
