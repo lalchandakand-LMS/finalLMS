@@ -249,6 +249,7 @@
             <a class="{{ request()->routeIs('admin.course-combos.*') ? 'active' : '' }}" href="{{ route('admin.course-combos.index') }}"><span>🎁</span><span class="nav-text">Course combos</span></a>
             <a class="{{ request()->routeIs('admin.course-categories.*') ? 'active' : '' }}" href="{{ route('admin.course-categories.index') }}"><span>🗂️</span><span class="nav-text">Course categories</span></a>
             <a class="{{ request()->routeIs('admin.course-content-posts.*') ? 'active' : '' }}" href="{{ route('admin.course-content-posts.index') }}"><span>📝</span><span class="nav-text">Course content studio</span></a>
+            <a class="{{ request()->routeIs('admin.question-sets.*') ? 'active' : '' }}" href="{{ route('admin.question-sets.index') }}"><span>🧩</span><span class="nav-text">Question sets</span></a>
             <a href="{{ route('admin.flash-sales.index') }}"><span>🔥</span><span class="nav-text">Flash Sale</span></a>
             <a href="{{ route('admin.users.index') }}"><span>👥</span><span class="nav-text">Students & teachers</span></a>
             <a class="{{ request()->routeIs('admin.teacher-applications.*') ? 'active' : '' }}" href="{{ route('admin.teacher-applications.index') }}"><span>🪪</span><span class="nav-text">Teacher KYC review</span></a>
