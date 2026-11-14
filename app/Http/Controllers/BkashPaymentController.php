@@ -151,6 +151,7 @@ class BkashPaymentController extends Controller
                 ->exists();
             abort_if($alreadyOwned, 409, __('This eBook is already available in your library.'));
 
+            abort_unless(strtoupper((string) ($lockedProduct->currency ?: 'BDT')) === 'BDT', 422, __('bKash supports BDT payments only.'));
             $amount = (float) $lockedProduct->currentPrice();
             abort_if($amount <= 0, 422, __('Free eBooks do not require bKash checkout.'));
 
