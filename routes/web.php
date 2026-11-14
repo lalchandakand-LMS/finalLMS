@@ -40,6 +40,7 @@ use App\Http\Controllers\FlashSaleController;
 use App\Http\Controllers\AdminProductController;
 use App\Http\Controllers\AdminQuestionSetController;
 use App\Http\Controllers\StudentQuestionSetAttemptController;
+use App\Http\Controllers\StudentQuestionSetAttemptHistoryController;
 use App\Http\Controllers\TeacherQuestionSetGradingController;
 use App\Http\Controllers\EbookStoreController;
 use App\Http\Controllers\AdminEbookOrderController;
@@ -208,7 +209,10 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::get('/exams/{exam}', [ExamController::class, 'studentIndex'])->name('student.exams.show');
         Route::post('/exams/{exam}/start', [ExamController::class, 'start'])->name('student.exams.start');
         Route::post('/exam-attempts/{attempt}/submit', [ExamController::class, 'submit'])->name('student.exams.submit');
-        Route::post('/courses/{course}/question-sets/{questionSet}/start', [StudentQuestionSetAttemptController::class, 'start'])->middleware('throttle:10,1')->name('student.question-sets.start');
+        Route::get('/student/quiz-attempts', [StudentQuestionSetAttemptHistoryController::class, 'index'])
+        ->middleware('role:student')
+        ->name('student.question-set-attempts.index');
+    Route::post('/courses/{course}/question-sets/{questionSet}/start', [StudentQuestionSetAttemptController::class, 'start'])->middleware('throttle:10,1')->name('student.question-sets.start');
         Route::get('/courses/{course}/question-sets/{questionSet}/attempts/{attempt}', [StudentQuestionSetAttemptController::class, 'show'])->name('student.question-sets.show');
         Route::post('/courses/{course}/question-sets/{questionSet}/attempts/{attempt}/submit', [StudentQuestionSetAttemptController::class, 'submit'])->middleware('throttle:5,1')->name('student.question-sets.submit');
         Route::post('/assignments/{assignment}/submit', [AssignmentController::class, 'submit'])->name('student.assignments.submit');
