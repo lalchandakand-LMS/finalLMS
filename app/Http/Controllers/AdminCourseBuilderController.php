@@ -30,6 +30,7 @@ class AdminCourseBuilderController extends Controller
     public function update(Request $request, Course $course): RedirectResponse
     {
         $attachedQuestionSetIds = $course->questionSets()->pluck('question_sets.id')->all();
+        $historicalQuestionSets = $course->questionSets()->whereHas('attempts')->get()->keyBy('id');
         $data = $request->validate([
             'post_ids' => ['nullable', 'array', 'max:300'],
             'post_ids.*' => ['integer', 'distinct', Rule::exists('course_content_posts', 'id')->where(fn ($query) => $query->where('status', 'published')->whereNotNull('published_at')->where('published_at', '<=', now()))],
@@ -64,7 +65,7 @@ class AdminCourseBuilderController extends Controller
         $positions = $data['positions'] ?? [];
         $previews = $data['previews'] ?? [];
         $durations = $data['durations'] ?? [];
-        $questionSetIds = collect($data['question_set_ids'] ?? [])->map(fn ($id) => (int) $id)->unique()->values();
+        $questionSetIds = collect($data['question_set_ids'] ?? [])->map(fn ($id) => (int) $id)->merge($historicalQuestionSets->keys())->unique()->values();
         $questionSetSections = $data['question_set_section_titles'] ?? [];
         $questionSetPositions = $data['question_set_positions'] ?? [];
         $questionSetAttempts = $data['question_set_max_attempts'] ?? [];
@@ -73,7 +74,7 @@ class AdminCourseBuilderController extends Controller
         $questionSetRandomize = $data['question_set_randomize'] ?? [];
         $questionSetAvailableFrom = $data['question_set_available_from'] ?? [];
 
-        DB::transaction(function () use ($course, $postIds, $sectionTitles, $positions, $previews, $durations, $questionSetIds, $questionSetSections, $questionSetPositions, $questionSetAttempts, $questionSetTimeLimits, $questionSetQuestionsPerAttempt, $questionSetRandomize, $questionSetAvailableFrom): void {
+        DB::transaction(function () use ($course, $postIds, $sectionTitles, $positions, $previews, $durations, $questionSetIds, $questionSetSections, $questionSetPositions, $questionSetAttempts, $questionSetTimeLimits, $questionSetQuestionsPerAttempt, $questionSetRandomize, $questionSetAvailableFrom, $historicalQuestionSets): void {
             $course->curriculumItems()->when($postIds->isNotEmpty(), fn ($query) => $query->whereNotIn('course_content_post_id', $postIds))->when($postIds->isEmpty(), fn ($query) => $query)->delete();
 
             foreach ($postIds as $index => $postId) {
@@ -91,16 +92,13 @@ class AdminCourseBuilderController extends Controller
             $questionSetSync = [];
             foreach ($questionSetIds as $index => $setId) {
                 $questionSetSync[$setId] = [
-                    'section_title' => $questionSetSections[$setId] ?? null,
-                    'position' => (int) ($questionSetPositions[$setId] ?? (($index + 1) * 10)),
-                    'max_attempts' => isset($questionSetAttempts[$setId]) && $questionSetAttempts[$setId] !== ''
-                        ? (int) $questionSetAttempts[$setId] : null,
-                    'time_limit_minutes' => isset($questionSetTimeLimits[$setId]) && $questionSetTimeLimits[$setId] !== ''
-                        ? (int) $questionSetTimeLimits[$setId] : null,
-                    'questions_per_attempt' => isset($questionSetQuestionsPerAttempt[$setId]) && $questionSetQuestionsPerAttempt[$setId] !== ''
-                        ? (int) $questionSetQuestionsPerAttempt[$setId] : null,
-                    'randomize_questions' => (bool) ($questionSetRandomize[$setId] ?? false),
-                    'available_from' => $questionSetAvailableFrom[$setId] ?? null,
+                    'section_title' => array_key_exists($setId, $questionSetSections) ? $questionSetSections[$setId] : $historicalQuestionSets->get($setId)?->pivot?->section_title,
+                    'position' => (int) (array_key_exists($setId, $questionSetPositions) ? $questionSetPositions[$setId] : ($historicalQuestionSets->get($setId)?->pivot?->position ?? (($index + 1) * 10))),
+                    'max_attempts' => array_key_exists($setId, $questionSetAttempts) ? ($questionSetAttempts[$setId] !== '' ? (int) $questionSetAttempts[$setId] : null) : $historicalQuestionSets->get($setId)?->pivot?->max_attempts,
+                    'time_limit_minutes' => array_key_exists($setId, $questionSetTimeLimits) ? ($questionSetTimeLimits[$setId] !== '' ? (int) $questionSetTimeLimits[$setId] : null) : $historicalQuestionSets->get($setId)?->pivot?->time_limit_minutes,
+                    'questions_per_attempt' => array_key_exists($setId, $questionSetQuestionsPerAttempt) ? ($questionSetQuestionsPerAttempt[$setId] !== '' ? (int) $questionSetQuestionsPerAttempt[$setId] : null) : $historicalQuestionSets->get($setId)?->pivot?->questions_per_attempt,
+                    'randomize_questions' => array_key_exists($setId, $questionSetRandomize) ? (bool) $questionSetRandomize[$setId] : (bool) ($historicalQuestionSets->get($setId)?->pivot?->randomize_questions ?? false),
+                    'available_from' => array_key_exists($setId, $questionSetAvailableFrom) ? $questionSetAvailableFrom[$setId] : $historicalQuestionSets->get($setId)?->pivot?->available_from,
                 ];
             }
             $course->questionSets()->sync($questionSetSync);
