@@ -394,13 +394,15 @@ class _InstructorHomeState extends State<InstructorHome> {
         '/instructor/assignments/${assignment['id']}/submissions/${submission['id']}',
         payload,
       );
-      if (!mounted) return;
+      if (!mounted) { return; }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Grade saved successfully.')),
       );
       await load();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
     }
   }
 
