@@ -128,7 +128,7 @@ class EbookStoreController extends Controller
 
     public function orders(Request $request): View
     {
-        $orders = Order::with(['items.product'])
+        $orders = Order::with(['items.product', 'payments'])
             ->where('user_id', $request->user()->id)
             ->latest()->paginate(15);
         $permissions = DownloadPermission::query()->where('user_id', $request->user()->id)
