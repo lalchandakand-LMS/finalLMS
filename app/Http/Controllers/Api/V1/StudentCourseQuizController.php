@@ -342,7 +342,7 @@ class StudentCourseQuizController extends Controller
         return response()->json([
             'data' => $this->attemptPayload($attempt),
             'expired' => $result['expired'],
-        ], $result['expired'] ? 409 : 200);
+        ]);
     }
 
     private function authorizeCourseQuiz($student, Course $course, QuestionSet $questionSet): object
