@@ -24,6 +24,11 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/my/wishlist', [CourseController::class, 'wishlist']);
         Route::post('/courses/{course:slug}/wishlist', [CourseController::class, 'addToWishlist']);
         Route::delete('/courses/{course:slug}/wishlist', [CourseController::class, 'removeFromWishlist']);
+        Route::get('/instructor/batches', [InstructorAssignmentController::class, 'batches']);
+        Route::get('/instructor/assignments', [InstructorAssignmentController::class, 'index']);
+        Route::post('/instructor/batches/{batch}/assignments', [InstructorAssignmentController::class, 'store'])->middleware('throttle:10,1');
+        Route::get('/instructor/assignments/{assignment}/submissions', [InstructorAssignmentController::class, 'submissions']);
+        Route::patch('/instructor/assignments/{assignment}/submissions/{submission}', [InstructorAssignmentController::class, 'grade'])->middleware('throttle:20,1');
         Route::get('/instructor/courses', [CourseController::class, 'teachingCourses']);
         Route::get('/instructor/courses/{course:slug}/students', [CourseController::class, 'courseStudents']);
         Route::get('/courses/{course:slug}/lessons/{lesson}', [CourseController::class, 'lesson']);
