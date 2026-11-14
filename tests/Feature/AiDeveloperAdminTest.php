@@ -77,9 +77,10 @@ class AiDeveloperAdminTest extends TestCase
             'user_id' => $admin->id,
             'title' => 'Student login problem',
             'status' => 'completed',
-            'instruction' => 'Student login error. Contact [REDACTED_EMAIL] at [REDACTED_PHONE]. Bearer [REDACTED] and [REDACTED_SECRET] should be hidden.',
-            'response' => 'সমস্যার কারণ [REDACTED_EMAIL] এবং [REDACTED_PHONE]; route configuration.',
         ]);
+        $task = AiDeveloperTask::query()->where('user_id', $admin->id)->latest()->firstOrFail();
+        $this->assertSame('Student login error. Contact [REDACTED_EMAIL] at [REDACTED_PHONE]. Bearer [REDACTED] and [REDACTED_SECRET] should be hidden.', $task->instruction);
+        $this->assertSame('সমস্যার কারণ [REDACTED_EMAIL] এবং [REDACTED_PHONE]; route configuration.', $task->response);
         $this->assertDatabaseMissing('ai_developer_tasks', ['instruction' => $rawInstruction]);
 
         Http::assertSent(function ($request) {
