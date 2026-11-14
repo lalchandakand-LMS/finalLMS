@@ -222,7 +222,7 @@ class AiDeveloperAdminTest extends TestCase
         ]);
         Http::fakeSequence()
             ->push(['error' => ['message' => 'provider unavailable']], 503)
-            ->push(['choices' => [['message' => ['content' => '   ']]]]], 200);
+            ->push(['choices' => [['message' => ['content' => '   ']]]], 200);
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
 
         foreach (['Provider unavailable', 'Empty provider response'] as $title) {
