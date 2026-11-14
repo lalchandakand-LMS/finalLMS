@@ -1102,5 +1102,11 @@
     "AI provider URL rejected. Use HTTPS and add its exact hostname to AI_DEVELOPER_ALLOWED_HOSTS on the server.": "AI প্রোভাইডার URL প্রত্যাখ্যাত হয়েছে। HTTPS ব্যবহার করুন এবং সার্ভারে নির্দিষ্ট hostname AI_DEVELOPER_ALLOWED_HOSTS-এ যোগ করুন।",
     "AI diagnosis completed. Review the advice before making changes.": "AI বিশ্লেষণ সম্পন্ন হয়েছে। পরিবর্তন করার আগে পরামর্শ যাচাই করুন।",
     "The AI request failed. Check the provider configuration and application logs.": "AI অনুরোধ ব্যর্থ হয়েছে। প্রোভাইডার কনফিগারেশন ও অ্যাপ্লিকেশন লগ যাচাই করুন।",
-    "AI analysis failed. No code or production data was changed.": "AI বিশ্লেষণ ব্যর্থ হয়েছে। কোনো কোড বা production data পরিবর্তন করা হয়নি।"
+    "AI analysis failed. No code or production data was changed.": "AI বিশ্লেষণ ব্যর্থ হয়েছে। কোনো কোড বা production data পরিবর্তন করা হয়নি।",
+    "e.g. Student login error": "যেমন: Student login error",
+    "Describe what is happening, when it happens and the sanitized error shown. Do not include secrets or personal data.": "কী ঘটছে, কখন ঘটছে এবং সংবেদনশীল তথ্য বাদ দেওয়া error লিখুন। কোনো গোপন তথ্য বা ব্যক্তিগত তথ্য দেবেন না।",
+    "completed": "সম্পন্ন",
+    "needs_configuration": "কনফিগারেশন প্রয়োজন",
+    "processing": "প্রক্রিয়াধীন",
+    "queued": "সারিতে আছে"
 }
