@@ -7,7 +7,7 @@
         <div>
             <span class="badge info">{{ auth()->user()->isAccountant() ? __('Accountant finance') : __('Admin finance') }}</span>
             <h1 style="margin: 12px 0 0;">{{ __('Invoices & installments') }}</h1>
-            <p><a class="btn secondary" href="{{ route(auth()->user()->isAccountant() ? 'accountant.finance-reports.index' : 'admin.finance-reports.index') }}">{{ __('Open finance reports') }}</a></p>
+            <p><a class="btn secondary" href="{{ route(auth()->user()->isAccountant() ? 'admin.finance.reports.index' : 'admin.finance-reports.index') }}">{{ __('Open finance reports') }}</a></p>
             <p class="muted">{{ __('Create a separate invoice for each fee or installment and record received payments.') }}</p>
         </div>
         @if(auth()->user()->isAdmin())
@@ -17,7 +17,7 @@
 
     <section class="panel" style="margin-bottom: 22px;">
         <h2>{{ __('Create student invoice') }}</h2>
-        <form method="POST" action="{{ route(auth()->user()->isAccountant() ? 'accountant.invoices.store' : 'admin.invoices.store') }}" class="grid grid-2">
+        <form method="POST" action="{{ route(auth()->user()->isAccountant() ? 'admin.finance.invoices.store' : 'admin.invoices.store') }}" class="grid grid-2">
             @csrf
             <div>
                 <label for="user_id">{{ __('Student') }}</label>
@@ -94,7 +94,7 @@
                     </div>
                 </div>
                 @if($due > 0 && $invoice->status !== 'cancelled')
-                    <form method="POST" action="{{ route(auth()->user()->isAccountant() ? 'accountant.invoices.payments.store' : 'admin.invoices.payments.store', $invoice) }}" class="grid grid-2" style="margin-top:16px;">
+                    <form method="POST" action="{{ route(auth()->user()->isAccountant() ? 'admin.finance.invoices.payments.store' : 'admin.invoices.payments.store', $invoice) }}" class="grid grid-2" style="margin-top:16px;">
                         @csrf
                         <div><label>{{ __('Received amount (BDT)') }}</label><input type="number" name="amount" min="0.01" max="{{ number_format($due, 2, '.', '') }}" step="0.01" required></div>
                         <div><label>{{ __('Payment method') }}</label><select name="method" required><option value="cash">{{ __('Cash') }}</option><option value="bkash">{{ __('bKash') }}</option><option value="nagad">{{ __('Nagad') }}</option><option value="bank">{{ __('Bank') }}</option><option value="online">{{ __('Online gateway') }}</option><option value="other">{{ __('Other') }}</option></select></div>
@@ -108,7 +108,7 @@
                     <details style="margin-top:14px;">
                         <summary>{{ __('Payment history') }} ({{ $invoice->payments->count() }})</summary>
                         @foreach($invoice->payments as $receipt)
-                            <p class="muted">৳{{ number_format((float) $receipt->amount, 2) }} · {{ __(ucfirst($receipt->method)) }} · {{ $receipt->paid_at->format('d M Y H:i') }} · {{ $receipt->reference ?: __('No reference') }} · <a href="{{ route('invoice-payments.receipt', $receipt) }}" target="_blank" rel="noopener">{{ __('Print receipt') }}</a></p>
+                            <p class="muted">৳{{ number_format((float) $receipt->amount, 2) }} · {{ __(ucfirst($receipt->method)) }} · {{ $receipt->paid_at->format('d M Y H:i') }} · {{ $receipt->reference ?: __('No reference') }} · <a href="{{ route(auth()->user()->isAccountant() ? 'admin.finance.invoice-payments.receipt' : 'invoice-payments.receipt', $receipt) }}" target="_blank" rel="noopener">{{ __('Print receipt') }}</a></p>
                         @endforeach
                     </details>
                 @endif
