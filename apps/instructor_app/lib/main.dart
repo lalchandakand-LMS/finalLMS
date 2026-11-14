@@ -572,6 +572,7 @@ class _InstructorHomeState extends State<InstructorHome> {
     final title = TextEditingController();
     final description = TextEditingController();
     final meetingUrl = TextEditingController();
+    final messenger = ScaffoldMessenger.of(context);
     int? selectedBatchId = (batches.first as Map<String, dynamic>)['id'] as int;
     DateTime startsAt = DateTime.now().add(const Duration(days: 1));
     startsAt = DateTime(startsAt.year, startsAt.month, startsAt.day, 19);
@@ -686,7 +687,7 @@ class _InstructorHomeState extends State<InstructorHome> {
       await load();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+        messenger.showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
