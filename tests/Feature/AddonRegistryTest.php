@@ -68,6 +68,19 @@ class AddonRegistryTest extends TestCase
         $this->assertSame([], json_decode((string) Setting::value('addon_registry', '[]'), true));
     }
 
+    public function test_addon_registry_is_available_in_bangla_locale(): void
+    {
+        app()->setLocale('bn');
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+
+        $this->actingAs($admin)->get(route('admin.addons.index'))
+            ->assertOk()
+            ->assertSee('অনুমোদিত অ্যাড-অন রেজিস্ট্রি')
+            ->assertSee('বিকাশ টোকেনাইজড চেকআউট')
+            ->assertSee('নগদ ডাইরেক্ট API')
+            ->assertSee('নিরাপত্তা ও অবস্থা');
+    }
+
     public function test_non_admin_cannot_view_or_change_addon_registry(): void
     {
         $student = User::factory()->create(['role' => 'student', 'email_verified_at' => now()]);
