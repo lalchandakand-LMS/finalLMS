@@ -693,5 +693,7 @@
     "disabled": "disabled",
     "Effective:": "Effective:",
     "available": "available",
-    "not active": "not active"
+    "not active": "not active",
+    "Add-on registry": "Add-on registry",
+    "Review allow-listed integrations and configuration readiness": "Review allow-listed integrations and configuration readiness"
 }
