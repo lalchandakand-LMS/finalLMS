@@ -188,4 +188,58 @@ class StudentDeviceApprovalTest extends TestCase
 
         Http::assertNothingSent();
     }
+
+    public function test_teacher_guardian_branch_manager_and_accountant_logins_require_sms_verification(): void
+    {
+        foreach (['teacher', 'guardian', 'branch_manager', 'accountant'] as $role) {
+            $code = null;
+            Http::fake(function ($request) use (&$code) {
+                preg_match('/code is ([0-9]{6})/', $request['Body'], $matches);
+                $code = $matches[1] ?? null;
+
+                return Http::response(['sid' => 'SM-test'], 201);
+            });
+
+            $user = User::factory()->create([
+                'role' => $role,
+                'email_verified_at' => now(),
+                'phone_number' => '+8801712345678',
+            ]);
+
+            $this->post(route('login.post'), ['email' => $user->email, 'password' => 'password'])
+                ->assertRedirect(route('student-device.verify'))
+                ->assertSessionHas('student_device_request_id');
+
+            $device = StudentDevice::where('user_id', $user->id)->firstOrFail();
+            $this->assertSame('pending_phone_verification', $device->status);
+            $this->assertNotNull($code);
+
+            $this->post(route('student-device.verify-phone'), ['code' => $code])
+                ->assertRedirect('/dashboard');
+
+            $this->assertAuthenticatedAs($user);
+            $this->assertDatabaseHas('student_devices', [
+                'id' => $device->id,
+                'status' => 'approved',
+            ]);
+            auth()->logout();
+        }
+    }
+
+    public function test_admin_password_login_remains_available_without_sms_for_recovery(): void
+    {
+        Http::fake();
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'email_verified_at' => now(),
+            'phone_number' => null,
+        ]);
+
+        $this->post(route('login.post'), ['email' => $admin->email, 'password' => 'password'])
+            ->assertRedirect('/dashboard');
+
+        $this->assertAuthenticatedAs($admin);
+        Http::assertNothingSent();
+    }
+
 }
