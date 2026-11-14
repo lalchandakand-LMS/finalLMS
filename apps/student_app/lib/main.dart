@@ -2059,9 +2059,10 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
       if (!mounted) { return; }
       clock?.cancel();
       setState(() {
-        _setAttempt(summary);
+        attempt = summary;
         _setQuestions(questionList);
       });
+      _configureTimer();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(
           response['expired'] == true
