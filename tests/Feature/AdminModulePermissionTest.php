@@ -31,7 +31,7 @@ class AdminModulePermissionTest extends TestCase
             'event' => 'admin.user_access.updated',
         ]);
 
-        $this->actingAs($manager)->get(route('admin.branch-workspace.batches.index'))->assertOk();
+        $this->actingAs($manager->fresh())->get(route('admin.branch-workspace.batches.index'))->assertOk();
         $this->get(route('admin.branch-workspace.students.index'))->assertForbidden();
 
         $this->get(route('dashboard'))
@@ -68,7 +68,7 @@ class AdminModulePermissionTest extends TestCase
 
         $this->assertSame(['finance.expenses'], $accountant->fresh()->admin_permissions);
 
-        $this->actingAs($accountant)->get(route('admin.finance.expenses.index'))->assertOk();
+        $this->actingAs($accountant->fresh())->get(route('admin.finance.expenses.index'))->assertOk();
         $this->get(route('admin.finance.invoices.index'))->assertForbidden();
         $this->get(route('admin.finance.refunds.index'))->assertForbidden();
         $this->get(route('admin.finance.reports.index'))->assertForbidden();
