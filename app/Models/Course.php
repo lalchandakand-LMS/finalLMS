@@ -21,7 +21,16 @@ class Course extends Model
         'price',
         'status',
         'image_path',
+        'short_description', 'tags', 'seo_title', 'seo_description',
+        'learning_outcomes', 'requirements', 'level', 'language', 'duration_minutes',
     ];
+
+    protected $casts = ['tags' => 'array'];
+
+    public function categories(): BelongsToMany
+    {
+        return $this->belongsToMany(CourseCategory::class, 'course_category_course')->withTimestamps();
+    }
 
     public function flashSales(): BelongsToMany
     {
