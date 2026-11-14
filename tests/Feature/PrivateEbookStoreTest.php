@@ -146,6 +146,7 @@ class PrivateEbookStoreTest extends TestCase
 
     public function test_rejected_order_never_grants_download_access(): void
     {
+        Storage::fake('local');
         $admin = User::factory()->create(['role' => 'admin']);
         $student = User::factory()->create(['role' => 'student']);
         $product = $this->ebook($admin);
