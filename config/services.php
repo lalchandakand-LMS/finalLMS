@@ -2,6 +2,22 @@
 
 return [
 
+    'ai_developer' => [
+        'provider' => env('AI_DEVELOPER_PROVIDER', 'openai-compatible'),
+        'base_url' => env('AI_DEVELOPER_BASE_URL', 'https://api.openai.com/v1'),
+        'allowed_hosts' => array_filter(array_map('trim', explode(',', env('AI_DEVELOPER_ALLOWED_HOSTS', 'api.openai.com')))),
+        'api_key' => env('AI_DEVELOPER_API_KEY'),
+        'model' => env('AI_DEVELOPER_MODEL'),
+        'max_tokens' => env('AI_DEVELOPER_MAX_TOKENS', 1200),
+        'repository_context_enabled' => env('AI_DEVELOPER_REPOSITORY_CONTEXT_ENABLED', false),
+        'github_token' => env('AI_DEVELOPER_GITHUB_TOKEN'),
+        'github_repository' => env('AI_DEVELOPER_GITHUB_REPOSITORY'),
+        'github_read_ref' => env('AI_DEVELOPER_GITHUB_READ_REF', 'main'),
+        'allowed_repository_paths' => array_filter(array_map('trim', explode(',', env('AI_DEVELOPER_ALLOWED_REPOSITORY_PATHS', '')))),
+        'repository_max_file_bytes' => env('AI_DEVELOPER_REPOSITORY_MAX_FILE_BYTES', 12000),
+        'repository_max_total_bytes' => env('AI_DEVELOPER_REPOSITORY_MAX_TOTAL_BYTES', 40000),
+    ],
+
     'bkash' => [
         'enabled' => env('BKASH_ENABLED', false),
         'base_url' => env('BKASH_BASE_URL', 'https://tokenized.sandbox.bka.sh/v1.2.0-beta'),
