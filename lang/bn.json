@@ -1112,7 +1112,7 @@
     "S3-compatible Object Storage": "S3-সামঞ্জস্যপূর্ণ অবজেক্ট স্টোরেজ",
     "Private object storage for uploads and backups": "আপলোড ও ব্যাকআপের জন্য ব্যক্তিগত অবজেক্ট স্টোরেজ",
     "Missing S3 access key, secret, region or bucket": "S3 access key, secret, region অথবা bucket অনুপস্থিত",
-    "S3-compatible endpoint must use HTTPS": "S3-compatible endpoint-এ HTTPS ব্যবহার করতে হবে",
+    "S3-compatible endpoint must use HTTPS": "S3-compatible endpoint অবশ্যই credentials-বিহীন বৈধ HTTPS URL হতে হবে",
     "S3 configuration ready; live bucket verification still required": "S3 কনফিগারেশন প্রস্তুত; live bucket যাচাই এখনও বাকি",
     "S3 credentials present; set FILESYSTEM_DISK=s3 to activate": "S3 ক্রেডেনশিয়াল আছে; চালু করতে FILESYSTEM_DISK=s3 সেট করুন",
     "FILESYSTEM_DISK=s3, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION and AWS_BUCKET; optional HTTPS AWS_ENDPOINT": "FILESYSTEM_DISK=s3, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION ও AWS_BUCKET; ঐচ্ছিক HTTPS AWS_ENDPOINT"
