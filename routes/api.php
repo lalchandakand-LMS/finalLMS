@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\CourseController;
 use App\Http\Controllers\Api\V1\InstructorAssignmentController;
 use App\Http\Controllers\Api\V1\StudentAssignmentController;
 use App\Http\Controllers\Api\V1\StudentExamController;
+use App\Http\Controllers\Api\V1\StudentCourseQuizController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -42,5 +43,11 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/exams/{exam}/start', [StudentExamController::class, 'start'])->middleware('throttle:10,1');
         Route::put('/exam-attempts/{attempt}/answers', [StudentExamController::class, 'saveAnswers'])->middleware('throttle:120,1');
         Route::post('/exam-attempts/{attempt}/submit', [StudentExamController::class, 'submit'])->middleware('throttle:10,1');
+        Route::get('/my/quizzes', [StudentCourseQuizController::class, 'index']);
+        Route::get('/courses/{course:slug}/question-sets/{questionSet}', [StudentCourseQuizController::class, 'show']);
+        Route::post('/courses/{course:slug}/question-sets/{questionSet}/start', [StudentCourseQuizController::class, 'start'])->middleware('throttle:10,1');
+        Route::get('/question-set-attempts/{attempt}', [StudentCourseQuizController::class, 'attempt']);
+        Route::put('/question-set-attempts/{attempt}/answers', [StudentCourseQuizController::class, 'saveAnswers'])->middleware('throttle:120,1');
+        Route::post('/question-set-attempts/{attempt}/submit', [StudentCourseQuizController::class, 'submit'])->middleware('throttle:10,1');
     });
 });
