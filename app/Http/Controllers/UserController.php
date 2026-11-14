@@ -64,6 +64,7 @@ class UserController extends Controller
         }
 
         $phoneChanged = array_key_exists('phone_number', $validated) && $user->phone_number !== $validated['phone_number'];
+        $roleChanged = $user->role !== $validated['role'];
         $roleChangedAwayFromStudent = $user->isStudent() && $validated['role'] !== 'student';
 
         $user->update([
@@ -72,12 +73,14 @@ class UserController extends Controller
             'phone_number' => $validated['phone_number'] ?? null,
         ]);
 
-        if ($request->boolean('admin_permissions_present')) {
+        if ($request->boolean('admin_permissions_present') || $roleChanged) {
             $allowedByRole = [
                 'branch_manager' => ['branch.batches', 'branch.students'],
                 'accountant' => ['finance.invoices', 'finance.refunds', 'finance.reports', 'finance.expenses'],
             ];
-            $requestedPermissions = $validated['admin_permissions'] ?? [];
+            $requestedPermissions = $request->boolean('admin_permissions_present')
+                ? ($validated['admin_permissions'] ?? [])
+                : [];
             $user->forceFill([
                 'admin_permissions' => array_values(array_intersect(
                     $requestedPermissions,
