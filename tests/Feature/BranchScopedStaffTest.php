@@ -44,7 +44,7 @@ class BranchScopedStaffTest extends TestCase
 
         $this->post(route('admin.branch-workspace.batches.store'), [
             ...$base, 'course_id' => $localCourse->id, 'teacher_id' => $localTeacher->id,
-        ])->assertRedirect(route('admin.branch-workspace.batches.index'));
+        ])->assertRedirect(route('branch-manager.batches.index'));
 
         $this->assertDatabaseHas('batches', [
             'branch_id' => $branch->id,
