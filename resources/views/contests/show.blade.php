@@ -11,7 +11,7 @@
     <div class="summary-box"><span class="muted">Deadline</span><strong style="font-size:1rem;">{{ $contest->ends_at->format('d M, h:i A') }}</strong></div>
 </div>
 @if($entry)
-    <div class="panel" style="margin-bottom:20px;"><span class="badge success">Submitted</span><h2>Thank you for participating!</h2><p>Your answers were received on {{ $entry->submitted_at->format('d M Y, h:i A') }}. Your entry is included in the free random prize draw.</p></div>
+    <div class="panel" style="margin-bottom:20px;"><span class="badge success">Submitted</span><h2>Thank you for participating!</h2><p>Your answers were received on {{ $entry->submitted_at->format('d M Y, h:i A') }}. Your result will be ranked by score and submission time.</p></div>
 @elseif(now()->between($contest->starts_at, $contest->ends_at) && $contest->status === 'published')
     @auth
         <form class="panel" method="POST" action="{{ route('contests.submit', $contest) }}">
@@ -32,10 +32,10 @@
         <div class="panel"><h2>Login to participate</h2><p>Create a free account or sign in to submit your answers. Each account can enter once.</p><a class="btn primary" href="{{ route('login') }}">Login</a> <a class="btn secondary" href="{{ route('register') }}">Create account</a></div>
     @endauth
 @else
-    <div class="panel"><strong>{{ $contest->drawn_at ? 'This contest has ended and winners have been selected.' : 'This contest is not accepting answers right now.' }}</strong></div>
+    <div class="panel"><strong>{{ $contest->drawn_at ? 'This contest has ended and final results have been published.' : 'This contest is not accepting answers right now.' }}</strong></div>
 @endif
 @if($contest->winners->isNotEmpty())
-    <div class="panel" style="margin-top:20px;"><h2>🏆 Lottery winners</h2><p class="muted">Winners were selected randomly from valid submitted entries after the contest closed.</p>
+    <div class="panel" style="margin-top:20px;"><h2>🏆 Top participants</h2><p class="muted">Final ranking uses score (highest first), then earliest submission time.</p>
         @foreach($contest->winners as $winner)
             <div style="padding:12px 0;border-bottom:1px solid var(--border);"><strong>#{{ $winner->rank }} — {{ $winner->user->name }}</strong><div class="muted">{{ $winner->prize_snapshot }}</div></div>
         @endforeach
