@@ -88,7 +88,7 @@ class ExpenseManagementTest extends TestCase
     public function test_inactive_branch_blocks_accountant_expense_reads_and_mutations(): void
         {
             $branch = Branch::create(['name' => 'Closing Branch', 'slug' => 'closing-branch', 'is_active' => true]);
-            $accountant = User::factory()->create(['role' => 'accountant', 'branch_id' => $branch->id]);
+            $accountant = User::factory()->create(['role' => 'accountant', 'admin_permissions' => ['finance.expenses'], 'branch_id' => $branch->id]);
             $expense = Expense::create([
                 'branch_id' => $branch->id,
                 'created_by' => $accountant->id,
