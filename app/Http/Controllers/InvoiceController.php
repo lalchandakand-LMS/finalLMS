@@ -10,6 +10,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class InvoiceController extends Controller
@@ -17,7 +18,7 @@ class InvoiceController extends Controller
     public function accountantIndex(Request $request): View
     {
         $branchId = $request->user()->branch_id;
-        abort_unless($branchId && \App\Models\Branch::whereKey($branchId)->where('is_active', true)->exists(), 403, 'No active branch is assigned to this account.');
+        abort_unless($this->activeBranchExists($branchId), 403, 'No active branch is assigned to this account.');
 
         $invoices = Invoice::with(['user', 'course', 'batch', 'payments', 'refunds'])
             ->where(function ($query) use ($branchId): void {
@@ -40,9 +41,7 @@ class InvoiceController extends Controller
 
     public function adminIndex(): View
     {
-        $invoices = Invoice::with(['user', 'course', 'batch', 'payments', 'refunds'])
-            ->latest()
-            ->paginate(25);
+        $invoices = Invoice::with(['user', 'course', 'batch', 'payments', 'refunds'])->latest()->paginate(25);
         $students = User::query()->where('role', 'student')->orderBy('name')->get();
         $courses = Course::query()->orderBy('title')->get();
 
@@ -52,9 +51,7 @@ class InvoiceController extends Controller
     public function studentIndex(Request $request): View
     {
         $invoices = Invoice::with(['course', 'batch', 'payments.receiver', 'refunds'])
-            ->where('user_id', $request->user()->id)
-            ->latest()
-            ->paginate(20);
+            ->where('user_id', $request->user()->id)->latest()->paginate(20);
 
         return view('student.invoices.index', compact('invoices'));
     }
@@ -64,7 +61,7 @@ class InvoiceController extends Controller
         $isAccountant = $request->user()->isAccountant();
         $branchId = $request->user()->branch_id;
         if ($isAccountant) {
-            abort_unless($branchId && \App\Models\Branch::whereKey($branchId)->where('is_active', true)->exists(), 403);
+            abort_unless($this->activeBranchExists($branchId), 403, 'No active branch is assigned to this account.');
         }
 
         $validated = $request->validate([
@@ -89,9 +86,7 @@ class InvoiceController extends Controller
         abort_unless($studentQuery->exists(), 422, 'Student is not assigned to your branch.');
 
         if ($isAccountant && ! empty($validated['batch_id'])) {
-            $batch = \App\Models\Batch::whereKey($validated['batch_id'])
-                ->where('branch_id', $branchId)
-                ->first();
+            $batch = \App\Models\Batch::whereKey($validated['batch_id'])->where('branch_id', $branchId)->first();
             abort_unless($batch, 422, 'Batch is outside your branch.');
 
             $studentBelongsToBatchScope = User::whereKey($validated['user_id'])
@@ -99,17 +94,12 @@ class InvoiceController extends Controller
                 ->where(function ($query) use ($branchId, $batch): void {
                     $query->where('branch_id', $branchId)
                         ->orWhereHas('enrollments', fn ($enrollments) => $enrollments
-                            ->where('batch_id', $batch->id)
-                            ->whereIn('status', ['active', 'completed']));
+                            ->where('batch_id', $batch->id)->whereIn('status', ['active', 'completed']));
                 })->exists();
-
             abort_unless($studentBelongsToBatchScope, 422, 'Student is not assigned to this branch or enrolled in the selected batch.');
         }
         if (! empty($validated['batch_id']) && ! empty($validated['course_id'])) {
-            abort_unless(
-                \App\Models\Batch::whereKey($validated['batch_id'])->where('course_id', $validated['course_id'])->exists(),
-                422
-            );
+            abort_unless(\App\Models\Batch::whereKey($validated['batch_id'])->where('course_id', $validated['course_id'])->exists(), 422);
         }
 
         $subtotal = round((float) $validated['amount'], 2);
@@ -150,6 +140,15 @@ class InvoiceController extends Controller
 
     public function receivePayment(Invoice $invoice, Request $request): RedirectResponse
     {
+        $isAccountant = $request->user()->isAccountant();
+        $branchId = $request->user()->branch_id;
+        if ($isAccountant) {
+            abort_unless($this->activeBranchExists($branchId), 403, 'No active branch is assigned to this account.');
+            abort_unless($this->invoiceBelongsToBranch($invoice, (int) $branchId), 404);
+        } else {
+            abort_unless($request->user()->isAdmin(), 403);
+        }
+
         $validated = $request->validate([
             'amount' => ['required', 'numeric', 'gt:0', 'max:99999999'],
             'method' => ['required', 'string', 'max:40'],
@@ -158,19 +157,12 @@ class InvoiceController extends Controller
             'paid_at' => ['required', 'date'],
         ]);
 
-        if ($request->user()->isAccountant()) {
-            $branchId = $request->user()->branch_id;
-            abort_unless($branchId && Invoice::whereKey($invoice->id)->where(function ($query) use ($branchId): void {
-                $query->whereHas('batch', fn ($batch) => $batch->where('branch_id', $branchId))
-                    ->orWhere(function ($unbatched) use ($branchId): void {
-                        $unbatched->whereNull('batch_id')
-                            ->whereHas('user', fn ($user) => $user->where('branch_id', $branchId));
-                    });
-            })->exists(), 404);
-        }
-
-        $result = DB::transaction(function () use ($invoice, $validated, $request): string {
+        $result = DB::transaction(function () use ($invoice, $validated, $request, $isAccountant, $branchId): string {
             $lockedInvoice = Invoice::query()->lockForUpdate()->findOrFail($invoice->id);
+            if ($isAccountant) {
+                abort_unless($this->activeBranchExists($branchId) && $this->invoiceBelongsToBranch($lockedInvoice, (int) $branchId), 404);
+            }
+
             $refunded = (float) $lockedInvoice->refunds()->where('status', 'approved')->sum('amount');
             $paid = max(0, (float) $lockedInvoice->payments()->sum('amount') - $refunded);
             $remaining = round((float) $lockedInvoice->amount - $paid, 2);
@@ -179,7 +171,6 @@ class InvoiceController extends Controller
             if ($lockedInvoice->status === 'cancelled' || $remaining <= 0) {
                 return 'closed';
             }
-
             if ($amount > $remaining) {
                 return 'excess';
             }
@@ -216,20 +207,28 @@ class InvoiceController extends Controller
 
         if ($request->user()->isAccountant()) {
             $branchId = $request->user()->branch_id;
-            abort_unless($branchId && \App\Models\Branch::whereKey($branchId)->where('is_active', true)->exists(), 403);
-            $invoice = $payment->invoice;
-            $inScope = $invoice && Invoice::whereKey($invoice->id)->where(function ($query) use ($branchId): void {
-                $query->whereHas('batch', fn ($batch) => $batch->where('branch_id', $branchId))
-                    ->orWhere(function ($unbatched) use ($branchId): void {
-                        $unbatched->whereNull('batch_id')
-                            ->whereHas('user', fn ($user) => $user->where('branch_id', $branchId));
-                    });
-            })->exists();
-            abort_unless($inScope, 404);
+            abort_unless($this->activeBranchExists($branchId), 403, 'No active branch is assigned to this account.');
+            abort_unless($payment->invoice && $this->invoiceBelongsToBranch($payment->invoice, (int) $branchId), 404);
         } else {
             abort_unless($request->user()->isAdmin(), 403);
         }
 
         return view('admin.invoices.receipt', compact('payment'));
+    }
+
+    private function activeBranchExists(?int $branchId): bool
+    {
+        return $branchId !== null && \App\Models\Branch::query()->whereKey($branchId)->where('is_active', true)->exists();
+    }
+
+    private function invoiceBelongsToBranch(Invoice $invoice, int $branchId): bool
+    {
+        return Invoice::query()->whereKey($invoice->id)->where(function ($query) use ($branchId): void {
+            $query->whereHas('batch', fn ($batch) => $batch->where('branch_id', $branchId))
+                ->orWhere(function ($unbatched) use ($branchId): void {
+                    $unbatched->whereNull('batch_id')
+                        ->whereHas('user', fn ($user) => $user->where('branch_id', $branchId));
+                });
+        })->exists();
     }
 }
