@@ -25,6 +25,10 @@ class AdminModulePermissionTest extends TestCase
         ])->assertRedirect(route('admin.users.index'));
 
         $this->assertSame(['branch.batches'], $manager->fresh()->admin_permissions);
+        $this->assertDatabaseHas('activity_logs', [
+            'user_id' => $admin->id,
+            'event' => 'admin.user_access.updated',
+        ]);
 
         $this->actingAs($manager)->get(route('admin.branch-workspace.batches.index'))->assertOk();
         $this->get(route('admin.branch-workspace.students.index'))->assertForbidden();
