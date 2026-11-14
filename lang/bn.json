@@ -792,7 +792,7 @@
     "Not configured": "নির্ধারণ করা হয়নি",
     "Auto score:": "স্বয়ংক্রিয় নম্বর:",
     "Student response": "শিক্ষার্থীর লিখিত উত্তর",
-    "No written answer submitted.": "কোনো লিখিত উত্তর জমা দেওয়া হয়নি।",
+    "No written answer submitted.": "কোনো লিখিত উত্তর জমা দেওয়া হয়নি.",
     "Reference answer:": "নমুনা উত্তর:",
     "Explanation:": "ব্যাখ্যা:",
     "Marks awarded (0–:max)": "প্রদত্ত নম্বর (০–:max)",
@@ -810,5 +810,6 @@
     "Review student written answers and publish final quiz results.": "শিক্ষার্থীদের লিখিত উত্তর যাচাই করে চূড়ান্ত কুইজের ফল প্রকাশ করুন।",
     "Review submissions": "জমা দেওয়া উত্তর যাচাই করুন",
     "Final quiz result": "কুইজের চূড়ান্ত ফলাফল",
-    "Teacher feedback:": "শিক্ষকের মতামত:"
+    "Teacher feedback:": "শিক্ষকের মতামত:",
+    "marks": "নম্বর"
 }
