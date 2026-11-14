@@ -7,6 +7,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AiDeveloperTask extends Model
 {
+    protected function casts(): array
+    {
+        return [
+            'instruction' => 'encrypted',
+            'response' => 'encrypted',
+        ];
+    }
+
     protected $fillable = [
         'user_id', 'title', 'instruction', 'response', 'status',
         'provider', 'model', 'error_message',
