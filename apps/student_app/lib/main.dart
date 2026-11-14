@@ -1890,10 +1890,9 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
     }
   }
 
-  void _setAttempt(Map<String, dynamic>? value) {
-    attempt = value;
-    final status = value?['status']?.toString();
-    final deadlineValue = value?['deadline_at']?.toString();
+  void _configureTimer() {
+    final status = attempt?['status']?.toString();
+    final deadlineValue = attempt?['deadline_at']?.toString();
     if (status == 'in_progress' && deadlineValue != null && deadlineValue.isNotEmpty) {
       _setDeadline(DateTime.parse(deadlineValue).toLocal());
     } else {
@@ -1921,9 +1920,10 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
         availableFrom = data['available_from'] == null
             ? null
             : DateTime.tryParse(data['available_from'].toString())?.toLocal();
-        _setAttempt(summary);
+        attempt = summary;
         _setQuestions(questionList);
       });
+      _configureTimer();
     } catch (exception) {
       if (mounted) setState(() => error = exception.toString());
     } finally {
