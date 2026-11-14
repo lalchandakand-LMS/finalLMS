@@ -724,5 +724,12 @@
     "Read-only diagnostic mode": "Read-only diagnostic mode",
     "If the server administrator enables repository context, this workspace can read only explicitly allow-listed source files in read-only mode. It never writes to GitHub, creates commits, merges, or deploys. Branch-based patch creation, diff review and automated test feedback remain a separate future stage with mandatory human approval. Never apply an AI suggestion directly to the live website.": "If the server administrator enables repository context, this workspace can read only explicitly allow-listed source files in read-only mode. It never writes to GitHub, creates commits, merges, or deploys. Branch-based patch creation, diff review and automated test feedback remain a separate future stage with mandatory human approval. Never apply an AI suggestion directly to the live website.",
     "Recent AI tasks": "Recent AI tasks",
-    "No AI tasks yet.": "No AI tasks yet."
+    "No AI tasks yet.": "No AI tasks yet.",
+    "Daily AI diagnostic limit reached. Try again tomorrow.": "Daily AI diagnostic limit reached. Try again tomorrow.",
+    "AI provider is not configured. Set AI_DEVELOPER_API_KEY, AI_DEVELOPER_BASE_URL and AI_DEVELOPER_MODEL in the server environment.": "AI provider is not configured. Set AI_DEVELOPER_API_KEY, AI_DEVELOPER_BASE_URL and AI_DEVELOPER_MODEL in the server environment.",
+    "AI connection is not configured yet. No external request was made.": "AI connection is not configured yet. No external request was made.",
+    "AI provider URL rejected. Use HTTPS and add its exact hostname to AI_DEVELOPER_ALLOWED_HOSTS on the server.": "AI provider URL rejected. Use HTTPS and add its exact hostname to AI_DEVELOPER_ALLOWED_HOSTS on the server.",
+    "AI diagnosis completed. Review the advice before making changes.": "AI diagnosis completed. Review the advice before making changes.",
+    "The AI request failed. Check the provider configuration and application logs.": "The AI request failed. Check the provider configuration and application logs.",
+    "AI analysis failed. No code or production data was changed.": "AI analysis failed. No code or production data was changed."
 }
