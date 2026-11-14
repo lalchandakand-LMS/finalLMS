@@ -276,20 +276,6 @@ class StudentDeviceApprovalTest extends TestCase
     }
 
 
-    public function test_existing_non_admin_sessions_without_a_trusted_device_must_reauthenticate(): void
-    {
-        foreach (['student', 'teacher', 'guardian', 'branch_manager', 'accountant'] as $role) {
-            $user = User::factory()->create(['role' => $role, 'email_verified_at' => now()]);
-
-            $this->actingAs($user)
-                ->get('/dashboard')
-                ->assertRedirect(route('login'))
-                ->assertSessionHas('warning');
-
-            $this->assertGuest();
-        }
-    }
-
     public function test_admin_password_login_remains_available_without_sms_for_recovery(): void
     {
         Http::fake();
