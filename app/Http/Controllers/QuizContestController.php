@@ -124,7 +124,7 @@ class QuizContestController extends Controller
 
     public function edit(QuizContest $contest): View
     {
-        abort_if($contest->drawn_at !== null || $contest->starts_at->isPast()
+        abort_if($contest->drawn_at !== null || $contest->starts_at->lessThanOrEqualTo(now())
             || $contest->entries()->exists(), 409, 'A contest can only be edited before it starts and before any entries are submitted.');
 
         $contest->load('questions');
@@ -151,7 +151,7 @@ class QuizContestController extends Controller
         DB::transaction(function () use ($contest, $validated): void {
             $lockedContest = QuizContest::query()->lockForUpdate()->findOrFail($contest->id);
             abort_if($lockedContest->drawn_at !== null
-                || $lockedContest->starts_at->isPast()
+                || $lockedContest->starts_at->lessThanOrEqualTo(now())
                 || $lockedContest->entries()->exists(), 409,
                 'A contest can only be edited before it starts and before any entries are submitted.');
             abort_unless(in_array($lockedContest->status, ['published', 'paused'], true), 409, 'This contest can no longer be edited.');
