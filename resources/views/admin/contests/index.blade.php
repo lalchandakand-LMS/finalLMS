@@ -52,7 +52,21 @@
             <tr style="border-bottom:1px solid var(--border);">
                 <td style="padding:12px 10px;"><strong>{{ $contest->title }}</strong><br><small class="muted">{{ $contest->starts_at->format('d M Y H:i') }} – {{ $contest->ends_at->format('d M Y H:i') }}</small><br><a href="{{ route('contests.show', $contest) }}">View public page</a></td>
                 <td>{{ $contest->questions_count }}</td><td>{{ $contest->entries_count }}</td><td>{{ $contest->prize_description }}<br><small>{{ $contest->winner_count }} winner(s)</small></td>
-                <td><span class="badge {{ $contest->drawn_at ? 'success' : ($contest->status === 'published' ? 'info' : 'warning') }}">{{ $contest->drawn_at ? 'Results published' : ucfirst($contest->status) }}</span></td>
+                <td>
+                    <span class="badge {{ $contest->drawn_at ? 'success' : ($contest->status === 'published' ? 'info' : 'warning') }}">{{ $contest->drawn_at ? 'Results published' : ucfirst($contest->status) }}</span>
+                    @if(!$contest->drawn_at && now()->lessThan($contest->ends_at))
+                        <form method="POST" action="{{ route('admin.contests.status', $contest) }}" style="margin-top:6px;">
+                            @csrf
+                            <input type="hidden" name="status" value="{{ $contest->status === 'paused' ? 'published' : 'paused' }}">
+                            <button class="btn secondary" type="submit">{{ $contest->status === 'paused' ? 'Resume' : 'Pause' }}</button>
+                        </form>
+                    @elseif(!$contest->drawn_at && $contest->status !== 'closed')
+                        <form method="POST" action="{{ route('admin.contests.status', $contest) }}" style="margin-top:6px;">
+                            @csrf<input type="hidden" name="status" value="closed">
+                            <button class="btn secondary" type="submit">Close contest</button>
+                        </form>
+                    @endif
+                </td>
                 <td>
                     @if($contest->drawn_at)
                         <strong>Results published</strong><br>@foreach($contest->winners as $winner)<small>#{{ $winner->rank }} {{ $winner->user->name }}</small><br>@endforeach

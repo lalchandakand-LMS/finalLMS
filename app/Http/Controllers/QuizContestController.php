@@ -122,12 +122,38 @@ class QuizContestController extends Controller
         return redirect()->route('admin.contests.index')->with('success', 'Quiz contest published successfully.');
     }
 
+    public function updateStatus(Request $request, QuizContest $contest): RedirectResponse
+    {
+        $validated = $request->validate([
+            'status' => ['required', 'in:published,paused,closed'],
+        ]);
+
+        DB::transaction(function () use ($contest, $validated): void {
+            $lockedContest = QuizContest::query()->lockForUpdate()->findOrFail($contest->id);
+            abort_if($lockedContest->drawn_at !== null, 409, 'Published results cannot be changed.');
+            $nextStatus = $validated['status'];
+
+            if ($nextStatus === 'paused') {
+                abort_unless($lockedContest->status === 'published' && now()->lessThan($lockedContest->ends_at), 422, 'Only an active contest can be paused.');
+            } elseif ($nextStatus === 'published') {
+                abort_unless($lockedContest->status === 'paused' && now()->lessThan($lockedContest->ends_at), 422, 'Only a paused contest before its deadline can be resumed.');
+            } else {
+                abort_unless(in_array($lockedContest->status, ['published', 'paused'], true)
+                    && now()->greaterThanOrEqualTo($lockedContest->ends_at), 422, 'A contest can only be closed after its scheduled end time.');
+            }
+
+            $lockedContest->update(['status' => $nextStatus]);
+        });
+
+        return redirect()->route('admin.contests.index')->with('success', 'Contest status updated.');
+    }
+
     public function publishResults(QuizContest $contest): RedirectResponse
     {
         $winnerCount = DB::transaction(function () use ($contest): int {
             $lockedContest = QuizContest::query()->lockForUpdate()->findOrFail($contest->id);
             abort_if($lockedContest->drawn_at !== null, 409, 'The results have already been published.');
-            abort_unless($lockedContest->status === 'published' && now()->greaterThan($lockedContest->ends_at), 422, 'The contest must end before results can be published.');
+            abort_unless(in_array($lockedContest->status, ['published', 'closed'], true) && now()->greaterThanOrEqualTo($lockedContest->ends_at), 422, 'The contest must end before results can be published.');
 
             $entries = $lockedContest->entries()
                 ->orderByDesc('score')
