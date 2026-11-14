@@ -72,7 +72,7 @@ class MobileStudentAssignmentTest extends TestCase
 
         $this->withToken($teacherToken)->getJson('/api/v1/my/assignments')->assertForbidden();
         $this->withToken($studentToken)->getJson('/api/v1/assignments/'.$assignment->id)->assertOk();
-        $this->getJson('/api/v1/my/assignments')->assertUnauthorized();
+        $this->withHeaders(['Authorization' => ''])->getJson('/api/v1/my/assignments')->assertUnauthorized();
 
         $this->assertDatabaseCount('assignment_submissions', 0);
     }
