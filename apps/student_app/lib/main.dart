@@ -391,6 +391,12 @@ class _StudentHomeState extends State<StudentHome> {
     widget.onLogout();
   }
 
+  Future<void> openAssignments() async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => AssignmentsPage(api: widget.api),
+    ));
+  }
+
   Future<void> openWishlist() async {
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => WishlistPage(api: widget.api),
@@ -460,6 +466,11 @@ class _StudentHomeState extends State<StudentHome> {
           onPressed: load,
           icon: const Icon(Icons.refresh),
           tooltip: 'Refresh',
+        ),
+        IconButton(
+          onPressed: openAssignments,
+          icon: const Icon(Icons.assignment_outlined),
+          tooltip: 'My assignments',
         ),
         IconButton(
           onPressed: openWishlist,
