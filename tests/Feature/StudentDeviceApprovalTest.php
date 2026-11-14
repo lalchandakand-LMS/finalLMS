@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\DeviceSession;
 use App\Models\StudentDevice;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -81,6 +82,15 @@ class StudentDeviceApprovalTest extends TestCase
             'approved_at' => now(),
         ]);
 
+        $existingSession = DeviceSession::create([
+            'user_id' => $student->id,
+            'student_device_id' => $existingDevice->id,
+            'session_hash' => hash('sha256', 'existing-student-browser-session'),
+            'device_name' => 'Android · Chrome',
+            'logged_in_at' => now()->subHour(),
+            'last_seen_at' => now(),
+        ]);
+
         $newDeviceToken = str_repeat('b', 64);
         $this->withCookie('lms_student_device', $newDeviceToken)
             ->post(route('login.post'), ['email' => $student->email, 'password' => 'password'])
@@ -112,6 +122,8 @@ class StudentDeviceApprovalTest extends TestCase
             'id' => $existingDevice->id,
             'status' => 'revoked',
         ]);
+
+        $this->assertNotNull($existingSession->fresh()->revoked_at);
 
         auth()->logout();
         $this->actingAs($student)
@@ -228,6 +240,89 @@ class StudentDeviceApprovalTest extends TestCase
             ]);
             auth()->logout();
         }
+    }
+
+
+    public function test_revoked_trusted_devices_log_out_every_non_admin_role(): void
+    {
+        foreach (['student', 'teacher', 'guardian', 'branch_manager', 'accountant'] as $index => $role) {
+            $user = User::factory()->create([
+                'role' => $role,
+                'email_verified_at' => now(),
+                'phone_number' => '+88017'.str_pad((string) (20000000 + $index), 8, '0', STR_PAD_LEFT),
+            ]);
+            $token = str_repeat(dechex($index + 1), 64);
+            $device = StudentDevice::create([
+                'user_id' => $user->id,
+                'device_hash' => hash('sha256', $token),
+                'device_name' => 'Trusted test device',
+                'status' => 'approved',
+                'phone_verified_at' => now(),
+                'approved_at' => now(),
+            ]);
+
+            $this->withCookie('lms_student_device', $token)
+                ->post(route('login.post'), ['email' => $user->email, 'password' => 'password'])
+                ->assertRedirect('/dashboard');
+
+            $this->assertAuthenticatedAs($user);
+            $device->forceFill(['status' => 'revoked'])->save();
+
+            $this->get('/dashboard')
+                ->assertRedirect(route('login'))
+                ->assertSessionHas('warning');
+            $this->assertGuest();
+        }
+    }
+
+
+
+    public function test_signing_in_with_one_approved_device_revokes_other_device_web_sessions(): void
+    {
+        $teacher = User::factory()->create([
+            'role' => 'teacher',
+            'email_verified_at' => now(),
+            'phone_number' => '+8801712345678',
+        ]);
+        $oldToken = str_repeat('a', 64);
+        $currentToken = str_repeat('b', 64);
+        $oldDevice = StudentDevice::create([
+            'user_id' => $teacher->id,
+            'device_hash' => hash('sha256', $oldToken),
+            'device_name' => 'Old trusted device',
+            'status' => 'approved',
+            'phone_verified_at' => now(),
+            'approved_at' => now(),
+        ]);
+        $currentDevice = StudentDevice::create([
+            'user_id' => $teacher->id,
+            'device_hash' => hash('sha256', $currentToken),
+            'device_name' => 'Current trusted device',
+            'status' => 'approved',
+            'phone_verified_at' => now(),
+            'approved_at' => now(),
+        ]);
+        $oldSession = DeviceSession::create([
+            'user_id' => $teacher->id,
+            'student_device_id' => $oldDevice->id,
+            'session_hash' => hash('sha256', 'old-teacher-session'),
+            'device_name' => 'Old trusted device',
+            'logged_in_at' => now()->subHour(),
+            'last_seen_at' => now(),
+        ]);
+
+        $this->withCookie('lms_student_device', $currentToken)
+            ->post(route('login.post'), ['email' => $teacher->email, 'password' => 'password'])
+            ->assertRedirect('/dashboard');
+
+        $this->assertSame('revoked', $oldDevice->fresh()->status);
+        $this->assertNotNull($oldSession->fresh()->revoked_at);
+        $this->assertSame('approved', $currentDevice->fresh()->status);
+        $this->assertDatabaseHas('device_sessions', [
+            'user_id' => $teacher->id,
+            'student_device_id' => $currentDevice->id,
+            'revoked_at' => null,
+        ]);
     }
 
     public function test_admin_password_login_remains_available_without_sms_for_recovery(): void

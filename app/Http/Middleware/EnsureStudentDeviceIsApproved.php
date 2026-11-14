@@ -15,7 +15,9 @@ class EnsureStudentDeviceIsApproved
         $user = $request->user();
         $deviceId = $request->session()->get('student_device_id');
 
-        if (! $user?->isStudent() || ! $deviceId) {
+        // Legacy sessions created before trusted-device tracking remain valid
+        // until sign-out/expiry. New non-admin logins always attach a device ID.
+        if (! $user || $user->isAdmin() || ! $deviceId) {
             return $next($request);
         }
 
@@ -31,7 +33,7 @@ class EnsureStudentDeviceIsApproved
             $request->session()->regenerateToken();
 
             return redirect()->route('login')
-                ->with('warning', 'This device no longer has access. Please sign in using your currently approved device.');
+                ->with('warning', 'This device no longer has access. Please sign in using an approved device.');
         }
 
         return $next($request);
