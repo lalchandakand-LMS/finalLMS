@@ -91,6 +91,39 @@ class AdminCourseContentPostController extends Controller
         return redirect()->route('admin.course-content-posts.index')->with('success', __('Course content post updated.'));
     }
 
+    public function bulkUpdate(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'post_ids' => ['required', 'array', 'min:1', 'max:100'],
+            'post_ids.*' => ['required', 'integer', 'distinct', Rule::exists('course_content_posts', 'id')],
+            'status' => ['required', Rule::in(['draft', 'published', 'archived'])],
+        ]);
+
+        DB::transaction(function () use ($data): void {
+            $posts = CourseContentPost::query()
+                ->whereIn('id', $data['post_ids'])
+                ->lockForUpdate()
+                ->get();
+
+            abort_if($posts->count() !== count($data['post_ids']), 404);
+
+            foreach ($posts as $post) {
+                $publishedAt = match ($data['status']) {
+                    'published' => $post->published_at ?? now(),
+                    'draft' => null,
+                    default => $post->published_at,
+                };
+
+                $post->update([
+                    'status' => $data['status'],
+                    'published_at' => $publishedAt,
+                ]);
+            }
+        });
+
+        return back()->with('success', __('Selected content posts updated.'));
+    }
+
     public function destroy(CourseContentPost $courseContentPost): RedirectResponse
     {
         abort_if($courseContentPost->courses()->exists(), 422, __('Remove this post from every course curriculum before deleting it.'));
