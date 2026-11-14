@@ -196,3 +196,14 @@ The release signing private key and public-key fingerprint still require secure 
 - The Student Flutter app includes OTP entry, Admin-approval waiting, 15-second approval polling, secure token persistence, session restoration and logout. Teacher API login remains password-based.
 - Exact-head verification on ff778f24eb4b7e1478eb23583ccea38b2a1bdee7: Laravel CI passed 309 tests / 1,608 assertions, migrations, route listing and frontend build; CodeQL passed; Flutter analyze and tests passed for both student and instructor apps.
 - Still required before app distribution: configure production-like SMS credentials and perform end-to-end login, wrong/expired OTP, additional-device approval, revocation and logout tests on isolated staging. Do not test against production student accounts or activate/deploy this PR.
+## eBook Store implementation — 2026-11-14
+
+- **In progress:** PR [#124](https://github.com/lalchandakand-LMS/finalLMS/pull/124), branch `feature/ebook-private-downloads-v1`, latest reviewed commit `4affeb566c40ec755f838f37a0af4ebcafa2fc06`.
+- Added a dedicated eBook catalog, admin product/category management, private PDF uploads, manual-reference checkout, private payment-proof review, student order/library pages and protected downloads.
+- Paid orders remain pending until an Admin independently verifies payment and approves. Free eBooks receive immediate entitlement.
+- Download authorization checks student ownership, completed order, revocation, expiry and remaining count. Active entitlements prevent repeated purchases from resetting a download limit; exhausted/expired entitlements may be purchased again.
+- Product creation and category assignment are transactional. Purchased product files cannot be replaced; products with order history are archived rather than deleted. Private payment-proof responses are non-cacheable.
+- **Validation:** earlier PR head `e2343bd13ab86d3cdb32430c997b8072693adfb9` passed Laravel CI including tests, migrations, route listing, asset build and cPanel package assembly; CodeQL passed. Subsequent hardening commits changed the tested head. Exact latest-head CI run #3913 and CodeQL #757 were still running at this update; do not mark PR #124 CI-verified until both complete on the latest head.
+- No production deployment, production database migration, or live gateway activation has occurred.
+- **Not included:** official bKash/Nagad/SSLCommerz gateway verification, refunds/revocation workflow UI, cart/coupons, staging acceptance and production rollout. This PR uses manual payment verification only.
+
