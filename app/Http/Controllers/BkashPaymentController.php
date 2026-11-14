@@ -154,6 +154,8 @@ class BkashPaymentController extends Controller
             abort_unless(strtoupper((string) ($lockedProduct->currency ?: 'BDT')) === 'BDT', 422, __('bKash supports BDT payments only.'));
             $amount = (float) $lockedProduct->currentPrice();
             abort_if($amount <= 0, 422, __('Free eBooks do not require bKash checkout.'));
+            $regularAmount = (float) $lockedProduct->regular_price;
+            $discountAmount = max(0, $regularAmount - $amount);
 
             $invoice = 'BKASH-'.Str::upper(Str::random(20));
             $order = Order::create([
@@ -163,8 +165,8 @@ class BkashPaymentController extends Controller
                 'payment_method' => 'bkash',
                 'payment_reference' => $invoice,
                 'currency' => 'BDT',
-                'subtotal' => $amount,
-                'discount_total' => 0,
+                'subtotal' => $regularAmount,
+                'discount_total' => $discountAmount,
                 'total' => $amount,
             ]);
 
@@ -174,7 +176,8 @@ class BkashPaymentController extends Controller
                 'product_type' => 'ebook',
                 'product_name' => $lockedProduct->name,
                 'quantity' => 1,
-                'regular_price' => $amount,
+                'regular_price' => $regularAmount,
+                'discount_total' => $discountAmount,
                 'line_total' => $amount,
                 'product_snapshot' => [
                     'name' => $lockedProduct->name,
