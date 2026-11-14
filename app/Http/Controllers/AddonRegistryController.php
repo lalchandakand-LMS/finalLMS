@@ -63,6 +63,15 @@ class AddonRegistryController extends Controller
             && filled(config('services.google_drive.redirect_uri'));
         $driveConnected = GoogleDriveConnection::query()->active()->exists();
         $updatePublicKey = (string) config('services.lms_updates.public_key_path');
+        $s3Disk = (array) config('filesystems.disks.s3', []);
+        $s3Endpoint = $s3Disk['endpoint'] ?? null;
+        $s3Credentials = filled($s3Disk['key'] ?? null)
+            && filled($s3Disk['secret'] ?? null)
+            && filled($s3Disk['region'] ?? null)
+            && filled($s3Disk['bucket'] ?? null);
+        $s3EndpointSecure = blank($s3Endpoint) || parse_url((string) $s3Endpoint, PHP_URL_SCHEME) === 'https';
+        $s3Ready = config('filesystems.default') === 's3' && $s3Credentials && $s3EndpointSecure;
+
 
         $definitions = [
             'bkash' => [
@@ -84,6 +93,22 @@ class AddonRegistryController extends Controller
                 'health' => ! $driveCredentials ? __('OAuth credentials missing') : ($driveConnected ? __('OAuth account connected') : __('OAuth configured; account connection required')),
                 'blocked' => false,
                 'requirements' => __('Google OAuth client ID, client secret and redirect URI; connect an account in Storage Manager'),
+            ],
+            's3_compatible_storage' => [
+                'name' => __('S3-compatible Object Storage'),
+                'provider' => 'AWS S3 / S3-compatible',
+                'purpose' => __('Private object storage for uploads and backups'),
+                'scopes' => ['storage.objects.read', 'storage.objects.write', 'storage.bucket.inspect'],
+                'config_ready' => $s3Ready,
+                'health' => ! $s3Credentials
+                    ? __('Missing S3 access key, secret, region or bucket')
+                    : (! $s3EndpointSecure
+                        ? __('S3-compatible endpoint must use HTTPS')
+                        : (config('filesystems.default') === 's3'
+                            ? __('S3 configuration ready; live bucket verification still required')
+                            : __('S3 credentials present; set FILESYSTEM_DISK=s3 to activate'))),
+                'blocked' => false,
+                'requirements' => __('FILESYSTEM_DISK=s3, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION and AWS_BUCKET; optional HTTPS AWS_ENDPOINT'),
             ],
             'lms_updates' => [
                 'name' => __('Signed LMS Update Center'),
