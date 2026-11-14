@@ -1973,6 +1973,7 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
       if (!mounted) return;
       setState(() {
         attempt = summary;
+        attemptsRemaining = (data['attempts_remaining'] as num?)?.toInt();
         _setQuestions(questionList);
       });
       _configureTimer();
