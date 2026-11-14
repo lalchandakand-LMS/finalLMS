@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CourseController;
 use App\Http\Controllers\Api\V1\InstructorAssignmentController;
 use App\Http\Controllers\Api\V1\InstructorLiveClassController;
+use App\Http\Controllers\Api\V1\InstructorLessonController;
 use App\Http\Controllers\Api\V1\StudentAssignmentController;
 use App\Http\Controllers\Api\V1\StudentExamController;
 use Illuminate\Support\Facades\Route;
@@ -39,6 +40,10 @@ Route::prefix('v1')->group(function (): void {
         Route::patch('/instructor/assignments/{assignment}/submissions/{submission}', [InstructorAssignmentController::class, 'grade'])->middleware('throttle:20,1');
         Route::get('/instructor/courses', [CourseController::class, 'teachingCourses']);
         Route::get('/instructor/courses/{course:slug}/students', [CourseController::class, 'courseStudents']);
+        Route::get('/instructor/courses/{course:slug}/lessons', [InstructorLessonController::class, 'index']);
+        Route::post('/instructor/courses/{course:slug}/lessons', [InstructorLessonController::class, 'store'])->middleware('throttle:20,1');
+        Route::put('/instructor/courses/{course:slug}/lessons/{lesson}', [InstructorLessonController::class, 'update'])->middleware('throttle:30,1');
+        Route::delete('/instructor/courses/{course:slug}/lessons/{lesson}', [InstructorLessonController::class, 'destroy'])->middleware('throttle:10,1');
         Route::get('/courses/{course:slug}/lessons/{lesson}', [CourseController::class, 'lesson']);
         Route::get('/courses/{course:slug}/lessons/{lesson}/video', [CourseController::class, 'streamLessonVideo']);
         Route::post('/courses/{course:slug}/lessons/{lesson}/complete', [CourseController::class, 'completeLesson']);
