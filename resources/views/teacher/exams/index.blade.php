@@ -92,9 +92,8 @@
             );
 
             card.querySelectorAll('input, textarea, select').forEach(field => {
-                const isEmptyOptionalCard = useBank && !hasManualContent;
-                field.disabled = isEmptyOptionalCard;
-                if (field.matches('textarea[name$="[question]"], input[name*="[options]"]')) {
+                field.disabled = false;
+                if (field.matches('textarea[name$="[question]"], input[name*="[options]"], input[name$="[marks]"]')) {
                     field.required = !useBank || hasManualContent;
                 }
             });
@@ -105,6 +104,23 @@
     bankToggle.addEventListener('change', syncQuestionMode);
     manualArea.addEventListener('input', syncQuestionMode);
     syncQuestionMode();
+
+    const examForm = bankToggle.closest('form');
+    examForm.addEventListener('submit', () => {
+        if (!bankToggle.checked) return;
+
+        manualArea.querySelectorAll('.exam-question').forEach(card => {
+            const questionField = card.querySelector('textarea[name$="[question]"]');
+            const optionFields = [...card.querySelectorAll('input[name*="[options]"]')];
+            const hasManualContent = Boolean(
+                questionField?.value.trim() || optionFields.some(field => field.value.trim())
+            );
+
+            if (!hasManualContent) {
+                card.querySelectorAll('input, textarea, select').forEach(field => field.disabled = true);
+            }
+        });
+    });
     if (!container || !button) return;
     button.addEventListener('click', () => {
         const index = container.querySelectorAll('.exam-question').length;
