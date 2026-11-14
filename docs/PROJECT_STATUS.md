@@ -265,3 +265,17 @@ No production deployment, production database mutation, live gateway activation 
 2. Confirm post-merge Laravel CI and CodeQL for main commit `1e6295a1c71289df4e2808689bcca47f376417e0`.
 3. Browser acceptance is still required for student resume/navigation, guardian privacy, branch manager and accountant flows on desktop/mobile and in Bangla/English.
 4. Admin Update Center remains partial; signed release activation, migrations, maintenance mode, health checks and tested rollback must be completed before advertising one-click updates.
+
+
+## Verified update — 2026-11-14 (mobile device OTP security regression coverage)
+
+- PR #174 merged to `main` as `d8c09f2c61d6b2a37bf5e5493f66044bc149becd`.
+- Adds regression coverage proving a device OTP challenge is single-use, expired OTPs cannot issue a bearer token even while the longer challenge token remains valid, and repeated incorrect codes are throttled per challenge independently of source IP.
+- Exact-head Laravel CI, cPanel package build and CodeQL passed before merge. Post-merge CodeQL passed; post-merge Laravel CI was still running at the time of this documentation update and must be rechecked before calling the mainline fully verified.
+- Test-only change: no authentication implementation, SMS provider configuration, production sessions or user data changed.
+- PR #175 merged the previous project-status correction as `e89fff1003875b2fea86ef43e07b3fa1bf822bc0`; its exact-head CI, package build and CodeQL passed.
+
+## Architecture clarification — Issue #38
+
+- Issue #38 now begins with an explicit notice that its older four-portal proposal is superseded by owner decision D-003: Admin, Branch, Teacher, Student and Guardian. One unified Admin Panel; Branch remains separate and server-side scoped.
+- Use Issue #38 only for compatible permission, role and Guardian privacy requirements; do not implement its obsolete four-portal count.
