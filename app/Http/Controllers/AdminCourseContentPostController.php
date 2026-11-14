@@ -8,6 +8,7 @@ use App\Models\MediaAsset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -63,8 +64,12 @@ class AdminCourseContentPostController extends Controller
         $data['slug'] = $this->uniqueSlug(($data['slug'] ?? '') ?: $data['title']);
         $data['published_at'] = $data['status'] === 'published' ? ($data['published_at'] ?? now()) : null;
 
-        $post = CourseContentPost::create($data);
-        $post->categories()->sync($categoryIds);
+        $post = DB::transaction(function () use ($data, $categoryIds): CourseContentPost {
+            $post = CourseContentPost::create($data);
+            $post->categories()->sync($categoryIds);
+
+            return $post;
+        });
 
         return redirect()->route('admin.course-content-posts.index')->with('success', __('Course content post created.'));
     }
@@ -77,8 +82,11 @@ class AdminCourseContentPostController extends Controller
         $data['slug'] = $this->uniqueSlug(($data['slug'] ?? '') ?: $data['title'], $courseContentPost->id);
         $data['published_at'] = $data['status'] === 'published' ? ($data['published_at'] ?? $courseContentPost->published_at ?? now()) : null;
 
-        $courseContentPost->update($data);
-        $courseContentPost->categories()->sync($categoryIds);
+        DB::transaction(function () use ($courseContentPost, $data, $categoryIds): void {
+            $post = CourseContentPost::query()->lockForUpdate()->findOrFail($courseContentPost->id);
+            $post->update($data);
+            $post->categories()->sync($categoryIds);
+        });
 
         return redirect()->route('admin.course-content-posts.index')->with('success', __('Course content post updated.'));
     }
