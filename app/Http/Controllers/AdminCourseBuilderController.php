@@ -49,6 +49,10 @@ class AdminCourseBuilderController extends Controller
             'question_set_positions.*' => ['nullable', 'integer', 'min:0', 'max:100000'],
             'question_set_max_attempts' => ['nullable', 'array'],
             'question_set_max_attempts.*' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'question_set_time_limits' => ['nullable', 'array'],
+            'question_set_time_limits.*' => ['nullable', 'integer', 'min:1', 'max:600'],
+            'question_set_questions_per_attempt' => ['nullable', 'array'],
+            'question_set_questions_per_attempt.*' => ['nullable', 'integer', 'min:1', 'max:200'],
             'question_set_randomize' => ['nullable', 'array'],
             'question_set_randomize.*' => ['nullable', 'boolean'],
             'question_set_available_from' => ['nullable', 'array'],
@@ -64,10 +68,12 @@ class AdminCourseBuilderController extends Controller
         $questionSetSections = $data['question_set_section_titles'] ?? [];
         $questionSetPositions = $data['question_set_positions'] ?? [];
         $questionSetAttempts = $data['question_set_max_attempts'] ?? [];
+        $questionSetTimeLimits = $data['question_set_time_limits'] ?? [];
+        $questionSetQuestionsPerAttempt = $data['question_set_questions_per_attempt'] ?? [];
         $questionSetRandomize = $data['question_set_randomize'] ?? [];
         $questionSetAvailableFrom = $data['question_set_available_from'] ?? [];
 
-        DB::transaction(function () use ($course, $postIds, $sectionTitles, $positions, $previews, $durations, $questionSetIds, $questionSetSections, $questionSetPositions, $questionSetAttempts, $questionSetRandomize, $questionSetAvailableFrom): void {
+        DB::transaction(function () use ($course, $postIds, $sectionTitles, $positions, $previews, $durations, $questionSetIds, $questionSetSections, $questionSetPositions, $questionSetAttempts, $questionSetTimeLimits, $questionSetQuestionsPerAttempt, $questionSetRandomize, $questionSetAvailableFrom): void {
             $course->curriculumItems()->when($postIds->isNotEmpty(), fn ($query) => $query->whereNotIn('course_content_post_id', $postIds))->when($postIds->isEmpty(), fn ($query) => $query)->delete();
 
             foreach ($postIds as $index => $postId) {
@@ -89,6 +95,10 @@ class AdminCourseBuilderController extends Controller
                     'position' => (int) ($questionSetPositions[$setId] ?? (($index + 1) * 10)),
                     'max_attempts' => isset($questionSetAttempts[$setId]) && $questionSetAttempts[$setId] !== ''
                         ? (int) $questionSetAttempts[$setId] : null,
+                    'time_limit_minutes' => isset($questionSetTimeLimits[$setId]) && $questionSetTimeLimits[$setId] !== ''
+                        ? (int) $questionSetTimeLimits[$setId] : null,
+                    'questions_per_attempt' => isset($questionSetQuestionsPerAttempt[$setId]) && $questionSetQuestionsPerAttempt[$setId] !== ''
+                        ? (int) $questionSetQuestionsPerAttempt[$setId] : null,
                     'randomize_questions' => (bool) ($questionSetRandomize[$setId] ?? false),
                     'available_from' => $questionSetAvailableFrom[$setId] ?? null,
                 ];
