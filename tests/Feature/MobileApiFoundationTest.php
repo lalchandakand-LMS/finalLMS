@@ -240,15 +240,22 @@ class MobileApiFoundationTest extends TestCase
             'duration_minutes' => 20,
             'order' => 1,
         ]);
+        $inProgressLesson = $course->lessons()->create([
+            'title' => 'Second lesson',
+            'content' => 'Continue speaking practice.',
+            'duration_minutes' => 20,
+            'order' => 2,
+        ]);
         Enrollment::create(['user_id' => $student->id, 'course_id' => $course->id, 'status' => 'active']);
         Enrollment::create(['user_id' => $otherStudent->id, 'course_id' => $course->id, 'status' => 'active']);
         LessonProgress::create(['user_id' => $student->id, 'lesson_id' => $lesson->id, 'completed_at' => now()]);
+        LessonProgress::create(['user_id' => $student->id, 'lesson_id' => $inProgressLesson->id, 'completed_at' => null, 'last_viewed_at' => now()]);
         $token = $this->createStudentApiToken($student, 'student-course-token-0123456789012345678901234567890123456789');
 
         $this->withToken('student-course-token-0123456789012345678901234567890123456789')->getJson('/api/v1/my/courses')
             ->assertOk()
             ->assertJsonPath('meta.total', 1)
-            ->assertJsonPath('data.0.progress_percent', 100)
+            ->assertJsonPath('data.0.progress_percent', 50)
             ->assertJsonPath('data.0.course.id', $course->id);
     }
 
@@ -367,11 +374,23 @@ class MobileApiFoundationTest extends TestCase
             'title' => 'Complete from app', 'content' => 'Lesson', 'duration_minutes' => 10, 'order' => 1,
         ]);
         Enrollment::create(['user_id' => $student->id, 'course_id' => $course->id, 'status' => 'active']);
+        LessonProgress::create([
+            'user_id' => $student->id,
+            'lesson_id' => $lesson->id,
+            'completed_at' => null,
+            'last_viewed_at' => now(),
+        ]);
         $this->createStudentApiToken($student, 'mobile-completion-token-0123456789012345678901234567890123456789');
         $url = '/api/v1/courses/'.$course->slug.'/lessons/'.$lesson->id.'/complete';
 
         $this->withToken('mobile-completion-token-0123456789012345678901234567890123456789')
-            ->postJson($url)->assertOk()->assertJsonPath('completed', true);
+            ->getJson('/api/v1/courses/'.$course->slug.'/lessons/'.$lesson->id)
+            ->assertOk()
+            ->assertJsonPath('lesson.is_completed', false);
+
+        $this->withToken('mobile-completion-token-0123456789012345678901234567890123456789')
+            ->postJson($url)->assertOk()->assertJsonPath('completed', true)
+            ->assertJsonPath('completed_at', fn ($value) => is_string($value));
         $this->withToken('mobile-completion-token-0123456789012345678901234567890123456789')
             ->postJson($url)->assertOk()->assertJsonPath('completed', true);
 
