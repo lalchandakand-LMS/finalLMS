@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 import 'api_client.dart';
+import 'package:video_player/video_player.dart';
 
 void main() => runApp(const StudentApp());
 
@@ -698,9 +699,12 @@ class LessonPlayerPage extends StatefulWidget {
 
 class _LessonPlayerPageState extends State<LessonPlayerPage> {
   Map<String, dynamic>? lesson;
+  VideoPlayerController? videoController;
   bool loading = true;
+  bool videoLoading = false;
   bool saving = false;
   String? error;
+  String? videoError;
 
   @override
   void initState() {
@@ -708,16 +712,59 @@ class _LessonPlayerPageState extends State<LessonPlayerPage> {
     load();
   }
 
+  @override
+  void dispose() {
+    final controller = videoController;
+    if (controller != null) {
+      unawaited(controller.dispose());
+    }
+    super.dispose();
+  }
+
   Future<void> load() async {
     try {
       final response = await widget.api.get(
         '/courses/${widget.slug}/lessons/${widget.lessonId}',
       );
-      if (mounted) { setState(() => lesson = response['lesson'] as Map<String, dynamic>); }
+      if (!mounted) return;
+      final data = response['lesson'] as Map<String, dynamic>;
+      setState(() => lesson = data);
+      final streamPath = data['video_stream_path']?.toString();
+      if (streamPath != null && streamPath.isNotEmpty) {
+        await initializeVideo(streamPath);
+      }
     } catch (exception) {
-      if (mounted) { setState(() => error = exception.toString()); }
+      if (mounted) setState(() => error = exception.toString());
     } finally {
-      if (mounted) { setState(() => loading = false); }
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> initializeVideo(String path) async {
+    setState(() {
+      videoLoading = true;
+      videoError = null;
+    });
+    VideoPlayerController? nextController;
+    try {
+      final headers = await widget.api.videoHeaders();
+      nextController = VideoPlayerController.networkUrl(
+        Uri.parse('${MobileApi.baseUrl}$path'),
+        httpHeaders: headers,
+      );
+      await nextController.initialize();
+      if (!mounted) {
+        await nextController.dispose();
+        return;
+      }
+      final previous = videoController;
+      setState(() => videoController = nextController);
+      if (previous != null) await previous.dispose();
+    } catch (exception) {
+      await nextController?.dispose();
+      if (mounted) setState(() => videoError = exception.toString());
+    } finally {
+      if (mounted) setState(() => videoLoading = false);
     }
   }
 
@@ -727,12 +774,113 @@ class _LessonPlayerPageState extends State<LessonPlayerPage> {
       await widget.api.post(
         '/courses/${widget.slug}/lessons/${widget.lessonId}/complete',
       );
-      if (mounted) { setState(() => lesson?['is_completed'] = true); }
+      if (mounted) setState(() => lesson?['is_completed'] = true);
     } catch (exception) {
-      if (mounted) { setState(() => error = exception.toString()); }
+      if (mounted) setState(() => error = exception.toString());
     } finally {
-      if (mounted) { setState(() => saving = false); }
+      if (mounted) setState(() => saving = false);
     }
+  }
+
+  String formatDuration(Duration duration) {
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return hours > 0 ? '$hours:$minutes:$seconds' : '$minutes:$seconds';
+  }
+
+  Widget buildVideoPlayer() {
+    final streamPath = lesson?['video_stream_path']?.toString();
+    if (streamPath == null || streamPath.isEmpty) {
+      final externalUrl = lesson?['video_url']?.toString();
+      if (externalUrl == null || externalUrl.isEmpty) {
+        return const SizedBox.shrink();
+      }
+      return Card(
+        child: ListTile(
+          leading: const Icon(Icons.link),
+          title: const Text('External lesson video'),
+          subtitle: SelectableText(externalUrl),
+        ),
+      );
+    }
+
+    if (videoLoading) {
+      return const AspectRatio(
+        aspectRatio: 16 / 9,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (videoError != null) {
+      return Card(
+        child: ListTile(
+          leading: const Icon(Icons.error_outline),
+          title: const Text('Video could not be loaded'),
+          subtitle: Text(videoError!),
+          trailing: IconButton(
+            tooltip: 'Retry video',
+            onPressed: () => initializeVideo(streamPath),
+            icon: const Icon(Icons.refresh),
+          ),
+        ),
+      );
+    }
+
+    final controller = videoController;
+    if (controller == null || !controller.value.isInitialized) {
+      return const SizedBox.shrink();
+    }
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AspectRatio(
+              aspectRatio: controller.value.aspectRatio > 0
+                  ? controller.value.aspectRatio
+                  : 16 / 9,
+              child: VideoPlayer(controller),
+            ),
+            const SizedBox(height: 8),
+            VideoProgressIndicator(
+              controller,
+              allowScrubbing: true,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+            ),
+            ValueListenableBuilder<VideoPlayerValue>(
+              valueListenable: controller,
+              builder: (context, value, _) => Row(
+                children: [
+                  IconButton(
+                    tooltip: value.isPlaying ? 'Pause video' : 'Play video',
+                    onPressed: () {
+                      if (value.isPlaying) {
+                        controller.pause();
+                      } else {
+                        controller.play();
+                      }
+                    },
+                    icon: Icon(
+                      value.isPlaying ? Icons.pause_circle : Icons.play_circle,
+                      size: 34,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${formatDuration(value.position)} / ${formatDuration(value.duration)}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -750,8 +898,7 @@ class _LessonPlayerPageState extends State<LessonPlayerPage> {
                         style: Theme.of(context).textTheme.headlineSmall,
                       ),
                       const SizedBox(height: 16),
-                      if ((lesson?['video_url'] ?? '').toString().isNotEmpty)
-                        SelectableText('Video: ${lesson?['video_url']}'),
+                      buildVideoPlayer(),
                       const SizedBox(height: 16),
                       Text(lesson?['content']?.toString() ?? ''),
                       if (widget.enrolled && lesson?['is_completed'] != true)
