@@ -40,6 +40,7 @@ use App\Http\Controllers\FlashSaleController;
 use App\Http\Controllers\AdminProductController;
 use App\Http\Controllers\AdminQuestionSetController;
 use App\Http\Controllers\StudentQuestionSetAttemptController;
+use App\Http\Controllers\TeacherQuestionSetGradingController;
 use App\Http\Controllers\EbookStoreController;
 use App\Http\Controllers\AdminEbookOrderController;
 use App\Http\Controllers\GuardianController;
@@ -163,6 +164,16 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
     Route::delete('/live-classes/{liveClass}', [LiveClassController::class, 'destroy'])
         ->middleware('role:teacher,admin')
         ->name('live-classes.destroy');
+
+    Route::middleware(['role:teacher,admin'])->prefix('teacher')->name('teacher.')->group(function () {
+        Route::get('/courses/{course}/question-sets/{questionSet}/attempts', [TeacherQuestionSetGradingController::class, 'index'])
+            ->name('question-set-attempts.index');
+        Route::get('/question-set-attempts/{attempt}', [TeacherQuestionSetGradingController::class, 'show'])
+            ->name('question-set-attempts.show');
+        Route::post('/question-set-attempts/{attempt}/grade', [TeacherQuestionSetGradingController::class, 'grade'])
+            ->middleware('throttle:20,1')
+            ->name('question-set-attempts.grade');
+    });
 
     Route::middleware('role:teacher')->get('/teacher/batches', [BatchController::class, 'teacherIndex'])->name('teacher.batches.index');
     Route::middleware('role:teacher')->get('/teacher/courses/{course}/lessons', [CourseController::class, 'teacherLessons'])->name('teacher.courses.lessons.index');
