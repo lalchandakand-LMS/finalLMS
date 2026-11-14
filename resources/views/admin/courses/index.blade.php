@@ -7,7 +7,7 @@
         <div><span class="badge info">Admin</span><h1 style="margin:12px 0 0;">{{ __('Course management') }}</h1></div>
         <a href="{{ route('admin.courses.create') }}" class="btn primary">{{ __('Create course') }}</a>
     </div>
-    <form method="GET" action="{{ route('admin.courses.index') }}" class="panel" style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:12px;align-items:end;margin-bottom:16px;">
+    <form method="GET" action="{{ route('admin.courses.index') }}" class="panel" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;align-items:end;margin-bottom:16px;">
         <label>{{ __('Search courses') }}
             <input type="search" name="search" maxlength="120" value="{{ $filters['search'] ?? '' }}" placeholder="{{ __('Course title or slug') }}">
         </label>
