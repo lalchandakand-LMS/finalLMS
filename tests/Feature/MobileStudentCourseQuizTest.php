@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\ApiToken;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\QuestionSet;
@@ -205,17 +204,20 @@ class MobileStudentCourseQuizTest extends TestCase
     private function token(User $user): string
     {
         $plain = Str::random(80);
-        $device = StudentDevice::create([
-            'user_id' => $user->id,
-            'device_hash' => hash('sha256', Str::random(64)),
-            'device_name' => 'Mobile Quiz API test device',
-            'status' => 'approved',
-            'phone_verified_at' => now(),
-            'approved_at' => now(),
-        ]);
+        $device = null;
+        if ($user->isStudent()) {
+            $device = StudentDevice::create([
+                'user_id' => $user->id,
+                'device_hash' => hash('sha256', Str::random(64)),
+                'device_name' => 'Mobile Quiz API test device',
+                'status' => 'approved',
+                'phone_verified_at' => now(),
+                'approved_at' => now(),
+            ]);
+        }
 
         $user->apiTokens()->create([
-            'student_device_id' => $device->id,
+            'student_device_id' => $device?->id,
             'name' => 'Mobile Quiz API test',
             'token_hash' => hash('sha256', $plain),
             'expires_at' => now()->addDay(),
