@@ -62,11 +62,14 @@
             let saveTimer = null;
             let countdownTimer = null;
             let saving = false;
+            let dirty = false;
+            let submitting = false;
             const saveUrl = form.dataset.saveUrl;
 
             const saveAnswers = async () => {
-                if (saving) return;
+                if (saving || submitting || !dirty) return;
                 saving = true;
+                dirty = false;
                 status.textContent = '{{ __('Saving answers...') }}';
                 try {
                     const response = await fetch(saveUrl, {
@@ -77,25 +80,37 @@
                     });
                     if (response.status === 409) {
                         status.textContent = '{{ __('Time expired. Your saved answers have been finalized.') }}';
-                        window.location.reload();
+                        if (!submitting) window.location.reload();
+                        return;
+                    }
+                    if (response.status === 422) {
+                        status.textContent = '{{ __('Please check your answers before saving again.') }}';
                         return;
                     }
                     if (!response.ok) throw new Error('save_failed');
                     status.textContent = '{{ __('All answers saved.') }}';
                 } catch (error) {
-                    status.textContent = '{{ __('Could not save just now. Your answers will be retried.') }}';
+                    dirty = true;
+                    status.textContent = '{{ __('Connection issue. Retrying answer save...') }}';
                 } finally {
                     saving = false;
+                    if (dirty && !submitting) {
+                        if (saveTimer) window.clearTimeout(saveTimer);
+                        saveTimer = window.setTimeout(saveAnswers, 1500);
+                    }
                 }
             };
 
             const scheduleSave = () => {
+                dirty = true;
                 if (saveTimer) window.clearTimeout(saveTimer);
                 saveTimer = window.setTimeout(saveAnswers, 700);
             };
             form.addEventListener('input', scheduleSave);
             form.addEventListener('change', scheduleSave);
             form.addEventListener('submit', () => {
+                submitting = true;
+                dirty = false;
                 if (saveTimer) window.clearTimeout(saveTimer);
                 if (countdownTimer) window.clearInterval(countdownTimer);
                 status.textContent = '{{ __('Submitting quiz...') }}';
