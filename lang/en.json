@@ -519,5 +519,6 @@
     "View attempt": "View attempt",
     "No quiz attempts yet": "No quiz attempts yet",
     "Quizzes attached to your enrolled courses will appear here after you start one.": "Quizzes attached to your enrolled courses will appear here after you start one.",
-    "Quiz attempts": "Quiz attempts"
+    "Quiz attempts": "Quiz attempts",
+    "Published posts can be added to a course. Existing attached draft or archived posts remain visible here so saving the curriculum does not silently remove them.": "Published posts can be added to a course. Existing attached draft or archived posts remain visible here so saving the curriculum does not silently remove them."
 }
