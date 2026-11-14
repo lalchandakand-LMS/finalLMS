@@ -46,6 +46,7 @@ class BranchManagerDataScopeTest extends TestCase
         $this->batch($otherBranch, $course, 'Other branch secret batch');
         $manager = User::factory()->create([
             'role' => 'branch_manager',
+            'admin_permissions' => ['branch.batches', 'branch.students'],
             'branch_id' => $ownBranch->id,
         ]);
 
@@ -64,6 +65,7 @@ class BranchManagerDataScopeTest extends TestCase
         $foreignBatch = $this->batch($otherBranch, $course, 'Protected batch');
         $manager = User::factory()->create([
             'role' => 'branch_manager',
+            'admin_permissions' => ['branch.batches', 'branch.students'],
             'branch_id' => $ownBranch->id,
         ]);
 
@@ -99,6 +101,7 @@ class BranchManagerDataScopeTest extends TestCase
         ]);
         $manager = User::factory()->create([
             'role' => 'branch_manager',
+            'admin_permissions' => ['branch.batches', 'branch.students'],
             'branch_id' => $ownBranch->id,
         ]);
 
@@ -142,6 +145,7 @@ class BranchManagerDataScopeTest extends TestCase
         $branch = $this->branch('Branch Role Center');
         $manager = User::factory()->create([
             'role' => 'branch_manager',
+            'admin_permissions' => ['branch.batches', 'branch.students'],
             'branch_id' => $branch->id,
         ]);
 
