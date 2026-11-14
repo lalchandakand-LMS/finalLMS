@@ -22,6 +22,7 @@ use App\Http\Controllers\SmsCampaignController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\LiveClassController;
 use App\Http\Controllers\ExamController;
+use App\Http\Controllers\ExamAnswerController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\FinanceReportController;
 use App\Http\Controllers\ExpenseController;
@@ -210,6 +211,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::get('/my/exams', [ExamController::class, 'studentExams'])->name('student.exams.index');
         Route::get('/exams/{exam}', [ExamController::class, 'studentIndex'])->name('student.exams.show');
         Route::post('/exams/{exam}/start', [ExamController::class, 'start'])->name('student.exams.start');
+        Route::post('/exam-attempts/{attempt}/answers', [ExamAnswerController::class, 'save'])->middleware('throttle:120,1')->name('student.exams.answers.save');
         Route::post('/exam-attempts/{attempt}/submit', [ExamController::class, 'submit'])->name('student.exams.submit');
         Route::get('/student/quiz-attempts', [StudentQuestionSetAttemptHistoryController::class, 'index'])
         ->middleware('role:student')
@@ -310,6 +312,13 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::post('/invoices', [InvoiceController::class, 'store'])->name('admin.invoices.store');
         Route::post('/invoices/{invoice}/payments', [InvoiceController::class, 'receivePayment'])->name('admin.invoices.payments.store');
         Route::get('/batches', [BatchController::class, 'index'])->name('admin.batches.index');
+        Route::get('/batches/{batch}/exams', [ExamController::class, 'teacherIndex'])->name('admin.batches.exams.index');
+        Route::post('/batches/{batch}/exams', [ExamController::class, 'store'])->middleware('throttle:10,1')->name('admin.batches.exams.store');
+        Route::get('/batches/{batch}/question-bank', [ExamController::class, 'questionBank'])->name('admin.batches.question-bank.index');
+        Route::post('/batches/{batch}/question-bank', [ExamController::class, 'storeBankQuestion'])->middleware('throttle:20,1')->name('admin.batches.question-bank.store');
+        Route::put('/batches/{batch}/question-bank/{question}', [ExamController::class, 'updateBankQuestion'])->middleware('throttle:30,1')->name('admin.batches.question-bank.update');
+        Route::delete('/batches/{batch}/question-bank/{question}', [ExamController::class, 'destroyBankQuestion'])->middleware('throttle:20,1')->name('admin.batches.question-bank.destroy');
+        Route::get('/exams/{exam}/results', [ExamController::class, 'teacherResults'])->name('admin.exams.results');
         Route::get('/batches/{batch}/assignments', [AssignmentController::class, 'index'])->name('admin.batches.assignments.index');
         Route::post('/batches/{batch}/assignments', [AssignmentController::class, 'store'])->middleware('throttle:10,1')->name('admin.batches.assignments.store');
         Route::post('/assignments/{assignment}/submissions/{submission}/grade', [AssignmentController::class, 'grade'])->middleware('throttle:30,1')->name('admin.assignments.grade');

@@ -5,12 +5,12 @@
 @section('content')
     <div class="page-header">
         <div><span class="badge info">{{ $batch->course->title }}</span><h1 style="margin:12px 0 0;">{{ __('Question Bank') }}</h1><p class="muted">{{ __('Reusable MCQ questions for your exams.') }}</p></div>
-        <a href="{{ route('teacher.batches.exams.index', $batch) }}" class="btn secondary">{{ __('Back to exams') }}</a>
+        <a href="{{ $isAdmin ? route('admin.batches.exams.index', $batch) : route('teacher.batches.exams.index', $batch) }}" class="btn secondary">{{ __('Back to exams') }}</a>
     </div>
 
     <div class="panel" style="margin-bottom:20px;">
         <h2>{{ __('Add question') }}</h2>
-        <form method="POST" action="{{ route('teacher.batches.question-bank.store', $batch) }}">
+        <form method="POST" action="{{ $isAdmin ? route('admin.batches.question-bank.store', $batch) : route('teacher.batches.question-bank.store', $batch) }}">
             @csrf
             <label>{{ __('Subject / topic') }}<input name="subject" maxlength="120" placeholder="e.g. Grammar"></label>
             <div class="grid grid-2">
@@ -40,7 +40,7 @@
             <label>{{ __('Difficulty') }}<select name="difficulty"><option value="">{{ __('All levels') }}</option>@foreach(['easy','medium','hard'] as $level)<option value="{{ $level }}" @selected(request('difficulty') === $level)>{{ ucfirst($level) }}</option>@endforeach</select></label>
         </div>
         <button class="btn primary" type="submit">{{ __('Filter questions') }}</button>
-        <a class="btn secondary" href="{{ route('teacher.batches.question-bank.index', $batch) }}">{{ __('Clear') }}</a>
+        <a class="btn secondary" href="{{ $isAdmin ? route('admin.batches.question-bank.index', $batch) : route('teacher.batches.question-bank.index', $batch) }}">{{ __('Clear') }}</a>
     </form>
 
     <div class="course-list">
@@ -51,7 +51,7 @@
                 <ol type="A">@foreach($question->options as $option)<li>{{ $option }}</li>@endforeach</ol>
                 <p class="muted">{{ __('Correct answer:') }} {{ ['A', 'B', 'C', 'D'][$question->correct_option] }} · {{ $question->marks }} marks · {{ ucfirst($question->difficulty ?? 'medium') }}</p>
                 <details><summary>{{ __('Edit question') }}</summary>
-                    <form method="POST" action="{{ route('teacher.batches.question-bank.update', [$batch, $question]) }}">
+                    <form method="POST" action="{{ $isAdmin ? route('admin.batches.question-bank.update', [$batch, $question]) : route('teacher.batches.question-bank.update', [$batch, $question]) }}">
                         @csrf @method('PUT')
                         <label>{{ __('Subject') }}<input name="subject" value="{{ $question->subject }}"></label>
                         <label>{{ __('Category') }}<input name="category" value="{{ $question->category }}"></label>
@@ -62,7 +62,7 @@
                         <button class="btn primary" type="submit">{{ __('Update') }}</button>
                     </form>
                 </details>
-                <form method="POST" action="{{ route('teacher.batches.question-bank.destroy', [$batch, $question]) }}" onsubmit="return confirm('{{ __('Delete this question?') }}')">
+                <form method="POST" action="{{ $isAdmin ? route('admin.batches.question-bank.destroy', [$batch, $question]) : route('teacher.batches.question-bank.destroy', [$batch, $question]) }}" onsubmit="return confirm('{{ __('Delete this question?') }}')">
                     @csrf @method('DELETE') <button class="btn secondary" type="submit">{{ __('Delete') }}</button>
                 </form>
             </article>

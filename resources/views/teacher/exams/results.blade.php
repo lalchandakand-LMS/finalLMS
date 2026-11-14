@@ -9,7 +9,7 @@
             <h1 style="margin:12px 0 0;">{{ $exam->title }} — {{ __('Results') }}</h1>
             <p class="muted">{{ __('Pass marks:') }} {{ $exam->pass_marks }} · {{ $attempts->total() }} {{ __('submitted attempts') }}</p>
         </div>
-        <a href="{{ route('teacher.batches.exams.index', $exam->batch_id) }}" class="btn secondary">{{ __('Back to exams') }}</a>
+        <a href="{{ $isAdmin ? route('admin.batches.exams.index', $exam->batch_id) : route('teacher.batches.exams.index', $exam->batch_id) }}" class="btn secondary">{{ __('Back to exams') }}</a>
     </div>
 
     <div class="panel">
