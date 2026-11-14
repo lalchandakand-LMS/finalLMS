@@ -406,6 +406,142 @@ class MobileApiFoundationTest extends TestCase
         $this->withToken('expired-device-token-0123456789012345678901234567890123456789')->getJson('/api/v1/auth/me')->assertUnauthorized();
         $this->withToken('not-a-valid-token-0123456789012345678901234567890123456789')->getJson('/api/v1/auth/me')->assertUnauthorized();
     }
+    public function test_mobile_device_otp_challenge_is_one_time_and_cannot_issue_duplicate_tokens(): void
+    {
+        config([
+            'services.twilio.sid' => 'AC-test-account',
+            'services.twilio.token' => 'test-auth-token',
+            'services.twilio.from' => '+15005550006',
+        ]);
+        $code = null;
+        Http::fake(function ($request) use (&$code) {
+            preg_match('/code is ([0-9]{6})/', $request['Body'], $matches);
+            $code = $matches[1] ?? null;
+
+            return Http::response(['sid' => 'SM-test'], 201);
+        });
+
+        $student = User::factory()->create([
+            'role' => 'student',
+            'email' => 'otp-replay@example.test',
+            'password' => Hash::make('correct-password'),
+            'phone_number' => '+8801712345678',
+        ]);
+        $login = $this->postJson('/api/v1/auth/login', [
+            'email' => $student->email,
+            'password' => 'correct-password',
+            'device_name' => 'Student Android',
+            'device_id' => str_repeat('e', 64),
+        ])->assertStatus(202);
+
+        $challenge = $login->json('challenge_token');
+        $this->assertNotNull($code);
+
+        $this->postJson('/api/v1/auth/verify-device', [
+            'challenge_token' => $challenge,
+            'code' => $code,
+        ])->assertOk();
+
+        $this->assertDatabaseCount('api_tokens', 1);
+        $this->postJson('/api/v1/auth/verify-device', [
+            'challenge_token' => $challenge,
+            'code' => $code,
+        ])->assertStatus(410);
+
+        $this->assertDatabaseCount('api_tokens', 1);
+        $this->assertDatabaseHas('student_devices', [
+            'user_id' => $student->id,
+            'api_challenge_hash' => null,
+            'phone_otp_hash' => null,
+        ]);
+    }
+
+    public function test_mobile_device_otp_expiry_prevents_token_issuance(): void
+    {
+        config([
+            'services.twilio.sid' => 'AC-test-account',
+            'services.twilio.token' => 'test-auth-token',
+            'services.twilio.from' => '+15005550006',
+        ]);
+        $code = null;
+        Http::fake(function ($request) use (&$code) {
+            preg_match('/code is ([0-9]{6})/', $request['Body'], $matches);
+            $code = $matches[1] ?? null;
+
+            return Http::response(['sid' => 'SM-test'], 201);
+        });
+
+        $student = User::factory()->create([
+            'role' => 'student',
+            'email' => 'otp-expiry@example.test',
+            'password' => Hash::make('correct-password'),
+            'phone_number' => '+8801712345678',
+        ]);
+        $login = $this->postJson('/api/v1/auth/login', [
+            'email' => $student->email,
+            'password' => 'correct-password',
+            'device_name' => 'Student Android',
+            'device_id' => str_repeat('f', 64),
+        ])->assertStatus(202);
+
+        $challenge = $login->json('challenge_token');
+        $device = StudentDevice::query()->where('user_id', $student->id)->firstOrFail();
+        $this->assertNotNull($code);
+
+        $this->travelTo($device->phone_otp_expires_at->copy()->addSecond());
+        $this->postJson('/api/v1/auth/verify-device', [
+            'challenge_token' => $challenge,
+            'code' => $code,
+        ])->assertUnprocessable();
+
+        $this->assertDatabaseCount('api_tokens', 0);
+        $this->assertSame('pending_phone_verification', $device->fresh()->status);
+    }
+
+    public function test_mobile_device_otp_rate_limit_blocks_repeated_incorrect_codes_per_challenge(): void
+    {
+        config([
+            'services.twilio.sid' => 'AC-test-account',
+            'services.twilio.token' => 'test-auth-token',
+            'services.twilio.from' => '+15005550006',
+        ]);
+        Http::fake(fn () => Http::response(['sid' => 'SM-test'], 201));
+
+        $student = User::factory()->create([
+            'role' => 'student',
+            'email' => 'otp-throttle@example.test',
+            'password' => Hash::make('correct-password'),
+            'phone_number' => '+8801712345678',
+        ]);
+        $login = $this->postJson('/api/v1/auth/login', [
+            'email' => $student->email,
+            'password' => 'correct-password',
+            'device_name' => 'Student Android',
+            'device_id' => str_repeat('9', 64),
+        ])->assertStatus(202);
+
+        $challenge = $login->json('challenge_token');
+        for ($attempt = 1; $attempt <= 5; $attempt++) {
+            $this->withServerVariables(['REMOTE_ADDR' => '192.0.2.'.$attempt])
+                ->postJson('/api/v1/auth/verify-device', [
+                    'challenge_token' => $challenge,
+                    'code' => '000000',
+                ])->assertUnprocessable();
+        }
+
+        $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.10'])
+            ->postJson('/api/v1/auth/verify-device', [
+                'challenge_token' => $challenge,
+                'code' => '000000',
+            ])->assertStatus(429);
+
+        $this->assertDatabaseCount('api_tokens', 0);
+        $this->assertSame(
+            'pending_phone_verification',
+            StudentDevice::query()->where('user_id', $student->id)->firstOrFail()->status
+        );
+    }
+
     private function createStudentApiToken(
         User $student,
         string $plainToken,
