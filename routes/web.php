@@ -185,6 +185,13 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::post('/teacher/assignments/{assignment}/submissions/{submission}/grade', [AssignmentController::class, 'grade'])->middleware('throttle:30,1')->name('teacher.assignments.grade');
     });
     Route::get('/assignment-submissions/{submission}/attachment', [AssignmentController::class, 'download'])->name('assignment-submissions.attachment');
+    Route::get('/courses/{course}/question-sets/{questionSet}/review', [QuestionSetAttemptController::class, 'reviewIndex'])
+        ->middleware('role:teacher,admin')->name('question-sets.review.index');
+    Route::get('/courses/{course}/question-sets/{questionSet}/attempts/{attempt}/review', [QuestionSetAttemptController::class, 'review'])
+        ->middleware('role:teacher,admin')->name('question-sets.review.show');
+    Route::post('/courses/{course}/question-sets/{questionSet}/attempts/{attempt}/grade', [QuestionSetAttemptController::class, 'grade'])
+        ->middleware(['role:teacher,admin', 'throttle:20,1'])->name('question-sets.review.grade');
+
     Route::middleware('role:student')->group(function () {
         Route::get('/my/wishlist', [CourseWishlistController::class, 'index'])->name('student.wishlist.index');
         Route::post('/courses/{course}/wishlist', [CourseWishlistController::class, 'store'])->middleware('throttle:30,1')->name('student.wishlist.store');
