@@ -191,7 +191,7 @@ class StudentDeviceApprovalTest extends TestCase
 
     public function test_teacher_guardian_branch_manager_and_accountant_logins_require_sms_verification(): void
     {
-        foreach (['teacher', 'guardian', 'branch_manager', 'accountant'] as $role) {
+        foreach (['teacher', 'guardian', 'branch_manager', 'accountant'] as $index => $role) {
             $code = null;
             Http::fake(function ($request) use (&$code) {
                 preg_match('/code is ([0-9]{6})/', $request['Body'], $matches);
@@ -203,7 +203,7 @@ class StudentDeviceApprovalTest extends TestCase
             $user = User::factory()->create([
                 'role' => $role,
                 'email_verified_at' => now(),
-                'phone_number' => '+8801712345678',
+                'phone_number' => '+88017'.str_pad((string) (10000000 + $index), 8, '0', STR_PAD_LEFT),
             ]);
 
             $this->post(route('login.post'), ['email' => $user->email, 'password' => 'password'])
