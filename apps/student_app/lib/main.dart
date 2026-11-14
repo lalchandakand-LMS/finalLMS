@@ -1227,19 +1227,12 @@ class _AssignmentDetailPageState extends State<AssignmentDetailPage> {
 
   Future<void> pickAttachment() async {
     try {
-      final result = await FilePicker.pickFiles(
-        allowMultiple: false,
+      final picked = await FilePicker.pickFile(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'],
-        withData: true,
       );
-      if (result == null || result.files.isEmpty) { return; }
-      final picked = result.files.first;
-      final bytes = picked.bytes;
-      if (bytes == null) {
-        if (mounted) { setState(() => error = 'The selected file could not be read.'); }
-        return;
-      }
+      if (picked == null) { return; }
+      final bytes = await picked.readAsBytes();
       if (bytes.lengthInBytes > 10 * 1024 * 1024) {
         if (mounted) { setState(() => error = 'Attachment must be 10 MB or smaller.'); }
         return;
