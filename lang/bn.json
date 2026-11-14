@@ -986,5 +986,22 @@
     "Assignments submitted": "জমা দেওয়া অ্যাসাইনমেন্ট",
     "Exams attempted": "অংশ নেওয়া পরীক্ষা",
     "Attendance records": "উপস্থিতির রেকর্ড",
-    "Your progress is calculated from completed lessons in your active and completed enrollments.": "আপনার সক্রিয় ও সম্পন্ন ভর্তি কোর্সের সম্পন্ন পাঠের ভিত্তিতে অগ্রগতি হিসাব করা হয়েছে।"
+    "Your progress is calculated from completed lessons in your active and completed enrollments.": "আপনার সক্রিয় ও সম্পন্ন ভর্তি কোর্সের সম্পন্ন পাঠের ভিত্তিতে অগ্রগতি হিসাব করা হয়েছে।",
+    "Admin Panel · Branch workspace": "অ্যাডমিন প্যানেল · শাখা ব্যবস্থাপনা",
+    "Manage your assigned branch": "আপনার নির্ধারিত শাখা পরিচালনা করুন",
+    "You can manage only batches and students assigned to your active branch.": "আপনি শুধু আপনার সক্রিয় শাখার নির্ধারিত ব্যাচ ও শিক্ষার্থী পরিচালনা করতে পারবেন।",
+    "Open branch batches": "শাখার ব্যাচ খুলুন",
+    "View branch students": "শাখার শিক্ষার্থী দেখুন",
+    "Admin Panel · Finance workspace": "অ্যাডমিন প্যানেল · অর্থ ব্যবস্থাপনা",
+    "Manage your branch finances": "আপনার শাখার আর্থিক কার্যক্রম পরিচালনা করুন",
+    "Invoices, refunds, expenses and reports are restricted to your assigned active branch.": "ইনভয়েস, রিফান্ড, ব্যয় ও রিপোর্ট আপনার নির্ধারিত সক্রিয় শাখার মধ্যে সীমাবদ্ধ।",
+    "Open branch invoices": "শাখার ইনভয়েস খুলুন",
+    "View branch finance reports": "শাখার আর্থিক রিপোর্ট দেখুন",
+    "Branch workspace": "শাখা ব্যবস্থাপনা",
+    "Finance workspace": "অর্থ ব্যবস্থাপনা",
+    "My branch batches": "আমার শাখার ব্যাচ",
+    "Branch students": "শাখার শিক্ষার্থী",
+    "Branch invoices": "শাখার ইনভয়েস",
+    "Refund requests": "রিফান্ড অনুরোধ",
+    "Branch finance reports": "শাখার আর্থিক রিপোর্ট"
 }
