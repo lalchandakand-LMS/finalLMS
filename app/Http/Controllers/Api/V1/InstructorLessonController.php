@@ -1,13 +1,13 @@
 <?php
 
-namespace App\\Http\\Controllers\\Api\\V1;
+namespace App\Http\Controllers\Api\V1;
 
-use App\\Http\\Controllers\\Controller;
-use App\\Models\\Course;
-use App\\Models\\Lesson;
-use Illuminate\\Http\\JsonResponse;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Facades\\Storage;
+use App\Http\Controllers\Controller;
+use App\Models\Course;
+use App\Models\Lesson;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class InstructorLessonController extends Controller
 {
@@ -86,7 +86,7 @@ class InstructorLessonController extends Controller
             'content' => ['required', 'string', 'max:50000'],
             'duration_minutes' => ['required', 'integer', 'min:1', 'max:600'],
             'order' => ['required', 'integer', 'min:1', 'max:10000'],
-            'video_url' => ['nullable', 'url', 'max:2048', 'regex:/^https:\\/\\/(?:www\\.)?(?:youtube\\.com|youtu\\.be|youtube-nocookie\\.com|vimeo\\.com)(?:\\/|$)/i'],
+            'video_url' => ['nullable', 'url', 'max:2048', 'regex:/^https:\/\/(?:www\.)?(?:youtube\.com|youtu\.be|youtube-nocookie\.com|vimeo\.com)(?:\/|$)/i'],
             'is_preview' => ['sometimes', 'boolean'],
         ]);
 
@@ -110,7 +110,7 @@ class InstructorLessonController extends Controller
         ];
     }
 
-    private function teacher(Request $request): \\App\\Models\\User
+    private function teacher(Request $request): \App\Models\User
     {
         $teacher = $request->user();
         abort_unless($teacher && $teacher->isTeacher(), 403);
