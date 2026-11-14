@@ -109,12 +109,14 @@ class CourseQuestionSetTest extends TestCase
                     'options' => ['A', 'B', 'C', 'D'],
                     'correct_option' => 2,
                     'marks' => 3,
+                    'position' => 20,
                 ],
                 [
                     'type' => 'short_answer',
                     'question' => 'Second new question?',
                     'correct_answer' => 'expected',
                     'marks' => 2,
+                    'position' => 10,
                 ],
             ],
         ])->assertRedirect(route('admin.question-sets.index'));
@@ -124,8 +126,8 @@ class CourseQuestionSetTest extends TestCase
         $this->assertSame('published', $set->status);
         $this->assertCount(2, $set->questions);
         $this->assertDatabaseMissing('question_set_questions', ['id' => $oldQuestion->id]);
-        $this->assertSame('First new question?', $set->questions[0]->question);
-        $this->assertSame('Second new question?', $set->questions[1]->question);
+        $this->assertSame('Second new question?', $set->questions[0]->question);
+        $this->assertSame('First new question?', $set->questions[1]->question);
     }
 
     public function test_question_set_rejects_invalid_question_type_payloads(): void
