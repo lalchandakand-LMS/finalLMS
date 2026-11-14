@@ -103,11 +103,11 @@ class AdminEbookOrderController extends Controller
 
         $result = DB::transaction(function () use ($order, $request, $validated): string {
             $locked = Order::query()->with('items')->lockForUpdate()->findOrFail($order->id);
-            if ($locked->status !== 'completed') {
-                return 'not_refundable';
-            }
             if ($locked->refunds()->exists()) {
                 return 'already_refunded';
+            }
+            if ($locked->status !== 'completed') {
+                return 'not_refundable';
             }
 
             $items = $locked->items->where('product_type', 'ebook');
