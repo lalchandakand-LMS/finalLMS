@@ -50,7 +50,7 @@ class AddonRegistryController extends Controller
     {
         $saved = json_decode((string) Setting::value('addon_registry', '{}'), true);
         $saved = is_array($saved) ? $saved : [];
-        $compatible = PHP_VERSION_ID >= 80300 && (int) app()->version()[0] === 12;
+        $compatible = PHP_VERSION_ID >= 80300 && (int) explode('.', app()->version())[0] === 12;
         $bkashKeysPresent = collect([
             config('services.bkash.username'),
             config('services.bkash.password'),
