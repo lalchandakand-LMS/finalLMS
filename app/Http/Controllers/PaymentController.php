@@ -65,7 +65,7 @@ class PaymentController extends Controller
                 $sale = FlashSale::activeForCourse($lockedCourse->id, $user->id);
                 if ($sale) {
                     $sale = FlashSale::query()->lockForUpdate()->find($sale->id);
-                    if (! $sale || ! $sale->courses()->whereKey($lockedCourse->id)->exists() || ! $sale->isAvailableFor($user->id)) {
+                    if (! $sale || ! $sale->targetsCourse($lockedCourse->id) || ! $sale->isAvailableFor($user->id)) {
                         return 'sale_unavailable';
                     }
                 }
@@ -145,7 +145,7 @@ class PaymentController extends Controller
             $sale = FlashSale::activeForCourse($lockedCourse->id, $user->id);
             if ($sale) {
                 $sale = FlashSale::query()->lockForUpdate()->find($sale->id);
-                if (! $sale || ! $sale->courses()->whereKey($lockedCourse->id)->exists() || ! $sale->isAvailableFor($user->id)) {
+                if (! $sale || ! $sale->targetsCourse($lockedCourse->id) || ! $sale->isAvailableFor($user->id)) {
                     return 'sale_unavailable';
                 }
             }
