@@ -185,6 +185,85 @@ class MobileStudentAssignmentTest extends TestCase
         $this->assertDatabaseCount('assignment_submissions', 0);
     }
 
+
+    public function test_student_can_upload_private_assignment_attachment_and_only_owner_can_download_it(): void
+    {
+        Storage::fake('local');
+        [$student, , $assignment] = $this->fixture();
+        $token = $this->token($student);
+
+        $this->withToken($token)->post('/api/v1/assignments/'.$assignment->id.'/submit', [
+            'attachment' => UploadedFile::fake()->create('homework.pdf', 100, 'application/pdf'),
+        ], ['Accept' => 'application/json'])
+            ->assertCreated()
+            ->assertJsonPath('submission.has_attachment', true)
+            ->assertJsonPath('submission.attachment_name', 'homework.pdf');
+
+        $submission = AssignmentSubmission::query()->firstOrFail();
+        Storage::disk('local')->assertExists($submission->attachment_path);
+
+        $this->withToken($token)->get('/api/v1/assignment-submissions/'.$submission->id.'/attachment')
+            ->assertOk();
+
+        $otherStudent = User::factory()->create(['role' => 'student']);
+        $this->withToken($this->token($otherStudent))
+            ->getJson('/api/v1/assignment-submissions/'.$submission->id.'/attachment')
+            ->assertForbidden();
+
+        $this->withToken($token)->post('/api/v1/assignments/'.$assignment->id.'/submit', [
+            'attachment' => UploadedFile::fake()->create('duplicate.pdf', 100, 'application/pdf'),
+        ], ['Accept' => 'application/json'])->assertStatus(409);
+
+        $this->assertCount(1, Storage::disk('local')->allFiles('assignment-submissions/'.$assignment->id));
+    }
+
+    public function test_mobile_assignment_upload_rejects_unsupported_and_oversized_files_without_orphan_files(): void
+    {
+        Storage::fake('local');
+        [$student, , $assignment] = $this->fixture();
+        $token = $this->token($student);
+
+        $this->withToken($token)->post('/api/v1/assignments/'.$assignment->id.'/submit', [
+            'attachment' => UploadedFile::fake()->create('payload.exe', 100, 'application/x-msdownload'),
+        ], ['Accept' => 'application/json'])->assertUnprocessable();
+
+        $this->withToken($token)->post('/api/v1/assignments/'.$assignment->id.'/submit', [
+            'attachment' => UploadedFile::fake()->create('oversized.pdf', 10241, 'application/pdf'),
+        ], ['Accept' => 'application/json'])->assertUnprocessable();
+
+        $this->assertDatabaseCount('assignment_submissions', 0);
+        $this->assertSame([], Storage::disk('local')->allFiles('assignment-submissions/'.$assignment->id));
+    }
+
+    public function test_mobile_revision_after_grading_preserves_existing_private_attachment(): void
+    {
+        Storage::fake('local');
+        [$student, , $assignment] = $this->fixture();
+        $token = $this->token($student);
+
+        $this->withToken($token)->post('/api/v1/assignments/'.$assignment->id.'/submit', [
+            'answer' => 'First version.',
+            'attachment' => UploadedFile::fake()->create('first.pdf', 100, 'application/pdf'),
+        ], ['Accept' => 'application/json'])->assertCreated();
+
+        $submission = AssignmentSubmission::query()->firstOrFail();
+        $oldPath = $submission->attachment_path;
+        Storage::disk('local')->assertExists($oldPath);
+        $submission->update(['status' => 'graded', 'score' => 8, 'feedback' => 'Revise this.']);
+
+        $this->withToken($token)->postJson('/api/v1/assignments/'.$assignment->id.'/submit', [
+            'answer' => 'Revised text answer.',
+        ])->assertCreated()
+            ->assertJsonPath('submission.status', 'submitted')
+            ->assertJsonPath('submission.has_attachment', true);
+
+        $submission->refresh();
+        $this->assertSame($oldPath, $submission->attachment_path);
+        Storage::disk('local')->assertExists($oldPath);
+        $this->assertNull($submission->score);
+        $this->assertNull($submission->feedback);
+    }
+
     private function fixture(): array
     {
         $teacher = User::factory()->create(['role' => 'teacher']);
