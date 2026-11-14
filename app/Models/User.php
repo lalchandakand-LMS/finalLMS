@@ -17,6 +17,8 @@ use Illuminate\Notifications\Notifiable;
 #[Hidden(['password', 'remember_token', 'phone_verification_code', 'admin_permissions'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
+    protected $hidden = ['password', 'remember_token', 'phone_verification_code', 'admin_permissions'];
+
     use HasFactory, MustVerifyEmailTrait, Notifiable;
 
     protected $fillable = ['name', 'email', 'password', 'role', 'phone_number', 'sms_marketing_opt_in', 'branch_id', 'admin_permissions'];
