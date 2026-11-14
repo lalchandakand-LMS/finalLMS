@@ -187,7 +187,7 @@ class _InstructorHomeState extends State<InstructorHome> {
             mainAxisSize: MainAxisSize.min,
             children: [
               DropdownButtonFormField<int>(
-                value: selectedBatchId,
+                initialValue: selectedBatchId,
                 decoration: const InputDecoration(labelText: 'Batch'),
                 items: batches.map((item) {
                   final batch = item as Map<String, dynamic>;
@@ -224,9 +224,11 @@ class _InstructorHomeState extends State<InstructorHome> {
                       firstDate: DateTime.now(),
                       lastDate: DateTime.now().add(const Duration(days: 365)),
                     );
-                    if (picked != null) setDialogState(() => dueAt = DateTime(
-                      picked.year, picked.month, picked.day, 23, 59,
-                    ));
+                    if (picked != null) {
+                      setDialogState(() => dueAt = DateTime(
+                        picked.year, picked.month, picked.day, 23, 59,
+                      ));
+                    }
                   },
                 ),
               ),
@@ -259,19 +261,19 @@ class _InstructorHomeState extends State<InstructorHome> {
     title.dispose();
     instructions.dispose();
     marks.dispose();
-    if (payload == null) return;
+    if (payload == null) {\n      return;\n    }
     try {
       await widget.api.postJson(
         '/instructor/batches/${payload.remove('batch_id')}/assignments',
         payload,
       );
-      if (!mounted) return;
+      if (!mounted) {\n        return;\n      }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Assignment published.')),
       );
       await load();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      if (mounted) {\n        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));\n      }
     }
   }
 
@@ -362,7 +364,7 @@ class _InstructorHomeState extends State<InstructorHome> {
           FilledButton(
             onPressed: () {
               final value = num.tryParse(score.text.trim());
-              if (value == null || value < 0 || value > (assignment['max_marks'] as num)) return;
+              if (value == null || value < 0 || value > (assignment['max_marks'] as num)) {\n                return;\n              }
               Navigator.pop(dialogContext, {'score': value, 'feedback': feedback.text.trim()});
             },
             child: const Text('Save grade'),
