@@ -40,8 +40,10 @@ class EbookStoreController extends Controller
 
     public function preview(Product $product, EbookPreviewPage $previewPage): \Symfony\Component\HttpFoundation\BinaryFileResponse
     {
-        abort_unless($product->type === 'ebook' && $product->status === 'published'
-            && $product->published_at && $product->published_at->lte(now()), 404);
+        $isPubliclyAvailable = $product->status === 'published'
+            && $product->published_at && $product->published_at->lte(now());
+        $isAdminPreview = auth()->user()?->isAdmin() ?? false;
+        abort_unless($product->type === 'ebook' && ($isPubliclyAvailable || $isAdminPreview), 404);
 
         $page = $product->previewPages()
             ->whereKey($previewPage->id)
