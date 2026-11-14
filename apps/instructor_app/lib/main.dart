@@ -338,13 +338,14 @@ class _InstructorHomeState extends State<InstructorHome> {
 
   Future<void> showStudents(Map<String, dynamic> course) async {
     final messenger = ScaffoldMessenger.of(context);
+    final pageContext = context;
     try {
       final response = await widget.api.get("/instructor/courses/${course['slug']}/students");
-      if (!mounted) {
+      if (!pageContext.mounted) {
         return;
       }
       final students = response['data'] as List<dynamic>? ?? [];
-      showModalBottomSheet<void>(context: context, builder: (sheetContext) => SafeArea(child: ListView(
+      showModalBottomSheet<void>(context: pageContext, builder: (sheetContext) => SafeArea(child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           Text('Students — ${course['title']}', style: Theme.of(sheetContext).textTheme.titleLarge),
@@ -540,20 +541,21 @@ class _InstructorHomeState extends State<InstructorHome> {
   }
 
   Future<DateTime?> _pickDateTime(DateTime initial) async {
+    final pickerContext = context;
     final date = await showDatePicker(
-      context: context,
+      context: pickerContext,
       initialDate: initial,
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    if (!mounted) {
+    if (!pickerContext.mounted) {
       return null;
     }
     if (date == null) {
       return null;
     }
     final time = await showTimePicker(
-      context: context,
+      context: pickerContext,
       initialTime: TimeOfDay.fromDateTime(initial),
     );
     if (time == null) {
@@ -678,17 +680,12 @@ class _InstructorHomeState extends State<InstructorHome> {
     try {
       final batchId = payload.remove('batch_id');
       await widget.api.postJson('/instructor/batches/$batchId/live-classes', payload);
-      if (!mounted) {
-        return;
-      }
       messenger.showSnackBar(
         const SnackBar(content: Text('Live class scheduled.')),
       );
       await load();
     } catch (e) {
-      if (mounted) {
-        messenger.showSnackBar(SnackBar(content: Text(e.toString())));
-      }
+      messenger.showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 
