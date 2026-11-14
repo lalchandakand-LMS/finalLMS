@@ -13,6 +13,8 @@ use App\Models\StudentDevice;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class MobileStudentAssignmentTest extends TestCase
