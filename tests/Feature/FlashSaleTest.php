@@ -132,6 +132,45 @@ class FlashSaleTest extends TestCase
         $this->assertSame('1000.00', $payment->amount);
         $this->assertNull($payment->flash_sale_id);
     }
+    public function test_category_targeted_flash_sale_is_applied_at_server_calculated_checkout(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $course = $this->makeCourse(1200);
+        $category = CourseCategory::create(['name' => 'Grammar', 'slug' => 'grammar-checkout', 'is_visible' => true]);
+        $post = CourseContentPost::create([
+            'author_id' => $admin->id,
+            'title' => 'Grammar curriculum',
+            'slug' => 'grammar-curriculum-checkout',
+            'long_description' => 'Grammar content',
+            'status' => 'published',
+            'published_at' => now(),
+        ]);
+        $post->categories()->attach($category->id);
+        CourseCurriculumItem::create([
+            'course_id' => $course->id,
+            'course_content_post_id' => $post->id,
+            'position' => 1,
+        ]);
+
+        $sale = $this->makeSale($course, ['discount_value' => 25]);
+        $sale->courses()->detach($course->id);
+        $sale->categories()->attach($category->id);
+        Setting::setValue('payment_methods', json_encode([
+            'manual' => ['enabled' => true, 'label' => 'Manual', 'account' => '012345', 'instructions' => 'Send payment'],
+        ]));
+
+        $this->actingAs($student)->post(route('courses.enroll', $course), [
+            'payment_method' => 'manual',
+            'transaction_reference' => 'CATEGORY-FLASH-SALE-001',
+            'amount' => 1,
+        ])->assertRedirect(route('courses.show', $course));
+
+        $payment = Payment::where('transaction_reference', 'CATEGORY-FLASH-SALE-001')->firstOrFail();
+        $this->assertSame('900.00', $payment->amount);
+        $this->assertSame($sale->id, $payment->flash_sale_id);
+    }
+
     public function test_free_flash_sale_enrollments_count_toward_campaign_and_student_limits(): void
     {
         $course = $this->makeCourse(0);
