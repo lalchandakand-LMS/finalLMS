@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Batch;
 use App\Models\LiveClass;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -81,8 +82,8 @@ class InstructorLiveClassController extends Controller
             'recording_notes' => ['sometimes', 'nullable', 'string', 'max:5000'],
         ]);
 
-        $startsAt = isset($validated['starts_at']) ? now()->parse($validated['starts_at']) : $liveClass->starts_at;
-        $endsAt = isset($validated['ends_at']) ? now()->parse($validated['ends_at']) : $liveClass->ends_at;
+        $startsAt = isset($validated['starts_at']) ? Carbon::parse($validated['starts_at']) : $liveClass->starts_at;
+        $endsAt = isset($validated['ends_at']) ? Carbon::parse($validated['ends_at']) : $liveClass->ends_at;
         abort_unless($endsAt->greaterThan($startsAt), 422, 'The live class end time must be after its start time.');
 
         DB::transaction(function () use ($liveClass, $validated): void {
