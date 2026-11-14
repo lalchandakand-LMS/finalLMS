@@ -33,7 +33,7 @@ class EbookStoreController extends Controller
     {
         abort_unless($request->user()->isStudent(), 403);
         $validated = $request->validate([
-            'payment_reference' => ['required', 'string', 'max:120', 'unique:orders,payment_reference'],
+            'payment_reference' => ['nullable', 'string', 'max:120', 'unique:orders,payment_reference'],
             'payment_sender' => ['nullable', 'string', 'max:60'],
             'payment_proof' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
         ]);
@@ -54,6 +54,7 @@ class EbookStoreController extends Controller
             $price = (float) $locked->sale_price >= 0 && $locked->sale_price !== null
                 && (float) $locked->sale_price < (float) $locked->regular_price
                 ? (float) $locked->sale_price : (float) $locked->regular_price;
+            abort_if($price > 0 && blank($validated['payment_reference'] ?? null), 422, 'A payment reference is required for paid eBooks.');
             $proofPath = $request->file('payment_proof')?->store('private/ebook-payment-proofs', 'local');
 
             $order = Order::create([
@@ -61,7 +62,7 @@ class EbookStoreController extends Controller
                 'user_id' => $request->user()->id,
                 'status' => $price <= 0 ? 'completed' : 'pending',
                 'payment_method' => 'manual',
-                'payment_reference' => $validated['payment_reference'],
+                'payment_reference' => $validated['payment_reference'] ?? ('FREE-'.Str::upper(Str::random(24))),
                 'payment_sender' => $validated['payment_sender'] ?? null,
                 'payment_proof_path' => $proofPath,
                 'currency' => 'BDT',
@@ -124,7 +125,8 @@ class EbookStoreController extends Controller
         $permission->load(['product', 'orderItem.order']);
         $product = $permission->product;
 
-        abort_unless($permission->orderItem?->order?->status === 'completed', 404);
+        abort_unless($permission->orderItem?->order?->status === 'completed'
+            && (int) $permission->orderItem->order->user_id === (int) $request->user()->id, 404);
         abort_unless($product && $product->is_downloadable && $product->download_path
             && Storage::disk('local')->exists($product->download_path), 404);
 
