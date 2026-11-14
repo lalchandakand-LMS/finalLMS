@@ -905,5 +905,11 @@
     "Only completed eBook orders or cancelled orders with a verified gateway transaction can be refunded. Verify that the external refund has been sent first.": "শুধু সম্পন্ন ই-বুক অর্ডার অথবা যাচাইকৃত গেটওয়ে ট্রানজ্যাকশনসহ বাতিল অর্ডার রিফান্ড করা যাবে। আগে নিশ্চিত করুন বাইরের মাধ্যমে টাকা ফেরত দেওয়া হয়েছে।",
     "Gateway orders must be completed by verified provider callback.": "গেটওয়ে অর্ডার কেবল পেমেন্ট প্রদানকারীর যাচাইকৃত callback-এর মাধ্যমে সম্পন্ন হবে।",
     "Gateway orders cannot be manually rejected. Reconcile them with the provider.": "গেটওয়ে অর্ডার ম্যানুয়ালি বাতিল করা যাবে না। পেমেন্ট প্রদানকারীর সঙ্গে মিলিয়ে যাচাই করুন।",
-    "bKash supports BDT payments only.": "bKash-এ শুধু বাংলাদেশি টাকা (BDT) দিয়ে পেমেন্ট করা যাবে।"
+    "bKash supports BDT payments only.": "bKash-এ শুধু বাংলাদেশি টাকা (BDT) দিয়ে পেমেন্ট করা যাবে।",
+    "Bulk status": "একসাথে স্ট্যাটাস পরিবর্তন",
+    "Choose status": "স্ট্যাটাস নির্বাচন করুন",
+    "Apply to selected": "নির্বাচিত পোস্টে প্রয়োগ করুন",
+    "Select all posts": "সব পোস্ট নির্বাচন করুন",
+    "Select :title": ":title নির্বাচন করুন",
+    "Selected content posts updated.": "নির্বাচিত কনটেন্ট পোস্টগুলোর স্ট্যাটাস আপডেট হয়েছে।"
 }
