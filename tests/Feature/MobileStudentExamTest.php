@@ -32,7 +32,7 @@ class MobileStudentExamTest extends TestCase
         $this->withToken($token)->getJson('/api/v1/exams/'.$exam->id)
             ->assertOk()
             ->assertJsonPath('data.id', $exam->id)
-            ->assertJsonMissingPath('data.questions');
+            ->assertJsonCount(0, 'data.questions');
 
         $start = $this->withToken($token)->postJson('/api/v1/exams/'.$exam->id.'/start')
             ->assertOk()
