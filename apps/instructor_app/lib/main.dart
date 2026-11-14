@@ -402,7 +402,9 @@ class _InstructorHomeState extends State<InstructorHome> {
         ),
       );
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       if (e is ApiException && (e.statusCode == 401 || e.statusCode == 403)) {
         widget.onLogout();
         return;
