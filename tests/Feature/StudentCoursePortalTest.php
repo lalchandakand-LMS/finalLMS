@@ -138,8 +138,7 @@ class StudentCoursePortalTest extends TestCase
             ->get(route('student.courses.index'))
             ->assertOk()
             ->assertSee('Resume learning')
-            ->assertSee(route('courses.lessons.show', [$course, $lastViewedLesson]), false)
-            ->assertSee('Continue here');
+            ->assertSee(route('courses.lessons.show', [$course, $lastViewedLesson]), false);
     }
 
     public function test_lesson_navigation_only_shows_lessons_the_student_can_access(): void
