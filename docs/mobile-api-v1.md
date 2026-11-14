@@ -76,6 +76,10 @@ Wishlist routes are student-only. Course visibility and user ownership are enfor
 
 Course ownership is checked server-side. The API does not accept a client-supplied instructor or student ID to select another user's records.
 
+- `GET /instructor/live-classes?batch_id=&status=&per_page=`: paginated live classes belonging only to the authenticated instructor's batches. Optional status values: `scheduled`, `live`, `completed`, `cancelled`; page size is limited to 50.
+- `POST /instructor/batches/{batch_id}/live-classes`: schedule a session in an owned batch. Requires title, HTTPS meeting URL, future start time and an end time after the start.
+- `PATCH /instructor/live-classes/{live_class_id}`: update an owned session's details/status or publish/remove a recording. Recording links are restricted to YouTube/Vimeo HTTPS URLs; adding a recording publishes it immediately to the existing authorized recording experience.
+
 ## Security and implementation notes
 
 - Login and OTP verification are rate-limited to 5 requests/minute; device-status polling is limited to 30 requests/minute.
