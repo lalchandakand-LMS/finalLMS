@@ -172,6 +172,76 @@ class QuizContestLotteryTest extends TestCase
         $this->assertDatabaseHas('quiz_contests', ['id' => $contest->id, 'status' => 'published']);
     }
 
+    public function test_admin_can_edit_contest_details_and_questions_before_it_starts(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $contest = $this->makeContest(now()->addHour(), now()->addDays(2));
+
+        $this->actingAs($admin)->get(route('admin.contests.edit', $contest))->assertOk()
+            ->assertSee('Edit quiz contest');
+
+        $this->put(route('admin.contests.update', $contest), [
+            'title' => 'Updated English Challenge',
+            'description' => 'Updated rules',
+            'prize_description' => 'Updated learning kit',
+            'winner_count' => 2,
+            'starts_at' => now()->addHours(2)->format('Y-m-d H:i:s'),
+            'ends_at' => now()->addDays(3)->format('Y-m-d H:i:s'),
+            'questions' => [
+                ['question' => 'Updated question?', 'options' => ['A', 'B', 'C', 'D'], 'correct_option' => 2],
+                ['question' => 'Second question?', 'options' => ['One', 'Two', 'Three', 'Four'], 'correct_option' => 0],
+            ],
+        ])->assertRedirect(route('admin.contests.index'));
+
+        $this->assertDatabaseHas('quiz_contests', [
+            'id' => $contest->id,
+            'title' => 'Updated English Challenge',
+            'winner_count' => 2,
+        ]);
+        $this->assertDatabaseCount('quiz_contest_questions', 2);
+        $this->assertDatabaseHas('quiz_contest_questions', [
+            'quiz_contest_id' => $contest->id,
+            'question' => 'Updated question?',
+            'correct_option' => 2,
+        ]);
+    }
+
+    public function test_contest_cannot_be_edited_after_start_or_after_an_entry_exists(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $startedContest = $this->makeContest(now()->subMinute(), now()->addHour());
+
+        $this->actingAs($admin)->get(route('admin.contests.edit', $startedContest))->assertStatus(409);
+        $this->put(route('admin.contests.update', $startedContest), [
+            'title' => 'Attempted late edit',
+            'description' => 'Should remain unchanged',
+            'prize_description' => 'A book',
+            'winner_count' => 1,
+            'starts_at' => now()->addHours(2)->format('Y-m-d H:i:s'),
+            'ends_at' => now()->addDays(2)->format('Y-m-d H:i:s'),
+            'questions' => [
+                ['question' => 'Replacement question?', 'options' => ['A', 'B', 'C', 'D'], 'correct_option' => 0],
+            ],
+        ])->assertStatus(409);
+
+        $this->assertDatabaseHas('quiz_contests', [
+            'id' => $startedContest->id,
+            'title' => 'Test quiz',
+        ]);
+
+        $futureContest = $this->makeContest(now()->addHour(), now()->addDay());
+        $student = User::factory()->create(['role' => 'student', 'email_verified_at' => now()]);
+        QuizContestEntry::create([
+            'quiz_contest_id' => $futureContest->id,
+            'user_id' => $student->id,
+            'answers' => [$futureContest->questions[0]->id => 1],
+            'score' => 1,
+            'submitted_at' => now(),
+        ]);
+
+        $this->get(route('admin.contests.edit', $futureContest))->assertStatus(409);
+    }
+
     private function makeContest($startsAt = null, $endsAt = null, int $winnerCount = 1): QuizContest
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
