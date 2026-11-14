@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\DeviceSession;
+use App\Models\StudentDevice;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -77,12 +78,23 @@ class AdminDeviceSessionManagementTest extends TestCase
         $teacher = User::factory()->create([
             'role' => 'teacher',
             'email_verified_at' => now(),
+            'phone_number' => '+8801712345678',
+        ]);
+        $deviceToken = str_repeat('d', 64);
+        StudentDevice::create([
+            'user_id' => $teacher->id,
+            'device_hash' => hash('sha256', $deviceToken),
+            'device_name' => 'Windows · Chrome',
+            'status' => 'approved',
+            'phone_verified_at' => now(),
+            'approved_at' => now(),
         ]);
 
-        $this->post(route('login.post'), [
-            'email' => $teacher->email,
-            'password' => 'password',
-        ])->assertRedirect('/dashboard');
+        $this->withCookie('lms_student_device', $deviceToken)
+            ->post(route('login.post'), [
+                'email' => $teacher->email,
+                'password' => 'password',
+            ])->assertRedirect('/dashboard');
 
         $session = DeviceSession::where('user_id', $teacher->id)->firstOrFail();
         $session->forceFill(['revoked_at' => now(), 'revoke_reason' => 'Test revocation'])->save();
@@ -119,12 +131,23 @@ class AdminDeviceSessionManagementTest extends TestCase
         $teacher = User::factory()->create([
             'role' => 'teacher',
             'email_verified_at' => now(),
+            'phone_number' => '+8801712345678',
+        ]);
+        $deviceToken = str_repeat('d', 64);
+        StudentDevice::create([
+            'user_id' => $teacher->id,
+            'device_hash' => hash('sha256', $deviceToken),
+            'device_name' => 'Windows · Chrome',
+            'status' => 'approved',
+            'phone_verified_at' => now(),
+            'approved_at' => now(),
         ]);
 
-        $this->post(route('login.post'), [
-            'email' => $teacher->email,
-            'password' => 'password',
-        ])->assertRedirect('/dashboard');
+        $this->withCookie('lms_student_device', $deviceToken)
+            ->post(route('login.post'), [
+                'email' => $teacher->email,
+                'password' => 'password',
+            ])->assertRedirect('/dashboard');
 
         $session = DeviceSession::where('user_id', $teacher->id)->firstOrFail();
 
