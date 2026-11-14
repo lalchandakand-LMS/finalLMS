@@ -129,6 +129,33 @@ class QuestionSetAttemptWorkflowTest extends TestCase
         $this->assertDatabaseCount('question_set_attempts', 1);
     }
 
+    public function test_question_count_limit_is_applied_and_archived_set_keeps_existing_result_history(): void
+    {
+        [$teacher, $student, $course, $set] = $this->makeCourseQuiz([
+            ['type' => 'mcq', 'question' => 'Question one?', 'options' => ['A', 'B', 'C', 'D'], 'correct_option' => 0, 'marks' => 1],
+            ['type' => 'mcq', 'question' => 'Question two?', 'options' => ['A', 'B', 'C', 'D'], 'correct_option' => 1, 'marks' => 2],
+            ['type' => 'mcq', 'question' => 'Question three?', 'options' => ['A', 'B', 'C', 'D'], 'correct_option' => 2, 'marks' => 3],
+        ], ['questions_per_attempt' => 2, 'randomize_questions' => false]);
+
+        $this->actingAs($student)->post(route('student.question-sets.attempts.start', [$course, $set]));
+        $attempt = QuestionSetAttempt::firstOrFail();
+        $this->assertCount(2, $attempt->questions);
+
+        $questions = $attempt->questions()->orderBy('position')->get();
+        $this->post(route('student.question-sets.attempts.submit', [$course, $set, $attempt]), [
+            'answers' => [$questions[0]->id => 0, $questions[1]->id => 1],
+        ])->assertRedirect();
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($admin)->delete(route('admin.question-sets.destroy', $set))->assertRedirect();
+        $this->assertDatabaseHas('question_sets', ['id' => $set->id, 'status' => 'archived']);
+        $this->assertDatabaseHas('question_set_attempts', ['id' => $attempt->id]);
+
+        $this->actingAs($student)->get(route('student.question-sets.attempts.result', [$course, $set, $attempt]))
+            ->assertOk()->assertSee('Answer summary');
+        $this->get(route('student.question-sets.show', [$course, $set]))->assertNotFound();
+    }
+
     public function test_teacher_can_only_review_question_sets_attached_to_their_own_courses(): void
     {
         [$teacher, $student, $course, $set] = $this->makeCourseQuiz([
