@@ -122,7 +122,10 @@ class CourseController extends Controller
             ->where('user_id', $user->id)
             ->whereIn('status', ['active', 'completed'])
             ->whereHas('course', fn ($query) => $query->where('status', 'published'))
-            ->with(['course.teacher', 'course.lessons'])
+            ->with([
+                'course.teacher',
+                'course.lessons' => fn ($lessons) => $lessons->orderBy('order')->orderBy('id'),
+            ])
             ->latest()
             ->get();
 
@@ -130,9 +133,19 @@ class CourseController extends Controller
         $completedByLesson = LessonProgress::query()
             ->where('user_id', $user->id)
             ->whereIn('lesson_id', $lessonIds)
+            ->whereNotNull('completed_at')
             ->pluck('completed_at', 'lesson_id');
+        $lastViewedByCourse = LessonProgress::query()
+            ->with('lesson:id,course_id,title,order')
+            ->where('user_id', $user->id)
+            ->whereIn('lesson_id', $lessonIds)
+            ->whereNotNull('last_viewed_at')
+            ->orderByDesc('last_viewed_at')
+            ->get()
+            ->filter(fn ($progress) => $progress->lesson)
+            ->groupBy(fn ($progress) => $progress->lesson->course_id);
 
-        $enrollments->each(function ($enrollment) use ($completedByLesson) {
+        $enrollments->each(function ($enrollment) use ($completedByLesson, $lastViewedByCourse) {
             $lessons = $enrollment->course->lessons;
             $enrollment->completed_lessons_count = $lessons->filter(
                 fn ($lesson) => $completedByLesson->has($lesson->id)
@@ -141,6 +154,20 @@ class CourseController extends Controller
             $enrollment->progress_percent = $lessons->isEmpty()
                 ? 0
                 : (int) round(($enrollment->completed_lessons_count / $lessons->count()) * 100);
+
+            $lastViewedLesson = ($lastViewedByCourse->get($enrollment->course_id) ?? collect())->first()?->lesson;
+            $nextIncompleteLesson = $lessons->first(
+                fn ($lesson) => ! $completedByLesson->has($lesson->id)
+            );
+            $nextIncompleteAfterLastViewed = $lastViewedLesson
+                ? $lessons->first(fn ($lesson) => (
+                    $lesson->order > $lastViewedLesson->order
+                    || ($lesson->order === $lastViewedLesson->order && $lesson->id > $lastViewedLesson->id)
+                ) && ! $completedByLesson->has($lesson->id))
+                : null;
+            $enrollment->resume_lesson = $lastViewedLesson && ! $completedByLesson->has($lastViewedLesson->id)
+                ? $lastViewedLesson
+                : ($nextIncompleteAfterLastViewed ?? $nextIncompleteLesson ?? $lastViewedLesson ?? $lessons->first());
         });
 
         return view('student.courses.index', compact('enrollments'));
@@ -357,6 +384,7 @@ class CourseController extends Controller
         $canViewLessons = $canManageCourse || $isEnrolled;
         $lessonProgress = $isEnrolled && $user?->isStudent()
             ? LessonProgress::where('user_id', $user->id)
+                ->whereNotNull('completed_at')
                 ->whereHas('lesson', fn ($query) => $query->where('course_id', $course->id))
                 ->pluck('completed_at', 'lesson_id')
             : collect();
@@ -445,11 +473,44 @@ class CourseController extends Controller
         }
         $privateVideoUrl = $lesson->video_path ? route('courses.lessons.media', [$course, $lesson, 'video']) : null;
         $privateAttachmentUrl = $lesson->attachment_path ? route('courses.lessons.media', [$course, $lesson, 'attachment']) : null;
-        $isCompleted = $user && $user->isStudent()
-            ? LessonProgress::where('user_id', $user->id)->where('lesson_id', $lesson->id)->exists()
-            : false;
+        if ($user?->isStudent() && $isEnrolled) {
+            LessonProgress::updateOrCreate(
+                ['lesson_id' => $lesson->id, 'user_id' => $user->id],
+                ['last_viewed_at' => now()]
+            );
+        }
 
-        return response()->view('student.lessons.show', compact('course', 'lesson', 'videoEmbedUrl', 'privateVideoUrl', 'privateAttachmentUrl', 'isCompleted'))
+        $isCompleted = $user && $user->isStudent()
+            ? LessonProgress::where('user_id', $user->id)
+                ->where('lesson_id', $lesson->id)
+                ->whereNotNull('completed_at')
+                ->exists()
+            : false;
+        $courseLessons = $course->lessons()->orderBy('order')->orderBy('id')->get(['id', 'course_id', 'title', 'order', 'is_preview', 'duration_minutes']);
+        $availableLessons = $courseLessons
+            ->filter(fn ($item) => $canManageCourse || $isEnrolled || $item->is_preview)
+            ->values();
+        $currentIndex = $availableLessons->search(fn ($item) => $item->id === $lesson->id);
+        $previousLesson = $currentIndex !== false && $currentIndex > 0 ? $availableLessons[$currentIndex - 1] : null;
+        $nextLesson = $currentIndex !== false ? ($availableLessons[$currentIndex + 1] ?? null) : null;
+        $completedLessonIds = $user?->isStudent() && $isEnrolled
+            ? LessonProgress::query()
+                ->where('user_id', $user->id)
+                ->whereIn('lesson_id', $courseLessons->pluck('id'))
+                ->whereNotNull('completed_at')
+                ->pluck('lesson_id')
+            : collect();
+        $completedLessonsCount = $completedLessonIds->count();
+        $totalLessonsCount = $courseLessons->count();
+        $progressPercent = $totalLessonsCount > 0
+            ? (int) round(($completedLessonsCount / $totalLessonsCount) * 100)
+            : 0;
+
+        return response()->view('student.lessons.show', compact(
+            'course', 'lesson', 'videoEmbedUrl', 'privateVideoUrl', 'privateAttachmentUrl',
+            'isCompleted', 'isEnrolled', 'previousLesson', 'nextLesson',
+            'completedLessonsCount', 'totalLessonsCount', 'progressPercent'
+        ))
             ->header('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0')
             ->header('Pragma', 'no-cache')
             ->header('X-Content-Type-Options', 'nosniff')
@@ -462,10 +523,17 @@ class CourseController extends Controller
         abort_unless($user?->isStudent() && $course->status === 'published' && $lesson->course_id === $course->id, 403);
         abort_unless($course->enrollments()->where('user_id', $user->id)->where('status', 'active')->exists(), 404);
 
-        LessonProgress::firstOrCreate(
+        $progress = LessonProgress::firstOrCreate(
             ['lesson_id' => $lesson->id, 'user_id' => $user->id],
-            ['completed_at' => now()]
+            ['completed_at' => now(), 'last_viewed_at' => now()]
         );
+
+        if (! $progress->completed_at || ! $progress->last_viewed_at) {
+            $progress->forceFill([
+                'completed_at' => $progress->completed_at ?? now(),
+                'last_viewed_at' => $progress->last_viewed_at ?? now(),
+            ])->save();
+        }
 
         return back()->with('success', 'Lesson progress saved.');
     }
@@ -532,7 +600,9 @@ class CourseController extends Controller
         $students = $course->enrollments()->whereIn('status', ['active', 'completed'])->with('user')->get();
         $lessonIds = $course->lessons->pluck('id');
         $progress = LessonProgress::query()->whereIn('lesson_id', $lessonIds)
-            ->whereIn('user_id', $students->pluck('user_id'))->get()->groupBy('user_id');
+            ->whereIn('user_id', $students->pluck('user_id'))
+            ->whereNotNull('completed_at')
+            ->get()->groupBy('user_id');
         $students->each(function ($enrollment) use ($progress, $course) {
             $done = ($progress->get($enrollment->user_id) ?? collect())->count();
             $total = $course->lessons->count();
@@ -646,6 +716,7 @@ class CourseController extends Controller
         $enrollment = $course->enrollments()->where('user_id', $studentId)->where('status', 'active')->firstOrFail();
         $lessonCount = $course->lessons()->count();
         $completedLessonCount = LessonProgress::where('user_id', $studentId)
+            ->whereNotNull('completed_at')
             ->whereHas('lesson', fn ($query) => $query->where('course_id', $course->id))
             ->count();
 
