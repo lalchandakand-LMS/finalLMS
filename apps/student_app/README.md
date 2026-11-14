@@ -25,8 +25,21 @@ Current screens: sign-in, OTP verification, Admin approval waiting/status screen
 The backend SMS service must be configured and the full OTP/admin-approval path must be tested on isolated staging before distributing the app.
 
 
+## Student exam API (backend workflow)
+
+The authenticated API exposes the following student-only endpoints:
+
+- `GET /my/exams` — paginated published exams for active batch enrollments.
+- `GET /exams/{exam}` — exam details and the student's own attempt/result.
+- `POST /exams/{exam}/start` — starts or resumes the student's single attempt and returns its frozen randomized question set.
+- `PUT /exam-attempts/{attempt}/answers` — saves selected option indexes for questions assigned to that attempt.
+- `POST /exam-attempts/{attempt}/submit` — submits answers and returns the server-calculated score.
+
+Correct answer indexes are never included in the question payload. The API checks student role, active enrollment, attempt ownership, assigned question IDs and the server-side deadline; scoring is performed on the server. The Student app includes an exam list and timed attempt screen with start/resume, saved answer selection, explicit answer saving, server-timed countdown, submission and result display. The server remains authoritative for deadlines and scoring.
+
+
 ## Assignment attachments
 
 - Uses `file_picker ^11.0.3` with in-memory bytes so the same picker works on Android, iOS and web.
 - The app accepts PDF, DOC, DOCX, JPG and PNG files up to 10 MB; the Laravel API independently validates MIME type and size.
-- The upload is sent as an authenticated multipart request. The server stores the file privately and only the submitting student with an active enrollment can download it.
+- Uploads use authenticated multipart requests and private server storage.
