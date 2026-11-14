@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DeviceSession;
 use App\Models\StudentDevice;
 use App\Models\User;
 use App\Services\SmsGateway;
@@ -99,6 +100,7 @@ class StudentDeviceAccessController extends Controller
 
         Auth::login($user);
         $request->session()->regenerate();
+        DeviceSession::register($request, $user, $device);
         $request->session()->put('student_device_id', $device->id);
         $request->session()->forget('student_device_request_id');
 
@@ -189,6 +191,11 @@ class StudentDeviceAccessController extends Controller
                 ->where('student_device_id', $device->id)
                 ->whereNull('revoked_at')
                 ->update(['revoked_at' => now(), 'updated_at' => now()]);
+            DeviceSession::query()->where('student_device_id', $device->id)->whereNull('revoked_at')->update([
+                'revoked_at' => now(),
+                'revoke_reason' => 'Trusted device revoked by administrator',
+                'updated_at' => now(),
+            ]);
         });
 
         return back()->with('success', 'Device access revoked. Its web and mobile sessions are now invalid.');
@@ -209,6 +216,7 @@ class StudentDeviceAccessController extends Controller
         if (! $user->isStudent()) {
             if (Auth::attempt(['email' => $validated['email'], 'password' => $validated['password']])) {
                 $request->session()->regenerate();
+                DeviceSession::register($request, $user);
                 return redirect()->intended('/dashboard');
             }
 
@@ -251,6 +259,7 @@ class StudentDeviceAccessController extends Controller
             $device->forceFill(['last_used_at' => now()])->save();
             Auth::login($user);
             $request->session()->regenerate();
+            DeviceSession::register($request, $user, $device);
             $request->session()->put('student_device_id', $device->id);
 
             return redirect()->intended('/dashboard')
