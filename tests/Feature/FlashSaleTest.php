@@ -6,6 +6,7 @@ use App\Models\Course;
 use App\Models\CourseCategory;
 use App\Models\CourseContentPost;
 use App\Models\CourseCurriculumItem;
+use App\Models\Enrollment;
 use App\Models\FlashSale;
 use App\Models\Payment;
 use App\Models\Setting;
@@ -190,6 +191,35 @@ class FlashSaleTest extends TestCase
 
         $this->assertNull(FlashSale::activeForCourse($course->id, $secondStudent->id));
         $this->assertFalse($sale->fresh()->isAvailableFor($firstStudent->id));
+    }
+
+    public function test_flash_sale_priority_and_redemption_fallback_are_deterministic(): void
+    {
+        $course = $this->makeCourse(1000);
+        $student = User::factory()->create(['role' => 'student']);
+        $lowerPriority = $this->makeSale($course, [
+            'title' => 'Standard offer',
+            'priority' => 10,
+            'discount_value' => 10,
+        ]);
+        $higherPriority = $this->makeSale($course, [
+            'title' => 'Priority offer',
+            'priority' => 20,
+            'discount_value' => 30,
+            'max_redemptions' => 1,
+        ]);
+
+        $this->assertSame($higherPriority->id, FlashSale::activeForCourse($course->id, $student->id)?->id);
+
+        Enrollment::create([
+            'user_id' => User::factory()->create(['role' => 'student'])->id,
+            'course_id' => $course->id,
+            'flash_sale_id' => $higherPriority->id,
+            'status' => 'active',
+        ]);
+
+        $this->assertFalse($higherPriority->fresh()->isAvailableFor($student->id));
+        $this->assertSame($lowerPriority->id, FlashSale::activeForCourse($course->id, $student->id)?->id);
     }
 
     public function test_fixed_price_flash_sale_never_exceeds_the_base_price(): void
