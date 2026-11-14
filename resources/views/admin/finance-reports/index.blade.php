@@ -13,10 +13,10 @@
     </div>
 
     <section class="panel no-print" style="margin-bottom:20px;">
-        <form method="GET" action="{{ route($accountant ? 'accountant.finance-reports.index' : 'admin.finance-reports.index') }}" class="grid grid-2">
+        <form method="GET" action="{{ route($accountant ? 'admin.finance.reports.index' : 'admin.finance-reports.index') }}" class="grid grid-2">
             <div><label for="date_from">{{ __('From date') }}</label><input id="date_from" type="date" name="date_from" value="{{ $dateFrom }}"></div>
             <div><label for="date_to">{{ __('To date') }}</label><input id="date_to" type="date" name="date_to" value="{{ $dateTo }}"></div>
-            <div><button class="btn primary" type="submit">{{ __('Apply date filter') }}</button> <a class="btn secondary" href="{{ route($accountant ? 'accountant.finance-reports.index' : 'admin.finance-reports.index') }}">{{ __('Clear') }}</a></div>
+            <div><button class="btn primary" type="submit">{{ __('Apply date filter') }}</button> <a class="btn secondary" href="{{ route($accountant ? 'admin.finance.reports.index' : 'admin.finance-reports.index') }}">{{ __('Clear') }}</a></div>
         </form>
     </section>
 
@@ -83,7 +83,7 @@
                             <td style="padding:10px;border-top:1px solid var(--border);">{{ ucfirst($payment->method) }}<br><small class="muted">{{ $payment->reference ?: '—' }}</small></td>
                             <td style="padding:10px;border-top:1px solid var(--border);">{{ $payment->receiver?->name ?? __('Online gateway') }}</td>
                             <td style="padding:10px;border-top:1px solid var(--border);text-align:right;">৳{{ number_format((float) $payment->amount, 2) }}</td>
-                            <td class="no-print" style="padding:10px;border-top:1px solid var(--border);"><a href="{{ route('invoice-payments.receipt', $payment) }}" target="_blank" rel="noopener">{{ __('Print') }}</a></td>
+                            <td class="no-print" style="padding:10px;border-top:1px solid var(--border);"><a href="{{ route($accountant ? 'admin.finance.invoice-payments.receipt' : 'invoice-payments.receipt', $payment) }}" target="_blank" rel="noopener">{{ __('Print') }}</a></td>
                         </tr>
                     @endforeach
                     </tbody>
