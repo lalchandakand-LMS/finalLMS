@@ -26,7 +26,8 @@ class GuardianController extends Controller
         abort_unless($guardian?->isGuardian(), 403);
         $this->requireActiveBranch($guardian);
 
-        $links = GuardianStudentLink::where('guardian_id', $guardian->id)
+        $links = GuardianStudentLink::query()
+            ->where('guardian_id', $guardian->id)
             ->whereIn('status', ['pending', 'active'])
             ->with('student:id,name,email,branch_id')
             ->latest('requested_at')
@@ -41,7 +42,8 @@ class GuardianController extends Controller
         abort_unless($student?->isStudent(), 403);
         $this->requireActiveBranch($student);
 
-        $requests = GuardianStudentLink::where('student_id', $student->id)
+        $requests = GuardianStudentLink::query()
+            ->where('student_id', $student->id)
             ->where('status', 'pending')
             ->with('guardian:id,name,email')
             ->latest('requested_at')
@@ -56,7 +58,8 @@ class GuardianController extends Controller
         abort_unless($guardian?->isGuardian(), 403);
         $this->requireActiveBranch($guardian);
 
-        $rows = GuardianStudentLink::where('guardian_id', $guardian->id)
+        $rows = GuardianStudentLink::query()
+            ->where('guardian_id', $guardian->id)
             ->whereIn('status', ['pending', 'active'])
             ->with('student:id,name,email,branch_id')
             ->latest('requested_at')
@@ -76,7 +79,8 @@ class GuardianController extends Controller
             'relationship' => ['nullable', 'string', 'min:1', 'max:60'],
         ]);
 
-        $student = User::where('email', strtolower(trim($data['student_email'])))
+        $student = User::query()
+            ->where('email', strtolower(trim($data['student_email'])))
             ->where('role', 'student')
             ->whereNotNull('email_verified_at')
             ->first();
@@ -90,8 +94,10 @@ class GuardianController extends Controller
         $this->sameBranch($guardian, $student);
 
         $link = DB::transaction(function () use ($request, $guardian, $student, $data): GuardianStudentLink {
-            User::whereKey($guardian->id)->lockForUpdate()->firstOrFail();
-            $existing = GuardianStudentLink::where('guardian_id', $guardian->id)
+            User::query()->whereKey($guardian->id)->lockForUpdate()->firstOrFail();
+
+            $existing = GuardianStudentLink::query()
+                ->where('guardian_id', $guardian->id)
                 ->where('student_id', $student->id)
                 ->lockForUpdate()
                 ->first();
@@ -100,7 +106,7 @@ class GuardianController extends Controller
                 abort(409, 'A pending or active request already exists.');
             }
 
-            $link = $existing ?? new GuardianStudentLink();
+            $link = $existing ?: new GuardianStudentLink();
             $link->fill([
                 'guardian_id' => $guardian->id,
                 'student_id' => $student->id,
@@ -108,9 +114,9 @@ class GuardianController extends Controller
                 'status' => 'pending',
                 'requested_by' => $guardian->id,
                 'reviewed_by' => null,
-                'requested_at' => now(),
                 'reviewed_at' => null,
-            ])->save();
+            ]);
+            $link->save();
 
             $this->audit($request, $guardian, 'guardian_link.requested', $link, 'Guardian requested a student relationship.');
 
@@ -129,7 +135,8 @@ class GuardianController extends Controller
         abort_unless($student?->isStudent(), 403);
         $this->requireActiveBranch($student);
 
-        $rows = GuardianStudentLink::where('student_id', $student->id)
+        $rows = GuardianStudentLink::query()
+            ->where('student_id', $student->id)
             ->where('status', 'pending')
             ->with('guardian:id,name,email')
             ->latest('requested_at')
@@ -144,33 +151,51 @@ class GuardianController extends Controller
         abort_unless($student?->isStudent() && (int) $link->student_id === (int) $student->id, 404);
         $this->requireActiveBranch($student);
 
-        $data = $request->validate(['decision' => ['required', 'in:accept,reject']]);
+        $data = $request->validate([
+            'decision' => ['required', 'in:accept,reject'],
+        ]);
 
         DB::transaction(function () use ($request, $student, $link, $data): void {
-            $row = GuardianStudentLink::whereKey($link->id)->lockForUpdate()->firstOrFail();
+            $row = GuardianStudentLink::query()->whereKey($link->id)->lockForUpdate()->firstOrFail();
+
             if ($row->status !== 'pending') {
                 abort(409);
             }
 
-            $guardian = User::findOrFail($row->guardian_id);
+            $guardian = User::query()->findOrFail($row->guardian_id);
             $this->sameBranch($guardian, $student);
+
             $row->respondByStudent($student, $data['decision'] === 'accept');
-            $this->audit($request, $student, $data['decision'] === 'accept' ? 'guardian_link.accepted' : 'guardian_link.rejected', $row, 'Student responded to a guardian request.');
+            $this->audit(
+                $request,
+                $student,
+                $data['decision'] === 'accept' ? 'guardian_link.accepted' : 'guardian_link.rejected',
+                $row,
+                'Student responded to a guardian request.'
+            );
         });
 
-        return response()->json(['data' => ['id' => $link->id, 'status' => $data['decision'] === 'accept' ? 'active' : 'rejected']]);
+        return response()->json([
+            'data' => ['id' => $link->id, 'status' => $data['decision'] === 'accept' ? 'active' : 'rejected'],
+        ]);
     }
 
     public function revoke(Request $request, GuardianStudentLink $link): JsonResponse
     {
         $actor = $request->user();
-        abort_unless($actor && (($actor->isGuardian() && (int) $link->guardian_id === (int) $actor->id) || ($actor->isStudent() && (int) $link->student_id === (int) $actor->id)), 404);
+        abort_unless(
+            $actor && (
+                ($actor->isGuardian() && (int) $link->guardian_id === (int) $actor->id)
+                || ($actor->isStudent() && (int) $link->student_id === (int) $actor->id)
+            ),
+            404
+        );
         $this->requireActiveBranch($actor);
 
         DB::transaction(function () use ($request, $actor, $link): void {
-            $row = GuardianStudentLink::whereKey($link->id)->lockForUpdate()->firstOrFail();
+            $row = GuardianStudentLink::query()->whereKey($link->id)->lockForUpdate()->firstOrFail();
             $row->revokeBy($actor);
-            $this->audit($request, $actor, 'guardian_link.revoked', $row, 'Guardian relationship was revoked.');
+            $this->audit($request, $actor, 'guardian_link.revoked', $row, 'Guardian/student revoked the relationship.');
         });
 
         return response()->json(['data' => ['id' => $link->id, 'status' => 'revoked']]);
@@ -182,7 +207,8 @@ class GuardianController extends Controller
         abort_unless($guardian?->isGuardian(), 403);
         $this->requireActiveBranch($guardian);
 
-        $link = GuardianStudentLink::where('guardian_id', $guardian->id)
+        $link = GuardianStudentLink::query()
+            ->where('guardian_id', $guardian->id)
             ->where('student_id', $student->id)
             ->where('status', 'active')
             ->whereNotNull('reviewed_at')
@@ -193,13 +219,13 @@ class GuardianController extends Controller
 
         return response()->json(['data' => [
             'student' => $student->only(['id', 'name', 'email']),
-            'courses' => Enrollment::where('user_id', $student->id)->with('course:id,title')->latest()->limit(30)->get(['id', 'course_id', 'status', 'completed_at', 'created_at']),
-            'progress' => LessonProgress::where('user_id', $student->id)->with('lesson:id,course_id,title')->latest('completed_at')->limit(50)->get(['id', 'lesson_id', 'completed_at']),
-            'attendance' => Attendance::where('student_id', $student->id)->with('batch.course:id,title')->orderByDesc('attendance_date')->limit(30)->get(['id', 'batch_id', 'attendance_date', 'status']),
-            'exams' => ExamAttempt::where('student_id', $student->id)->where('status', 'submitted')->with('exam:id,batch_id,title')->latest('submitted_at')->limit(30)->get(['id', 'exam_id', 'score', 'status', 'submitted_at']),
-            'payments' => Payment::where('user_id', $student->id)->with('course:id,title')->latest()->limit(30)->get(['id', 'course_id', 'amount', 'currency', 'method', 'status', 'created_at']),
-            'invoices' => Invoice::where('user_id', $student->id)->with('course:id,title')->withSum('payments', 'amount')->latest()->limit(30)->get(['id', 'course_id', 'invoice_number', 'title', 'amount', 'due_date', 'status']),
-            'certificates' => Certificate::where('user_id', $student->id)->with('course:id,title')->latest('issued_at')->limit(30)->get(['id', 'course_id', 'certificate_number', 'status', 'issued_at']),
+            'courses' => Enrollment::query()->where('user_id', $student->id)->with('course:id,title')->latest()->limit(30)->get(['id', 'course_id', 'status', 'completed_at', 'created_at']),
+            'progress' => LessonProgress::query()->where('user_id', $student->id)->with('lesson:id,course_id,title')->latest('completed_at')->limit(50)->get(['id', 'lesson_id', 'completed_at']),
+            'attendance' => Attendance::query()->where('student_id', $student->id)->with('batch.course:id,title')->orderByDesc('attendance_date')->limit(30)->get(['id', 'batch_id', 'attendance_date', 'status']),
+            'exams' => ExamAttempt::query()->where('student_id', $student->id)->where('status', 'submitted')->with('exam:id,batch_id,title')->latest('submitted_at')->limit(30)->get(['id', 'exam_id', 'score', 'status', 'submitted_at']),
+            'payments' => Payment::query()->where('user_id', $student->id)->with('course:id,title')->latest()->limit(30)->get(['id', 'course_id', 'amount', 'currency', 'method', 'status', 'created_at']),
+            'invoices' => Invoice::query()->where('user_id', $student->id)->with('course:id,title')->withSum('payments', 'amount')->latest()->limit(30)->get(['id', 'course_id', 'invoice_number', 'title', 'amount', 'due_date', 'status']),
+            'certificates' => Certificate::query()->where('user_id', $student->id)->with('course:id,title')->latest('issued_at')->limit(30)->get(['id', 'course_id', 'certificate_number', 'status', 'issued_at']),
         ]]);
     }
 
@@ -212,7 +238,8 @@ class GuardianController extends Controller
 
     private function sameBranch(User $guardian, User $student): void
     {
-        if (($guardian->branch_id === null) !== ($student->branch_id === null) || ($guardian->branch_id !== null && (int) $guardian->branch_id !== (int) $student->branch_id)) {
+        if (($guardian->branch_id === null) !== ($student->branch_id === null)
+            || ($guardian->branch_id !== null && (int) $guardian->branch_id !== (int) $student->branch_id)) {
             abort(403, 'Guardian and student must belong to the same branch.');
         }
 
@@ -222,7 +249,7 @@ class GuardianController extends Controller
 
     private function audit(Request $request, User $actor, string $event, GuardianStudentLink $link, string $description): void
     {
-        ActivityLog::create([
+        ActivityLog::query()->create([
             'user_id' => $actor->id,
             'event' => $event,
             'description' => substr($description.' Link #'.$link->id, 0, 255),
