@@ -123,7 +123,11 @@ class StudentQuestionSetAttemptController extends Controller
             ->exists(), 403);
 
         if ($attempt->status === 'in_progress' && $attempt->deadline_at && now()->gte($attempt->deadline_at)) {
-            $this->finalizeExpiredAttempt($attempt);
+            DB::transaction(function () use ($attempt): void {
+                $lockedAttempt = QuestionSetAttempt::query()->whereKey($attempt->id)->lockForUpdate()->firstOrFail();
+                $this->finalizeExpiredAttempt($lockedAttempt);
+            });
+
             return redirect()->route('student.question-sets.show', [$course, $questionSet, $attempt]);
         }
 
@@ -150,6 +154,10 @@ class StudentQuestionSetAttemptController extends Controller
         abort_unless($attempt->student_id === $student->id
             && $attempt->course_id === $course->id
             && $attempt->question_set_id === $questionSet->id, 404);
+        abort_unless($course->enrollments()
+            ->where('user_id', $student->id)
+            ->whereIn('status', ['active', 'completed'])
+            ->exists(), 403);
 
         DB::transaction(function () use ($request, $attempt) {
             $lockedAttempt = QuestionSetAttempt::query()->whereKey($attempt->id)->lockForUpdate()->firstOrFail();
