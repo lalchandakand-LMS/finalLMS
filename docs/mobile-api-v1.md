@@ -95,7 +95,7 @@ Course ownership is checked server-side. The API does not accept a client-suppli
 - `GET /assignments/{assignment}`: assignment details and the authenticated student's own submission only.
 - `POST /assignments/{assignment}/submit`: submit or revise a text answer under the assignment's publication, enrollment, due-date, late-policy and grading rules. A pending submission cannot be duplicated; a graded submission may be revised according to the server policy.
 
-The current mobile assignment screen supports text answers. Private attachment upload from the mobile app remains a follow-up.
+The mobile assignment screen supports text answers and private file attachments. Files are stored on the private local disk, filenames are sanitized, rejected/duplicate uploads are cleaned up, and download access is checked against submission ownership and active enrollment.
 
 ## Student exam endpoints
 
@@ -131,7 +131,6 @@ Course ownership is checked server-side. The API does not accept a client-suppli
 - Token hashes, not bearer values, are persisted. Expired and revoked tokens are rejected.
 - The Student Flutter app now implements secure installation-ID and bearer-token storage, OTP entry, Admin-approval waiting UI, 15-second approval polling, session restoration and server-side logout. Flutter analyze/tests must pass for each release; real SMS and end-to-end approval still require isolated staging acceptance.
 - Enrollment purchase, cart/coupons, reviews, quizzes, assignments, live-class operations, notifications, and complete Flutter user interfaces are separate remaining deliverables.
-
 
 ## Student course quiz endpoints
 
