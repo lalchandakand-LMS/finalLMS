@@ -64,6 +64,22 @@
                     @endforeach
                 </select>
             </label>
+            <label>{{ __('Level') }}
+                <select name="level">
+                    <option value="">{{ __('All levels') }}</option>
+                    @foreach(['Beginner', 'Elementary', 'Intermediate', 'Upper-Intermediate', 'Advanced', 'All levels'] as $level)
+                        <option value="{{ $level }}" @selected(request('level') === $level)>{{ __($level) }}</option>
+                    @endforeach
+                </select>
+            </label>
+            <label>{{ __('Language') }}
+                <select name="language">
+                    <option value="">{{ __('All languages') }}</option>
+                    @foreach(['Bangla', 'English', 'Bangla & English'] as $language)
+                        <option value="{{ $language }}" @selected(request('language') === $language)>{{ __($language) }}</option>
+                    @endforeach
+                </select>
+            </label>
             <label>{{ __('Minimum price (BDT)') }}
                 <input type="number" name="min_price" min="0" max="100000000" step="0.01" value="{{ request('min_price') }}">
             </label>
@@ -92,7 +108,7 @@
                 $activeFlashSale = \App\Models\FlashSale::activeForCourse($course->id, auth()->id());
                 $basePrice = (float) $course->price;
                 $offerPrice = $activeFlashSale ? $activeFlashSale->discountedPrice($basePrice) : $basePrice;
-                $courseCategories = $course->curriculumItems->flatMap(fn ($item) => $item->post?->categories ?? collect())->unique('id')->take(3);
+                $courseCategories = $course->categories->concat($course->curriculumItems->flatMap(fn ($item) => $item->post?->categories ?? collect()))->unique('id')->take(3);
             @endphp
             <article class="catalog-course-card">
                 <a class="catalog-course-image" href="{{ route('courses.show', $course) }}" aria-label="{{ __('View course') }}: {{ $course->title }}">
@@ -118,6 +134,9 @@
                     <div class="catalog-course-meta">
                         <span>♙ {{ $course->teacher?->name ?? __('Instructor to be announced') }}</span>
                         <span>▣ {{ number_format($course->students_count) }} {{ __('students') }}</span>
+                        @if($course->level)<span>{{ __($course->level) }}</span>@endif
+                        @if($course->language)<span>{{ __($course->language) }}</span>@endif
+                        @if($course->duration_minutes)<span>{{ number_format($course->duration_minutes) }} {{ __('minutes') }}</span>@endif
                     </div>
                     <div class="catalog-course-price">
                         <strong>{{ $offerPrice <= 0 ? __('Free') : '৳'.number_format($offerPrice, 0) }}</strong>

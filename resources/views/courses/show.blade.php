@@ -1,6 +1,8 @@
 @extends('layouts.app')
 
-@section('title', $course->title . ' | ' . config('app.name'))
+@section('title', ($course->seo_title ?: $course->title) . ' | ' . config('app.name'))
+@section('seo_title', $course->seo_title ?: $course->title)
+@section('seo_description', $course->seo_description ?: ($course->short_description ?: \Illuminate\Support\Str::limit(strip_tags($course->description), 160)))
 
 @section('content')
     @php($activeFlashSale = \App\Models\FlashSale::activeForCourse($course->id, auth()->id()))
@@ -57,7 +59,33 @@
                 <div class="course-detail-stat"><strong>{{ number_format($courseContentCount) }}</strong><small>{{ __('Lessons') }}</small></div>
                 <div class="course-detail-stat"><strong>{{ $course->teacher?->name ? __('Available') : __('Coming soon') }}</strong><small>{{ __('Instructor') }}</small></div>
             </div>
+            @if($course->short_description)<p class="muted">{{ $course->short_description }}</p>@endif
             <p>{{ $course->description }}</p>
+            @if($course->categories->isNotEmpty())
+                <div class="meta-row" aria-label="{{ __('Course categories') }}">
+                    @foreach($course->categories as $category)
+                        <span class="badge info">{{ $category->name }}</span>
+                    @endforeach
+                </div>
+            @endif
+            <div class="meta-row" style="margin:12px 0;">
+                @if($course->level)<span class="badge">{{ __('Level') }}: {{ __($course->level) }}</span>@endif
+                @if($course->language)<span class="badge">{{ __('Language') }}: {{ __($course->language) }}</span>@endif
+                @if($course->duration_minutes)<span class="badge">{{ __('Duration') }}: {{ number_format($course->duration_minutes) }} {{ __('minutes') }}</span>@endif
+            </div>
+            @if($course->learning_outcomes)
+                <h3>{{ __('What you will learn') }}</h3>
+                <p>{!! nl2br(e($course->learning_outcomes)) !!}</p>
+            @endif
+            @if($course->requirements)
+                <h3>{{ __('Requirements / prerequisites') }}</h3>
+                <p>{!! nl2br(e($course->requirements)) !!}</p>
+            @endif
+            @if($course->tags)
+                <div class="meta-row" style="margin-top:12px;">
+                    @foreach($course->tags as $tag)<span class="badge">{{ $tag }}</span>@endforeach
+                </div>
+            @endif
             @if(auth()->check() && auth()->user()->isAdmin())
                 <a class="btn secondary" href="{{ route('admin.courses.lessons.index', $course) }}">{{ __('Manage lessons') }}</a>
             @elseif(auth()->check() && auth()->user()->isTeacher() && $course->teacher_id === auth()->id())

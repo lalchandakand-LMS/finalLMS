@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class CourseController extends Controller
@@ -28,6 +29,8 @@ class CourseController extends Controller
             'q' => ['nullable', 'string', 'max:120'],
             'teacher' => ['nullable', 'integer', 'min:1'],
             'category' => ['nullable', 'integer', 'min:1'],
+            'level' => ['nullable', 'string', 'max:40'],
+            'language' => ['nullable', 'string', 'max:40'],
             'min_price' => ['nullable', 'numeric', 'min:0', 'max:100000000'],
             'max_price' => ['nullable', 'numeric', 'min:0', 'max:100000000', 'gte:min_price'],
             'sort' => ['nullable', 'in:latest,oldest,price_low,price_high,title'],
@@ -36,6 +39,7 @@ class CourseController extends Controller
         $query = Course::query()
             ->with([
                 'teacher',
+                'categories',
                 'curriculumItems' => fn ($items) => $items
                     ->whereHas('post', fn ($posts) => $posts->published())
                     ->with('post.categories'),
@@ -47,8 +51,12 @@ class CourseController extends Controller
             $term = trim($validated['q']);
             $query->where(function ($builder) use ($term): void {
                 $builder->where('title', 'like', '%'.$term.'%')
+                    ->orWhere('short_description', 'like', '%'.$term.'%')
                     ->orWhere('description', 'like', '%'.$term.'%')
                     ->orWhereHas('teacher', fn ($teacher) => $teacher->where('name', 'like', '%'.$term.'%'));
+                if (mb_strlen($term) <= 80) {
+                    $builder->orWhereJsonContains('tags', $term);
+                }
             });
         }
 
@@ -57,11 +65,20 @@ class CourseController extends Controller
         }
         if (! empty($validated['category'])) {
             $categoryId = (int) $validated['category'];
-            $query->whereHas('curriculumItems.post', fn ($posts) => $posts
-                ->published()
-                ->whereHas('categories', fn ($categories) => $categories->whereKey($categoryId)));
+            $query->where(function ($builder) use ($categoryId): void {
+                $builder->whereHas('categories', fn ($categories) => $categories
+                    ->whereKey($categoryId)->where('is_visible', true))
+                    ->orWhereHas('curriculumItems.post', fn ($posts) => $posts
+                        ->published()
+                        ->whereHas('categories', fn ($categories) => $categories->whereKey($categoryId)->where('is_visible', true)));
+            });
         }
-
+        if (! empty($validated['level'])) {
+            $query->where('level', $validated['level']);
+        }
+        if (! empty($validated['language'])) {
+            $query->where('language', $validated['language']);
+        }
         if (isset($validated['min_price'])) {
             $query->where('price', '>=', $validated['min_price']);
         }
@@ -84,7 +101,11 @@ class CourseController extends Controller
             ->get(['id', 'name']);
         $categories = CourseCategory::query()
             ->where('is_visible', true)
-            ->whereHas('posts', fn ($posts) => $posts->published()->whereHas('courses', fn ($relatedCourses) => $relatedCourses->where('status', 'published')))
+            ->where(function ($builder): void {
+                $builder->whereHas('courses', fn ($courses) => $courses->where('status', 'published'))
+                    ->orWhereHas('posts', fn ($posts) => $posts->published()
+                        ->whereHas('courses', fn ($relatedCourses) => $relatedCourses->where('status', 'published')));
+            })
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get(['id', 'name']);
@@ -125,86 +146,144 @@ class CourseController extends Controller
         return view('student.courses.index', compact('enrollments'));
     }
 
-    public function adminIndex(): View
+    public function adminIndex(Request $request): View
     {
-        $courses = Course::with('teacher')->latest()->get();
-        $teachers = User::where('role', 'teacher')->get();
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:120'],
+            'status' => ['nullable', Rule::in(['published', 'draft', 'archived'])],
+            'teacher_id' => ['nullable', 'integer', 'min:1'],
+        ]);
 
-        return view('admin.courses.index', compact('courses', 'teachers'));
+        $query = Course::query()
+            ->with(['teacher', 'categories'])
+            ->withCount(['enrollments', 'lessons', 'curriculumItems'])
+            ->latest();
+
+        if (! empty($filters['search'])) {
+            $term = trim($filters['search']);
+            $query->where(fn ($builder) => $builder
+                ->where('title', 'like', '%'.$term.'%')
+                ->orWhere('slug', 'like', '%'.$term.'%'));
+        }
+        if (! empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+        if (! empty($filters['teacher_id'])) {
+            $query->where('teacher_id', $filters['teacher_id']);
+        }
+
+        $courses = $query->paginate(20)->withQueryString();
+        $teachers = User::query()->where('role', 'teacher')->orderBy('name')->get(['id', 'name']);
+
+        return view('admin.courses.index', compact('courses', 'teachers', 'filters'));
     }
 
     public function create(): View
     {
-        $teachers = User::where('role', 'teacher')->get();
+        $teachers = User::query()->where('role', 'teacher')->orderBy('name')->get();
+        $categories = CourseCategory::query()->orderBy('sort_order')->orderBy('name')->get();
 
-        return view('admin.courses.form', ['course' => null, 'teachers' => $teachers]);
+        return view('admin.courses.form', ['course' => null, 'teachers' => $teachers, 'categories' => $categories]);
     }
 
     public function edit(Course $course): View
     {
-        $teachers = User::where('role', 'teacher')->get();
+        $teachers = User::query()->where('role', 'teacher')->orderBy('name')->get();
+        $categories = CourseCategory::query()->orderBy('sort_order')->orderBy('name')->get();
 
-        return view('admin.courses.form', ['course' => $course, 'teachers' => $teachers]);
+        return view('admin.courses.form', [
+            'course' => $course->load('categories'),
+            'teachers' => $teachers,
+            'categories' => $categories,
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
-            'description' => ['required', 'string'],
-            'teacher_id' => ['required', 'exists:users,id'],
-            'price' => ['required', 'numeric', 'min:0'],
-            'status' => ['required', 'in:published,draft,archived'],
-            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
-        ]);
+        $validated = $request->validate($this->courseRules());
+        $categoryIds = $validated['category_ids'] ?? [];
+        unset($validated['category_ids'], $validated['image']);
+        $validated['tags'] = $this->normalizeTags($request->input('tags'));
+        $validated['short_description'] = ($validated['short_description'] ?? '')
+            ?: Str::limit(trim(strip_tags($validated['description'])), 240);
+        $validated['slug'] = $this->uniqueCourseSlug($validated['title']);
 
-        $validated['slug'] = Str::slug($validated['title']);
-        if ($request->hasFile('image')) {
-            $validated['image_path'] = $request->file('image')->store('courses', 'public');
+        $newImagePath = $request->file('image')?->store('courses', 'public');
+        if ($newImagePath) {
+            $validated['image_path'] = $newImagePath;
         }
 
-        Course::create($validated);
+        try {
+            DB::transaction(function () use ($validated, $categoryIds): void {
+                $course = Course::create($validated);
+                $course->categories()->sync($categoryIds);
+            });
+        } catch (Throwable $exception) {
+            if ($newImagePath) {
+                Storage::disk('public')->delete($newImagePath);
+            }
+            throw $exception;
+        }
 
-        return redirect()->route('admin.courses.index')->with('success', 'Course created successfully.');
+        return redirect()->route('admin.courses.index')->with('success', __('Course created successfully.'));
     }
 
     public function update(Request $request, Course $course): RedirectResponse
     {
-        $validated = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
-            'description' => ['required', 'string'],
-            'teacher_id' => ['required', 'exists:users,id'],
-            'price' => ['required', 'numeric', 'min:0'],
-            'status' => ['required', 'in:published,draft,archived'],
-            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
-        ]);
+        $validated = $request->validate($this->courseRules($course));
+        $categoryIds = $validated['category_ids'] ?? [];
+        unset($validated['category_ids'], $validated['image']);
+        $validated['tags'] = $this->normalizeTags($request->input('tags'));
+        $validated['short_description'] = ($validated['short_description'] ?? '')
+            ?: Str::limit(trim(strip_tags($validated['description'])), 240);
+        $validated['slug'] = $this->uniqueCourseSlug($validated['title'], $course->id);
 
-        $validated['slug'] = Str::slug($validated['title']);
-        if ($request->hasFile('image')) {
-            $newImagePath = $request->file('image')->store('courses', 'public');
-            if ($course->image_path) Storage::disk('public')->delete($course->image_path);
+        $oldImagePath = $course->image_path;
+        $newImagePath = $request->file('image')?->store('courses', 'public');
+        if ($newImagePath) {
             $validated['image_path'] = $newImagePath;
         }
-        $course->update($validated);
 
-        return redirect()->route('admin.courses.index')->with('success', 'Course updated successfully.');
+        try {
+            DB::transaction(function () use ($course, $validated, $categoryIds): void {
+                $locked = Course::query()->lockForUpdate()->findOrFail($course->id);
+                $locked->update($validated);
+                $locked->categories()->sync($categoryIds);
+            });
+        } catch (Throwable $exception) {
+            if ($newImagePath) {
+                Storage::disk('public')->delete($newImagePath);
+            }
+            throw $exception;
+        }
+
+        if ($newImagePath && $oldImagePath && $oldImagePath !== $newImagePath) {
+            Storage::disk('public')->delete($oldImagePath);
+        }
+
+        return redirect()->route('admin.courses.index')->with('success', __('Course updated successfully.'));
     }
 
     public function destroy(Course $course): RedirectResponse
     {
         if ($course->combos()->exists()) {
-            return back()->with('error', 'Remove this course from every combo before deleting it.');
+            return back()->with('error', __('Remove this course from every combo before deleting it.'));
         }
 
-        if ($course->payments()->exists()) {
-            return back()->with('error', 'This course has payment history. Archive it instead of deleting it.');
-        }
+        $hasHistory = $course->enrollments()->exists()
+            || $course->payments()->exists()
+            || $course->certificates()->exists()
+            || $course->lessons()->exists()
+            || $course->batches()->exists()
+            || $course->curriculumItems()->exists()
+            || $course->questionSets()->exists()
+            || DB::table('question_set_attempts')->where('course_id', $course->id)->exists();
 
-        if (DB::table('question_set_attempts')->where('course_id', $course->id)->exists()) {
+        if ($hasHistory) {
             $course->update(['status' => 'archived']);
 
             return redirect()->route('admin.courses.index')
-                ->with('success', __('This course has quiz attempt history and was archived instead of deleted.'));
+                ->with('success', __('Course archived because learning, enrollment, quiz or payment history exists; records were preserved.'));
         }
 
         $course->load('lessons');
@@ -212,12 +291,23 @@ class CourseController extends Controller
         $thumbnailPaths = $course->lessons->pluck('thumbnail_path')->filter()->all();
         $attachmentPaths = $course->lessons->pluck('attachment_path')->filter()->all();
         $imagePath = $course->image_path;
-        $course->delete();
-        if ($imagePath) Storage::disk('public')->delete($imagePath);
-        foreach ($videoPaths as $path) Storage::disk('lesson_videos')->delete($path);
-        foreach ($thumbnailPaths as $path) Storage::disk('public')->delete($path);
-        foreach ($attachmentPaths as $path) Storage::disk('local')->delete($path);
-        return redirect()->route('admin.courses.index')->with('success', 'Course deleted successfully.');
+
+        DB::transaction(fn () => $course->delete());
+
+        if ($imagePath) {
+            Storage::disk('public')->delete($imagePath);
+        }
+        foreach ($videoPaths as $path) {
+            Storage::disk('lesson_videos')->delete($path);
+        }
+        foreach ($thumbnailPaths as $path) {
+            Storage::disk('public')->delete($path);
+        }
+        foreach ($attachmentPaths as $path) {
+            Storage::disk('local')->delete($path);
+        }
+
+        return redirect()->route('admin.courses.index')->with('success', __('Course deleted successfully.'));
     }
 
     public function show(Request $request, Course $course): View
@@ -229,7 +319,7 @@ class CourseController extends Controller
         PageView::record($request, 'course', 'course', $course->id);
         $course->views_count = PageView::where('view_type', 'course')->where('viewable_id', $course->id)->count();
         $comments = $course->comments()->with('author')->latest()->paginate(10, ['*'], 'comments_page');
-        $course->load('teacher', 'enrollments.user', 'lessons', 'curriculumItems.post.categories', 'curriculumItems.post.thumbnail');
+        $course->load('teacher', 'categories', 'enrollments.user', 'lessons', 'curriculumItems.post.categories', 'curriculumItems.post.thumbnail');
         $course->load(['questionSets' => fn ($sets) => $sets
             ->when(! $canManageCourse, fn ($query) => $query->published())
             ->withCount('questions')]);
@@ -580,4 +670,54 @@ class CourseController extends Controller
 
         return back()->with('success', 'Course marked complete and certificate issued.');
     }
+
+    private function courseRules(?Course $course = null): array
+    {
+        return [
+            'title' => ['required', 'string', 'max:255'],
+            'short_description' => ['nullable', 'string', 'max:500'],
+            'description' => ['required', 'string', 'max:100000'],
+            'teacher_id' => ['required', Rule::exists('users', 'id')->where(fn ($query) => $query->where('role', 'teacher'))],
+            'price' => ['required', 'numeric', 'min:0', 'max:999999999'],
+            'status' => ['required', Rule::in(['published', 'draft', 'archived'])],
+            'category_ids' => ['nullable', 'array', 'max:30'],
+            'category_ids.*' => ['integer', 'distinct', Rule::exists('course_categories', 'id')],
+            'tags' => ['nullable', 'string', 'max:2000'],
+            'seo_title' => ['nullable', 'string', 'max:255'],
+            'seo_description' => ['nullable', 'string', 'max:320'],
+            'learning_outcomes' => ['nullable', 'string', 'max:10000'],
+            'requirements' => ['nullable', 'string', 'max:10000'],
+            'level' => ['nullable', 'string', 'max:40'],
+            'language' => ['nullable', 'string', 'max:40'],
+            'duration_minutes' => ['nullable', 'integer', 'min:1', 'max:100000'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+        ];
+    }
+
+    private function normalizeTags(?string $tags): array
+    {
+        return collect(explode(',', (string) $tags))
+            ->map(fn ($tag) => trim($tag))
+            ->filter()
+            ->unique(fn ($tag) => mb_strtolower($tag))
+            ->take(30)
+            ->values()
+            ->all();
+    }
+
+    private function uniqueCourseSlug(string $title, ?int $ignoreId = null): string
+    {
+        $base = Str::slug($title) ?: 'course';
+        $slug = $base;
+        $suffix = 2;
+
+        while (Course::query()->where('slug', $slug)
+            ->when($ignoreId, fn ($query) => $query->whereKeyNot($ignoreId))
+            ->exists()) {
+            $slug = $base.'-'.$suffix++;
+        }
+
+        return $slug;
+    }
+
 }

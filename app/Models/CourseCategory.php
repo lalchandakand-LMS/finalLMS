@@ -20,6 +20,11 @@ class CourseCategory extends Model
         return $this->belongsTo(MediaAsset::class, 'image_media_id');
     }
 
+    public function courses(): BelongsToMany
+    {
+        return $this->belongsToMany(Course::class, 'course_category_course')->withTimestamps();
+    }
+
     public function posts(): BelongsToMany
     {
         return $this->belongsToMany(CourseContentPost::class, 'course_content_post_category');
