@@ -114,9 +114,13 @@ class _InstructorHomeState extends State<InstructorHome> {
     setState(() { loading = true; error = null; });
     try {
       final response = await widget.api.get('/instructor/courses');
-      if (mounted) setState(() => courses = response['data'] as List<dynamic>? ?? []);
+      if (mounted) {
+        setState(() => courses = response['data'] as List<dynamic>? ?? []);
+      }
     } catch (e) {
-      if (mounted) setState(() => error = e.toString());
+      if (mounted) {
+        setState(() => error = e.toString());
+      }
     } finally {
       if (mounted) {
         setState(() => loading = false);
@@ -126,7 +130,9 @@ class _InstructorHomeState extends State<InstructorHome> {
   Future<void> showStudents(Map<String, dynamic> course) async {
     try {
       final response = await widget.api.get("/instructor/courses/${course['slug']}/students");
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       final students = response['data'] as List<dynamic>? ?? [];
       showModalBottomSheet<void>(context: context, builder: (context) => SafeArea(child: ListView(
         padding: const EdgeInsets.all(16),
@@ -140,7 +146,9 @@ class _InstructorHomeState extends State<InstructorHome> {
         ],
       )));
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       if (e is ApiException && (e.statusCode == 401 || e.statusCode == 403)) {
         widget.onLogout();
         return;
