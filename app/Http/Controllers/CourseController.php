@@ -266,8 +266,11 @@ class CourseController extends Controller
 
     public function destroy(Course $course): RedirectResponse
     {
-        $hasHistory = $course->combos()->exists()
-            || $course->enrollments()->exists()
+        if ($course->combos()->exists()) {
+            return back()->with('error', __('Remove this course from every combo before deleting it.'));
+        }
+
+        $hasHistory = $course->enrollments()->exists()
             || $course->payments()->exists()
             || $course->certificates()->exists()
             || $course->lessons()->exists()
