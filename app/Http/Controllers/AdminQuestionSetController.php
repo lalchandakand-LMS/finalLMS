@@ -106,9 +106,12 @@ class AdminQuestionSetController extends Controller
             'status' => ['required', Rule::in(['draft', 'published', 'archived'])],
             'source_question_ids' => ['nullable', 'array', 'max:200'],
             'source_question_ids.*' => ['integer', 'distinct', 'exists:question_bank_questions,id'],
+            'source_question_positions' => ['nullable', 'array'],
+            'source_question_positions.*' => ['nullable', 'integer', 'min:0', 'max:100000'],
             'questions' => ['nullable', 'array', 'max:200'],
             'questions.*.type' => ['required', Rule::in(['mcq', 'true_false', 'short_answer'])],
             'questions.*.question' => ['required', 'string', 'max:3000'],
+            'questions.*.position' => ['nullable', 'integer', 'min:0', 'max:100000'],
             'questions.*.options' => ['nullable', 'array', 'max:4'],
             'questions.*.options.*' => ['required', 'string', 'max:500', 'distinct'],
             'questions.*.correct_option' => ['nullable', 'integer', 'between:0,3'],
@@ -124,7 +127,8 @@ class AdminQuestionSetController extends Controller
         abort_unless($sourceQuestions->count() === count($sourceIds), 422, __('One or more selected bank questions no longer exist.'));
 
         $items = [];
-        foreach ($sourceIds as $id) {
+        $sourcePositions = $data['source_question_positions'] ?? [];
+        foreach ($sourceIds as $index => $id) {
             $source = $sourceQuestions->get($id);
             $items[] = [
                 'source_question_id' => $source->id,
@@ -137,7 +141,7 @@ class AdminQuestionSetController extends Controller
                 'difficulty' => $source->difficulty ?: 'medium',
                 'tags' => array_values(array_filter([$source->subject, $source->category])),
                 'marks' => $source->marks,
-                'position' => (count($items) + 1) * 10,
+                'position' => (int) ($sourcePositions[$id] ?? (($index + 1) * 10)),
             ];
         }
 
@@ -190,7 +194,7 @@ class AdminQuestionSetController extends Controller
                 'difficulty' => $question['difficulty'] ?? 'medium',
                 'tags' => $tags,
                 'marks' => (int) $question['marks'],
-                'position' => (count($items) + 1) * 10,
+                'position' => (int) ($question['position'] ?? ((count($items) + 1) * 10)),
             ];
         }
 
@@ -199,6 +203,12 @@ class AdminQuestionSetController extends Controller
                 'questions' => __('Select at least one Question Bank item or add a question to this set.'),
             ]);
         }
+
+        usort($items, fn (array $left, array $right): int => $left['position'] <=> $right['position']);
+        foreach ($items as $index => &$item) {
+            $item['position'] = ($index + 1) * 10;
+        }
+        unset($item);
 
         return [$data, $items];
     }
