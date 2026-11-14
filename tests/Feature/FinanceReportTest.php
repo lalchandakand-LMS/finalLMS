@@ -65,7 +65,7 @@ class FinanceReportTest extends TestCase
     {
         $branch = Branch::create(['name' => 'Dhaka Branch', 'slug' => 'dhaka-branch']);
         $otherBranch = Branch::create(['name' => 'Sylhet Branch', 'slug' => 'sylhet-branch']);
-        $accountant = User::factory()->create(['role' => 'accountant', 'branch_id' => $branch->id]);
+        $accountant = User::factory()->create(['role' => 'accountant', 'branch_id' => $branch->id, 'admin_permissions' => ['finance.invoices', 'finance.refunds', 'finance.reports', 'finance.expenses']]);
         $admin = User::factory()->create(['role' => 'admin']);
         $localStudent = User::factory()->create(['role' => 'student', 'branch_id' => $branch->id]);
         $remoteStudent = User::factory()->create(['role' => 'student', 'branch_id' => $otherBranch->id]);
