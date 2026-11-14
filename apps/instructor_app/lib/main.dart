@@ -180,7 +180,7 @@ class _InstructorHomeState extends State<InstructorHome> {
               onPressed: () {
                 final minutes = int.tryParse(duration.text.trim());
                 final position = int.tryParse(order.text.trim());
-                if (title.text.trim().isEmpty || content.text.trim().isEmpty || minutes == null || minutes < 1 || minutes > 600 || position == null || position < 1) return;
+                if (title.text.trim().isEmpty || content.text.trim().isEmpty || minutes == null || minutes < 1 || minutes > 600 || position == null || position < 1) {\n                  return;\n                }
                 Navigator.pop(dialogContext, {
                   'title': title.text.trim(),
                   'content': content.text.trim(),
@@ -270,7 +270,7 @@ class _InstructorHomeState extends State<InstructorHome> {
                           onSelected: (action) async {
                             if (action == 'edit') {
                               final payload = await editLessonDialog(lesson: lesson, nextOrder: index + 1);
-                              if (payload == null) return;
+                              if (payload == null) {\n                                return;\n                              }
                               try {
                                 await widget.api.putJson('/instructor/courses/$slug/lessons/$lessonId', payload);
                                 await refreshLessons(setSheetState);
@@ -349,7 +349,7 @@ class _InstructorHomeState extends State<InstructorHome> {
   Future<void> showBatchStudents(Map<String, dynamic> batch) async {
     try {
       final response = await widget.api.get('/instructor/batches/${batch['id']}');
-      if (!mounted) return;
+      if (!mounted) {\n        return;\n      }
       final detail = response['batch'] as Map<String, dynamic>;
       final students = response['data'] as List<dynamic>? ?? [];
       await showModalBottomSheet<void>(
@@ -454,7 +454,7 @@ class _InstructorHomeState extends State<InstructorHome> {
                       firstDate: DateTime.now(),
                       lastDate: DateTime.now().add(const Duration(days: 365)),
                     );
-                    if (picked != null) {
+                    if (!dialogContext.mounted) {\n                      return;\n                    }\n                    if (picked != null) {
                       setDialogState(() => dueAt = DateTime(
                         picked.year, picked.month, picked.day, 23, 59,
                       ));
