@@ -2,6 +2,29 @@
 @section('title', $lesson->title . ' | ' . $course->title)
 @section('content')
 <div class="page-header"><div><a href="{{ route('courses.show', $course) }}" class="muted">← {{ __('Back to course') }}</a><h1 style="margin:12px 0 0;">{{ $lesson->title }}</h1><p class="muted">{{ $course->title }} · {{ $lesson->duration_minutes }} {{ __('minutes') }}</p></div>@if($isCompleted)<span class="badge success">{{ __('Completed') }}</span>@endif</div>
+@if($isEnrolled && auth()->user()?->isStudent())
+    <section class="panel" style="margin-bottom:18px;">
+        <div class="meta-row" style="justify-content:space-between;">
+            <strong>{{ __('Course progress') }}</strong>
+            <span class="muted">{{ $completedLessonsCount }} / {{ $totalLessonsCount }} {{ __('lessons completed') }} · {{ $progressPercent }}%</span>
+        </div>
+        <div role="progressbar" aria-label="{{ __('Course progress') }}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ $progressPercent }}" style="height:9px;background:#e8eef8;border-radius:999px;overflow:hidden;margin-top:10px;">
+            <div style="height:100%;width:{{ $progressPercent }}%;background:#1769e8;border-radius:999px;"></div>
+        </div>
+    </section>
+@endif
+<nav class="meta-row" aria-label="{{ __('Lesson navigation') }}" style="justify-content:space-between;margin-bottom:18px;">
+    <div>
+        @if($previousLesson)
+            <a class="btn secondary" href="{{ route('courses.lessons.show', [$course, $previousLesson]) }}">← {{ __('Previous lesson') }}</a>
+        @endif
+    </div>
+    <div>
+        @if($nextLesson)
+            <a class="btn primary" href="{{ route('courses.lessons.show', [$course, $nextLesson]) }}">{{ __('Next lesson') }} →</a>
+        @endif
+    </div>
+</nav>
 <div class="panel protected-learning-content" oncontextmenu="return false" ondragstart="return false">
 <div aria-hidden="true" style="position:fixed;inset:35% 5% auto;z-index:5;pointer-events:none;opacity:.10;transform:rotate(-24deg);font-size:clamp(18px,4vw,42px);font-weight:800;text-align:center;word-break:break-all;">{{ auth()->user()?->email }} · Alom’s English Center · {{ now()->format('d/m/Y') }}</div>
 @if($privateVideoUrl)

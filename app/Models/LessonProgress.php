@@ -7,9 +7,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class LessonProgress extends Model
 {
-    protected $fillable = ['lesson_id', 'user_id', 'completed_at'];
+    protected $fillable = ['lesson_id', 'user_id', 'completed_at', 'last_viewed_at'];
 
-    protected $casts = ['completed_at' => 'datetime'];
+    protected $casts = ['completed_at' => 'datetime', 'last_viewed_at' => 'datetime'];
 
     public function lesson(): BelongsTo
     {
