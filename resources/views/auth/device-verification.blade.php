@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
-@section('title', 'Verify student device | ' . config('app.name'))
+@section('title', 'Verify device | ' . config('app.name'))
 
 @section('content')
 <div class="auth-box">
-    <span class="badge info">Student security</span>
+    <span class="badge info">Account security</span>
     <h2 style="margin-top:12px;">Verify this device</h2>
     @if($device->status === 'pending_admin_approval')
         <div class="panel">
@@ -14,7 +14,7 @@
         </div>
         <a href="{{ route('login') }}" class="btn secondary" style="width:100%;margin-top:14px;">Back to login</a>
     @else
-        <p class="muted">We sent a 6-digit verification code to the mobile number saved in your student profile.</p>
+        <p class="muted">We sent a 6-digit verification code to the mobile number saved in your account.</p>
         @if($errors->any())<div class="error">{{ $errors->first() }}</div>@endif
         <form method="POST" action="{{ route('student-device.verify-phone') }}" style="margin-top:20px;">
             @csrf

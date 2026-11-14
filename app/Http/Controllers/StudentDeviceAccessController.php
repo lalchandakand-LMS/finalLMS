@@ -165,7 +165,7 @@ class StudentDeviceAccessController extends Controller
             return back()->with('error', 'Only phone-verified pending devices can be approved.');
         }
 
-        return back()->with('success', 'Student device approved. Previous device access has been revoked.');
+        return back()->with('success', 'Device approved. Previous device access has been revoked.');
     }
 
     public function reject(StudentDevice $device): RedirectResponse
@@ -213,7 +213,7 @@ class StudentDeviceAccessController extends Controller
             return back()->withErrors(['email' => 'The provided credentials do not match our records.'])->onlyInput('email');
         }
 
-        if (! $user->isStudent()) {
+        if ($user->isAdmin()) {
             if (Auth::attempt(['email' => $validated['email'], 'password' => $validated['password']])) {
                 $request->session()->regenerate();
                 DeviceSession::register($request, $user);
@@ -224,7 +224,7 @@ class StudentDeviceAccessController extends Controller
         }
 
         if (! $user->phone_number) {
-            return back()->withErrors(['email' => 'Add a mobile number to the student profile through the academy administrator before signing in.'])->onlyInput('email');
+            return back()->withErrors(['email' => 'Add a mobile number to your account through the academy administrator before signing in.'])->onlyInput('email');
         }
 
         $deviceToken = $request->cookie('lms_student_device');
@@ -267,7 +267,7 @@ class StudentDeviceAccessController extends Controller
         }
 
         if (! $sms->isConfigured()) {
-            return back()->withErrors(['email' => 'Student device verification needs the academy SMS service. Please contact the administrator.'])->onlyInput('email');
+            return back()->withErrors(['email' => 'Device verification needs the academy SMS service. Please contact the administrator.'])->onlyInput('email');
         }
 
         $otp = (string) random_int(100000, 999999);
