@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\Course;
 use App\Models\QuestionBankQuestion;
 use App\Models\QuestionSet;
-use App\Models\QuestionSetQuestion;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -13,6 +12,17 @@ use Tests\TestCase;
 class CourseQuestionSetTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_admin_can_render_question_set_listing_and_authoring_pages(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->get(route('admin.question-sets.index'))
+            ->assertOk()->assertSee('Question sets');
+        $this->get(route('admin.question-sets.create'))
+            ->assertOk()->assertSee('Reuse Question Bank MCQs')
+            ->assertSee('Short answer');
+    }
 
     public function test_admin_can_create_a_mixed_question_set_and_snapshot_question_bank_items(): void
     {
