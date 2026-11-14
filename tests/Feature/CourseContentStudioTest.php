@@ -189,6 +189,35 @@ class CourseContentStudioTest extends TestCase
         $this->actingAs($student)->get(route('admin.course-builder.edit', $course))->assertForbidden();
     }
 
+    public function test_course_builder_rejects_scheduled_posts_until_their_publish_time(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $course = Course::factory()->create(['teacher_id' => $teacher->id, 'status' => 'published']);
+        $scheduled = CourseContentPost::create([
+            'author_id' => $admin->id,
+            'title' => 'Scheduled lesson',
+            'slug' => 'scheduled-lesson',
+            'long_description' => 'This lesson is not live yet.',
+            'status' => 'published',
+            'published_at' => now()->addDay(),
+        ]);
+
+        $this->actingAs($admin)
+            ->from(route('admin.course-builder.edit', $course))
+            ->put(route('admin.course-builder.update', $course), [
+                'post_ids' => [$scheduled->id],
+                'positions' => [$scheduled->id => 10],
+            ])
+            ->assertRedirect(route('admin.course-builder.edit', $course))
+            ->assertSessionHasErrors('post_ids.0');
+
+        $this->assertDatabaseMissing('course_curriculum_items', [
+            'course_id' => $course->id,
+            'course_content_post_id' => $scheduled->id,
+        ]);
+    }
+
     private function makePost(User $author, ?CourseCategory $category, string $title): CourseContentPost
     {
         $post = CourseContentPost::create([
