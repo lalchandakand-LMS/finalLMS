@@ -36,7 +36,7 @@ class BatchController extends Controller
             ->paginate(25);
 
         $courses = Course::where('status', 'published')->orderBy('title')->get();
-        $teachers = User::where('role', 'teacher')->where('branch_id', $request->user()->branch_id)->orderBy('name')->get();
+        $teachers = User::where('role', 'teacher')->where('branch_id', $branchId)->orderBy('name')->get();
 
         return view('branch-manager.batches.index', compact('batches', 'courses', 'teachers'));
     }
@@ -55,12 +55,19 @@ class BatchController extends Controller
             'fee' => ['required', 'numeric', 'min:0'],
         ]);
         Batch::create([...$validated, 'branch_id' => $branchId, 'status' => 'open']);
-        return redirect()->route('admin.branch-workspace.batches.index')->with('success', 'Batch created for your branch.');
+        return redirect()->route('branch-manager.batches.index')->with('success', 'Batch created for your branch.');
     }
 
     public function branchManagerUpdate(Batch $batch, Request $request): RedirectResponse
     {
-        abort_unless($request->user()->branch_id && Branch::whereKey($request->user()->branch_id)->where('is_active', true)->exists() && $batch->branch_id === $request->user()->branch_id, 404);
+        $branchId = $request->user()->branch_id;
+        abort_unless(
+            $branchId
+            && (int) $batch->branch_id === (int) $branchId
+            && Branch::whereKey($branchId)->where('is_active', true)->exists(),
+            404,
+            'The batch is not available to this active branch.'
+        );
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:160'],
             'capacity' => ['required', 'integer', 'min:1', 'max:1000'],
@@ -71,7 +78,7 @@ class BatchController extends Controller
         ]);
         abort_if($validated['capacity'] < $batch->enrollments()->whereIn('status', ['active', 'completed'])->count(), 422, 'Capacity cannot be lower than the current enrolled student count.');
         $batch->update($validated);
-        return redirect()->route('admin.branch-workspace.batches.index')->with('success', 'Your branch batch was updated.');
+        return redirect()->route('branch-manager.batches.index')->with('success', 'Your branch batch was updated.');
     }
 
     public function branchManagerStudents(Request $request): View
@@ -87,7 +94,9 @@ class BatchController extends Controller
             ->where('role', 'student')
             ->where(function ($query) use ($branchId): void {
                 $query->where('branch_id', $branchId)
-                    ->orWhereHas('enrollments.batch', fn ($batch) => $batch->where('branch_id', $branchId));
+                    ->orWhereHas('enrollments', fn ($enrollments) => $enrollments
+                        ->whereIn('status', ['active', 'completed'])
+                        ->whereHas('batch', fn ($batch) => $batch->where('branch_id', $branchId)));
             })
             ->with(['enrollments' => function ($query) use ($branchId): void {
                 $query->whereIn('status', ['active', 'completed'])
