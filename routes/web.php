@@ -50,6 +50,7 @@ use App\Http\Controllers\StorageManagerController;
 use App\Http\Controllers\AdminAnalyticsController;
 use App\Http\Controllers\AdminCommentController;
 use App\Http\Controllers\AdminDashboardAnnouncementController;
+use App\Http\Controllers\AdminDeviceSessionController;
 use App\Http\Controllers\AdminVisitorPopupController;
 use App\Http\Controllers\AdminCourseCategoryController;
 use App\Http\Controllers\AdminCourseContentPostController;
@@ -298,6 +299,8 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::put('/comments/{comment}', [AdminCommentController::class, 'update'])->name('admin.comments.update');
         Route::delete('/comments/{comment}', [AdminCommentController::class, 'destroy'])->name('admin.comments.destroy');
         Route::get('/student-devices', [StudentDeviceAccessController::class, 'adminIndex'])->name('admin.student-devices.index');
+        Route::get('/security/sessions', [AdminDeviceSessionController::class, 'index'])->name('admin.security.sessions.index');
+        Route::patch('/security/sessions/{deviceSession}/revoke', [AdminDeviceSessionController::class, 'revoke'])->name('admin.security.sessions.revoke');
         Route::get('/teacher-applications', [TeacherApplicationController::class, 'adminIndex'])->name('admin.teacher-applications.index');
         Route::get('/teacher-applications/{application}/documents/{type}', [TeacherApplicationController::class, 'document'])->name('admin.teacher-applications.document');
         Route::post('/teacher-applications/{application}/approve', [TeacherApplicationController::class, 'approve'])->name('admin.teacher-applications.approve');
