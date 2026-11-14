@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\AiDeveloperTask;
 use App\Models\User;
+use App\Services\AiDeveloperProviderEndpoint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
@@ -12,6 +13,15 @@ use Tests\TestCase;
 class AiDeveloperAdminTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->app->bind(AiDeveloperProviderEndpoint::class, static fn () => new AiDeveloperProviderEndpoint(
+            static fn (string $host): array => [['type' => 'A', 'ip' => '93.184.216.34']]
+        ));
+    }
 
     public function test_only_admin_can_open_ai_developer(): void
     {
@@ -27,6 +37,17 @@ class AiDeveloperAdminTest extends TestCase
         $this->actingAs($admin)->get(route('admin.ai-developer.index'))
             ->assertOk()
             ->assertSee('AI Developer');
+    }
+
+    public function test_non_admin_staff_do_not_see_ai_developer_navigation_link(): void
+    {
+        foreach (['branch_manager', 'accountant'] as $role) {
+            $staff = User::factory()->create(['role' => $role, 'email_verified_at' => now()]);
+
+            $this->actingAs($staff)->get(route('dashboard'))
+                ->assertOk()
+                ->assertDontSee(route('admin.ai-developer.index'));
+        }
     }
 
     public function test_admin_can_see_only_their_own_ai_task_history(): void
@@ -305,5 +326,32 @@ class AiDeveloperAdminTest extends TestCase
         ]);
     }
 
+
+    public function test_oversized_provider_response_is_rejected_before_persistence(): void
+    {
+        config([
+            'services.ai_developer.api_key' => 'test-key',
+            'services.ai_developer.base_url' => 'https://ai.example.test/v1',
+            'services.ai_developer.allowed_hosts' => ['ai.example.test'],
+            'services.ai_developer.model' => 'test-model',
+            'services.ai_developer.max_response_bytes' => 1024,
+        ]);
+        Http::fake([
+            'ai.example.test/*' => Http::response(str_repeat('x', 2048), 200),
+        ]);
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+
+        $this->actingAs($admin)->post(route('admin.ai-developer.analyze'), [
+            'title' => 'Oversized provider response',
+            'instruction' => 'Please verify that oversized provider responses are rejected.',
+        ])->assertRedirect(route('admin.ai-developer.index'));
+
+        $this->assertDatabaseHas('ai_developer_tasks', [
+            'user_id' => $admin->id,
+            'title' => 'Oversized provider response',
+            'status' => 'failed',
+            'response' => null,
+        ]);
+    }
 
 }

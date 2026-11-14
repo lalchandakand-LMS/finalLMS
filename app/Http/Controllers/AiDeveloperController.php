@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AiDeveloperTask;
 use App\Services\AiDeveloperRepositoryReader;
+use App\Services\AiDeveloperProviderEndpoint;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -78,6 +79,8 @@ Clearly label assumptions and ask for sanitized error excerpts when needed. Repl
 PROMPT;
 
         try {
+            // Resolve and pin the allow-listed provider to validated public IPs before connecting.
+            $providerCurlOptions = app(AiDeveloperProviderEndpoint::class)->curlOptionsFor($baseUrl);
             // Repository context is opt-in, read-only, bounded, and limited to server-configured paths.
             $repositoryFiles = app(AiDeveloperRepositoryReader::class)->readConfiguredFiles();
             $messages = [
@@ -96,7 +99,10 @@ PROMPT;
             $response = Http::withToken($apiKey)
                 ->acceptJson()
                 ->timeout(45)
-                ->withOptions(['allow_redirects' => false])
+                ->withOptions(array_merge([
+                    'allow_redirects' => false,
+                    'stream' => true,
+                ], $providerCurlOptions))
                 ->post($baseUrl.'/chat/completions', [
                     'model' => $model,
                     'temperature' => 0.2,
@@ -108,7 +114,28 @@ PROMPT;
                 throw new \RuntimeException('AI provider returned HTTP '.$response->status().'. Check provider settings and server logs.');
             }
 
-            $answer = data_get($response->json(), 'choices.0.message.content');
+            $maxResponseBytes = max(1024, min(1048576, (int) config('services.ai_developer.max_response_bytes', 262144)));
+            $body = $response->toPsrResponse()->getBody();
+            $contentLength = $response->header('Content-Length');
+            if (is_numeric($contentLength) && (int) $contentLength > $maxResponseBytes) {
+                throw new \RuntimeException('AI provider response exceeded the configured size limit.');
+            }
+
+            $responseBody = '';
+            while (!$body->eof()) {
+                $remaining = $maxResponseBytes + 1 - strlen($responseBody);
+                $responseBody .= $body->read(min(8192, $remaining));
+                if (strlen($responseBody) > $maxResponseBytes) {
+                    throw new \RuntimeException('AI provider response exceeded the configured size limit.');
+                }
+            }
+
+            $decodedResponse = json_decode($responseBody, true);
+            if (!is_array($decodedResponse)) {
+                throw new \RuntimeException('AI provider returned an invalid response.');
+            }
+
+            $answer = data_get($decodedResponse, 'choices.0.message.content');
             if (!is_string($answer) || trim($answer) === '') {
                 throw new \RuntimeException('AI provider returned an empty or unsupported response.');
             }
