@@ -60,6 +60,7 @@ class StudentQuestionSetAttemptTest extends TestCase
             ->assertOk()
             ->assertSee('Awaiting teacher review')
             ->assertSee('3 / 5')
+            ->assertSee('My written response.')
             ->assertDontSee('SECRET ANSWER KEY');
     }
 
