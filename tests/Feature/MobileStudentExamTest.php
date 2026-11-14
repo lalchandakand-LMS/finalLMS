@@ -38,6 +38,8 @@ class MobileStudentExamTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.attempt.status', 'in_progress')
             ->assertJsonCount(2, 'data.questions')
+            ->assertJsonPath('data.attempt.status', 'in_progress')
+            ->assertJsonStructure(['data' => ['deadline']])
             ->assertJsonMissingPath('data.questions.0.correct_option');
 
         $questions = $start->json('data.questions');
@@ -95,6 +97,22 @@ class MobileStudentExamTest extends TestCase
         ])->assertForbidden();
 
         $this->assertDatabaseCount('exam_answers', 0);
+    }
+
+
+    public function test_student_cannot_resume_an_attempt_after_its_server_deadline(): void
+    {
+        [$student, $exam] = $this->fixture();
+        $token = $this->token($student);
+        $started = $this->withToken($token)->postJson('/api/v1/exams/'.$exam->id.'/start')->assertOk();
+        $attemptId = $started->json('data.attempt.id');
+
+        \\App\\Models\\ExamAttempt::query()->whereKey($attemptId)->update([
+            'started_at' => now()->subMinutes(31),
+        ]);
+
+        $this->withToken($token)->postJson('/api/v1/exams/'.$exam->id.'/start')
+            ->assertStatus(409);
     }
 
     private function fixture(): array
