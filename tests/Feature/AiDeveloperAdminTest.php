@@ -103,6 +103,51 @@ class AiDeveloperAdminTest extends TestCase
         });
     }
 
+    public function test_ai_workspace_renders_bangla_labels_when_bangla_locale_is_selected(): void
+    {
+        app()->setLocale('bn');
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+
+        $this->actingAs($admin)->get(route('admin.ai-developer.index'))
+            ->assertOk()
+            ->assertSee('এআই ডেভেলপার')
+            ->assertSee('শুধু অ্যাডমিন')
+            ->assertSee('নতুন কাজ')
+            ->assertSee('শুধু-পঠন ডায়াগনস্টিক মোড');
+    }
+
+    public function test_admin_daily_diagnostic_cap_prevents_more_than_ten_requests(): void
+    {
+        config([
+            'services.ai_developer.api_key' => 'test-key',
+            'services.ai_developer.base_url' => 'https://ai.example.test/v1',
+            'services.ai_developer.allowed_hosts' => ['ai.example.test'],
+            'services.ai_developer.model' => 'test-model',
+        ]);
+        Http::fake();
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+
+        for ($i = 0; $i < 10; $i++) {
+            AiDeveloperTask::create([
+                'user_id' => $admin->id,
+                'title' => 'Existing diagnostic '.$i,
+                'instruction' => 'Previously submitted diagnostic content.',
+                'status' => 'needs_configuration',
+                'provider' => 'openai-compatible',
+                'model' => 'test-model',
+            ]);
+        }
+
+        $this->actingAs($admin)->post(route('admin.ai-developer.analyze'), [
+            'title' => 'Eleventh diagnostic',
+            'instruction' => 'Please inspect this issue after the daily cap.',
+        ])->assertRedirect(route('admin.ai-developer.index'))
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseCount('ai_developer_tasks', 10);
+        Http::assertNothingSent();
+    }
+
     public function test_unconfigured_provider_does_not_send_an_external_request(): void
     {
         config([
