@@ -8,6 +8,8 @@ use App\Models\Lesson;
 use App\Models\LessonProgress;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class CourseController extends Controller
 {
@@ -137,12 +139,56 @@ class CourseController extends Controller
                 'title' => $lesson->title,
                 'content' => $lesson->content,
                 'video_url' => $lesson->video_url,
+                'video_stream_path' => $lesson->video_path
+                    ? '/courses/'.$course->slug.'/lessons/'.$lesson->id.'/video'
+                    : null,
                 'duration_minutes' => $lesson->duration_minutes,
                 'order' => $lesson->order,
                 'is_preview' => (bool) $lesson->is_preview,
                 'is_completed' => (bool) $progress,
             ],
         ]);
+    }
+
+    public function streamLessonVideo(Request $request, Course $course, Lesson $lesson): BinaryFileResponse
+    {
+        abort_unless($lesson->course_id === $course->id && $lesson->video_path, 404);
+
+        $user = $request->user();
+        $isInstructor = $user && $user->isTeacher() && (int) $course->teacher_id === (int) $user->id;
+        abort_unless($course->status === 'published' || $isInstructor, 404);
+
+        $isEnrolled = $user && $user->isStudent()
+            && $course->enrollments()
+                ->where('user_id', $user->id)
+                ->whereIn('status', ['active', 'completed'])
+                ->exists();
+        abort_unless($lesson->is_preview || $isEnrolled || $isInstructor, 403);
+
+        $disk = Storage::disk('lesson_videos');
+        abort_unless($disk->exists($lesson->video_path), 404);
+
+        $extension = strtolower(pathinfo($lesson->video_path, PATHINFO_EXTENSION));
+        $mime = match ($extension) {
+            'mp4' => 'video/mp4',
+            'webm' => 'video/webm',
+            'ogv', 'ogg' => 'video/ogg',
+            'mov' => 'video/quicktime',
+            default => null,
+        };
+        abort_unless($mime !== null, 404);
+        $response = response()->file($disk->path($lesson->video_path), [
+            'Content-Type' => $mime,
+            'Content-Disposition' => 'inline; filename="lesson-'.$lesson->id.'.'.$extension.'"',
+            'Accept-Ranges' => 'bytes',
+            'X-Content-Type-Options' => 'nosniff',
+            'Referrer-Policy' => 'no-referrer',
+        ]);
+
+        $response->setPrivate();
+        $response->headers->set('Cache-Control', 'max-age=0, no-store, private');
+
+        return $response;
     }
 
     public function completeLesson(Request $request, Course $course, Lesson $lesson): JsonResponse

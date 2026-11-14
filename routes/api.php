@@ -20,6 +20,7 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/instructor/courses', [CourseController::class, 'teachingCourses']);
         Route::get('/instructor/courses/{course:slug}/students', [CourseController::class, 'courseStudents']);
         Route::get('/courses/{course:slug}/lessons/{lesson}', [CourseController::class, 'lesson']);
+        Route::get('/courses/{course:slug}/lessons/{lesson}/video', [CourseController::class, 'streamLessonVideo']);
         Route::post('/courses/{course:slug}/lessons/{lesson}/complete', [CourseController::class, 'completeLesson']);
     });
 });

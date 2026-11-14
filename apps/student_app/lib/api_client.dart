@@ -177,6 +177,17 @@ class MobileApi {
     await storage.write(key: _tokenKey, value: token);
   }
 
+  Future<Map<String, String>> videoHeaders() async {
+    final token = await readToken();
+    if (token == null) {
+      throw const ApiException('Please sign in again.', 401);
+    }
+    return {
+      'Accept': '*/*',
+      'Authorization': 'Bearer $token',
+    };
+  }
+
   Future<Map<String, dynamic>> get(String path) async {
     final token = await readToken();
     if (token == null) {
