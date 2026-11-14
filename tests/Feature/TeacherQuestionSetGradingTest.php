@@ -31,6 +31,12 @@ class TeacherQuestionSetGradingTest extends TestCase
             ->assertSee('SECRET REFERENCE ANSWER')
             ->assertSee('My written response two.');
 
+        $set->update(['status' => 'archived']);
+        $this->get(route('courses.show', $course))
+            ->assertOk()
+            ->assertSee('Quiz grading workspace')
+            ->assertSee('Review submissions');
+
         $questions = $attempt->questions()->where('type', 'short_answer')->get();
         $this->post(route('teacher.question-set-attempts.grade', $attempt), [
             'answers' => [
