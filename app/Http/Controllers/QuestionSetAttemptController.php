@@ -20,6 +20,7 @@ class QuestionSetAttemptController extends Controller
         abort_unless($student?->isStudent(), 403);
         $this->assertCourseAccess($course, $questionSet, $student->id);
 
+        $questionSet->loadCount('questions');
         $pivot = $course->questionSets()->whereKey($questionSet->id)->firstOrFail()->pivot;
         abort_if($pivot->available_from && now()->lt($pivot->available_from), 404);
 
@@ -27,7 +28,6 @@ class QuestionSetAttemptController extends Controller
             ->where('course_id', $course->id)
             ->where('question_set_id', $questionSet->id)
             ->where('student_id', $student->id)
-            ->with('questions')
             ->latest('attempt_number')
             ->get();
 
@@ -125,7 +125,7 @@ class QuestionSetAttemptController extends Controller
         $this->assertCourseAccess($course, $questionSet, $student->id);
         abort_unless($attempt->status === 'in_progress', 404);
 
-        $attempt->load('questions');
+        $attempt->load(['questions' => fn ($query) => $query->select(['id', 'question_set_attempt_id', 'type', 'question', 'options', 'marks', 'position'])]);
 
         return view('student.question-sets.attempt', compact('course', 'questionSet', 'attempt'));
     }
@@ -212,7 +212,7 @@ class QuestionSetAttemptController extends Controller
             && $attempt->student_id === $student->id, 404);
         $this->assertCourseAccess($course, $questionSet, $student->id);
         abort_unless($attempt->status !== 'in_progress', 404);
-        $attempt->load('questions');
+        $attempt->load(['questions' => fn ($query) => $query->select(['id', 'question_set_attempt_id', 'type', 'question', 'options', 'marks', 'position', 'selected_option', 'answer_text', 'is_correct', 'marks_awarded', 'graded_at', 'manual_feedback'])]);
 
         return view('student.question-sets.result', compact('course', 'questionSet', 'attempt'));
     }
