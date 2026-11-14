@@ -156,4 +156,37 @@ class AdminDeviceSessionManagementTest extends TestCase
         $this->assertNotNull($session->fresh()->revoked_at);
         $this->assertSame('User logged out', $session->fresh()->revoke_reason);
     }
+
+    public function test_session_filters_reject_unknown_roles_and_statuses(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+
+        $this->actingAs($admin)
+            ->getJson(route('admin.security.sessions.index', ['role' => 'superadmin']))
+            ->assertUnprocessable();
+
+        $this->actingAs($admin)
+            ->getJson(route('admin.security.sessions.index', ['status' => 'pending']))
+            ->assertUnprocessable();
+    }
+
+    public function test_admin_can_filter_sessions_for_staff_roles(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        DeviceSession::create([
+            'user_id' => $teacher->id,
+            'session_hash' => hash('sha256', 'teacher-browser-session'),
+            'device_name' => 'Windows · Edge',
+            'logged_in_at' => now(),
+            'last_seen_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.security.sessions.index', ['role' => 'teacher', 'status' => 'active']))
+            ->assertOk()
+            ->assertSee($teacher->email)
+            ->assertSee('Windows');
+    }
+
 }
