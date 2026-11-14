@@ -521,6 +521,7 @@ class _InstructorHomeState extends State<InstructorHome> {
     if (payload == null) {
       return;
     }
+    final messenger = ScaffoldMessenger.of(context);
     try {
       await widget.api.postJson(
         '/instructor/batches/${payload.remove('batch_id')}/assignments',
@@ -545,7 +546,7 @@ class _InstructorHomeState extends State<InstructorHome> {
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    if (date == null) {
+    if (!mounted || date == null) {
       return null;
     }
     if (!context.mounted) {
@@ -760,6 +761,7 @@ class _InstructorHomeState extends State<InstructorHome> {
   }
 
   Future<void> viewSubmissions(Map<String, dynamic> assignment) async {
+    final messenger = ScaffoldMessenger.of(context);
     try {
       final response = await widget.api.get(
         '/instructor/assignments/${assignment['id']}/submissions',
@@ -818,6 +820,7 @@ class _InstructorHomeState extends State<InstructorHome> {
     final feedback = TextEditingController(
       text: submission['feedback']?.toString() ?? '',
     );
+    final messenger = ScaffoldMessenger.of(context);
     final payload = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -863,7 +866,6 @@ class _InstructorHomeState extends State<InstructorHome> {
     if (payload == null) {
       return;
     }
-    final messenger = ScaffoldMessenger.of(context);
     try {
       await widget.api.patchJson(
         '/instructor/assignments/${assignment['id']}/submissions/${submission['id']}',
