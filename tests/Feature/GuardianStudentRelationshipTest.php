@@ -62,4 +62,40 @@ class GuardianStudentRelationshipTest extends TestCase {
   $this->actingAs($student)->get(route('student.guardian-requests.page'))->assertOk()->assertSee($guardian->name)->assertDontSee($otherGuardian->name);
  }
 
+
+ public function test_guardian_can_switch_between_multiple_consented_children_without_accessing_unlinked_students(): void {
+  $guardian=User::factory()->create(['role'=>'guardian','email_verified_at'=>now()]);
+  $first=User::factory()->create(['role'=>'student','email_verified_at'=>now()]);
+  $second=User::factory()->create(['role'=>'student','email_verified_at'=>now()]);
+  $unlinked=User::factory()->create(['role'=>'student','email_verified_at'=>now()]);
+  $otherGuardian=User::factory()->create(['role'=>'guardian','email_verified_at'=>now()]);
+
+  foreach ([$first,$second] as $child) {
+   GuardianStudentLink::create([
+    'guardian_id'=>$guardian->id,'student_id'=>$child->id,'relationship'=>'Parent',
+    'status'=>'active','requested_by'=>$guardian->id,'reviewed_by'=>$child->id,
+    'requested_at'=>now(),'reviewed_at'=>now(),
+   ]);
+  }
+  GuardianStudentLink::create([
+   'guardian_id'=>$otherGuardian->id,'student_id'=>$unlinked->id,'relationship'=>'Parent',
+   'status'=>'active','requested_by'=>$otherGuardian->id,'reviewed_by'=>$unlinked->id,
+   'requested_at'=>now(),'reviewed_at'=>now(),
+  ]);
+
+  $this->actingAs($guardian)->getJson(route('guardian.links.index'))
+   ->assertOk()
+   ->assertJsonCount(2,'data')
+   ->assertJsonFragment(['id'=>$first->id])
+   ->assertJsonFragment(['id'=>$second->id])
+   ->assertJsonMissing(['id'=>$unlinked->id]);
+
+  $this->actingAs($guardian)->getJson(route('guardian.students.summary',$first))
+   ->assertOk()->assertJsonPath('data.student.id',$first->id);
+  $this->actingAs($guardian)->getJson(route('guardian.students.summary',$second))
+   ->assertOk()->assertJsonPath('data.student.id',$second->id);
+  $this->actingAs($guardian)->getJson(route('guardian.students.summary',$unlinked))
+   ->assertNotFound();
+ }
+
 }
