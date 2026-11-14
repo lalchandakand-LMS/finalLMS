@@ -362,11 +362,12 @@ class _InstructorHomeState extends State<InstructorHome> {
                     final picked = await _pickDateTime(startsAt);
                     if (picked != null) {
                       setDialogState(() {
-                      startsAt = picked;
-                      if (!endsAt.isAfter(startsAt)) {
-                        endsAt = startsAt.add(const Duration(hours: 1));
-                      }
-                    });
+                        startsAt = picked;
+                        if (!endsAt.isAfter(startsAt)) {
+                          endsAt = startsAt.add(const Duration(hours: 1));
+                        }
+                      });
+                    }
                   },
                 ),
               ),
@@ -449,8 +450,8 @@ class _InstructorHomeState extends State<InstructorHome> {
     try {
       await widget.api.patchJson('/instructor/live-classes/${liveClass['id']}', payload);
       if (!mounted) {
-      return;
-    }
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Live class updated.')),
       );
