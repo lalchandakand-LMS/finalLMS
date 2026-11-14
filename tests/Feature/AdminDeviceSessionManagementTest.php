@@ -162,11 +162,11 @@ class AdminDeviceSessionManagementTest extends TestCase
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
 
         $this->actingAs($admin)
-            ->get(route('admin.security.sessions.index', ['role' => 'superadmin']))
+            ->getJson(route('admin.security.sessions.index', ['role' => 'superadmin']))
             ->assertUnprocessable();
 
         $this->actingAs($admin)
-            ->get(route('admin.security.sessions.index', ['status' => 'pending']))
+            ->getJson(route('admin.security.sessions.index', ['status' => 'pending']))
             ->assertUnprocessable();
     }
 
