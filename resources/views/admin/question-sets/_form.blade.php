@@ -1,6 +1,7 @@
 @php
     $selectedSourceIds = old('source_question_ids', $questions->whereNotNull('source_question_id')->pluck('source_question_id')->all());
     $customQuestions = old('questions', $questions->whereNull('source_question_id')->values()->all());
+    $sourceQuestionsById = $questions->whereNotNull('source_question_id')->keyBy('source_question_id');
     if (count($customQuestions) === 0 && count($selectedSourceIds) === 0) {
         $customQuestions = [['type' => 'mcq', 'question' => '', 'options' => ['', '', '', ''], 'correct_option' => 0, 'marks' => 1, 'difficulty' => 'medium']];
     }
@@ -22,7 +23,8 @@
                 @foreach($bankQuestions as $bankQuestion)
                     <label style="display:flex;align-items:flex-start;gap:9px;padding:8px;border-bottom:1px solid var(--border);">
                         <input type="checkbox" name="source_question_ids[]" value="{{ $bankQuestion->id }}" @checked(in_array($bankQuestion->id, $selectedSourceIds)) style="width:auto;margin-top:4px;">
-                        <span><strong>{{ $bankQuestion->subject ?: __('General') }}</strong> · {{ $bankQuestion->teacher?->name }}<small class="muted" style="display:block;">{{ \Illuminate\Support\Str::limit($bankQuestion->question, 160) }}</small></span>
+                        <span style="flex:1;"><strong>{{ $bankQuestion->subject ?: __('General') }}</strong> · {{ $bankQuestion->teacher?->name }}<small class="muted" style="display:block;">{{ \Illuminate\Support\Str::limit($bankQuestion->question, 160) }}</small></span>
+                        <span>{{ __('Order') }} <input type="number" name="source_question_positions[{{ $bankQuestion->id }}]" min="0" max="100000" value="{{ old('source_question_positions.'.$bankQuestion->id, $sourceQuestionsById->get($bankQuestion->id)?->position ?? ($loop->iteration * 10)) }}" style="width:75px;"></span>
                     </label>
                 @endforeach
             </div>
@@ -44,6 +46,7 @@
                 </div>
                 <label>{{ __('Question type') }}<select name="questions[{{ $index }}][type]" data-question-type>@foreach(['mcq' => 'Multiple choice', 'true_false' => 'True / False', 'short_answer' => 'Short answer'] as $value => $label)<option value="{{ $value }}" @selected($type === $value)>{{ __($label) }}</option>@endforeach</select></label>
                 <label>{{ __('Question text') }}<textarea name="questions[{{ $index }}][question]" maxlength="3000" required>{{ data_get($question, 'question') }}</textarea></label>
+                <label>{{ __('Order') }}<input type="number" name="questions[{{ $index }}][position]" min="0" max="100000" value="{{ old('questions.'.$index.'.position', data_get($question, 'position', ((count($selectedSourceIds) + $loop->iteration) * 10))) }}" style="width:100px;"></label>
                 <div data-mcq-fields>
                     <div class="grid grid-2">
                         @foreach(range(0, 3) as $optionIndex)
@@ -80,6 +83,7 @@
     const container = document.getElementById('set-questions');
     const addButton = document.getElementById('add-set-question');
     if (!container || !addButton) return;
+    const sourceCount = {{ count($selectedSourceIds) }};
 
     const syncCard = card => {
         const type = card.querySelector('[data-question-type]').value;
@@ -113,6 +117,7 @@
             <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;"><h3>Question</h3><button type="button" class="btn secondary remove-set-question">Remove</button></div>
             <label>Question type<select name="questions[${index}][type]" data-question-type><option value="mcq">Multiple choice</option><option value="true_false">True / False</option><option value="short_answer">Short answer</option></select></label>
             <label>Question text<textarea name="questions[${index}][question]" maxlength="3000" required></textarea></label>
+            <label>Order<input type="number" name="questions[${index}][position]" min="0" max="100000" value="${(sourceCount + index + 1) * 10}" style="width:100px;"></label>
             <div data-mcq-fields><div class="grid grid-2">
                 <label>Option A<input name="questions[${index}][options][0]" maxlength="500"></label><label>Option B<input name="questions[${index}][options][1]" maxlength="500"></label>
                 <label>Option C<input name="questions[${index}][options][2]" maxlength="500"></label><label>Option D<input name="questions[${index}][options][3]" maxlength="500"></label>
