@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\DownloadPermission;
+use App\Models\EbookPreviewPage;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -25,7 +26,7 @@ class EbookStoreController extends Controller
     {
         abort_unless($product->type === 'ebook' && $product->status === 'published'
             && $product->published_at && $product->published_at->lte(now()) && $product->is_downloadable, 404);
-        $product->load('categories');
+        $product->load(['categories', 'previewPages' => fn ($query) => $query->where('is_active', true)]);
         $bkashAvailable = strtoupper((string) ($product->currency ?: 'BDT')) === 'BDT'
             && (bool) config('services.bkash.enabled')
             && filled(config('services.bkash.base_url'))
@@ -35,6 +36,39 @@ class EbookStoreController extends Controller
             && filled(config('services.bkash.app_secret'));
 
         return view('ebooks.show', compact('product', 'bkashAvailable'));
+    }
+
+    public function preview(Product $product, EbookPreviewPage $previewPage): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    {
+        abort_unless($product->type === 'ebook' && $product->status === 'published'
+            && $product->published_at && $product->published_at->lte(now()), 404);
+
+        $page = $product->previewPages()
+            ->whereKey($previewPage->id)
+            ->where('is_active', true)
+            ->firstOrFail();
+        $disk = Storage::disk('local');
+        abort_unless($disk->exists($page->file_path), 404);
+
+        $mime = $disk->mimeType($page->file_path) ?: 'application/octet-stream';
+        abort_unless(in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true), 404);
+        $extension = match ($mime) {
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+            default => 'jpg',
+        };
+
+        $response = response()->file($disk->path($page->file_path), [
+            'Content-Type' => $mime,
+            'Content-Disposition' => 'inline; filename="ebook-preview-'.$page->page_number.'.'.$extension.'"',
+            'Cache-Control' => 'private, no-store, max-age=0',
+            'X-Content-Type-Options' => 'nosniff',
+            'Referrer-Policy' => 'no-referrer',
+        ]);
+        $response->setPrivate();
+        $response->headers->set('Cache-Control', 'private, no-store, max-age=0');
+
+        return $response;
     }
 
     public function checkout(Product $product, Request $request): RedirectResponse

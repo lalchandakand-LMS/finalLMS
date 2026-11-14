@@ -131,6 +131,61 @@ class AdminProductController extends Controller
         return back()->with('success', 'eBook updated.');
     }
 
+    public function storePreviewPage(Request $request, Product $product): RedirectResponse
+    {
+        abort_unless($product->type === 'ebook', 404);
+        $data = $request->validate([
+            'page_image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'alt_text' => ['nullable', 'string', 'max:180'],
+        ]);
+
+        $path = $request->file('page_image')->store('private/ebook-previews/'.$product->id, 'local');
+        try {
+            DB::transaction(function () use ($product, $request, $data, $path): void {
+                $locked = Product::query()->lockForUpdate()->findOrFail($product->id);
+                abort_unless($locked->type === 'ebook', 404);
+                $usedPages = $locked->previewPages()->pluck('page_number')->map(fn ($number) => (int) $number)->all();
+                abort_if(count($usedPages) >= 10, 422, 'An eBook can have at most 10 preview pages.');
+
+                $pageNumber = 1;
+                while (in_array($pageNumber, $usedPages, true)) {
+                    $pageNumber++;
+                }
+
+                $locked->previewPages()->create([
+                    'page_number' => $pageNumber,
+                    'file_path' => $path,
+                    'alt_text' => $data['alt_text'] ?? null,
+                    'is_active' => true,
+                    'created_by' => $request->user()->id,
+                ]);
+            });
+        } catch (\Throwable $exception) {
+            Storage::disk('local')->delete($path);
+            throw $exception;
+        }
+
+        return back()->with('success', 'Private eBook preview page uploaded.');
+    }
+
+    public function destroyPreviewPage(Product $product, \App\Models\EbookPreviewPage $previewPage): RedirectResponse
+    {
+        abort_unless($product->type === 'ebook' && (int) $previewPage->product_id === (int) $product->id, 404);
+
+        $path = DB::transaction(function () use ($product, $previewPage): string {
+            $locked = Product::query()->lockForUpdate()->findOrFail($product->id);
+            $page = $locked->previewPages()->lockForUpdate()->findOrFail($previewPage->id);
+            $path = $page->file_path;
+            $page->delete();
+
+            return $path;
+        });
+
+        Storage::disk('local')->delete($path);
+
+        return back()->with('success', 'Private eBook preview page removed.');
+    }
+
     public function destroy(Product $product): RedirectResponse
     {
         abort_unless($product->type === 'ebook', 404);
