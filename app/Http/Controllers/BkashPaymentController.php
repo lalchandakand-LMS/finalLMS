@@ -6,11 +6,16 @@ use App\Models\Batch;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\Payment;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\Product;
+use App\Models\DownloadPermission;
 use App\Models\FlashSale;
 use App\Services\Payments\BkashCheckoutService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Throwable;
@@ -112,6 +117,125 @@ class BkashPaymentController extends Controller
             ]);
 
             return redirect()->route('courses.show', $course)
+                ->with('error', 'bKash checkout could not be started. Please try again or contact the academy.');
+        }
+    }
+
+    public function initiateEbook(Product $product, Request $request, BkashCheckoutService $bkash): RedirectResponse
+    {
+        abort_unless($request->user()?->isStudent(), 403);
+        abort_unless($this->isConfigured(), 503, 'bKash checkout is not configured.');
+
+        $student = $request->user();
+        $payment = DB::transaction(function () use ($product, $student): Payment {
+            $lockedProduct = Product::query()->whereKey($product->id)->lockForUpdate()->firstOrFail();
+            abort_unless($lockedProduct->type === 'ebook' && $lockedProduct->is_downloadable
+                && $lockedProduct->status === 'published' && $lockedProduct->published_at
+                && $lockedProduct->published_at->lte(now()) && $lockedProduct->download_path
+                && Storage::disk('local')->exists($lockedProduct->download_path), 422,
+                'This eBook is not currently available.');
+
+            $alreadyPending = Order::query()->where('user_id', $student->id)
+                ->where('status', 'pending')
+                ->whereHas('items', fn ($query) => $query->where('product_id', $lockedProduct->id))
+                ->exists();
+            abort_if($alreadyPending, 409, 'You already have a pending order for this eBook.');
+
+            $alreadyOwned = DownloadPermission::query()
+                ->where('user_id', $student->id)
+                ->where('product_id', $lockedProduct->id)
+                ->whereNull('revoked_at')
+                ->where(fn ($query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+                ->where(fn ($query) => $query->whereNull('downloads_remaining')->orWhere('downloads_remaining', '>', 0))
+                ->whereHas('orderItem.order', fn ($query) => $query->where('status', 'completed'))
+                ->exists();
+            abort_if($alreadyOwned, 409, 'This eBook is already available in your library.');
+
+            $amount = (float) $lockedProduct->currentPrice();
+            abort_if($amount <= 0, 422, 'Free eBooks do not require bKash checkout.');
+
+            $invoice = 'BKASH-'.Str::upper(Str::random(20));
+            $order = Order::create([
+                'order_number' => 'AEC-'.now()->format('ymd').'-'.Str::upper(Str::random(8)),
+                'user_id' => $student->id,
+                'status' => 'pending',
+                'payment_method' => 'bkash',
+                'payment_reference' => $invoice,
+                'currency' => 'BDT',
+                'subtotal' => $amount,
+                'discount_total' => 0,
+                'total' => $amount,
+            ]);
+
+            $item = OrderItem::create([
+                'order_id' => $order->id,
+                'product_id' => $lockedProduct->id,
+                'product_type' => 'ebook',
+                'product_name' => $lockedProduct->name,
+                'quantity' => 1,
+                'regular_price' => $amount,
+                'line_total' => $amount,
+                'product_snapshot' => [
+                    'name' => $lockedProduct->name,
+                    'slug' => $lockedProduct->slug,
+                    'download_path' => $lockedProduct->download_path,
+                ],
+            ]);
+
+            return Payment::create([
+                'user_id' => $student->id,
+                'course_id' => null,
+                'order_id' => $order->id,
+                'method' => 'bkash',
+                'gateway_provider' => 'bkash',
+                'amount' => number_format($amount, 2, '.', ''),
+                'currency' => 'BDT',
+                'transaction_reference' => $invoice,
+                'status' => 'pending',
+            ]);
+        });
+
+        try {
+            $token = $bkash->grantToken();
+            $created = $bkash->createPayment(
+                $token,
+                number_format((float) $payment->amount, 2, '.', ''),
+                $payment->transaction_reference,
+                route('payments.bkash.callback'),
+                (string) $student->id
+            );
+
+            $paymentId = $created['paymentID'] ?? null;
+            $checkoutUrl = $created['bkashURL'] ?? null;
+            $checkoutHost = is_string($checkoutUrl) ? parse_url($checkoutUrl, PHP_URL_HOST) : null;
+            $allowedHosts = ['tokenized.sandbox.bka.sh', 'tokenized.pay.bka.sh', 'checkout.sandbox.bka.sh', 'checkout.pay.bka.sh'];
+
+            if (($created['statusCode'] ?? null) !== '0000'
+                || ! is_string($paymentId)
+                || $paymentId === ''
+                || ! is_string($checkoutUrl)
+                || parse_url($checkoutUrl, PHP_URL_SCHEME) !== 'https'
+                || ! in_array($checkoutHost, $allowedHosts, true)) {
+                throw new \RuntimeException('bKash returned an invalid checkout response.');
+            }
+
+            $payment->update(['gateway_payment_id' => $paymentId]);
+
+            return redirect()->away($checkoutUrl);
+        } catch (Throwable) {
+            DB::transaction(function () use ($payment): void {
+                $lockedPayment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
+                if ($lockedPayment->status === 'pending') {
+                    $lockedPayment->update([
+                        'status' => 'rejected',
+                        'admin_note' => 'bKash checkout could not be initialized. The student may retry.',
+                    ]);
+                    Order::query()->whereKey($lockedPayment->order_id)->where('status', 'pending')
+                        ->update(['status' => 'cancelled']);
+                }
+            });
+
+            return redirect()->route('ebooks.show', $product)
                 ->with('error', 'bKash checkout could not be started. Please try again or contact the academy.');
         }
     }
