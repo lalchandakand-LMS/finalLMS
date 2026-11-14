@@ -25,6 +25,28 @@ class GuardianStudentRelationshipTest extends TestCase {
    $this->actingAs($g)->postJson(route('guardian.links.store'),['student_email'=>$s->email])->assertForbidden();
    $this->assertDatabaseCount('guardian_student_links',0);
   }
+
+  public function test_inactive_branch_blocks_all_guardian_and_student_relationship_routes(): void {
+   $branch=Branch::create(['name'=>'Relationship Branch','slug'=>'relationship-branch','is_active'=>true]);
+   $guardian=User::factory()->create(['role'=>'guardian','branch_id'=>$branch->id,'email_verified_at'=>now()]);
+   $student=User::factory()->create(['role'=>'student','branch_id'=>$branch->id,'email_verified_at'=>now()]);
+
+   $this->actingAs($guardian)->postJson(route('guardian.links.store'),['student_email'=>$student->email])->assertCreated();
+   $link=GuardianStudentLink::firstOrFail();
+   $this->actingAs($student)->postJson(route('student.guardian-requests.respond',$link),['decision'=>'accept'])->assertOk();
+
+   $branch->update(['is_active'=>false]);
+
+   $this->actingAs($guardian)->get(route('guardian.dashboard'))->assertForbidden();
+   $this->actingAs($guardian)->getJson(route('guardian.links.index'))->assertForbidden();
+   $this->actingAs($guardian)->getJson(route('guardian.students.summary',$student))->assertForbidden();
+   $this->actingAs($guardian)->postJson(route('guardian.links.revoke',$link))->assertForbidden();
+
+   $this->actingAs($student)->get(route('student.guardian-requests.page'))->assertForbidden();
+   $this->actingAs($student)->getJson(route('student.guardian-requests.index'))->assertForbidden();
+   $this->actingAs($student)->postJson(route('student.guardian-requests.revoke',$link))->assertForbidden();
+  }
+
   public function test_only_linked_student_can_respond_and_either_party_can_revoke(): void {
    $g=User::factory()->create(['role'=>'guardian','email_verified_at'=>now()]); $s=User::factory()->create(['role'=>'student','email_verified_at'=>now()]);
    $otherS=User::factory()->create(['role'=>'student','email_verified_at'=>now()]); $otherG=User::factory()->create(['role'=>'guardian','email_verified_at'=>now()]);
