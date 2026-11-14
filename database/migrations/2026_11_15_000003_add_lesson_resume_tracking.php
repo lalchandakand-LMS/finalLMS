@@ -17,7 +17,9 @@ return new class extends Migration
 
     public function down(): void
     {
-        DB::table('lesson_progress')->whereNull('completed_at')->delete();
+        DB::table('lesson_progress')
+            ->whereNull('completed_at')
+            ->update(['completed_at' => DB::raw('COALESCE(last_viewed_at, created_at, CURRENT_TIMESTAMP)')]);
 
         Schema::table('lesson_progress', function (Blueprint $table): void {
             $table->dropColumn('last_viewed_at');
