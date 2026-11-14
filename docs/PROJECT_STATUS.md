@@ -279,3 +279,15 @@ No production deployment, production database mutation, live gateway activation 
 
 - Issue #38 now begins with an explicit notice that its older four-portal proposal is superseded by owner decision D-003: Admin, Branch, Teacher, Student and Guardian. One unified Admin Panel; Branch remains separate and server-side scoped.
 - Use Issue #38 only for compatible permission, role and Guardian privacy requirements; do not implement its obsolete four-portal count.
+
+
+## Verified update — 2026-11-14 (Course Studio student learning progress)
+
+- PR #192 merged to `main` as `a0256a3edfd05cc9fe633b70c0f6773dfd3b19d8`.
+- Added per-student progress records for Course Content Studio curriculum items, an authenticated lesson-completion action, and resume links from My Courses.
+- My Courses now combines legacy Lesson progress and published Course Builder curriculum posts in its progress count and percentage.
+- Course completion/certificate issuance requires all published curriculum posts and legacy lessons to be complete.
+- Unenrolled visitors may still view free previews but cannot create or complete progress records.
+- Exact PR-head validation passed: 503 PHPUnit tests / 2,872 assertions, PHP lint, migrations, route listing, Vite build, cPanel package verification and CodeQL.
+- Main-branch CI for the merge commit must still be checked. No production deployment or production database migration was performed.
+- Issue #73 remains open for cPanel staging install/upgrade and rollback rehearsal, browser/mobile responsive/accessibility acceptance, and official payment-provider sandbox verification.

@@ -296,3 +296,14 @@ Current work is on PR #116, branch `feature/aloms-premium-homepage-clean`. Keep 
 - No production deployment or live database changes. No gateway integration is claimed; paid checkout is manual Admin verification only.
 - Next: schedule isolated cPanel staging validation, test first install and upgrade paths, verify private storage permissions and exercise admin/student purchase/download flows. Do not deploy to production until backup, rollback and staging acceptance are documented.
 
+
+
+## Student Learning curriculum progress — 2026-11-14
+
+- PR #192 merged to `main` as `a0256a3edfd05cc9fe633b70c0f6773dfd3b19d8`.
+- New `CourseContentProgress` records store each enrolled student's last-viewed and completed state for Course Builder curriculum items.
+- Viewing a curriculum post records progress only for an enrolled student; unenrolled users retain free-preview access without progress writes.
+- Students can mark a published course lesson complete. My Courses combines these curriculum records with legacy LessonProgress for accurate progress and resume actions.
+- Course completion and certificate issuance now require every published curriculum post and every legacy lesson to be complete.
+- Exact PR-head checks passed: 503 PHPUnit tests / 2,872 assertions, PHP lint, MySQL migrations, route listing, Vite build, cPanel ZIP packaging and CodeQL. Main merge-commit CI must be rechecked separately.
+- No production deployment, production migration or live payment action was performed.
