@@ -95,7 +95,7 @@ Course ownership is checked server-side. The API does not accept a client-suppli
 - `GET /assignments/{assignment}`: assignment details and the authenticated student's own submission only.
 - `POST /assignments/{assignment}/submit`: submit or revise a text answer under the assignment's publication, enrollment, due-date, late-policy and grading rules. A pending submission cannot be duplicated; a graded submission may be revised according to the server policy.
 
-The current mobile assignment screen supports text answers. Private attachment upload from the mobile app remains a follow-up.
+The mobile assignment screen supports text answers and private file attachments. Files are stored on the private local disk, filenames are sanitized, rejected/duplicate uploads are cleaned up, and download access is checked against submission ownership and active enrollment.
 
 ## Student exam endpoints
 

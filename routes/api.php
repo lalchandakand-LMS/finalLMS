@@ -23,6 +23,7 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/my/assignments', [StudentAssignmentController::class, 'index']);
         Route::get('/assignments/{assignment}', [StudentAssignmentController::class, 'show']);
         Route::post('/assignments/{assignment}/submit', [StudentAssignmentController::class, 'submit'])->middleware('throttle:10,1');
+        Route::get('/assignment-submissions/{submission}/attachment', [StudentAssignmentController::class, 'downloadAttachment'])->middleware('throttle:30,1');
         Route::get('/my/wishlist', [CourseController::class, 'wishlist']);
         Route::post('/courses/{course:slug}/wishlist', [CourseController::class, 'addToWishlist']);
         Route::delete('/courses/{course:slug}/wishlist', [CourseController::class, 'removeFromWishlist']);
