@@ -279,7 +279,7 @@ class StudentDeviceApprovalTest extends TestCase
     public function test_existing_non_admin_sessions_without_a_trusted_device_must_reauthenticate(): void
     {
         foreach (['student', 'teacher', 'guardian', 'branch_manager', 'accountant'] as $role) {
-            $user = User::factory()->create(['role' => $role]);
+            $user = User::factory()->create(['role' => $role, 'email_verified_at' => now()]);
 
             $this->actingAs($user)
                 ->get('/dashboard')
