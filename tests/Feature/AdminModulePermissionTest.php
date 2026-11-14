@@ -57,7 +57,7 @@ class AdminModulePermissionTest extends TestCase
             ['finance.invoices', 'finance.refunds', 'finance.reports', 'finance.expenses'],
             $accountant->fresh()->admin_permissions
         );
-        $this->actingAs($accountant)->get(route('admin.finance.invoices.index'))->assertOk();
+        $this->actingAs($accountant->fresh())->get(route('admin.finance.invoices.index'))->assertOk();
 
         $this->actingAs($admin)->post(route('admin.users.updateRole', $accountant), [
             'role' => 'accountant',
