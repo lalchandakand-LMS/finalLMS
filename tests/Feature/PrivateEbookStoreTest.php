@@ -389,11 +389,11 @@ class PrivateEbookStoreTest extends TestCase
     private function completedEbookOrder(User $student, Product $product): array
     {
         $order = Order::create([
-            'order_number' => 'AEC-REFUND-'.strtoupper(bin2hex(random_bytes(4))),
+            'order_number' => 'AEC-REFUND-ORDER-001',
             'user_id' => $student->id,
             'status' => 'completed',
             'payment_method' => 'manual',
-            'payment_reference' => 'PAY-'.strtoupper(bin2hex(random_bytes(5))),
+            'payment_reference' => 'PAY-REFUND-001',
             'currency' => 'BDT',
             'subtotal' => 350,
             'discount_total' => 0,
