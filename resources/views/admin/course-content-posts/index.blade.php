@@ -8,13 +8,31 @@
 <label>{{ __('Status') }}<select name="status"><option value="">{{ __('All statuses') }}</option>@foreach(['draft','published','archived'] as $status)<option value="{{ $status }}" @selected(request('status') === $status)>{{ __(ucfirst($status)) }}</option>@endforeach</select></label>
 <div><button class="btn secondary" type="submit">{{ __('Filter') }}</button> <a class="btn secondary" href="{{ route('admin.course-content-posts.index') }}">{{ __('Reset') }}</a></div>
 </form></div>
-<div class="panel"><div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">
-<thead><tr><th>{{ __('Content') }}</th><th>{{ __('Categories') }}</th><th>{{ __('Status') }}</th><th>{{ __('Author') }}</th><th>{{ __('Actions') }}</th></tr></thead><tbody>
+<div class="panel">
+<form id="bulk-form" method="POST" action="{{ route('admin.course-content-posts.bulk-update') }}" style="margin-bottom:16px;">
+@csrf
+<div class="grid grid-3" style="align-items:end;">
+<label>{{ __('Bulk status') }}<select name="status" required><option value="">{{ __('Choose status') }}</option>@foreach(['draft','published','archived'] as $status)<option value="{{ $status }}">{{ __(ucfirst($status)) }}</option>@endforeach</select></label>
+<div><button class="btn secondary" type="submit">{{ __('Apply to selected') }}</button></div>
+</div>
+</form>
+@error('post_ids')<p class="error">{{ $message }}</p>@enderror
+@error('status')<p class="error">{{ $message }}</p>@enderror
+@foreach($errors->get('post_ids.*') as $messages)
+    @foreach($messages as $message)<p class="error">{{ $message }}</p>@endforeach
+@endforeach
+<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">
+<thead><tr><th><input type="checkbox" id="select-all-posts" aria-label="{{ __('Select all posts') }}" style="width:auto;"></th><th>{{ __('Content') }}</th><th>{{ __('Categories') }}</th><th>{{ __('Status') }}</th><th>{{ __('Author') }}</th><th>{{ __('Actions') }}</th></tr></thead><tbody>
 @forelse($posts as $post)
-<tr style="border-top:1px solid var(--border);"><td style="padding:12px;">@if($post->thumbnail)<img src="{{ $post->thumbnail->url }}" alt="{{ $post->thumbnail->alt_text ?: $post->title }}" style="width:76px;height:48px;object-fit:cover;border-radius:8px;vertical-align:middle;margin-right:8px;">@endif<strong>{{ $post->title }}</strong><div class="muted">{{ $post->slug }}</div></td>
+<tr style="border-top:1px solid var(--border);"><td style="padding:12px;"><input class="post-select" type="checkbox" name="post_ids[]" value="{{ $post->id }}" form="bulk-form" aria-label="{{ __('Select :title', ['title' => $post->title]) }}" style="width:auto;"></td><td style="padding:12px;">@if($post->thumbnail)<img src="{{ $post->thumbnail->url }}" alt="{{ $post->thumbnail->alt_text ?: $post->title }}" style="width:76px;height:48px;object-fit:cover;border-radius:8px;vertical-align:middle;margin-right:8px;">@endif<strong>{{ $post->title }}</strong><div class="muted">{{ $post->slug }}</div></td>
 <td>{{ $post->categories->pluck('name')->join(', ') ?: '—' }}</td><td><span class="badge {{ $post->status === 'published' ? 'success' : 'warning' }}">{{ __(ucfirst($post->status)) }}</span></td><td>{{ $post->author?->name }}</td>
 <td><a class="btn secondary" href="{{ route('admin.course-content-posts.edit', $post) }}">{{ __('Edit') }}</a>
 <form method="POST" action="{{ route('admin.course-content-posts.destroy', $post) }}" style="display:inline;" onsubmit="return confirm('{{ __('Delete this post?') }}')">@csrf @method('DELETE')<button class="btn secondary" type="submit">{{ __('Delete') }}</button></form></td></tr>
-@empty<tr><td colspan="5" class="muted" style="padding:18px;">{{ __('No content posts found.') }}</td></tr>@endforelse
+@empty<tr><td colspan="6" class="muted" style="padding:18px;">{{ __('No content posts found.') }}</td></tr>@endforelse
 </tbody></table></div>{{ $posts->links() }}</div>
+<script>
+document.getElementById('select-all-posts')?.addEventListener('change', function () {
+    document.querySelectorAll('.post-select').forEach((checkbox) => { checkbox.checked = this.checked; });
+});
+</script>
 @endsection
