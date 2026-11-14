@@ -13,8 +13,8 @@
             <p class="muted">{{ __('Requested') }}: {{ optional($request->requested_at)->format('d M Y, h:i A') }}</p>
             <form class="guardian-response-form" method="POST" action="{{ route('student.guardian-requests.respond',$request) }}" style="display:flex;gap:10px;flex-wrap:wrap">
                 @csrf
-                <button class="btn btn-primary" name="decision" value="accept" type="submit">{{ __('Approve access') }}</button>
-                <button class="btn btn-secondary" name="decision" value="reject" type="submit">{{ __('Reject request') }}</button>
+                <button class="btn primary" name="decision" value="accept" type="submit">{{ __('Approve access') }}</button>
+                <button class="btn secondary" name="decision" value="reject" type="submit">{{ __('Reject request') }}</button>
             </form>
         </article>
     @empty
