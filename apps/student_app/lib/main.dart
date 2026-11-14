@@ -391,6 +391,12 @@ class _StudentHomeState extends State<StudentHome> {
     widget.onLogout();
   }
 
+  Future<void> openAssignments() async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => AssignmentsPage(api: widget.api),
+    ));
+  }
+
   Future<void> openWishlist() async {
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => WishlistPage(api: widget.api),
@@ -460,6 +466,11 @@ class _StudentHomeState extends State<StudentHome> {
           onPressed: load,
           icon: const Icon(Icons.refresh),
           tooltip: 'Refresh',
+        ),
+        IconButton(
+          onPressed: openAssignments,
+          icon: const Icon(Icons.assignment_outlined),
+          tooltip: 'My assignments',
         ),
         IconButton(
           onPressed: openWishlist,
@@ -1085,4 +1096,181 @@ class _LessonPlayerPageState extends State<LessonPlayerPage> {
                     ],
                   ),
       );
+}
+
+
+class AssignmentsPage extends StatefulWidget {
+  const AssignmentsPage({required this.api, super.key});
+  final MobileApi api;
+
+  @override
+  State<AssignmentsPage> createState() => _AssignmentsPageState();
+}
+
+class _AssignmentsPageState extends State<AssignmentsPage> {
+  List<dynamic> assignments = [];
+  bool loading = true;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  Future<void> load() async {
+    setState(() { loading = true; error = null; });
+    try {
+      final response = await widget.api.get('/my/assignments');
+      if (!mounted) return;
+      setState(() => assignments = response['data'] as List<dynamic>? ?? []);
+    } catch (exception) {
+      if (mounted) setState(() => error = exception.toString());
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('My Assignments')),
+    body: loading
+      ? const Center(child: CircularProgressIndicator())
+      : error != null
+        ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text(error!), TextButton(onPressed: load, child: const Text('Retry')),
+          ]))
+        : assignments.isEmpty
+          ? const Center(child: Text('No assignments available.'))
+          : RefreshIndicator(
+              onRefresh: load,
+              child: ListView.builder(
+                padding: const EdgeInsets.all(12),
+                itemCount: assignments.length,
+                itemBuilder: (context, index) {
+                  final item = assignments[index] as Map<String, dynamic>;
+                  final submission = item['submission'] as Map<String, dynamic>?;
+                  return Card(child: ListTile(
+                    title: Text(item['title']?.toString() ?? 'Assignment'),
+                    subtitle: Text([
+                      item['course']?.toString() ?? '',
+                      'Due: ${item['due_at'] ?? '—'}',
+                      'Status: ${submission?['status'] ?? 'Not submitted'}',
+                    ].where((value) => value.isNotEmpty).join(' • ')),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => AssignmentDetailPage(api: widget.api, id: item['id'] as int),
+                    )).then((_) => load()),
+                  ));
+                },
+              ),
+            ),
+  );
+}
+
+class AssignmentDetailPage extends StatefulWidget {
+  const AssignmentDetailPage({required this.api, required this.id, super.key});
+  final MobileApi api;
+  final int id;
+
+  @override
+  State<AssignmentDetailPage> createState() => _AssignmentDetailPageState();
+}
+
+class _AssignmentDetailPageState extends State<AssignmentDetailPage> {
+  final answer = TextEditingController();
+  Map<String, dynamic>? assignment;
+  bool loading = true;
+  bool saving = false;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  @override
+  void dispose() {
+    answer.dispose();
+    super.dispose();
+  }
+
+  Future<void> load() async {
+    try {
+      final response = await widget.api.get('/assignments/${widget.id}');
+      if (!mounted) return;
+      final item = response['assignment'] as Map<String, dynamic>;
+      setState(() {
+        assignment = item;
+        answer.text = (item['submission'] as Map<String, dynamic>?)?['answer']?.toString() ?? '';
+      });
+    } catch (exception) {
+      if (mounted) setState(() => error = exception.toString());
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> submit() async {
+    setState(() { saving = true; error = null; });
+    try {
+      await widget.api.postJson('/assignments/${widget.id}/submit', {'answer': answer.text.trim()});
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Assignment submitted.')));
+      await load();
+    } catch (exception) {
+      if (mounted) setState(() => error = exception.toString());
+    } finally {
+      if (mounted) setState(() => saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final item = assignment;
+    final submission = item?['submission'] as Map<String, dynamic>?;
+    final canSubmit = item != null && item['is_closed'] != true && submission?['status'] != 'submitted';
+    return Scaffold(
+      appBar: AppBar(title: Text(item?['title']?.toString() ?? 'Assignment')),
+      body: loading
+        ? const Center(child: CircularProgressIndicator())
+        : error != null && item == null
+          ? Center(child: Text(error!))
+          : ListView(padding: const EdgeInsets.all(16), children: [
+              Text(item?['course']?.toString() ?? '', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Text('Due: ${item?['due_at'] ?? '—'}'),
+              Text('Maximum marks: ${item?['max_marks'] ?? 0}'),
+              const Divider(height: 24),
+              Text(item?['instructions']?.toString() ?? ''),
+              const SizedBox(height: 20),
+              if (submission != null) ...[
+                Text('Submission: ${submission['status']}'),
+                if (submission['score'] != null) Text('Score: ${submission['score']}'),
+                if ((submission['feedback'] ?? '').toString().isNotEmpty) Text('Feedback: ${submission['feedback']}'),
+                const SizedBox(height: 12),
+              ],
+              if (canSubmit) ...[
+                TextField(
+                  controller: answer,
+                  minLines: 6,
+                  maxLines: 12,
+                  maxLength: 50000,
+                  decoration: const InputDecoration(
+                    labelText: 'Your answer',
+                    alignLabelWithHint: true,
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                FilledButton(
+                  onPressed: saving || answer.text.trim().isEmpty ? null : submit,
+                  child: saving ? const CircularProgressIndicator() : const Text('Submit assignment'),
+                ),
+              ] else if (item?['is_closed'] == true)
+                const Chip(label: Text('Submission closed')),
+              if (error != null) Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            ]),
+    );
+  }
 }

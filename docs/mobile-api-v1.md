@@ -57,6 +57,9 @@ Revokes every active mobile token for the authenticated user.
 - `GET /courses?q=&sort=&per_page=`: published course catalog with pagination. Sort values: `newest`, `oldest`, `price_low`, `price_high`, `title`.
 - `GET /courses/{course_slug}`: course details and curriculum; non-enrolled users only receive preview lessons.
 - `GET /my/courses`: authenticated student's active/completed enrollments with lesson completion progress.
+- `GET /my/assignments?status=&per_page=`: published assignments from the authenticated student's active batch enrollments, including only that student's own submission. Optional status filters: `upcoming`, `overdue`, `submitted`, `graded`; page size is limited to 50.
+- `GET /assignments/{assignment_id}`: details for a published assignment in one of the authenticated student's active batches, with only that student's submission.
+- `POST /assignments/{assignment_id}/submit`: submit a text answer (`answer`, maximum 50,000 characters). Requires active enrollment and a published assignment; late submissions are accepted only when enabled. Pending submissions cannot be duplicated. A graded submission may be revised, which clears its previous score and feedback. Closed assignments return HTTP 409. File attachments are not yet supported by this mobile endpoint.
 - `GET /my/wishlist`: authenticated student's own saved, published courses with pagination.
 - `POST /courses/{course_slug}/wishlist`: add a published course to the student's wishlist; idempotent.
 - `DELETE /courses/{course_slug}/wishlist`: remove a course from the student's own wishlist; idempotent.
