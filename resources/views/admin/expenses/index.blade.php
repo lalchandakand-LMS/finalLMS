@@ -18,7 +18,7 @@
 
     <section class="panel" style="margin-bottom:20px;">
         <h2>{{ __('Record a new expense') }}</h2>
-        <form method="POST" action="{{ route($isAccountant ? 'accountant.expenses.store' : 'admin.expenses.store') }}" class="grid grid-2">
+        <form method="POST" action="{{ route($isAccountant ? 'admin.finance.expenses.store' : 'admin.expenses.store') }}" class="grid grid-2">
             @csrf
             <div><label for="expense-title">{{ __('Expense title') }}</label><input id="expense-title" name="title" maxlength="160" required value="{{ old('title') }}"></div>
             <div><label for="expense-category">{{ __('Category') }}</label><input id="expense-category" name="category" maxlength="80" required placeholder="{{ __('Rent, salary, utilities...') }}" value="{{ old('category') }}"></div>
@@ -37,11 +37,11 @@
 
     <section class="panel" style="margin-bottom:20px;">
         <h2>{{ __('Filter expenses') }}</h2>
-        <form method="GET" action="{{ route($isAccountant ? 'accountant.expenses.index' : 'admin.expenses.index') }}" class="grid grid-3">
+        <form method="GET" action="{{ route($isAccountant ? 'admin.finance.expenses.index' : 'admin.expenses.index') }}" class="grid grid-3">
             <div><label for="date_from">{{ __('From') }}</label><input id="date_from" type="date" name="date_from" value="{{ $filters['date_from'] ?? '' }}"></div>
             <div><label for="date_to">{{ __('To') }}</label><input id="date_to" type="date" name="date_to" value="{{ $filters['date_to'] ?? '' }}"></div>
             <div><label for="category">{{ __('Category') }}</label><select id="category" name="category"><option value="">{{ __('All categories') }}</option>@foreach($categories as $category)<option value="{{ $category }}" @selected(($filters['category'] ?? '') === $category)>{{ $category }}</option>@endforeach</select></div>
-            <div><button class="btn primary" type="submit">{{ __('Apply filters') }}</button> <a class="btn secondary" href="{{ route($isAccountant ? 'accountant.expenses.index' : 'admin.expenses.index') }}">{{ __('Clear') }}</a></div>
+            <div><button class="btn primary" type="submit">{{ __('Apply filters') }}</button> <a class="btn secondary" href="{{ route($isAccountant ? 'admin.finance.expenses.index' : 'admin.expenses.index') }}">{{ __('Clear') }}</a></div>
         </form>
     </section>
 
@@ -64,7 +64,7 @@
                             <td style="padding:10px;border-top:1px solid var(--border);">
                                 <details>
                                     <summary style="cursor:pointer;margin-bottom:8px;">{{ __('Edit') }}</summary>
-                                    <form method="POST" action="{{ route($isAccountant ? 'accountant.expenses.update' : 'admin.expenses.update', $expense) }}" class="grid" style="min-width:260px;">
+                                    <form method="POST" action="{{ route($isAccountant ? 'admin.finance.expenses.update' : 'admin.expenses.update', $expense) }}" class="grid" style="min-width:260px;">
                                         @csrf @method('PUT')
                                         <label>{{ __('Title') }}<input name="title" maxlength="160" required value="{{ $expense->title }}"></label>
                                         <label>{{ __('Category') }}<input name="category" maxlength="80" required value="{{ $expense->category }}"></label>
@@ -76,7 +76,7 @@
                                         <button class="btn primary" type="submit">{{ __('Update') }}</button>
                                     </form>
                                 </details>
-                                <form method="POST" action="{{ route($isAccountant ? 'accountant.expenses.destroy' : 'admin.expenses.destroy', $expense) }}" onsubmit="return confirm('{{ __('Delete this expense record?') }}')">@csrf @method('DELETE')<button class="btn secondary" type="submit">{{ __('Delete') }}</button></form>
+                                <form method="POST" action="{{ route($isAccountant ? 'admin.finance.expenses.destroy' : 'admin.expenses.destroy', $expense) }}" onsubmit="return confirm('{{ __('Delete this expense record?') }}')">@csrf @method('DELETE')<button class="btn secondary" type="submit">{{ __('Delete') }}</button></form>
                             </td>
                         </tr>
                     @endforeach</tbody>

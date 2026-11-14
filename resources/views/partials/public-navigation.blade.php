@@ -42,13 +42,6 @@
                 @if(auth()->user()->isTeacher())
                     <a href="{{ route('teacher.batches.index') }}"><span class="menu-icon">▥</span>{{ __('My batches') }}</a>
                 @endif
-                @if(auth()->user()->isBranchManager())
-                    <a href="{{ route('branch-manager.batches.index') }}"><span class="menu-icon">⌖</span>{{ __('My branch') }}</a>
-                @endif
-                @if(auth()->user()->isAccountant())
-                    <a href="{{ route('accountant.invoices.index') }}"><span class="menu-icon">৳</span>{{ __('Finance') }}</a>
-                    <a href="{{ route('accountant.finance-reports.index') }}"><span class="menu-icon">▥</span>{{ __('Reports') }}</a>
-                @endif
                 @if(auth()->user()->isAdmin())
                     <div class="public-drawer-section">{{ __('Administration') }}</div>
                     <a href="{{ route('admin.website-builder.index') }}"><span class="menu-icon">▧</span>{{ __('Website builder') }}</a>

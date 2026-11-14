@@ -12,13 +12,14 @@
         $googleTagManagerId = $hasSettingsTable ? \App\Models\Setting::value('google_tag_manager_id') : null;
         $facebookPixelId = $hasSettingsTable ? \App\Models\Setting::value('facebook_pixel_id') : null;
         $marketingConsent = request()->cookie('marketing_consent') === 'accepted';
+        $isAdminLayout = auth()->check() && (auth()->user()->isAdmin() || auth()->user()->isBranchManager() || auth()->user()->isAccountant());
         $visitorPopup = null;
-        if (\Illuminate\Support\Facades\Schema::hasTable('visitor_popups') && !(auth()->check() && auth()->user()->isAdmin())) {
+        if (\Illuminate\Support\Facades\Schema::hasTable('visitor_popups') && ! $isAdminLayout) {
             $visitorPopup = \App\Models\VisitorPopup::currentlyActive()->with('image')
                 ->where(function ($query) { $query->where('audience', 'all')->orWhere('audience', auth()->check() ? 'members' : 'guests'); })
                 ->orderByDesc('priority')->latest()->first();
         }
-        $isPublicLayout = !(auth()->check() && auth()->user()->isAdmin());
+        $isPublicLayout = ! $isAdminLayout;
         $websiteHeaderLinks = $isPublicLayout && $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('header_links', '[]'), true) : [];
         $websiteFooterTitle = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('footer_title', config('app.name')) : config('app.name');
         $websiteFooterText = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('footer_text', '') : '';
@@ -66,7 +67,6 @@
             fbq('track','PageView');
         </script>
     @endif
-    @php($isAdminLayout = auth()->check() && auth()->user()->isAdmin())
     <style>
         :root {
             --bg: #f3f6fb;
@@ -240,6 +240,7 @@
     @if($isAdminLayout)
         <aside class="admin-sidebar" aria-label="Admin navigation">
             <a class="admin-sidebar-brand" href="{{ route('dashboard') }}"><span>📘</span><strong>Alom’s English Center<br><small style="font-weight:500;color:#a9bee0;">Admin workspace</small></strong></a>
+            @if(auth()->user()->isAdmin())
             <div class="admin-sidebar-label">Overview</div>
             <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><span>▦</span><span class="nav-text">Dashboard</span></a>
             <div class="admin-sidebar-label">Academy</div>
@@ -276,6 +277,21 @@
             <a href="{{ route('admin.activity-logs.index') }}"><span>📋</span><span class="nav-text">Activity logs</span></a>
             <a href="{{ route('admin.settings.index') }}"><span>⚙️</span><span class="nav-text">Settings</span></a>
             <a href="{{ route('admin.sms-campaigns.index') }}"><span>✉️</span><span class="nav-text">SMS campaigns</span></a>
+            @elseif(auth()->user()->isBranchManager())
+                <div class="admin-sidebar-label">Overview</div>
+                <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><span>▦</span><span class="nav-text">Dashboard</span></a>
+                <div class="admin-sidebar-label">Branch workspace</div>
+                <a class="{{ request()->routeIs('admin.branch-workspace.batches.*') ? 'active' : '' }}" href="{{ route('admin.branch-workspace.batches.index') }}"><span>🗓️</span><span class="nav-text">My branch batches</span></a>
+                <a class="{{ request()->routeIs('admin.branch-workspace.students.*') ? 'active' : '' }}" href="{{ route('admin.branch-workspace.students.index') }}"><span>👥</span><span class="nav-text">Branch students</span></a>
+            @elseif(auth()->user()->isAccountant())
+                <div class="admin-sidebar-label">Overview</div>
+                <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><span>▦</span><span class="nav-text">Dashboard</span></a>
+                <div class="admin-sidebar-label">Finance workspace</div>
+                <a class="{{ request()->routeIs('admin.finance.invoices.*') ? 'active' : '' }}" href="{{ route('admin.finance.invoices.index') }}"><span>🧾</span><span class="nav-text">Branch invoices</span></a>
+                <a class="{{ request()->routeIs('admin.finance.refunds.*') ? 'active' : '' }}" href="{{ route('admin.finance.refunds.index') }}"><span>↩️</span><span class="nav-text">Refund requests</span></a>
+                <a class="{{ request()->routeIs('admin.finance.expenses.*') ? 'active' : '' }}" href="{{ route('admin.finance.expenses.index') }}"><span>💸</span><span class="nav-text">Branch expenses</span></a>
+                <a class="{{ request()->routeIs('admin.finance.reports.*') ? 'active' : '' }}" href="{{ route('admin.finance.reports.index') }}"><span>📊</span><span class="nav-text">Branch finance reports</span></a>
+            @endif
             <div class="admin-sidebar-footer">Alom’s English Center<br>Learning Management System</div>
         </aside>
     @endif
@@ -332,15 +348,6 @@
                         <a href="{{ route('admin.users.index') }}">Users</a>
                         <a href="{{ route('admin.courses.index') }}">Courses</a>
                         <a href="{{ route('admin.flash-sales.index') }}">Flash Sale</a>
-                    @endif
-                    @if(auth()->user()->isBranchManager())
-                        <a href="{{ route('branch-manager.batches.index') }}">My branch</a>
-                    @endif
-                    @if(auth()->user()->isAccountant())
-                        <a href="{{ route('accountant.invoices.index') }}">Finance</a>
-                        <a href="{{ route('accountant.refunds.index') }}">Refunds</a>
-                        <a href="{{ route('accountant.expenses.index') }}">Expenses</a>
-                        <a href="{{ route('accountant.finance-reports.index') }}">Reports</a>
                     @endif
                     @if(auth()->user()->isTeacher())
                         <a href="{{ route('teacher.batches.index') }}">My batches</a>

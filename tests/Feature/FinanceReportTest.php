@@ -89,7 +89,7 @@ class FinanceReportTest extends TestCase
             'amount' => 900, 'method' => 'cash', 'paid_at' => now(),
         ]);
 
-        $this->actingAs($accountant)->get(route('accountant.finance-reports.index'))
+        $this->actingAs($accountant)->get(route('admin.finance.reports.index'))
             ->assertOk()
             ->assertSee('৳400.00')
             ->assertDontSee('৳900.00')
@@ -100,6 +100,6 @@ class FinanceReportTest extends TestCase
     public function test_accountant_without_an_active_branch_cannot_open_finance_report(): void
     {
         $accountant = User::factory()->create(['role' => 'accountant']);
-        $this->actingAs($accountant)->get(route('accountant.finance-reports.index'))->assertForbidden();
+        $this->actingAs($accountant)->get(route('admin.finance.reports.index'))->assertForbidden();
     }
 }

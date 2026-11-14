@@ -50,7 +50,7 @@ class BranchManagerDataScopeTest extends TestCase
         ]);
 
         $this->actingAs($manager)
-            ->get(route('branch-manager.batches.index'))
+            ->get(route('admin.branch-workspace.batches.index'))
             ->assertOk()
             ->assertSee('Own branch batch')
             ->assertDontSee('Other branch secret batch');
@@ -68,7 +68,7 @@ class BranchManagerDataScopeTest extends TestCase
         ]);
 
         $this->actingAs($manager)
-            ->put(route('branch-manager.batches.update', $foreignBatch), [
+            ->put(route('admin.branch-workspace.batches.update', $foreignBatch), [
                 'title' => 'Unauthorized change',
                 'capacity' => 50,
                 'starts_at' => now()->addDays(2)->toDateTimeString(),
@@ -103,7 +103,7 @@ class BranchManagerDataScopeTest extends TestCase
         ]);
 
         $this->actingAs($manager)
-            ->post(route('branch-manager.batches.store'), [
+            ->post(route('admin.branch-workspace.batches.store'), [
                 'branch_id' => $otherBranch->id,
                 'course_id' => $course->id,
                 'teacher_id' => $course->teacher_id,
@@ -113,7 +113,7 @@ class BranchManagerDataScopeTest extends TestCase
                 'ends_at' => now()->addMonth()->toDateTimeString(),
                 'fee' => 2500,
             ])
-            ->assertRedirect(route('branch-manager.batches.index'));
+            ->assertRedirect(route('admin.branch-workspace.batches.index'));
 
         $this->assertDatabaseHas('batches', [
             'branch_id' => $ownBranch->id,
@@ -133,7 +133,7 @@ class BranchManagerDataScopeTest extends TestCase
             ->get(route('admin.batches.index'))
             ->assertForbidden();
 
-        $this->get(route('branch-manager.batches.index'))
+        $this->get(route('admin.branch-workspace.batches.index'))
             ->assertForbidden();
     }
 
@@ -146,7 +146,7 @@ class BranchManagerDataScopeTest extends TestCase
         ]);
 
         $this->actingAs($manager)
-            ->get(route('accountant.invoices.index'))
+            ->get(route('admin.finance.invoices.index'))
             ->assertForbidden();
     }
 }
