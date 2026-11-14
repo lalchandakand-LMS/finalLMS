@@ -35,10 +35,17 @@ class AdminEbookOrderController extends Controller
 
     public function reject(Order $order): RedirectResponse
     {
-        if ($order->status !== 'pending') {
-            return back()->with('info', 'Only pending orders can be rejected.');
-        }
-        $order->update(['status' => 'cancelled']);
-        return back()->with('success', 'Order cancelled; no download access was granted.');
+        $cancelled = DB::transaction(function () use ($order): bool {
+            $locked = Order::query()->lockForUpdate()->findOrFail($order->id);
+            if ($locked->status !== 'pending') {
+                return false;
+            }
+            $locked->update(['status' => 'cancelled']);
+            return true;
+        });
+
+        return $cancelled
+            ? back()->with('success', 'Order cancelled; no download access was granted.')
+            : back()->with('info', 'Only pending orders can be rejected.');
     }
 }
