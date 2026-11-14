@@ -29,6 +29,7 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/courses/{course:slug}/wishlist', [CourseController::class, 'addToWishlist']);
         Route::delete('/courses/{course:slug}/wishlist', [CourseController::class, 'removeFromWishlist']);
         Route::get('/instructor/batches', [InstructorAssignmentController::class, 'batches']);
+        Route::get('/instructor/batches/{batch}', [InstructorAssignmentController::class, 'showBatch']);
         Route::get('/instructor/assignments', [InstructorAssignmentController::class, 'index']);
         Route::get('/instructor/live-classes', [InstructorLiveClassController::class, 'index']);
         Route::post('/instructor/batches/{batch}/live-classes', [InstructorLiveClassController::class, 'store'])->middleware('throttle:10,1');

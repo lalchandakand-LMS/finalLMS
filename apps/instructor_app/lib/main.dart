@@ -169,6 +169,56 @@ class _InstructorHomeState extends State<InstructorHome> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
+  Future<void> showBatchStudents(Map<String, dynamic> batch) async {
+    try {
+      final response = await widget.api.get('/instructor/batches/${batch['id']}');
+      if (!mounted) return;
+      final detail = response['batch'] as Map<String, dynamic>;
+      final students = response['data'] as List<dynamic>? ?? [];
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        builder: (sheetContext) => SafeArea(
+          child: SizedBox(
+            height: MediaQuery.of(sheetContext).size.height * 0.75,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Text(detail['title']?.toString() ?? 'Batch', style: Theme.of(sheetContext).textTheme.titleLarge),
+                Text('${detail['course'] ?? ''} · ${detail['status'] ?? ''}'),
+                Text('Enrolled: ${detail['enrolled_count'] ?? 0} / ${detail['capacity'] ?? '—'}'),
+                Text('Starts: ${detail['starts_at'] ?? '—'}'),
+                Text('Ends: ${detail['ends_at'] ?? '—'}'),
+                const Divider(),
+                Text('Enrolled students', style: Theme.of(sheetContext).textTheme.titleMedium),
+                ...students.map((item) {
+                  final student = item['student'] as Map<String, dynamic>? ?? {};
+                  return ListTile(
+                    leading: const Icon(Icons.person_outline),
+                    title: Text(student['name']?.toString() ?? 'Student'),
+                    subtitle: Text([
+                      student['email']?.toString() ?? '',
+                      student['phone_number']?.toString() ?? '',
+                    ].where((value) => value.isNotEmpty).join(' · ')),
+                    trailing: Text(item['status']?.toString() ?? ''),
+                  );
+                }),
+                if (students.isEmpty) const ListTile(title: Text('No active or completed students in this batch.')),
+              ],
+            ),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      if (e is ApiException && (e.statusCode == 401 || e.statusCode == 403)) {
+        widget.onLogout();
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
   Future<void> createAssignment() async {
     if (batches.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -648,6 +698,19 @@ class _InstructorHomeState extends State<InstructorHome> {
               subtitle: Text("${course['students_count'] ?? 0} enrolled students · ${course['status'] ?? ''}"),
               trailing: const Icon(Icons.people_outline),
               onTap: () => showStudents(course),
+            ));
+          }),
+          const SizedBox(height: 24),
+          Text('My Batches', style: Theme.of(context).textTheme.titleLarge),
+          if (batches.isEmpty) const ListTile(title: Text('No batches assigned.')),
+          ...batches.map((item) {
+            final batch = item as Map<String, dynamic>;
+            return Card(child: ListTile(
+              leading: const Icon(Icons.groups_outlined),
+              title: Text(batch['title']?.toString() ?? 'Batch'),
+              subtitle: Text('${batch['course'] ?? ''} · ${batch['status'] ?? ''} · ${batch['assignments_count'] ?? 0} assignments'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => showBatchStudents(batch),
             ));
           }),
           const SizedBox(height: 24),

@@ -154,6 +154,59 @@ class MobileInstructorAssignmentTest extends TestCase
         ])->assertUnprocessable();
     }
 
+    public function test_instructor_can_view_only_their_batch_and_paginated_enrolled_students(): void
+    {
+        [$teacher, $batch, $student] = $this->fixture();
+        $otherTeacher = User::factory()->create(['role' => 'teacher']);
+        $otherBatch = Batch::create([
+            'branch_id' => $batch->branch_id,
+            'course_id' => $batch->course_id,
+            'teacher_id' => $otherTeacher->id,
+            'title' => 'Other teacher batch',
+            'capacity' => 10,
+            'starts_at' => now(),
+            'ends_at' => now()->addMonth(),
+            'fee' => 0,
+            'status' => 'open',
+        ]);
+
+        $token = $this->token($teacher);
+        $this->withToken($token)->getJson('/api/v1/instructor/batches/'.$batch->id)
+            ->assertOk()
+            ->assertJsonPath('batch.id', $batch->id)
+            ->assertJsonPath('batch.enrolled_count', 1)
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.student.id', $student->id)
+            ->assertJsonPath('data.0.status', 'active');
+
+        $this->withToken($token)->getJson('/api/v1/instructor/batches/'.$otherBatch->id)
+            ->assertNotFound();
+
+        $this->withToken($this->token($student))->getJson('/api/v1/instructor/batches/'.$batch->id)
+            ->assertForbidden();
+    }
+
+    public function test_instructor_batch_roster_status_filter_is_validated_and_applied(): void
+    {
+        [$teacher, $batch, $student] = $this->fixture();
+        $completedStudent = User::factory()->create(['role' => 'student']);
+        Enrollment::create([
+            'user_id' => $completedStudent->id,
+            'course_id' => $batch->course_id,
+            'batch_id' => $batch->id,
+            'status' => 'completed',
+        ]);
+
+        $token = $this->token($teacher);
+        $this->withToken($token)->getJson('/api/v1/instructor/batches/'.$batch->id.'?status=completed')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.student.id', $completedStudent->id);
+
+        $this->withToken($token)->getJson('/api/v1/instructor/batches/'.$batch->id.'?status=pending')
+            ->assertUnprocessable();
+    }
+
     private function fixture(): array
     {
         $teacher = User::factory()->create(['role' => 'teacher']);

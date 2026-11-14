@@ -41,6 +41,54 @@ class InstructorAssignmentController extends Controller
         ]);
     }
 
+    public function showBatch(Request $request, Batch $batch): JsonResponse
+    {
+        $teacher = $this->teacher($request);
+        abort_unless((int) $batch->teacher_id === (int) $teacher->id, 404);
+
+        $validated = $request->validate([
+            'status' => ['nullable', 'in:active,completed'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
+        ]);
+
+        $enrollments = $batch->enrollments()
+            ->whereIn('status', ! empty($validated['status']) ? [$validated['status']] : ['active', 'completed'])
+            ->with('user:id,name,email,phone_number')
+            ->orderByDesc('created_at')
+            ->paginate($validated['per_page'] ?? 30);
+
+        return response()->json([
+            'batch' => [
+                'id' => $batch->id,
+                'title' => $batch->title,
+                'status' => $batch->status,
+                'starts_at' => $batch->starts_at?->toIso8601String(),
+                'ends_at' => $batch->ends_at?->toIso8601String(),
+                'course' => $batch->course()->value('title'),
+                'capacity' => $batch->capacity,
+                'fee' => (float) $batch->fee,
+                'enrolled_count' => $batch->enrollments()->whereIn('status', ['active', 'completed'])->count(),
+            ],
+            'data' => $enrollments->getCollection()->map(fn ($enrollment) => [
+                'enrollment_id' => $enrollment->id,
+                'status' => $enrollment->status,
+                'enrolled_at' => $enrollment->created_at?->toIso8601String(),
+                'student' => [
+                    'id' => $enrollment->user?->id,
+                    'name' => $enrollment->user?->name,
+                    'email' => $enrollment->user?->email,
+                    'phone_number' => $enrollment->user?->phone_number,
+                ],
+            ]),
+            'meta' => [
+                'current_page' => $enrollments->currentPage(),
+                'last_page' => $enrollments->lastPage(),
+                'per_page' => $enrollments->perPage(),
+                'total' => $enrollments->total(),
+            ],
+        ]);
+    }
+
     public function index(Request $request): JsonResponse
     {
         $teacher = $this->teacher($request);
