@@ -18,14 +18,14 @@ class AddonRegistryController extends Controller
 
     public function update(Request $request, string $key): RedirectResponse
     {
-        $validated = $request->validate(['enabled' => ['required', 'boolean']]);
+        $validated = $request->validate([__('enabled') => ['required', 'boolean']]);
         $addons = $this->addons();
         abort_unless(isset($addons[$key]), 404);
 
-        $enabled = (bool) $validated['enabled'];
+        $enabled = (bool) $validated[__('enabled')];
         if ($enabled) {
-            abort_unless($addons[$key]['config_ready'] && $addons[$key]['compatible'] && ! $addons[$key]['blocked'], 422,
-                'This add-on cannot be enabled until its configuration and compatibility checks pass.');
+            abort_unless($addons[$key]['config_ready'] && $addons[$key][__('compatible')] && ! $addons[$key]['blocked'], 422,
+                __('This add-on cannot be enabled until its configuration and compatibility checks pass.'));
         }
 
         $saved = json_decode((string) Setting::value('addon_registry', '{}'), true);
@@ -43,7 +43,7 @@ class AddonRegistryController extends Controller
             'user_agent' => substr((string) $request->userAgent(), 0, 1000),
         ]);
 
-        return redirect()->route('admin.addons.index')->with('success', 'Add-on registry updated. Provider activation still depends on its own server configuration and connection checks.');
+        return redirect()->route('admin.addons.index')->with('success', __('Add-on registry updated. Provider activation still depends on its own server configuration and connection checks.'));
     }
 
     private function addons(): array
@@ -66,29 +66,29 @@ class AddonRegistryController extends Controller
 
         $definitions = [
             'bkash' => [
-                'name' => 'bKash Tokenized Checkout',
+                'name' => __('bKash Tokenized Checkout'),
                 'provider' => 'bKash',
-                'purpose' => 'Server-verified BDT course and eBook payments',
+                'purpose' => __('Server-verified BDT course and eBook payments'),
                 'scopes' => ['payments.create', 'payments.verify', 'payments.callback'],
                 'config_ready' => (bool) config('services.bkash.enabled') && $bkashKeysPresent && $bkashHttps,
-                'health' => (bool) config('services.bkash.enabled') && $bkashKeysPresent && $bkashHttps ? 'Configuration ready; live merchant verification still required' : 'Missing or disabled server configuration',
+                'health' => (bool) config('services.bkash.enabled') && $bkashKeysPresent && $bkashHttps ? __('Configuration ready; live merchant verification still required') : __('Missing or disabled server configuration'),
                 'blocked' => false,
-                'requirements' => 'HTTPS base URL, merchant username/password, app key/secret and BKASH_ENABLED=true',
+                'requirements' => __('HTTPS base URL, merchant username/password, app key/secret and BKASH_ENABLED=true'),
             ],
             'google_drive' => [
-                'name' => 'Google Drive Storage',
+                'name' => __('Google Drive Storage'),
                 'provider' => 'Google',
-                'purpose' => 'OAuth-connected backup and storage quota integration',
+                'purpose' => __('OAuth-connected backup and storage quota integration'),
                 'scopes' => ['storage.quota.read', 'storage.backup.write'],
                 'config_ready' => $driveCredentials,
-                'health' => ! $driveCredentials ? 'OAuth credentials missing' : ($driveConnected ? 'OAuth account connected' : 'OAuth configured; account connection required'),
+                'health' => ! $driveCredentials ? __('OAuth credentials missing') : ($driveConnected ? __('OAuth account connected') : __('OAuth configured; account connection required')),
                 'blocked' => false,
-                'requirements' => 'Google OAuth client ID, client secret and redirect URI; connect an account in Storage Manager',
+                'requirements' => __('Google OAuth client ID, client secret and redirect URI; connect an account in Storage Manager'),
             ],
             'lms_updates' => [
-                'name' => 'Signed LMS Update Center',
+                'name' => __('Signed LMS Update Center'),
                 'provider' => 'LMS release service',
-                'purpose' => 'Verify signed release manifests and stage update packages',
+                'purpose' => __('Verify signed release manifests and stage update packages'),
                 'scopes' => ['updates.manifest.read', 'updates.package.verify', 'updates.backup.prepare'],
                 'config_ready' => (bool) config('services.lms_updates.enabled')
                     && filter_var(config('services.lms_updates.manifest_url'), FILTER_VALIDATE_URL)
@@ -97,27 +97,27 @@ class AddonRegistryController extends Controller
                 'health' => (bool) config('services.lms_updates.enabled')
                     && filter_var(config('services.lms_updates.manifest_url'), FILTER_VALIDATE_URL)
                     && parse_url((string) config('services.lms_updates.manifest_url'), PHP_URL_SCHEME) === 'https'
-                    && is_file($updatePublicKey) ? 'Signed-update configuration ready' : 'Disabled or missing HTTPS manifest/public key',
+                    && is_file($updatePublicKey) ? __('Signed-update configuration ready') : __('Disabled or missing HTTPS manifest/public key'),
                 'blocked' => false,
-                'requirements' => 'LMS_UPDATES_ENABLED=true, HTTPS manifest URL and provisioned release public key',
+                'requirements' => __('LMS_UPDATES_ENABLED=true, HTTPS manifest URL and provisioned release public key'),
             ],
             'nagad_api' => [
-                'name' => 'Nagad Direct API',
+                'name' => __('Nagad Direct API'),
                 'provider' => 'Nagad',
-                'purpose' => 'Future server-verified payment adapter',
+                'purpose' => __('Future server-verified payment adapter'),
                 'scopes' => ['payments.create', 'payments.verify', 'payments.callback'],
                 'config_ready' => false,
-                'health' => 'Blocked pending official merchant API guide and credentials',
+                'health' => __('Blocked pending official merchant API guide and credentials'),
                 'blocked' => true,
-                'requirements' => 'Official merchant integration guide, sandbox credentials, signing/encryption details and callback specification',
+                'requirements' => __('Official merchant integration guide, sandbox credentials, signing/encryption details and callback specification'),
             ],
         ];
 
         foreach ($definitions as $key => &$addon) {
-            $addon['compatible'] = $compatible;
-            $addon['enabled'] = (bool) ($saved[$key] ?? false);
-            $addon['effective'] = $addon['enabled'] && $addon['config_ready'] && $compatible && ! $addon['blocked'];
-            $addon['status'] = $addon['blocked'] ? 'Blocked' : (! $compatible ? 'Incompatible' : ($addon['config_ready'] ? 'Configured' : 'Needs configuration'));
+            $addon[__('compatible')] = $compatible;
+            $addon[__('enabled')] = (bool) ($saved[$key] ?? false);
+            $addon['effective'] = $addon[__('enabled')] && $addon['config_ready'] && $compatible && ! $addon['blocked'];
+            $addon['status'] = $addon['blocked'] ? __('Blocked') : (! $compatible ? __('Incompatible') : ($addon['config_ready'] ? __('Configured') : __('Needs configuration')));
         }
         unset($addon);
 
