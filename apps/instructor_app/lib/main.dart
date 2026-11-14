@@ -293,12 +293,16 @@ class _InstructorHomeState extends State<InstructorHome> {
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    if (date == null || !mounted) {\n      return null;\n    }
+    if (date == null || !mounted) {
+      return null;
+    }
     final time = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(initial),
     );
-    if (time == null) {\n      return null;\n    }
+    if (time == null) {
+      return null;
+    }
     return DateTime(date.year, date.month, date.day, time.hour, time.minute);
   }
 
@@ -356,9 +360,12 @@ class _InstructorHomeState extends State<InstructorHome> {
                   icon: const Icon(Icons.calendar_month),
                   onPressed: () async {
                     final picked = await _pickDateTime(startsAt);
-                    if (picked != null) {\n                      setDialogState(() {
+                    if (picked != null) {
+                      setDialogState(() {
                       startsAt = picked;
-                      if (!endsAt.isAfter(startsAt)) {\n                        endsAt = startsAt.add(const Duration(hours: 1));\n                      }
+                      if (!endsAt.isAfter(startsAt)) {
+                        endsAt = startsAt.add(const Duration(hours: 1));
+                      }
                     });
                   },
                 ),
@@ -371,7 +378,9 @@ class _InstructorHomeState extends State<InstructorHome> {
                   icon: const Icon(Icons.schedule),
                   onPressed: () async {
                     final picked = await _pickDateTime(endsAt);
-                    if (picked != null) {\n                      setDialogState(() => endsAt = picked);\n                    }
+                    if (picked != null) {
+                      setDialogState(() => endsAt = picked);
+                    }
                   },
                 ),
               ),
@@ -405,17 +414,23 @@ class _InstructorHomeState extends State<InstructorHome> {
     title.dispose();
     description.dispose();
     meetingUrl.dispose();
-    if (payload == null) {\n      return;\n    }
+    if (payload == null) {
+      return;
+    }
     try {
       final batchId = payload.remove('batch_id');
       await widget.api.postJson('/instructor/batches/$batchId/live-classes', payload);
-      if (!mounted) {\n        return;\n      }
+      if (!mounted) {
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Live class scheduled.')),
       );
       await load();
     } catch (e) {
-      if (mounted) {\n        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));\n      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
     }
   }
 
@@ -431,7 +446,9 @@ class _InstructorHomeState extends State<InstructorHome> {
     }
     try {
       await widget.api.patchJson('/instructor/live-classes/${liveClass['id']}', payload);
-      if (!mounted) {\n      return;\n    }
+      if (!mounted) {
+      return;
+    }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Live class updated.')),
       );
@@ -467,7 +484,9 @@ class _InstructorHomeState extends State<InstructorHome> {
       ),
     );
     controller.dispose();
-    if (url == null) {\n      return;\n    }
+    if (url == null) {
+      return;
+    }
     if (!url.isEmpty && !url.startsWith('https://')) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Recording URL must use HTTPS.')),
@@ -588,7 +607,9 @@ class _InstructorHomeState extends State<InstructorHome> {
         '/instructor/assignments/${assignment['id']}/submissions/${submission['id']}',
         payload,
       );
-      if (!mounted) {\n        return;\n      }
+      if (!mounted) {
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Grade saved successfully.')),
       );
