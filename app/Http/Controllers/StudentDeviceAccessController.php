@@ -150,6 +150,15 @@ class StudentDeviceAccessController extends Controller
                 ->whereNull('revoked_at')
                 ->update(['revoked_at' => now(), 'updated_at' => now()]);
 
+            DeviceSession::query()
+                ->where('user_id', $device->user_id)
+                ->whereNull('revoked_at')
+                ->update([
+                    'revoked_at' => now(),
+                    'revoke_reason' => 'Another trusted device was approved by administrator',
+                    'updated_at' => now(),
+                ]);
+
             $target->forceFill([
                 'status' => 'approved',
                 'approved_by' => $request->user()->id,
@@ -253,6 +262,19 @@ class StudentDeviceAccessController extends Controller
                         ->where('id', '!=', $device->id)
                         ->where('status', 'approved')
                         ->update(['status' => 'revoked', 'updated_at' => now()]);
+
+                    DeviceSession::query()
+                        ->where('user_id', $user->id)
+                        ->whereNull('revoked_at')
+                        ->where(function ($query) use ($device): void {
+                            $query->whereNull('student_device_id')
+                                ->orWhere('student_device_id', '!=', $device->id);
+                        })
+                        ->update([
+                            'revoked_at' => now(),
+                            'revoke_reason' => 'Another trusted device was used to sign in',
+                            'updated_at' => now(),
+                        ]);
                 });
             }
 
