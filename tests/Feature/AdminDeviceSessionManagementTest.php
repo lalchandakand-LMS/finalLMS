@@ -11,6 +11,17 @@ class AdminDeviceSessionManagementTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // These tests exercise multiple HTTP requests that must share the same
+        // browser session. The array driver intentionally discards sessions
+        // between requests, so use the file driver for realistic cookie/session
+        // continuity in this feature suite.
+        config(['session.driver' => 'file']);
+    }
+
     public function test_admin_can_view_and_revoke_another_users_session(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
