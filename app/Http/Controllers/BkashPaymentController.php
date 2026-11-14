@@ -177,7 +177,6 @@ class BkashPaymentController extends Controller
                 'product_name' => $lockedProduct->name,
                 'quantity' => 1,
                 'regular_price' => $regularAmount,
-                'discount_total' => $discountAmount,
                 'line_total' => $amount,
                 'product_snapshot' => [
                     'name' => $lockedProduct->name,
