@@ -314,6 +314,9 @@ class PaymentController extends Controller
 
     public function approve(Payment $payment): RedirectResponse
     {
+        if ($payment->order_id) {
+            return back()->with('error', 'eBook order payments must be fulfilled through verified eBook checkout.');
+        }
         if (filled($payment->gateway_provider)) {
             return back()->with('error', 'Gateway payments can only be approved after server-side verification.');
         }
