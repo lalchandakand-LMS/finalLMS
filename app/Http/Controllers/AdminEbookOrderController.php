@@ -42,10 +42,10 @@ class AdminEbookOrderController extends Controller
         $result = $fulfillment->fulfill($order);
 
         return match ($result) {
-            'approved' => back()->with('success', 'Payment verified and private eBook access granted.'),
-            'reviewed' => back()->with('info', 'This order has already been completed.'),
-            'closed' => back()->with('error', 'Only pending orders can be approved.'),
-            default => back()->with('error', 'The eBook file or order item is invalid. No access was granted.'),
+            'approved' => back()->with('success', __('Payment verified and private eBook access granted.')),
+            'reviewed' => back()->with('info', __('This order has already been completed.')),
+            'closed' => back()->with('error', __('Only pending orders can be approved.')),
+            default => back()->with('error', __('The eBook file or order item is invalid. No access was granted.')),
         };
     }
 
@@ -63,8 +63,8 @@ class AdminEbookOrderController extends Controller
         });
 
         return $cancelled
-            ? back()->with('success', 'Order cancelled; no download access was granted.')
-            : back()->with('info', 'Only pending orders can be rejected.');
+            ? back()->with('success', __('Order cancelled; no download access was granted.'))
+            : back()->with('info', __('Only pending orders can be rejected.'));
     }
 
     public function revokePermission(Request $request, DownloadPermission $permission): RedirectResponse
@@ -89,8 +89,8 @@ class AdminEbookOrderController extends Controller
         });
 
         return $revoked
-            ? back()->with('success', 'Private eBook access revoked and recorded.')
-            : back()->with('info', 'This download permission was already revoked.');
+            ? back()->with('success', __('Private eBook access revoked and recorded.'))
+            : back()->with('info', __('This download permission was already revoked.'));
     }
 
     public function refund(Request $request, Order $order): RedirectResponse
@@ -141,10 +141,10 @@ class AdminEbookOrderController extends Controller
         });
 
         return match ($result) {
-            'refunded' => back()->with('success', 'Full refund recorded and eBook access revoked.'),
-            'already_refunded' => back()->with('info', 'A refund has already been recorded for this order.'),
-            'unsupported_order' => back()->with('error', 'Only a single paid eBook item can be refunded through this workflow.'),
-            default => back()->with('error', 'Only completed eBook orders can be refunded. Verify that the external refund has been sent first.'),
+            'refunded' => back()->with('success', __('Full refund recorded and eBook access revoked.')),
+            'already_refunded' => back()->with('info', __('A refund has already been recorded for this order.')),
+            'unsupported_order' => back()->with('error', __('Only a single paid eBook item can be refunded through this workflow.')),
+            default => back()->with('error', __('Only completed eBook orders can be refunded. Verify that the external refund has been sent first.')),
         };
     }
 
