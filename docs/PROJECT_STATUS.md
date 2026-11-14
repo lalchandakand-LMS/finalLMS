@@ -207,3 +207,34 @@ The release signing private key and public-key fingerprint still require secure 
 - No production deployment, production database migration, or live gateway activation has occurred; cPanel staging acceptance remains outstanding.
 - **Not included:** official bKash/Nagad/SSLCommerz gateway verification, refunds/revocation workflow UI, cart/coupons, staging acceptance and production rollout. This PR uses manual payment verification only.
 
+
+
+## Live GitHub recheck — 2026-11-14 (continuation)
+
+This section records a fresh repository/PR recheck. Merge status is based on GitHub PR search; CI/staging claims are kept separate from merge status.
+
+### Recently merged implementation
+
+- [PR #65](https://github.com/lalchandakand-LMS/finalLMS/pull/65) — 15 responsive homepage presets, homepage visual builder, managed hero carousel, draft/publish and revision rollback. GitHub reports merged; recorded merge commit: 499d54d21cd65f893c8f890a2df9963457a09836.
+- [PR #116](https://github.com/lalchandakand-LMS/finalLMS/pull/116) — premium homepage, admin-managed header/footer and navigation, custom Website Pages CMS, public Flash Sale page, course catalog/detail and course-combo/device-login workflows. GitHub reports merged. Its PR body still contains stale text saying “Draft and unmerged”; do not rely on that stale sentence for current merge status. The PR description records Laravel CI (309 tests / 1,608 assertions), CodeQL and both Flutter app analyze/test checks passed on head 81524c06af1d2bb72cdd885beb6b44453abab82a; re-check exact merge-head checks before any release decision.
+- [PR #149](https://github.com/lalchandakand-LMS/finalLMS/pull/149) — secure private uploaded-lesson video streaming for the Student mobile app, byte-range seeking and authorization tests. Merged commit observed: 3277737451e3bef6e9f9e4635aed32ab15a0d679. Its commit message records 399 PHPUnit tests / 2,201 assertions, Flutter analyze/tests for both apps, CodeQL and Student/Instructor Android APK builds passed. App-store publication and staging SMS/device acceptance remain separate.
+- [PR #152](https://github.com/lalchandakand-LMS/finalLMS/pull/152) — direct course-category assignments, course metadata/SEO/tags/outcomes/requirements/level/language/duration, admin filters and safe archive/deletion rules. Merged commit observed: da7e8449de6a6c8388a2cd46851f4f10397accae.
+- [PR #153](https://github.com/lalchandakand-LMS/finalLMS/pull/153) — Student mobile course wishlist using the existing wishlist table, student-scoped API operations and app UI. Merged commit observed: a3b61fcbcb75e976c94860b06446a980c5aefa64.
+- [PR #155](https://github.com/lalchandakand-LMS/finalLMS/pull/155) — role-scoped Teacher dashboard metrics and Student learning-progress insights with Bengali labels and feature tests. GitHub reports merged; commit observed: ffd2d95f0004870e4479e848080ceebbc82d11b5. The connector did not return check-run/status records for this SHA during this recheck; do not claim fresh exact-head CI from this status note alone.
+
+### Homepage and navigation implementation check
+
+- WebsitePageController supports draft/published page states, duplication as draft, menu label, show_in_menu and menu_order validation, and published-page rendering.
+- The shared public layout includes partials.public-navigation; the public navigation drawer has close-on-link, backdrop and Escape-key handling.
+- WebsiteBuilderController keeps homepage drafts separate from the published homepage, supports draft preview, explicit publish and revision rollback. Unsafe header/footer/slide/section URLs are filtered in preview.
+- These are source-level checks, not a browser/responsive acceptance test. Confirm the owner's exact reference-image sections, menu ordering and Bangla/English rendering on desktop/mobile before calling visual acceptance complete.
+
+### Current release blockers and next order
+
+1. **Staging blocker:** the owner previously reported no staging subdomain or separate staging database. The cPanel staging runbook explicitly says to stop rather than use the live database. Create an isolated HTTPS staging subdomain and empty database before installation, upgrade, restore or release rehearsal.
+2. Run fresh exact-head Laravel CI, CodeQL and cPanel package checks for the current main SHA before release; do not infer these from an earlier PR head.
+3. Complete browser acceptance for the homepage/navigation, custom pages, student course player, teacher workflows and guardian privacy in both locales.
+4. Verify backup/restore and recovery on staging. The Admin Update Center still cannot activate code or perform a tested rollback; do not advertise one-click updates or use it to update production.
+5. Keep live gateway activation blocked until official merchant credentials, callback verification and sandbox acceptance are completed. Nagad direct API and SSLCommerz direct API are not implemented per the cPanel runbook.
+
+No production deployment, production database mutation, live gateway activation or app-store publication is evidenced by this recheck.
