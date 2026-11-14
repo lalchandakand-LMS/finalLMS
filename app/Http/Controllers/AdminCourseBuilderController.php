@@ -29,6 +29,7 @@ class AdminCourseBuilderController extends Controller
 
     public function update(Request $request, Course $course): RedirectResponse
     {
+        $attachedQuestionSetIds = $course->questionSets()->pluck('question_sets.id')->all();
         $data = $request->validate([
             'post_ids' => ['nullable', 'array', 'max:300'],
             'post_ids.*' => ['integer', 'distinct', Rule::exists('course_content_posts', 'id')->where(fn ($query) => $query->where('status', 'published')->whereNotNull('published_at')->where('published_at', '<=', now()))],
@@ -41,7 +42,7 @@ class AdminCourseBuilderController extends Controller
             'durations' => ['nullable', 'array'],
             'durations.*' => ['nullable', 'integer', 'min:1', 'max:600'],
             'question_set_ids' => ['nullable', 'array', 'max:100'],
-            'question_set_ids.*' => ['integer', 'distinct', Rule::exists('question_sets', 'id')],
+            'question_set_ids.*' => ['integer', 'distinct', Rule::exists('question_sets', 'id')->where(fn ($query) => $query->where('status', 'published')->orWhereIn('id', $attachedQuestionSetIds))],
             'question_set_section_titles' => ['nullable', 'array'],
             'question_set_section_titles.*' => ['nullable', 'string', 'max:120'],
             'question_set_positions' => ['nullable', 'array'],
