@@ -117,7 +117,7 @@ class BkashPaymentController extends Controller
             ]);
 
             return redirect()->route('courses.show', $course)
-                ->with('error', 'bKash checkout could not be started. Please try again or contact the academy.');
+                ->with('error', __('bKash checkout could not be started. Please try again or contact the academy.'));
         }
     }
 
@@ -133,13 +133,13 @@ class BkashPaymentController extends Controller
                 && $lockedProduct->status === 'published' && $lockedProduct->published_at
                 && $lockedProduct->published_at->lte(now()) && $lockedProduct->download_path
                 && Storage::disk('local')->exists($lockedProduct->download_path), 422,
-                'This eBook is not currently available.');
+                __('This eBook is not currently available.'));
 
             $alreadyPending = Order::query()->where('user_id', $student->id)
                 ->where('status', 'pending')
                 ->whereHas('items', fn ($query) => $query->where('product_id', $lockedProduct->id))
                 ->exists();
-            abort_if($alreadyPending, 409, 'You already have a pending order for this eBook.');
+            abort_if($alreadyPending, 409, __('You already have a pending order for this eBook.'));
 
             $alreadyOwned = DownloadPermission::query()
                 ->where('user_id', $student->id)
@@ -149,10 +149,10 @@ class BkashPaymentController extends Controller
                 ->where(fn ($query) => $query->whereNull('downloads_remaining')->orWhere('downloads_remaining', '>', 0))
                 ->whereHas('orderItem.order', fn ($query) => $query->where('status', 'completed'))
                 ->exists();
-            abort_if($alreadyOwned, 409, 'This eBook is already available in your library.');
+            abort_if($alreadyOwned, 409, __('This eBook is already available in your library.'));
 
             $amount = (float) $lockedProduct->currentPrice();
-            abort_if($amount <= 0, 422, 'Free eBooks do not require bKash checkout.');
+            abort_if($amount <= 0, 422, __('Free eBooks do not require bKash checkout.'));
 
             $invoice = 'BKASH-'.Str::upper(Str::random(20));
             $order = Order::create([
@@ -236,7 +236,7 @@ class BkashPaymentController extends Controller
             });
 
             return redirect()->route('ebooks.show', $product)
-                ->with('error', 'bKash checkout could not be started. Please try again or contact the academy.');
+                ->with('error', __('bKash checkout could not be started. Please try again or contact the academy.'));
         }
     }
 
@@ -256,7 +256,7 @@ class BkashPaymentController extends Controller
 
         if ($payment->status === 'approved') {
             return $payment->order_id
-                ? redirect()->route('ebooks.orders')->with('success', 'Your eBook payment is already verified.')
+                ? redirect()->route('ebooks.orders')->with('success', __('Your eBook payment is already verified.'))
                 : redirect()->route('courses.show', $payment->course)->with('success', 'Your payment is already verified.');
         }
 
@@ -408,11 +408,11 @@ class BkashPaymentController extends Controller
             if ($payment->order_id) {
                 return match ($result) {
                     'ebook_approved', 'already' => redirect()->route('ebooks.orders')
-                        ->with('success', 'bKash payment verified. Your eBook is now available in your library.'),
+                        ->with('success', __('bKash payment verified. Your eBook is now available in your library.')),
                     'ebook_unavailable' => redirect()->route('ebooks.orders')
-                        ->with('error', 'bKash payment succeeded, but the eBook could not be fulfilled. The academy must arrange a manual refund.'),
+                        ->with('error', __('bKash payment succeeded, but the eBook could not be fulfilled. The academy must arrange a manual refund.')),
                     default => redirect()->route('ebooks.orders')
-                        ->with('error', 'This eBook payment is no longer eligible for automatic fulfillment. Please contact the academy.'),
+                        ->with('error', __('This eBook payment is no longer eligible for automatic fulfillment. Please contact the academy.')),
                 };
             }
 
@@ -430,8 +430,8 @@ class BkashPaymentController extends Controller
                 ->with('success', 'bKash payment verified. Your course enrollment is now active.');
         } catch (Throwable) {
             return $payment->order_id
-                ? redirect()->route('ebooks.orders')->with('warning', 'Your bKash payment is awaiting server-side verification. Do not pay again; contact the academy if this message remains.')
-                : redirect()->route('courses.show', $payment->course)->with('warning', 'Your bKash payment is awaiting server-side verification. Do not pay again; contact the academy if this message remains.');
+                ? redirect()->route('ebooks.orders')->with('warning', __('Your bKash payment is awaiting server-side verification. Do not pay again; contact the academy if this message remains.'))
+                : redirect()->route('courses.show', $payment->course)->with('warning', __('Your bKash payment is awaiting server-side verification. Do not pay again; contact the academy if this message remains.'));
         }
     }
 
