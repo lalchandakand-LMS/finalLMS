@@ -258,6 +258,7 @@
             <a class="{{ request()->routeIs('admin.security.sessions.*') ? 'active' : '' }}" href="{{ route('admin.security.sessions.index') }}"><span>🔐</span><span class="nav-text">Device sessions</span></a>
             <a href="{{ route('admin.batches.index') }}"><span>🗓️</span><span class="nav-text">Batches & branches</span></a>
             <a href="{{ route('admin.contests.index') }}"><span>🎁</span><span class="nav-text">Quiz & lottery</span></a>
+            <a class="{{ request()->routeIs('admin.ai-developer.*') ? 'active' : '' }}" href="{{ route('admin.ai-developer.index') }}"><span>🤖</span><span class="nav-text">AI Developer</span></a>
             <a href="{{ route('live-classes.index') }}"><span>🎥</span><span class="nav-text">Live classes</span></a>
             <div class="admin-sidebar-label">Finance</div>
             <a href="{{ route('admin.payments.index') }}"><span>💳</span><span class="nav-text">Payments</span></a>
