@@ -15,7 +15,7 @@ class QuizContestController extends Controller
     public function index(): View
     {
         $contests = QuizContest::query()
-            ->where('status', 'published')
+            ->whereIn('status', ['published', 'closed'])
             ->withCount(['entries', 'questions'])
             ->with('winners.user')
             ->latest()
@@ -26,7 +26,7 @@ class QuizContestController extends Controller
 
     public function show(QuizContest $contest): View
     {
-        abort_unless($contest->status === 'published' || $contest->drawn_at, 404);
+        abort_unless(in_array($contest->status, ['published', 'closed'], true) || $contest->drawn_at, 404);
         $contest->load(['questions', 'winners.user']);
         $entry = auth()->check()
             ? $contest->entries()->where('user_id', auth()->id())->first()
@@ -79,6 +79,19 @@ class QuizContestController extends Controller
             ->paginate(15);
 
         return view('admin.contests.index', compact('contests'));
+    }
+
+    public function adminEntries(QuizContest $contest): View
+    {
+        $contest->load('questions');
+        $entries = $contest->entries()
+            ->with('user:id,name,email')
+            ->orderByDesc('score')
+            ->orderBy('submitted_at')
+            ->orderBy('id')
+            ->paginate(50);
+
+        return view('admin.contests.entries', compact('contest', 'entries'));
     }
 
     public function store(Request $request): RedirectResponse

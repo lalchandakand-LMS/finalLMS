@@ -695,5 +695,16 @@
     "available": "available",
     "not active": "not active",
     "Add-on registry": "Add-on registry",
-    "Review allow-listed integrations and configuration readiness": "Review allow-listed integrations and configuration readiness"
+    "Review allow-listed integrations and configuration readiness": "Review allow-listed integrations and configuration readiness",
+    "Thank you for participating!": "Thank you for participating!",
+    "Your answers were received on": "Your answers were received on",
+    "Your score:": "Your score:",
+    "The answer key is available because the contest has ended.": "The answer key is available because the contest has ended.",
+    "Your submitted choices are shown below. Correct answers remain hidden until the contest ends.": "Your submitted choices are shown below. Correct answers remain hidden until the contest ends.",
+    "Unavailable": "Unavailable",
+    "Scoring policy": "Scoring policy",
+    "Entries are ranked by score, then submission time, then entry ID. Review is read-only; published scores and answers are not changed here.": "Entries are ranked by score, then submission time, then entry ID. Review is read-only; published scores and answers are not changed here.",
+    "Correct:": "Correct:",
+    "No submissions yet.": "No submissions yet.",
+    "Back to contests": "Back to contests"
 }

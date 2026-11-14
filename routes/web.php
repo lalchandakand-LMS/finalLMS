@@ -322,6 +322,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::put('/flash-sales/{flashSale}', [FlashSaleController::class, 'update'])->name('admin.flash-sales.update');
         Route::delete('/flash-sales/{flashSale}', [FlashSaleController::class, 'destroy'])->name('admin.flash-sales.destroy');
         Route::get('/contests', [QuizContestController::class, 'adminIndex'])->name('admin.contests.index');
+        Route::get('/contests/{contest}/entries', [QuizContestController::class, 'adminEntries'])->name('admin.contests.entries');
         Route::post('/contests', [QuizContestController::class, 'store'])->middleware('throttle:10,1')->name('admin.contests.store');
         Route::get('/contests/{contest}/edit', [QuizContestController::class, 'edit'])->name('admin.contests.edit');
         Route::put('/contests/{contest}', [QuizContestController::class, 'update'])->middleware('throttle:10,1')->name('admin.contests.update');

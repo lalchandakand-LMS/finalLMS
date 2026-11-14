@@ -1066,5 +1066,16 @@
     "available": "উপলভ্য",
     "not active": "সক্রিয় নয়",
     "Add-on registry": "অ্যাড-অন রেজিস্ট্রি",
-    "Review allow-listed integrations and configuration readiness": "অনুমোদিত ইন্টিগ্রেশন ও কনফিগারেশনের প্রস্তুতি পর্যালোচনা করুন"
+    "Review allow-listed integrations and configuration readiness": "অনুমোদিত ইন্টিগ্রেশন ও কনফিগারেশনের প্রস্তুতি পর্যালোচনা করুন",
+    "Thank you for participating!": "অংশগ্রহণের জন্য ধন্যবাদ!",
+    "Your answers were received on": "আপনার উত্তর গ্রহণ করা হয়েছে",
+    "Your score:": "আপনার স্কোর:",
+    "The answer key is available because the contest has ended.": "প্রতিযোগিতা শেষ হওয়ায় সঠিক উত্তরগুলো এখন দেখা যাচ্ছে।",
+    "Your submitted choices are shown below. Correct answers remain hidden until the contest ends.": "আপনার জমা দেওয়া উত্তরগুলো নিচে দেখানো হয়েছে। প্রতিযোগিতা শেষ না হওয়া পর্যন্ত সঠিক উত্তর গোপন থাকবে।",
+    "Unavailable": "অনুপলভ্য",
+    "Scoring policy": "স্কোর নির্ধারণের নিয়ম",
+    "Entries are ranked by score, then submission time, then entry ID. Review is read-only; published scores and answers are not changed here.": "অংশগ্রহণকারীদের স্কোর, জমা দেওয়ার সময় এবং এন্ট্রি আইডি অনুযায়ী র‌্যাঙ্ক করা হয়। এই পর্যালোচনা শুধু দেখার জন্য; প্রকাশিত স্কোর বা উত্তর এখানে পরিবর্তন করা যায় না।",
+    "Correct:": "সঠিক উত্তর:",
+    "No submissions yet.": "এখনও কোনো উত্তর জমা পড়েনি।",
+    "Back to contests": "প্রতিযোগিতায় ফিরে যান"
 }
