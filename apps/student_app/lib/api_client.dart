@@ -267,6 +267,29 @@ class MobileApi {
     return _decode(response);
   }
 
+  Future<Map<String, dynamic>> putJson(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
+    final token = await readToken();
+    if (token == null) {
+      throw const ApiException('Please sign in again.', 401);
+    }
+    final response = await client.put(
+      Uri.parse('$baseUrl$path'),
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(body),
+    );
+    if (response.statusCode == 401) {
+      await storage.delete(key: _tokenKey);
+    }
+    return _decode(response);
+  }
+
   Future<Map<String, dynamic>> delete(String path) async {
     final token = await readToken();
     if (token == null) {
