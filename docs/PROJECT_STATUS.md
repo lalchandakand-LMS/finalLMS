@@ -1,6 +1,6 @@
 # Project Status — Alom's English Center LMS
 
-Last consolidated: 2026-11-10
+Last consolidated: 2026-11-14
 Repository: https://github.com/lalchandakand-LMS/finalLMS
 Production domain: https://alomsenglishcenter.com
 
@@ -238,3 +238,11 @@ This section records a fresh repository/PR recheck. Merge status is based on Git
 5. Keep live gateway activation blocked until official merchant credentials, callback verification and sandbox acceptance are completed. Nagad direct API and SSLCommerz direct API are not implemented per the cPanel runbook.
 
 No production deployment, production database mutation, live gateway activation or app-store publication is evidenced by this recheck.
+
+
+## Verified continuation update (2026-11-14, after PR #156/#157)
+
+- PR #157 — exam/question-bank admin access, answer autosave/resume, frozen-attempt answer validation and submission hardening — merged to `main` at `6259142f7952ba1836ff512b93156008cd047a59`. Exact-head Laravel CI run #4401 and CodeQL run #854 both completed successfully.
+- PR #156 — this project-status documentation refresh — merged to `main` as `8b3749dc1c5f21774785e09cfcc7cf0e1ab179ce`. Exact-head Laravel CI run #4397 and CodeQL run #853 both completed successfully.
+- PR #158 — follow-up question-bank admin/autosave proposal — remains open and is not merge-ready. Its base is behind current `main`, GitHub currently reports mergeability false, and no exact-head CI/CodeQL runs were returned at the latest check. Review/rebase and fresh checks are required before considering merge. Do not assume its proposed changes are live.
+- These merge records do not constitute staging/browser acceptance or production deployment. No production database or hosting files were changed.
