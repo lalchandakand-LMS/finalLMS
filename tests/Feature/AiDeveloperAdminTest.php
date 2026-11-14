@@ -39,6 +39,17 @@ class AiDeveloperAdminTest extends TestCase
             ->assertSee('AI Developer');
     }
 
+    public function test_non_admin_staff_do_not_see_ai_developer_navigation_link(): void
+    {
+        foreach (['branch_manager', 'accountant'] as $role) {
+            $staff = User::factory()->create(['role' => $role, 'email_verified_at' => now()]);
+
+            $this->actingAs($staff)->get(route('dashboard'))
+                ->assertOk()
+                ->assertDontSee(route('admin.ai-developer.index'));
+        }
+    }
+
     public function test_admin_can_see_only_their_own_ai_task_history(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
