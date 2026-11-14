@@ -17,9 +17,14 @@ class EnsureDeviceSessionActive
             return $next($request);
         }
 
+        $sessionHash = $request->session()->get('device_session_hash');
+        if (! is_string($sessionHash) || ! preg_match('/^[a-f0-9]{64}$/', $sessionHash)) {
+            $sessionHash = hash('sha256', $request->session()->getId());
+        }
+
         $session = DeviceSession::query()
             ->where('user_id', $user->id)
-            ->where('session_hash', hash('sha256', $request->session()->getId()))
+            ->where('session_hash', $sessionHash)
             ->first();
 
         // Sessions created before this feature remain valid until their next sign-in.
