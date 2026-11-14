@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\DownloadPermission;
+use App\Models\EbookRefund;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
@@ -268,6 +269,154 @@ class PrivateEbookStoreTest extends TestCase
 
         $this->assertSame('private/ebooks/guide.pdf', $product->fresh()->download_path);
         Storage::disk('local')->assertExists('private/ebooks/guide.pdf');
+    }
+
+    public function test_admin_records_full_refund_revokes_access_and_sales_report_nets_the_refund(): void
+    {
+        Storage::fake('local');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $product = $this->ebook($admin);
+        [$order, $item, $permission] = $this->completedEbookOrder($student, $product);
+
+        $this->actingAs($admin)->post(route('admin.ebooks.orders.refund', $order), [
+            'refund_reference' => 'REFUND-TRANSFER-001',
+            'reason' => 'Customer requested a full refund.',
+            'confirm_refund' => '1',
+        ])->assertRedirect()->assertSessionHas('success');
+
+        $this->assertSame('refunded', $order->fresh()->status);
+        $this->assertDatabaseHas('ebook_refunds', [
+            'order_id' => $order->id,
+            'processed_by' => $admin->id,
+            'amount' => '350.00',
+            'refund_reference' => 'REFUND-TRANSFER-001',
+        ]);
+        $this->assertNotNull($permission->fresh()->revoked_at);
+        $this->assertSame($admin->id, $permission->fresh()->revoked_by);
+        $this->assertStringContainsString('Customer requested', $permission->fresh()->revocation_reason);
+
+        $this->actingAs($student)->get(route('ebooks.download', $permission))->assertNotFound();
+
+        $this->actingAs($admin)->get(route('admin.ebooks.sales'))
+            ->assertOk()
+            ->assertSee('350.00')
+            ->assertSee('REFUND-TRANSFER-001');
+        $refund = EbookRefund::firstOrFail();
+        $this->assertSame('350.00', $refund->amount);
+    }
+
+    public function test_admin_can_revoke_access_without_refunding_and_cannot_refund_pending_orders(): void
+    {
+        Storage::fake('local');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $product = $this->ebook($admin);
+        [$order, $item, $permission] = $this->completedEbookOrder($student, $product);
+
+        $this->actingAs($admin)->post(route('admin.ebooks.permissions.revoke', $permission), [
+            'reason' => 'Chargeback investigation pending.',
+        ])->assertRedirect()->assertSessionHas('success');
+
+        $permission->refresh();
+        $this->assertNotNull($permission->revoked_at);
+        $this->assertSame($admin->id, $permission->revoked_by);
+        $this->actingAs($student)->get(route('ebooks.download', $permission))->assertGone();
+        $this->assertSame('completed', $order->fresh()->status);
+        $this->assertDatabaseCount('ebook_refunds', 0);
+
+        $pending = Order::create([
+            'order_number' => 'AEC-TEST-PENDING-REFUND',
+            'user_id' => $student->id,
+            'status' => 'pending',
+            'payment_method' => 'manual',
+            'payment_reference' => 'PENDING-REFUND-REF',
+            'currency' => 'BDT',
+            'subtotal' => 350,
+            'discount_total' => 0,
+            'total' => 350,
+        ]);
+        $pending->items()->create([
+            'product_id' => $product->id,
+            'product_type' => 'ebook',
+            'product_name' => $product->name,
+            'quantity' => 1,
+            'regular_price' => 350,
+            'line_total' => 350,
+        ]);
+
+        $this->actingAs($admin)->from(route('admin.ebooks.orders.index'))
+            ->post(route('admin.ebooks.orders.refund', $pending), [
+                'refund_reference' => 'REFUND-PENDING-001',
+                'reason' => 'Not eligible.',
+                'confirm_refund' => '1',
+            ])->assertRedirect()->assertSessionHas('error');
+        $this->assertSame('pending', $pending->fresh()->status);
+        $this->assertDatabaseCount('ebook_refunds', 0);
+    }
+
+    public function test_ebook_refund_is_idempotent_and_requires_admin_authorization(): void
+    {
+        Storage::fake('local');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $product = $this->ebook($admin);
+        [$order] = $this->completedEbookOrder($student, $product);
+
+        $this->actingAs($student)->get(route('admin.ebooks.sales'))->assertForbidden();
+        $this->post(route('admin.ebooks.orders.refund', $order), [
+            'refund_reference' => 'STUDENT-REFUND-001',
+            'reason' => 'Unauthorized.',
+            'confirm_refund' => '1',
+        ])->assertForbidden();
+
+        $this->actingAs($admin)->post(route('admin.ebooks.orders.refund', $order), [
+            'refund_reference' => 'REFUND-ONCE-001',
+            'reason' => 'Full refund sent.',
+            'confirm_refund' => '1',
+        ])->assertRedirect();
+
+        $this->post(route('admin.ebooks.orders.refund', $order), [
+            'refund_reference' => 'REFUND-ONCE-002',
+            'reason' => 'Duplicate request.',
+            'confirm_refund' => '1',
+        ])->assertRedirect()->assertSessionHas('info');
+
+        $this->assertDatabaseCount('ebook_refunds', 1);
+        $this->assertSame('refunded', $order->fresh()->status);
+    }
+
+    private function completedEbookOrder(User $student, Product $product): array
+    {
+        $order = Order::create([
+            'order_number' => 'AEC-REFUND-'.strtoupper(bin2hex(random_bytes(4))),
+            'user_id' => $student->id,
+            'status' => 'completed',
+            'payment_method' => 'manual',
+            'payment_reference' => 'PAY-'.strtoupper(bin2hex(random_bytes(5))),
+            'currency' => 'BDT',
+            'subtotal' => 350,
+            'discount_total' => 0,
+            'total' => 350,
+            'paid_at' => now(),
+            'completed_at' => now(),
+        ]);
+        $item = $order->items()->create([
+            'product_id' => $product->id,
+            'product_type' => 'ebook',
+            'product_name' => $product->name,
+            'quantity' => 1,
+            'regular_price' => 350,
+            'line_total' => 350,
+        ]);
+        $permission = DownloadPermission::create([
+            'order_item_id' => $item->id,
+            'user_id' => $student->id,
+            'product_id' => $product->id,
+            'downloads_remaining' => 2,
+        ]);
+
+        return [$order, $item, $permission];
     }
 
     public function test_admin_payment_proof_is_served_without_public_cache(): void
