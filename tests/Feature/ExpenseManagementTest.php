@@ -115,8 +115,8 @@ class ExpenseManagementTest extends TestCase
                 'amount' => 1,
                 'payment_method' => 'cash',
                 'expense_date' => now()->toDateString(),
-            ])->assertNotFound();
-            $this->delete(route('admin.finance.expenses.destroy', $expense))->assertNotFound();
+            ])->assertForbidden();
+            $this->delete(route('admin.finance.expenses.destroy', $expense))->assertForbidden();
     
             $this->assertDatabaseHas('expenses', ['id' => $expense->id, 'title' => 'Existing branch expense', 'amount' => 450]);
             $this->assertDatabaseMissing('expenses', ['title' => 'Should not be recorded']);
