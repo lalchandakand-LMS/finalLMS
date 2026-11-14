@@ -106,6 +106,8 @@ class InstructorHome extends StatefulWidget {
 }
 class _InstructorHomeState extends State<InstructorHome> {
   List<dynamic> courses = [];
+  List<dynamic> batches = [];
+  List<dynamic> assignments = [];
   bool loading = true;
   String? error;
   @override
@@ -113,9 +115,17 @@ class _InstructorHomeState extends State<InstructorHome> {
   Future<void> load() async {
     setState(() { loading = true; error = null; });
     try {
-      final response = await widget.api.get('/instructor/courses');
+      final responses = await Future.wait([
+        widget.api.get('/instructor/courses'),
+        widget.api.get('/instructor/batches'),
+        widget.api.get('/instructor/assignments'),
+      ]);
       if (mounted) {
-        setState(() => courses = response['data'] as List<dynamic>? ?? []);
+        setState(() {
+          courses = responses[0]['data'] as List<dynamic>? ?? [];
+          batches = responses[1]['data'] as List<dynamic>? ?? [];
+          assignments = responses[2]['data'] as List<dynamic>? ?? [];
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -156,6 +166,228 @@ class _InstructorHomeState extends State<InstructorHome> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
+  Future<void> createAssignment() async {
+    if (batches.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No assigned batches are available.')),
+      );
+      return;
+    }
+    final title = TextEditingController();
+    final instructions = TextEditingController();
+    final marks = TextEditingController(text: '100');
+    int? selectedBatchId = (batches.first as Map<String, dynamic>)['id'] as int;
+    DateTime dueAt = DateTime.now().add(const Duration(days: 2));
+    final payload = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Create assignment'),
+          content: SingleChildScrollView(child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<int>(
+                value: selectedBatchId,
+                decoration: const InputDecoration(labelText: 'Batch'),
+                items: batches.map((item) {
+                  final batch = item as Map<String, dynamic>;
+                  return DropdownMenuItem<int>(
+                    value: batch['id'] as int,
+                    child: Text(batch['title']?.toString() ?? 'Batch'),
+                  );
+                }).toList(),
+                onChanged: (value) => setDialogState(() => selectedBatchId = value),
+              ),
+              TextField(controller: title, decoration: const InputDecoration(labelText: 'Assignment title')),
+              TextField(
+                controller: instructions,
+                minLines: 3,
+                maxLines: 5,
+                decoration: const InputDecoration(labelText: 'Instructions'),
+              ),
+              TextField(
+                controller: marks,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Maximum marks'),
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Due date'),
+                subtitle: Text(dueAt.toLocal().toString().split('.').first),
+                trailing: IconButton(
+                  icon: const Icon(Icons.calendar_month),
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: dueAt,
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                    );
+                    if (picked != null) setDialogState(() => dueAt = DateTime(
+                      picked.year, picked.month, picked.day, 23, 59,
+                    ));
+                  },
+                ),
+              ),
+            ],
+          )),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+            FilledButton(
+              onPressed: () {
+                final parsedMarks = int.tryParse(marks.text.trim());
+                if (selectedBatchId == null || title.text.trim().isEmpty ||
+                    instructions.text.trim().isEmpty || parsedMarks == null || parsedMarks < 1) {
+                  return;
+                }
+                Navigator.pop(dialogContext, {
+                  'batch_id': selectedBatchId,
+                  'title': title.text.trim(),
+                  'instructions': instructions.text.trim(),
+                  'max_marks': parsedMarks,
+                  'due_at': dueAt.toIso8601String(),
+                  'allow_late': false,
+                });
+              },
+              child: const Text('Publish'),
+            ),
+          ],
+        ),
+      ),
+    );
+    title.dispose();
+    instructions.dispose();
+    marks.dispose();
+    if (payload == null) return;
+    try {
+      await widget.api.postJson(
+        '/instructor/batches/${payload.remove('batch_id')}/assignments',
+        payload,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Assignment published.')),
+      );
+      await load();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
+  Future<void> viewSubmissions(Map<String, dynamic> assignment) async {
+    try {
+      final response = await widget.api.get(
+        '/instructor/assignments/${assignment['id']}/submissions',
+      );
+      if (!mounted) return;
+      final submissions = response['data'] as List<dynamic>? ?? [];
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        builder: (sheetContext) => SafeArea(
+          child: SizedBox(
+            height: MediaQuery.of(sheetContext).size.height * 0.75,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Text(
+                  'Submissions — ${assignment['title']}',
+                  style: Theme.of(sheetContext).textTheme.titleLarge,
+                ),
+                if (submissions.isEmpty)
+                  const ListTile(title: Text('No submissions received yet.')),
+                ...submissions.map((raw) {
+                  final item = raw as Map<String, dynamic>;
+                  final student = item['student'] as Map<String, dynamic>? ?? {};
+                  return Card(child: ListTile(
+                    title: Text(student['name']?.toString() ?? 'Student'),
+                    subtitle: Text(
+                      '${item['status']} · ${item['submitted_at'] ?? ''} · Score: ${item['score'] ?? '—'}',
+                    ),
+                    trailing: const Icon(Icons.rate_review_outlined),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      gradeSubmission(assignment, item);
+                    },
+                  ));
+                }),
+              ],
+            ),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
+  Future<void> gradeSubmission(
+    Map<String, dynamic> assignment,
+    Map<String, dynamic> submission,
+  ) async {
+    final score = TextEditingController(
+      text: submission['score']?.toString() ?? '',
+    );
+    final feedback = TextEditingController(
+      text: submission['feedback']?.toString() ?? '',
+    );
+    final payload = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Grade — ${submission['student']?['name'] ?? 'Student'}'),
+        content: SingleChildScrollView(child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(submission['answer']?.toString() ?? 'No text answer attached.'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: score,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: InputDecoration(
+                labelText: 'Score (max ${assignment['max_marks']})',
+              ),
+            ),
+            TextField(
+              controller: feedback,
+              minLines: 2,
+              maxLines: 4,
+              decoration: const InputDecoration(labelText: 'Feedback'),
+            ),
+          ],
+        )),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () {
+              final value = num.tryParse(score.text.trim());
+              if (value == null || value < 0 || value > (assignment['max_marks'] as num)) return;
+              Navigator.pop(dialogContext, {'score': value, 'feedback': feedback.text.trim()});
+            },
+            child: const Text('Save grade'),
+          ),
+        ],
+      ),
+    );
+    score.dispose();
+    feedback.dispose();
+    if (payload == null) return;
+    try {
+      await widget.api.patchJson(
+        '/instructor/assignments/${assignment['id']}/submissions/${submission['id']}',
+        payload,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Grade saved successfully.')),
+      );
+      await load();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
   Future<void> logout() async { await widget.api.logout(); widget.onLogout(); }
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -175,6 +407,30 @@ class _InstructorHomeState extends State<InstructorHome> {
               subtitle: Text("${course['students_count'] ?? 0} enrolled students · ${course['status'] ?? ''}"),
               trailing: const Icon(Icons.people_outline),
               onTap: () => showStudents(course),
+            ));
+          }),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(child: Text('Assignments', style: Theme.of(context).textTheme.titleLarge)),
+              FilledButton.icon(
+                onPressed: createAssignment,
+                icon: const Icon(Icons.add),
+                label: const Text('Create'),
+              ),
+            ],
+          ),
+          if (assignments.isEmpty) const ListTile(title: Text('No assignments published yet.')),
+          ...assignments.map((item) {
+            final assignment = item as Map<String, dynamic>;
+            return Card(child: ListTile(
+              leading: const Icon(Icons.assignment_outlined),
+              title: Text(assignment['title']?.toString() ?? 'Assignment'),
+              subtitle: Text(
+                '${assignment['batch'] ?? 'Batch'} · ${assignment['submissions_count'] ?? 0} submissions · Due ${assignment['due_at'] ?? '—'}',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => viewSubmissions(assignment),
             ));
           }),
         ]),
