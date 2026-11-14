@@ -744,5 +744,8 @@
     "S3-compatible endpoint must be a valid HTTPS URL without embedded credentials": "S3-compatible endpoint must be a valid HTTPS URL without embedded credentials",
     "S3 configuration ready; live bucket verification still required": "S3 configuration ready; live bucket verification still required",
     "S3 credentials present; set FILESYSTEM_DISK=s3 to activate": "S3 credentials present; set FILESYSTEM_DISK=s3 to activate",
-    "FILESYSTEM_DISK=s3, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION and AWS_BUCKET; optional HTTPS AWS_ENDPOINT": "FILESYSTEM_DISK=s3, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION and AWS_BUCKET; optional HTTPS AWS_ENDPOINT"
+    "FILESYSTEM_DISK=s3, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION and AWS_BUCKET; optional HTTPS AWS_ENDPOINT": "FILESYSTEM_DISK=s3, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION and AWS_BUCKET; optional HTTPS AWS_ENDPOINT",
+    "Lesson completed": "Lesson completed",
+    "Lesson marked complete.": "Lesson marked complete.",
+    "Complete every course lesson before completing this course.": "Complete every course lesson before completing this course."
 }

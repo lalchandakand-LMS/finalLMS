@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Course;
 use App\Models\CourseContentPost;
+use App\Models\CourseContentProgress;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -32,6 +34,14 @@ class CourseContentController extends Controller
                 ->with('warning', __('Enroll in this course to unlock the lesson.'));
         }
 
+        $contentProgress = null;
+        if ($isEnrolled) {
+            $contentProgress = CourseContentProgress::query()->updateOrCreate(
+                ['course_curriculum_item_id' => $item->id, 'user_id' => $user->id],
+                ['last_viewed_at' => now()]
+            );
+        }
+
         $post->load(['thumbnail', 'categories']);
         $curriculumItems = $course->curriculumItems()->with('post')->get()
             ->filter(fn ($curriculumItem) => $curriculumItem->post && $curriculumItem->post->status === 'published' && $curriculumItem->post->published_at?->lte(now()))
@@ -45,7 +55,46 @@ class CourseContentController extends Controller
 
         return view('courses.content', compact(
             'course', 'post', 'item', 'curriculumItems', 'previousItem',
-            'nextItem', 'canAccessNext', 'canAccessPrevious', 'canViewAllLessons'
+            'nextItem', 'canAccessNext', 'canAccessPrevious', 'canViewAllLessons', 'contentProgress'
         ));
+    }
+
+    public function complete(Request $request, Course $course, CourseContentPost $post): RedirectResponse
+    {
+        $student = $request->user();
+        abort_unless($student?->isStudent(), 403);
+        abort_unless($course->status === 'published', 404);
+        abort_unless($post->status === 'published' && $post->published_at && $post->published_at->lte(now()), 404);
+        abort_unless($course->enrollments()
+            ->where('user_id', $student->id)
+            ->whereIn('status', ['active', 'completed'])
+            ->exists(), 403);
+
+        $item = $course->curriculumItems()
+            ->where('course_content_post_id', $post->id)
+            ->firstOrFail();
+
+        DB::transaction(function () use ($item, $student): void {
+            $progress = CourseContentProgress::query()
+                ->where('course_curriculum_item_id', $item->id)
+                ->where('user_id', $student->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $progress) {
+                $progress = new CourseContentProgress([
+                    'course_curriculum_item_id' => $item->id,
+                    'user_id' => $student->id,
+                    'last_viewed_at' => now(),
+                ]);
+            }
+
+            $progress->last_viewed_at = now();
+            $progress->completed_at ??= now();
+            $progress->save();
+        });
+
+        return redirect()->route('courses.content.show', [$course, $post])
+            ->with('success', __('Lesson marked complete.'));
     }
 }

@@ -40,6 +40,10 @@
         <a class="btn secondary" href="{{ route('courses.show', $course) }}">← {{ __('Back to course') }}</a>
     </div>
 
+    @if(session('success'))
+        <div class="alert success" role="status">{{ session('success') }}</div>
+    @endif
+
     <div class="lesson-layout">
         <main>
             <article class="panel lesson-article">
@@ -64,6 +68,19 @@
                 @endif
 
                 <div class="lesson-copy">{{ $post->long_description }}</div>
+
+                @if($contentProgress)
+                    <div class="meta-row" style="margin-top:22px;padding-top:16px;border-top:1px solid var(--border);justify-content:space-between;">
+                        @if($contentProgress->completed_at)
+                            <span class="badge success">{{ __('Lesson completed') }}</span>
+                        @else
+                            <form method="POST" action="{{ route('student.courses.content.complete', [$course, $post]) }}">
+                                @csrf
+                                <button type="submit" class="btn primary">{{ __('Mark lesson complete') }}</button>
+                            </form>
+                        @endif
+                    </div>
+                @endif
 
                 @if($post->tags)
                     <div class="muted" style="margin-top:22px;padding-top:15px;border-top:1px solid var(--border);">
