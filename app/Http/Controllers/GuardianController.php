@@ -4,6 +4,18 @@ use App\Models\ActivityLog; use App\Models\Attendance; use App\Models\Branch; us
 use App\Models\Enrollment; use App\Models\ExamAttempt; use App\Models\GuardianStudentLink; use App\Models\Invoice; use App\Models\LessonProgress; use App\Models\Payment; use App\Models\User;
 use Illuminate\Http\JsonResponse; use Illuminate\Http\Request; use Illuminate\Support\Facades\DB; use Illuminate\Validation\ValidationException;
 class GuardianController extends Controller {
+ public function dashboard(Request $request) {
+  $g=$request->user(); abort_unless($g?->isGuardian(),403);
+  $links=GuardianStudentLink::where('guardian_id',$g->id)->whereIn('status',['pending','active'])
+   ->with('student:id,name,email,branch_id')->latest('requested_at')->get();
+  return view('guardian.dashboard',compact('links'));
+ }
+ public function requestsPage(Request $request) {
+  $s=$request->user(); abort_unless($s?->isStudent(),403);
+  $requests=GuardianStudentLink::where('student_id',$s->id)->where('status','pending')
+   ->with('guardian:id,name,email')->latest('requested_at')->get();
+  return view('student.guardian-requests.index',compact('requests'));
+ }
  public function links(Request $request): JsonResponse {
   $g=$request->user(); abort_unless($g?->isGuardian(),403);
   $rows=GuardianStudentLink::where('guardian_id',$g->id)->whereIn('status',['pending','active'])->with('student:id,name,email,branch_id')->latest('requested_at')->get(['id','guardian_id','student_id','relationship','status','requested_at','reviewed_at']);

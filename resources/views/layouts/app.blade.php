@@ -338,7 +338,11 @@
                     @if(auth()->user()->isTeacher())
                         <a href="{{ route('teacher.batches.index') }}">My batches</a>
                     @endif
+                    @if(auth()->user()->isGuardian())
+                        <a href="{{ route('guardian.dashboard') }}">{{ __('Guardian portal') }}</a>
+                    @endif
                     @if(auth()->user()->isStudent())
+                        <a href="{{ route('student.guardian-requests.page') }}">{{ __('Guardian requests') }}</a>
                         <a href="{{ route('student.wishlist.index') }}">Wishlist</a>
                         <a href="{{ route('student.attendance.index') }}">Attendance</a>
                     <a href="{{ route('student.exams.index') }}">Exams</a>
