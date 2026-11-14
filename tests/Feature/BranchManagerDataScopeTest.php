@@ -116,7 +116,7 @@ class BranchManagerDataScopeTest extends TestCase
                 'ends_at' => now()->addMonth()->toDateTimeString(),
                 'fee' => 2500,
             ])
-            ->assertRedirect(route('admin.branch-workspace.batches.index'));
+            ->assertRedirect(route('branch-manager.batches.index'));
 
         $this->assertDatabaseHas('batches', [
             'branch_id' => $ownBranch->id,
