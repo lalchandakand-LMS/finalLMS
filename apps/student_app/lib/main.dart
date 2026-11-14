@@ -398,6 +398,12 @@ class _StudentHomeState extends State<StudentHome> {
     ));
   }
 
+  Future<void> openExams() async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => ExamsPage(api: widget.api),
+    ));
+  }
+
   Future<void> openWishlist() async {
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => WishlistPage(api: widget.api),
@@ -472,6 +478,11 @@ class _StudentHomeState extends State<StudentHome> {
           onPressed: openAssignments,
           icon: const Icon(Icons.assignment_outlined),
           tooltip: 'My assignments',
+        ),
+        IconButton(
+          onPressed: openExams,
+          icon: const Icon(Icons.quiz_outlined),
+          tooltip: 'My exams',
         ),
         IconButton(
           onPressed: openWishlist,
@@ -1319,6 +1330,411 @@ class _AssignmentDetailPageState extends State<AssignmentDetailPage> {
                 const Chip(label: Text('Submission closed')),
               if (error != null) Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
             ]),
+    );
+  }
+}
+
+class ExamsPage extends StatefulWidget {
+  const ExamsPage({required this.api, super.key});
+  final MobileApi api;
+
+  @override
+  State<ExamsPage> createState() => _ExamsPageState();
+}
+
+class _ExamsPageState extends State<ExamsPage> {
+  List<dynamic> exams = [];
+  bool loading = true;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  Future<void> load() async {
+    setState(() { loading = true; error = null; });
+    try {
+      final response = await widget.api.get('/my/exams');
+      if (!mounted) return;
+      setState(() => exams = response['data'] as List<dynamic>? ?? []);
+    } catch (exception) {
+      if (mounted) setState(() => error = exception.toString());
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      title: const Text('My Exams'),
+      actions: [
+        IconButton(onPressed: load, icon: const Icon(Icons.refresh), tooltip: 'Refresh'),
+      ],
+    ),
+    body: loading
+      ? const Center(child: CircularProgressIndicator())
+      : error != null
+        ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text(error!), TextButton(onPressed: load, child: const Text('Retry')),
+          ]))
+        : exams.isEmpty
+          ? const Center(child: Text('No exams are available for your active batches.'))
+          : RefreshIndicator(
+              onRefresh: load,
+              child: ListView.builder(
+                padding: const EdgeInsets.all(12),
+                itemCount: exams.length,
+                itemBuilder: (context, index) {
+                  final item = exams[index] as Map<String, dynamic>;
+                  final attempt = item['attempt'] as Map<String, dynamic>?;
+                  final status = attempt?['status']?.toString();
+                  final statusLabel = status == 'submitted'
+                      ? 'Submitted • Score: ${attempt?['score'] ?? '—'}'
+                      : status == 'in_progress'
+                          ? 'In progress'
+                          : 'Not started';
+                  return Card(
+                    child: ListTile(
+                      leading: const CircleAvatar(child: Icon(Icons.quiz_outlined)),
+                      title: Text(item['title']?.toString() ?? 'Exam'),
+                      subtitle: Text([
+                        item['course']?.toString() ?? '',
+                        'Starts: ${item['starts_at'] ?? '—'}',
+                        'Ends: ${item['ends_at'] ?? '—'}',
+                        statusLabel,
+                      ].where((value) => value.isNotEmpty).join(' • ')),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => ExamDetailPage(
+                          api: widget.api,
+                          examId: (item['id'] as num).toInt(),
+                        ),
+                      )).then((_) => load()),
+                    ),
+                  );
+                },
+              ),
+            ),
+  );
+}
+
+class ExamDetailPage extends StatefulWidget {
+  const ExamDetailPage({required this.api, required this.examId, super.key});
+  final MobileApi api;
+  final int examId;
+
+  @override
+  State<ExamDetailPage> createState() => _ExamDetailPageState();
+}
+
+class _ExamDetailPageState extends State<ExamDetailPage> {
+  Map<String, dynamic>? exam;
+  Map<String, dynamic>? attempt;
+  Map<String, dynamic>? result;
+  List<dynamic> questions = [];
+  final Map<int, int> answers = {};
+  Timer? clock;
+  DateTime? deadline;
+  int secondsRemaining = 0;
+  bool loading = true;
+  bool starting = false;
+  bool saving = false;
+  bool submitting = false;
+  String? error;
+  int? attemptId;
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  @override
+  void dispose() {
+    clock?.cancel();
+    super.dispose();
+  }
+
+  Future<void> load() async {
+    setState(() { loading = true; error = null; });
+    try {
+      final response = await widget.api.get('/exams/${widget.examId}');
+      final data = response['data'] as Map<String, dynamic>;
+      final nextAttempt = data['attempt'] as Map<String, dynamic>?;
+      final nextQuestions = data['questions'] as List<dynamic>? ?? [];
+      final nextResult = data['result'] as Map<String, dynamic>?;
+      if (!mounted) return;
+      setState(() {
+        exam = data;
+        attempt = nextAttempt;
+        attemptId = (nextAttempt?['id'] as num?)?.toInt();
+        questions = nextQuestions;
+        result = nextResult;
+        answers.clear();
+        for (final raw in nextQuestions) {
+          final question = raw as Map<String, dynamic>;
+          final selected = question['selected_option'];
+          if (selected is num) {
+            answers[(question['id'] as num).toInt()] = selected.toInt();
+          }
+        }
+      });
+      final deadlineValue = data['deadline']?.toString();
+      if (deadlineValue != null && deadlineValue.isNotEmpty &&
+          nextAttempt?['status'] == 'in_progress') {
+        _setDeadline(DateTime.parse(deadlineValue).toLocal());
+      } else {
+        clock?.cancel();
+        deadline = null;
+      }
+    } catch (exception) {
+      if (mounted) setState(() => error = exception.toString());
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  void _setDeadline(DateTime value) {
+    clock?.cancel();
+    deadline = value;
+    _tick();
+    clock = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
+  }
+
+  void _tick() {
+    final end = deadline;
+    if (end == null || !mounted) return;
+    final remaining = end.difference(DateTime.now()).inSeconds;
+    setState(() => secondsRemaining = remaining > 0 ? remaining : 0);
+    if (remaining <= 0) {
+      clock?.cancel();
+      if (!submitting && result == null) submit(automatic: true);
+    }
+  }
+
+  String _formatTime(int value) {
+    final minutes = value ~/ 60;
+    final seconds = value % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  Map<String, dynamic> _answerPayload() => {
+    for (final entry in answers.entries) entry.key.toString(): entry.value,
+  };
+
+  Future<void> startOrResume() async {
+    setState(() { starting = true; error = null; });
+    try {
+      final response = await widget.api.post('/exams/${widget.examId}/start');
+      final data = response['data'] as Map<String, dynamic>;
+      final nextAttempt = data['attempt'] as Map<String, dynamic>;
+      final nextQuestions = data['questions'] as List<dynamic>? ?? [];
+      if (!mounted) return;
+      setState(() {
+        attempt = nextAttempt;
+        attemptId = (nextAttempt['id'] as num).toInt();
+        questions = nextQuestions;
+        result = nextAttempt['status'] == 'submitted'
+            ? {'score': nextAttempt['score']}
+            : null;
+        answers.clear();
+        for (final raw in nextQuestions) {
+          final question = raw as Map<String, dynamic>;
+          final selected = question['selected_option'];
+          if (selected is num) {
+            answers[(question['id'] as num).toInt()] = selected.toInt();
+          }
+        }
+      });
+      final deadlineValue = data['deadline']?.toString();
+      if (deadlineValue != null && deadlineValue.isNotEmpty &&
+          nextAttempt['status'] == 'in_progress') {
+        _setDeadline(DateTime.parse(deadlineValue).toLocal());
+      }
+    } catch (exception) {
+      if (mounted) setState(() => error = exception.toString());
+    } finally {
+      if (mounted) setState(() => starting = false);
+    }
+  }
+
+  Future<void> saveAnswers() async {
+    final id = attemptId;
+    if (id == null || answers.isEmpty || saving || submitting) return;
+    setState(() { saving = true; error = null; });
+    try {
+      await widget.api.putJson('/exam-attempts/$id/answers', {
+        'answers': _answerPayload(),
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Answers saved securely.')),
+        );
+      }
+    } catch (exception) {
+      if (mounted) setState(() => error = exception.toString());
+    } finally {
+      if (mounted) setState(() => saving = false);
+    }
+  }
+
+  Future<void> submit({bool automatic = false}) async {
+    final id = attemptId;
+    if (id == null || submitting || result != null) return;
+    setState(() { submitting = true; error = null; });
+    try {
+      final response = await widget.api.postJson('/exam-attempts/$id/submit', {
+        'answers': _answerPayload(),
+      });
+      if (!mounted) return;
+      clock?.cancel();
+      setState(() {
+        result = response['data'] as Map<String, dynamic>;
+        attempt = {...?attempt, 'status': 'submitted', 'score': result?['score']};
+        questions = [];
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(automatic ? 'Time ended. Your exam was submitted.' : 'Exam submitted successfully.')),
+      );
+    } catch (exception) {
+      if (mounted) setState(() => error = exception.toString());
+    } finally {
+      if (mounted) setState(() => submitting = false);
+    }
+  }
+
+  Widget _questionCard(Map<String, dynamic> question) {
+    final id = (question['id'] as num).toInt();
+    final options = question['options'] as List<dynamic>? ?? [];
+    final selected = answers[id];
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${question['position'] ?? ''}. ${question['question'] ?? ''}',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            RadioGroup<int>(
+              groupValue: selected,
+              onChanged: (value) {
+                if (value != null && !saving && !submitting) {
+                  setState(() => answers[id] = value);
+                }
+              },
+              child: Column(
+                children: List.generate(options.length, (index) => RadioListTile<int>(
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  value: index,
+                  enabled: !saving && !submitting,
+                  title: Text(options[index].toString()),
+                )),
+              ),
+            ),
+            Text(
+              '${question['marks'] ?? 0} marks',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final item = exam;
+    final inProgress = attempt?['status'] == 'in_progress' && result == null;
+    final submitted = result != null || attempt?['status'] == 'submitted';
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(item?['title']?.toString() ?? 'Exam'),
+        actions: [
+          IconButton(onPressed: load, icon: const Icon(Icons.refresh), tooltip: 'Refresh'),
+        ],
+      ),
+      body: loading
+        ? const Center(child: CircularProgressIndicator())
+        : error != null && item == null
+          ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Text(error!), TextButton(onPressed: load, child: const Text('Retry')),
+            ]))
+          : ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Text(item?['instructions']?.toString() ?? ''),
+                const SizedBox(height: 8),
+                Text('Starts: ${item?['starts_at'] ?? '—'}'),
+                Text('Ends: ${item?['ends_at'] ?? '—'}'),
+                Text('Duration: ${item?['duration_minutes'] ?? '—'} minutes'),
+                const Divider(height: 24),
+                if (submitted) ...[
+                  Card(
+                    child: ListTile(
+                      leading: Icon(
+                        result?['passed'] == true ? Icons.emoji_events : Icons.assignment_turned_in,
+                      ),
+                      title: Text('Exam submitted • Score: ${result?['score'] ?? attempt?['score'] ?? '—'}'),
+                      subtitle: Text(
+                        result?['passed'] == true
+                            ? 'Passed'
+                            : 'Pass marks: ${result?['pass_marks'] ?? item?['pass_marks'] ?? '—'}',
+                      ),
+                    ),
+                  ),
+                ] else if (!inProgress) ...[
+                  const Text('Start the exam when it is available. Your attempt and question order will be saved securely.'),
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    onPressed: starting ? null : startOrResume,
+                    icon: const Icon(Icons.play_arrow),
+                    label: starting
+                        ? const CircularProgressIndicator()
+                        : const Text('Start exam'),
+                  ),
+                ] else ...[
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.timer_outlined),
+                      title: Text('Time remaining: ${_formatTime(secondsRemaining)}'),
+                      subtitle: const Text('The server controls the official exam deadline.'),
+                    ),
+                  ),
+                  ...questions.map((raw) => _questionCard(raw as Map<String, dynamic>)),
+                  if (error != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                    ),
+                  OutlinedButton.icon(
+                    onPressed: saving || submitting || answers.isEmpty ? null : saveAnswers,
+                    icon: const Icon(Icons.save_outlined),
+                    label: saving ? const CircularProgressIndicator() : const Text('Save answers'),
+                  ),
+                  const SizedBox(height: 8),
+                  FilledButton.icon(
+                    onPressed: saving || submitting ? null : () => submit(),
+                    icon: const Icon(Icons.send),
+                    label: submitting
+                        ? const CircularProgressIndicator()
+                        : const Text('Submit exam'),
+                  ),
+                ],
+                if (error != null && item != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                  ),
+              ],
+            ),
     );
   }
 }
