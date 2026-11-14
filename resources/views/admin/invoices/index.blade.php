@@ -11,7 +11,9 @@
             <p class="muted">{{ __('Create a separate invoice for each fee or installment and record received payments.') }}</p>
         </div>
         @if(auth()->user()->isAdmin())
-            <a href="{{ route('admin.payments.index') }}" class="btn secondary">{{ __('Online payment review') }}</a>
+            @unless(auth()->user()->isAccountant())
+                <a href="{{ route('admin.payments.index') }}" class="btn secondary">{{ __('Online payment review') }}</a>
+            @endunless
         @endif
     </div>
 
