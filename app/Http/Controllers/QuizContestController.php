@@ -81,6 +81,19 @@ class QuizContestController extends Controller
         return view('admin.contests.index', compact('contests'));
     }
 
+    public function adminEntries(QuizContest $contest): View
+    {
+        $contest->load('questions');
+        $entries = $contest->entries()
+            ->with('user:id,name,email')
+            ->orderByDesc('score')
+            ->orderBy('submitted_at')
+            ->orderBy('id')
+            ->paginate(50);
+
+        return view('admin.contests.entries', compact('contest', 'entries'));
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
