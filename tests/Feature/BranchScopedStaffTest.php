@@ -33,17 +33,17 @@ class BranchScopedStaffTest extends TestCase
             'fee' => 2500,
         ];
 
-        $this->actingAs($manager)->post(route('branch-manager.batches.store'), [
+        $this->actingAs($manager)->post(route('admin.branch-workspace.batches.store'), [
             ...$base, 'course_id' => $localCourse->id, 'teacher_id' => $remoteTeacher->id,
         ])->assertSessionHasErrors('teacher_id');
 
-        $this->post(route('branch-manager.batches.store'), [
+        $this->post(route('admin.branch-workspace.batches.store'), [
             ...$base, 'course_id' => $unpublishedCourse->id, 'teacher_id' => $localTeacher->id,
         ])->assertSessionHasErrors('course_id');
 
-        $this->post(route('branch-manager.batches.store'), [
+        $this->post(route('admin.branch-workspace.batches.store'), [
             ...$base, 'course_id' => $localCourse->id, 'teacher_id' => $localTeacher->id,
-        ])->assertRedirect(route('branch-manager.batches.index'));
+        ])->assertRedirect(route('admin.branch-workspace.batches.index'));
 
         $this->assertDatabaseHas('batches', [
             'branch_id' => $branch->id,
@@ -72,12 +72,12 @@ class BranchScopedStaffTest extends TestCase
             'amount' => 1500, 'status' => 'unpaid',
         ]);
 
-        $this->actingAs($accountant)->get(route('accountant.invoices.index'))
+        $this->actingAs($accountant)->get(route('admin.finance.invoices.index'))
             ->assertOk()
             ->assertSee($localInvoice->invoice_number)
             ->assertDontSee($remoteInvoice->invoice_number);
 
-        $this->post(route('accountant.invoices.payments.store', $remoteInvoice), [
+        $this->post(route('admin.finance.invoices.payments.store', $remoteInvoice), [
             'amount' => 100, 'method' => 'cash', 'paid_at' => now()->format('Y-m-d H:i:s'),
         ])->assertNotFound();
 
@@ -104,7 +104,7 @@ class BranchScopedStaffTest extends TestCase
             'status' => 'open',
         ]);
 
-        $this->actingAs($accountant)->post(route('accountant.invoices.store'), [
+        $this->actingAs($accountant)->post(route('admin.finance.invoices.store'), [
             'user_id' => $localStudent->id,
             'batch_id' => $remoteBatch->id,
             'title' => 'Invalid cross-branch invoice',
@@ -143,7 +143,7 @@ class BranchScopedStaffTest extends TestCase
             'status' => 'active',
         ]);
 
-        $this->actingAs($manager)->get(route('branch-manager.students.index'))
+        $this->actingAs($manager)->get(route('admin.branch-workspace.students.index'))
             ->assertOk()
             ->assertSee($localStudent->email)
             ->assertSee($enrolledStudent->email)
