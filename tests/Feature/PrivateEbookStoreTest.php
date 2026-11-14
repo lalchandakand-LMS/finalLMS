@@ -292,7 +292,7 @@ class PrivateEbookStoreTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.ebooks.orders.proof', $order))
             ->assertOk()
-            ->assertHeader('Cache-Control', 'private, no-store')
+            ->assertHeader('Cache-Control', 'no-store, private')
             ->assertHeader('X-Content-Type-Options', 'nosniff');
     }
 
