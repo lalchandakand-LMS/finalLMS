@@ -391,6 +391,12 @@ class _StudentHomeState extends State<StudentHome> {
     widget.onLogout();
   }
 
+  Future<void> openWishlist() async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => WishlistPage(api: widget.api),
+    ));
+  }
+
   Widget _courseCard(dynamic item) {
     final course = item as Map<String, dynamic>;
     final imageUrl = course['image_url']?.toString();
@@ -454,6 +460,11 @@ class _StudentHomeState extends State<StudentHome> {
           onPressed: load,
           icon: const Icon(Icons.refresh),
           tooltip: 'Refresh',
+        ),
+        IconButton(
+          onPressed: openWishlist,
+          icon: const Icon(Icons.favorite_outline),
+          tooltip: 'My wishlist',
         ),
         IconButton(
           onPressed: logout,
@@ -585,6 +596,118 @@ class _StudentHomeState extends State<StudentHome> {
   );
 }
 
+class WishlistPage extends StatefulWidget {
+  const WishlistPage({required this.api, super.key});
+  final MobileApi api;
+
+  @override
+  State<WishlistPage> createState() => _WishlistPageState();
+}
+
+class _WishlistPageState extends State<WishlistPage> {
+  List<dynamic> courses = [];
+  bool loading = true;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  Future<void> load() async {
+    setState(() {
+      loading = true;
+      error = null;
+    });
+    try {
+      final response = await widget.api.get('/my/wishlist');
+      if (!mounted) return;
+      setState(() => courses = response['data'] as List<dynamic>? ?? []);
+    } catch (exception) {
+      if (mounted) setState(() => error = exception.toString());
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> removeCourse(Map<String, dynamic> course) async {
+    try {
+      await widget.api.delete('/courses/${course['slug']}/wishlist');
+      if (mounted) {
+        setState(() {
+          courses.removeWhere(
+            (item) => (item as Map<String, dynamic>)['id'] == course['id'],
+          );
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Course removed from wishlist.')),
+        );
+      }
+    } catch (exception) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(exception.toString())),
+        );
+      }
+    }
+  }
+
+  Future<void> openCourse(String slug) async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => CourseDetailsPage(api: widget.api, slug: slug),
+    ));
+    if (mounted) load();
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(
+          title: const Text('My wishlist'),
+          actions: [
+            IconButton(
+              onPressed: load,
+              tooltip: 'Refresh wishlist',
+              icon: const Icon(Icons.refresh),
+            ),
+          ],
+        ),
+        body: loading
+            ? const Center(child: CircularProgressIndicator())
+            : error != null
+                ? Center(child: Text(error!))
+                : courses.isEmpty
+                    ? const Center(child: Text('Your wishlist is empty.'))
+                    : RefreshIndicator(
+                        onRefresh: load,
+                        child: ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: courses.length,
+                          itemBuilder: (context, index) {
+                            final course = courses[index] as Map<String, dynamic>;
+                            final instructor =
+                                course['instructor'] as Map<String, dynamic>?;
+                            return Card(
+                              child: ListTile(
+                                leading: const Icon(Icons.menu_book),
+                                title: Text(course['title']?.toString() ?? 'Course'),
+                                subtitle: Text(
+                                  instructor?['name']?.toString() ?? 'Academy course',
+                                ),
+                                onTap: () => openCourse(course['slug'].toString()),
+                                trailing: IconButton(
+                                  tooltip: 'Remove from wishlist',
+                                  onPressed: () => removeCourse(course),
+                                  icon: const Icon(Icons.favorite, color: Colors.red),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+      );
+}
+
 class CourseDetailsPage extends StatefulWidget {
   const CourseDetailsPage({required this.api, required this.slug, super.key});
   final MobileApi api;
@@ -598,6 +721,8 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
   Map<String, dynamic>? course;
   List<dynamic> lessons = [];
   bool enrolled = false;
+  bool wishlisted = false;
+  bool wishlistBusy = false;
   bool loading = true;
   String? error;
 
@@ -621,6 +746,7 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
         course = response['course'] as Map<String, dynamic>;
         lessons = response['lessons'] as List<dynamic>? ?? [];
         enrolled = response['is_enrolled'] == true;
+        wishlisted = response['is_wishlisted'] == true;
       });
     } catch (exception) {
       if (mounted) { setState(() => error = exception.toString()); }
@@ -629,9 +755,52 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
     }
   }
 
+  Future<void> toggleWishlist() async {
+    if (course == null || wishlistBusy) return;
+    setState(() => wishlistBusy = true);
+    try {
+      final response = wishlisted
+          ? await widget.api.delete('/courses/${widget.slug}/wishlist')
+          : await widget.api.postJson(
+              '/courses/${widget.slug}/wishlist',
+              const {},
+            );
+      if (mounted) {
+        setState(() => wishlisted = response['wishlisted'] == true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              wishlisted ? 'Added to your wishlist.' : 'Removed from your wishlist.',
+            ),
+          ),
+        );
+      }
+    } catch (exception) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(exception.toString())),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => wishlistBusy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Course details')),
+        appBar: AppBar(
+          title: const Text('Course details'),
+          actions: [
+            IconButton(
+              onPressed: wishlistBusy ? null : toggleWishlist,
+              tooltip: wishlisted ? 'Remove from wishlist' : 'Add to wishlist',
+              icon: Icon(
+                wishlisted ? Icons.favorite : Icons.favorite_outline,
+                color: wishlisted ? Colors.red : null,
+              ),
+            ),
+          ],
+        ),
         body: loading
             ? const Center(child: CircularProgressIndicator())
             : error != null
