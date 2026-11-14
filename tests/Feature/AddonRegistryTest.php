@@ -36,6 +36,43 @@ class AddonRegistryTest extends TestCase
             ->assertDontSee('private-app-secret');
     }
 
+    public function test_admin_can_view_configured_s3_compatible_storage_without_exposing_credentials(): void
+    {
+        config([
+            'filesystems.default' => 's3',
+            'filesystems.disks.s3.key' => 'private-s3-key',
+            'filesystems.disks.s3.secret' => 'private-s3-secret',
+            'filesystems.disks.s3.region' => 'ap-southeast-1',
+            'filesystems.disks.s3.bucket' => 'lms-private',
+            'filesystems.disks.s3.endpoint' => 'https://objects.example.test',
+        ]);
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+
+        $this->actingAs($admin)->get(route('admin.addons.index'))
+            ->assertOk()
+            ->assertSee('S3-compatible Object Storage')
+            ->assertSee('storage.objects.write')
+            ->assertSee('S3 configuration ready')
+            ->assertDontSee('private-s3-key')
+            ->assertDontSee('private-s3-secret');
+    }
+
+    public function test_s3_addon_cannot_be_enabled_with_an_insecure_custom_endpoint(): void
+    {
+        config([
+            'filesystems.default' => 's3',
+            'filesystems.disks.s3.key' => 'configured-key',
+            'filesystems.disks.s3.secret' => 'configured-secret',
+            'filesystems.disks.s3.region' => 'ap-southeast-1',
+            'filesystems.disks.s3.bucket' => 'lms-private',
+            'filesystems.disks.s3.endpoint' => 'http://objects.example.test',
+        ]);
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+
+        $this->actingAs($admin)->patch(route('admin.addons.update', 's3_compatible_storage'), ['enabled' => true])
+            ->assertStatus(422);
+    }
+
     public function test_admin_can_enable_configured_addon_and_change_is_audited(): void
     {
         config([
