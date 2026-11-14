@@ -160,7 +160,8 @@ class InvoiceController extends Controller
 
         if ($request->user()->isAccountant()) {
             $branchId = $request->user()->branch_id;
-            abort_unless($branchId && Invoice::whereKey($invoice->id)->where(function ($query) use ($branchId): void {
+            abort_unless($branchId && \\App\\Models\\Branch::whereKey($branchId)->where('is_active', true)->exists(), 403);
+            abort_unless(Invoice::whereKey($invoice->id)->where(function ($query) use ($branchId): void {
                 $query->whereHas('batch', fn ($batch) => $batch->where('branch_id', $branchId))
                     ->orWhere(function ($unbatched) use ($branchId): void {
                         $unbatched->whereNull('batch_id')
