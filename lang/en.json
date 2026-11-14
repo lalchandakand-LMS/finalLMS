@@ -609,5 +609,15 @@
     "Apply to selected": "Apply to selected",
     "Select all posts": "Select all posts",
     "Select :title": "Select :title",
-    "Selected content posts updated.": "Selected content posts updated."
+    "Selected content posts updated.": "Selected content posts updated.",
+    "Assignment published to the batch.": "Assignment published to the batch.",
+    "This assignment is closed for submissions.": "This assignment is closed for submissions.",
+    "Your submission is already received and awaiting review.": "Your submission is already received and awaiting review.",
+    "Please enter an answer or attach a file.": "Please enter an answer or attach a file.",
+    "Your revised assignment has been submitted.": "Your revised assignment has been submitted.",
+    "Assignment submitted successfully.": "Assignment submitted successfully.",
+    "Assignment graded successfully.": "Assignment graded successfully.",
+    "Download submitted file:": "Download submitted file:",
+    "Assignments": "Assignments",
+    "assignments": "assignments"
 }
