@@ -25,12 +25,12 @@
             @csrf
             <div style="margin-bottom:14px;">
                 <label for="title">{{ __('Problem title') }}</label>
-                <input id="title" name="title" maxlength="180" required value="{{ old('title') }}" placeholder="যেমন: Student login error">
+                <input id="title" name="title" maxlength="180" required value="{{ old('title') }}" placeholder="{{ __('e.g. Student login error') }}">
                 @error('title')<small class="muted">{{ $message }}</small>@enderror
             </div>
             <div style="margin-bottom:14px;">
                 <label for="instruction">{{ __('Describe the problem / নির্দেশনা') }}</label>
-                <textarea id="instruction" name="instruction" rows="9" maxlength="12000" required placeholder="সমস্যাটি কী, কখন হচ্ছে, কী error দেখাচ্ছে—সংবেদনশীল তথ্য বাদ দিয়ে লিখুন।">{{ old('instruction') }}</textarea>
+                <textarea id="instruction" name="instruction" rows="9" maxlength="12000" required placeholder="{{ __('Describe what is happening, when it happens and the sanitized error shown. Do not include secrets or personal data.') }}">{{ old('instruction') }}</textarea>
                 @error('instruction')<small class="muted">{{ $message }}</small>@enderror
             </div>
             <button class="btn primary" type="submit" @disabled(!$configured)>{{ __('Analyze problem') }}</button>
@@ -56,7 +56,7 @@
         <article style="padding:16px 0;border-top:1px solid var(--border);">
             <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;">
                 <strong>{{ $task->title }}</strong>
-                <span class="badge {{ $task->status === 'completed' ? 'success' : ($task->status === 'failed' ? 'warning' : 'info') }}">{{ ucfirst(str_replace('_', ' ', $task->status)) }}</span>
+                <span class="badge {{ $task->status === 'completed' ? 'success' : ($task->status === 'failed' ? 'warning' : 'info') }}">{{ __($task->status) }}</span>
             </div>
             <small class="muted">{{ $task->created_at->format('d M Y, h:i A') }}</small>
             @if($task->response)
