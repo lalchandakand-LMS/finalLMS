@@ -40,6 +40,10 @@
         <a class="btn secondary" href="{{ route('courses.show', $course) }}">← {{ __('Back to course') }}</a>
     </div>
 
+    @if(session('success'))
+        <div class="alert success" role="status">{{ session('success') }}</div>
+    @endif
+
     <div class="lesson-layout">
         <main>
             <article class="panel lesson-article">
