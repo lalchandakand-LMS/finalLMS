@@ -337,17 +337,18 @@ class _InstructorHomeState extends State<InstructorHome> {
   }
 
   Future<void> showStudents(Map<String, dynamic> course) async {
-    final messenger = ScaffoldMessenger.of(context);
+    final pageContext = context;
+    final messenger = ScaffoldMessenger.of(pageContext);
     try {
       final response = await widget.api.get("/instructor/courses/${course['slug']}/students");
-      if (!mounted) {
+      if (!mounted || !pageContext.mounted) {
         return;
       }
       final students = response['data'] as List<dynamic>? ?? [];
-      showModalBottomSheet<void>(context: context, builder: (context) => SafeArea(child: ListView(
+      showModalBottomSheet<void>(context: pageContext, builder: (sheetContext) => SafeArea(child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text('Students — ${course['title']}', style: Theme.of(context).textTheme.titleLarge),
+          Text('Students — ${course['title']}', style: Theme.of(sheetContext).textTheme.titleLarge),
           ...students.map((item) {
             final student = item['student'] as Map<String, dynamic>;
             return ListTile(title: Text(student['name']?.toString() ?? 'Student'), subtitle: Text(student['email']?.toString() ?? ''));
@@ -540,17 +541,21 @@ class _InstructorHomeState extends State<InstructorHome> {
   }
 
   Future<DateTime?> _pickDateTime(DateTime initial) async {
+    final pickerContext = context;
     final date = await showDatePicker(
-      context: context,
+      context: pickerContext,
       initialDate: initial,
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    if (!mounted || date == null) {
+    if (!pickerContext.mounted) {
+      return null;
+    }
+    if (date == null) {
       return null;
     }
     final time = await showTimePicker(
-      context: context,
+      context: pickerContext,
       initialTime: TimeOfDay.fromDateTime(initial),
     );
     if (time == null) {
@@ -671,19 +676,20 @@ class _InstructorHomeState extends State<InstructorHome> {
     if (payload == null || !mounted) {
       return;
     }
-    final messenger = ScaffoldMessenger.of(context);
     try {
       final batchId = payload.remove('batch_id');
       await widget.api.postJson('/instructor/batches/$batchId/live-classes', payload);
       if (!mounted) {
         return;
       }
-      messenger.showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Live class scheduled.')),
       );
       await load();
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.toString())));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
     }
   }
 
