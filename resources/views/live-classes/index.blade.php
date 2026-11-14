@@ -32,9 +32,9 @@
                     <p>{{ $liveClass->description }}</p>
                 @endif
                 @if(auth()->user()->isStudent())
-                    @if($joinWindowOpen)
+                    @if($liveClass->student_has_active_enrollment && $joinWindowOpen)
                         <a class="btn primary" href="{{ $liveClass->meeting_url }}" target="_blank" rel="noopener noreferrer">{{ __('Join live class') }}</a>
-                    @else
+                    @elseif($liveClass->student_has_active_enrollment)
                         <span class="muted">The secure join link becomes available 15 minutes before class and closes when the session ends.</span>
                     @endif
                 @else
