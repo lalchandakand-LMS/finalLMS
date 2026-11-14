@@ -61,11 +61,30 @@ class StaffRoleScopeTest extends TestCase
         $other = Branch::create(['name' => 'Foreign Branch', 'slug' => 'foreign-branch']);
         $manager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $assigned->id]);
         $foreignBatch = Batch::create(['branch_id' => $other->id, 'course_id' => $course->id, 'teacher_id' => $teacher->id, 'title' => 'Foreign Batch', 'capacity' => 20, 'starts_at' => now(), 'ends_at' => now()->addMonth(), 'fee' => 1000, 'status' => 'open']);
-        $payload = ['course_id' => $course->id, 'teacher_id' => $teacher->id, 'title' => 'New Local Batch', 'capacity' => 15, 'starts_at' => now()->addDay()->format('Y-m-d H:i:s'), 'ends_at' => now()->addMonth()->format('Y-m-d H:i:s'), 'fee' => 1200];
+        $payload = ['course_id' => $course->id, 'teacher_id' => $teacher->id, 'title' => 'New Local Batch', 'capacity' => 15, 'starts_at' => now()->addDay()->format('Y-m-d H:i:s'), 'ends_at' => now()->addDays(10)->format('Y-m-d H:i:s'), 'fee' => 1500];
         $this->actingAs($manager)->post(route('branch-manager.batches.store'), $payload)->assertRedirect();
         $this->assertDatabaseHas('batches', ['title' => 'New Local Batch', 'branch_id' => $assigned->id]);
         $this->put(route('branch-manager.batches.update', $foreignBatch), ['title' => 'Tampered', 'capacity' => 20, 'starts_at' => now()->addDay(), 'ends_at' => now()->addMonth(), 'fee' => 1000, 'status' => 'closed'])->assertNotFound();
         $this->assertDatabaseHas('batches', ['id' => $foreignBatch->id, 'title' => 'Foreign Batch']);
+    }
+
+    public function test_inactive_branch_staff_accounts_are_blocked_until_branch_is_reactivated(): void
+    {
+        $branch = Branch::create(['name' => 'Inactive Branch', 'slug' => 'inactive-branch', 'is_active' => false]);
+        $manager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $branch->id]);
+        $accountant = User::factory()->create(['role' => 'accountant', 'branch_id' => $branch->id]);
+
+        $this->actingAs($manager)
+            ->get(route('branch-manager.batches.index'))
+            ->assertForbidden();
+
+        $this->actingAs($manager)
+            ->get(route('branch-manager.students.index'))
+            ->assertForbidden();
+
+        $this->actingAs($accountant)
+            ->get(route('accountant.invoices.index'))
+            ->assertForbidden();
     }
 
     public function test_accountant_can_manage_invoice_ledger_but_cannot_open_admin_payment_review(): void
