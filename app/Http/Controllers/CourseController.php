@@ -230,7 +230,9 @@ class CourseController extends Controller
         $course->views_count = PageView::where('view_type', 'course')->where('viewable_id', $course->id)->count();
         $comments = $course->comments()->with('author')->latest()->paginate(10, ['*'], 'comments_page');
         $course->load('teacher', 'enrollments.user', 'lessons', 'curriculumItems.post.categories', 'curriculumItems.post.thumbnail');
-        $course->load(['questionSets' => fn ($sets) => $sets->published()->withCount('questions')]);
+        $course->load(['questionSets' => fn ($sets) => $sets
+            ->when(! $canManageCourse, fn ($query) => $query->published())
+            ->withCount('questions')]);
         if ($user?->isStudent()) {
             $attemptsBySet = QuestionSetAttempt::query()
                 ->where('course_id', $course->id)
