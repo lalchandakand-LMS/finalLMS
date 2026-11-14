@@ -355,7 +355,7 @@ class _InstructorHomeState extends State<InstructorHome> {
         ],
       )));
     } catch (e) {
-      if (!mounted) {
+      if (!context.mounted) {
         return;
       }
       if (e is ApiException && (e.statusCode == 401 || e.statusCode == 403)) {
@@ -408,7 +408,7 @@ class _InstructorHomeState extends State<InstructorHome> {
         ),
       );
     } catch (e) {
-      if (!mounted) {
+      if (!context.mounted) {
         return;
       }
       if (e is ApiException && (e.statusCode == 401 || e.statusCode == 403)) {
