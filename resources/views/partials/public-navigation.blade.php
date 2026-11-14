@@ -42,10 +42,6 @@
                 @if(auth()->user()->isTeacher())
                     <a href="{{ route('teacher.batches.index') }}"><span class="menu-icon">▥</span>{{ __('My batches') }}</a>
                 @endif
-                @if(auth()->user()->isBranchManager())
-                @endif
-                @if(auth()->user()->isAccountant())
-                @endif
                 @if(auth()->user()->isAdmin())
                     <div class="public-drawer-section">{{ __('Administration') }}</div>
                     <a href="{{ route('admin.website-builder.index') }}"><span class="menu-icon">▧</span>{{ __('Website builder') }}</a>
