@@ -35,6 +35,11 @@ class Product extends Model
         return $this->hasMany(OrderItem::class);
     }
 
+    public function previewPages(): HasMany
+    {
+        return $this->hasMany(EbookPreviewPage::class)->orderBy('page_number');
+    }
+
     public function currentPrice(): string
     {
         $regular = (float) $this->regular_price;
