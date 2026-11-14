@@ -3,6 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\Course;
+use App\Models\CourseCategory;
+use App\Models\CourseContentPost;
+use App\Models\CourseCurriculumItem;
+use App\Models\FlashSale;
 use App\Models\Product;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -91,6 +95,65 @@ class BkashPaymentFlowTest extends TestCase
             str_ends_with($request->url(), '/tokenized/checkout/payment/status')
             && $request['paymentID'] === 'BKASH-PAY-001'
         );
+    }
+
+    public function test_bkash_checkout_applies_category_targeted_flash_sale(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $course = $this->paidCourse();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $category = CourseCategory::create([
+            'name' => 'Grammar',
+            'slug' => 'bkash-grammar-category',
+            'is_visible' => true,
+        ]);
+        $post = CourseContentPost::create([
+            'author_id' => $admin->id,
+            'title' => 'Grammar curriculum',
+            'slug' => 'bkash-grammar-curriculum',
+            'long_description' => 'Published grammar curriculum.',
+            'status' => 'published',
+            'published_at' => now(),
+        ]);
+        $post->categories()->attach($category->id);
+        CourseCurriculumItem::create([
+            'course_id' => $course->id,
+            'course_content_post_id' => $post->id,
+            'position' => 1,
+        ]);
+
+        $sale = FlashSale::create([
+            'title' => 'Grammar category offer',
+            'badge' => 'SAVE 25%',
+            'description' => 'Category-targeted bKash discount.',
+            'discount_type' => 'percentage',
+            'discount_value' => 25,
+            'starts_at' => now()->subMinute(),
+            'ends_at' => now()->addDay(),
+            'status' => 'active',
+            'per_student_limit' => 1,
+            'priority' => 10,
+            'created_by' => $admin->id,
+        ]);
+        $sale->categories()->attach($category->id);
+
+        Http::fake([
+            '*/tokenized/checkout/token/grant' => Http::response(['id_token' => 'category-sale-token'], 200),
+            '*/tokenized/checkout/create' => Http::response([
+                'statusCode' => '0000',
+                'paymentID' => 'BKASH-CATEGORY-SALE-001',
+                'bkashURL' => 'https://tokenized.sandbox.bka.sh/checkout/pay/BKASH-CATEGORY-SALE-001',
+            ], 200),
+        ]);
+
+        $this->actingAs($student)
+            ->post(route('courses.payments.bkash', $course))
+            ->assertRedirect('https://tokenized.sandbox.bka.sh/checkout/pay/BKASH-CATEGORY-SALE-001');
+
+        $payment = Payment::query()->where('gateway_payment_id', 'BKASH-CATEGORY-SALE-001')->firstOrFail();
+        $this->assertSame('1125.00', $payment->amount);
+        $this->assertSame($sale->id, $payment->flash_sale_id);
+        $this->assertSame('pending', $payment->status);
     }
 
     public function test_callback_with_amount_mismatch_never_activates_enrollment(): void
