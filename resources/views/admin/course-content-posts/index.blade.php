@@ -16,6 +16,11 @@
 <div><button class="btn secondary" type="submit">{{ __('Apply to selected') }}</button></div>
 </div>
 </form>
+@error('post_ids')<p class="error">{{ $message }}</p>@enderror
+@error('status')<p class="error">{{ $message }}</p>@enderror
+@foreach($errors->get('post_ids.*') as $messages)
+    @foreach($messages as $message)<p class="error">{{ $message }}</p>@endforeach
+@endforeach
 <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">
 <thead><tr><th><input type="checkbox" id="select-all-posts" aria-label="{{ __('Select all posts') }}" style="width:auto;"></th><th>{{ __('Content') }}</th><th>{{ __('Categories') }}</th><th>{{ __('Status') }}</th><th>{{ __('Author') }}</th><th>{{ __('Actions') }}</th></tr></thead><tbody>
 @forelse($posts as $post)
