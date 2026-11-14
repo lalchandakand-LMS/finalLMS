@@ -496,6 +496,9 @@ class PrivateEbookStoreTest extends TestCase
             'is_active' => true,
         ]);
         $this->get(route('ebooks.preview', [$draft->slug, $draftPage]))->assertNotFound();
+        $this->actingAs($admin)->get(route('ebooks.preview', [$draft->slug, $draftPage]))
+            ->assertOk()
+            ->assertHeader('X-Content-Type-Options', 'nosniff');
 
         $otherProduct = $this->ebook($admin, [
             'name' => 'Other workbook',
