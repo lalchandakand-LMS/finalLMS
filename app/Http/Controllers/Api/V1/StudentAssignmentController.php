@@ -228,7 +228,7 @@ class StudentAssignmentController extends Controller
 
     private function safeOriginalFilename(string $filename): string
     {
-        $filename = basename(str_replace('\\\\', '/', $filename));
+        $filename = basename(str_replace('\\', '/', $filename));
         $filename = preg_replace('/[\\x00-\\x1F\\x7F"<>]/u', '_', $filename) ?: 'assignment-submission';
 
         return Str::limit(trim($filename), 180, '');
