@@ -1,14 +1,14 @@
 <?php
 
-namespace App\Http\Controllers\Api\V1;
+namespace App\\Http\\Controllers\\Api\\V1;
 
-use App\Http\Controllers\Controller;
-use App\Models\Assignment;
-use App\Models\AssignmentSubmission;
-use App\Models\Enrollment;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use App\\Http\\Controllers\\Controller;
+use App\\Models\\Assignment;
+use App\\Models\\AssignmentSubmission;
+use App\\Models\\Enrollment;
+use Illuminate\\Http\\JsonResponse;
+use Illuminate\\Http\\Request;
+use Illuminate\\Support\\Facades\\DB;
 
 class StudentAssignmentController extends Controller
 {
@@ -17,15 +17,31 @@ class StudentAssignmentController extends Controller
         $student = $request->user();
         abort_unless($student->isStudent(), 403);
 
-        $assignments = Assignment::query()
+        $validated = $request->validate([
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
+            'status' => ['nullable', 'in:upcoming,overdue,submitted,graded'],
+        ]);
+
+        $query = Assignment::query()
             ->where('status', 'published')
-            ->whereHas('batch.enrollments', fn ($query) => $query
+            ->whereHas('batch.enrollments', fn ($enrollments) => $enrollments
                 ->where('user_id', $student->id)
                 ->where('status', 'active'))
-            ->with(['batch.course', 'submissions' => fn ($query) => $query
+            ->with(['batch.course:id,title', 'submissions' => fn ($submissions) => $submissions
                 ->where('student_id', $student->id)])
-            ->orderBy('due_at')
-            ->paginate(20);
+            ->orderBy('due_at');
+
+        match ($validated['status'] ?? null) {
+            'upcoming' => $query->where('due_at', '>=', now()),
+            'overdue' => $query->where('due_at', '<', now()),
+            'submitted' => $query->whereHas('submissions', fn ($submissions) => $submissions
+                ->where('student_id', $student->id)->where('status', 'submitted')),
+            'graded' => $query->whereHas('submissions', fn ($submissions) => $submissions
+                ->where('student_id', $student->id)->where('status', 'graded')),
+            default => null,
+        };
+
+        $assignments = $query->paginate($validated['per_page'] ?? 20);
 
         return response()->json([
             'data' => $assignments->getCollection()->map(fn (Assignment $assignment) => $this->payload($assignment, true)),
@@ -45,7 +61,7 @@ class StudentAssignmentController extends Controller
         abort_unless($assignment->status === 'published', 404);
         $this->authorizeEnrollment($student->id, $assignment);
 
-        $assignment->load(['batch.course', 'submissions' => fn ($query) => $query
+        $assignment->load(['batch.course:id,title', 'submissions' => fn ($query) => $query
             ->where('student_id', $student->id)]);
 
         return response()->json(['assignment' => $this->payload($assignment)]);
@@ -92,9 +108,11 @@ class StudentAssignmentController extends Controller
                 'feedback' => null,
                 'graded_by' => null,
             ]);
+            $submission->assignment_id = $locked->id;
+            $submission->student_id = $student->id;
             $submission->save();
 
-            return ['state' => 'saved', 'submission' => $submission];
+            return ['state' => 'saved', 'submission' => $submission->fresh()];
         });
 
         if ($result['state'] === 'closed') {
@@ -122,6 +140,7 @@ class StudentAssignmentController extends Controller
     private function payload(Assignment $assignment, bool $includeCourse = false): array
     {
         $submission = $assignment->submissions->first();
+        $isOverdue = $assignment->due_at?->isPast() ?? false;
 
         return [
             'id' => $assignment->id,
@@ -129,7 +148,8 @@ class StudentAssignmentController extends Controller
             'instructions' => $assignment->instructions,
             'due_at' => $assignment->due_at?->toIso8601String(),
             'allow_late' => (bool) $assignment->allow_late,
-            'is_closed' => $assignment->due_at->isPast() && ! $assignment->allow_late,
+            'is_overdue' => $isOverdue,
+            'is_closed' => $isOverdue && ! $assignment->allow_late,
             'max_marks' => (int) $assignment->max_marks,
             'course' => $includeCourse ? $assignment->batch?->course?->title : null,
             'submission' => $submission ? $this->submissionPayload($submission) : null,
