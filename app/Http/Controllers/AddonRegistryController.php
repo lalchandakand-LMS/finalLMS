@@ -18,13 +18,13 @@ class AddonRegistryController extends Controller
 
     public function update(Request $request, string $key): RedirectResponse
     {
-        $validated = $request->validate([__('enabled') => ['required', 'boolean']]);
+        $validated = $request->validate(['enabled' => ['required', 'boolean']]);
         $addons = $this->addons();
         abort_unless(isset($addons[$key]), 404);
 
-        $enabled = (bool) $validated[__('enabled')];
+        $enabled = (bool) $validated['enabled'];
         if ($enabled) {
-            abort_unless($addons[$key]['config_ready'] && $addons[$key][__('compatible')] && ! $addons[$key]['blocked'], 422,
+            abort_unless($addons[$key]['config_ready'] && $addons[$key]['compatible'] && ! $addons[$key]['blocked'], 422,
                 __('This add-on cannot be enabled until its configuration and compatibility checks pass.'));
         }
 
@@ -114,9 +114,9 @@ class AddonRegistryController extends Controller
         ];
 
         foreach ($definitions as $key => &$addon) {
-            $addon[__('compatible')] = $compatible;
-            $addon[__('enabled')] = (bool) ($saved[$key] ?? false);
-            $addon['effective'] = $addon[__('enabled')] && $addon['config_ready'] && $compatible && ! $addon['blocked'];
+            $addon['compatible'] = $compatible;
+            $addon['enabled'] = (bool) ($saved[$key] ?? false);
+            $addon['effective'] = $addon['enabled'] && $addon['config_ready'] && $compatible && ! $addon['blocked'];
             $addon['status'] = $addon['blocked'] ? __('Blocked') : (! $compatible ? __('Incompatible') : ($addon['config_ready'] ? __('Configured') : __('Needs configuration')));
         }
         unset($addon);
