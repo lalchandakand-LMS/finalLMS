@@ -197,6 +197,8 @@ class CourseQuestionSetTest extends TestCase
             'max_attempts' => 3,
             'randomize_questions' => 0,
         ]);
+        $this->actingAs($admin)->get(route('admin.course-builder.edit', $course))
+            ->assertOk()->assertSee('Module one quiz')->assertSee('Module 1');
 
         $draft = QuestionSet::create([
             'title' => 'Draft set',
