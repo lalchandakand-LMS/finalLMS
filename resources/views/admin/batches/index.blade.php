@@ -81,6 +81,7 @@
                         <div class="muted">{{ $batch->course->title }} · {{ $batch->branch->name }} · Teacher: {{ $batch->teacher->name }}</div>
                         <div class="muted">{{ $batch->starts_at->format('M j, Y H:i') }} to {{ $batch->ends_at->format('M j, Y H:i') }} · Capacity {{ $batch->capacity }} · BDT {{ number_format($batch->fee, 2) }}</div>
                         <a href="{{ route('admin.batches.attendance.index', $batch) }}" class="btn secondary" style="margin-top:10px;">Attendance</a>
+                        <a href="{{ route('admin.batches.exams.index', $batch) }}" class="btn secondary" style="margin-top:10px;">Exams & Question Bank</a>
                     </div>
                 </div>
                 <details style="margin-top:14px;">

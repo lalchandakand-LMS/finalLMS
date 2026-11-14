@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Batch;
 use App\Models\Exam;
 use App\Models\ExamAttempt;
-use App\Models\ExamAnswer;
 use App\Models\Enrollment;
 use App\Models\QuestionBankQuestion;
 use Illuminate\Http\RedirectResponse;
@@ -20,9 +19,10 @@ class ExamController extends Controller
     {
         abort_unless(Auth::user()->isAdmin() || $batch->teacher_id === Auth::id(), 403);
         $exams = $batch->exams()->withCount(['questions', 'attempts'])->latest()->get();
-        $bankQuestions = QuestionBankQuestion::where('teacher_id', Auth::id())->latest()->get();
+        $bankQuestions = QuestionBankQuestion::where('teacher_id', $batch->teacher_id)->latest()->get();
+        $isAdmin = Auth::user()->isAdmin();
 
-        return view('teacher.exams.index', compact('batch', 'exams', 'bankQuestions'));
+        return view('teacher.exams.index', compact('batch', 'exams', 'bankQuestions', 'isAdmin'));
     }
 
     public function store(Batch $batch, Request $request): RedirectResponse
@@ -37,7 +37,7 @@ class ExamController extends Controller
             'pass_marks' => ['required', 'integer', 'min:0'],
             'questions_per_attempt' => ['nullable', 'integer', 'min:1', 'max:100'],
             'questions' => ['nullable', 'array', 'min:1', 'max:100'],
-            'question_bank_ids' => ['nullable', 'array', 'min:1', 'max:500'],
+            'question_bank_ids' => ['nullable', 'array', 'min:1', 'max:100'],
             'question_bank_ids.*' => ['integer', 'distinct', 'exists:question_bank_questions,id'],
             'random_question_count' => ['nullable', 'integer', 'min:1', 'max:100'],
             'questions.*.question' => ['required', 'string', 'max:3000'],
@@ -51,7 +51,7 @@ class ExamController extends Controller
         if (! empty($validated['question_bank_ids'])) {
             $bankQuestions = QuestionBankQuestion::query()
                 ->whereIn('id', $validated['question_bank_ids'])
-                ->where('teacher_id', Auth::id())
+                ->where('teacher_id', $batch->teacher_id)
                 ->inRandomOrder()
                 ->get();
 
@@ -59,12 +59,14 @@ class ExamController extends Controller
             $selectedCount = $validated['random_question_count'] ?? $bankQuestions->count();
             abort_if($selectedCount > $bankQuestions->count(), 422, 'Random question count exceeds the selected bank questions.');
 
-            $selectedQuestions = $bankQuestions->shuffle()->take($selectedCount)->map(fn ($question) => [
+            $bankSelections = $bankQuestions->shuffle()->take($selectedCount)->map(fn ($question) => [
+                'question_bank_question_id' => $question->id,
                 'question' => $question->question,
                 'options' => $question->options,
                 'correct_option' => $question->correct_option,
                 'marks' => $question->marks,
             ]);
+            $selectedQuestions = $selectedQuestions->concat($bankSelections)->values();
         }
 
         abort_if($selectedQuestions->isEmpty(), 422, 'Add questions or select questions from your question bank.');
@@ -76,7 +78,7 @@ class ExamController extends Controller
 
         DB::transaction(function () use ($batch, $validated, $selectedQuestions) {
             $exam = $batch->exams()->create([
-                'teacher_id' => Auth::id(),
+                'teacher_id' => $batch->teacher_id,
                 'title' => $validated['title'],
                 'instructions' => $validated['instructions'] ?? null,
                 'starts_at' => $validated['starts_at'],
@@ -104,7 +106,8 @@ class ExamController extends Controller
             'category' => ['nullable', 'string', 'max:80'],
             'difficulty' => ['nullable', 'in:easy,medium,hard'],
         ]);
-        $query = QuestionBankQuestion::where('teacher_id', Auth::id())
+        $ownerId = $batch->teacher_id;
+        $query = QuestionBankQuestion::where('teacher_id', $ownerId)
             ->when($filters['subject'] ?? null, fn ($builder, string $subject) => $builder->where('subject', $subject))
             ->when($filters['category'] ?? null, fn ($builder, string $category) => $builder->where('category', $category))
             ->when($filters['difficulty'] ?? null, fn ($builder, string $difficulty) => $builder->where('difficulty', $difficulty))
@@ -116,14 +119,16 @@ class ExamController extends Controller
                 }
             });
         $questions = $query->latest()->paginate(25)->withQueryString();
-        $subjects = QuestionBankQuestion::where('teacher_id', Auth::id())
+        $subjects = QuestionBankQuestion::where('teacher_id', $ownerId)
             ->whereNotNull('subject')->where('subject', '<>', '')
             ->select('subject')->distinct()->orderBy('subject')->pluck('subject');
-        $categories = QuestionBankQuestion::where('teacher_id', Auth::id())
+        $categories = QuestionBankQuestion::where('teacher_id', $ownerId)
             ->whereNotNull('category')->where('category', '<>', '')
             ->select('category')->distinct()->orderBy('category')->pluck('category');
 
-        return view('teacher.exams.question-bank', compact('batch', 'questions', 'subjects', 'categories'));
+        $isAdmin = Auth::user()->isAdmin();
+
+        return view('teacher.exams.question-bank', compact('batch', 'questions', 'subjects', 'categories', 'isAdmin'));
     }
 
     public function storeBankQuestion(Batch $batch, Request $request): RedirectResponse
@@ -140,7 +145,7 @@ class ExamController extends Controller
             'marks' => ['required', 'integer', 'min:1', 'max:100'],
         ]);
 
-        QuestionBankQuestion::create([...$validated, 'teacher_id' => Auth::id()]);
+        QuestionBankQuestion::create([...$validated, 'teacher_id' => $batch->teacher_id]);
 
         return back()->with('success', 'Question added to your question bank.');
     }
@@ -149,7 +154,7 @@ class ExamController extends Controller
     public function updateBankQuestion(Batch $batch, QuestionBankQuestion $question, Request $request): RedirectResponse
     {
         abort_unless(Auth::user()->isAdmin() || $batch->teacher_id === Auth::id(), 403);
-        abort_unless($question->teacher_id === Auth::id(), 403);
+        abort_unless((int) $question->teacher_id === (int) $batch->teacher_id, 403);
         $validated = $request->validate([
             'subject' => ['nullable', 'string', 'max:120'],
             'category' => ['nullable', 'string', 'max:80'],
@@ -168,7 +173,7 @@ class ExamController extends Controller
     public function destroyBankQuestion(Batch $batch, QuestionBankQuestion $question): RedirectResponse
     {
         abort_unless(Auth::user()->isAdmin() || $batch->teacher_id === Auth::id(), 403);
-        abort_unless($question->teacher_id === Auth::id(), 403);
+        abort_unless((int) $question->teacher_id === (int) $batch->teacher_id, 403);
         $question->delete();
 
         return back()->with('success', 'Question deleted successfully.');
@@ -184,7 +189,9 @@ class ExamController extends Controller
             ->latest('submitted_at')
             ->paginate(30);
 
-        return view('teacher.exams.results', compact('exam', 'attempts'));
+        $isAdmin = Auth::user()->isAdmin();
+
+        return view('teacher.exams.results', compact('exam', 'attempts', 'isAdmin'));
     }
 
     public function studentExams(): View
@@ -204,7 +211,8 @@ class ExamController extends Controller
     public function studentIndex(Exam $exam): View
     {
         $this->ensureEnrolled($exam);
-        $attempt = $exam->attempts()->where('student_id', Auth::id())->with('attemptQuestions.question')->first();
+        abort_unless($exam->status === 'published', 404);
+        $attempt = $exam->attempts()->where('student_id', Auth::id())->with(['attemptQuestions.question', 'answers'])->first();
         $exam->load('batch.course');
 
         return view('exams.show', compact('exam', 'attempt'));
@@ -213,23 +221,42 @@ class ExamController extends Controller
     public function start(Exam $exam): RedirectResponse
     {
         $this->ensureEnrolled($exam);
-        abort_unless($exam->status === 'published' && now()->between($exam->starts_at, $exam->ends_at), 403);
-        abort_unless($exam->questions()->exists(), 403);
 
-        $attempt = DB::transaction(function () use ($exam) {
-            $attempt = ExamAttempt::firstOrCreate(
-                ['exam_id' => $exam->id, 'student_id' => Auth::id()],
-                ['started_at' => now(), 'status' => 'in_progress']
+        $attempt = DB::transaction(function () use ($exam): ExamAttempt {
+            // Serialize concurrent starts so one student receives one frozen paper.
+            $lockedExam = Exam::query()->lockForUpdate()->findOrFail($exam->id);
+            $this->ensureEnrolled($lockedExam);
+            abort_unless(
+                $lockedExam->status === 'published'
+                    && now()->between($lockedExam->starts_at, $lockedExam->ends_at),
+                403
             );
+            abort_unless($lockedExam->questions()->exists(), 403);
 
-            // Freeze a shuffled question order for this attempt exactly once.
-            // Refreshing or reopening the exam will never reshuffle a student's paper.
-            if ($attempt->wasRecentlyCreated || ! $attempt->attemptQuestions()->exists()) {
-                $questionQuery = $exam->questions()->inRandomOrder();
-                if ($exam->questions_per_attempt) {
-                    $questionQuery->limit($exam->questions_per_attempt);
+            $attempt = ExamAttempt::query()
+                ->where('exam_id', $lockedExam->id)
+                ->where('student_id', Auth::id())
+                ->lockForUpdate()
+                ->first();
+
+            if (! $attempt) {
+                $attempt = ExamAttempt::create([
+                    'exam_id' => $lockedExam->id,
+                    'student_id' => Auth::id(),
+                    'started_at' => now(),
+                    'status' => 'in_progress',
+                ]);
+            }
+
+            if ($attempt->status === 'in_progress' && ! $attempt->attemptQuestions()->exists()) {
+                $questionQuery = $lockedExam->questions()->reorder()->inRandomOrder();
+                if ($lockedExam->questions_per_attempt) {
+                    $questionQuery->limit($lockedExam->questions_per_attempt);
                 }
+
                 $questionIds = $questionQuery->pluck('id')->values();
+                abort_if($questionIds->isEmpty(), 422, 'No questions are available for this attempt.');
+
                 $attempt->attemptQuestions()->createMany(
                     $questionIds->map(fn ($questionId, $index) => [
                         'exam_question_id' => $questionId,
@@ -242,7 +269,8 @@ class ExamController extends Controller
         });
 
         if ($attempt->status !== 'in_progress') {
-            return redirect()->route('student.exams.show', $exam)->with('info', 'You have already submitted this exam.');
+            return redirect()->route('student.exams.show', $exam)
+                ->with('info', 'You have already submitted this exam.');
         }
 
         return redirect()->route('student.exams.show', $exam);
@@ -250,51 +278,73 @@ class ExamController extends Controller
 
     public function submit(ExamAttempt $attempt, Request $request): RedirectResponse
     {
-        abort_unless($attempt->student_id === Auth::id(), 403);
-        abort_unless($attempt->status === 'in_progress', 403);
+        $score = DB::transaction(function () use ($attempt, $request): int {
+            $lockedAttempt = ExamAttempt::query()->lockForUpdate()->findOrFail($attempt->id);
+            abort_unless((int) $lockedAttempt->student_id === (int) Auth::id(), 403);
+            abort_unless($lockedAttempt->status === 'in_progress', 403);
 
-        $exam = $attempt->exam()->firstOrFail();
-        $this->ensureEnrolled($exam);
-        $attemptQuestions = $attempt->attemptQuestions()->with('question')->orderBy('position')->get();
-        abort_if($attemptQuestions->isEmpty(), 422, 'No questions are assigned to this attempt.');
-        $deadline = min($exam->ends_at->getTimestamp(), $attempt->started_at->copy()->addMinutes($exam->duration_minutes)->getTimestamp());
-        abort_if(now()->getTimestamp() > $deadline, 403, 'The exam submission window has closed.');
+            $exam = $lockedAttempt->exam()->firstOrFail();
+            $this->ensureEnrolled($exam);
+            $attemptQuestions = $lockedAttempt->attemptQuestions()
+                ->with('question')
+                ->orderBy('position')
+                ->get();
+            abort_if($attemptQuestions->isEmpty(), 422, 'No questions are assigned to this attempt.');
 
-        $validated = $request->validate([
-            'answers' => ['required', 'array'],
-            'answers.*' => ['required', 'integer', 'between:0,3'],
-        ]);
+            $deadline = min(
+                $exam->ends_at->getTimestamp(),
+                $lockedAttempt->started_at->copy()->addMinutes($exam->duration_minutes)->getTimestamp()
+            );
+            abort_if(now()->getTimestamp() > $deadline + 15, 403, 'The exam submission window has closed.');
 
-        $questionIds = $attemptQuestions->pluck('exam_question_id')->map(fn ($id) => (string) $id)->all();
-        $submittedIds = array_keys($validated['answers']);
-        abort_unless(count(array_diff($submittedIds, $questionIds)) === 0, 422);
+            $validated = $request->validate([
+                'answers' => ['sometimes', 'array', 'max:100'],
+                'answers.*' => ['required', 'integer', 'between:0,3'],
+            ]);
+            $submittedAnswers = $validated['answers'] ?? [];
+            $questionIds = $attemptQuestions->pluck('exam_question_id')->map(fn ($id) => (string) $id)->all();
+            $submittedIds = array_map('strval', array_keys($submittedAnswers));
+            abort_unless(count(array_diff($submittedIds, $questionIds)) === 0, 422);
 
-        $score = 0;
-        DB::transaction(function () use ($attemptQuestions, $attempt, $validated, &$score) {
+            $savedAnswers = $lockedAttempt->answers()->get()->keyBy('exam_question_id');
+            $totalScore = 0;
+
             foreach ($attemptQuestions as $attemptQuestion) {
                 $question = $attemptQuestion->question;
                 if (! $question) {
                     continue;
                 }
-                if (! array_key_exists((string) $question->id, $validated['answers'])) {
+
+                $questionId = (string) $question->id;
+                $selected = array_key_exists($questionId, $submittedAnswers)
+                    ? (int) $submittedAnswers[$questionId]
+                    : ($savedAnswers[$question->id]->selected_option ?? null);
+
+                if ($selected === null) {
                     continue;
                 }
-                $selected = (int) $validated['answers'][(string) $question->id];
-                $correct = $selected === $question->correct_option;
-                $awarded = $correct ? $question->marks : 0;
-                $score += $awarded;
-                ExamAnswer::create([
-                    'exam_attempt_id' => $attempt->id,
-                    'exam_question_id' => $question->id,
-                    'selected_option' => $selected,
-                    'is_correct' => $correct,
-                    'marks_awarded' => $awarded,
-                ]);
+
+                $correct = $selected === (int) $question->correct_option;
+                $awarded = $correct ? (int) $question->marks : 0;
+                $totalScore += $awarded;
+
+                $lockedAttempt->answers()->updateOrCreate(
+                    ['exam_question_id' => $question->id],
+                    ['selected_option' => $selected, 'is_correct' => $correct, 'marks_awarded' => $awarded]
+                );
             }
-            $attempt->update(['submitted_at' => now(), 'score' => $score, 'status' => 'submitted']);
+
+            $lockedAttempt->update([
+                'submitted_at' => now(),
+                'score' => $totalScore,
+                'status' => 'submitted',
+            ]);
+
+            return $totalScore;
         });
 
-        return redirect()->route('student.exams.show', $exam)->with('success', 'Exam submitted. Your score is '.$score.'.');
+        return redirect()->route('student.exams.show', $attempt->exam)
+            ->with('success', 'Exam submitted. Your score is '.$score.'.');
     }
 
     private function ensureEnrolled(Exam $exam): void
