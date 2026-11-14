@@ -69,7 +69,16 @@ class AddonRegistryController extends Controller
             && filled($s3Disk['secret'] ?? null)
             && filled($s3Disk['region'] ?? null)
             && filled($s3Disk['bucket'] ?? null);
-        $s3EndpointSecure = blank($s3Endpoint) || parse_url((string) $s3Endpoint, PHP_URL_SCHEME) === 'https';
+        $s3EndpointParts = is_string($s3Endpoint) && filter_var($s3Endpoint, FILTER_VALIDATE_URL)
+            ? parse_url($s3Endpoint)
+            : false;
+        $s3EndpointSecure = blank($s3Endpoint) || (
+            is_array($s3EndpointParts)
+            && ($s3EndpointParts['scheme'] ?? null) === 'https'
+            && filled($s3EndpointParts['host'] ?? null)
+            && ! isset($s3EndpointParts['user'])
+            && ! isset($s3EndpointParts['pass'])
+        );
         $s3Ready = config('filesystems.default') === 's3' && $s3Credentials && $s3EndpointSecure;
 
 
