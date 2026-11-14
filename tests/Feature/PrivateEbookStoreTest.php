@@ -205,4 +205,63 @@ class PrivateEbookStoreTest extends TestCase
         $this->assertSame('archived', $product->fresh()->status);
         Storage::disk('local')->assertExists('private/ebooks/guide.pdf');
     }
+    public function test_free_ebook_is_fulfilled_immediately_without_a_payment_reference(): void
+    {
+        Storage::fake('local');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $product = $this->ebook($admin, ['regular_price' => 0, 'download_limit' => null]);
+
+        $this->actingAs($student)->post(route('ebooks.checkout', $product->slug), [])
+            ->assertRedirect(route('ebooks.orders'));
+
+        $order = Order::where('user_id', $student->id)->firstOrFail();
+        $this->assertSame('completed', $order->status);
+        $this->assertStringStartsWith('FREE-', $order->payment_reference);
+        $permission = DownloadPermission::where('user_id', $student->id)->firstOrFail();
+        $this->assertNull($permission->downloads_remaining);
+        $this->actingAs($student)->get(route('ebooks.download', $permission))->assertOk();
+    }
+
+    public function test_admin_cannot_replace_pdf_after_order_history_exists(): void
+    {
+        Storage::fake('local');
+        Storage::disk('local')->put('private/ebooks/guide.pdf', 'original private pdf');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $product = $this->ebook($admin);
+        $order = Order::create([
+            'order_number' => 'AEC-TEST-FILE-LOCK-001',
+            'user_id' => $student->id,
+            'status' => 'pending',
+            'payment_method' => 'manual',
+            'payment_reference' => 'EBOOK-FILE-LOCK-001',
+            'currency' => 'BDT',
+            'subtotal' => 350,
+            'discount_total' => 0,
+            'total' => 350,
+        ]);
+        $order->items()->create([
+            'product_id' => $product->id,
+            'product_type' => 'ebook',
+            'product_name' => $product->name,
+            'quantity' => 1,
+            'regular_price' => 350,
+            'line_total' => 350,
+        ]);
+
+        $this->actingAs($admin)->from(route('admin.ebooks.index'))
+            ->put(route('admin.ebooks.update', $product), [
+                'name' => $product->name,
+                'regular_price' => 350,
+                'status' => 'published',
+                'download_file' => UploadedFile::fake()->create('replacement.pdf', 12, 'application/pdf'),
+            ])
+            ->assertRedirect(route('admin.ebooks.index'))
+            ->assertSessionHasErrors('download_file');
+
+        $this->assertSame('private/ebooks/guide.pdf', $product->fresh()->download_path);
+        Storage::disk('local')->assertExists('private/ebooks/guide.pdf');
+    }
+
 }
