@@ -27,7 +27,9 @@ class _InstructorGateState extends State<InstructorGate> {
   void initState() {
     super.initState();
     api.restoreSession().then((restored) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() { signedIn = restored; loading = false; });
     });
   }
@@ -62,9 +64,13 @@ class _InstructorLoginState extends State<InstructorLogin> {
       await widget.api.login(email.text.trim(), password.text, 'Aloms Instructor App');
       widget.onLogin();
     } catch (e) {
-      if (mounted) setState(() => error = e.toString());
+      if (mounted) {
+        setState(() => error = e.toString());
+      }
     } finally {
-      if (mounted) setState(() => busy = false);
+      if (mounted) {
+        setState(() => busy = false);
+      }
     }
   }
   @override
@@ -112,7 +118,9 @@ class _InstructorHomeState extends State<InstructorHome> {
     } catch (e) {
       if (mounted) setState(() => error = e.toString());
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) {
+        setState(() => loading = false);
+      }
     }
   }
   Future<void> showStudents(Map<String, dynamic> course) async {
