@@ -378,6 +378,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::get('/course-categories/{courseCategory}/edit', [AdminCourseCategoryController::class, 'edit'])->name('admin.course-categories.edit');
         Route::put('/course-categories/{courseCategory}', [AdminCourseCategoryController::class, 'update'])->name('admin.course-categories.update');
         Route::delete('/course-categories/{courseCategory}', [AdminCourseCategoryController::class, 'destroy'])->name('admin.course-categories.destroy');
+        Route::post('/course-content-posts/bulk-update', [AdminCourseContentPostController::class, 'bulkUpdate'])->name('admin.course-content-posts.bulk-update');
         Route::get('/course-content-posts', [AdminCourseContentPostController::class, 'index'])->name('admin.course-content-posts.index');
         Route::get('/course-content-posts/create', [AdminCourseContentPostController::class, 'create'])->name('admin.course-content-posts.create');
         Route::post('/course-content-posts', [AdminCourseContentPostController::class, 'store'])->name('admin.course-content-posts.store');
