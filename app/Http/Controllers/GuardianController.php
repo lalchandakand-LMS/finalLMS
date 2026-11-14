@@ -65,7 +65,7 @@ class GuardianController extends Controller {
   return response()->json(['data'=>[
    'student'=>$student->only(['id','name','email']),
    'courses'=>Enrollment::where('user_id',$student->id)->with('course:id,title')->latest()->limit(30)->get(['id','course_id','status','completed_at','created_at']),
-   'progress'=>LessonProgress::where('user_id',$student->id)->with('lesson:id,course_id,title')->latest('completed_at')->limit(50)->get(['id','lesson_id','completed_at']),
+   'progress'=>LessonProgress::where('user_id',$student->id)->whereNotNull('completed_at')->with('lesson:id,course_id,title')->latest('completed_at')->limit(50)->get(['id','lesson_id','completed_at']),
    'attendance'=>Attendance::where('student_id',$student->id)->with('batch.course:id,title')->orderByDesc('attendance_date')->limit(30)->get(['id','batch_id','attendance_date','status']),
    'exams'=>ExamAttempt::where('student_id',$student->id)->where('status','submitted')->with('exam:id,batch_id,title')->latest('submitted_at')->limit(30)->get(['id','exam_id','score','status','submitted_at']),
    'payments'=>Payment::where('user_id',$student->id)->with('course:id,title')->latest()->limit(30)->get(['id','course_id','amount','currency','method','status','created_at']),
