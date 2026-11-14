@@ -63,7 +63,7 @@ class AuthController extends Controller
         if (Auth::check()) {
             DeviceSession::query()
                 ->where('user_id', Auth::id())
-                ->where('session_hash', hash('sha256', $request->session()->getId()))
+                ->where('session_hash', $request->session()->get('device_session_hash', hash('sha256', $request->session()->getId())))
                 ->whereNull('revoked_at')
                 ->update(['revoked_at' => now(), 'revoke_reason' => 'User logged out', 'updated_at' => now()]);
         }
