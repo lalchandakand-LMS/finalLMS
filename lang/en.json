@@ -296,7 +296,7 @@
     "Created by": "Created by",
     "Former user": "Former user",
     "sent": "sent",
-    "failed": "failed",
+    "failed": "Failed",
     "skipped": "skipped",
     "total": "total",
     "No campaigns have been created.": "No campaigns have been created.",
@@ -731,5 +731,11 @@
     "AI provider URL rejected. Use HTTPS and add its exact hostname to AI_DEVELOPER_ALLOWED_HOSTS on the server.": "AI provider URL rejected. Use HTTPS and add its exact hostname to AI_DEVELOPER_ALLOWED_HOSTS on the server.",
     "AI diagnosis completed. Review the advice before making changes.": "AI diagnosis completed. Review the advice before making changes.",
     "The AI request failed. Check the provider configuration and application logs.": "The AI request failed. Check the provider configuration and application logs.",
-    "AI analysis failed. No code or production data was changed.": "AI analysis failed. No code or production data was changed."
+    "AI analysis failed. No code or production data was changed.": "AI analysis failed. No code or production data was changed.",
+    "e.g. Student login error": "E.g. Student login error",
+    "Describe what is happening, when it happens and the sanitized error shown. Do not include secrets or personal data.": "Describe what is happening, when it happens and the sanitized error shown. Do not include secrets or personal data.",
+    "completed": "Completed",
+    "needs_configuration": "Needs configuration",
+    "processing": "Processing",
+    "queued": "Queued"
 }
