@@ -460,5 +460,6 @@
     "Questions per attempt": "Questions per attempt",
     "None": "None",
     "All": "All",
-    "Attach published question sets to this course and group them under a module. Configure attempts, time limits and question selection.": "Attach published question sets to this course and group them under a module. Configure attempts, time limits and question selection."
+    "Attach published question sets to this course and group them under a module. Configure attempts, time limits and question selection.": "Attach published question sets to this course and group them under a module. Configure attempts, time limits and question selection.",
+    "This course has quiz attempt history and was archived instead of deleted.": "This course has quiz attempt history and was archived instead of deleted."
 }
