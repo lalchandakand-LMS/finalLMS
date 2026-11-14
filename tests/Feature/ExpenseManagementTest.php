@@ -101,22 +101,22 @@ class ExpenseManagementTest extends TestCase
     
             $branch->update(['is_active' => false]);
     
-            $this->actingAs($accountant)->get(route('accountant.expenses.index'))->assertForbidden();
-            $this->post(route('accountant.expenses.store'), [
+            $this->actingAs($accountant)->get(route('admin.finance.expenses.index'))->assertForbidden();
+            $this->post(route('admin.finance.expenses.store'), [
                 'category' => 'Travel',
                 'title' => 'Should not be recorded',
                 'amount' => 250,
                 'payment_method' => 'cash',
                 'expense_date' => now()->toDateString(),
             ])->assertForbidden();
-            $this->put(route('accountant.expenses.update', $expense), [
+            $this->put(route('admin.finance.expenses.update', $expense), [
                 'category' => 'Utilities',
                 'title' => 'Should not be updated',
                 'amount' => 1,
                 'payment_method' => 'cash',
                 'expense_date' => now()->toDateString(),
             ])->assertNotFound();
-            $this->delete(route('accountant.expenses.destroy', $expense))->assertNotFound();
+            $this->delete(route('admin.finance.expenses.destroy', $expense))->assertNotFound();
     
             $this->assertDatabaseHas('expenses', ['id' => $expense->id, 'title' => 'Existing branch expense', 'amount' => 450]);
             $this->assertDatabaseMissing('expenses', ['title' => 'Should not be recorded']);
