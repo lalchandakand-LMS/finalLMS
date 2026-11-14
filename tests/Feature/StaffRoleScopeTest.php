@@ -39,6 +39,16 @@ class StaffRoleScopeTest extends TestCase
         $this->actingAs($accountant)->get(route('admin.branch-workspace.batches.index'))->assertForbidden();
     }
 
+    public function test_staff_subroles_with_inactive_branch_assignments_are_denied(): void
+    {
+        $branch = Branch::create(['name' => 'Inactive Branch', 'slug' => 'inactive-branch', 'is_active' => false]);
+        $manager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $branch->id]);
+        $accountant = User::factory()->create(['role' => 'accountant', 'branch_id' => $branch->id]);
+
+        $this->actingAs($manager)->get(route('admin.branch-workspace.batches.index'))->assertForbidden();
+        $this->actingAs($accountant)->get(route('admin.finance.invoices.index'))->assertForbidden();
+    }
+
     public function test_legacy_staff_urls_redirect_into_the_shared_admin_modules(): void
     {
         $branch = Branch::create(['name' => 'Legacy Branch', 'slug' => 'legacy-branch']);
