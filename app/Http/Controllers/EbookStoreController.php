@@ -51,6 +51,16 @@ class EbookStoreController extends Controller
                 ->exists();
             abort_if($alreadyPending, 409, 'You already have a pending order for this eBook.');
 
+            $alreadyOwned = DownloadPermission::query()
+                ->where('user_id', $request->user()->id)
+                ->where('product_id', $locked->id)
+                ->whereNull('revoked_at')
+                ->where(fn ($query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+                ->where(fn ($query) => $query->whereNull('downloads_remaining')->orWhere('downloads_remaining', '>', 0))
+                ->whereHas('orderItem.order', fn ($query) => $query->where('status', 'completed'))
+                ->exists();
+            abort_if($alreadyOwned, 409, 'This eBook is already available in your library.');
+
             $price = (float) $locked->sale_price >= 0 && $locked->sale_price !== null
                 && (float) $locked->sale_price < (float) $locked->regular_price
                 ? (float) $locked->sale_price : (float) $locked->regular_price;
