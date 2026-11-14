@@ -176,8 +176,8 @@ class BranchScopedStaffTest extends TestCase
     
             $branch->update(['is_active' => false]);
     
-            $this->actingAs($manager)->get(route('branch-manager.students.index'))->assertForbidden();
-            $this->put(route('branch-manager.batches.update', $batch), [
+            $this->actingAs($manager)->get(route('admin.branch-workspace.students.index'))->assertForbidden();
+            $this->put(route('admin.branch-workspace.batches.update', $batch), [
                 'title' => 'Updated batch',
                 'capacity' => 10,
                 'starts_at' => now()->addDay(),
