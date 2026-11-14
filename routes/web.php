@@ -141,24 +141,42 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
     Route::get('/invoice-payments/{payment}/receipt', [InvoiceController::class, 'receipt'])
         ->middleware('role:admin,accountant')
         ->name('invoice-payments.receipt');
-    Route::middleware('role:branch_manager')->group(function () {
-        Route::get('/branch-manager/batches', [BatchController::class, 'branchManagerIndex'])->name('branch-manager.batches.index');
-        Route::get('/branch-manager/students', [BatchController::class, 'branchManagerStudents'])->name('branch-manager.students.index');
-        Route::post('/branch-manager/batches', [BatchController::class, 'branchManagerStore'])->name('branch-manager.batches.store');
-        Route::put('/branch-manager/batches/{batch}', [BatchController::class, 'branchManagerUpdate'])->name('branch-manager.batches.update');
-    });
-    Route::middleware('role:accountant')->group(function () {
-        Route::get('/accountant/invoices', [InvoiceController::class, 'accountantIndex'])->name('accountant.invoices.index');
-        Route::get('/accountant/refunds', [InvoiceRefundController::class, 'index'])->name('accountant.refunds.index');
-        Route::post('/accountant/refunds', [InvoiceRefundController::class, 'store'])->name('accountant.refunds.store');
-        Route::get('/accountant/finance-reports', [FinanceReportController::class, 'index'])->name('accountant.finance-reports.index');
-        Route::get('/accountant/expenses', [ExpenseController::class, 'index'])->name('accountant.expenses.index');
-        Route::post('/accountant/expenses', [ExpenseController::class, 'store'])->name('accountant.expenses.store');
-        Route::put('/accountant/expenses/{expense}', [ExpenseController::class, 'update'])->name('accountant.expenses.update');
-        Route::delete('/accountant/expenses/{expense}', [ExpenseController::class, 'destroy'])->name('accountant.expenses.destroy');
-        Route::post('/accountant/invoices', [InvoiceController::class, 'store'])->name('accountant.invoices.store');
-        Route::post('/accountant/invoices/{invoice}/payments', [InvoiceController::class, 'receivePayment'])->name('accountant.invoices.payments.store');
-    });
+
+    // Staff subroles use the shared Admin shell and only their scoped modules.
+    Route::middleware('role:branch_manager')
+        ->prefix('admin/branch-workspace')
+        ->name('admin.branch-workspace.')
+        ->group(function () {
+            Route::get('/batches', [BatchController::class, 'branchManagerIndex'])->name('batches.index');
+            Route::get('/students', [BatchController::class, 'branchManagerStudents'])->name('students.index');
+            Route::post('/batches', [BatchController::class, 'branchManagerStore'])->name('batches.store');
+            Route::put('/batches/{batch}', [BatchController::class, 'branchManagerUpdate'])->name('batches.update');
+        });
+
+    Route::middleware('role:accountant')
+        ->prefix('admin/finance')
+        ->name('admin.finance.')
+        ->group(function () {
+            Route::get('/invoices', [InvoiceController::class, 'accountantIndex'])->name('invoices.index');
+            Route::post('/invoices', [InvoiceController::class, 'store'])->name('invoices.store');
+            Route::post('/invoices/{invoice}/payments', [InvoiceController::class, 'receivePayment'])->name('invoices.payments.store');
+            Route::get('/refunds', [InvoiceRefundController::class, 'index'])->name('refunds.index');
+            Route::post('/refunds', [InvoiceRefundController::class, 'store'])->name('refunds.store');
+            Route::get('/reports', [FinanceReportController::class, 'index'])->name('reports.index');
+            Route::get('/expenses', [ExpenseController::class, 'index'])->name('expenses.index');
+            Route::post('/expenses', [ExpenseController::class, 'store'])->name('expenses.store');
+            Route::put('/expenses/{expense}', [ExpenseController::class, 'update'])->name('expenses.update');
+            Route::delete('/expenses/{expense}', [ExpenseController::class, 'destroy'])->name('expenses.destroy');
+            Route::get('/invoice-payments/{payment}/receipt', [InvoiceController::class, 'receipt'])->name('invoice-payments.receipt');
+        });
+
+    // Legacy bookmarks now land inside the unified Admin Panel.
+    Route::middleware('role:branch_manager')->get('/branch-manager/batches', fn () => redirect()->route('admin.branch-workspace.batches.index', [], 301))->name('branch-manager.batches.index');
+    Route::middleware('role:branch_manager')->get('/branch-manager/students', fn () => redirect()->route('admin.branch-workspace.students.index', [], 301))->name('branch-manager.students.index');
+    Route::middleware('role:accountant')->get('/accountant/invoices', fn () => redirect()->route('admin.finance.invoices.index', [], 301))->name('accountant.invoices.index');
+    Route::middleware('role:accountant')->get('/accountant/refunds', fn () => redirect()->route('admin.finance.refunds.index', [], 301))->name('accountant.refunds.index');
+    Route::middleware('role:accountant')->get('/accountant/finance-reports', fn () => redirect()->route('admin.finance.reports.index', [], 301))->name('accountant.finance-reports.index');
+    Route::middleware('role:accountant')->get('/accountant/expenses', fn () => redirect()->route('admin.finance.expenses.index', [], 301))->name('accountant.expenses.index');
     Route::post('/teacher/batches/{batch}/live-classes', [LiveClassController::class, 'store'])
         ->middleware('role:teacher')
         ->name('teacher.batches.live-classes.store');
