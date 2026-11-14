@@ -117,10 +117,7 @@ class StudentQuestionSetAttemptController extends Controller
         abort_unless($attempt->student_id === $student->id
             && $attempt->course_id === $course->id
             && $attempt->question_set_id === $questionSet->id, 404);
-        abort_unless($course->enrollments()
-            ->where('user_id', $student->id)
-            ->whereIn('status', ['active', 'completed'])
-            ->exists(), 403);
+        // Existing attempt ownership is sufficient for read-only history, even after enrollment ends.
 
         if ($attempt->status === 'in_progress' && $attempt->deadline_at && now()->gte($attempt->deadline_at)) {
             DB::transaction(function () use ($attempt): void {
