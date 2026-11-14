@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Certificate;
 use App\Models\Course;
 use App\Models\CourseCategory;
+use App\Models\CourseContentProgress;
 use App\Models\Lesson;
 use App\Models\LessonProgress;
 use App\Models\PageView;
@@ -125,11 +126,16 @@ class CourseController extends Controller
             ->with([
                 'course.teacher',
                 'course.lessons' => fn ($lessons) => $lessons->orderBy('order')->orderBy('id'),
+                'course.curriculumItems' => fn ($items) => $items
+                    ->whereHas('post', fn ($posts) => $posts->where('status', 'published')
+                        ->whereNotNull('published_at')->where('published_at', '<=', now()))
+                    ->with('post')->orderBy('position')->orderBy('id'),
             ])
             ->latest()
             ->get();
 
         $lessonIds = $enrollments->flatMap(fn ($enrollment) => $enrollment->course->lessons->pluck('id'))->unique();
+        $curriculumItemIds = $enrollments->flatMap(fn ($enrollment) => $enrollment->course->curriculumItems->pluck('id'))->unique();
         $completedByLesson = LessonProgress::query()
             ->where('user_id', $user->id)
             ->whereIn('lesson_id', $lessonIds)
@@ -144,30 +150,52 @@ class CourseController extends Controller
             ->get()
             ->filter(fn ($progress) => $progress->lesson)
             ->groupBy(fn ($progress) => $progress->lesson->course_id);
+        $contentProgress = CourseContentProgress::query()
+            ->with('curriculumItem:id,course_id,course_content_post_id')
+            ->where('user_id', $user->id)
+            ->whereIn('course_curriculum_item_id', $curriculumItemIds)
+            ->get();
+        $completedByCurriculumItem = $contentProgress->whereNotNull('completed_at')->keyBy('course_curriculum_item_id');
+        $lastViewedContentByCourse = $contentProgress->whereNotNull('last_viewed_at')
+            ->sortByDesc('last_viewed_at')
+            ->filter(fn ($progress) => $progress->curriculumItem)
+            ->groupBy(fn ($progress) => $progress->curriculumItem->course_id);
 
-        $enrollments->each(function ($enrollment) use ($completedByLesson, $lastViewedByCourse) {
+        $enrollments->each(function ($enrollment) use ($completedByLesson, $lastViewedByCourse, $completedByCurriculumItem, $lastViewedContentByCourse) {
             $lessons = $enrollment->course->lessons;
-            $enrollment->completed_lessons_count = $lessons->filter(
-                fn ($lesson) => $completedByLesson->has($lesson->id)
-            )->count();
-            $enrollment->total_lessons_count = $lessons->count();
-            $enrollment->progress_percent = $lessons->isEmpty()
+            $items = $enrollment->course->curriculumItems;
+            $completedLessons = $lessons->filter(fn ($lesson) => $completedByLesson->has($lesson->id))->count();
+            $completedItems = $items->filter(fn ($item) => $completedByCurriculumItem->has($item->id))->count();
+            $enrollment->completed_lessons_count = $completedLessons + $completedItems;
+            $enrollment->total_lessons_count = $lessons->count() + $items->count();
+            $enrollment->progress_percent = $enrollment->total_lessons_count === 0
                 ? 0
-                : (int) round(($enrollment->completed_lessons_count / $lessons->count()) * 100);
+                : (int) round(($enrollment->completed_lessons_count / $enrollment->total_lessons_count) * 100);
 
-            $lastViewedLesson = ($lastViewedByCourse->get($enrollment->course_id) ?? collect())->first()?->lesson;
-            $nextIncompleteLesson = $lessons->first(
-                fn ($lesson) => ! $completedByLesson->has($lesson->id)
-            );
-            $nextIncompleteAfterLastViewed = $lastViewedLesson
-                ? $lessons->first(fn ($lesson) => (
-                    $lesson->order > $lastViewedLesson->order
-                    || ($lesson->order === $lastViewedLesson->order && $lesson->id > $lastViewedLesson->id)
-                ) && ! $completedByLesson->has($lesson->id))
-                : null;
-            $enrollment->resume_lesson = $lastViewedLesson && ! $completedByLesson->has($lastViewedLesson->id)
-                ? $lastViewedLesson
-                : ($nextIncompleteAfterLastViewed ?? $nextIncompleteLesson ?? $lastViewedLesson ?? $lessons->first());
+            $lastViewedLessonProgress = ($lastViewedByCourse->get($enrollment->course_id) ?? collect())->first();
+            $lastViewedLesson = $lastViewedLessonProgress?->lesson;
+            $lastViewedContentProgress = ($lastViewedContentByCourse->get($enrollment->course_id) ?? collect())->first();
+            $lastViewedContentItem = $lastViewedContentProgress?->curriculumItem;
+            $contentIsLatest = $lastViewedContentProgress
+                && (! $lastViewedLessonProgress || $lastViewedContentProgress->last_viewed_at->gt($lastViewedLessonProgress->last_viewed_at));
+
+            $enrollment->resume_content_item = null;
+            $enrollment->resume_lesson = null;
+            if ($contentIsLatest && $lastViewedContentItem && ! $completedByCurriculumItem->has($lastViewedContentItem->id)) {
+                $enrollment->resume_content_item = $lastViewedContentItem;
+            } elseif ($lastViewedLesson && ! $completedByLesson->has($lastViewedLesson->id)) {
+                $enrollment->resume_lesson = $lastViewedLesson;
+            } else {
+                $enrollment->resume_content_item = $items->first(fn ($item) => ! $completedByCurriculumItem->has($item->id));
+                $enrollment->resume_lesson = $enrollment->resume_content_item
+                    ? null
+                    : $lessons->first(fn ($lesson) => ! $completedByLesson->has($lesson->id));
+            }
+
+            if (! $enrollment->resume_content_item && ! $enrollment->resume_lesson) {
+                $enrollment->resume_content_item = $items->last();
+                $enrollment->resume_lesson = $enrollment->resume_content_item ? null : $lessons->last();
+            }
         });
 
         return view('student.courses.index', compact('enrollments'));
@@ -719,9 +747,22 @@ class CourseController extends Controller
             ->whereNotNull('completed_at')
             ->whereHas('lesson', fn ($query) => $query->where('course_id', $course->id))
             ->count();
+        $curriculumItemCount = $course->curriculumItems()
+            ->whereHas('post', fn ($query) => $query->where('status', 'published')
+                ->whereNotNull('published_at')->where('published_at', '<=', now()))
+            ->count();
+        $completedCurriculumItemCount = CourseContentProgress::query()
+            ->where('user_id', $studentId)
+            ->whereNotNull('completed_at')
+            ->whereHas('curriculumItem', fn ($query) => $query->where('course_id', $course->id)
+                ->whereHas('post', fn ($posts) => $posts->where('status', 'published')
+                    ->whereNotNull('published_at')->where('published_at', '<=', now())))
+            ->count();
+        $requiredContentCount = $lessonCount + $curriculumItemCount;
+        $completedContentCount = $completedLessonCount + $completedCurriculumItemCount;
 
-        if ($lessonCount === 0 || $completedLessonCount < $lessonCount) {
-            return back()->with('error', 'Complete every lesson before completing this course.');
+        if ($requiredContentCount === 0 || $completedContentCount < $requiredContentCount) {
+            return back()->with('error', __('Complete every course lesson before completing this course.'));
         }
         $enrollment->status = 'completed';
         $enrollment->completed_at = now();
