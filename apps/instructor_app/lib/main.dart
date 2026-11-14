@@ -261,19 +261,25 @@ class _InstructorHomeState extends State<InstructorHome> {
     title.dispose();
     instructions.dispose();
     marks.dispose();
-    if (payload == null) {\n      return;\n    }
+    if (payload == null) {
+      return;
+    }
     try {
       await widget.api.postJson(
         '/instructor/batches/${payload.remove('batch_id')}/assignments',
         payload,
       );
-      if (!mounted) {\n        return;\n      }
+      if (!mounted) {
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Assignment published.')),
       );
       await load();
     } catch (e) {
-      if (mounted) {\n        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));\n      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
     }
   }
 
@@ -364,7 +370,9 @@ class _InstructorHomeState extends State<InstructorHome> {
           FilledButton(
             onPressed: () {
               final value = num.tryParse(score.text.trim());
-              if (value == null || value < 0 || value > (assignment['max_marks'] as num)) {\n                return;\n              }
+              if (value == null || value < 0 || value > (assignment['max_marks'] as num)) {
+                return;
+              }
               Navigator.pop(dialogContext, {'score': value, 'feedback': feedback.text.trim()});
             },
             child: const Text('Save grade'),
