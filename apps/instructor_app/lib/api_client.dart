@@ -59,6 +59,46 @@ class MobileApi {
     return _decode(response);
   }
 
+  Future<Map<String, dynamic>> postJson(String path, Map<String, dynamic> body) async {
+    final token = await readToken();
+    if (token == null || token.isEmpty) {
+      throw const ApiException('Please sign in again.', 401);
+    }
+    final response = await client.post(
+      Uri.parse('$baseUrl$path'),
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(body),
+    );
+    if (response.statusCode == 401 || response.statusCode == 403) {
+      await storage.delete(key: 'mobile_access_token');
+    }
+    return _decode(response);
+  }
+
+  Future<Map<String, dynamic>> patchJson(String path, Map<String, dynamic> body) async {
+    final token = await readToken();
+    if (token == null || token.isEmpty) {
+      throw const ApiException('Please sign in again.', 401);
+    }
+    final response = await client.patch(
+      Uri.parse('$baseUrl$path'),
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(body),
+    );
+    if (response.statusCode == 401 || response.statusCode == 403) {
+      await storage.delete(key: 'mobile_access_token');
+    }
+    return _decode(response);
+  }
+
   Future<void> logout() async {
     final token = await readToken();
     if (token != null && token.isNotEmpty) {

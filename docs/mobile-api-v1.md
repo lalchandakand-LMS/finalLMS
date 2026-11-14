@@ -106,3 +106,28 @@ The current mobile assignment screen supports text answers. Private attachment u
 - `POST /exam-attempts/{attempt}/submit`: submit answers and receive the server-calculated score and pass status.
 
 The mobile exam UI displays the server deadline, saves selected answers, and submits the attempt. Correct option indexes are never returned before submission. Student role, active enrollment, attempt ownership, frozen question membership, attempt deadline and scoring are enforced by the server.
+
+
+## Instructor endpoints
+
+- `GET /instructor/batches`: paginated batches assigned to the authenticated instructor, including course title and assignment count.
+- `GET /instructor/assignments`: paginated assignments created for the authenticated instructor, with batch/course labels and submission counts.
+- `POST /instructor/batches/{batch_id}/assignments`: publish an assignment to an owned batch. Requires title, instructions, future `due_at`, and `max_marks`; optional `allow_late`.
+- `GET /instructor/assignments/{assignment_id}/submissions`: list submissions and student identity for an assignment owned by the authenticated instructor.
+- `PATCH /instructor/assignments/{assignment_id}/submissions/{submission_id}`: grade or re-grade a submission with a score bounded by the assignment's maximum marks and optional feedback.
+- `GET /instructor/courses`: courses assigned to the authenticated instructor.
+- `GET /instructor/courses/{course_slug}/students`: active/completed students in that instructor's own course only.
+
+Course ownership is checked server-side. The API does not accept a client-supplied instructor or student ID to select another user's records.
+
+## Security and implementation notes
+
+- Login and OTP verification are rate-limited to 5 requests/minute; device-status polling is limited to 30 requests/minute.
+- Catalog routes are rate-limited to 60 requests/minute; authenticated API routes are rate-limited to 120 requests/minute.
+- Student API tokens must reference a currently approved `student_devices` record owned by that student. Legacy student tokens without an approved device binding are rejected and revoked on use.
+- Admin approval of a new device revokes the student's previous approved device and all existing mobile bearer tokens. Admin revocation also invalidates tokens bound to that device.
+- Student web sessions and mobile API tokens share the same approved-device registry, enforcing one active student device across the web and app. A revoked device's web session is ended on its next protected web request; its mobile token is rejected on its next API request.
+- Teacher API login remains password-based and is not subject to the student SMS device policy.
+- Token hashes, not bearer values, are persisted. Expired and revoked tokens are rejected.
+- The Student Flutter app now implements secure installation-ID and bearer-token storage, OTP entry, Admin-approval waiting UI, 15-second approval polling, session restoration and server-side logout. Flutter analyze/tests must pass for each release; real SMS and end-to-end approval still require isolated staging acceptance.
+- Enrollment purchase, cart/coupons, reviews, quizzes, assignments, live-class operations, notifications, and complete Flutter user interfaces are separate remaining deliverables.
