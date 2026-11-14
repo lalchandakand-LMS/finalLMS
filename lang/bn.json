@@ -905,5 +905,17 @@
     "Only completed eBook orders or cancelled orders with a verified gateway transaction can be refunded. Verify that the external refund has been sent first.": "শুধু সম্পন্ন ই-বুক অর্ডার অথবা যাচাইকৃত গেটওয়ে ট্রানজ্যাকশনসহ বাতিল অর্ডার রিফান্ড করা যাবে। আগে নিশ্চিত করুন বাইরের মাধ্যমে টাকা ফেরত দেওয়া হয়েছে।",
     "Gateway orders must be completed by verified provider callback.": "গেটওয়ে অর্ডার কেবল পেমেন্ট প্রদানকারীর যাচাইকৃত callback-এর মাধ্যমে সম্পন্ন হবে।",
     "Gateway orders cannot be manually rejected. Reconcile them with the provider.": "গেটওয়ে অর্ডার ম্যানুয়ালি বাতিল করা যাবে না। পেমেন্ট প্রদানকারীর সঙ্গে মিলিয়ে যাচাই করুন।",
-    "bKash supports BDT payments only.": "bKash-এ শুধু বাংলাদেশি টাকা (BDT) দিয়ে পেমেন্ট করা যাবে।"
+    "bKash supports BDT payments only.": "bKash-এ শুধু বাংলাদেশি টাকা (BDT) দিয়ে পেমেন্ট করা যাবে।",
+    "Lesson progress": "পাঠের অগ্রগতি",
+    "Payments": "পেমেন্ট",
+    "Invoices": "চালান",
+    "Lesson": "পাঠ",
+    "Currency": "মুদ্রা",
+    "Issued": "ইস্যুর তারিখ",
+    "Student account": "শিক্ষার্থী অ্যাকাউন্ট",
+    "No records available.": "কোনো তথ্য পাওয়া যায়নি।",
+    "Revoke this guardian relationship?": "এই অভিভাবক-শিক্ষার্থী সংযোগ বাতিল করবেন?",
+    "Request sent.": "অনুরোধ পাঠানো হয়েছে।",
+    "Access revoked.": "প্রবেশাধিকার বাতিল করা হয়েছে।",
+    "Could not load student summary.": "শিক্ষার্থীর সারসংক্ষেপ লোড করা যায়নি।"
 }
