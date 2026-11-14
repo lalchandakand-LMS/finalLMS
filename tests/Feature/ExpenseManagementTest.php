@@ -54,12 +54,12 @@ class ExpenseManagementTest extends TestCase
             'amount' => 900, 'payment_method' => 'cash', 'expense_date' => now()->toDateString(),
         ]);
 
-        $this->actingAs($accountant)->get(route('accountant.expenses.index'))
+        $this->actingAs($accountant)->get(route('admin.finance.expenses.index'))
             ->assertOk()
             ->assertSee('Local stationery')
             ->assertDontSee('Remote stationery');
 
-        $this->post(route('accountant.expenses.store'), [
+        $this->post(route('admin.finance.expenses.store'), [
             'branch_id' => $otherBranch->id,
             'category' => 'Travel',
             'title' => 'Accountant travel',
@@ -73,8 +73,8 @@ class ExpenseManagementTest extends TestCase
             'branch_id' => $branch->id,
         ]);
 
-        $this->delete(route('accountant.expenses.destroy', $remoteExpense))->assertNotFound();
-        $this->delete(route('accountant.expenses.destroy', $localExpense))->assertRedirect();
+        $this->delete(route('admin.finance.expenses.destroy', $remoteExpense))->assertNotFound();
+        $this->delete(route('admin.finance.expenses.destroy', $localExpense))->assertRedirect();
         $this->assertDatabaseMissing('expenses', ['id' => $localExpense->id]);
         $this->assertDatabaseHas('expenses', ['id' => $remoteExpense->id]);
     }
@@ -82,6 +82,6 @@ class ExpenseManagementTest extends TestCase
     public function test_accountant_without_active_branch_cannot_access_expenses(): void
     {
         $accountant = User::factory()->create(['role' => 'accountant']);
-        $this->actingAs($accountant)->get(route('accountant.expenses.index'))->assertForbidden();
+        $this->actingAs($accountant)->get(route('admin.finance.expenses.index'))->assertForbidden();
     }
 }
