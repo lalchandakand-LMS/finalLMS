@@ -917,5 +917,11 @@
     "Revoke this guardian relationship?": "এই অভিভাবক-শিক্ষার্থী সংযোগ বাতিল করবেন?",
     "Request sent.": "অনুরোধ পাঠানো হয়েছে।",
     "Access revoked.": "প্রবেশাধিকার বাতিল করা হয়েছে।",
-    "Could not load student summary.": "শিক্ষার্থীর সারসংক্ষেপ লোড করা যায়নি।"
+    "Could not load student summary.": "শিক্ষার্থীর সারসংক্ষেপ লোড করা যায়নি।",
+    "Bulk status": "একসাথে স্ট্যাটাস পরিবর্তন",
+    "Choose status": "স্ট্যাটাস নির্বাচন করুন",
+    "Apply to selected": "নির্বাচিত পোস্টে প্রয়োগ করুন",
+    "Select all posts": "সব পোস্ট নির্বাচন করুন",
+    "Select :title": ":title নির্বাচন করুন",
+    "Selected content posts updated.": "নির্বাচিত কনটেন্ট পোস্টগুলোর স্ট্যাটাস আপডেট হয়েছে।"
 }
