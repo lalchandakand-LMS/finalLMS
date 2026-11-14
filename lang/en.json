@@ -603,5 +603,17 @@
     "Only completed eBook orders or cancelled orders with a verified gateway transaction can be refunded. Verify that the external refund has been sent first.": "Only completed eBook orders or cancelled orders with a verified gateway transaction can be refunded. Verify that the external refund has been sent first.",
     "Gateway orders must be completed by verified provider callback.": "Gateway orders must be completed by verified provider callback.",
     "Gateway orders cannot be manually rejected. Reconcile them with the provider.": "Gateway orders cannot be manually rejected. Reconcile them with the provider.",
-    "bKash supports BDT payments only.": "bKash supports BDT payments only."
+    "bKash supports BDT payments only.": "bKash supports BDT payments only.",
+    "Manage sample preview pages": "Manage sample preview pages",
+    "Upload up to ten sample page images. They are stored privately and served through a controlled preview route.": "Upload up to ten sample page images. They are stored privately and served through a controlled preview route.",
+    "Sample page :number": "Sample page :number",
+    "Page :number": "Page :number",
+    "Remove this sample page?": "Remove this sample page?",
+    "Remove page": "Remove page",
+    "Sample page image": "Sample page image",
+    "Alternative text (optional)": "Alternative text (optional)",
+    "Upload sample page": "Upload sample page",
+    "The maximum of ten sample pages has been reached.": "The maximum of ten sample pages has been reached.",
+    "Preview sample pages": "Preview sample pages",
+    "View sample pages before purchasing. Full PDF access remains protected by your order entitlement.": "View sample pages before purchasing. Full PDF access remains protected by your order entitlement."
 }
