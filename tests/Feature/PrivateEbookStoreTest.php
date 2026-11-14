@@ -425,6 +425,7 @@ class PrivateEbookStoreTest extends TestCase
         Storage::disk('local')->put('private/ebook-payment-proofs/receipt.pdf', 'private receipt');
         $admin = User::factory()->create(['role' => 'admin']);
         $student = User::factory()->create(['role' => 'student']);
+        $product = $this->ebook($admin);
         $order = Order::create([
             'order_number' => 'AEC-TEST-PROOF-001',
             'user_id' => $student->id,
@@ -436,6 +437,14 @@ class PrivateEbookStoreTest extends TestCase
             'subtotal' => 350,
             'discount_total' => 0,
             'total' => 350,
+        ]);
+        $order->items()->create([
+            'product_id' => $product->id,
+            'product_type' => 'ebook',
+            'product_name' => $product->name,
+            'quantity' => 1,
+            'regular_price' => 350,
+            'line_total' => 350,
         ]);
 
         $this->actingAs($admin)
