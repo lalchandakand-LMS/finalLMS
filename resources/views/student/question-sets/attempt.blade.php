@@ -63,6 +63,21 @@
                 <p>{{ __('Score:') }} <strong>{{ $attempt->final_score ?? $attempt->auto_score }} / {{ $attempt->max_score }}</strong></p>
             @endif
             <p class="muted">{{ __('Submitted at:') }} {{ $attempt->submitted_at?->format('M j, Y g:i A') }}</p>
+            <div style="margin-top:18px;">
+                <h3>{{ __('Your submitted answers') }}</h3>
+                @foreach($questions as $index => $question)
+                    <div class="course-item" style="margin-bottom:10px;">
+                        <strong>{{ $index + 1 }}. {{ $question['question'] }}</strong>
+                        @if(in_array($question['type'], ['mcq', 'true_false'], true))
+                            <p class="muted">{{ __('Your answer:') }} {{ $question['selected_option'] !== null ? ($question['options'][$question['selected_option']] ?? __('Not answered')) : __('Not answered') }}</p>
+                            <p class="muted">{{ __('Marks awarded:') }} {{ $question['marks_awarded'] }} / {{ $question['marks'] }}</p>
+                        @else
+                            <p>{{ $question['answer_text'] ?: __('Not answered') }}</p>
+                            <p class="muted">{{ __('Written answer pending teacher review.') }}</p>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
             <a class="btn secondary" href="{{ route('courses.show', $course) }}">{{ __('Return to course') }}</a>
         </section>
     @endif
