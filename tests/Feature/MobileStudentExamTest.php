@@ -107,7 +107,7 @@ class MobileStudentExamTest extends TestCase
         $started = $this->withToken($token)->postJson('/api/v1/exams/'.$exam->id.'/start')->assertOk();
         $attemptId = $started->json('data.attempt.id');
 
-        \\App\\Models\\ExamAttempt::query()->whereKey($attemptId)->update([
+        \App\Models\ExamAttempt::query()->whereKey($attemptId)->update([
             'started_at' => now()->subMinutes(31),
         ]);
 
