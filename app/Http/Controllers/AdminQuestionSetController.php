@@ -81,7 +81,7 @@ class AdminQuestionSetController extends Controller
     {
         $archived = DB::transaction(function () use ($questionSet): bool {
             $set = QuestionSet::query()->lockForUpdate()->findOrFail($questionSet->id);
-            if ($set->courses()->exists()) {
+            if ($set->courses()->exists() || $set->attempts()->exists()) {
                 $set->update(['status' => 'archived']);
                 return true;
             }
