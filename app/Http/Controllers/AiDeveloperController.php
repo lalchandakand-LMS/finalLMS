@@ -99,7 +99,10 @@ PROMPT;
             $response = Http::withToken($apiKey)
                 ->acceptJson()
                 ->timeout(45)
-                ->withOptions(array_merge(['allow_redirects' => false], $providerCurlOptions))
+                ->withOptions(array_merge([
+                    'allow_redirects' => false,
+                    'stream' => true,
+                ], $providerCurlOptions))
                 ->post($baseUrl.'/chat/completions', [
                     'model' => $model,
                     'temperature' => 0.2,
@@ -108,10 +111,31 @@ PROMPT;
                 ]);
 
             if (!$response->successful()) {
-                throw new \RuntimeException('AI provider returned HTTP '.$response->status().'. Check provider settings and server logs.');
+                throw new \\RuntimeException('AI provider returned HTTP '.$response->status().'. Check provider settings and server logs.');
             }
 
-            $answer = data_get($response->json(), 'choices.0.message.content');
+            $maxResponseBytes = max(1024, min(1048576, (int) config('services.ai_developer.max_response_bytes', 262144)));
+            $body = $response->toPsrResponse()->getBody();
+            $contentLength = $response->header('Content-Length');
+            if (is_numeric($contentLength) && (int) $contentLength > $maxResponseBytes) {
+                throw new \\RuntimeException('AI provider response exceeded the configured size limit.');
+            }
+
+            $responseBody = '';
+            while (!$body->eof()) {
+                $remaining = $maxResponseBytes + 1 - strlen($responseBody);
+                $responseBody .= $body->read(min(8192, $remaining));
+                if (strlen($responseBody) > $maxResponseBytes) {
+                    throw new \\RuntimeException('AI provider response exceeded the configured size limit.');
+                }
+            }
+
+            $decodedResponse = json_decode($responseBody, true);
+            if (!is_array($decodedResponse)) {
+                throw new \\RuntimeException('AI provider returned an invalid response.');
+            }
+
+            $answer = data_get($decodedResponse, 'choices.0.message.content');
             if (!is_string($answer) || trim($answer) === '') {
                 throw new \RuntimeException('AI provider returned an empty or unsupported response.');
             }
