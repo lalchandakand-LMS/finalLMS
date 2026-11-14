@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CourseController;
 use App\Http\Controllers\Api\V1\StudentAssignmentController;
+use App\Http\Controllers\Api\V1\StudentExamController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -29,5 +30,10 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/courses/{course:slug}/lessons/{lesson}', [CourseController::class, 'lesson']);
         Route::get('/courses/{course:slug}/lessons/{lesson}/video', [CourseController::class, 'streamLessonVideo']);
         Route::post('/courses/{course:slug}/lessons/{lesson}/complete', [CourseController::class, 'completeLesson']);
+        Route::get('/my/exams', [StudentExamController::class, 'index']);
+        Route::get('/exams/{exam}', [StudentExamController::class, 'show']);
+        Route::post('/exams/{exam}/start', [StudentExamController::class, 'start'])->middleware('throttle:10,1');
+        Route::put('/exam-attempts/{attempt}/answers', [StudentExamController::class, 'saveAnswers'])->middleware('throttle:120,1');
+        Route::post('/exam-attempts/{attempt}/submit', [StudentExamController::class, 'submit'])->middleware('throttle:10,1');
     });
 });

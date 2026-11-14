@@ -86,4 +86,23 @@ Course ownership is checked server-side. The API does not accept a client-suppli
 - Teacher API login remains password-based and is not subject to the student SMS device policy.
 - Token hashes, not bearer values, are persisted. Expired and revoked tokens are rejected.
 - The Student Flutter app now implements secure installation-ID and bearer-token storage, OTP entry, Admin-approval waiting UI, 15-second approval polling, session restoration and server-side logout. Flutter analyze/tests must pass for each release; real SMS and end-to-end approval still require isolated staging acceptance.
-- Enrollment purchase, cart/coupons, reviews, quizzes, assignments, live-class operations, notifications, and complete Flutter user interfaces are separate remaining deliverables.
+- Enrollment purchase/checkout, cart/coupons, reviews, course quizzes, live-class operations, notices, support and instructor teaching workflows remain separate deliverables. Mobile exam and text-assignment screens are implemented; assignment attachment upload remains pending.
+
+
+## Student assignment endpoints
+
+- `GET /my/assignments`: paginated assignments for the authenticated student's active batch enrollments, including that student's own submission summary.
+- `GET /assignments/{assignment}`: assignment details and the authenticated student's own submission only.
+- `POST /assignments/{assignment}/submit`: submit or revise a text answer under the assignment's publication, enrollment, due-date, late-policy and grading rules. A pending submission cannot be duplicated; a graded submission may be revised according to the server policy.
+
+The current mobile assignment screen supports text answers. Private attachment upload from the mobile app remains a follow-up.
+
+## Student exam endpoints
+
+- `GET /my/exams`: paginated published exams in the authenticated student's active batch enrollments.
+- `GET /exams/{exam}`: exam details, the student's own attempt, server deadline and submitted result.
+- `POST /exams/{exam}/start`: start or resume the single attempt and return the frozen randomized question set.
+- `PUT /exam-attempts/{attempt}/answers`: save selected option indexes for questions assigned to the attempt.
+- `POST /exam-attempts/{attempt}/submit`: submit answers and receive the server-calculated score and pass status.
+
+The mobile exam UI displays the server deadline, saves selected answers, and submits the attempt. Correct option indexes are never returned before submission. Student role, active enrollment, attempt ownership, frozen question membership, attempt deadline and scoring are enforced by the server.
