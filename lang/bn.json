@@ -783,7 +783,7 @@
     "Grade quiz attempt": "কুইজের উত্তর মূল্যায়ন",
     "Back to submissions": "জমার তালিকায় ফিরুন",
     "Final score:": "চূড়ান্ত নম্বর:",
-    "Submitted:": "জমা হয়েছে:",
+    "Submitted:": "জমা:",
     "Grading summary": "মূল্যায়নের সারাংশ",
     "Manual score:": "লিখিত উত্তরের নম্বর:",
     "Overall feedback:": "সামগ্রিক মতামত:",
@@ -811,5 +811,16 @@
     "Review submissions": "জমা দেওয়া উত্তর যাচাই করুন",
     "Final quiz result": "কুইজের চূড়ান্ত ফলাফল",
     "Teacher feedback:": "শিক্ষকের মতামত:",
-    "marks": "নম্বর"
+    "marks": "নম্বর",
+    "Your quiz attempts": "আপনার কুইজের চেষ্টা",
+    "Review current quizzes, submitted answers and published results from all your courses.": "আপনার সব কোর্সের চলমান কুইজ, জমা দেওয়া উত্তর এবং প্রকাশিত ফলাফল দেখুন।",
+    "Quiz unavailable": "কুইজ পাওয়া যাচ্ছে না",
+    "Course unavailable": "কোর্স পাওয়া যাচ্ছে না",
+    "Started:": "শুরু:",
+    "In progress": "চলমান",
+    "Not submitted": "জমা দেওয়া হয়নি",
+    "View attempt": "চেষ্টা দেখুন",
+    "No quiz attempts yet": "এখনো কোনো কুইজের চেষ্টা নেই",
+    "Quizzes attached to your enrolled courses will appear here after you start one.": "আপনার ভর্তি হওয়া কোর্সের কুইজ শুরু করলে সেগুলো এখানে দেখা যাবে।",
+    "Quiz attempts": "কুইজের চেষ্টা"
 }
