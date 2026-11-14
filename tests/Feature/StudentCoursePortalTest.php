@@ -55,6 +55,123 @@ class StudentCoursePortalTest extends TestCase
             ->assertSee('50%');
     }
 
+
+    public function test_viewing_a_lesson_tracks_resume_position_without_marking_it_complete(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $course = Course::factory()->create([
+            'teacher_id' => $teacher->id,
+            'status' => 'published',
+        ]);
+        $lesson = $course->lessons()->create([
+            'title' => 'Resume point',
+            'content' => 'Lesson content',
+            'duration_minutes' => 15,
+            'order' => 1,
+        ]);
+        Enrollment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($student)
+            ->get(route('courses.lessons.show', [$course, $lesson]))
+            ->assertOk()
+            ->assertSee('Course progress')
+            ->assertSee('0 / 1');
+
+        $this->assertDatabaseHas('lesson_progress', [
+            'user_id' => $student->id,
+            'lesson_id' => $lesson->id,
+            'completed_at' => null,
+        ]);
+        $this->assertNotNull(
+            LessonProgress::query()
+                ->where('user_id', $student->id)
+                ->where('lesson_id', $lesson->id)
+                ->firstOrFail()
+                ->last_viewed_at
+        );
+    }
+
+    public function test_my_courses_resumes_the_last_viewed_incomplete_lesson(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $course = Course::factory()->create([
+            'teacher_id' => $teacher->id,
+            'title' => 'Resume course',
+            'status' => 'published',
+        ]);
+        $firstLesson = $course->lessons()->create([
+            'title' => 'First lesson',
+            'content' => 'First content',
+            'duration_minutes' => 10,
+            'order' => 1,
+        ]);
+        $lastViewedLesson = $course->lessons()->create([
+            'title' => 'Continue here',
+            'content' => 'Second content',
+            'duration_minutes' => 10,
+            'order' => 2,
+        ]);
+        Enrollment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'status' => 'active',
+        ]);
+        LessonProgress::create([
+            'lesson_id' => $firstLesson->id,
+            'user_id' => $student->id,
+            'completed_at' => now(),
+        ]);
+        LessonProgress::create([
+            'lesson_id' => $lastViewedLesson->id,
+            'user_id' => $student->id,
+            'completed_at' => null,
+            'last_viewed_at' => now(),
+        ]);
+
+        $this->actingAs($student)
+            ->get(route('student.courses.index'))
+            ->assertOk()
+            ->assertSee('Resume learning')
+            ->assertSee(route('courses.lessons.show', [$course, $lastViewedLesson]), false)
+            ->assertSee('Continue here');
+    }
+
+    public function test_lesson_navigation_only_shows_lessons_the_student_can_access(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $course = Course::factory()->create([
+            'teacher_id' => $teacher->id,
+            'status' => 'published',
+        ]);
+        $preview = $course->lessons()->create([
+            'title' => 'Preview lesson',
+            'content' => 'Preview content',
+            'duration_minutes' => 10,
+            'order' => 1,
+            'is_preview' => true,
+        ]);
+        $locked = $course->lessons()->create([
+            'title' => 'Locked lesson',
+            'content' => 'Locked content',
+            'duration_minutes' => 10,
+            'order' => 2,
+            'is_preview' => false,
+        ]);
+
+        $this->actingAs($student)
+            ->get(route('courses.lessons.show', [$course, $preview]))
+            ->assertOk()
+            ->assertDontSee(route('courses.lessons.show', [$course, $locked]), false)
+            ->assertDontSee('Next lesson');
+    }
+
     public function test_non_student_cannot_open_student_course_portal(): void
     {
         $teacher = User::factory()->create(['role' => 'teacher']);
