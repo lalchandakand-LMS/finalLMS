@@ -130,8 +130,7 @@
 
     container.addEventListener('click', event => {
         if (event.target.classList.contains('remove-set-question')) {
-            const cards = container.querySelectorAll('[data-question-card]');
-            if (cards.length > 1) event.target.closest('[data-question-card]').remove();
+            event.target.closest('[data-question-card]').remove();
         }
     });
 })();
