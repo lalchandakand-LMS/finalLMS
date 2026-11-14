@@ -45,6 +45,19 @@ class AdminModulePermissionTest extends TestCase
             'role' => 'accountant',
             'branch_id' => $branch->id,
             'admin_permissions_present' => '1',
+            'admin_permissions' => ['finance.invoices', 'finance.refunds', 'finance.reports', 'finance.expenses'],
+        ])->assertRedirect(route('admin.users.index'));
+
+        $this->assertSame(
+            ['finance.invoices', 'finance.refunds', 'finance.reports', 'finance.expenses'],
+            $accountant->fresh()->admin_permissions
+        );
+        $this->actingAs($accountant)->get(route('admin.finance.invoices.index'))->assertOk();
+
+        $this->actingAs($admin)->post(route('admin.users.updateRole', $accountant), [
+            'role' => 'accountant',
+            'branch_id' => $branch->id,
+            'admin_permissions_present' => '1',
             'admin_permissions' => ['finance.expenses'],
         ])->assertRedirect(route('admin.users.index'));
 
