@@ -63,6 +63,46 @@ class StudentQuestionSetAttemptTest extends TestCase
             ->assertDontSee('SECRET ANSWER KEY');
     }
 
+    public function test_enrolled_student_sees_published_quiz_on_course_page(): void
+    {
+        [$course, $set, $student] = $this->fixture();
+
+        $this->actingAs($student)->get(route('courses.show', $course))
+            ->assertOk()
+            ->assertSee('Course quizzes')
+            ->assertSee('Grammar assessment')
+            ->assertSee('Start quiz');
+    }
+
+    public function test_quiz_cannot_start_before_its_scheduled_availability(): void
+    {
+        [$course, $set, $student] = $this->fixture([
+            'available_from' => now()->addDay(),
+        ]);
+
+        $this->actingAs($student)
+            ->post(route('student.question-sets.start', [$course, $set]))
+            ->assertForbidden();
+
+        $this->assertDatabaseCount('question_set_attempts', 0);
+    }
+
+    public function test_selected_option_outside_question_choices_is_rejected(): void
+    {
+        [$course, $set, $student] = $this->fixture();
+        $this->actingAs($student)->post(route('student.question-sets.start', [$course, $set]));
+        $attempt = QuestionSetAttempt::with('questions')->firstOrFail();
+        $mcq = $attempt->questions->firstWhere('type', 'mcq');
+
+        $this->from(route('student.question-sets.show', [$course, $set, $attempt]))
+            ->post(route('student.question-sets.submit', [$course, $set, $attempt]), [
+                'answers' => [$mcq->id => ['selected_option' => 4]],
+            ])
+            ->assertSessionHasErrors('answers.'.$mcq->id.'.selected_option');
+
+        $this->assertSame('in_progress', $attempt->fresh()->status);
+    }
+
     public function test_student_cannot_access_another_students_attempt_or_start_without_enrollment(): void
     {
         [$course, $set, $student] = $this->fixture();
