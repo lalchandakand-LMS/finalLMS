@@ -358,7 +358,7 @@ class _StudentHomeState extends State<StudentHome> {
         widget.api.get('/courses?$query'),
         if (!loadMore) widget.api.get('/my/courses'),
       ]);
-      if (!mounted) return;
+      if (!mounted) { return; }
       final catalogResponse = results[0];
       final nextCourses = catalogResponse['data'] as List<dynamic>? ?? [];
       final meta = catalogResponse['meta'] as Map<String, dynamic>? ?? {};
@@ -655,12 +655,12 @@ class _WishlistPageState extends State<WishlistPage> {
     });
     try {
       final response = await widget.api.get('/my/wishlist');
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() => courses = response['data'] as List<dynamic>? ?? []);
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) { setState(() => loading = false); }
     }
   }
 
@@ -928,7 +928,7 @@ class _LessonPlayerPageState extends State<LessonPlayerPage> {
       final response = await widget.api.get(
         '/courses/${widget.slug}/lessons/${widget.lessonId}',
       );
-      if (!mounted) return;
+      if (!mounted) { return; }
       final data = response['lesson'] as Map<String, dynamic>;
       setState(() => lesson = data);
       final streamPath = data['video_stream_path']?.toString();
@@ -936,9 +936,9 @@ class _LessonPlayerPageState extends State<LessonPlayerPage> {
         await initializeVideo(streamPath);
       }
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) { setState(() => loading = false); }
     }
   }
 
@@ -978,9 +978,9 @@ class _LessonPlayerPageState extends State<LessonPlayerPage> {
       );
       if (mounted) setState(() => lesson?['is_completed'] = true);
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => saving = false);
+      if (mounted) { setState(() => saving = false); }
     }
   }
 
@@ -1144,12 +1144,12 @@ class _AssignmentsPageState extends State<AssignmentsPage> {
     setState(() { loading = true; error = null; });
     try {
       final response = await widget.api.get('/my/assignments');
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() => assignments = response['data'] as List<dynamic>? ?? []);
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) { setState(() => loading = false); }
     }
   }
 
@@ -1221,16 +1221,16 @@ class _AssignmentDetailPageState extends State<AssignmentDetailPage> {
   Future<void> load() async {
     try {
       final response = await widget.api.get('/assignments/${widget.id}');
-      if (!mounted) return;
+      if (!mounted) { return; }
       final item = response['assignment'] as Map<String, dynamic>;
       setState(() {
         assignment = item;
         answer.text = (item['submission'] as Map<String, dynamic>?)?['answer']?.toString() ?? '';
       });
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) { setState(() => loading = false); }
     }
   }
 
@@ -1238,13 +1238,13 @@ class _AssignmentDetailPageState extends State<AssignmentDetailPage> {
     setState(() { saving = true; error = null; });
     try {
       await widget.api.postJson('/assignments/${widget.id}/submit', {'answer': answer.text.trim()});
-      if (!mounted) return;
+      if (!mounted) { return; }
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Assignment submitted.')));
       await load();
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => saving = false);
+      if (mounted) { setState(() => saving = false); }
     }
   }
 
@@ -1321,12 +1321,12 @@ class _ExamsPageState extends State<ExamsPage> {
     setState(() { loading = true; error = null; });
     try {
       final response = await widget.api.get('/my/exams');
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() => exams = response['data'] as List<dynamic>? ?? []);
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) { setState(() => loading = false); }
     }
   }
 
@@ -1430,7 +1430,7 @@ class _ExamDetailPageState extends State<ExamDetailPage> {
       final nextAttempt = data['attempt'] as Map<String, dynamic>?;
       final nextQuestions = data['questions'] as List<dynamic>? ?? [];
       final nextResult = data['result'] as Map<String, dynamic>?;
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() {
         exam = data;
         attempt = nextAttempt;
@@ -1455,9 +1455,9 @@ class _ExamDetailPageState extends State<ExamDetailPage> {
         deadline = null;
       }
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) { setState(() => loading = false); }
     }
   }
 
@@ -1470,7 +1470,7 @@ class _ExamDetailPageState extends State<ExamDetailPage> {
 
   void _tick() {
     final end = deadline;
-    if (end == null || !mounted) return;
+    if (end == null || !mounted) { return; }
     final remaining = end.difference(DateTime.now()).inSeconds;
     setState(() => secondsRemaining = remaining > 0 ? remaining : 0);
     if (remaining <= 0) {
@@ -1496,7 +1496,7 @@ class _ExamDetailPageState extends State<ExamDetailPage> {
       final data = response['data'] as Map<String, dynamic>;
       final nextAttempt = data['attempt'] as Map<String, dynamic>;
       final nextQuestions = data['questions'] as List<dynamic>? ?? [];
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() {
         attempt = nextAttempt;
         attemptId = (nextAttempt['id'] as num).toInt();
@@ -1519,15 +1519,15 @@ class _ExamDetailPageState extends State<ExamDetailPage> {
         _setDeadline(DateTime.parse(deadlineValue).toLocal());
       }
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => starting = false);
+      if (mounted) { setState(() => starting = false); }
     }
   }
 
   Future<void> saveAnswers() async {
     final id = attemptId;
-    if (id == null || answers.isEmpty || saving || submitting) return;
+    if (id == null || answers.isEmpty || saving || submitting) { return; }
     setState(() { saving = true; error = null; });
     try {
       await widget.api.putJson('/exam-attempts/$id/answers', {
@@ -1539,9 +1539,9 @@ class _ExamDetailPageState extends State<ExamDetailPage> {
         );
       }
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => saving = false);
+      if (mounted) { setState(() => saving = false); }
     }
   }
 
@@ -1553,7 +1553,7 @@ class _ExamDetailPageState extends State<ExamDetailPage> {
       final response = await widget.api.postJson('/exam-attempts/$id/submit', {
         'answers': _answerPayload(),
       });
-      if (!mounted) return;
+      if (!mounted) { return; }
       clock?.cancel();
       setState(() {
         result = response['data'] as Map<String, dynamic>;
@@ -1564,9 +1564,9 @@ class _ExamDetailPageState extends State<ExamDetailPage> {
         SnackBar(content: Text(automatic ? 'Time ended. Your exam was submitted.' : 'Exam submitted successfully.')),
       );
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => submitting = false);
+      if (mounted) { setState(() => submitting = false); }
     }
   }
 
@@ -1727,12 +1727,12 @@ class _QuizzesPageState extends State<QuizzesPage> {
     setState(() { loading = true; error = null; });
     try {
       final response = await widget.api.get('/my/quizzes');
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() => courses = response['data'] as List<dynamic>? ?? []);
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) { setState(() => loading = false); }
     }
   }
 
@@ -1912,7 +1912,7 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
       final wrapper = data['attempt'] as Map<String, dynamic>?;
       final summary = wrapper?['attempt'] as Map<String, dynamic>?;
       final questionList = wrapper?['questions'] as List<dynamic>? ?? [];
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() {
         course = data['course'] as Map<String, dynamic>?;
         quiz = data['quiz'] as Map<String, dynamic>?;
@@ -1925,9 +1925,9 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
       });
       _configureTimer();
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) { setState(() => loading = false); }
     }
   }
 
@@ -1940,7 +1940,7 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
 
   void _tick() {
     final end = deadline;
-    if (end == null || !mounted) return;
+    if (end == null || !mounted) { return; }
     final remaining = end.difference(DateTime.now()).inSeconds;
     setState(() => secondsRemaining = remaining > 0 ? remaining : 0);
     if (remaining <= 0) {
@@ -1970,7 +1970,7 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
       final data = response['data'] as Map<String, dynamic>;
       final summary = data['attempt'] as Map<String, dynamic>;
       final questionList = data['questions'] as List<dynamic>? ?? [];
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() {
         attempt = summary;
         attemptsRemaining = (data['attempts_remaining'] as num?)?.toInt();
@@ -1978,15 +1978,15 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
       });
       _configureTimer();
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => starting = false);
+      if (mounted) { setState(() => starting = false); }
     }
   }
 
   Future<void> saveAnswers() async {
     final id = (attempt?['id'] as num?)?.toInt();
-    if (id == null || answers.isEmpty || saving || submitting) return;
+    if (id == null || answers.isEmpty || saving || submitting) { return; }
     setState(() { saving = true; error = null; });
     try {
       await widget.api.putJson('/question-set-attempts/$id/answers', {
@@ -1998,15 +1998,15 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
         );
       }
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => saving = false);
+      if (mounted) { setState(() => saving = false); }
     }
   }
 
   Future<void> submit({bool automatic = false}) async {
     final id = (attempt?['id'] as num?)?.toInt();
-    if (id == null || submitting || attempt?['status'] != 'in_progress') return;
+    if (id == null || submitting || attempt?['status'] != 'in_progress') { return; }
     setState(() { submitting = true; error = null; });
     try {
       final response = await widget.api.postJson(
@@ -2016,7 +2016,7 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
       final data = response['data'] as Map<String, dynamic>;
       final summary = data['attempt'] as Map<String, dynamic>;
       final questionList = data['questions'] as List<dynamic>? ?? [];
-      if (!mounted) return;
+      if (!mounted) { return; }
       clock?.cancel();
       setState(() {
         _setAttempt(summary);
@@ -2032,9 +2032,9 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
         )),
       );
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => submitting = false);
+      if (mounted) { setState(() => submitting = false); }
     }
   }
 
