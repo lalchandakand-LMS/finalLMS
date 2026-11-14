@@ -14,6 +14,27 @@
         </form>
     </section>
 
+    @php $activeStudents = $links->filter(fn ($link) => $link->status === 'active' && $link->student); @endphp
+    @if($activeStudents->isNotEmpty())
+        <section class="panel" style="padding:18px 22px;margin:0 0 18px">
+            <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between">
+                <div>
+                    <h2 style="margin:0 0 6px">{{ __('Switch child view') }}</h2>
+                    <p class="muted" style="margin:0">{{ __('Choose an active student to open their linked summary.') }}</p>
+                </div>
+                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                    <select id="guardian-student-switcher" style="min-width:220px;padding:10px 12px;border-radius:8px;border:1px solid #d0d7de;background:#fff">
+                        <option value="">{{ __('Select a child') }}</option>
+                        @foreach($activeStudents as $link)
+                            <option value="{{ route('guardian.students.summary', $link->student_id) }}">{{ $link->student?->name ?? __('Student account') }}</option>
+                        @endforeach
+                    </select>
+                    <button id="guardian-switch-summary" class="btn primary" type="button">{{ __('Open child summary') }}</button>
+                </div>
+            </div>
+        </section>
+    @endif
+
     <div class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
     @forelse($links as $link)
         <article class="panel" style="padding:20px">
@@ -43,18 +64,39 @@
 <script>
 (() => {
  const message=document.getElementById('guardian-message');
+ const summarySection=document.getElementById('guardian-summary');
+ const summaryData=document.getElementById('guardian-summary-data');
  const show=(text,ok=false)=>{message.className=ok?'flash success':'flash error';message.textContent=text;};
+ const loadSummary = async (url) => {
+   if (!url) return;
+   try {
+     const response=await fetch(url,{headers:{'Accept':'application/json'}});
+     const payload=await response.json().catch(()=>({message:'Unexpected server response.'}));
+     if(!response.ok) throw new Error(payload.message || Object.values(payload.errors||{}).flat().join(' ') || 'Request failed.');
+     summaryData.textContent = JSON.stringify(payload.data ?? payload, null, 2);
+     summarySection.hidden = false;
+     summarySection.scrollIntoView({behavior:'smooth', block:'start'});
+   } catch (error) {
+     show(error.message || 'Unable to load the student summary.');
+   }
+ };
  async function send(form,extra={}) {
-  const data=new FormData(form); Object.entries(extra).forEach(([k,v])=>data.set(k,v));
-  const response=await fetch(form.action,{method:'POST',body:data,headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'}});
-  const payload=await response.json().catch(()=>({message:'Unexpected server response.'}));
-  if(!response.ok) throw new Error(payload.message || Object.values(payload.errors||{}).flat().join(' ') || 'Request failed.');
-  return payload;
+   const data=new FormData(form); Object.entries(extra).forEach(([k,v])=>data.set(k,v));
+   const response=await fetch(form.action,{method:'POST',body:data,headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'}});
+   const payload=await response.json().catch(()=>({message:'Unexpected server response.'}));
+   if(!response.ok) throw new Error(payload.message || Object.values(payload.errors||{}).flat().join(' ') || 'Request failed.');
+   return payload;
  }
- document.getElementById('guardian-link-form').addEventListener('submit',async e=>{e.preventDefault();try{const p=await send(e.currentTarget);show(p.message||'Request sent.',true);e.currentTarget.reset();setTimeout(()=>location.reload(),700);}catch(err){show(err.message);}});
- document.querySelectorAll('.guardian-revoke-form').forEach(form=>form.addEventListener('submit',async e=>{e.preventDefault();if(!confirm('Revoke this guardian relationship?'))return;try{await send(e.currentTarget);show('Access revoked.',true);setTimeout(()=>location.reload(),500);}catch(err){show(err.message);}}));
- document.querySelectorAll('.guardian-summary').forEach(button=>button.addEventListener('click',async()=>{try{const r=await fetch(button.dataset.url,{headers:{'Accept':'application/json'}});const p=await r.json();if(!r.ok)throw new Error(p.message||'Could not load student summary.');document.getElementById('guardian-summary-data').textContent=JSON.stringify(p.data,null,2);document.getElementById('guardian-summary').hidden=false;document.getElementById('guardian-summary').scrollIntoView({behavior:'smooth'});}catch(err){show(err.message);}}));
- document.getElementById('close-summary').addEventListener('click',()=>document.getElementById('guardian-summary').hidden=true);
+ document.getElementById('guardian-link-form').addEventListener('submit',async e=>{e.preventDefault();try{const p=await send(e.currentTarget);show(p.message||'Request sent.',true);e.currentTarget.reset();window.location.reload();}catch(error){show(error.message||'Request failed.');}});
+ document.querySelectorAll('.guardian-revoke-form').forEach(form=>form.addEventListener('submit',async e=>{e.preventDefault();if(!confirm('Revoke this guardian relationship?'))return;try{await send(e.currentTarget);show('Access revoked.',true);window.location.reload();}catch(error){show(error.message||'Could not revoke access.');}}));
+ document.querySelectorAll('.guardian-summary').forEach(button=>button.addEventListener('click',()=>loadSummary(button.dataset.url)));
+ const studentSwitcher=document.getElementById('guardian-student-switcher');
+ const switchButton=document.getElementById('guardian-switch-summary');
+ if (studentSwitcher && switchButton) {
+   switchButton.addEventListener('click',()=>loadSummary(studentSwitcher.value));
+   studentSwitcher.addEventListener('change',()=>{ if (studentSwitcher.value) { loadSummary(studentSwitcher.value); } });
+ }
+ document.getElementById('close-summary').addEventListener('click',()=>{summarySection.hidden=true; summaryData.textContent='';});
 })();
 </script>
 @endsection
