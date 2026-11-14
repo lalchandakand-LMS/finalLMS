@@ -917,5 +917,17 @@
     "Revoke this guardian relationship?": "এই অভিভাবক-শিক্ষার্থী সংযোগ বাতিল করবেন?",
     "Request sent.": "অনুরোধ পাঠানো হয়েছে।",
     "Access revoked.": "প্রবেশাধিকার বাতিল করা হয়েছে।",
-    "Could not load student summary.": "শিক্ষার্থীর সারসংক্ষেপ লোড করা যায়নি।"
+    "Could not load student summary.": "শিক্ষার্থীর সারসংক্ষেপ লোড করা যায়নি।",
+    "Manage sample preview pages": "নমুনা প্রিভিউ পৃষ্ঠা পরিচালনা",
+    "Upload up to ten sample page images. They are stored privately and served through a controlled preview route.": "সর্বোচ্চ ১০টি নমুনা পৃষ্ঠার ছবি আপলোড করুন। ছবিগুলো ব্যক্তিগত স্টোরেজে থাকবে এবং নিরাপদ প্রিভিউ লিংকের মাধ্যমে দেখানো হবে।",
+    "Sample page :number": "নমুনা পৃষ্ঠা :number",
+    "Page :number": "পৃষ্ঠা :number",
+    "Remove this sample page?": "এই নমুনা পৃষ্ঠাটি সরাবেন?",
+    "Remove page": "পৃষ্ঠা সরান",
+    "Sample page image": "নমুনা পৃষ্ঠার ছবি",
+    "Alternative text (optional)": "বিকল্প বর্ণনা (ঐচ্ছিক)",
+    "Upload sample page": "নমুনা পৃষ্ঠা আপলোড",
+    "The maximum of ten sample pages has been reached.": "সর্বোচ্চ ১০টি নমুনা পৃষ্ঠা আপলোড করা হয়েছে।",
+    "Preview sample pages": "নমুনা পৃষ্ঠা দেখুন",
+    "View sample pages before purchasing. Full PDF access remains protected by your order entitlement.": "কেনার আগে বইয়ের কিছু নমুনা পৃষ্ঠা দেখুন। সম্পূর্ণ PDF কেবল অনুমোদিত অর্ডারের মাধ্যমে ডাউনলোড করা যাবে।"
 }
