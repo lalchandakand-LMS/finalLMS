@@ -303,7 +303,9 @@ class PaymentController extends Controller
 
     public function index(): View
     {
-        $payments = Payment::with(['user', 'course', 'courseCombo', 'comboCourses', 'reviewer'])
+        $payments = Payment::query()
+            ->where(fn ($query) => $query->whereNotNull('course_id')->orWhereNotNull('course_combo_id'))
+            ->with(['user', 'course', 'courseCombo', 'comboCourses', 'reviewer'])
             ->latest()
             ->paginate(20);
 
