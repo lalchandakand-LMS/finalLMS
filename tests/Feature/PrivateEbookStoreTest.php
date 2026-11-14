@@ -270,4 +270,30 @@ class PrivateEbookStoreTest extends TestCase
         Storage::disk('local')->assertExists('private/ebooks/guide.pdf');
     }
 
+    public function test_admin_payment_proof_is_served_without_public_cache(): void
+    {
+        Storage::fake('local');
+        Storage::disk('local')->put('private/ebook-payment-proofs/receipt.pdf', 'private receipt');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $order = Order::create([
+            'order_number' => 'AEC-TEST-PROOF-001',
+            'user_id' => $student->id,
+            'status' => 'pending',
+            'payment_method' => 'manual',
+            'payment_reference' => 'EBOOK-PROOF-001',
+            'payment_proof_path' => 'private/ebook-payment-proofs/receipt.pdf',
+            'currency' => 'BDT',
+            'subtotal' => 350,
+            'discount_total' => 0,
+            'total' => 350,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.ebooks.orders.proof', $order))
+            ->assertOk()
+            ->assertHeader('Cache-Control', 'private, no-store')
+            ->assertHeader('X-Content-Type-Options', 'nosniff');
+    }
+
 }
