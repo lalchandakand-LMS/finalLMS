@@ -32,15 +32,25 @@
     const deadline = new Date(@json($attempt->deadline_at->toIso8601String())).getTime();
     const display = document.getElementById('quiz-countdown');
     const form = document.getElementById('quiz-attempt-form');
+    let submitted = false;
+    let timer = null;
     const tick = () => {
         const remaining = Math.max(0, deadline - Date.now());
         const minutes = Math.floor(remaining / 60000);
         const seconds = Math.floor((remaining % 60000) / 1000);
         display.textContent = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
-        if (remaining <= 0) form.requestSubmit();
+        if (remaining <= 3000 && !submitted) {
+            submitted = true;
+            if (timer) window.clearInterval(timer);
+            form.requestSubmit();
+        }
     };
+    form.addEventListener('submit', () => {
+        submitted = true;
+        if (timer) window.clearInterval(timer);
+    });
     tick();
-    window.setInterval(tick, 1000);
+    timer = window.setInterval(tick, 1000);
 })();
 </script>
 @endif
