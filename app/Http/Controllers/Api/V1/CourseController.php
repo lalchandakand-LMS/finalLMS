@@ -59,7 +59,6 @@ class CourseController extends Controller
         abort_unless($course->status === 'published' || $isInstructor, 404);
         $enrolled = $user && $user->isStudent()
             && $course->enrollments()->where('user_id', $user->id)->whereIn('status', ['active', 'completed'])->exists();
-        abort_unless($course->status === 'published' || $isInstructor, 404);
 
         $course->load(['teacher:id,name', 'lessons']);
         $lessons = $course->lessons
