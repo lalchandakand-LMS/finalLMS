@@ -157,6 +157,7 @@ class AdminEbookOrderController extends Controller
 
         $paidOrders = Order::query()
             ->whereIn('status', ['completed', 'refunded'])
+            ->where('total', '>', 0)
             ->whereHas('items', fn ($query) => $query->where('product_type', 'ebook'));
         if (! empty($filters['from'])) {
             $paidOrders->whereDate('created_at', '>=', $filters['from']);
@@ -185,6 +186,7 @@ class AdminEbookOrderController extends Controller
             ->leftJoin('ebook_refunds', 'ebook_refunds.order_id', '=', 'orders.id')
             ->where('order_items.product_type', 'ebook')
             ->whereIn('orders.status', ['completed', 'refunded'])
+            ->where('orders.total', '>', 0)
             ->when(! empty($filters['from']), fn ($query) => $query->whereDate('orders.created_at', '>=', $filters['from']))
             ->when(! empty($filters['to']), fn ($query) => $query->whereDate('orders.created_at', '<=', $filters['to']))
             ->select([
