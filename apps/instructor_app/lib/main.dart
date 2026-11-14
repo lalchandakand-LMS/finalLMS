@@ -356,7 +356,7 @@ class _InstructorHomeState extends State<InstructorHome> {
         ],
       )));
     } catch (e) {
-      if (!mounted) {
+      if (!context.mounted) {
         return;
       }
       if (e is ApiException && (e.statusCode == 401 || e.statusCode == 403)) {
@@ -673,20 +673,19 @@ class _InstructorHomeState extends State<InstructorHome> {
     if (payload == null) {
       return;
     }
+    final messenger = ScaffoldMessenger.of(context);
     try {
       final batchId = payload.remove('batch_id');
       await widget.api.postJson('/instructor/batches/$batchId/live-classes', payload);
-      if (!context.mounted) {
+      if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         const SnackBar(content: Text('Live class scheduled.')),
       );
       await load();
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-      }
+      messenger.showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 
@@ -702,12 +701,13 @@ class _InstructorHomeState extends State<InstructorHome> {
     if (recordingUrl != null) {
       payload['recording_url'] = recordingUrl.trim().isEmpty ? null : recordingUrl.trim();
     }
+    final messenger = ScaffoldMessenger.of(context);
     try {
       await widget.api.patchJson('/instructor/live-classes/${liveClass['id']}', payload);
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         const SnackBar(content: Text('Live class updated.')),
       );
       await load();
@@ -804,9 +804,7 @@ class _InstructorHomeState extends State<InstructorHome> {
         ),
       );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-      }
+      messenger.showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 
@@ -879,9 +877,7 @@ class _InstructorHomeState extends State<InstructorHome> {
       );
       await load();
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-      }
+      messenger.showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 
