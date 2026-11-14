@@ -18,6 +18,7 @@ class QuestionSetAttemptController extends Controller
     {
         $student = auth()->user();
         abort_unless($student?->isStudent(), 403);
+        abort_unless($questionSet->status === 'published', 404);
         $this->assertCourseAccess($course, $questionSet, $student->id);
 
         $questionSet->loadCount('questions');
@@ -307,7 +308,6 @@ class QuestionSetAttemptController extends Controller
     {
         abort_unless($course->status === 'published', 404);
         abort_unless($course->enrollments()->where('user_id', $studentId)->whereIn('status', ['active', 'completed'])->exists(), 403);
-        abort_unless($course->questionSets()->where('question_sets.id', $questionSet->id)
-            ->where('question_sets.status', 'published')->exists(), 404);
+        abort_unless($course->questionSets()->where('question_sets.id', $questionSet->id)->exists(), 404);
     }
 }
