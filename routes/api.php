@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CourseController;
+use App\Http\Controllers\Api\V1\StudentAssignmentController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -16,7 +17,10 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/auth/me', [AuthController::class, 'me']);
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::post('/auth/logout-all', [AuthController::class, 'logoutAll']);
-        Route::get('/my/courses', [CourseController::class, 'myCourses']);\n        Route::get('/my/assignments', [StudentAssignmentController::class, 'index']);\n        Route::get('/assignments/{assignment}', [StudentAssignmentController::class, 'show']);\n        Route::post('/assignments/{assignment}/submit', [StudentAssignmentController::class, 'submit'])->middleware('throttle:10,1');
+        Route::get('/my/courses', [CourseController::class, 'myCourses']);
+        Route::get('/my/assignments', [StudentAssignmentController::class, 'index']);
+        Route::get('/assignments/{assignment}', [StudentAssignmentController::class, 'show']);
+        Route::post('/assignments/{assignment}/submit', [StudentAssignmentController::class, 'submit'])->middleware('throttle:10,1');
         Route::get('/my/wishlist', [CourseController::class, 'wishlist']);
         Route::post('/courses/{course:slug}/wishlist', [CourseController::class, 'addToWishlist']);
         Route::delete('/courses/{course:slug}/wishlist', [CourseController::class, 'removeFromWishlist']);
