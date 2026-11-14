@@ -74,6 +74,7 @@ class CourseMetadataAndCategoriesTest extends TestCase
     public function test_admin_course_form_exposes_category_learning_and_seo_fields(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
+        $this->category();
         $this->actingAs($admin)->get(route('admin.courses.create'))
             ->assertOk()
             ->assertSee('name="category_ids[]"', false)
