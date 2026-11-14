@@ -125,6 +125,53 @@ class QuizContestLotteryTest extends TestCase
         $this->assertDatabaseCount('quiz_contest_winners', 0);
     }
 
+    public function test_admin_can_pause_and_resume_a_contest_before_deadline(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $contest = $this->makeContest(now()->subMinute(), now()->addHour());
+
+        $this->actingAs($admin)->post(route('admin.contests.status', $contest), ['status' => 'paused'])
+            ->assertRedirect(route('admin.contests.index'));
+        $this->assertDatabaseHas('quiz_contests', ['id' => $contest->id, 'status' => 'paused']);
+
+        $this->post(route('admin.contests.status', $contest), ['status' => 'published'])
+            ->assertRedirect(route('admin.contests.index'));
+        $this->assertDatabaseHas('quiz_contests', ['id' => $contest->id, 'status' => 'published']);
+    }
+
+    public function test_admin_can_close_only_after_deadline_and_publish_results_from_closed_state(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $contest = $this->makeContest(now()->subDay(), now()->subMinute());
+        $student = User::factory()->create(['role' => 'student', 'email_verified_at' => now()]);
+        QuizContestEntry::create([
+            'quiz_contest_id' => $contest->id,
+            'user_id' => $student->id,
+            'answers' => [$contest->questions[0]->id => 1],
+            'score' => 1,
+            'submitted_at' => now()->subMinutes(2),
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.contests.status', $contest), ['status' => 'closed'])
+            ->assertRedirect(route('admin.contests.index'));
+        $this->assertDatabaseHas('quiz_contests', ['id' => $contest->id, 'status' => 'closed']);
+
+        $this->post(route('admin.contests.results.publish', $contest))
+            ->assertRedirect(route('admin.contests.index'));
+        $this->assertDatabaseHas('quiz_contests', ['id' => $contest->id, 'status' => 'closed']);
+        $this->assertDatabaseCount('quiz_contest_winners', 1);
+    }
+
+    public function test_admin_cannot_close_a_contest_before_deadline(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $contest = $this->makeContest(now()->subMinute(), now()->addHour());
+
+        $this->actingAs($admin)->post(route('admin.contests.status', $contest), ['status' => 'closed'])
+            ->assertStatus(422);
+        $this->assertDatabaseHas('quiz_contests', ['id' => $contest->id, 'status' => 'published']);
+    }
+
     private function makeContest($startsAt = null, $endsAt = null, int $winnerCount = 1): QuizContest
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
