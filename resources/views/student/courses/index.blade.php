@@ -37,7 +37,12 @@
                     </div>
                     <div class="meta-row" style="justify-content:space-between;">
                         <small class="muted">{{ $enrollment->progress_percent }}% {{ __('complete') }}</small>
-                        @if($enrollment->resume_content_item)
+                        @if($enrollment->status === 'active' && $enrollment->progress_percent >= 100)
+                            <form method="POST" action="{{ route('courses.complete', $course) }}">
+                                @csrf
+                                <button type="submit" class="btn primary">{{ __('Mark as complete') }}</button>
+                            </form>
+                        @elseif($enrollment->resume_content_item)
                             <a class="btn primary" href="{{ route('courses.content.show', [$course, $enrollment->resume_content_item->post]) }}">{{ $enrollment->status === 'completed' ? __('Review last lesson') : __('Resume learning') }}</a>
                         @elseif($enrollment->resume_lesson)
                             <a class="btn primary" href="{{ route('courses.lessons.show', [$course, $enrollment->resume_lesson]) }}">{{ $enrollment->status === 'completed' ? __('Review last lesson') : __('Resume learning') }}</a>
