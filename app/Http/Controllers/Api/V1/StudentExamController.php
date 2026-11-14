@@ -171,6 +171,8 @@ class StudentExamController extends Controller
 
     public function submit(Request $request, ExamAttempt $attempt): JsonResponse
     {
+        abort_unless($request->user()?->isStudent(), 403);
+
         $score = DB::transaction(function () use ($request, $attempt): int {
             $locked = ExamAttempt::query()->lockForUpdate()->findOrFail($attempt->id);
             abort_unless((int) $locked->student_id === (int) $request->user()->id, 403);
