@@ -122,6 +122,63 @@ class QuizContestController extends Controller
         return redirect()->route('admin.contests.index')->with('success', 'Quiz contest published successfully.');
     }
 
+    public function edit(QuizContest $contest): View
+    {
+        abort_if($contest->drawn_at !== null || $contest->starts_at->isPast()
+            || $contest->entries()->exists(), 409, 'A contest can only be edited before it starts and before any entries are submitted.');
+
+        $contest->load('questions');
+
+        return view('admin.contests.edit', compact('contest'));
+    }
+
+    public function update(Request $request, QuizContest $contest): RedirectResponse
+    {
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:180'],
+            'description' => ['nullable', 'string', 'max:5000'],
+            'prize_description' => ['required', 'string', 'max:500'],
+            'winner_count' => ['required', 'integer', 'min:1', 'max:100'],
+            'starts_at' => ['required', 'date', 'after:now'],
+            'ends_at' => ['required', 'date', 'after:starts_at'],
+            'questions' => ['required', 'array', 'min:1', 'max:50'],
+            'questions.*.question' => ['required', 'string', 'max:2000'],
+            'questions.*.options' => ['required', 'array', 'size:4'],
+            'questions.*.options.*' => ['required', 'string', 'max:300'],
+            'questions.*.correct_option' => ['required', 'integer', 'between:0,3'],
+        ]);
+
+        DB::transaction(function () use ($contest, $validated): void {
+            $lockedContest = QuizContest::query()->lockForUpdate()->findOrFail($contest->id);
+            abort_if($lockedContest->drawn_at !== null
+                || $lockedContest->starts_at->isPast()
+                || $lockedContest->entries()->exists(), 409,
+                'A contest can only be edited before it starts and before any entries are submitted.');
+            abort_unless(in_array($lockedContest->status, ['published', 'paused'], true), 409, 'This contest can no longer be edited.');
+
+            $lockedContest->update([
+                'title' => $validated['title'],
+                'description' => $validated['description'] ?? null,
+                'prize_description' => $validated['prize_description'],
+                'winner_count' => $validated['winner_count'],
+                'starts_at' => $validated['starts_at'],
+                'ends_at' => $validated['ends_at'],
+            ]);
+
+            $lockedContest->questions()->delete();
+            foreach ($validated['questions'] as $position => $question) {
+                $lockedContest->questions()->create([
+                    'question' => $question['question'],
+                    'options' => array_values($question['options']),
+                    'correct_option' => $question['correct_option'],
+                    'position' => $position + 1,
+                ]);
+            }
+        });
+
+        return redirect()->route('admin.contests.index')->with('success', 'Contest updated before opening.');
+    }
+
     public function updateStatus(Request $request, QuizContest $contest): RedirectResponse
     {
         $validated = $request->validate([
