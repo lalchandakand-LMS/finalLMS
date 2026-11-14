@@ -197,7 +197,15 @@ class AdminProductController extends Controller
                 return ['archived' => true, 'pdf' => null, 'image' => null];
             }
 
-            $paths = ['archived' => false, 'pdf' => $locked->download_path, 'image' => $locked->image_path];
+            $paths = [
+                'archived' => false,
+                'pdf' => $locked->download_path,
+                'image' => $locked->image_path,
+                'previews' => $locked->previewPages()->pluck('file_path')->all(),
+            ];
+            // Soft-deleting the product does not trigger the database cascade.
+            // Remove preview metadata in the same transaction, then delete files after commit.
+            $locked->previewPages()->delete();
             $locked->categories()->detach();
             $locked->delete();
 
