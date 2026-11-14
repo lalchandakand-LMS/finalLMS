@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CourseController;
+use App\Http\Controllers\Api\V1\InstructorAssignmentController;
 use App\Http\Controllers\Api\V1\StudentAssignmentController;
 use Illuminate\Support\Facades\Route;
 
