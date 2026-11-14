@@ -229,6 +229,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::delete('/courses/{course}/wishlist', [CourseWishlistController::class, 'destroy'])->middleware('throttle:30,1')->name('student.wishlist.destroy');
         Route::post('/courses/{course}/payments/bkash', [BkashPaymentController::class, 'initiate'])->middleware('throttle:10,1')->name('courses.payments.bkash');
         Route::get('/my/courses', [CourseController::class, 'myCourses'])->name('student.courses.index');
+        Route::post('/courses/{course}/content/{post:slug}/complete', [CourseContentController::class, 'complete'])->middleware('throttle:30,1')->name('student.courses.content.complete');
         Route::get('/my/invoices', [InvoiceController::class, 'studentIndex'])->name('student.invoices.index');
         Route::get('/assignments/{assignment}', [AssignmentController::class, 'show'])->name('student.assignments.show');
         Route::get('/my/exams', [ExamController::class, 'studentExams'])->name('student.exams.index');
