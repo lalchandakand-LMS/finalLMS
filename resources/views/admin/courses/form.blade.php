@@ -3,6 +3,7 @@
 @section('title', isset($course) ? __('Edit course') . ' | ' . config('app.name') : __('Create course') . ' | ' . config('app.name'))
 
 @section('content')
+    @php($selectedCategoryIds = collect(old('category_ids', $course?->categories?->pluck('id')->all() ?? []))->map(fn ($id) => (int) $id)->all())
     <div class="page-header">
         <div>
             <span class="badge info">{{ __('Admin') }}</span>
@@ -32,6 +33,74 @@
             <label>
                 {{ __('Description') }}
                 <textarea name="description" rows="6" required>{{ old('description', $course?->description ?? '') }}</textarea>
+            </label>
+
+            <label>
+                {{ __('Short description') }}
+                <textarea name="short_description" rows="2" maxlength="500">{{ old('short_description', $course?->short_description ?? '') }}</textarea>
+            </label>
+
+            <fieldset style="border:1px solid var(--border);border-radius:12px;padding:14px;margin:16px 0;">
+                <legend>{{ __('Course categories') }}</legend>
+                @forelse($categories as $category)
+                    <label style="display:flex;align-items:center;gap:8px;margin:8px 0;">
+                        <input type="checkbox" name="category_ids[]" value="{{ $category->id }}" @checked(in_array($category->id, $selectedCategoryIds, true))>
+                        <span>{{ $category->name }}</span>
+                    </label>
+                @empty
+                    <p class="muted">{{ __('Create a course category first to organize this course.') }}</p>
+                @endforelse
+            </fieldset>
+
+            <label>
+                {{ __('Tags (comma separated)') }}
+                <input type="text" name="tags" maxlength="2000" value="{{ old('tags', implode(', ', $course?->tags ?? [])) }}" placeholder="{{ __('speaking, grammar, IELTS') }}">
+            </label>
+
+            <div class="grid grid-2">
+                <label>
+                    {{ __('Level') }}
+                    <select name="level">
+                        <option value="">{{ __('Select level') }}</option>
+                        @foreach(['Beginner', 'Elementary', 'Intermediate', 'Upper-Intermediate', 'Advanced', 'All levels'] as $level)
+                            <option value="{{ $level }}" @selected(old('level', $course?->level ?? '') === $level)>{{ __($level) }}</option>
+                        @endforeach
+                    </select>
+                </label>
+                <label>
+                    {{ __('Language') }}
+                    <select name="language">
+                        <option value="">{{ __('Select language') }}</option>
+                        @foreach(['Bangla', 'English', 'Bangla & English'] as $language)
+                            <option value="{{ $language }}" @selected(old('language', $course?->language ?? '') === $language)>{{ __($language) }}</option>
+                        @endforeach
+                    </select>
+                </label>
+            </div>
+
+            <label>
+                {{ __('Duration (minutes)') }}
+                <input type="number" name="duration_minutes" min="1" max="100000" value="{{ old('duration_minutes', $course?->duration_minutes ?? '') }}">
+            </label>
+
+            <label>
+                {{ __('Learning outcomes') }}
+                <textarea name="learning_outcomes" rows="4" maxlength="10000">{{ old('learning_outcomes', $course?->learning_outcomes ?? '') }}</textarea>
+            </label>
+
+            <label>
+                {{ __('Requirements / prerequisites') }}
+                <textarea name="requirements" rows="3" maxlength="10000">{{ old('requirements', $course?->requirements ?? '') }}</textarea>
+            </label>
+
+            <label>
+                {{ __('SEO title') }}
+                <input type="text" name="seo_title" maxlength="255" value="{{ old('seo_title', $course?->seo_title ?? '') }}">
+            </label>
+
+            <label>
+                {{ __('SEO description') }}
+                <textarea name="seo_description" rows="2" maxlength="320">{{ old('seo_description', $course?->seo_description ?? '') }}</textarea>
             </label>
 
             <label>
