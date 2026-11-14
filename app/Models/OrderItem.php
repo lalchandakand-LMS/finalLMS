@@ -10,11 +10,11 @@ class OrderItem extends Model
 {
     protected $fillable = [
         'order_id', 'product_id', 'product_type', 'product_name', 'quantity',
-        'regular_price', 'line_total', 'product_snapshot',
+        'regular_price', 'discount_total', 'line_total', 'product_snapshot',
     ];
 
     protected $casts = [
-        'regular_price' => 'decimal:2', 'line_total' => 'decimal:2',
+        'regular_price' => 'decimal:2', 'discount_total' => 'decimal:2', 'line_total' => 'decimal:2',
         'product_snapshot' => 'array',
     ];
 
