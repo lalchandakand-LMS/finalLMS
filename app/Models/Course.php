@@ -76,6 +76,14 @@ class Course extends Model
         return $this->hasMany(CourseCurriculumItem::class)->orderBy('position');
     }
 
+    public function questionSets(): BelongsToMany
+    {
+        return $this->belongsToMany(QuestionSet::class, 'course_question_set')
+            ->withPivot(['section_title', 'position', 'max_attempts', 'randomize_questions', 'available_from'])
+            ->withTimestamps()
+            ->orderByPivot('position');
+    }
+
     public function comments(): MorphMany
     {
         return $this->morphMany(Comment::class, 'commentable')->where('status', 'approved');
