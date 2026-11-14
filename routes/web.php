@@ -138,7 +138,10 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::post('/{link}/revoke', [GuardianController::class, 'revoke'])->name('revoke');
     });
     Route::get('/live-classes', [LiveClassController::class, 'index'])->name('live-classes.index');
-    Route::get('/invoice-payments/{payment}/receipt', [InvoiceController::class, 'receipt'])
+    Route::get('/admin/finance/invoice-payments/{payment}/receipt', [InvoiceController::class, 'receipt'])
+        ->middleware('role:admin,accountant')
+        ->name('admin.finance.invoice-payments.receipt');
+    Route::get('/invoice-payments/{payment}/receipt', fn ($payment) => redirect()->route('admin.finance.invoice-payments.receipt', $payment, 301))
         ->middleware('role:admin,accountant')
         ->name('invoice-payments.receipt');
 
@@ -167,7 +170,6 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
             Route::post('/expenses', [ExpenseController::class, 'store'])->name('expenses.store');
             Route::put('/expenses/{expense}', [ExpenseController::class, 'update'])->name('expenses.update');
             Route::delete('/expenses/{expense}', [ExpenseController::class, 'destroy'])->name('expenses.destroy');
-            Route::get('/invoice-payments/{payment}/receipt', [InvoiceController::class, 'receipt'])->name('invoice-payments.receipt');
         });
 
     // Legacy bookmarks now land inside the unified Admin Panel.
