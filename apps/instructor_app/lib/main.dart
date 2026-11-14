@@ -253,7 +253,9 @@ class _InstructorHomeState extends State<InstructorHome> {
                             await widget.api.postJson('/instructor/courses/$slug/lessons', payload);
                             await refreshLessons(setSheetState);
                           } catch (e) {
-                            if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                            }
                           }
                         },
                         icon: const Icon(Icons.add),
@@ -285,7 +287,9 @@ class _InstructorHomeState extends State<InstructorHome> {
                                 await widget.api.putJson('/instructor/courses/$slug/lessons/$lessonId', payload);
                                 await refreshLessons(setSheetState);
                               } catch (e) {
-                                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                                if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                            }
                               }
                             } else {
                               if (!sheetContext.mounted) {
@@ -307,7 +311,9 @@ class _InstructorHomeState extends State<InstructorHome> {
                                   await widget.api.deleteJson('/instructor/courses/$slug/lessons/$lessonId');
                                   await refreshLessons(setSheetState);
                                 } catch (e) {
-                                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                                  if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                            }
                                 }
                               }
                             }
