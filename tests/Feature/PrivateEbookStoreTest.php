@@ -525,7 +525,7 @@ class PrivateEbookStoreTest extends TestCase
         ])->assertUnprocessable();
 
         $this->assertDatabaseCount('ebook_preview_pages', 10);
-        $this->assertCount(11, Storage::disk('local')->allFiles('private/ebook-previews/'.$product->id));
+        $this->assertCount(10, Storage::disk('local')->allFiles('private/ebook-previews/'.$product->id));
     }
 
     public function test_admin_payment_proof_is_served_without_public_cache(): void
