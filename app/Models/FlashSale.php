@@ -34,6 +34,16 @@ class FlashSale extends Model
         return true;
     }
 
+    public function targetsCourse(int $courseId): bool
+    {
+        return $this->courses()->whereKey($courseId)->exists()
+            || $this->categories()->whereHas('posts', fn ($posts) => $posts->published()
+                ->whereHas('courses', fn ($courses) => $courses
+                    ->where('courses.id', $courseId)
+                    ->where('courses.status', 'published')))
+                ->exists();
+    }
+
     public function discountedPrice(float $basePrice): float
     {
         $price = $this->discount_type === 'percentage'
