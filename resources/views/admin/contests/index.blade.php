@@ -7,6 +7,11 @@
     <div><span class="badge info">Admin control</span><h1 style="margin:12px 0 0;">Quiz & Competition Management</h1><p class="muted">Create quizzes, manage participation and publish skill-based results transparently.</p></div>
 </div>
 
+<div class="panel" role="note" style="margin-bottom:24px;border-left:4px solid var(--warning);">
+    <strong>Compliance safeguard</strong>
+    <p class="muted" style="margin-bottom:0;">Only free-entry, skill-based competitions are enabled. Random winner selection and paid-entry collection are disabled until qualified Bangladesh legal advice and written confirmation of the specific contest model and payment-provider terms are obtained.</p>
+</div>
+
 <div class="panel" style="margin-bottom:24px;">
     <h2 style="margin-top:0;">Create a new quiz contest</h2>
     <p class="muted">Participation is free. Each account can submit once. Add at least one multiple-choice question.</p>
@@ -41,7 +46,7 @@
 <div class="panel">
     <h2 style="margin-top:0;">All contests</h2>
     <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">
-        <thead><tr style="text-align:left;border-bottom:1px solid var(--border);"><th style="padding:10px;">Contest</th><th>Questions</th><th>Participants</th><th>Prize</th><th>Status</th><th>Lottery</th></tr></thead>
+        <thead><tr style="text-align:left;border-bottom:1px solid var(--border);"><th style="padding:10px;">Contest</th><th>Questions</th><th>Participants</th><th>Prize</th><th>Status</th><th>Results</th></tr></thead>
         <tbody>
         @forelse($contests as $contest)
             <tr style="border-bottom:1px solid var(--border);">
