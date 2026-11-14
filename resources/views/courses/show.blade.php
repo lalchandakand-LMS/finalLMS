@@ -291,4 +291,33 @@
     @empty<p class="muted">{{ __('No approved comments yet.') }}</p>@endforelse
     {{ $comments->links() }}
 </section>
+    @if(auth()->check() && auth()->user()->isStudent() && $isEnrolled && $course->questionSets->isNotEmpty())
+        <section class="panel" id="course-quizzes" style="margin-top:20px;">
+            <h2 style="margin-top:0;">{{ __('Course quizzes') }}</h2>
+            <p class="muted">{{ __('Practice with quizzes attached to this course. Written answers may need teacher review.') }}</p>
+            <div class="grid grid-2">
+                @foreach($course->questionSets as $questionSet)
+                    @php($activeAttempt = $questionSet->student_active_attempt)
+                    <article class="course-item">
+                        <h3 style="margin-top:0;">{{ $questionSet->title }}</h3>
+                        @if($questionSet->description)<p>{{ $questionSet->description }}</p>@endif
+                        <p class="muted">{{ number_format($questionSet->questions_count) }} {{ __('questions') }} · {{ __('Attempted:') }} {{ $questionSet->student_attempt_count }}</p>
+                        @if($questionSet->pivot->available_from && now()->lt($questionSet->pivot->available_from))
+                            <span class="badge warning">{{ __('Available from') }} {{ \Illuminate\Support\Carbon::parse($questionSet->pivot->available_from)->format('M j, Y g:i A') }}</span>
+                        @elseif($activeAttempt)
+                            <a class="btn primary" href="{{ route('student.question-sets.show', [$course, $questionSet, $activeAttempt]) }}">{{ __('Continue quiz') }}</a>
+                        @elseif($questionSet->pivot->max_attempts !== null && $questionSet->student_attempt_count >= $questionSet->pivot->max_attempts)
+                            <span class="badge info">{{ __('No attempts remaining') }}</span>
+                        @else
+                            <form method="POST" action="{{ route('student.question-sets.start', [$course, $questionSet]) }}">
+                                @csrf
+                                <button type="submit" class="btn primary">{{ __('Start quiz') }}</button>
+                            </form>
+                        @endif
+                    </article>
+                @endforeach
+            </div>
+        </section>
+    @endif
+
 @endsection
