@@ -161,7 +161,7 @@ class BranchScopedStaffTest extends TestCase
             $branch = Branch::create(['name' => 'Manager Branch', 'slug' => 'manager-branch']);
             $teacher = User::factory()->create(['role' => 'teacher', 'branch_id' => $branch->id]);
             $course = Course::factory()->create(['teacher_id' => $teacher->id, 'status' => 'published']);
-            $manager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $branch->id]);
+            $manager = User::factory()->create(['role' => 'branch_manager', 'admin_permissions' => ['branch.batches', 'branch.students'], 'branch_id' => $branch->id]);
             $batch = Batch::create([
                 'branch_id' => $branch->id,
                 'course_id' => $course->id,
