@@ -83,7 +83,7 @@
                             <td style="padding:10px;border-top:1px solid var(--border);">{{ ucfirst($payment->method) }}<br><small class="muted">{{ $payment->reference ?: '—' }}</small></td>
                             <td style="padding:10px;border-top:1px solid var(--border);">{{ $payment->receiver?->name ?? __('Online gateway') }}</td>
                             <td style="padding:10px;border-top:1px solid var(--border);text-align:right;">৳{{ number_format((float) $payment->amount, 2) }}</td>
-                            <td class="no-print" style="padding:10px;border-top:1px solid var(--border);"><a href="{{ route($accountant ? 'admin.finance.invoice-payments.receipt' : 'invoice-payments.receipt', $payment) }}" target="_blank" rel="noopener">{{ __('Print') }}</a></td>
+                            <td class="no-print" style="padding:10px;border-top:1px solid var(--border);"><a href="{{ route('admin.finance.invoice-payments.receipt', $payment) }}" target="_blank" rel="noopener">{{ __('Print') }}</a></td>
                         </tr>
                     @endforeach
                     </tbody>
