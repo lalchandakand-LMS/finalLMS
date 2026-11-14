@@ -7,6 +7,20 @@
         <h1>{{ $product->name }}</h1>
         <p>{{ $product->short_description }}</p>
         <div>{!! nl2br(e($product->description)) !!}</div>
+        @if($product->previewPages->isNotEmpty())
+            <section aria-labelledby="ebook-preview-heading" style="margin:22px 0">
+                <h2 id="ebook-preview-heading">{{ __('Preview sample pages') }}</h2>
+                <p class="muted">{{ __('View sample pages before purchasing. Full PDF access remains protected by your order entitlement.') }}</p>
+                <div class="grid grid-3">
+                    @foreach($product->previewPages as $previewPage)
+                        <a href="{{ route('ebooks.preview', [$product->slug, $previewPage]) }}" target="_blank" rel="noopener noreferrer" class="course-item" style="display:block;text-decoration:none">
+                            <img src="{{ route('ebooks.preview', [$product->slug, $previewPage]) }}" alt="{{ $previewPage->alt_text ?: __('Sample page :number', ['number' => $previewPage->page_number]) }}" loading="lazy" style="width:100%;max-height:280px;object-fit:contain;border-radius:8px">
+                            <span class="muted">{{ __('Sample page :number', ['number' => $previewPage->page_number]) }}</span>
+                        </a>
+                    @endforeach
+                </div>
+            </section>
+        @endif
         <h2>৳{{ number_format((float)$product->currentPrice(),2) }} <small>BDT</small></h2>
         @auth
             @if((float)$product->currentPrice() > 0)
