@@ -468,7 +468,7 @@ class PrivateEbookStoreTest extends TestCase
 
         $this->get(route('ebooks.preview', [$product->slug, $page]))
             ->assertOk()
-            ->assertHeader('Cache-Control', 'private, no-store, max-age=0')
+            ->assertHeader('Cache-Control', 'max-age=0, no-store, private')
             ->assertHeader('X-Content-Type-Options', 'nosniff')
             ->assertHeader('Referrer-Policy', 'no-referrer');
 
