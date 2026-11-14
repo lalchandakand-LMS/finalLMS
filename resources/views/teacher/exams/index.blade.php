@@ -29,7 +29,7 @@
                 @forelse($bankQuestions as $bankQuestion)
                     <label style="display:block;"><input type="checkbox" name="question_bank_ids[]" value="{{ $bankQuestion->id }}"> {{ $bankQuestion->subject ?: 'General' }} — {{ Str::limit($bankQuestion->question, 120) }} ({{ $bankQuestion->marks }} marks)</label>
                 @empty
-                    <p class="muted">Question Bank is empty. <a href="{{ route('teacher.batches.question-bank.index', $batch) }}">Add questions</a>.</p>
+                    <p class="muted">Question Bank is empty. <a href="{{ $isAdmin ? route('admin.batches.question-bank.index', $batch) : route('teacher.batches.question-bank.index', $batch) }}">Add questions</a>.</p>
                 @endforelse
             </div>
             <div id="manual-question-area">
@@ -81,12 +81,29 @@
     const syncQuestionMode = () => {
         const useBank = bankToggle.checked;
         bankArea.hidden = !useBank;
-        manualArea.hidden = false;
-        manualArea.querySelectorAll('input, textarea, select').forEach(field => field.disabled = false);
-        button.hidden = false;
         bankArea.querySelectorAll('input').forEach(field => field.disabled = !useBank);
+        manualArea.hidden = false;
+
+        manualArea.querySelectorAll('.exam-question').forEach(card => {
+            const questionField = card.querySelector('textarea[name$="[question]"]');
+            const optionFields = [...card.querySelectorAll('input[name*="[options]"]')];
+            const hasManualContent = Boolean(
+                questionField?.value.trim() || optionFields.some(field => field.value.trim())
+            );
+
+            card.querySelectorAll('input, textarea, select').forEach(field => {
+                const isEmptyOptionalCard = useBank && !hasManualContent;
+                field.disabled = isEmptyOptionalCard;
+                if (field.matches('textarea[name$="[question]"], input[name*="[options]"]')) {
+                    field.required = !useBank || hasManualContent;
+                }
+            });
+        });
+
+        button.hidden = false;
     };
     bankToggle.addEventListener('change', syncQuestionMode);
+    manualArea.addEventListener('input', syncQuestionMode);
     syncQuestionMode();
     if (!container || !button) return;
     button.addEventListener('click', () => {
@@ -108,6 +125,7 @@
             </div>
             <button type="button" class="btn secondary remove-question">Remove question</button>`;
         container.appendChild(card);
+        syncQuestionMode();
     });
     container.addEventListener('click', event => {
         if (event.target.classList.contains('remove-question')) event.target.closest('.exam-question').remove();
