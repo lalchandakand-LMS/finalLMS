@@ -38,6 +38,19 @@ class QuestionSetAutosaveTest extends TestCase
             'answer_text' => 'My saved written response.',
         ]);
 
+        $this->postJson(route('student.question-sets.save', [$course, $set, $attempt]), [
+            'answers' => [$written->id => ['answer_text' => 'Updated draft response.']],
+        ])->assertOk()->assertJsonPath('saved', true);
+        $this->assertSame(1, $mcq->fresh()->selected_option);
+        $this->assertSame('Updated draft response.', $written->fresh()->answer_text);
+
+        $this->postJson(route('student.question-sets.save', [$course, $set, $attempt]), [
+            'answers' => [
+                $mcq->id => ['selected_option' => 1],
+                $written->id => ['answer_text' => 'My saved written response.'],
+            ],
+        ])->assertOk();
+
         $this->get(route('student.question-sets.show', [$course, $set, $attempt]))
             ->assertOk()
             ->assertSee('My saved written response.')
