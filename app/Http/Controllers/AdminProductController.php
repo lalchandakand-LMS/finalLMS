@@ -7,6 +7,7 @@ use App\Models\ProductCategory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -90,27 +91,40 @@ class AdminProductController extends Controller
 
         $newPdf = $request->file('download_file')?->store('private/ebooks', 'local');
         $newImage = $request->file('image')?->store('ebooks', 'public');
-        $oldPdf = $product->download_path;
-        $oldImage = $product->image_path;
+        $oldPaths = ['pdf' => null, 'image' => null];
 
-        $product->update([
-            'name' => $data['name'],
-            'slug' => $this->uniqueSlug($data['name'], $product->id),
-            'short_description' => $data['short_description'] ?? null,
-            'description' => $data['description'] ?? null,
-            'regular_price' => $data['regular_price'],
-            'sale_price' => $data['sale_price'] ?? null,
-            'download_limit' => $data['download_limit'] ?? null,
-            'download_expires_at' => $data['download_expires_at'] ?? null,
-            'download_path' => $newPdf ?: $oldPdf,
-            'image_path' => $newImage ?: $oldImage,
-            'status' => $data['status'],
-            'published_at' => $data['status'] === 'published' ? ($product->published_at ?? now()) : null,
-        ]);
-        $product->categories()->sync($data['category_ids'] ?? []);
+        try {
+            DB::transaction(function () use ($product, $data, $newPdf, $newImage, &$oldPaths): void {
+                $locked = Product::query()->lockForUpdate()->findOrFail($product->id);
+                abort_unless($locked->type === 'ebook', 404);
+                abort_if($newPdf && $locked->orderItems()->exists(), 422, 'The PDF cannot be replaced after an order exists.');
 
-        if ($newPdf && $oldPdf) Storage::disk('local')->delete($oldPdf);
-        if ($newImage && $oldImage) Storage::disk('public')->delete($oldImage);
+                $oldPaths['pdf'] = $locked->download_path;
+                $oldPaths['image'] = $locked->image_path;
+                $locked->update([
+                    'name' => $data['name'],
+                    'slug' => $this->uniqueSlug($data['name'], $locked->id),
+                    'short_description' => $data['short_description'] ?? null,
+                    'description' => $data['description'] ?? null,
+                    'regular_price' => $data['regular_price'],
+                    'sale_price' => $data['sale_price'] ?? null,
+                    'download_limit' => $data['download_limit'] ?? null,
+                    'download_expires_at' => $data['download_expires_at'] ?? null,
+                    'download_path' => $newPdf ?: $locked->download_path,
+                    'image_path' => $newImage ?: $locked->image_path,
+                    'status' => $data['status'],
+                    'published_at' => $data['status'] === 'published' ? ($locked->published_at ?? now()) : null,
+                ]);
+                $locked->categories()->sync($data['category_ids'] ?? []);
+            });
+        } catch (\Throwable $exception) {
+            if ($newPdf) Storage::disk('local')->delete($newPdf);
+            if ($newImage) Storage::disk('public')->delete($newImage);
+            throw $exception;
+        }
+
+        if ($newPdf && $oldPaths['pdf']) Storage::disk('local')->delete($oldPaths['pdf']);
+        if ($newImage && $oldPaths['image']) Storage::disk('public')->delete($oldPaths['image']);
 
         return back()->with('success', 'eBook updated.');
     }
@@ -118,14 +132,26 @@ class AdminProductController extends Controller
     public function destroy(Product $product): RedirectResponse
     {
         abort_unless($product->type === 'ebook', 404);
-        if ($product->orderItems()->exists()) {
-            $product->update(['status' => 'archived', 'published_at' => null]);
+
+        $result = DB::transaction(function () use ($product): array {
+            $locked = Product::query()->lockForUpdate()->findOrFail($product->id);
+            if ($locked->orderItems()->exists()) {
+                $locked->update(['status' => 'archived', 'published_at' => null]);
+                return ['archived' => true, 'pdf' => null, 'image' => null];
+            }
+
+            $paths = ['archived' => false, 'pdf' => $locked->download_path, 'image' => $locked->image_path];
+            $locked->categories()->detach();
+            $locked->delete();
+
+            return $paths;
+        });
+
+        if ($result['archived']) {
             return back()->with('success', 'eBook archived because it has purchase history.');
         }
-
-        if ($product->download_path) Storage::disk('local')->delete($product->download_path);
-        if ($product->image_path) Storage::disk('public')->delete($product->image_path);
-        $product->delete();
+        if ($result['pdf']) Storage::disk('local')->delete($result['pdf']);
+        if ($result['image']) Storage::disk('public')->delete($result['image']);
 
         return back()->with('success', 'eBook deleted.');
     }
