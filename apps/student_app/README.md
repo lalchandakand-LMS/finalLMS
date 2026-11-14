@@ -40,6 +40,6 @@ Correct answer indexes are never included in the question payload. The API check
 
 ## Assignment attachments
 
-- Uses `file_picker ^11.0.3` with in-memory bytes so the same picker works on Android, iOS and web.
+- Uses `file_picker ^12.0.0 and flutter_secure_storage ^10.3.4` with in-memory bytes so the same picker works on Android, iOS and web.
 - The app accepts PDF, DOC, DOCX, JPG and PNG files up to 10 MB; the Laravel API independently validates MIME type and size.
 - Uploads use authenticated multipart requests and private server storage.
