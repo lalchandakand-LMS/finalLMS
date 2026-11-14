@@ -242,6 +242,64 @@ class QuizContestLotteryTest extends TestCase
         $this->get(route('admin.contests.edit', $futureContest))->assertStatus(409);
     }
 
+    public function test_student_can_review_submitted_answers_without_seeing_answer_key_before_deadline(): void
+    {
+        $student = User::factory()->create(['role' => 'student', 'email_verified_at' => now()]);
+        $contest = $this->makeContest(now()->subMinute(), now()->addHour());
+
+        $this->actingAs($student)->post(route('contests.submit', $contest), [
+            'answers' => [$contest->questions[0]->id => 0],
+        ])->assertRedirect(route('contests.show', $contest));
+
+        $this->get(route('contests.show', $contest))
+            ->assertOk()
+            ->assertSee('Your submitted choices are shown below.')
+            ->assertSee('Your answer:')
+            ->assertSee('Wrong')
+            ->assertDontSee('Correct answer:')
+            ->assertDontSee('Right');
+    }
+
+    public function test_student_sees_score_and_correct_answer_after_contest_deadline(): void
+    {
+        $student = User::factory()->create(['role' => 'student', 'email_verified_at' => now()]);
+        $contest = $this->makeContest(now()->subMinute(), now()->addHour());
+
+        $this->actingAs($student)->post(route('contests.submit', $contest), [
+            'answers' => [$contest->questions[0]->id => 0],
+        ])->assertRedirect();
+
+        $contest->update(['ends_at' => now()->subMinute()]);
+        $this->get(route('contests.show', $contest->fresh()))
+            ->assertOk()
+            ->assertSee('Your score:')
+            ->assertSee('Correct answer:')
+            ->assertSee('Right');
+    }
+
+    public function test_admin_can_review_submissions_and_student_cannot_access_admin_review(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $student = User::factory()->create(['role' => 'student', 'email_verified_at' => now()]);
+        $contest = $this->makeContest();
+        QuizContestEntry::create([
+            'quiz_contest_id' => $contest->id,
+            'user_id' => $student->id,
+            'answers' => [$contest->questions[0]->id => 0],
+            'score' => 0,
+            'submitted_at' => now(),
+        ]);
+
+        $this->actingAs($admin)->get(route('admin.contests.entries', $contest))
+            ->assertOk()
+            ->assertSee('Review submissions')
+            ->assertSee($student->name)
+            ->assertSee('Wrong')
+            ->assertSee('Right');
+
+        $this->actingAs($student)->get(route('admin.contests.entries', $contest))->assertForbidden();
+    }
+
     private function makeContest($startsAt = null, $endsAt = null, int $winnerCount = 1): QuizContest
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
