@@ -217,6 +217,92 @@ class QuestionSetAttemptController extends Controller
         return view('student.question-sets.result', compact('course', 'questionSet', 'attempt'));
     }
 
+    public function reviewIndex(Course $course, QuestionSet $questionSet): View
+    {
+        $reviewer = auth()->user();
+        abort_unless($reviewer && ($reviewer->isAdmin() || ($reviewer->isTeacher() && $course->teacher_id === $reviewer->id)), 403);
+        abort_unless($course->questionSets()->where('question_sets.id', $questionSet->id)->exists(), 404);
+
+        $attempts = QuestionSetAttempt::query()
+            ->where('course_id', $course->id)
+            ->where('question_set_id', $questionSet->id)
+            ->where('status', 'pending_review')
+            ->with('student')
+            ->withCount('questions')
+            ->latest('submitted_at')
+            ->paginate(20);
+
+        return view('teacher.question-sets.review-index', compact('course', 'questionSet', 'attempts'));
+    }
+
+    public function review(Course $course, QuestionSet $questionSet, QuestionSetAttempt $attempt): View
+    {
+        $reviewer = auth()->user();
+        abort_unless($reviewer && ($reviewer->isAdmin() || ($reviewer->isTeacher() && $course->teacher_id === $reviewer->id)), 403);
+        abort_unless($attempt->course_id === $course->id && $attempt->question_set_id === $questionSet->id, 404);
+        abort_unless($course->questionSets()->where('question_sets.id', $questionSet->id)->exists(), 404);
+        abort_unless($attempt->status === 'pending_review', 404);
+        $attempt->load(['student', 'questions']);
+
+        return view('teacher.question-sets.review', compact('course', 'questionSet', 'attempt'));
+    }
+
+    public function grade(Request $request, Course $course, QuestionSet $questionSet, QuestionSetAttempt $attempt): RedirectResponse
+    {
+        $reviewer = $request->user();
+        abort_unless($reviewer && ($reviewer->isAdmin() || ($reviewer->isTeacher() && $course->teacher_id === $reviewer->id)), 403);
+        abort_unless($attempt->course_id === $course->id && $attempt->question_set_id === $questionSet->id, 404);
+        abort_unless($course->questionSets()->where('question_sets.id', $questionSet->id)->exists(), 404);
+
+        DB::transaction(function () use ($request, $attempt, $reviewer) {
+            $locked = QuestionSetAttempt::query()->whereKey($attempt->id)->lockForUpdate()->firstOrFail();
+            if ($locked->status !== 'pending_review') {
+                throw ValidationException::withMessages(['attempt' => __('This attempt is no longer awaiting review.')]);
+            }
+
+            $questions = $locked->questions()->where('type', 'short_answer')->get();
+            $scores = $request->validate([
+                'scores' => ['required', 'array'],
+                'scores.*' => ['required', 'integer', 'min:0'],
+                'feedback' => ['nullable', 'string', 'max:5000'],
+                'question_feedback' => ['nullable', 'array'],
+                'question_feedback.*' => ['nullable', 'string', 'max:2000'],
+            ]);
+            $expectedIds = $questions->pluck('id')->map(fn ($id) => (string) $id)->all();
+            if (array_diff($expectedIds, array_map('strval', array_keys($scores['scores'])))
+                || array_diff(array_map('strval', array_keys($scores['scores'])), $expectedIds)) {
+                throw ValidationException::withMessages(['scores' => __('Grade every short-answer question in this attempt.')]);
+            }
+
+            $manualScore = 0;
+            foreach ($questions as $question) {
+                $score = (int) $scores['scores'][$question->id];
+                if ($score > $question->marks) {
+                    throw ValidationException::withMessages(["scores.{$question->id}" => __('Marks cannot exceed the question maximum.')]);
+                }
+                $question->update([
+                    'marks_awarded' => $score,
+                    'graded_by' => $reviewer->id,
+                    'graded_at' => now(),
+                    'manual_feedback' => $scores['question_feedback'][$question->id] ?? null,
+                ]);
+                $manualScore += $score;
+            }
+
+            $locked->update([
+                'status' => 'graded',
+                'manual_score' => $manualScore,
+                'final_score' => $locked->auto_score + $manualScore,
+                'graded_by' => $reviewer->id,
+                'graded_at' => now(),
+                'teacher_feedback' => $scores['feedback'] ?? null,
+            ]);
+        });
+
+        return redirect()->route('question-sets.review.index', [$course, $questionSet])
+            ->with('success', __('Attempt graded successfully.'));
+    }
+
     private function assertCourseAccess(Course $course, QuestionSet $questionSet, int $studentId): void
     {
         abort_unless($course->status === 'published', 404);
