@@ -254,7 +254,7 @@ class _InstructorHomeState extends State<InstructorHome> {
                             await refreshLessons(setSheetState);
                           } catch (e) {
                             if (context.mounted) {
-                              ScaffoldMessenger.of(this.context).showSnackBar(SnackBar(content: Text(e.toString())));
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
                             }
                           }
                         },
@@ -674,7 +674,7 @@ class _InstructorHomeState extends State<InstructorHome> {
     try {
       final batchId = payload.remove('batch_id');
       await widget.api.postJson('/instructor/batches/$batchId/live-classes', payload);
-      if (!mounted) {
+      if (!context.mounted) {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
