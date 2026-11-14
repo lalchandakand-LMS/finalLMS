@@ -96,10 +96,10 @@ This file records decisions that should not be casually reversed by a developer 
 - Flutter client UI/secure storage/polling implementation and real SMS delivery on staging remain separate acceptance checks.
 ## D-015 — eBook store implementation tranche (2026-11-14)
 
-- The approved eBook/PDF store scope in D-007 is being implemented in a focused Laravel PR, not by merging the stale broad commerce PR.
+- The approved eBook/PDF store scope in D-007 was implemented in focused PR #124 and merged to `main` as `65c5e20b79bf9709ebd4a713552d9f531258cfe0`, without merging the stale broad commerce PR.
 - Paid eBook access must remain private and must be granted only after an Admin independently verifies the manual payment. Free eBooks may be fulfilled immediately.
 - A student must not be able to repeatedly check out an already-active entitlement to reset its download limit. Expired or exhausted entitlements may be repurchased.
 - A purchased PDF cannot be replaced or deleted while order history exists; archive the product instead. Store PDF files and payment proofs on the private local disk and serve them only through authorization-checked controllers.
 - PR #124 is an implementation tranche, not a complete commerce system. It does not activate bKash/Nagad/SSLCommerz, automate payment verification, provide refunds/revocation UI, or satisfy staging/production acceptance.
-- Merge only after exact latest-head Laravel CI, CodeQL, full diff review and migration compatibility checks pass. Production rollout remains a separate release gate.
+- Merge completed after exact-head Laravel CI, cPanel package verification, CodeQL and full diff review passed. Production rollout remains a separate release gate; isolated staging acceptance is still required.
 
