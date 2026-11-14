@@ -30,6 +30,11 @@ class QuestionSet extends Model
             ->orderByPivot('position');
     }
 
+    public function attempts(): HasMany
+    {
+        return $this->hasMany(QuestionSetAttempt::class);
+    }
+
     public function scopePublished(Builder $query): Builder
     {
         return $query->where('status', 'published');
