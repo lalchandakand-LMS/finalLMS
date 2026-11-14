@@ -492,6 +492,9 @@ class _InstructorHomeState extends State<InstructorHome> {
     if (url == null) {
       return;
     }
+    if (!mounted) {
+      return;
+    }
     if (url.isNotEmpty && !url.startsWith('https://')) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Recording URL must use HTTPS.')),
