@@ -1115,5 +1115,6 @@
     "S3-compatible endpoint must use HTTPS": "S3-compatible endpoint অবশ্যই credentials-বিহীন বৈধ HTTPS URL হতে হবে",
     "S3 configuration ready; live bucket verification still required": "S3 কনফিগারেশন প্রস্তুত; live bucket যাচাই এখনও বাকি",
     "S3 credentials present; set FILESYSTEM_DISK=s3 to activate": "S3 ক্রেডেনশিয়াল আছে; চালু করতে FILESYSTEM_DISK=s3 সেট করুন",
-    "FILESYSTEM_DISK=s3, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION and AWS_BUCKET; optional HTTPS AWS_ENDPOINT": "FILESYSTEM_DISK=s3, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION ও AWS_BUCKET; ঐচ্ছিক HTTPS AWS_ENDPOINT"
+    "FILESYSTEM_DISK=s3, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION and AWS_BUCKET; optional HTTPS AWS_ENDPOINT": "FILESYSTEM_DISK=s3, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION ও AWS_BUCKET; ঐচ্ছিক HTTPS AWS_ENDPOINT",
+    "S3-compatible endpoint must be a valid HTTPS URL without embedded credentials": "S3-compatible endpoint অবশ্যই বৈধ HTTPS URL হতে হবে এবং URL-এর মধ্যে কোনো username বা password থাকা যাবে না"
 }
