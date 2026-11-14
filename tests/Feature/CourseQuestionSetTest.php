@@ -187,6 +187,8 @@ class CourseQuestionSetTest extends TestCase
             'question_set_section_titles' => [$set->id => 'Module 1'],
             'question_set_positions' => [$set->id => 20],
             'question_set_max_attempts' => [$set->id => 3],
+            'question_set_time_limits' => [$set->id => 30],
+            'question_set_questions_per_attempt' => [$set->id => 10],
             'question_set_randomize' => [$set->id => 0],
             'question_set_available_from' => [$set->id => now()->addDay()->format('Y-m-d H:i:s')],
         ])->assertRedirect(route('admin.course-builder.edit', $course));
@@ -197,6 +199,8 @@ class CourseQuestionSetTest extends TestCase
             'section_title' => 'Module 1',
             'position' => 20,
             'max_attempts' => 3,
+            'time_limit_minutes' => 30,
+            'questions_per_attempt' => 10,
             'randomize_questions' => 0,
         ]);
         $this->actingAs($admin)->get(route('admin.course-builder.edit', $course))
