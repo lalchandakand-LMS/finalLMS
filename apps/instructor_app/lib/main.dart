@@ -440,7 +440,9 @@ class _InstructorHomeState extends State<InstructorHome> {
     String? recordingUrl,
   }) async {
     final payload = <String, dynamic>{};
-    if (status != null) {\n      payload['status'] = status;\n    }
+    if (status != null) {
+      payload['status'] = status;
+    }
     if (recordingUrl != null) {
       payload['recording_url'] = recordingUrl.trim().isEmpty ? null : recordingUrl.trim();
     }
@@ -454,7 +456,9 @@ class _InstructorHomeState extends State<InstructorHome> {
       );
       await load();
     } catch (e) {
-      if (mounted) {\n        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));\n      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
     }
   }
 
