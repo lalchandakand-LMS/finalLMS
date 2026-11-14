@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Course;
+use App\Models\CourseContentPost;
 use App\Models\QuestionBankQuestion;
 use App\Models\QuestionSet;
 use App\Models\User;
@@ -22,6 +23,71 @@ class CourseQuestionSetTest extends TestCase
         $this->get(route('admin.question-sets.create'))
             ->assertOk()->assertSee('Reuse Question Bank MCQs')
             ->assertSee('Short answer');
+    }
+
+    public function test_course_builder_preserves_existing_draft_posts_but_rejects_new_draft_attachments(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $course = Course::factory()->create(['teacher_id' => $teacher->id, 'status' => 'published']);
+        $attachedDraft = CourseContentPost::create([
+            'author_id' => $admin->id,
+            'title' => 'Existing draft lesson',
+            'slug' => 'existing-draft-lesson',
+            'long_description' => 'Draft content already attached to this course.',
+            'status' => 'draft',
+            'tags' => [],
+        ]);
+        $newDraft = CourseContentPost::create([
+            'author_id' => $admin->id,
+            'title' => 'Unattached draft lesson',
+            'slug' => 'unattached-draft-lesson',
+            'long_description' => 'Draft content that is not attached.',
+            'status' => 'draft',
+            'tags' => [],
+        ]);
+        $course->curriculumItems()->create([
+            'course_content_post_id' => $attachedDraft->id,
+            'section_title' => 'Existing module',
+            'position' => 10,
+            'is_preview' => false,
+            'duration_minutes' => 12,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.course-builder.edit', $course))
+            ->assertOk()
+            ->assertSee('Existing draft lesson')
+            ->assertSee('Draft');
+
+        $this->put(route('admin.course-builder.update', $course), [
+            'post_ids' => [$attachedDraft->id],
+            'section_titles' => [$attachedDraft->id => 'Existing module'],
+            'positions' => [$attachedDraft->id => 20],
+            'durations' => [$attachedDraft->id => 15],
+            'previews' => [$attachedDraft->id => 0],
+        ])->assertRedirect(route('admin.course-builder.edit', $course));
+
+        $this->assertDatabaseHas('course_curriculum_items', [
+            'course_id' => $course->id,
+            'course_content_post_id' => $attachedDraft->id,
+            'position' => 20,
+        ]);
+
+        $this->from(route('admin.course-builder.edit', $course))
+            ->put(route('admin.course-builder.update', $course), [
+                'post_ids' => [$newDraft->id],
+            ])
+            ->assertSessionHasErrors('post_ids.0');
+
+        $this->assertDatabaseHas('course_curriculum_items', [
+            'course_id' => $course->id,
+            'course_content_post_id' => $attachedDraft->id,
+        ]);
+        $this->assertDatabaseMissing('course_curriculum_items', [
+            'course_id' => $course->id,
+            'course_content_post_id' => $newDraft->id,
+        ]);
     }
 
     public function test_admin_can_create_a_mixed_question_set_and_snapshot_question_bank_items(): void
