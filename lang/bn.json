@@ -1009,5 +1009,7 @@
     "Branch batches": "শাখার ব্যাচসমূহ",
     "Finance invoices": "ফাইন্যান্স ইনভয়েস",
     "Finance refunds": "ফাইন্যান্স রিফান্ড",
-    "Finance expenses": "ফাইন্যান্স খরচ"
+    "Finance expenses": "ফাইন্যান্স খরচ",
+    "You can manage only the branch modules explicitly assigned to your account.": "আপনার অ্যাকাউন্টে নির্দিষ্টভাবে দেওয়া শাখার মডিউলগুলোই পরিচালনা করতে পারবেন।",
+    "Only explicitly assigned finance modules are available within your branch.": "আপনার শাখায় কেবল নির্দিষ্টভাবে অনুমোদিত ফাইন্যান্স মডিউলগুলো ব্যবহার করা যাবে।"
 }
