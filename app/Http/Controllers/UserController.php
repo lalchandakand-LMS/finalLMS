@@ -46,6 +46,9 @@ class UserController extends Controller
             'role' => ['required', 'in:admin,branch_manager,accountant,teacher,student,guardian'],
             'branch_id' => ['nullable', Rule::exists('branches', 'id')->where('is_active', true)],
             'phone_number' => ['nullable', 'string', 'regex:/^\+[1-9][0-9]{7,14}$/', Rule::unique('users', 'phone_number')->ignore($user->id)],
+            'admin_permissions_present' => ['sometimes', 'accepted'],
+            'admin_permissions' => ['sometimes', 'array'],
+            'admin_permissions.*' => ['string', Rule::in(['branch.batches', 'branch.students', 'finance.invoices', 'finance.refunds', 'finance.reports', 'finance.expenses'])],
         ]);
 
         if ($user->id === Auth::id() && $validated['role'] !== 'admin') {
@@ -68,6 +71,20 @@ class UserController extends Controller
             'branch_id' => in_array($validated['role'], ['branch_manager', 'accountant', 'student'], true) ? ($validated['branch_id'] ?? null) : null,
             'phone_number' => $validated['phone_number'] ?? null,
         ]);
+
+        if ($request->boolean('admin_permissions_present')) {
+            $allowedByRole = [
+                'branch_manager' => ['branch.batches', 'branch.students'],
+                'accountant' => ['finance.invoices', 'finance.refunds', 'finance.reports', 'finance.expenses'],
+            ];
+            $requestedPermissions = $validated['admin_permissions'] ?? [];
+            $user->forceFill([
+                'admin_permissions' => array_values(array_intersect(
+                    $requestedPermissions,
+                    $allowedByRole[$validated['role']] ?? []
+                )),
+            ])->save();
+        }
 
         if ($phoneChanged) {
             $user->forceFill([
