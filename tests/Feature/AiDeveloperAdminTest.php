@@ -316,4 +316,31 @@ class AiDeveloperAdminTest extends TestCase
     }
 
 
+    public function test_oversized_provider_response_is_rejected_before_persistence(): void
+    {
+        config([
+            'services.ai_developer.api_key' => 'test-key',
+            'services.ai_developer.base_url' => 'https://ai.example.test/v1',
+            'services.ai_developer.allowed_hosts' => ['ai.example.test'],
+            'services.ai_developer.model' => 'test-model',
+            'services.ai_developer.max_response_bytes' => 1024,
+        ]);
+        Http::fake([
+            'ai.example.test/*' => Http::response(str_repeat('x', 2048), 200),
+        ]);
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+
+        $this->actingAs($admin)->post(route('admin.ai-developer.analyze'), [
+            'title' => 'Oversized provider response',
+            'instruction' => 'Please verify that oversized provider responses are rejected.',
+        ])->assertRedirect(route('admin.ai-developer.index'));
+
+        $this->assertDatabaseHas('ai_developer_tasks', [
+            'user_id' => $admin->id,
+            'title' => 'Oversized provider response',
+            'status' => 'failed',
+            'response' => null,
+        ]);
+    }
+
 }
