@@ -57,7 +57,8 @@ Revokes every active mobile token for the authenticated user.
 - `GET /courses?q=&sort=&per_page=`: published course catalog with pagination. Sort values: `newest`, `oldest`, `price_low`, `price_high`, `title`.
 - `GET /courses/{course_slug}`: course details and curriculum; non-enrolled users only receive preview lessons.
 - `GET /my/courses`: authenticated student's active/completed enrollments with lesson completion progress.
-- `GET /courses/{course_slug}/lessons/{lesson_id}`: lesson content only for an enrolled student or a preview lesson.
+- `GET /courses/{course_slug}/lessons/{lesson_id}`: lesson content only for an enrolled student or a preview lesson. When a private uploaded video exists, the response includes a relative `video_stream_path`; it never exposes the storage path.
+- `GET /courses/{course_slug}/lessons/{lesson_id}/video`: authenticated, entitlement-checked private video stream. Preview lessons are available to signed-in students; full lessons require an active/completed enrollment. The owning instructor may stream their own course lessons. Supports HTTP byte ranges for seeking, uses private/no-store and nosniff headers, and reads only from the private `lesson_videos` disk.
 - `POST /courses/{course_slug}/lessons/{lesson_id}/complete`: mark an owned lesson complete; requires an active enrollment and is idempotent.
 
 ## Instructor endpoints
