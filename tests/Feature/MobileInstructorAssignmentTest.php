@@ -2,13 +2,13 @@
 
 namespace Tests\Feature;
 
-use App\Models\ApiToken;
 use App\Models\Assignment;
 use App\Models\AssignmentSubmission;
 use App\Models\Batch;
 use App\Models\Branch;
 use App\Models\Course;
 use App\Models\Enrollment;
+use App\Models\StudentDevice;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
