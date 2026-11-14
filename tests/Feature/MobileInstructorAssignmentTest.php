@@ -191,7 +191,20 @@ class MobileInstructorAssignmentTest extends TestCase
     private function token(User $user): string
     {
         $plain = Str::random(80);
+        $device = null;
+        if ($user->isStudent()) {
+            $device = StudentDevice::create([
+                'user_id' => $user->id,
+                'device_hash' => hash('sha256', Str::random(64)),
+                'device_name' => 'Instructor assignment test device',
+                'status' => 'approved',
+                'phone_verified_at' => now(),
+                'approved_at' => now(),
+            ]);
+        }
+
         $user->apiTokens()->create([
+            'student_device_id' => $device?->id,
             'name' => 'Instructor assignment test',
             'token_hash' => hash('sha256', $plain),
             'expires_at' => now()->addDay(),
