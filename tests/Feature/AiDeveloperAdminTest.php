@@ -108,13 +108,21 @@ class AiDeveloperAdminTest extends TestCase
     {
         app()->setLocale('bn');
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        AiDeveloperTask::create([
+            'user_id' => $admin->id,
+            'title' => 'বাংলা ডায়াগনস্টিক',
+            'instruction' => 'একটি নিরাপদ পরীক্ষামূলক নির্দেশনা।',
+            'status' => 'completed',
+        ]);
 
         $this->actingAs($admin)->get(route('admin.ai-developer.index'))
             ->assertOk()
             ->assertSee('এআই ডেভেলপার')
             ->assertSee('শুধু অ্যাডমিন')
             ->assertSee('নতুন কাজ')
-            ->assertSee('শুধু-পঠন ডায়াগনস্টিক মোড');
+            ->assertSee('শুধু-পঠন ডায়াগনস্টিক মোড')
+            ->assertSee('সম্পন্ন')
+            ->assertSee('কী ঘটছে, কখন ঘটছে');
     }
 
     public function test_admin_daily_diagnostic_cap_prevents_more_than_ten_requests(): void
