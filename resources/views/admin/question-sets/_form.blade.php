@@ -1,7 +1,7 @@
 @php
     $selectedSourceIds = old('source_question_ids', $questions->whereNotNull('source_question_id')->pluck('source_question_id')->all());
     $customQuestions = old('questions', $questions->whereNull('source_question_id')->values()->all());
-    if (count($customQuestions) === 0) {
+    if (count($customQuestions) === 0 && count($selectedSourceIds) === 0) {
         $customQuestions = [['type' => 'mcq', 'question' => '', 'options' => ['', '', '', ''], 'correct_option' => 0, 'marks' => 1, 'difficulty' => 'medium']];
     }
 @endphp
