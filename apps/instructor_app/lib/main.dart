@@ -180,7 +180,9 @@ class _InstructorHomeState extends State<InstructorHome> {
               onPressed: () {
                 final minutes = int.tryParse(duration.text.trim());
                 final position = int.tryParse(order.text.trim());
-                if (title.text.trim().isEmpty || content.text.trim().isEmpty || minutes == null || minutes < 1 || minutes > 600 || position == null || position < 1) {\n                  return;\n                }
+                if (title.text.trim().isEmpty || content.text.trim().isEmpty || minutes == null || minutes < 1 || minutes > 600 || position == null || position < 1) {
+                  return;
+                }
                 Navigator.pop(dialogContext, {
                   'title': title.text.trim(),
                   'content': content.text.trim(),
@@ -206,7 +208,9 @@ class _InstructorHomeState extends State<InstructorHome> {
 
   Future<void> manageLessons(Map<String, dynamic> course) async {
     final slug = course['slug']?.toString();
-    if (slug == null || slug.isEmpty) {\n      return;\n    }
+    if (slug == null || slug.isEmpty) {
+      return;
+    }
     List<dynamic> lessons = [];
     bool busy = true;
     String? loadError;
@@ -222,7 +226,9 @@ class _InstructorHomeState extends State<InstructorHome> {
       }
     }
     await refreshLessons(setState);
-    if (!mounted) {\n      return;\n    }
+    if (!mounted) {
+      return;
+    }
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -240,7 +246,9 @@ class _InstructorHomeState extends State<InstructorHome> {
                       FilledButton.icon(
                         onPressed: busy ? null : () async {
                           final payload = await editLessonDialog(nextOrder: lessons.length + 1);
-                          if (payload == null) {\n                            return;\n                          }
+                          if (payload == null) {
+                            return;
+                          }
                           try {
                             await widget.api.postJson('/instructor/courses/$slug/lessons', payload);
                             await refreshLessons(setSheetState);
@@ -270,7 +278,9 @@ class _InstructorHomeState extends State<InstructorHome> {
                           onSelected: (action) async {
                             if (action == 'edit') {
                               final payload = await editLessonDialog(lesson: lesson, nextOrder: index + 1);
-                              if (payload == null) {\n                                return;\n                              }
+                              if (payload == null) {
+                                return;
+                              }
                               try {
                                 await widget.api.putJson('/instructor/courses/$slug/lessons/$lessonId', payload);
                                 await refreshLessons(setSheetState);
@@ -278,7 +288,10 @@ class _InstructorHomeState extends State<InstructorHome> {
                                 if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
                               }
                             } else {
-                              if (!sheetContext.mounted) {\n                                return;\n                              }\n                              final confirmed = await showDialog<bool>(
+                              if (!sheetContext.mounted) {
+                                return;
+                              }
+                              final confirmed = await showDialog<bool>(
                                 context: sheetContext,
                                 builder: (dialogContext) => AlertDialog(
                                   title: const Text('Delete lesson?'),
@@ -349,7 +362,9 @@ class _InstructorHomeState extends State<InstructorHome> {
   Future<void> showBatchStudents(Map<String, dynamic> batch) async {
     try {
       final response = await widget.api.get('/instructor/batches/${batch['id']}');
-      if (!mounted) {\n        return;\n      }
+      if (!mounted) {
+        return;
+      }
       final detail = response['batch'] as Map<String, dynamic>;
       final students = response['data'] as List<dynamic>? ?? [];
       await showModalBottomSheet<void>(
@@ -454,7 +469,10 @@ class _InstructorHomeState extends State<InstructorHome> {
                       firstDate: DateTime.now(),
                       lastDate: DateTime.now().add(const Duration(days: 365)),
                     );
-                    if (!dialogContext.mounted) {\n                      return;\n                    }\n                    if (picked != null) {
+                    if (!dialogContext.mounted) {
+                      return;
+                    }
+                    if (picked != null) {
                       setDialogState(() => dueAt = DateTime(
                         picked.year, picked.month, picked.day, 23, 59,
                       ));
