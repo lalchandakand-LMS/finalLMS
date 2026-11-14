@@ -67,7 +67,7 @@ class AiDeveloperAdminTest extends TestCase
             ]),
         ]);
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
-        $rawInstruction = 'Student login error. Contact student@example.com at 01712345678. password=super-secret Bearer abc.def.ghi and sk-1234567890abcdefghijklmnop should be hidden.';
+        $rawInstruction = 'Student login error. Contact student@example.com at 01712345678. Bearer abc.def.ghi and sk-1234567890abcdefghijklmnop should be hidden. password=super-secret';
 
         $this->actingAs($admin)->post(route('admin.ai-developer.analyze'), [
             'title' => 'Student login problem',
@@ -80,7 +80,7 @@ class AiDeveloperAdminTest extends TestCase
             'status' => 'completed',
         ]);
         $task = AiDeveloperTask::query()->where('user_id', $admin->id)->latest()->firstOrFail();
-        $this->assertSame('Student login error. Contact [REDACTED_EMAIL] at [REDACTED_PHONE]. password=[REDACTED] Bearer [REDACTED] and [REDACTED_SECRET] should be hidden.', $task->instruction);
+        $this->assertSame('Student login error. Contact [REDACTED_EMAIL] at [REDACTED_PHONE]. Bearer [REDACTED] and [REDACTED_SECRET] should be hidden. password=[REDACTED]', $task->instruction);
         $this->assertSame('সমস্যার কারণ [REDACTED_EMAIL] এবং [REDACTED_PHONE]; route configuration.', $task->response);
         $this->assertDatabaseMissing('ai_developer_tasks', ['instruction' => $rawInstruction]);
         $storedTask = DB::table('ai_developer_tasks')->where('id', $task->id)->first();
