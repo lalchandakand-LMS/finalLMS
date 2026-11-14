@@ -472,6 +472,11 @@ class PrivateEbookStoreTest extends TestCase
             ->assertHeader('X-Content-Type-Options', 'nosniff')
             ->assertHeader('Referrer-Policy', 'no-referrer');
 
+        $this->get(route('ebooks.show', $product->slug))
+            ->assertOk()
+            ->assertSee('Preview sample pages')
+            ->assertSee('Public sample');
+
         $inactive = $product->previewPages()->create([
             'page_number' => 2,
             'file_path' => $path,
@@ -510,6 +515,17 @@ class PrivateEbookStoreTest extends TestCase
             'page_image' => UploadedFile::fake()->image('blocked.png'),
         ])->assertForbidden();
 
+        $foreignPage = $product->previewPages()->create([
+            'page_number' => 1,
+            'file_path' => 'private/ebook-previews/forbidden.png',
+            'is_active' => true,
+        ]);
+        $this->actingAs($student)
+            ->delete(route('admin.ebooks.preview-pages.destroy', [$product, $foreignPage]))
+            ->assertForbidden();
+        $this->assertDatabaseHas('ebook_preview_pages', ['id' => $foreignPage->id]);
+
+        $foreignPage->delete();
         for ($pageNumber = 1; $pageNumber <= 10; $pageNumber++) {
             $path = 'private/ebook-previews/'.$product->id.'/page-'.$pageNumber.'.png';
             Storage::disk('local')->put($path, 'preview-'.$pageNumber);
