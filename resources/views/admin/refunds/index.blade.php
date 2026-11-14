@@ -9,12 +9,12 @@
             <h1 style="margin:12px 0 0;">{{ __('Refund management') }}</h1>
             <p class="muted">{{ __('Refunds are recorded against received payments. Admin approval is required before a refund is marked approved.') }}</p>
         </div>
-        <a class="btn secondary" href="{{ route(auth()->user()->isAccountant() ? 'accountant.invoices.index' : 'admin.invoices.index') }}">{{ __('Back to invoices') }}</a>
+        <a class="btn secondary" href="{{ route(auth()->user()->isAccountant() ? 'admin.finance.invoices.index' : 'admin.invoices.index') }}">{{ __('Back to invoices') }}</a>
     </div>
 
     <section class="panel" style="margin-bottom:22px;">
         <h2>{{ __('Request a refund') }}</h2>
-        <form method="POST" action="{{ route(auth()->user()->isAccountant() ? 'accountant.refunds.store' : 'admin.refunds.store') }}" class="grid grid-2">
+        <form method="POST" action="{{ route(auth()->user()->isAccountant() ? 'admin.finance.refunds.store' : 'admin.refunds.store') }}" class="grid grid-2">
             @csrf
             <div style="grid-column:1/-1;">
                 <label for="invoice_payment_id">{{ __('Received payment') }}</label>
