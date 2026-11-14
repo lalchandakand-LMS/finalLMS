@@ -13,7 +13,7 @@ class AdminCourseCategoryController extends Controller
 {
     public function index(): View
     {
-        $categories = CourseCategory::with('image')->withCount('posts')
+        $categories = CourseCategory::with('image')->withCount(['posts', 'courses'])
             ->orderBy('sort_order')->orderBy('name')->paginate(25);
 
         return view('admin.course-categories.index', compact('categories'));
@@ -44,7 +44,7 @@ class AdminCourseCategoryController extends Controller
 
     public function destroy(CourseCategory $courseCategory): RedirectResponse
     {
-        abort_if($courseCategory->posts()->exists(), 422, __('Reassign or remove this category from content posts before deleting it.'));
+        abort_if($courseCategory->posts()->exists() || $courseCategory->courses()->exists(), 422, __('Reassign or remove this category from courses and content posts before deleting it.'));
         $courseCategory->delete();
 
         return back()->with('success', __('Course category deleted.'));
