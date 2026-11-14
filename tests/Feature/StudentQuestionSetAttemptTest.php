@@ -144,8 +144,8 @@ class StudentQuestionSetAttemptTest extends TestCase
 
         $this->get(route('student.question-sets.show', [$course, $set, $attempt]))
             ->assertOk()
-            ->assertSee('Quiz result');
-        $this->assertSame('submitted', $attempt->fresh()->status);
+            ->assertSee('Awaiting teacher review');
+        $this->assertSame('awaiting_manual', $attempt->fresh()->status);
         $this->assertNotNull($attempt->fresh()->submitted_at);
 
         $this->post(route('student.question-sets.start', [$course, $set]))->assertForbidden();
