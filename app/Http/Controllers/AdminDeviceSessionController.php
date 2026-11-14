@@ -34,7 +34,7 @@ class AdminDeviceSessionController extends Controller
     public function revoke(DeviceSession $deviceSession, Request $request): RedirectResponse
     {
         abort_unless($deviceSession->user_id !== $request->user()->id
-            || ! hash_equals($deviceSession->session_hash, hash('sha256', $request->session()->getId())), 422,
+            || ! hash_equals($deviceSession->session_hash, $request->session()->get('device_session_hash', hash('sha256', $request->session()->getId()))), 422,
             __('You cannot revoke the session currently being used to administer the LMS.'));
 
         if ($deviceSession->revoked_at) {
