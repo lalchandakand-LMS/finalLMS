@@ -104,7 +104,7 @@
             const scheduleSave = () => {
                 dirty = true;
                 if (saveTimer) window.clearTimeout(saveTimer);
-                saveTimer = window.setTimeout(saveAnswers, 700);
+                saveTimer = window.setTimeout(saveAnswers, 1000);
             };
             form.addEventListener('input', scheduleSave);
             form.addEventListener('change', scheduleSave);
