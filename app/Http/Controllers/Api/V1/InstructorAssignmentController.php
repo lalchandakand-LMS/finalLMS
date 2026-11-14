@@ -52,7 +52,7 @@ class InstructorAssignmentController extends Controller
         ]);
 
         $enrollments = $batch->enrollments()
-            ->whereIn('status', $validated['status'] ? [$validated['status']] : ['active', 'completed'])
+            ->whereIn('status', ! empty($validated['status']) ? [$validated['status']] : ['active', 'completed'])
             ->with('user:id,name,email,phone_number')
             ->orderByDesc('created_at')
             ->paginate($validated['per_page'] ?? 30);
