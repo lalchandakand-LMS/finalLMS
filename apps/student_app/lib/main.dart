@@ -1972,9 +1972,10 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
       final questionList = data['questions'] as List<dynamic>? ?? [];
       if (!mounted) return;
       setState(() {
-        _setAttempt(summary);
+        attempt = summary;
         _setQuestions(questionList);
       });
+      _configureTimer();
     } catch (exception) {
       if (mounted) setState(() => error = exception.toString());
     } finally {
