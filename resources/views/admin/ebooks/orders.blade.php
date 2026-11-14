@@ -46,7 +46,7 @@
                     <form method="POST" action="{{ route('admin.ebooks.orders.approve',$order) }}">@csrf<button class="btn primary" type="submit">{{ __('Verify & grant download') }}</button></form>
                     <form method="POST" action="{{ route('admin.ebooks.orders.reject',$order) }}">@csrf<button class="btn secondary" type="submit">{{ __('Reject order') }}</button></form>
                 </div>
-            @elseif($order->status === 'completed' && $order->refunds->isEmpty())
+            @elseif($order->status === 'completed' && (float) $order->total > 0 && $order->refunds->isEmpty())
                 <form method="POST" action="{{ route('admin.ebooks.orders.refund',$order) }}" class="panel" style="margin-top:12px;background:var(--surface-muted)">
                     @csrf
                     <h3>{{ __('Record full refund') }}</h3>
