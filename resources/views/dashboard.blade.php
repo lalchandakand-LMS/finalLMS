@@ -123,6 +123,34 @@
             <p class="muted" style="margin:12px 0 0;">{{ __('Keep momentum going with a clear set of next actions, from enrollment to course completion.') }}</p>
         </div>
 
+        @if($user->isBranchManager())
+            <section class="panel" style="margin-bottom:20px;">
+                <div class="page-header" style="margin-bottom:10px;">
+                    <div>
+                        <span class="badge info">{{ __('Admin Panel · Branch workspace') }}</span>
+                        <h2 style="margin:10px 0 0;">{{ __('Manage your assigned branch') }}</h2>
+                        <p class="muted">{{ __('You can manage only batches and students assigned to your active branch.') }}</p>
+                    </div>
+                    <a href="{{ route('admin.branch-workspace.batches.index') }}" class="btn primary">{{ __('Open branch batches') }}</a>
+                </div>
+                <a href="{{ route('admin.branch-workspace.students.index') }}" class="btn secondary">{{ __('View branch students') }}</a>
+            </section>
+        @endif
+
+        @if($user->isAccountant())
+            <section class="panel" style="margin-bottom:20px;">
+                <div class="page-header" style="margin-bottom:10px;">
+                    <div>
+                        <span class="badge info">{{ __('Admin Panel · Finance workspace') }}</span>
+                        <h2 style="margin:10px 0 0;">{{ __('Manage your branch finances') }}</h2>
+                        <p class="muted">{{ __('Invoices, refunds, expenses and reports are restricted to your assigned active branch.') }}</p>
+                    </div>
+                    <a href="{{ route('admin.finance.invoices.index') }}" class="btn primary">{{ __('Open branch invoices') }}</a>
+                </div>
+                <a href="{{ route('admin.finance.reports.index') }}" class="btn secondary">{{ __('View branch finance reports') }}</a>
+            </section>
+        @endif
+
         @if($user->isTeacher() && $teacherInsights)
             <section class="panel" style="margin-bottom:20px;">
                 <div class="page-header" style="margin-bottom:14px;">
