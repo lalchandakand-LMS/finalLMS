@@ -68,7 +68,6 @@ class UserController extends Controller
         $previousPermissions = $user->admin_permissions ?? [];
         $phoneChanged = array_key_exists('phone_number', $validated) && $user->phone_number !== $validated['phone_number'];
         $roleChanged = $user->role !== $validated['role'];
-        $roleChangedAwayFromStudent = $user->isStudent() && $validated['role'] !== 'student';
         $newBranchId = in_array($validated['role'], ['branch_manager', 'accountant', 'student'], true)
             ? ($validated['branch_id'] ?? null)
             : null;
