@@ -356,7 +356,7 @@ class _InstructorHomeState extends State<InstructorHome> {
         ],
       )));
     } catch (e) {
-      if (!context.mounted) {
+      if (!mounted) {
         return;
       }
       if (e is ApiException && (e.statusCode == 401 || e.statusCode == 403)) {
@@ -549,9 +549,6 @@ class _InstructorHomeState extends State<InstructorHome> {
     if (!mounted || date == null) {
       return null;
     }
-    if (!context.mounted) {
-      return null;
-    }
     final time = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(initial),
@@ -671,7 +668,7 @@ class _InstructorHomeState extends State<InstructorHome> {
     title.dispose();
     description.dispose();
     meetingUrl.dispose();
-    if (payload == null) {
+    if (payload == null || !mounted) {
       return;
     }
     final messenger = ScaffoldMessenger.of(context);
@@ -863,7 +860,7 @@ class _InstructorHomeState extends State<InstructorHome> {
     );
     score.dispose();
     feedback.dispose();
-    if (payload == null) {
+    if (payload == null || !mounted) {
       return;
     }
     try {
