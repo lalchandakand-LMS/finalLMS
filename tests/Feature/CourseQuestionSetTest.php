@@ -187,6 +187,26 @@ class CourseQuestionSetTest extends TestCase
             'max_attempts' => 3,
             'randomize_questions' => 0,
         ]);
+
+        $draft = QuestionSet::create([
+            'title' => 'Draft set',
+            'status' => 'draft',
+            'created_by' => $admin->id,
+        ]);
+        $this->from(route('admin.course-builder.edit', $course))
+            ->put(route('admin.course-builder.update', $course), [
+                'question_set_ids' => [$draft->id],
+            ])
+            ->assertSessionHasErrors('question_set_ids.0');
+
+        $this->assertDatabaseHas('course_question_set', [
+            'course_id' => $course->id,
+            'question_set_id' => $set->id,
+        ]);
+        $this->assertDatabaseMissing('course_question_set', [
+            'course_id' => $course->id,
+            'question_set_id' => $draft->id,
+        ]);
     }
 
     public function test_question_set_management_and_course_attachment_are_admin_only(): void
