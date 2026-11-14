@@ -73,6 +73,38 @@ class AddonRegistryTest extends TestCase
             ->assertStatus(422);
     }
 
+    public function test_s3_addon_rejects_malformed_https_endpoint(): void
+    {
+        config([
+            'filesystems.default' => 's3',
+            'filesystems.disks.s3.key' => 'configured-key',
+            'filesystems.disks.s3.secret' => 'configured-secret',
+            'filesystems.disks.s3.region' => 'ap-southeast-1',
+            'filesystems.disks.s3.bucket' => 'lms-private',
+            'filesystems.disks.s3.endpoint' => 'https:objects.example.test',
+        ]);
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+
+        $this->actingAs($admin)->patch(route('admin.addons.update', 's3_compatible_storage'), ['enabled' => true])
+            ->assertStatus(422);
+    }
+
+    public function test_s3_addon_rejects_endpoint_with_embedded_credentials(): void
+    {
+        config([
+            'filesystems.default' => 's3',
+            'filesystems.disks.s3.key' => 'configured-key',
+            'filesystems.disks.s3.secret' => 'configured-secret',
+            'filesystems.disks.s3.region' => 'ap-southeast-1',
+            'filesystems.disks.s3.bucket' => 'lms-private',
+            'filesystems.disks.s3.endpoint' => 'https://user:password@objects.example.test',
+        ]);
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+
+        $this->actingAs($admin)->patch(route('admin.addons.update', 's3_compatible_storage'), ['enabled' => true])
+            ->assertStatus(422);
+    }
+
     public function test_admin_can_enable_configured_addon_and_change_is_audited(): void
     {
         config([
