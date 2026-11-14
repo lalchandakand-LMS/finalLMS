@@ -155,4 +155,37 @@ class BranchScopedStaffTest extends TestCase
     }
 
 
+
+    public function test_branch_manager_update_and_student_directory_require_an_active_assigned_branch(): void
+        {
+            $branch = Branch::create(['name' => 'Manager Branch', 'slug' => 'manager-branch']);
+            $teacher = User::factory()->create(['role' => 'teacher', 'branch_id' => $branch->id]);
+            $course = Course::factory()->create(['teacher_id' => $teacher->id, 'status' => 'published']);
+            $manager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $branch->id]);
+            $batch = Batch::create([
+                'branch_id' => $branch->id,
+                'course_id' => $course->id,
+                'teacher_id' => $teacher->id,
+                'title' => 'Branch batch',
+                'capacity' => 10,
+                'starts_at' => now()->addDay(),
+                'ends_at' => now()->addMonth(),
+                'fee' => 500,
+                'status' => 'open',
+            ]);
+    
+            $branch->update(['is_active' => false]);
+    
+            $this->actingAs($manager)->get(route('branch-manager.students.index'))->assertForbidden();
+            $this->put(route('branch-manager.batches.update', $batch), [
+                'title' => 'Updated batch',
+                'capacity' => 10,
+                'starts_at' => now()->addDay(),
+                'ends_at' => now()->addMonth(),
+                'fee' => 500,
+                'status' => 'open',
+            ])->assertNotFound();
+    
+            $this->assertDatabaseHas('batches', ['id' => $batch->id, 'title' => 'Branch batch']);
+        }
 }
