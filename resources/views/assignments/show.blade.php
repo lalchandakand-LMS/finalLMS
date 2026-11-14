@@ -7,11 +7,11 @@
         <span class="badge info">{{ $assignment->batch->course->title }}</span>
         <h1>{{ $assignment->title }}</h1>
         <p>{{ $assignment->instructions }}</p>
-        <p class="muted">Due {{ $assignment->due_at->format('M j, Y H:i') }} · {{ $assignment->max_marks }} marks · {{ $assignment->allow_late ? __('Late submissions allowed') : __('Late submissions closed') }}</p>
+        <p class="muted">{{ __('Due') }} {{ $assignment->due_at->format('M j, Y H:i') }} · {{ $assignment->max_marks }} {{ __('marks') }} · {{ $assignment->allow_late ? __('Late submissions allowed') : __('Late submissions closed') }}</p>
         @if($submission)
-            <span class="badge {{ $submission->status === 'graded' ? 'success' : 'warning' }}">{{ ucfirst($submission->status) }}</span>
+            <span class="badge {{ $submission->status === 'graded' ? 'success' : 'warning' }}">{{ __($submission->status === 'graded' ? 'Graded' : 'Submitted') }}</span>
             @if($submission->answer)<p>{{ $submission->answer }}</p>@endif
-            @if($submission->attachment_path)<p><a class="btn secondary" href="{{ route('assignment-submissions.attachment', $submission) }}">Download submitted file: {{ $submission->attachment_name }}</a></p>@endif
+            @if($submission->attachment_path)<p><a class="btn secondary" href="{{ route('assignment-submissions.attachment', $submission) }}">{{ __('Download submitted file:') }} {{ $submission->attachment_name }}</a></p>@endif
             @if($submission->status === 'graded')
                 <p><strong>{{ __('Score:') }}</strong> {{ $submission->score }} / {{ $assignment->max_marks }}</p>
                 <p>{{ $submission->feedback }}</p>
