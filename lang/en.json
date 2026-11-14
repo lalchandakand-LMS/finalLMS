@@ -507,5 +507,17 @@
     "Review submissions": "Review submissions",
     "Final quiz result": "Final quiz result",
     "Teacher feedback:": "Teacher feedback:",
-    "marks": "marks"
+    "marks": "marks",
+    "Your quiz attempts": "Your quiz attempts",
+    "Review current quizzes, submitted answers and published results from all your courses.": "Review current quizzes, submitted answers and published results from all your courses.",
+    "Back to dashboard": "Back to dashboard",
+    "Quiz unavailable": "Quiz unavailable",
+    "Course unavailable": "Course unavailable",
+    "Started:": "Started:",
+    "In progress": "In progress",
+    "Not submitted": "Not submitted",
+    "View attempt": "View attempt",
+    "No quiz attempts yet": "No quiz attempts yet",
+    "Quizzes attached to your enrolled courses will appear here after you start one.": "Quizzes attached to your enrolled courses will appear here after you start one.",
+    "Quiz attempts": "Quiz attempts"
 }
