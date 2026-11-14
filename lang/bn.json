@@ -1095,5 +1095,12 @@
     "Read-only diagnostic mode": "শুধু-পঠন ডায়াগনস্টিক মোড",
     "If the server administrator enables repository context, this workspace can read only explicitly allow-listed source files in read-only mode. It never writes to GitHub, creates commits, merges, or deploys. Branch-based patch creation, diff review and automated test feedback remain a separate future stage with mandatory human approval. Never apply an AI suggestion directly to the live website.": "সার্ভার অ্যাডমিন repository context চালু করলে এই workspace কেবল অনুমোদিত source file পড়তে পারবে। এটি GitHub-এ কিছু লেখে না, commit/merge বা deploy করে না। Branch-এ patch তৈরি, diff review এবং automated test feedback ভবিষ্যৎ ধাপ; সেখানে মানুষের অনুমোদন বাধ্যতামূলক। AI-এর পরামর্শ সরাসরি live website-এ প্রয়োগ করবেন না।",
     "Recent AI tasks": "সাম্প্রতিক AI কাজ",
-    "No AI tasks yet.": "এখনও কোনো AI কাজ নেই।"
+    "No AI tasks yet.": "এখনও কোনো AI কাজ নেই।",
+    "Daily AI diagnostic limit reached. Try again tomorrow.": "আজকের AI ডায়াগনস্টিক সীমা শেষ হয়েছে। আগামীকাল আবার চেষ্টা করুন।",
+    "AI provider is not configured. Set AI_DEVELOPER_API_KEY, AI_DEVELOPER_BASE_URL and AI_DEVELOPER_MODEL in the server environment.": "AI প্রোভাইডার কনফিগার করা হয়নি। সার্ভার environment-এ AI_DEVELOPER_API_KEY, AI_DEVELOPER_BASE_URL ও AI_DEVELOPER_MODEL সেট করুন।",
+    "AI connection is not configured yet. No external request was made.": "AI সংযোগ এখনও কনফিগার করা হয়নি। কোনো বাহ্যিক অনুরোধ পাঠানো হয়নি।",
+    "AI provider URL rejected. Use HTTPS and add its exact hostname to AI_DEVELOPER_ALLOWED_HOSTS on the server.": "AI প্রোভাইডার URL প্রত্যাখ্যাত হয়েছে। HTTPS ব্যবহার করুন এবং সার্ভারে নির্দিষ্ট hostname AI_DEVELOPER_ALLOWED_HOSTS-এ যোগ করুন।",
+    "AI diagnosis completed. Review the advice before making changes.": "AI বিশ্লেষণ সম্পন্ন হয়েছে। পরিবর্তন করার আগে পরামর্শ যাচাই করুন।",
+    "The AI request failed. Check the provider configuration and application logs.": "AI অনুরোধ ব্যর্থ হয়েছে। প্রোভাইডার কনফিগারেশন ও অ্যাপ্লিকেশন লগ যাচাই করুন।",
+    "AI analysis failed. No code or production data was changed.": "AI বিশ্লেষণ ব্যর্থ হয়েছে। কোনো কোড বা production data পরিবর্তন করা হয়নি।"
 }
