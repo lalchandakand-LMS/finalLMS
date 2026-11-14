@@ -403,6 +403,12 @@ class _StudentHomeState extends State<StudentHome> {
     ));
   }
 
+  Future<void> openQuizzes() async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => QuizzesPage(api: widget.api),
+    ));
+  }
+
   Future<void> openWishlist() async {
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => WishlistPage(api: widget.api),
@@ -482,6 +488,11 @@ class _StudentHomeState extends State<StudentHome> {
           onPressed: openExams,
           icon: const Icon(Icons.quiz_outlined),
           tooltip: 'My exams',
+        ),
+        IconButton(
+          onPressed: openQuizzes,
+          icon: const Icon(Icons.fact_check_outlined),
+          tooltip: 'Course quizzes',
         ),
         IconButton(
           onPressed: openWishlist,
@@ -1682,6 +1693,507 @@ class _ExamDetailPageState extends State<ExamDetailPage> {
                   ),
                 ],
                 if (error != null && item != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                  ),
+              ],
+            ),
+    );
+  }
+}
+
+
+class QuizzesPage extends StatefulWidget {
+  const QuizzesPage({required this.api, super.key});
+  final MobileApi api;
+
+  @override
+  State<QuizzesPage> createState() => _QuizzesPageState();
+}
+
+class _QuizzesPageState extends State<QuizzesPage> {
+  List<dynamic> courses = [];
+  bool loading = true;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  Future<void> load() async {
+    setState(() { loading = true; error = null; });
+    try {
+      final response = await widget.api.get('/my/quizzes');
+      if (!mounted) return;
+      setState(() => courses = response['data'] as List<dynamic>? ?? []);
+    } catch (exception) {
+      if (mounted) setState(() => error = exception.toString());
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final quizzes = <Map<String, dynamic>>[];
+    for (final rawCourse in courses) {
+      final course = rawCourse as Map<String, dynamic>;
+      final sets = course['quizzes'] as List<dynamic>? ?? [];
+      for (final rawQuiz in sets) {
+        quizzes.add({
+          ...rawQuiz as Map<String, dynamic>,
+          'course_title': course['course_title'],
+          'course_slug': course['course_slug'],
+        });
+      }
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Course quizzes'),
+        actions: [
+          IconButton(onPressed: load, icon: const Icon(Icons.refresh), tooltip: 'Refresh'),
+        ],
+      ),
+      body: loading
+        ? const Center(child: CircularProgressIndicator())
+        : error != null
+          ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Text(error!), TextButton(onPressed: load, child: const Text('Retry')),
+            ]))
+          : quizzes.isEmpty
+            ? const Center(child: Text('No course quizzes are available for your enrolled courses.'))
+            : RefreshIndicator(
+                onRefresh: load,
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: quizzes.length,
+                  itemBuilder: (context, index) {
+                    final quiz = quizzes[index];
+                    final latest = quiz['latest_attempt'] as Map<String, dynamic>?;
+                    final status = latest?['status']?.toString();
+                    final used = quiz['attempts_used'] ?? 0;
+                    final maximum = quiz['max_attempts'];
+                    final statusLabel = status == 'in_progress'
+                        ? 'In progress'
+                        : status == 'awaiting_manual'
+                            ? 'Awaiting teacher review'
+                            : status == 'submitted' || status == 'graded'
+                                ? 'Submitted'
+                                : 'Not started';
+                    final attemptLabel = maximum == null
+                        ? 'Attempts used: $used'
+                        : 'Attempts: $used / $maximum';
+                    return Card(
+                      child: ListTile(
+                        leading: const CircleAvatar(child: Icon(Icons.fact_check_outlined)),
+                        title: Text(quiz['title']?.toString() ?? 'Quiz'),
+                        subtitle: Text([
+                          quiz['course_title']?.toString() ?? '',
+                          statusLabel,
+                          attemptLabel,
+                          if (quiz['available_from'] != null)
+                            'Available: ${quiz['available_from']}',
+                        ].where((value) => value.isNotEmpty).join(' • ')),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => QuizDetailPage(
+                            api: widget.api,
+                            courseSlug: quiz['course_slug'].toString(),
+                            quizId: (quiz['id'] as num).toInt(),
+                          ),
+                        )).then((_) => load()),
+                      ),
+                    );
+                  },
+                ),
+              ),
+    );
+  }
+}
+
+class QuizDetailPage extends StatefulWidget {
+  const QuizDetailPage({
+    required this.api,
+    required this.courseSlug,
+    required this.quizId,
+    super.key,
+  });
+
+  final MobileApi api;
+  final String courseSlug;
+  final int quizId;
+
+  @override
+  State<QuizDetailPage> createState() => _QuizDetailPageState();
+}
+
+class _QuizDetailPageState extends State<QuizDetailPage> {
+  Map<String, dynamic>? course;
+  Map<String, dynamic>? quiz;
+  Map<String, dynamic>? attempt;
+  List<dynamic> questions = [];
+  final Map<int, Map<String, dynamic>> answers = {};
+  final Map<int, TextEditingController> textControllers = {};
+  Timer? clock;
+  DateTime? deadline;
+  int secondsRemaining = 0;
+  int? attemptsRemaining;
+  DateTime? availableFrom;
+  bool loading = true;
+  bool starting = false;
+  bool saving = false;
+  bool submitting = false;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  @override
+  void dispose() {
+    clock?.cancel();
+    for (final controller in textControllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  void _clearQuestionState() {
+    for (final controller in textControllers.values) {
+      controller.dispose();
+    }
+    textControllers.clear();
+    answers.clear();
+  }
+
+  void _setQuestions(List<dynamic> values) {
+    _clearQuestionState();
+    questions = values;
+    for (final raw in values) {
+      final question = raw as Map<String, dynamic>;
+      final id = (question['id'] as num).toInt();
+      if (question['type'] == 'short_answer') {
+        final controller = TextEditingController(text: question['answer_text']?.toString() ?? '');
+        textControllers[id] = controller;
+        if (controller.text.isNotEmpty) {
+          answers[id] = {'answer_text': controller.text};
+        }
+      } else if (question['selected_option'] is num) {
+        answers[id] = {'selected_option': (question['selected_option'] as num).toInt()};
+      }
+    }
+  }
+
+  void _setAttempt(Map<String, dynamic>? value) {
+    attempt = value;
+    final status = value?['status']?.toString();
+    final deadlineValue = value?['deadline_at']?.toString();
+    if (status == 'in_progress' && deadlineValue != null && deadlineValue.isNotEmpty) {
+      _setDeadline(DateTime.parse(deadlineValue).toLocal());
+    } else {
+      clock?.cancel();
+      deadline = null;
+      secondsRemaining = 0;
+    }
+  }
+
+  Future<void> load() async {
+    setState(() { loading = true; error = null; });
+    try {
+      final response = await widget.api.get(
+        '/courses/${widget.courseSlug}/question-sets/${widget.quizId}',
+      );
+      final data = response['data'] as Map<String, dynamic>;
+      final wrapper = data['attempt'] as Map<String, dynamic>?;
+      final summary = wrapper?['attempt'] as Map<String, dynamic>?;
+      final questionList = wrapper?['questions'] as List<dynamic>? ?? [];
+      if (!mounted) return;
+      setState(() {
+        course = data['course'] as Map<String, dynamic>?;
+        quiz = data['quiz'] as Map<String, dynamic>?;
+        attemptsRemaining = (data['attempts_remaining'] as num?)?.toInt();
+        availableFrom = data['available_from'] == null
+            ? null
+            : DateTime.tryParse(data['available_from'].toString())?.toLocal();
+        _setAttempt(summary);
+        _setQuestions(questionList);
+      });
+    } catch (exception) {
+      if (mounted) setState(() => error = exception.toString());
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  void _setDeadline(DateTime value) {
+    clock?.cancel();
+    deadline = value;
+    _tick();
+    clock = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
+  }
+
+  void _tick() {
+    final end = deadline;
+    if (end == null || !mounted) return;
+    final remaining = end.difference(DateTime.now()).inSeconds;
+    setState(() => secondsRemaining = remaining > 0 ? remaining : 0);
+    if (remaining <= 0) {
+      clock?.cancel();
+      if (!submitting && attempt?['status'] == 'in_progress') {
+        submit(automatic: true);
+      }
+    }
+  }
+
+  String _formatTime(int value) {
+    final minutes = value ~/ 60;
+    final seconds = value % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  Map<String, dynamic> _answerPayload() => {
+    for (final entry in answers.entries) entry.key.toString(): entry.value,
+  };
+
+  Future<void> start() async {
+    setState(() { starting = true; error = null; });
+    try {
+      final response = await widget.api.post(
+        '/courses/${widget.courseSlug}/question-sets/${widget.quizId}/start',
+      );
+      final data = response['data'] as Map<String, dynamic>;
+      final summary = data['attempt'] as Map<String, dynamic>;
+      final questionList = data['questions'] as List<dynamic>? ?? [];
+      if (!mounted) return;
+      setState(() {
+        _setAttempt(summary);
+        _setQuestions(questionList);
+      });
+    } catch (exception) {
+      if (mounted) setState(() => error = exception.toString());
+    } finally {
+      if (mounted) setState(() => starting = false);
+    }
+  }
+
+  Future<void> saveAnswers() async {
+    final id = (attempt?['id'] as num?)?.toInt();
+    if (id == null || answers.isEmpty || saving || submitting) return;
+    setState(() { saving = true; error = null; });
+    try {
+      await widget.api.putJson('/question-set-attempts/$id/answers', {
+        'answers': _answerPayload(),
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Quiz answers saved securely.')),
+        );
+      }
+    } catch (exception) {
+      if (mounted) setState(() => error = exception.toString());
+    } finally {
+      if (mounted) setState(() => saving = false);
+    }
+  }
+
+  Future<void> submit({bool automatic = false}) async {
+    final id = (attempt?['id'] as num?)?.toInt();
+    if (id == null || submitting || attempt?['status'] != 'in_progress') return;
+    setState(() { submitting = true; error = null; });
+    try {
+      final response = await widget.api.postJson(
+        '/question-set-attempts/$id/submit',
+        {'answers': _answerPayload()},
+      );
+      final data = response['data'] as Map<String, dynamic>;
+      final summary = data['attempt'] as Map<String, dynamic>;
+      final questionList = data['questions'] as List<dynamic>? ?? [];
+      if (!mounted) return;
+      clock?.cancel();
+      setState(() {
+        _setAttempt(summary);
+        _setQuestions(questionList);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(
+          response['expired'] == true
+              ? 'Time ended. Your quiz was submitted.'
+              : automatic
+                  ? 'Time ended. Your quiz was submitted.'
+                  : 'Quiz submitted successfully.',
+        )),
+      );
+    } catch (exception) {
+      if (mounted) setState(() => error = exception.toString());
+    } finally {
+      if (mounted) setState(() => submitting = false);
+    }
+  }
+
+  Widget _questionCard(Map<String, dynamic> question) {
+    final id = (question['id'] as num).toInt();
+    final type = question['type']?.toString();
+    final options = question['options'] as List<dynamic>? ?? [];
+    final selected = answers[id]?['selected_option'] as int?;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${question['position'] ?? ''}. ${question['question'] ?? ''}',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            if (type == 'short_answer')
+              TextField(
+                controller: textControllers[id],
+                maxLength: 5000,
+                minLines: 2,
+                maxLines: 5,
+                enabled: !saving && !submitting,
+                decoration: const InputDecoration(
+                  labelText: 'Your answer',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    if (value.trim().isEmpty) {
+                      answers.remove(id);
+                    } else {
+                      answers[id] = {'answer_text': value};
+                    }
+                  });
+                },
+              )
+            else
+              RadioGroup<int>(
+                groupValue: selected,
+                onChanged: (value) {
+                  if (value != null && !saving && !submitting) {
+                    setState(() => answers[id] = {'selected_option': value});
+                  }
+                },
+                child: Column(
+                  children: List.generate(options.length, (index) => RadioListTile<int>(
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    value: index,
+                    enabled: !saving && !submitting,
+                    title: Text(options[index].toString()),
+                  )),
+                ),
+              ),
+            Text('${question['marks'] ?? 0} marks', style: Theme.of(context).textTheme.bodySmall),
+            if (question['marks_awarded'] != null)
+              Text('Marks awarded: ${question['marks_awarded']}'),
+            if (question['manual_feedback'] != null)
+              Text('Teacher feedback: ${question['manual_feedback']}'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final status = attempt?['status']?.toString();
+    final inProgress = status == 'in_progress';
+    final awaitingReview = status == 'awaiting_manual';
+    final submitted = status == 'submitted' || status == 'graded';
+    final canStart = attemptsRemaining == null || attemptsRemaining! > 0;
+    final notAvailable = availableFrom != null && DateTime.now().isBefore(availableFrom!);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(quiz?['title']?.toString() ?? 'Course quiz'),
+        actions: [
+          IconButton(onPressed: load, icon: const Icon(Icons.refresh), tooltip: 'Refresh'),
+        ],
+      ),
+      body: loading
+        ? const Center(child: CircularProgressIndicator())
+        : error != null && quiz == null
+          ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Text(error!), TextButton(onPressed: load, child: const Text('Retry')),
+            ]))
+          : ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Text(course?['title']?.toString() ?? ''),
+                const SizedBox(height: 8),
+                Text(quiz?['description']?.toString() ?? ''),
+                Text('Questions: ${quiz?['question_count'] ?? '—'}'),
+                if (attemptsRemaining != null)
+                  Text('Attempts remaining: $attemptsRemaining'),
+                if (availableFrom != null && notAvailable)
+                  Text('Available from: ${availableFrom!.toLocal()}'),
+                const Divider(height: 24),
+                if (awaitingReview)
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.hourglass_top),
+                      title: const Text('Awaiting teacher review'),
+                      subtitle: Text(
+                        'Auto score: ${attempt?['auto_score'] ?? 0} / ${attempt?['max_score'] ?? '—'}',
+                      ),
+                    ),
+                  )
+                else if (submitted)
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.assignment_turned_in),
+                      title: Text('Quiz submitted • Score: ${attempt?['final_score'] ?? attempt?['auto_score'] ?? '—'}'),
+                      subtitle: Text(
+                        'Maximum score: ${attempt?['max_score'] ?? '—'}'
+                        '${attempt?['teacher_feedback'] == null ? '' : '\nFeedback: ${attempt?['teacher_feedback']}'}',
+                      ),
+                    ),
+                  )
+                else if (inProgress) ...[
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.timer_outlined),
+                      title: Text(deadline == null
+                          ? 'No time limit'
+                          : 'Time remaining: ${_formatTime(secondsRemaining)}'),
+                      subtitle: const Text('The server controls the official quiz deadline.'),
+                    ),
+                  ),
+                  ...questions.map((raw) => _questionCard(raw as Map<String, dynamic>)),
+                  OutlinedButton.icon(
+                    onPressed: saving || submitting || answers.isEmpty ? null : saveAnswers,
+                    icon: const Icon(Icons.save_outlined),
+                    label: saving ? const CircularProgressIndicator() : const Text('Save answers'),
+                  ),
+                  const SizedBox(height: 8),
+                  FilledButton.icon(
+                    onPressed: saving || submitting ? null : () => submit(),
+                    icon: const Icon(Icons.send),
+                    label: submitting
+                        ? const CircularProgressIndicator()
+                        : const Text('Submit quiz'),
+                  ),
+                ] else ...[
+                  const Text('Start your quiz when it is available. Questions and answer keys are controlled securely by the server.'),
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    onPressed: starting || !canStart || notAvailable ? null : start,
+                    icon: const Icon(Icons.play_arrow),
+                    label: starting
+                        ? const CircularProgressIndicator()
+                        : const Text('Start quiz'),
+                  ),
+                ],
+                if (error != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 12),
                     child: Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
