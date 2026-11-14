@@ -1575,16 +1575,25 @@ class _ExamDetailPageState extends State<ExamDetailPage> {
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
-            ...List.generate(options.length, (index) => RadioListTile<int>(
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              value: index,
+            RadioGroup<int>(
               groupValue: selected,
               onChanged: saving || submitting
                   ? null
-                  : (value) => setState(() => answers[id] = value!),
-              title: Text(options[index].toString()),
-            )),
+                  : (value) {
+                      if (value != null) {
+                        setState(() => answers[id] = value);
+                      }
+                    },
+              child: Column(
+                children: List.generate(options.length, (index) => RadioListTile<int>(
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  value: index,
+                  enabled: !saving && !submitting,
+                  title: Text(options[index].toString()),
+                )),
+              ),
+            ),
             Text(
               '${question['marks'] ?? 0} marks',
               style: Theme.of(context).textTheme.bodySmall,
