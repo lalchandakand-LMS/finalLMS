@@ -25,7 +25,10 @@ class AttendanceController extends Controller
     {
         $this->authorizeBatch($batch);
 
-        $students = $batch->enrollments()->with('user')->get();
+        $students = $batch->enrollments()
+            ->where('status', 'active')
+            ->with('user')
+            ->get();
         $attendance = Attendance::where('batch_id', $batch->id)
             ->whereDate('attendance_date', request('date', now()->toDateString()))
             ->pluck('status', 'student_id');
@@ -44,7 +47,10 @@ class AttendanceController extends Controller
             'records.*.status' => ['required', 'in:present,absent,late'],
         ]);
 
-        $enrolledStudentIds = $batch->enrollments()->pluck('user_id')->all();
+        $enrolledStudentIds = $batch->enrollments()
+            ->where('status', 'active')
+            ->pluck('user_id')
+            ->all();
 
         foreach ($validated['records'] as $record) {
             abort_unless(in_array((int) $record['student_id'], $enrolledStudentIds, true), 403);
