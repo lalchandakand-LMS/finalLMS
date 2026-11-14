@@ -283,3 +283,16 @@ The student browser sign-in policy is now:
 - Mobile API endpoints: `POST /api/v1/auth/login`, `POST /api/v1/auth/verify-device`, and `POST /api/v1/auth/device-status`. The contract and client requirements are documented in `docs/mobile-api-v1.md`. The Flutter Student App now implements secure device-ID/token storage, OTP entry, Admin-approval waiting UI and 15-second approval polling. Flutter analyze/tests and backend CI passed on the current head; real SMS delivery and end-to-end approval still need isolated staging acceptance.
 
 Current work is on PR #116, branch `feature/aloms-premium-homepage-clean`. Keep PR #116 unmerged and do not deploy or change production data/payment settings without a separate explicit owner instruction. Re-fetch the PR head and exact-head Laravel CI/CodeQL/package runs before relying on any verification status.
+## 2026-11-14 implementation handoff — eBook Store PR #124
+
+- Active branch: `feature/ebook-private-downloads-v1`.
+- PR: https://github.com/lalchandakand-LMS/finalLMS/pull/124 (draft; not merged).
+- Latest reviewed commit: `4affeb566c40ec755f838f37a0af4ebcafa2fc06`.
+- Scope: eBook-only catalog and categories; admin PDF upload to the private `local` disk; manual payment-reference checkout and private proof storage; admin approval/rejection; student order/library pages; owner-checked private downloads with expiry, revocation and download-count enforcement.
+- Free eBooks create completed orders and entitlements immediately. A student with an active entitlement cannot re-checkout to reset a download limit. Expired or exhausted entitlements can be purchased again.
+- Product creation plus category sync is transactional. Purchased PDFs cannot be replaced; products with order history are archived. Private payment-proof responses use no-store headers.
+- Tests in `tests/Feature/PrivateEbookStoreTest.php` cover private upload, approval, download limit, IDOR, expiry, rejection, archive/file immutability, free fulfillment and duplicate-free-entitlement prevention.
+- A previous PR head passed Laravel CI and CodeQL, but later hardening commits moved the head. Latest exact-head Laravel CI run #3913 and CodeQL #757 were running at the time of this note. Re-check the latest PR head and both checks before marking ready or merging.
+- No production deployment or live database changes. No gateway integration is claimed; paid checkout is manual Admin verification only.
+- Next: inspect exact-head CI logs/results; fix any failures; re-review migration compatibility and access control; only then mark ready and merge. After merge, schedule isolated cPanel staging validation before any production release.
+

@@ -37,6 +37,9 @@ use App\Http\Controllers\BackupController;
 use App\Http\Controllers\InstallController;
 use App\Http\Controllers\QuizContestController;
 use App\Http\Controllers\FlashSaleController;
+use App\Http\Controllers\AdminProductController;
+use App\Http\Controllers\EbookStoreController;
+use App\Http\Controllers\AdminEbookOrderController;
 use App\Http\Controllers\GuardianController;
 use App\Http\Controllers\StorageManagerController;
 use App\Http\Controllers\AdminAnalyticsController;
@@ -86,6 +89,8 @@ Route::get('/flash-sale', [FlashSaleController::class, 'publicIndex'])->name('fl
 Route::get('/contests', [QuizContestController::class, 'index'])->name('contests.index');
 Route::get('/contests/{contest}', [QuizContestController::class, 'show'])->name('contests.show');
 
+Route::get('/ebooks', [EbookStoreController::class, 'index'])->name('ebooks.index');
+Route::get('/ebooks/{product:slug}', [EbookStoreController::class, 'show'])->name('ebooks.show');
 Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
 Route::get('/course-combos', [CourseComboController::class, 'publicIndex'])->name('course-combos.index');
 Route::get('/course-combos/{courseCombo:slug}', [CourseComboController::class, 'show'])->name('course-combos.show');
@@ -106,6 +111,11 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group(function () {
+    Route::middleware('role:student')->group(function () {
+        Route::post('/ebooks/{product:slug}/checkout', [EbookStoreController::class, 'checkout'])->middleware('throttle:5,1')->name('ebooks.checkout');
+        Route::get('/my/ebooks/orders', [EbookStoreController::class, 'orders'])->name('ebooks.orders');
+        Route::get('/my/ebooks/downloads/{permission}', [EbookStoreController::class, 'download'])->middleware('throttle:10,1')->name('ebooks.download');
+    });
     Route::middleware('role:guardian')->prefix('guardian')->name('guardian.')->group(function () {
         Route::get('/dashboard', [GuardianController::class, 'dashboard'])->name('dashboard');
         Route::get('/links', [GuardianController::class, 'links'])->name('links.index');
@@ -209,6 +219,16 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         ->name('courses.lessons.complete');
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
+        Route::get('/ebooks', [AdminProductController::class, 'index'])->name('admin.ebooks.index');
+        Route::post('/ebooks', [AdminProductController::class, 'store'])->name('admin.ebooks.store');
+        Route::put('/ebooks/{product}', [AdminProductController::class, 'update'])->name('admin.ebooks.update');
+        Route::delete('/ebooks/{product}', [AdminProductController::class, 'destroy'])->name('admin.ebooks.destroy');
+        Route::post('/ebook-categories', [AdminProductController::class, 'storeCategory'])->name('admin.ebooks.categories.store');
+        Route::delete('/ebook-categories/{category}', [AdminProductController::class, 'destroyCategory'])->name('admin.ebooks.categories.destroy');
+        Route::get('/ebook-orders', [AdminEbookOrderController::class, 'index'])->name('admin.ebooks.orders.index');
+        Route::get('/ebook-orders/{order}/proof', [AdminEbookOrderController::class, 'proof'])->name('admin.ebooks.orders.proof');
+        Route::post('/ebook-orders/{order}/approve', [AdminEbookOrderController::class, 'approve'])->name('admin.ebooks.orders.approve');
+        Route::post('/ebook-orders/{order}/reject', [AdminEbookOrderController::class, 'reject'])->name('admin.ebooks.orders.reject');
         Route::get('/analytics', [AdminAnalyticsController::class, 'index'])->name('admin.analytics.index');
         Route::get('/dashboard-announcements', [AdminDashboardAnnouncementController::class, 'index'])->name('admin.dashboard-announcements.index');
         Route::get('/dashboard-announcements/create', [AdminDashboardAnnouncementController::class, 'create'])->name('admin.dashboard-announcements.create');
