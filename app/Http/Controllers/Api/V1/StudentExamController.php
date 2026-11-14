@@ -67,12 +67,21 @@ class StudentExamController extends Controller
                 'starts_at' => $exam->starts_at?->toIso8601String(),
                 'ends_at' => $exam->ends_at?->toIso8601String(),
                 'duration_minutes' => $exam->duration_minutes,
+                'pass_marks' => $exam->pass_marks,
                 'attempt' => $this->attemptSummary($attempt),
+                'deadline' => $attempt && $attempt->status === 'in_progress'
+                    ? $this->deadline($attempt)->toIso8601String()
+                    : null,
                 'questions' => $attempt && $attempt->status === 'in_progress'
                     ? $this->questionPayload($attempt)
                     : [],
                 'result' => $attempt && $attempt->status === 'submitted'
-                    ? ['score' => $attempt->score, 'submitted_at' => $attempt->submitted_at?->toIso8601String()]
+                    ? [
+                        'score' => $attempt->score,
+                        'pass_marks' => $exam->pass_marks,
+                        'passed' => (int) $attempt->score >= (int) $exam->pass_marks,
+                        'submitted_at' => $attempt->submitted_at?->toIso8601String(),
+                    ]
                     : null,
             ],
         ]);
@@ -85,14 +94,6 @@ class StudentExamController extends Controller
         $attempt = DB::transaction(function () use ($request, $exam): ExamAttempt {
             $lockedExam = Exam::query()->lockForUpdate()->findOrFail($exam->id);
             $this->ensureEnrolled($request, $lockedExam);
-            abort_unless(
-                $lockedExam->status === 'published'
-                    && now()->between($lockedExam->starts_at, $lockedExam->ends_at),
-                403,
-                'This exam is not currently available.'
-            );
-            abort_unless($lockedExam->questions()->exists(), 422, 'This exam has no questions.');
-
             $attempt = ExamAttempt::query()
                 ->where('exam_id', $lockedExam->id)
                 ->where('student_id', $request->user()->id)
@@ -100,12 +101,26 @@ class StudentExamController extends Controller
                 ->first();
 
             if (! $attempt) {
+                abort_unless(
+                    $lockedExam->status === 'published'
+                        && now()->between($lockedExam->starts_at, $lockedExam->ends_at),
+                    403,
+                    'This exam is not currently available.'
+                );
+                abort_unless($lockedExam->questions()->exists(), 422, 'This exam has no questions.');
+
                 $attempt = ExamAttempt::create([
                     'exam_id' => $lockedExam->id,
                     'student_id' => $request->user()->id,
                     'started_at' => now(),
                     'status' => 'in_progress',
                 ]);
+            } elseif ($attempt->status === 'in_progress') {
+                abort_if(
+                    now()->gt($this->deadline($attempt)->addSeconds(15)),
+                    409,
+                    'The exam attempt time has expired.'
+                );
             }
 
             if ($attempt->status === 'in_progress' && ! $attempt->attemptQuestions()->exists()) {
