@@ -498,8 +498,6 @@ class _StudentHomeState extends State<StudentHome> {
         ),
         IconButton(
           onPressed: openWishlist,
-          icon: const Icon(Icons.favorite_outlin        IconButton(
-          onPressed: openWishlist,
           icon: const Icon(Icons.favorite_outline),
           tooltip: 'My wishlist',
         ),
