@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:material_ui/material_ui.dart';
 import 'api_client.dart';
 import 'package:video_player/video_player.dart';
@@ -647,7 +648,7 @@ class _WishlistPageState extends State<WishlistPage> {
       if (!mounted) return;
       setState(() => courses = response['data'] as List<dynamic>? ?? []);
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
       if (mounted) setState(() => loading = false);
     }
@@ -1193,6 +1194,7 @@ class _AssignmentDetailPageState extends State<AssignmentDetailPage> {
   Map<String, dynamic>? assignment;
   bool loading = true;
   bool saving = false;
+  PlatformFile? attachment;
   String? error;
 
   @override
@@ -1223,11 +1225,34 @@ class _AssignmentDetailPageState extends State<AssignmentDetailPage> {
     }
   }
 
+  Future<void> pickAttachment() async {
+    try {
+      final picked = await FilePicker.pickFile(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'],
+      );
+      if (picked == null) { return; }
+      final bytes = await picked.readAsBytes();
+      if (bytes.lengthInBytes > 10 * 1024 * 1024) {
+        if (mounted) { setState(() => error = 'Attachment must be 10 MB or smaller.'); }
+        return;
+      }
+      if (mounted) { setState(() { attachment = picked; error = null; }); }
+    } catch (exception) {
+      if (mounted) setState(() => error = exception.toString());
+    }
+  }
+
   Future<void> submit() async {
     setState(() { saving = true; error = null; });
     try {
-      await widget.api.postJson('/assignments/${widget.id}/submit', {'answer': answer.text.trim()});
+      await widget.api.postMultipart(
+        '/assignments/${widget.id}/submit',
+        {'answer': answer.text.trim()},
+        attachment: attachment,
+      );
       if (!mounted) return;
+      setState(() => attachment = null);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Assignment submitted.')));
       await load();
     } catch (exception) {
@@ -1268,14 +1293,30 @@ class _AssignmentDetailPageState extends State<AssignmentDetailPage> {
                   minLines: 6,
                   maxLines: 12,
                   maxLength: 50000,
+                  onChanged: (_) => setState(() {}),
                   decoration: const InputDecoration(
                     labelText: 'Your answer',
                     alignLabelWithHint: true,
                     border: OutlineInputBorder(),
                   ),
                 ),
+                OutlinedButton.icon(
+                  onPressed: saving ? null : pickAttachment,
+                  icon: const Icon(Icons.attach_file),
+                  label: Text(attachment?.name ?? 'Attach file (PDF, DOC, DOCX, JPG, PNG • max 10 MB)'),
+                ),
+                if (attachment != null)
+                  TextButton.icon(
+                    onPressed: saving ? null : () => setState(() => attachment = null),
+                    icon: const Icon(Icons.close),
+                    label: const Text('Remove attachment'),
+                  ),
+                if (submission?['attachment_name'] != null && attachment == null)
+                  Text('Previously submitted file: ${submission?['attachment_name']}'),
                 FilledButton(
-                  onPressed: saving || answer.text.trim().isEmpty ? null : submit,
+                  onPressed: saving || (answer.text.trim().isEmpty && attachment == null && submission?['has_attachment'] != true)
+                      ? null
+                      : submit,
                   child: saving ? const CircularProgressIndicator() : const Text('Submit assignment'),
                 ),
               ] else if (item?['is_closed'] == true)
@@ -1285,7 +1326,6 @@ class _AssignmentDetailPageState extends State<AssignmentDetailPage> {
     );
   }
 }
-
 
 class ExamsPage extends StatefulWidget {
   const ExamsPage({required this.api, super.key});

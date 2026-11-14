@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
@@ -223,6 +224,40 @@ class MobileApi {
       },
       body: jsonEncode(body),
     );
+    if (response.statusCode == 401) {
+      await storage.delete(key: _tokenKey);
+    }
+    return _decode(response);
+  }
+
+  Future<Map<String, dynamic>> postMultipart(
+    String path,
+    Map<String, String> fields, {
+    PlatformFile? attachment,
+  }) async {
+    final token = await readToken();
+    if (token == null) {
+      throw const ApiException('Please sign in again.', 401);
+    }
+
+    final request = http.MultipartRequest('POST', Uri.parse('$baseUrl$path'))
+      ..headers.addAll({
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      })
+      ..fields.addAll(fields);
+
+    if (attachment != null) {
+      final bytes = await attachment.readAsBytes();
+      request.files.add(http.MultipartFile.fromBytes(
+        'attachment',
+        bytes,
+        filename: attachment.name,
+      ));
+    }
+
+    final streamed = await client.send(request);
+    final response = await http.Response.fromStream(streamed);
     if (response.statusCode == 401) {
       await storage.delete(key: _tokenKey);
     }
