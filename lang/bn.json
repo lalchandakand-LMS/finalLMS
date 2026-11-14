@@ -1064,5 +1064,7 @@
     "disabled": "নিষ্ক্রিয়",
     "Effective:": "কার্যকর অবস্থা:",
     "available": "উপলভ্য",
-    "not active": "সক্রিয় নয়"
+    "not active": "সক্রিয় নয়",
+    "Add-on registry": "অ্যাড-অন রেজিস্ট্রি",
+    "Review allow-listed integrations and configuration readiness": "অনুমোদিত ইন্টিগ্রেশন ও কনফিগারেশনের প্রস্তুতি পর্যালোচনা করুন"
 }
