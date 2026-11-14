@@ -246,3 +246,22 @@ No production deployment, production database mutation, live gateway activation 
 - PR #156 — this project-status documentation refresh — merged to `main` as `8b3749dc1c5f21774785e09cfcc7cf0e1ab179ce`. Exact-head Laravel CI run #4397 and CodeQL run #853 both completed successfully.
 - PR #158 — question-bank admin access and exam answer autosave/resume proposal — remains open and is not merge-ready. Its base is behind current `main`, GitHub currently reports mergeability false, and no exact-head CI/CodeQL runs were returned at the latest check. Review/rebase and fresh checks are required before considering merge. Do not assume its proposed changes are live.
 - These merge records do not constitute staging/browser acceptance or production deployment. No production database or hosting files were changed.
+
+
+## Verified continuation update (2026-11-14, trusted-device, branch scope and student learning)
+
+- PR #165 — all-role trusted-device/session revocation — merged as `348a7aa87bb751c50af42eed0889a3dff946be9d`. Exact-head Laravel CI passed (441 tests / 2,527 assertions) and CodeQL passed.
+- PR #166 — guardian and branch-scoped staff access hardening — merged as `adc2994bbafb8f06c5b20c7eb8ebc57002aa54f6`. Both exact-head Laravel CI runs and CodeQL passed; post-merge Laravel CI and CodeQL also passed.
+- PR #168 — student lesson resume/navigation — merged as `1e6295a1c71289df4e2808689bcca47f376417e0`. Exact PR-head Laravel CI passed (451 tests / 2,586 assertions), including migrations, route list, frontend build and cPanel ZIP package; CodeQL passed. Post-merge mainline Laravel CI and CodeQL are still running at this status update.
+- Lesson progress now distinguishes last viewed from completed: opening a lesson does not mark it complete. Web and mobile API completion, student dashboard, teacher metrics and guardian summaries count only rows with non-null `completed_at`. Web/Mobile completion can finish an existing in-progress row.
+- PR #167 was closed as superseded by #168 after PR #166 changed `GuardianController`; no feature work was discarded.
+- PR #158 (exam autosave/question bank proposal) is closed unmerged. Exam autosave is not delivered and remains outstanding work.
+- PR #164 was closed unmerged and replaced by #166; its scoped guardian/branch fixes were carried forward.
+- No production deployment, production migration, live SMS/payment-provider activation or live database changes were performed.
+
+### Remaining release blockers
+
+1. Isolated HTTPS staging subdomain and separate empty database are still required before any cPanel installation, upgrade, restore or release rehearsal.
+2. Confirm post-merge Laravel CI and CodeQL for main commit `1e6295a1c71289df4e2808689bcca47f376417e0`.
+3. Browser acceptance is still required for student resume/navigation, guardian privacy, branch manager and accountant flows on desktop/mobile and in Bangla/English.
+4. Admin Update Center remains partial; signed release activation, migrations, maintenance mode, health checks and tested rollback must be completed before advertising one-click updates.
