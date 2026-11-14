@@ -37,7 +37,11 @@
                     </div>
                     <div class="meta-row" style="justify-content:space-between;">
                         <small class="muted">{{ $enrollment->progress_percent }}% {{ __('complete') }}</small>
-                        <a class="btn primary" href="{{ route('courses.show', $course) }}">{{ $enrollment->status === 'completed' ? __('Review course') : __('Continue learning') }}</a>
+                        @if($enrollment->resume_lesson)
+                            <a class="btn primary" href="{{ route('courses.lessons.show', [$course, $enrollment->resume_lesson]) }}">{{ $enrollment->status === 'completed' ? __('Review last lesson') : __('Resume learning') }}</a>
+                        @else
+                            <a class="btn primary" href="{{ route('courses.show', $course) }}">{{ $enrollment->status === 'completed' ? __('Review course') : __('Continue learning') }}</a>
+                        @endif
                     </div>
                 </article>
             @endforeach
