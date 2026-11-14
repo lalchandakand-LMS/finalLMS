@@ -54,7 +54,7 @@ class AssignmentController extends Controller
             'status' => 'published',
         ]);
 
-        return back()->with('success', 'Assignment published to the batch.');
+        return back()->with('success', __('Assignment published to the batch.'));
     }
 
     public function show(Assignment $assignment): View
@@ -129,7 +129,7 @@ class AssignmentController extends Controller
                     && ! $submission?->attachment_path
                 ) {
                     throw ValidationException::withMessages([
-                        'answer' => 'Please enter an answer or attach a file.',
+                        'answer' => __('Please enter an answer or attach a file.'),
                     ]);
                 }
 
@@ -177,8 +177,8 @@ class AssignmentController extends Controller
             }
 
             return $result['state'] === 'closed'
-                ? back()->with('error', 'This assignment is closed for submissions.')
-                : back()->with('info', 'Your submission is already received and awaiting review.');
+                ? back()->with('error', __('This assignment is closed for submissions.'))
+                : back()->with('info', __('Your submission is already received and awaiting review.'));
         }
 
         $previousPath = $result['previous_attachment_path'];
@@ -188,7 +188,7 @@ class AssignmentController extends Controller
 
         return back()->with(
             'success',
-            $result['was_revision'] ? 'Your revised assignment has been submitted.' : 'Assignment submitted successfully.'
+            $result['was_revision'] ? __('Your revised assignment has been submitted.') : __('Assignment submitted successfully.')
         );
     }
 
@@ -249,7 +249,7 @@ class AssignmentController extends Controller
             ]);
         });
 
-        return back()->with('success', 'Assignment graded successfully.');
+        return back()->with('success', __('Assignment graded successfully.'));
     }
 
     private function authorizeBatchManagement(Batch $batch): void
