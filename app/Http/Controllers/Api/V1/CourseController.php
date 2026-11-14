@@ -168,20 +168,15 @@ class CourseController extends Controller
         $disk = Storage::disk('lesson_videos');
         abort_unless($disk->exists($lesson->video_path), 404);
 
-        $mime = $disk->mimeType($lesson->video_path) ?: 'application/octet-stream';
-        abort_unless(in_array($mime, [
-            'video/mp4',
-            'video/webm',
-            'video/ogg',
-            'video/quicktime',
-        ], true), 404);
-
-        $extension = match ($mime) {
-            'video/webm' => 'webm',
-            'video/ogg' => 'ogv',
-            'video/quicktime' => 'mov',
-            default => 'mp4',
+        $extension = strtolower(pathinfo($lesson->video_path, PATHINFO_EXTENSION));
+        $mime = match ($extension) {
+            'mp4' => 'video/mp4',
+            'webm' => 'video/webm',
+            'ogv', 'ogg' => 'video/ogg',
+            'mov' => 'video/quicktime',
+            default => null,
         };
+        abort_unless($mime !== null, 404);
         $response = response()->file($disk->path($lesson->video_path), [
             'Content-Type' => $mime,
             'Content-Disposition' => 'inline; filename="lesson-'.$lesson->id.'.'.$extension.'"',
