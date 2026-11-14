@@ -2193,6 +2193,17 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
                         : const Text('Start quiz'),
                   ),
                 ],
+                if ((awaitingReview || submitted) && canStart && !notAvailable)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: FilledButton.icon(
+                      onPressed: starting ? null : start,
+                      icon: const Icon(Icons.replay),
+                      label: starting
+                          ? const CircularProgressIndicator()
+                          : const Text('Start another attempt'),
+                    ),
+                  ),
                 if (error != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 12),
