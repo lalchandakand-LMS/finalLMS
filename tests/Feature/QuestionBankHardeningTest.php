@@ -108,6 +108,64 @@ class QuestionBankHardeningTest extends TestCase
         $this->assertDatabaseCount('question_bank_questions', 0);
     }
 
+    public function test_question_bank_and_exam_reject_duplicate_mcq_options(): void
+    {
+        [$teacher, , $batch] = $this->makeBatchWithStudent();
+        $this->actingAs($teacher);
+
+        $this->from(route('teacher.batches.question-bank.index', $batch))
+            ->post(route('teacher.batches.question-bank.store', $batch), [
+                'subject' => 'Grammar',
+                'question' => 'Duplicate choices?',
+                'options' => ['Same', 'Same', 'Other', 'Last'],
+                'correct_option' => 0,
+                'marks' => 1,
+            ])
+            ->assertSessionHasErrors('options.1');
+
+        $question = QuestionBankQuestion::create([
+            'teacher_id' => $teacher->id,
+            'subject' => 'Grammar',
+            'question' => 'Existing question?',
+            'options' => ['A', 'B', 'C', 'D'],
+            'correct_option' => 0,
+            'marks' => 1,
+        ]);
+
+        $this->from(route('teacher.batches.question-bank.index', $batch))
+            ->put(route('teacher.batches.question-bank.update', [$batch, $question]), [
+                'subject' => 'Grammar',
+                'question' => 'Updated question?',
+                'options' => ['Same', 'Same', 'Other', 'Last'],
+                'correct_option' => 0,
+                'marks' => 1,
+            ])
+            ->assertSessionHasErrors('options.1');
+
+        $this->assertDatabaseHas('question_bank_questions', [
+            'id' => $question->id,
+            'question' => 'Existing question?',
+        ]);
+
+        $this->from(route('teacher.batches.exams.index', $batch))
+            ->post(route('teacher.batches.exams.store', $batch), [
+                'title' => 'Duplicate option exam',
+                'starts_at' => now()->addHour()->format('Y-m-d H:i:s'),
+                'ends_at' => now()->addHours(2)->format('Y-m-d H:i:s'),
+                'duration_minutes' => 30,
+                'pass_marks' => 1,
+                'questions' => [[
+                    'question' => 'Manual duplicate choices?',
+                    'options' => ['Same', 'Same', 'Other', 'Last'],
+                    'correct_option' => 0,
+                    'marks' => 1,
+                ]],
+            ])
+            ->assertSessionHasErrors('questions.0.options.1');
+
+        $this->assertDatabaseMissing('exams', ['title' => 'Duplicate option exam']);
+    }
+
     public function test_randomized_attempt_question_set_is_limited_and_stays_frozen_when_student_reopens_exam(): void
     {
         [$teacher, $student, $batch] = $this->makeBatchWithStudent();
