@@ -108,6 +108,7 @@ class _InstructorHomeState extends State<InstructorHome> {
   List<dynamic> courses = [];
   List<dynamic> batches = [];
   List<dynamic> assignments = [];
+  List<dynamic> liveClasses = [];
   bool loading = true;
   String? error;
   @override
@@ -119,12 +120,14 @@ class _InstructorHomeState extends State<InstructorHome> {
         widget.api.get('/instructor/courses'),
         widget.api.get('/instructor/batches'),
         widget.api.get('/instructor/assignments'),
+        widget.api.get('/instructor/live-classes'),
       ]);
       if (mounted) {
         setState(() {
           courses = responses[0]['data'] as List<dynamic>? ?? [];
           batches = responses[1]['data'] as List<dynamic>? ?? [];
           assignments = responses[2]['data'] as List<dynamic>? ?? [];
+          liveClasses = responses[3]['data'] as List<dynamic>? ?? [];
         });
       }
     } catch (e) {
@@ -281,6 +284,197 @@ class _InstructorHomeState extends State<InstructorHome> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
+  }
+
+  Future<DateTime?> _pickDateTime(DateTime initial) async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (date == null || !mounted) return null;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(initial),
+    );
+    if (time == null) return null;
+    return DateTime(date.year, date.month, date.day, time.hour, time.minute);
+  }
+
+  Future<void> scheduleLiveClass() async {
+    if (batches.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No assigned batches are available.')),
+      );
+      return;
+    }
+    final title = TextEditingController();
+    final description = TextEditingController();
+    final meetingUrl = TextEditingController();
+    int? selectedBatchId = (batches.first as Map<String, dynamic>)['id'] as int;
+    DateTime startsAt = DateTime.now().add(const Duration(days: 1));
+    startsAt = DateTime(startsAt.year, startsAt.month, startsAt.day, 19);
+    DateTime endsAt = startsAt.add(const Duration(hours: 1));
+    final payload = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Schedule live class'),
+          content: SingleChildScrollView(child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<int>(
+                initialValue: selectedBatchId,
+                decoration: const InputDecoration(labelText: 'Batch'),
+                items: batches.map((item) {
+                  final batch = item as Map<String, dynamic>;
+                  return DropdownMenuItem<int>(
+                    value: batch['id'] as int,
+                    child: Text(batch['title']?.toString() ?? 'Batch'),
+                  );
+                }).toList(),
+                onChanged: (value) => setDialogState(() => selectedBatchId = value),
+              ),
+              TextField(controller: title, decoration: const InputDecoration(labelText: 'Session title')),
+              TextField(
+                controller: description,
+                minLines: 2,
+                maxLines: 4,
+                decoration: const InputDecoration(labelText: 'Description (optional)'),
+              ),
+              TextField(
+                controller: meetingUrl,
+                keyboardType: TextInputType.url,
+                decoration: const InputDecoration(labelText: 'HTTPS meeting URL'),
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Starts'),
+                subtitle: Text(startsAt.toLocal().toString().split('.').first),
+                trailing: IconButton(
+                  icon: const Icon(Icons.calendar_month),
+                  onPressed: () async {
+                    final picked = await _pickDateTime(startsAt);
+                    if (picked != null) setDialogState(() {
+                      startsAt = picked;
+                      if (!endsAt.isAfter(startsAt)) endsAt = startsAt.add(const Duration(hours: 1));
+                    });
+                  },
+                ),
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Ends'),
+                subtitle: Text(endsAt.toLocal().toString().split('.').first),
+                trailing: IconButton(
+                  icon: const Icon(Icons.schedule),
+                  onPressed: () async {
+                    final picked = await _pickDateTime(endsAt);
+                    if (picked != null) setDialogState(() => endsAt = picked);
+                  },
+                ),
+              ),
+            ],
+          )),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+            FilledButton(
+              onPressed: () {
+                final url = meetingUrl.text.trim();
+                if (selectedBatchId == null || title.text.trim().isEmpty ||
+                    !url.startsWith('https://') || !endsAt.isAfter(startsAt) ||
+                    !startsAt.isAfter(DateTime.now())) {
+                  return;
+                }
+                Navigator.pop(dialogContext, {
+                  'batch_id': selectedBatchId,
+                  'title': title.text.trim(),
+                  'description': description.text.trim(),
+                  'meeting_url': url,
+                  'starts_at': startsAt.toUtc().toIso8601String(),
+                  'ends_at': endsAt.toUtc().toIso8601String(),
+                });
+              },
+              child: const Text('Schedule'),
+            ),
+          ],
+        ),
+      ),
+    );
+    title.dispose();
+    description.dispose();
+    meetingUrl.dispose();
+    if (payload == null) return;
+    try {
+      final batchId = payload.remove('batch_id');
+      await widget.api.postJson('/instructor/batches/$batchId/live-classes', payload);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Live class scheduled.')),
+      );
+      await load();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
+  Future<void> updateLiveClass(
+    Map<String, dynamic> liveClass, {
+    String? status,
+    String? recordingUrl,
+  }) async {
+    final payload = <String, dynamic>{};
+    if (status != null) payload['status'] = status;
+    if (recordingUrl != null) {
+      payload['recording_url'] = recordingUrl.trim().isEmpty ? null : recordingUrl.trim();
+    }
+    try {
+      await widget.api.patchJson('/instructor/live-classes/${liveClass['id']}', payload);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Live class updated.')),
+      );
+      await load();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
+  Future<void> publishRecording(Map<String, dynamic> liveClass) async {
+    final controller = TextEditingController(
+      text: liveClass['recording_url']?.toString() ?? '',
+    );
+    final url = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Publish class recording'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.url,
+          decoration: const InputDecoration(
+            labelText: 'YouTube or Vimeo HTTPS URL',
+            hintText: 'https://youtu.be/...',
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
+            child: const Text('Publish'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (url == null) return;
+    if (!url.isEmpty && !url.startsWith('https://')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Recording URL must use HTTPS.')),
+      );
+      return;
+    }
+    await updateLiveClass(liveClass, recordingUrl: url);
   }
 
   Future<void> viewSubmissions(Map<String, dynamic> assignment) async {
@@ -449,6 +643,47 @@ class _InstructorHomeState extends State<InstructorHome> {
               ),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => viewSubmissions(assignment),
+            ));
+          }),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(child: Text('Live Classes', style: Theme.of(context).textTheme.titleLarge)),
+              FilledButton.icon(
+                onPressed: scheduleLiveClass,
+                icon: const Icon(Icons.video_call),
+                label: const Text('Schedule'),
+              ),
+            ],
+          ),
+          if (liveClasses.isEmpty) const ListTile(title: Text('No live classes scheduled.')),
+          ...liveClasses.map((item) {
+            final liveClass = item as Map<String, dynamic>;
+            return Card(child: ListTile(
+              leading: const Icon(Icons.video_camera_front_outlined),
+              title: Text(liveClass['title']?.toString() ?? 'Live class'),
+              subtitle: Text(
+                '${liveClass['batch'] ?? 'Batch'} · ${liveClass['status'] ?? ''} · ${liveClass['starts_at'] ?? ''}',
+              ),
+              isThreeLine: true,
+              trailing: PopupMenuButton<String>(
+                tooltip: 'Manage live class',
+                onSelected: (value) {
+                  if (value == 'recording') {
+                    publishRecording(liveClass);
+                  } else {
+                    updateLiveClass(liveClass, status: value);
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(value: 'scheduled', child: Text('Mark scheduled')),
+                  const PopupMenuItem(value: 'live', child: Text('Mark live')),
+                  const PopupMenuItem(value: 'completed', child: Text('Mark completed')),
+                  const PopupMenuItem(value: 'cancelled', child: Text('Cancel class')),
+                  const PopupMenuDivider(),
+                  const PopupMenuItem(value: 'recording', child: Text('Publish recording')),
+                ],
+              ),
             ));
           }),
         ]),
