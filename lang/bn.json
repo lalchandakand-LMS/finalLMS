@@ -767,5 +767,6 @@
     "Questions per attempt": "প্রতি চেষ্টায় প্রশ্নের সংখ্যা",
     "None": "নেই",
     "All": "সবগুলো",
-    "Attach published question sets to this course and group them under a module. Configure attempts, time limits and question selection.": "প্রকাশিত প্রশ্নসেট এই কোর্সে যুক্ত করে মডিউল অনুযায়ী সাজান। চেষ্টার সংখ্যা, সময়সীমা ও প্রশ্ন নির্বাচন নির্ধারণ করুন।"
+    "Attach published question sets to this course and group them under a module. Configure attempts, time limits and question selection.": "প্রকাশিত প্রশ্নসেট এই কোর্সে যুক্ত করে মডিউল অনুযায়ী সাজান। চেষ্টার সংখ্যা, সময়সীমা ও প্রশ্ন নির্বাচন নির্ধারণ করুন।",
+    "This course has quiz attempt history and was archived instead of deleted.": "এই কোর্সে শিক্ষার্থীদের কুইজের ইতিহাস রয়েছে, তাই মুছে না ফেলে আর্কাইভ করা হয়েছে।"
 }
