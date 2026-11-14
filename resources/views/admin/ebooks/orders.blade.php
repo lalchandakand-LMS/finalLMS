@@ -11,6 +11,12 @@
             <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><strong>{{ $order->order_number }}</strong><strong>{{ __(ucfirst($order->status)) }}</strong></div>
             <p>{{ $order->user->name }} · {{ $order->user->email }}</p>
             <p>৳{{ number_format((float)$order->total,2) }} · {{ __('Reference') }}: {{ $order->payment_reference }} · {{ __('Sender') }}: {{ $order->payment_sender ?: '—' }}</p>
+            @foreach($order->payments as $payment)
+                <p class="muted">{{ strtoupper($payment->method) }} · {{ __('Gateway status') }}: {{ __(ucfirst($payment->status)) }}
+                    @if($payment->gateway_transaction_id) · {{ __('Gateway transaction') }}: {{ $payment->gateway_transaction_id }} @endif
+                    @if($payment->admin_note) · {{ $payment->admin_note }} @endif
+                </p>
+            @endforeach
             @if($order->payment_proof_path)<p><a href="{{ route('admin.ebooks.orders.proof',$order) }}">{{ __('View private payment proof') }}</a></p>@endif
             @foreach($order->items as $item)
                 <div style="padding:10px 0;border-top:1px solid var(--border)">
