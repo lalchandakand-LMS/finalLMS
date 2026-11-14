@@ -11,10 +11,14 @@
         @auth
             <form method="POST" action="{{ route('ebooks.checkout',$product->slug) }}" enctype="multipart/form-data">
                 @csrf
-                <p>Payment method: Manual (academy verification required)</p>
-                <label>Transaction reference<input name="payment_reference" maxlength="120" required></label>
-                <label>Sender account (optional)<input name="payment_sender" maxlength="60"></label>
-                <label>Payment screenshot / receipt (optional)<input type="file" name="payment_proof" accept="image/jpeg,image/png,application/pdf"></label>
+                @if((float)$product->currentPrice() > 0)
+                    <p>Payment method: Manual (academy verification required)</p>
+                    <label>Transaction reference<input name="payment_reference" maxlength="120" required></label>
+                    <label>Sender account (optional)<input name="payment_sender" maxlength="60"></label>
+                    <label>Payment screenshot / receipt (optional)<input type="file" name="payment_proof" accept="image/jpeg,image/png,application/pdf"></label>
+                @else
+                    <p>This eBook is free. Your download access will be activated immediately.</p>
+                @endif
                 <button class="btn primary" type="submit">Submit order</button>
             </form>
         @else
