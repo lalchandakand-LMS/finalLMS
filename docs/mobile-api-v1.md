@@ -115,6 +115,7 @@ The mobile exam UI displays the server deadline, saves selected answers, and sub
 ## Instructor endpoints
 
 - `GET /instructor/batches`: paginated batches assigned to the authenticated instructor, including course title and assignment count.
+- `GET /instructor/batches/{batch_id}?status=&per_page=`: batch details and a paginated roster of active/completed enrollments for that instructor's own batch only. Optional status filter: `active` or `completed`; page size is limited to 50. Student identity and contact fields are returned only within the owning instructor's batch scope.
 - `GET /instructor/assignments`: paginated assignments created for the authenticated instructor, with batch/course labels and submission counts.
 - `POST /instructor/batches/{batch_id}/assignments`: publish an assignment to an owned batch. Requires title, instructions, future `due_at`, and `max_marks`; optional `allow_late`.
 - `GET /instructor/assignments/{assignment_id}/submissions`: list submissions and student identity for an assignment owned by the authenticated instructor.
