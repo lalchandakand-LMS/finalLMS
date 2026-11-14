@@ -84,4 +84,41 @@ class ExpenseManagementTest extends TestCase
         $accountant = User::factory()->create(['role' => 'accountant']);
         $this->actingAs($accountant)->get(route('admin.finance.expenses.index'))->assertForbidden();
     }
+
+    public function test_inactive_branch_blocks_accountant_expense_reads_and_mutations(): void
+        {
+            $branch = Branch::create(['name' => 'Closing Branch', 'slug' => 'closing-branch', 'is_active' => true]);
+            $accountant = User::factory()->create(['role' => 'accountant', 'admin_permissions' => ['finance.expenses'], 'branch_id' => $branch->id]);
+            $expense = Expense::create([
+                'branch_id' => $branch->id,
+                'created_by' => $accountant->id,
+                'category' => 'Utilities',
+                'title' => 'Existing branch expense',
+                'amount' => 450,
+                'payment_method' => 'cash',
+                'expense_date' => now()->toDateString(),
+            ]);
+    
+            $branch->update(['is_active' => false]);
+    
+            $this->actingAs($accountant)->get(route('admin.finance.expenses.index'))->assertForbidden();
+            $this->post(route('admin.finance.expenses.store'), [
+                'category' => 'Travel',
+                'title' => 'Should not be recorded',
+                'amount' => 250,
+                'payment_method' => 'cash',
+                'expense_date' => now()->toDateString(),
+            ])->assertForbidden();
+            $this->put(route('admin.finance.expenses.update', $expense), [
+                'category' => 'Utilities',
+                'title' => 'Should not be updated',
+                'amount' => 1,
+                'payment_method' => 'cash',
+                'expense_date' => now()->toDateString(),
+            ])->assertForbidden();
+            $this->delete(route('admin.finance.expenses.destroy', $expense))->assertForbidden();
+    
+            $this->assertDatabaseHas('expenses', ['id' => $expense->id, 'title' => 'Existing branch expense', 'amount' => 450]);
+            $this->assertDatabaseMissing('expenses', ['title' => 'Should not be recorded']);
+        }
 }
