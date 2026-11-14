@@ -42,7 +42,7 @@ class ExpenseManagementTest extends TestCase
     {
         $branch = Branch::create(['name' => 'Dhaka Branch', 'slug' => 'dhaka-branch']);
         $otherBranch = Branch::create(['name' => 'Sylhet Branch', 'slug' => 'sylhet-branch']);
-        $accountant = User::factory()->create(['role' => 'accountant', 'branch_id' => $branch->id]);
+        $accountant = User::factory()->create(['role' => 'accountant', 'branch_id' => $branch->id, 'admin_permissions' => ['finance.invoices', 'finance.refunds', 'finance.reports', 'finance.expenses']]);
         $localExpense = Expense::create([
             'branch_id' => $branch->id, 'created_by' => $accountant->id,
             'category' => 'Supplies', 'title' => 'Local stationery',
