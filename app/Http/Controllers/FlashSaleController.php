@@ -86,7 +86,7 @@ class FlashSaleController extends Controller
             'category_ids' => ['nullable', 'array', 'required_without_all:course_ids,product_category_ids', 'min:1', 'max:200'],
             'category_ids.*' => ['required', 'integer', 'distinct', 'exists:course_categories,id'],
             'product_category_ids' => ['nullable', 'array', 'required_without_all:course_ids,category_ids', 'min:1', 'max:200'],
-            'product_category_ids.*' => ['required', 'integer', 'distinct', 'exists:product_categories,id'],
+            'product_category_ids.*' => ['required', 'integer', 'distinct', Rule::exists('product_categories', 'id')->where(fn ($query) => $query->where('is_active', true))],
             'banner'=>['nullable','image','mimes:jpg,jpeg,png,webp','max:5120'],
         ]);
     }

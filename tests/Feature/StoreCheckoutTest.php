@@ -146,7 +146,7 @@ class StoreCheckoutTest extends TestCase
             'starts_at'=>now()->subMinute(),'ends_at'=>now()->addDay(),'status'=>'active',
             'max_redemptions'=>1,'per_student_limit'=>1,'priority'=>50,'created_by'=>$admin->id,
         ]);
-        $sale->categories()->attach($category);
+        $sale->productCategories()->attach($category);
         Setting::setValue('payment_methods', json_encode(['manual'=>['enabled'=>true,'label'=>'Manual']]));
 
         $firstStudent = User::factory()->create(['role'=>'student']);
@@ -169,6 +169,24 @@ class StoreCheckoutTest extends TestCase
         $this->assertDatabaseHas('order_items', [
             'order_id'=>$secondOrder->id,'flash_sale_id'=>null,'line_total'=>'1000.00',
         ]);
+
+        $archivedCategory = \App\Models\ProductCategory::create([
+            'name'=>'Archived Books','slug'=>'archived-books','is_active'=>false,
+        ]);
+        $archivedProduct = Product::create([
+            'type'=>'ebook','name'=>'Archived Category Product','slug'=>'archived-category-product',
+            'regular_price'=>800,'currency'=>'BDT','status'=>'published','published_at'=>now(),
+            'is_downloadable'=>true,'download_path'=>'private/products/archived.pdf','created_by'=>$admin->id,
+        ]);
+        $archivedProduct->categories()->attach($archivedCategory);
+        $archivedSale = \App\Models\FlashSale::create([
+            'title'=>'Archived Category Campaign','badge'=>'20% OFF','discount_type'=>'percentage','discount_value'=>20,
+            'starts_at'=>now()->subMinute(),'ends_at'=>now()->addDay(),'status'=>'active',
+            'max_redemptions'=>5,'per_student_limit'=>1,'priority'=>10,'created_by'=>$admin->id,
+        ]);
+        $archivedSale->productCategories()->attach($archivedCategory);
+
+        $this->assertNull(\App\Models\FlashSale::activeForProduct($archivedProduct));
     }
 
     public function test_coupon_usage_is_reserved_until_order_is_rejected_then_released(): void
