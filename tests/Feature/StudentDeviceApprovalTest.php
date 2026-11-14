@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\DeviceSession;
 use App\Models\StudentDevice;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
