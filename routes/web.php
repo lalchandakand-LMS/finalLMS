@@ -320,6 +320,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::delete('/flash-sales/{flashSale}', [FlashSaleController::class, 'destroy'])->name('admin.flash-sales.destroy');
         Route::get('/contests', [QuizContestController::class, 'adminIndex'])->name('admin.contests.index');
         Route::post('/contests', [QuizContestController::class, 'store'])->middleware('throttle:10,1')->name('admin.contests.store');
+        Route::post('/contests/{contest}/status', [QuizContestController::class, 'updateStatus'])->middleware('throttle:10,1')->name('admin.contests.status');
         Route::post('/contests/{contest}/publish-results', [QuizContestController::class, 'publishResults'])->middleware('throttle:3,10')->name('admin.contests.results.publish');
         Route::get('/invoices', [InvoiceController::class, 'adminIndex'])->name('admin.invoices.index');
         Route::get('/refunds', [InvoiceRefundController::class, 'index'])->name('admin.refunds.index');
