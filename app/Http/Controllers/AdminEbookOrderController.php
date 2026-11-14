@@ -111,7 +111,7 @@ class AdminEbookOrderController extends Controller
             }
 
             $items = $locked->items->where('product_type', 'ebook');
-            if ($items->count() !== 1 || (int) $items->first()->quantity !== 1 || (float) $locked->total <= 0) {
+            if ($locked->items->count() !== 1 || $items->count() !== 1 || (int) $items->first()->quantity !== 1 || (float) $locked->total <= 0) {
                 return 'unsupported_order';
             }
 
@@ -193,7 +193,7 @@ class AdminEbookOrderController extends Controller
             ])
             ->selectRaw('SUM(order_items.quantity) as units_sold')
             ->selectRaw('SUM(order_items.line_total) as gross_sales')
-            ->selectRaw('SUM(COALESCE(ebook_refunds.amount, 0)) as refunded_sales')
+            ->selectRaw('SUM(COALESCE(ebook_refunds.amount * (order_items.line_total / NULLIF(orders.total, 0)), 0)) as refunded_sales')
             ->groupBy('order_items.product_id', 'order_items.product_name')
             ->orderByDesc('gross_sales')
             ->get();
