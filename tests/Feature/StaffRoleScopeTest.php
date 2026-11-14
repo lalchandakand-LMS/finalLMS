@@ -127,7 +127,9 @@ class StaffRoleScopeTest extends TestCase
         $this->actingAs($accountant)
             ->get(route('admin.finance.invoices.index'))
             ->assertOk()
-            ->assertSee('Invoices & installments');
+            ->assertSee('Invoices & installments')
+            ->assertSee('action="/admin/finance/invoices"', false)
+            ->assertDontSee('Online payment review');
 
         $this->post(route('admin.finance.invoices.store'), [
             'user_id' => $student->id,
