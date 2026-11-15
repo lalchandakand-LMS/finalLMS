@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\ApiToken;
 use App\Models\Course;
 use App\Models\Setting;
 use App\Models\StudentDevice;
