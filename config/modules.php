@@ -46,6 +46,7 @@ return [
     'page_builder' => ['name' => 'Page Builder', 'description' => 'Admin drag-and-drop page design, reusable sections, preview, publishing and navigation menus.', 'type' => 'module', 'dependencies' => ['core', 'website_cms', 'media_library']],
     'slider_builder' => ['name' => 'Slider Builder', 'description' => 'Admin-managed homepage sliders, banners, slide ordering, scheduling and responsive display.', 'type' => 'module', 'dependencies' => ['core', 'website_cms', 'media_library']],
     'slider' => ['name' => 'Website Slider & Banners', 'description' => 'Homepage sliders, promotional banners, scheduling and media placement.', 'type' => 'module', 'dependencies' => ['core', 'website_cms', 'storage']],
+    'carousel_builder' => ['name' => 'Carousel Builder', 'description' => 'Reusable multi-item carousels for courses, teachers, testimonials and featured content with responsive layouts.', 'type' => 'module', 'dependencies' => ['core', 'website_cms', 'media_library']],
     'media_library' => ['name' => 'Media Library', 'description' => 'Image, document and media asset management.', 'type' => 'module', 'dependencies' => ['core', 'storage']],
     'storage' => ['name' => 'Storage & Backups', 'description' => 'Local/cloud storage, backups and media infrastructure.', 'type' => 'module', 'dependencies' => ['core']],
     'seo' => ['name' => 'SEO', 'description' => 'Metadata, sitemap, structured data and search optimization.', 'type' => 'module', 'dependencies' => ['core', 'website_cms']],
