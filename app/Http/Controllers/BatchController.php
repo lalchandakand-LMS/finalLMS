@@ -18,7 +18,7 @@ class BatchController extends Controller
     public function index(): View
     {
         $branches = Branch::withCount('batches')->orderBy('name')->get();
-        $batches = Batch::with(['branch', 'course', 'teacher'])->latest('starts_at')->get();
+        $batches = Batch::with(['branch', 'course.academicLevel', 'teacher'])->latest('starts_at')->get();
         $courses = Course::orderBy('title')->get();
         $teachers = User::where('role', 'teacher')->orderBy('name')->get();
 
