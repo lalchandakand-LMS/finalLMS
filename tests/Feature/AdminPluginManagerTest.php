@@ -226,19 +226,19 @@ PHP;
     public function test_admin_can_uninstall_inactive_plugin_without_deleting_application_data(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
-        $this->finalPath = base_path('plugins/aec/universal-ai-assistant/1.0.0');
+        $this->finalPath = base_path('plugins/test/universal-ai-assistant/1.0.0');
         if (! is_dir($this->finalPath)) mkdir($this->finalPath, 0750, true);
         file_put_contents($this->finalPath.'/src.php', '<?php // signed test package');
 
         $plugin = new PluginInstallation();
         $plugin->forceFill([
-            'plugin_key' => 'aec.universal-ai-assistant',
+            'plugin_key' => 'test.universal-ai-assistant',
             'name' => 'Universal AI Assistant',
             'version' => '1.0.0',
             'type' => 'module',
             'status' => 'inactive',
             'manifest' => $this->manifest,
-            'package_path' => 'plugins/aec/universal-ai-assistant/1.0.0',
+            'package_path' => 'plugins/test/universal-ai-assistant/1.0.0',
             'signature_verified_at' => now(),
             'package_sha256' => str_repeat('a', 64),
             'signature_key_id' => 'test-release-key',
@@ -261,7 +261,7 @@ PHP;
             'updated_at' => now(),
         ]);
 
-        $this->actingAs($admin)->post(route('admin.plugins.uninstall', 'aec.universal-ai-assistant'))
+        $this->actingAs($admin)->post(route('admin.plugins.uninstall', 'test.universal-ai-assistant'))
             ->assertRedirect(route('admin.plugins.index'))
             ->assertSessionHas('success');
 
