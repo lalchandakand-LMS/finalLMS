@@ -8,9 +8,9 @@ use App\Models\User;
 use App\Services\AiDeveloperProviderEndpoint;
 use App\Services\Modules\ModuleRegistry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -138,13 +138,12 @@ class UniversalAiAssistantPluginTest extends TestCase
 
         $user = User::factory()->create(['role' => 'student']);
         $secret = 'sk-ABCDEFGHIJKLMNOPQRSTUVWXYZ123456';
-        $request = Request::create('/student/ai-assistant/messages', 'POST', [
+        Route::post('/__test-ai-assistant/messages', [\Aloms\UniversalAiAssistant\AssistantController::class, 'send']);
+
+        $response = $this->actingAs($user)->postJson('/__test-ai-assistant/messages', [
             'message' => 'Please help me; my key is '.$secret,
         ]);
-        $request->setUserResolver(static fn () => $user);
-
-        $response = (new \Aloms\UniversalAiAssistant\AssistantController())->send($request);
-        $this->assertSame(200, $response->getStatusCode());
+        $response->assertOk();
 
         $conversation = \DB::table('ai_assistant_conversations')->where('user_id', $user->id)->first();
         $message = \DB::table('ai_assistant_messages')->where('conversation_id', $conversation->id)->where('message_role', 'user')->first();
