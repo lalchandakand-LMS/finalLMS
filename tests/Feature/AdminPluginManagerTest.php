@@ -204,4 +204,49 @@ class AdminPluginManagerTest extends TestCase
 
         $this->assertDatabaseCount('plugin_registry', 0);
     }
+    public function test_admin_can_restore_a_verified_uninstall_backup_from_plugin_manager(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $directory = $this->finalPath.'/src';
+        if (! is_dir($directory)) {
+            mkdir($directory, 0750, true);
+        }
+        $entrypoint = $directory.'/Plugin.php';
+        file_put_contents($entrypoint, '<?php return new class {};');
+
+        $plugin = new PluginInstallation();
+        $plugin->forceFill([
+            'plugin_key' => 'aec.course-management',
+            'name' => 'Course Management',
+            'version' => '1.0.0',
+            'type' => 'module',
+            'status' => 'inactive',
+            'manifest' => ['key' => 'aec.course-management', 'dependencies' => []],
+            'package_path' => 'plugins/aec/course-management/1.0.0',
+            'metadata' => [
+                'integrity_version' => 1,
+                'installed_file_hashes' => [
+                    'src/Plugin.php' => hash_file('sha256', $entrypoint),
+                ],
+            ],
+        ])->save();
+
+        $uninstalled = app(\\App\\Services\\Plugins\\PluginUninstaller::class)->uninstall($plugin);
+        $this->assertSame('uninstalled', $uninstalled->status);
+
+        $this->actingAs($admin)->post(route('admin.plugins.restore', $uninstalled))
+            ->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'status' => 'inactive',
+        ]);
+        $this->assertFileExists($this->finalPath.'/src/Plugin.php');
+        $this->assertDatabaseHas('activity_logs', [
+            'user_id' => $admin->id,
+            'event' => 'admin.plugins.restored',
+        ]);
+    }
+
 }
