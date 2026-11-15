@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BlogPost;
+use App\Models\Branch;
 use App\Models\Course;
 use App\Models\DashboardAnnouncement;
 use App\Models\MediaAsset;
@@ -16,7 +17,7 @@ class AdminDashboardAnnouncementController extends Controller
 {
     public function index(): View
     {
-        $announcements = DashboardAnnouncement::with(['course', 'post', 'image'])
+        $announcements = DashboardAnnouncement::with(['course', 'post', 'image', 'branch'])
             ->orderByDesc('priority')->latest()->paginate(20);
 
         return view('admin.dashboard-announcements.index', compact('announcements'));
@@ -41,8 +42,9 @@ class AdminDashboardAnnouncementController extends Controller
         $courses = Course::where('status', 'published')->orderBy('title')->get();
         $posts = BlogPost::where('status', 'published')->orderByDesc('published_at')->get();
         $media = MediaAsset::where('mime_type', 'like', 'image/%')->latest()->limit(300)->get();
+        $branches = Branch::query()->where('is_active', true)->orderBy('name')->get();
 
-        return view('admin.dashboard-announcements.form', compact('announcement', 'courses', 'posts', 'media'));
+        return view('admin.dashboard-announcements.form', compact('announcement', 'courses', 'posts', 'media', 'branches'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -86,7 +88,8 @@ class AdminDashboardAnnouncementController extends Controller
             'image_media_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($q) => $q->where('mime_type', 'like', 'image/%'))],
             'button_label' => ['nullable', 'string', 'max:60'],
             'button_url' => ['nullable', 'string', 'max:500'],
-            'audience' => ['required', Rule::in(['all', 'student', 'teacher', 'guardian'])],
+            'audience' => ['required', Rule::in(['all', 'student', 'teacher', 'guardian', 'branch_manager'])],
+            'branch_id' => ['nullable', 'integer', Rule::exists('branches', 'id')->where(fn ($q) => $q->where('is_active', true))],
             'priority' => ['nullable', 'integer', 'min:0', 'max:10000'],
             'is_active' => ['nullable', 'boolean'],
             'starts_at' => ['nullable', 'date'],
