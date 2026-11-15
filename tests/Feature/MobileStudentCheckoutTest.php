@@ -91,6 +91,27 @@ class MobileStudentCheckoutTest extends TestCase
         $this->assertDatabaseCount('payments', 1);
     }
 
+    public function test_free_course_enrollment_does_not_require_payment_methods_or_transaction_details(): void
+    {
+        [$student, $course, $batch] = $this->fixture();
+        $course->update(['price' => 0]);
+        $batch->update(['fee' => 0]);
+        $token = $this->token($student);
+
+        $this->withToken($token)->postJson('/api/v1/checkout/courses/'.$course->slug.'/manual', [
+            'batch_id' => $batch->id,
+        ])->assertCreated()
+            ->assertJsonPath('data.status', 'active');
+
+        $this->assertDatabaseHas('enrollments', [
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'batch_id' => $batch->id,
+            'status' => 'active',
+        ]);
+        $this->assertDatabaseCount('payments', 0);
+    }
+
     public function test_student_can_only_view_their_own_payment_details(): void
     {
         [$student, $course, $batch] = $this->fixture();
