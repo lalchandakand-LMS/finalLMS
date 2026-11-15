@@ -34,10 +34,10 @@ This inventory prevents duplicate integrations and distinguishes existing applic
 ## Remaining acceptance gaps — do not mark issue complete yet
 
 1. A reviewed, allow-listed runtime for activation with complete web/API/job/event/navigation gating and per-portal permission grants. Third-party activation remains disabled intentionally.
-2. Safe package update and rollback/restore flow with version-to-version compatibility checks.
+2. Safe package update and rollback flow with version-to-version compatibility checks; verified uninstall backup restore is implemented.
 3. Declarative hook/event and job registry with disable-time revocation tests.
 4. Explicit role/branch/guardian permission scopes and tenant isolation for each plugin-provided endpoint.
-5. Plugin-specific settings schemas, provider-specific secret rotation and configuration validation; generic encrypted key/value storage is only a foundation.
+5. Plugin-specific settings schemas, provider-specific secret rotation and configuration validation; generic encrypted key/value storage and explicit non-wildcard manifest permission identifiers are only a foundation.
 6. Actual Carousel Builder extraction and first-party plugin implementation migration beyond manifests.
 7. Integration acceptance for each provider (Meta Pixel consent, Meta Ads OAuth/Graph API, Search Console API where supported, SMS/email providers, storage and payment adapters).
 8. AI Builder contract integration with draft preview, human approval/publish, prompt/output audit and cost controls.
