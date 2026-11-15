@@ -13,6 +13,7 @@ class MetaBoostCampaign extends Model
         'target_location', 'daily_budget_bdt', 'total_budget_bdt', 'starts_at',
         'ends_at', 'status', 'meta_campaign_id', 'actual_spend_bdt',
         'impressions', 'clicks', 'leads', 'conversions', 'notes', 'created_by',
+        'meta_adset_id', 'meta_creative_id', 'meta_ad_id', 'meta_page_id',
     ];
 
     protected $casts = [
