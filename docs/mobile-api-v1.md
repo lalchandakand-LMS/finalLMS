@@ -69,6 +69,16 @@ Revokes every active mobile token for the authenticated user.
 
 Wishlist routes are student-only. Course visibility and user ownership are enforced server-side; the API never accepts a client-supplied user ID for wishlist operations.
 
+## Student checkout and payment endpoints
+
+- `GET /checkout/courses/{course_slug}`: return the published course's checkout details, open batches, batch capacity after active/completed enrollments and pending-payment seat reservations, enabled manual payment instructions, current server-calculated Flash Sale price, and whether online bKash is configured.
+- `POST /checkout/courses/{course_slug}/manual`: submit a manual payment using `batch_id`, enabled `payment_method`, `transaction_reference`, optional `sender_account`, and optional JPG/PNG/PDF proof (maximum 5 MB). Free courses enroll immediately without payment details. Paid courses create a pending payment; access is granted only after Admin approval.
+- `POST /checkout/courses/{course_slug}/bkash`: create a server-priced bKash payment and return the verified HTTPS checkout URL. The app must open that URL in a secure browser session and refresh payment history/course enrollment after returning. The callback verifies payment status, amount, currency and transaction reference server-side; callback query parameters are never treated as proof.
+- `GET /my/payments`: paginated course payment history for the authenticated student.
+- `GET /my/payments/{payment_id}`: payment details for the authenticated student's own course payment only. Rejected-payment admin notes are visible only to the payment owner.
+
+Checkout locks the course and selected batch while rechecking publication, enrollment, pending payments, batch status/capacity, and active Flash Sale eligibility. Pending payments reserve batch seats until reviewed. The API never trusts client-supplied prices, discounts, user IDs or payment status. This phase reuses existing Flash Sale pricing and manual/bKash payment records; coupon codes and a persistent cross-device cart are not implemented by these endpoints.
+
 ## Instructor endpoints
 
 - `GET /instructor/courses`: courses assigned to the authenticated instructor.
@@ -90,7 +100,7 @@ Course ownership is checked server-side. The API does not accept a client-suppli
 - Teacher API login remains password-based and is not subject to the student SMS device policy.
 - Token hashes, not bearer values, are persisted. Expired and revoked tokens are rejected.
 - The Student Flutter app now implements secure installation-ID and bearer-token storage, OTP entry, Admin-approval waiting UI, 15-second approval polling, session restoration and server-side logout. Flutter analyze/tests must pass for each release; real SMS and end-to-end approval still require isolated staging acceptance.
-- Enrollment purchase/checkout, cart/coupons, reviews, course quizzes, live-class operations, notices, support and instructor teaching workflows remain separate deliverables. Mobile exam and text-assignment screens are implemented; assignment attachment upload remains pending.
+- Mobile course checkout now supports batch selection, server-priced Flash Sale discounts, manual payment submission, bKash checkout initiation and private payment history. Coupon codes, a persistent cross-device cart, reviews, notices and support remain separate deliverables. Mobile exam and text-assignment screens are implemented; assignment attachment upload remains pending.
 
 
 ## Student assignment endpoints
