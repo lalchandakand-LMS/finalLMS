@@ -39,7 +39,7 @@ class PaymentGatewayManager
     /** @return array<string, array<string, mixed>> */
     public function catalog(): array
     {
-        $saved = json_decode((string) Setting::value('payment_gateway_registry', '{}'), true);
+        $saved = json_decode((string) Setting::value('payment_gateway_registry', Setting::value('addon_registry', '{}')), true);
         $saved = is_array($saved) ? $saved : [];
         $catalog = [];
 
