@@ -9,7 +9,8 @@
   "dependencies": [
     "core",
     "identity",
-    "teacher_management"
+    "teacher_management",
+    "academic_levels"
   ],
   "permissions": [],
   "routes": [],
