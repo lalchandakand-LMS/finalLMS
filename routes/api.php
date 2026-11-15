@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\StudentExamController;
 use App\Http\Controllers\Api\V1\StudentCheckoutController;
 use App\Http\Controllers\Api\V1\StudentInvoiceController;
 use App\Http\Controllers\Api\V1\StudentEngagementController;
+use App\Http\Controllers\Api\V1\StudentSupportTicketController;
 use App\Http\Controllers\Api\V1\StudentCartController;
 use App\Http\Controllers\Api\V1\StudentCartCheckoutController;
 use Illuminate\Support\Facades\Route;
@@ -32,6 +33,10 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/checkout/courses/{course:slug}/manual', [StudentCheckoutController::class, 'submitManual'])->middleware('throttle:10,1');
         Route::post('/checkout/courses/{course:slug}/bkash', [StudentCheckoutController::class, 'initiateBkash'])->middleware('throttle:5,1');
         Route::get('/my/notices', [StudentEngagementController::class, 'notices']);
+        Route::get('/my/support-tickets', [StudentSupportTicketController::class, 'index']);
+        Route::post('/my/support-tickets', [StudentSupportTicketController::class, 'store'])->middleware('throttle:5,1');
+        Route::get('/my/support-tickets/{ticket}', [StudentSupportTicketController::class, 'show']);
+        Route::post('/my/support-tickets/{ticket}/messages', [StudentSupportTicketController::class, 'reply'])->middleware('throttle:10,1');
         Route::post('/my/notices/{announcement}/read', [StudentEngagementController::class, 'markNoticeRead'])->middleware('throttle:60,1');
         Route::post('/my/courses/{course:slug}/reviews', [StudentEngagementController::class, 'submitCourseReview'])->middleware('throttle:5,1');
         Route::get('/my/invoices', [StudentInvoiceController::class, 'index']);
