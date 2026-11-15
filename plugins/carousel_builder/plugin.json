@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "key": "carousel_builder",
+  "name": "Carousel Builder",
+  "description": "Reusable multi-item carousels for courses, teachers, testimonials and featured content with responsive layouts.",
+  "type": "first_party",
+  "status": "metadata_only",
+  "provider": null,
+  "dependencies": [
+    "core",
+    "website_cms",
+    "media_library"
+  ],
+  "capabilities": [
+    "carousels.create",
+    "carousels.edit",
+    "carousels.order",
+    "carousels.configure_responsive_layout",
+    "carousels.publish"
+  ],
+  "permissions": [
+    "website.carousels.view",
+    "website.carousels.create",
+    "website.carousels.update",
+    "website.carousels.publish"
+  ],
+  "routes": [],
+  "settings": [],
+  "events": [],
+  "directory": "plugins/carousel_builder",
+  "safety": {
+    "trusted_code_only": true,
+    "execute_uploaded_code": false,
+    "disable_preserves_data": true
+  }
+}
