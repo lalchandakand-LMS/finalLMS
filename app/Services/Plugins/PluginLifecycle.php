@@ -39,6 +39,7 @@ final class PluginLifecycle
         $allowedAttributes = [
             'health_status',
             'health_message', 'last_health_check_at', 'metadata',
+            'version', 'package_sha256', 'signature_key_id', 'package_path', 'signature_verified_at',
         ];
 
         if (array_diff(array_keys($attributes), $allowedAttributes) !== []) {
