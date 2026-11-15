@@ -29,6 +29,8 @@ class MobileStudentCheckoutTest extends TestCase
             ->assertJsonPath('data.course.id', $course->id)
             ->assertJsonPath('data.batches.0.id', $batch->id)
             ->assertJsonPath('data.batches.0.available_seats', 20)
+            ->assertJsonPath('data.batches.0.base_amount', '2500.00')
+            ->assertJsonPath('data.batches.0.discounted_amount', '2500.00')
             ->assertJsonPath('data.payment_methods.0.key', 'manual')
             ->assertJsonPath('data.pricing.base_amount', '3000.00');
 
