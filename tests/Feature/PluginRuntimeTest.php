@@ -118,8 +118,9 @@ PHP;
         $this->assertTrue(app('plugin.runtime.registered'));
         $this->assertTrue(app('plugin.runtime.booted'));
 
-        $route = app('router')->getRoutes()->getByName('plugins.runtime_check.health');
-        $this->assertNotNull($route);
+        $routes = app('router')->getRoutes()->getRoutes();
+        $route = collect($routes)->first(fn ($candidate) => $candidate->uri() === 'plugins/runtime-check/health');
+        $this->assertNotNull($route, 'Registered route URIs: '.json_encode(array_map(fn ($candidate) => $candidate->uri(), $routes)));
         $this->assertContains('plugin.active:test.runtime-check', $route->middleware());
         $this->assertContains('role:admin', $route->middleware());
         $this->assertContains('auth', $route->middleware());
