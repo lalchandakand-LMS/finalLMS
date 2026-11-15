@@ -197,3 +197,14 @@ Coupon discounts are calculated server-side, cannot stack with Flash Sales, and 
 - `GET /api/v1/instructor/exams` — paginated assessments belonging to the authenticated instructor's batches, with question and submitted-attempt counts.
 - `GET /api/v1/instructor/exams/{exam}/results` — paginated submitted results for an assessment owned by the instructor, including average/highest score, pass count/rate and student names. Other instructors' assessment IDs return 404.
 - These endpoints are read-only. Assessment/question authoring and editing remain in the existing secured web instructor workflow.
+
+## Student course quiz endpoints
+
+- `GET /api/v1/my/quizzes` — list published Question Sets attached to courses where the student has an active or completed enrollment, including attempt counts and the latest attempt summary.
+- `GET /api/v1/courses/{course:slug}/question-sets/{questionSet}` — show the quiz and the student's latest attempt.
+- `POST /api/v1/courses/{course:slug}/question-sets/{questionSet}/start` — start or resume an attempt using the course attachment's availability, attempt limit, time limit, question count and randomization settings.
+- `GET /api/v1/question-set-attempts/{attempt}` — view the authenticated student's own attempt.
+- `PUT /api/v1/question-set-attempts/{attempt}/answers` — save answers only for questions in that frozen attempt.
+- `POST /api/v1/question-set-attempts/{attempt}/submit` — submit and server-score objective questions; short answers enter `awaiting_manual` until a teacher grades them.
+
+Correct options, model answers and explanations are never returned by these mobile endpoints. The API enforces student role, course enrollment, course/quiz publication, attempt ownership, assigned question membership, attempt limits and server-side deadlines.
