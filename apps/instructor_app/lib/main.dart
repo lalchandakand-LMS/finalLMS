@@ -340,7 +340,7 @@ class _InstructorHomeState extends State<InstructorHome> {
     final messenger = ScaffoldMessenger.of(context);
     try {
       final response = await widget.api.get("/instructor/courses/${course['slug']}/students");
-      if (!mounted) {
+      if (!context.mounted) {
         return;
       }
       final students = response['data'] as List<dynamic>? ?? [];
@@ -546,7 +546,7 @@ class _InstructorHomeState extends State<InstructorHome> {
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    if (!mounted) {
+    if (!context.mounted) {
       return null;
     }
     if (date == null) {
@@ -677,7 +677,7 @@ class _InstructorHomeState extends State<InstructorHome> {
     try {
       final batchId = payload.remove('batch_id');
       await widget.api.postJson('/instructor/batches/$batchId/live-classes', payload);
-      if (!mounted) {
+      if (!context.mounted) {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
