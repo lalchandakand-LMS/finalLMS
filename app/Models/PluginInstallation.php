@@ -17,7 +17,6 @@ class PluginInstallation extends Model
         'manifest',
         'package_sha256',
         'signature_key_id',
-        'signature_verified_at',
         'package_path',
         'health_status',
         'health_message',
