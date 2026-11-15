@@ -6,7 +6,6 @@ use Aloms\UniversalAiAssistant\AssistantSettings;
 use Aloms\UniversalAiAssistant\AssistantTokenBudget;
 use App\Models\PluginInstallation;
 use App\Models\User;
-use App\Services\AiDeveloperProviderEndpoint;
 use App\Services\Modules\ModuleRegistry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
@@ -110,9 +109,6 @@ class UniversalAiAssistantPluginTest extends TestCase
         ]);
 
         Http::fake();
-        $this->app->instance(AiDeveloperProviderEndpoint::class, new AiDeveloperProviderEndpoint(
-            static fn (string $host): array => [['type' => 'A', 'ip' => '1.1.1.1']]
-        ));
         $request = Request::create('/student/ai-assistant/messages', 'POST', ['message' => 'Hello']);
         $request->setUserResolver(fn () => $user);
         $response = (new \Aloms\UniversalAiAssistant\AssistantController())->send($request);
