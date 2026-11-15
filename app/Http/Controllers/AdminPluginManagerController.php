@@ -7,6 +7,7 @@ use App\Models\PluginInstallation;
 use App\Services\Plugins\PluginIntegrityVerifier;
 use App\Services\Plugins\PluginLifecycle;
 use App\Services\Plugins\PluginManifestValidator;
+use App\Services\Plugins\PluginPackageRemover;
 use App\Services\Plugins\PluginUploadInstaller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
