@@ -70,6 +70,10 @@
         </section>
     </div>
 
+    <form method="GET" action="{{ route('admin.batches.index') }}" class="panel" style="margin-bottom:16px;">
+        <label>Filter batches by academic level<select name="academic_level_id"><option value="">All academic levels</option>@foreach(\App\Models\AcademicLevel::query()->orderBy('sort_order')->orderBy('name')->get() as $academicLevel)<option value="{{ $academicLevel->id }}" @selected((string) ($filters['academic_level_id'] ?? '') === (string) $academicLevel->id)>{{ $academicLevel->name }}</option>@endforeach</select></label>
+        <div class="cta-row" style="margin-top:10px;"><button class="btn primary" type="submit">Apply filter</button><a class="btn secondary" href="{{ route('admin.batches.index') }}">Clear</a></div>
+    </form>
     <h2>Scheduled batches</h2>
     <div class="course-list">
         @forelse($batches as $batch)
