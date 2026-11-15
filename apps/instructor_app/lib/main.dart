@@ -211,6 +211,9 @@ class _InstructorHomeState extends State<InstructorHome> {
     if (slug == null || slug.isEmpty) {
       return;
     }
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final capturedThemes = InheritedTheme.capture(from: context, to: navigator.context);
     List<dynamic> lessons = [];
     bool busy = true;
     String? loadError;
@@ -226,12 +229,12 @@ class _InstructorHomeState extends State<InstructorHome> {
       }
     }
     await refreshLessons(setState);
-    if (!mounted) {
+    if (!navigator.mounted) {
       return;
     }
-    await showModalBottomSheet<void>(
-      context: context,
+    navigator.push<void>(ModalBottomSheetRoute<void>(
       isScrollControlled: true,
+      capturedThemes: capturedThemes,
       builder: (sheetContext) => StatefulBuilder(
         builder: (sheetContext, setSheetState) => SafeArea(
           child: SizedBox(
@@ -253,8 +256,8 @@ class _InstructorHomeState extends State<InstructorHome> {
                             await widget.api.postJson('/instructor/courses/$slug/lessons', payload);
                             await refreshLessons(setSheetState);
                           } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                            if (messenger.mounted) {
+                              messenger.showSnackBar(SnackBar(content: Text(e.toString())));
                             }
                           }
                         },
@@ -287,8 +290,8 @@ class _InstructorHomeState extends State<InstructorHome> {
                                 await widget.api.putJson('/instructor/courses/$slug/lessons/$lessonId', payload);
                                 await refreshLessons(setSheetState);
                               } catch (e) {
-                                if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                                if (messenger.mounted) {
+                              messenger.showSnackBar(SnackBar(content: Text(e.toString())));
                             }
                               }
                             } else {
@@ -311,8 +314,8 @@ class _InstructorHomeState extends State<InstructorHome> {
                                   await widget.api.deleteJson('/instructor/courses/$slug/lessons/$lessonId');
                                   await refreshLessons(setSheetState);
                                 } catch (e) {
-                                  if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                                  if (messenger.mounted) {
+                              messenger.showSnackBar(SnackBar(content: Text(e.toString())));
                             }
                                 }
                               }
@@ -333,7 +336,7 @@ class _InstructorHomeState extends State<InstructorHome> {
           ),
         ),
       ),
-    );
+    ));
   }
 
   Future<void> showStudents(Map<String, dynamic> course) async {
