@@ -108,6 +108,36 @@ class StudentCheckoutApiTest extends TestCase
         $this->assertDatabaseCount('enrollments', 0);
     }
 
+    public function test_checkout_quote_lists_open_batches_and_uses_selected_batch_price(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $course = $this->course(900);
+        $branch = Branch::create(['name' => 'Quote Test Branch', 'slug' => 'quote-test-branch']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $batch = $course->batches()->create([
+            'branch_id' => $branch->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Evening batch',
+            'capacity' => 10,
+            'starts_at' => now()->addDay(),
+            'ends_at' => now()->addDays(30),
+            'fee' => 600,
+            'status' => 'open',
+        ]);
+        $this->authenticate($student);
+
+        $this->getJson('/api/v1/courses/'.$course->slug.'/checkout')
+            ->assertOk()
+            ->assertJsonPath('batch_required', true)
+            ->assertJsonPath('open_batches.0.id', $batch->id);
+
+        $this->getJson('/api/v1/courses/'.$course->slug.'/checkout?batch_id='.$batch->id)
+            ->assertOk()
+            ->assertJsonPath('batch_required', false)
+            ->assertJsonPath('batch.id', $batch->id)
+            ->assertJsonPath('discounted_amount', 600);
+    }
+
     public function test_paid_mobile_checkout_requires_a_payment_method_before_creating_payment(): void
     {
         $student = User::factory()->create(['role' => 'student']);
