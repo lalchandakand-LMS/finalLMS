@@ -20,14 +20,19 @@
         </div>
         <p>{{ $module['description'] }}</p>
         <p><strong>{{ __('Dependencies:') }}</strong> {{ $module['dependencies'] ? implode(', ', $module['dependencies']) : __('None') }}</p>
-        <form method="POST" action="{{ route('admin.modules.update', $key) }}">
-            @csrf
-            @method('PATCH')
-            <input type="hidden" name="enabled" value="{{ $module['enabled'] ? '0' : '1' }}">
-            <button class="btn {{ $module['enabled'] ? 'secondary' : 'primary' }}" type="submit" @disabled($module['protected'])>
-                {{ $module['protected'] ? __('Protected core module') : ($module['enabled'] ? __('Disable module') : __('Enable module')) }}
-            </button>
-        </form>
+        @if($module['managed_by_plugin_manager'] ?? false)
+            <p class="muted">{{ $module['installed'] ? __('Installed package lifecycle:') : __('Not installed. Core LMS works normally without this add-on.') }} {{ str_replace('_', ' ', $module['status']) }}</p>
+            <a class="btn secondary" href="{{ route('admin.plugins.index') }}">{{ __('Manage signed plugin') }}</a>
+        @else
+            <form method="POST" action="{{ route('admin.modules.update', $key) }}">
+                @csrf
+                @method('PATCH')
+                <input type="hidden" name="enabled" value="{{ $module['enabled'] ? '0' : '1' }}">
+                <button class="btn {{ $module['enabled'] ? 'secondary' : 'primary' }}" type="submit" @disabled($module['protected'])>
+                    {{ $module['protected'] ? __('Protected core module') : ($module['enabled'] ? __('Disable module') : __('Enable module')) }}
+                </button>
+            </form>
+        @endif
     </section>
 @endforeach
 </div>
