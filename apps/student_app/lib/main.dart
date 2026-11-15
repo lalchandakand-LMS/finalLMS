@@ -808,7 +808,7 @@ class _StudentSupportPageState extends State<StudentSupportPage> {
   }
 
   Future<void> load() async {
-    if (mounted) setState(() { loading = true; error = null; });
+    if (mounted) { setState(() { loading = true; error = null; }); }
     try {
       final response = await widget.api.get('/my/support-tickets');
       if (!mounted) { return; }
@@ -984,7 +984,7 @@ class _SupportTicketConversationPageState extends State<SupportTicketConversatio
   }
 
   Future<void> load() async {
-    if (mounted) setState(() { loading = true; error = null; });
+    if (mounted) { setState(() { loading = true; error = null; }); }
     try {
       final response = await widget.api.get('/my/support-tickets/${widget.ticketId}');
       if (!mounted) { return; }
