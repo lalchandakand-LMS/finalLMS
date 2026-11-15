@@ -34,7 +34,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: bcmath, ctype, fileinfo, mbstring, openssl, pdo_mysql, tokenizer, xml, zip
+          extensions: bcmath, ctype, fileinfo, mbstring, openssl, sodium, pdo_mysql, tokenizer, xml, zip
           coverage: none
       - uses: actions/setup-node@v5
         with:
@@ -88,7 +88,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: bcmath, ctype, fileinfo, mbstring, openssl, pdo_mysql, tokenizer, xml, zip
+          extensions: bcmath, ctype, fileinfo, mbstring, openssl, sodium, pdo_mysql, tokenizer, xml, zip
           coverage: none
 
       - name: Set up Node
@@ -129,7 +129,7 @@ jobs:
             --exclude='node_modules' \
             --exclude='.git' \
             --exclude='dist' \
-            app artisan bootstrap config database deployment public resources routes storage vendor composer.json composer.lock README.md VERSION \
+            app artisan bootstrap config database deployment plugins public resources routes storage vendor composer.json composer.lock README.md VERSION \
             "$RUNNER_TEMP/cpanel-package/"
           (cd "$RUNNER_TEMP/cpanel-package" && zip -qr "$GITHUB_WORKSPACE/dist/AlomsEnglishCenter-cpanel.zip" .)
           unzip -t dist/AlomsEnglishCenter-cpanel.zip
@@ -139,6 +139,8 @@ jobs:
           grep -Fxq 'vendor/autoload.php' "$RUNNER_TEMP/cpanel-files.txt"
           grep -Fxq 'deployment/.env.example' "$RUNNER_TEMP/cpanel-files.txt"
           grep -Fxq 'VERSION' "$RUNNER_TEMP/cpanel-files.txt"
+          grep -Fxq 'plugins/.htaccess' "$RUNNER_TEMP/cpanel-files.txt"
+          grep -Fxq 'plugins/.staging/.htaccess' "$RUNNER_TEMP/cpanel-files.txt"
 
       - name: Create signed release manifest
         env:

@@ -32,7 +32,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: bcmath, ctype, fileinfo, mbstring, openssl, pdo_mysql, tokenizer, xml, zip
+          extensions: bcmath, ctype, fileinfo, mbstring, openssl, sodium, pdo_mysql, tokenizer, xml, zip
           coverage: none
       - name: Lint PHP source files
         run: |
@@ -76,7 +76,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: bcmath, ctype, fileinfo, mbstring, openssl, pdo_mysql, tokenizer, xml
+          extensions: bcmath, ctype, fileinfo, mbstring, openssl, sodium, pdo_mysql, tokenizer, xml
           coverage: none
       - uses: actions/setup-node@v5
         with:
@@ -106,7 +106,7 @@ jobs:
             --exclude='node_modules' \
             --exclude='.git' \
             --exclude='dist' \
-            app artisan bootstrap config database deployment public resources routes storage vendor composer.json composer.lock README.md VERSION \
+            app artisan bootstrap config database deployment plugins public resources routes storage vendor composer.json composer.lock README.md VERSION \
             "$RUNNER_TEMP/cpanel-package/"
           (cd "$RUNNER_TEMP/cpanel-package" && zip -qr "$GITHUB_WORKSPACE/dist/AlomsEnglishCenter-cpanel.zip" .)
           unzip -t dist/AlomsEnglishCenter-cpanel.zip
@@ -115,6 +115,8 @@ jobs:
           grep -Fxq 'public/index.php' "$RUNNER_TEMP/cpanel-files.txt"
           grep -Fxq 'vendor/autoload.php' "$RUNNER_TEMP/cpanel-files.txt"
           grep -Fxq 'VERSION' "$RUNNER_TEMP/cpanel-files.txt"
+          grep -Fxq 'plugins/.htaccess' "$RUNNER_TEMP/cpanel-files.txt"
+          grep -Fxq 'plugins/.staging/.htaccess' "$RUNNER_TEMP/cpanel-files.txt"
           grep -Fxq 'deployment/.env.example' "$RUNNER_TEMP/cpanel-files.txt"
       - uses: actions/upload-artifact@v7
         with:

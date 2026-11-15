@@ -31,6 +31,17 @@ class PluginManifestValidatorTest extends TestCase
         $this->assertTrue(app(PluginManifestValidator::class)->isValid($this->validManifest()));
     }
 
+    public function test_plugin_key_requires_vendor_and_plugin_segments(): void
+    {
+        $manifest = $this->validManifest();
+        $manifest['key'] = 'course-management';
+
+        $this->assertContains(
+            'Invalid or missing plugin key.',
+            app(PluginManifestValidator::class)->errors($manifest),
+        );
+    }
+
     public function test_rejects_unknown_fields_and_unsupported_schema_versions(): void
     {
         $manifest = $this->validManifest();

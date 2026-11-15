@@ -62,6 +62,16 @@ class PluginLifecycleTest extends TestCase
         $this->assertNull($plugin->package_path);
     }
 
+    public function test_lifecycle_rejects_caller_controlled_install_and_activation_timestamps(): void
+    {
+        $this->plugin(['status' => 'staged']);
+
+        $this->expectException(\InvalidArgumentException::class);
+        app(PluginLifecycle::class)->transition('aec.course-management', 'installed', [
+            'installed_at' => Carbon::now(),
+        ]);
+    }
+
     public function test_lifecycle_rejects_skipped_or_unknown_states(): void
     {
         $this->plugin();
@@ -93,7 +103,7 @@ class PluginLifecycleTest extends TestCase
             'signature_verified_at' => Carbon::now(),
             'package_sha256' => str_repeat('d', 64),
             'signature_key_id' => 'release-key-2026',
-            'package_path' => 'plugins/aec/aec.course-management/1.0.0',
+            'package_path' => 'plugins/aec/course-management/1.0.0',
         ])->save();
 
         $installed = app(PluginLifecycle::class)->transition('aec.course-management', 'installed');
@@ -118,7 +128,7 @@ class PluginLifecycleTest extends TestCase
             'signature_verified_at' => Carbon::now(),
             'package_sha256' => str_repeat('a', 64),
             'signature_key_id' => 'release-key-2026',
-            'package_path' => 'plugins/aec/aec.course-management/1.0.0',
+            'package_path' => 'plugins/aec/course-management/1.0.0',
         ])->save();
 
         $active = app(PluginLifecycle::class)->transition('aec.course-management', 'active');
@@ -162,7 +172,7 @@ class PluginLifecycleTest extends TestCase
             'signature_verified_at' => Carbon::now(),
             'package_sha256' => str_repeat('c', 64),
             'signature_key_id' => 'release-key-2026',
-            'package_path' => 'plugins/aec/aec.course-management/1.0.0',
+            'package_path' => 'plugins/aec/course-management/1.0.0',
         ]);
 
         $inactive = app(PluginLifecycle::class)->transition('aec.course-management', 'inactive');
