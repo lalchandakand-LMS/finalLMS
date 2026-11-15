@@ -3,7 +3,7 @@
 namespace Tests\Unit;
 
 use App\Services\Plugins\PluginManifestValidator;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 class PluginManifestValidatorTest extends TestCase
 {
