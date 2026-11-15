@@ -185,6 +185,37 @@ class MetaAdsIntegrationController extends Controller
         }
     }
 
+    public function resumeCampaign(Request $request, string $campaignId): RedirectResponse
+    {
+        abort_unless(preg_match('/^\\d{5,30}$/', $campaignId) === 1, 404);
+
+        $data = $request->validate([
+            'account_id' => ['required', 'string', 'regex:/^\\d{5,30}$/'],
+        ]);
+
+        $token = $this->accessToken();
+        abort_unless($token, 409, __('Connect Meta Ads first.'));
+
+        try {
+            $accounts = $this->graphGet('me/adaccounts', $token, ['fields' => 'id,account_id', 'limit' => 100])['data'] ?? [];
+            $validAccount = collect($accounts)->contains(fn ($account) => preg_replace('/^act_/', '', (string) ($account['account_id'] ?? $account['id'] ?? '')) === $data['account_id']);
+            abort_unless($validAccount, 403, __('This ad account is not accessible to the connected Meta user.'));
+
+            $campaign = $this->graphGet($campaignId, $token, ['fields' => 'id,account_id,status']);
+            $campaignAccountId = preg_replace('/^act_/', '', (string) ($campaign['account_id'] ?? ''));
+            abort_unless($campaignAccountId === $data['account_id'], 403, __('This campaign does not belong to the selected ad account.'));
+            abort_unless(($campaign['status'] ?? '') === 'PAUSED', 409, __('Only a paused campaign can be resumed.'));
+
+            Http::withToken($token)->asForm()->acceptJson()->post('https://graph.facebook.com/'.self::GRAPH_VERSION.'/'.$campaignId, [
+                'status' => 'ACTIVE',
+            ])->throw();
+
+            return redirect()->route('admin.marketing.meta-ads.index', ['account' => $data['account_id']])->with('success', __('Meta campaign resumed. It may now deliver and spend its configured budget.'));
+        } catch (Throwable $exception) {
+            return redirect()->route('admin.marketing.meta-ads.index', ['account' => $data['account_id']])->with('error', __('Meta could not resume this campaign. Check its status and permissions.'));
+        }
+    }
+
     private function accessToken(): ?string
     {
         $encrypted = Setting::value('meta_ads_access_token');
