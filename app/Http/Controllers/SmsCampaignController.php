@@ -15,15 +15,16 @@ use Illuminate\View\View;
 
 class SmsCampaignController extends Controller
 {
-    public function index(): View
+    public function index(SmsGateway $sms): View
     {
         $campaigns = SmsCampaign::with('creator')->latest()->paginate(20);
+        $smsConfigured = $sms->isConfigured();
         $eligibleCount = User::whereNotNull('phone_number')
             ->whereNotNull('phone_verified_at')
             ->where('sms_marketing_opt_in', true)
             ->count();
 
-        return view('admin.sms.index', compact('campaigns', 'eligibleCount'));
+        return view('admin.sms.index', compact('campaigns', 'eligibleCount', 'smsConfigured'));
     }
 
     public function show(Request $request, SmsCampaign $campaign): View
