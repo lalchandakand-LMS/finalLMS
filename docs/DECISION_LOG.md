@@ -103,3 +103,12 @@ This file records decisions that should not be casually reversed by a developer 
 - PR #124 is an implementation tranche, not a complete commerce system. It does not activate bKash/Nagad/SSLCommerz, automate payment verification, provide refunds/revocation UI, or satisfy staging/production acceptance.
 - Merge completed after exact-head Laravel CI, cPanel package verification, CodeQL and full diff review passed. Production rollout remains a separate release gate; isolated staging acceptance is still required.
 
+## D-016 — Universal plugin platform across all portals and builders (2026-11-15)
+- Replace the limited fixed allow-list Add-on Registry with a secure universal plugin platform using one private application-root `plugins/` directory.
+- Admin must be able to discover, install, configure, activate, deactivate, update and uninstall trusted plugins through a Plugin Manager, with compatibility/dependency checks, health status, version history and audit logs.
+- Plugin contract supports all five operational panels: unified Admin, Branch, Teacher, Student and Guardian, with declared portal scope and permission capabilities enforced server-side. Existing branch isolation and verified guardian-child privacy cannot be bypassed by plugins.
+- Plugin families include integrations (GA4, GTM, Meta Pixel, Google Search Console where supported, storage, SMS/email and payment providers), slider/post/course/page builders, portal modules and AI Builder/AI Developer.
+- Existing builders and integrations must be integrated/migrated without duplicating data models or breaking current content. AI output is draft-only until human approval; AI cannot autonomously install plugins, alter permissions, delete data, publish or deploy.
+- Install/update requires signed trusted packages, checksum and manifest verification, private staging, archive/path safety, compatibility/dependency checks and verified backup before data-changing migrations. Uninstall defaults to retaining plugin data; no silent destructive purge.
+- Plugin code is never served from public web root; no arbitrary unsigned PHP/JS execution, shell/Composer runtime install, or direct production activation.
+- Architecture and delivery contract: `docs/UNIVERSAL_PLUGIN_PLATFORM.md`; implementation tracked by Issue #241. This is an approved product direction, not a claim that the plugin runtime or installer is already implemented.
