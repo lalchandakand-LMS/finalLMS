@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "key": "academic_levels",
+  "name": "Academic Levels",
+  "description": "Admin-managed academic levels shared by courses, batches, exams and website pages.",
+  "type": "first_party",
+  "status": "metadata_only",
+  "provider": null,
+  "dependencies": ["core", "identity", "course_management", "batch_management", "exam_management", "page_builder"],
+  "permissions": ["academic-levels.view", "academic-levels.manage"],
+  "routes": ["admin.academic-levels.*"],
+  "settings": [],
+  "events": ["academic-level.created", "academic-level.updated", "academic-level.deleted"],
+  "directory": "plugins/academic_levels",
+  "safety": {
+    "trusted_code_only": true,
+    "execute_uploaded_code": false,
+    "disable_preserves_data": true
+  }
+}
