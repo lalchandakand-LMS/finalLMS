@@ -100,7 +100,7 @@ class AdminPluginManagerTest extends TestCase
             ->assertOk()
             ->assertSee('Plugin Manager')
             ->assertSee('Install a signed plugin')
-            ->assertSee('Activation remains disabled');
+            ->assertSee('Only trusted, signed packages with intact installed-file hashes can be activated.');
 
         $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData())
             ->assertRedirect(route('admin.plugins.index'))
