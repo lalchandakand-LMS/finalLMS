@@ -133,6 +133,21 @@ PHP;
         $this->actingAs($admin)->get('/plugins/runtime-check/health')->assertNotFound();
     }
 
+
+    public function test_support_staff_portal_is_bound_to_the_accountant_role(): void
+    {
+        $this->createPlugin($this->validEntrypoint('support_staff'), 'active', ['support_staff']);
+
+        app(PluginRuntime::class)->registerActivePlugins();
+
+        $route = app('router')->getRoutes()->getByName('plugins.runtime_check.health');
+        $this->assertNotNull($route);
+        $this->assertContains('role:accountant', $route->middleware());
+
+        $accountant = User::factory()->create(['role' => 'accountant', 'email_verified_at' => now()]);
+        $this->actingAs($accountant)->get('/plugins/runtime-check/health')->assertOk();
+    }
+
     public function test_inactive_plugin_is_never_loaded(): void
     {
         $this->createPlugin($this->validEntrypoint(), 'inactive');

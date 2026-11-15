@@ -31,6 +31,15 @@ class PluginManifestValidatorTest extends TestCase
         $this->assertTrue(app(PluginManifestValidator::class)->isValid($this->validManifest()));
     }
 
+
+    public function test_accepts_explicit_support_staff_portal_for_accountant_role_mapping(): void
+    {
+        $manifest = $this->validManifest();
+        $manifest['portals'][] = 'support_staff';
+
+        $this->assertTrue(app(PluginManifestValidator::class)->isValid($manifest));
+    }
+
     public function test_plugin_key_requires_vendor_and_plugin_segments(): void
     {
         $manifest = $this->validManifest();
