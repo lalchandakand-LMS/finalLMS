@@ -9,6 +9,10 @@ use LogicException;
 
 final class PluginLifecycle
 {
+    public function __construct(private readonly PluginVersionHistory $versionHistory)
+    {
+    }
+
     private const TRANSITIONS = [
         'discovered' => ['validated', 'failed'],
         'validated' => ['staged', 'failed'],
@@ -68,6 +72,11 @@ final class PluginLifecycle
             }
 
             $plugin->save();
+            $plugin = $plugin->refresh();
+
+            if ($target === 'installed') {
+                $this->versionHistory->recordInstalledVersion($plugin);
+            }
 
             return $plugin->refresh();
         });
