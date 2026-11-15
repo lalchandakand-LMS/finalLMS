@@ -12,7 +12,7 @@ class InstructorAssessmentController extends Controller
     public function index(Request $request): JsonResponse
     {
         $teacher = $request->user();
-        abort_unless($teacher?->isTeacher() || $teacher?->isAdmin(), 403);
+        abort_unless($teacher?->isTeacher(), 403);
 
         $exams = Exam::query()
             ->whereHas('batch', fn ($query) => $query->where('teacher_id', $teacher->id))
