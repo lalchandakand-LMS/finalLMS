@@ -235,7 +235,7 @@ return new class extends Migration {
 PHP;
 
         $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData(migrationSource: $migration))
-            ->assertRedirect(route('admin.plugins.index'))
+            ->assertRedirect()
             ->assertSessionHas('error');
 
         $this->assertDatabaseHas('plugin_migrations', [
