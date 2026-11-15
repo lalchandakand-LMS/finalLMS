@@ -1,13 +1,13 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use App\\Models\\PluginInstallation;
-use App\\Services\\Plugins\\PluginUninstaller;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Illuminate\\Support\\Facades\\File;
+use App\Models\PluginInstallation;
+use App\Services\Plugins\PluginUninstaller;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\File;
 use RuntimeException;
-use Tests\\TestCase;
+use Tests\TestCase;
 
 class PluginUninstallerTest extends TestCase
 {
