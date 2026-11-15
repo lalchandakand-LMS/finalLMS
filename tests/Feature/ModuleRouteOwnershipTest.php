@@ -16,7 +16,7 @@ class ModuleRouteOwnershipTest extends TestCase
         Route::middleware('web')->get('/_test/slider-route', fn () => response('slider route'))
             ->name('admin.sliders.test');
 
-        Setting::setValue('module_registry', json_encode(['slider' => false]));
+        Setting::setValue('module_registry', json_encode(['slider_builder' => false]));
 
         $this->get('/_test/slider-route')->assertNotFound();
     }
@@ -26,7 +26,7 @@ class ModuleRouteOwnershipTest extends TestCase
         Route::middleware('web')->get('/_test/slider-route-enabled', fn () => response('slider route'))
             ->name('admin.sliders.enabled-test');
 
-        Setting::setValue('module_registry', json_encode(['slider' => true]));
+        Setting::setValue('module_registry', json_encode(['slider_builder' => true]));
 
         $this->get('/_test/slider-route-enabled')->assertOk()->assertSeeText('slider route');
     }
