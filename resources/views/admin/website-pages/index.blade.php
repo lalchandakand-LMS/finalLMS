@@ -5,6 +5,10 @@
     <div><span class="badge info">Admin CMS</span><h1>Website Pages</h1><p class="muted">Create and manage independent public pages without changing application code.</p></div>
     <a class="btn primary" href="{{ route('admin.website-pages.create') }}">+ Create Page</a>
 </div>
+<form method="GET" action="{{ route('admin.website-pages.index') }}" class="panel" style="margin-bottom:14px;">
+    <label>Filter pages by academic level<select name="academic_level_id"><option value="">All pages and levels</option>@foreach($academicLevels as $academicLevel)<option value="{{ $academicLevel->id }}" @selected((string) ($filters['academic_level_id'] ?? '') === (string) $academicLevel->id)>{{ $academicLevel->name }}</option>@endforeach</select></label>
+    <div class="cta-row" style="margin-top:10px;"><button class="btn primary" type="submit">Apply filter</button><a class="btn secondary" href="{{ route('admin.website-pages.index') }}">Clear</a></div>
+</form>
 <div class="panel">
     @forelse($pages as $page)
         <div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:12px;">
