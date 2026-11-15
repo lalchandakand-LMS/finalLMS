@@ -8,7 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('ai_assistant_settings', function (Blueprint $table): void {
+        if (! Schema::hasTable('ai_assistant_settings')) {
+            Schema::create('ai_assistant_settings', function (Blueprint $table): void {
             $table->unsignedTinyInteger('id')->primary();
             $table->boolean('enabled')->default(false);
             $table->string('provider', 40)->default('openai');
@@ -21,18 +22,22 @@ return new class extends Migration
             $table->json('role_settings');
             $table->json('data_access');
             $table->timestamps();
-        });
+            });
+        }
 
-        Schema::create('ai_assistant_conversations', function (Blueprint $table): void {
+        if (! Schema::hasTable('ai_assistant_conversations')) {
+            Schema::create('ai_assistant_conversations', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('user_id')->index();
             $table->string('role', 40)->index();
             $table->string('title', 120)->nullable();
             $table->timestamps();
             $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
-        });
+            });
+        }
 
-        Schema::create('ai_assistant_messages', function (Blueprint $table): void {
+        if (! Schema::hasTable('ai_assistant_messages')) {
+            Schema::create('ai_assistant_messages', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('conversation_id')->index();
             $table->unsignedBigInteger('user_id')->nullable()->index();
@@ -41,9 +46,11 @@ return new class extends Migration
             $table->timestamps();
             $table->foreign('conversation_id')->references('id')->on('ai_assistant_conversations')->cascadeOnDelete();
             $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
-        });
+            });
+        }
 
-        Schema::create('ai_assistant_usage', function (Blueprint $table): void {
+        if (! Schema::hasTable('ai_assistant_usage')) {
+            Schema::create('ai_assistant_usage', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('user_id')->index();
             $table->string('role', 40);
@@ -55,7 +62,8 @@ return new class extends Migration
             $table->timestamp('created_at')->useCurrent();
             $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
             $table->index(['user_id', 'created_at']);
-        });
+            });
+        }
     }
 
     public function down(): void
