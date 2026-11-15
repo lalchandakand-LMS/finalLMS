@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\Plugins\PluginSignatureVerifier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 use ZipArchive;
 
@@ -163,8 +164,8 @@ PHP;
         $migration = <<<'PHP'
 <?php
 
-use Illuminate\\Database\\Migrations\\Migration;
-use Illuminate\\Support\\Facades\\DB;
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration {
     public function up(): void
@@ -221,12 +222,12 @@ PHP;
         $migration = <<<'PHP'
 <?php
 
-use Illuminate\\Database\\Migrations\\Migration;
+use Illuminate\Database\Migrations\Migration;
 
 return new class extends Migration {
     public function up(): void
     {
-        throw new \\RuntimeException('Deliberate migration test failure.');
+        throw new \RuntimeException('Deliberate migration test failure.');
     }
 
     public function down(): void {}
