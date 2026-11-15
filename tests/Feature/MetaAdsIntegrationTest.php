@@ -122,4 +122,184 @@ class MetaAdsIntegrationTest extends TestCase
             && str_contains($request->body(), 'status=ACTIVE'));
     }
 
+
+    public function test_admin_can_create_a_complete_paused_meta_traffic_campaign_with_bdt_budget(): void
+    {
+        config(['services.meta_ads.app_id' => 'test-app']);
+        Setting::setValue('meta_ads_access_token', Crypt::encryptString('secret-token'));
+        Http::fake(function ($request) {
+            $url = $request->url();
+            if (str_contains($url, '/me/adaccounts')) {
+                return Http::response(['data' => [['id' => 'act_12345', 'account_id' => '12345', 'currency' => 'BDT']]], 200);
+            }
+            if (str_contains($url, '/me/accounts')) {
+                return Http::response(['data' => [['id' => '98765', 'name' => 'LMS Page', 'tasks' => ['ADVERTISE']]]], 200);
+            }
+            if (str_ends_with($url, '/act_12345/campaigns')) {
+                return Http::response(['id' => '111111111111111'], 200);
+            }
+            if (str_ends_with($url, '/act_12345/adsets')) {
+                return Http::response(['id' => '222222222222222'], 200);
+            }
+            if (str_ends_with($url, '/act_12345/adcreatives')) {
+                return Http::response(['id' => '333333333333333'], 200);
+            }
+            if (str_ends_with($url, '/act_12345/ads')) {
+                return Http::response(['id' => '444444444444444'], 200);
+            }
+
+            return Http::response(['error' => ['message' => 'Unexpected request']], 500);
+        });
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.marketing.meta-ads.campaigns.store'), [
+                'account_id' => '12345',
+                'page_id' => '98765',
+                'name' => 'LMS HSC English',
+                'message' => 'Enroll in our English course today.',
+                'destination_url' => 'https://lms.example/courses/english',
+                'image_url' => 'https://lms.example/images/english.jpg',
+                'daily_budget_bdt' => 300,
+                'age_min' => 18,
+                'age_max' => 45,
+            ])
+            ->assertRedirect(route('admin.marketing.meta-ads.index', ['account' => '12345']))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('meta_boost_campaigns', [
+            'title' => 'LMS HSC English',
+            'meta_campaign_id' => '111111111111111',
+            'meta_adset_id' => '222222222222222',
+            'meta_creative_id' => '333333333333333',
+            'meta_ad_id' => '444444444444444',
+            'meta_page_id' => '98765',
+            'status' => 'paused',
+        ]);
+
+        Http::assertSent(function ($request) {
+            $url = $request->url();
+            if (str_contains($url, '/campaigns') || str_contains($url, '/adsets') || str_contains($url, '/ads')) {
+                return $request->method() === 'POST' && $request['status'] === 'PAUSED';
+            }
+
+            return true;
+        });
+        Http::assertSent(fn ($request) => str_ends_with($request->url(), '/act_12345/adsets')
+            && (int) $request['daily_budget'] === 30000);
+    }
+
+    public function test_meta_campaign_creation_rejects_non_bdt_ad_accounts_before_creating_anything(): void
+    {
+        Setting::setValue('meta_ads_access_token', Crypt::encryptString('secret-token'));
+        Http::fake([
+            'https://graph.facebook.com/v27.0/me/adaccounts*' => Http::response(['data' => [['id' => 'act_12345', 'account_id' => '12345', 'currency' => 'USD']]]),
+        ]);
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+
+        $this->actingAs($admin)
+            ->from(route('admin.marketing.meta-ads.index', ['account' => '12345']))
+            ->post(route('admin.marketing.meta-ads.campaigns.store'), [
+                'account_id' => '12345',
+                'page_id' => '98765',
+                'name' => 'LMS campaign',
+                'message' => 'Course enrollment is open.',
+                'destination_url' => 'https://lms.example/course',
+                'image_url' => 'https://lms.example/course.jpg',
+                'daily_budget_bdt' => 300,
+                'age_min' => 18,
+                'age_max' => 45,
+            ])
+            ->assertRedirect(route('admin.marketing.meta-ads.index', ['account' => '12345']))
+            ->assertSessionHas('error');
+
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), '/campaigns'));
+        $this->assertDatabaseCount('meta_boost_campaigns', 0);
+    }
+
+    public function test_meta_campaign_creation_rejects_a_page_not_accessible_to_connected_user(): void
+    {
+        Setting::setValue('meta_ads_access_token', Crypt::encryptString('secret-token'));
+        Http::fake([
+            'https://graph.facebook.com/v27.0/me/adaccounts*' => Http::response(['data' => [['id' => 'act_12345', 'account_id' => '12345', 'currency' => 'BDT']]]),
+            'https://graph.facebook.com/v27.0/me/accounts*' => Http::response(['data' => [['id' => '11111', 'name' => 'Other Page']]]),
+        ]);
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+
+        $this->actingAs($admin)
+            ->from(route('admin.marketing.meta-ads.index', ['account' => '12345']))
+            ->post(route('admin.marketing.meta-ads.campaigns.store'), [
+                'account_id' => '12345',
+                'page_id' => '98765',
+                'name' => 'LMS campaign',
+                'message' => 'Course enrollment is open.',
+                'destination_url' => 'https://lms.example/course',
+                'image_url' => 'https://lms.example/course.jpg',
+                'daily_budget_bdt' => 300,
+                'age_min' => 18,
+                'age_max' => 45,
+            ])
+            ->assertRedirect(route('admin.marketing.meta-ads.index', ['account' => '12345']))
+            ->assertSessionHas('error');
+
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), '/campaigns'));
+    }
+
+    public function test_meta_campaign_creation_validates_age_range_and_budget(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.marketing.meta-ads.campaigns.store'), [
+                'account_id' => '12345',
+                'page_id' => '98765',
+                'name' => 'LMS campaign',
+                'message' => 'Course enrollment is open.',
+                'destination_url' => 'https://lms.example/course',
+                'image_url' => 'https://lms.example/course.jpg',
+                'daily_budget_bdt' => 50,
+                'age_min' => 45,
+                'age_max' => 18,
+            ])
+            ->assertSessionHasErrors(['daily_budget_bdt', 'age_max']);
+    }
+
+
+
+    public function test_resuming_lms_created_campaign_activates_ad_and_adset_before_campaign(): void
+    {
+        Setting::setValue('meta_ads_access_token', Crypt::encryptString('secret-token'));
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $local = \App\Models\MetaBoostCampaign::create([
+            'title' => 'LMS campaign',
+            'destination_url' => 'https://lms.example/course',
+            'objective' => 'traffic',
+            'daily_budget_bdt' => 300,
+            'status' => 'paused',
+            'meta_campaign_id' => '111111111111114',
+            'meta_adset_id' => '222222222222224',
+            'meta_creative_id' => '333333333333334',
+            'meta_ad_id' => '444444444444444',
+            'meta_page_id' => '98765',
+            'created_by' => $admin->id,
+        ]);
+        Http::fake([
+            'https://graph.facebook.com/v27.0/me/adaccounts*' => Http::response(['data' => [['id' => 'act_12345', 'account_id' => '12345']]]),
+            'https://graph.facebook.com/v27.0/111111111111114*' => Http::response(['id' => '111111111111114', 'account_id' => '12345', 'status' => 'PAUSED']),
+            'https://graph.facebook.com/v27.0/444444444444444' => Http::response(['success' => true]),
+            'https://graph.facebook.com/v27.0/222222222222224' => Http::response(['success' => true]),
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.marketing.meta-ads.campaigns.resume', '111111111111114'), ['account_id' => '12345'])
+            ->assertRedirect(route('admin.marketing.meta-ads.index', ['account' => '12345']))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('meta_boost_campaigns', ['id' => $local->id, 'status' => 'running']);
+        Http::assertSent(fn ($request) => str_ends_with($request->url(), '/444444444444444') && $request['status'] === 'ACTIVE');
+        Http::assertSent(fn ($request) => str_ends_with($request->url(), '/222222222222224') && $request['status'] === 'ACTIVE');
+        Http::assertSent(fn ($request) => str_ends_with($request->url(), '/111111111111114') && $request['status'] === 'ACTIVE');
+    }
+
+
 }

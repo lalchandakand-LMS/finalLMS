@@ -32,3 +32,14 @@ Meta may require App Review and Standard Access before non-app-role users can us
 - Disconnect removes the stored encrypted token and selected account.
 
 After configuring server environment values, clear cached configuration using the deployment's normal Laravel process.
+
+
+## Creating a paused LMS boost
+
+1. Connect a Meta account and choose an ad account whose currency is BDT.
+2. Select an accessible Facebook Page with the Advertise task.
+3. Enter the campaign name, ad copy, public image URL, LMS landing-page URL, daily BDT budget and age range.
+4. Submit **Create paused campaign**. The LMS creates all four Meta objects (campaign, ad set, creative and ad) with status `PAUSED`.
+5. Review the draft in Meta Ads Manager. Only when ready, use **Resume campaign** in the LMS and confirm the spend warning. For LMS-created campaigns, the ad and ad set are activated before the campaign.
+
+The first release is a website-traffic campaign targeting Bangladesh; custom audiences, lead forms, sales/conversion objectives, schedule controls and automatic budget optimization are not included yet. Meta may reject requests until the developer app and Marketing API permissions have the required review and access level.
