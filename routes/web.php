@@ -365,6 +365,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::put('/batches/{batch}', [BatchController::class, 'update'])->name('admin.batches.update');
         Route::delete('/batches/{batch}', [BatchController::class, 'destroy'])->name('admin.batches.destroy');
         Route::get('/sms-campaigns', [SmsCampaignController::class, 'index'])->name('admin.sms-campaigns.index');
+        Route::get('/sms-campaigns/{campaign}', [SmsCampaignController::class, 'show'])->name('admin.sms-campaigns.show');
         Route::post('/sms-campaigns', [SmsCampaignController::class, 'store'])
             ->middleware('throttle:10,1')
             ->name('admin.sms-campaigns.store');
