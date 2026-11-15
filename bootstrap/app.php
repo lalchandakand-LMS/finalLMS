@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'module.enabled' => \App\Http\Middleware\EnsureModuleEnabled::class,
+            'plugin.active' => \App\Http\Middleware\EnsurePluginActive::class,
             'admin.permission' => \App\Http\Middleware\EnsureAdminModulePermission::class,
             'activity.log' => \App\Http\Middleware\LogUserActivity::class,
             'student.device' => \App\Http\Middleware\EnsureStudentDeviceIsApproved::class,
