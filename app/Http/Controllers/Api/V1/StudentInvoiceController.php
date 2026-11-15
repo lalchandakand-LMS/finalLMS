@@ -29,7 +29,7 @@ class StudentInvoiceController extends Controller
                 'per_page' => $invoices->perPage(),
                 'total' => $invoices->total(),
             ],
-        ]);
+        ])->header('Cache-Control', 'private, no-store, max-age=0');
     }
 
     public function show(Request $request, Invoice $invoice): JsonResponse
@@ -37,7 +37,8 @@ class StudentInvoiceController extends Controller
         abort_unless($request->user()->isStudent() && (int) $invoice->user_id === (int) $request->user()->id, 404);
         $invoice->load(['course:id,title', 'batch:id,title', 'payments.receiver:id,name', 'refunds']);
 
-        return response()->json(['data' => $this->present($invoice)]);
+        return response()->json(['data' => $this->present($invoice)])
+            ->header('Cache-Control', 'private, no-store, max-age=0');
     }
 
     public function printInvoice(Invoice $invoice)
