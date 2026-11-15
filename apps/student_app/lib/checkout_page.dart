@@ -47,15 +47,19 @@ class _CheckoutPageState extends State<CheckoutPage> {
       error = null;
     });
     try {
-      final response = await widget.api.checkoutQuote(
-        widget.slug,
-        batchId: selectedBatchId,
-      );
+      final response = await widget.api.checkoutQuote(widget.slug);
       if (!mounted) return;
       final nextMethods = response['payment_methods'] as List<dynamic>? ?? [];
+      final nextBatches = response['batches'] as List<dynamic>? ?? [];
       setState(() {
         quote = response;
-        batches = response['open_batches'] as List<dynamic>? ?? [];
+        batches = nextBatches;
+        if (selectedBatchId != null &&
+            !nextBatches.any((item) =>
+                (item as Map<String, dynamic>)['id'] == selectedBatchId &&
+                ((item['available_seats'] as num?)?.toInt() ?? 0) > 0)) {
+          selectedBatchId = null;
+        }
         methods = nextMethods;
         if (selectedMethod == null ||
             !nextMethods.any((item) =>
@@ -77,10 +81,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
   Future<void> chooseBatch(int? id) async {
     setState(() {
       selectedBatchId = id;
-      quote = null;
       notice = null;
+      error = null;
     });
-    await loadQuote();
   }
 
   Future<void> pickProof() async {
@@ -103,9 +106,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   Future<void> submitFreeEnrollment() async {
     await _perform(() async {
-      final response = await widget.api.postJson(
-        '/courses/${Uri.encodeComponent(widget.slug)}/checkout',
-        {if (selectedBatchId != null) 'batch_id': selectedBatchId},
+      final response = await widget.api.submitFreeCheckout(
+        widget.slug,
+        batchId: selectedBatchId,
       );
       return response['message']?.toString() ?? 'Enrollment completed.';
     });
@@ -140,7 +143,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
         widget.slug,
         batchId: selectedBatchId,
       );
-      final rawUrl = response['checkout_url']?.toString();
+      final payload = response['data'] as Map<String, dynamic>? ?? {};
+      final rawUrl = payload['checkout_url']?.toString();
       final uri = rawUrl == null ? null : Uri.tryParse(rawUrl);
       const allowedHosts = {
         'tokenized.sandbox.bka.sh',
@@ -191,11 +195,24 @@ class _CheckoutPageState extends State<CheckoutPage> {
   Widget build(BuildContext context) {
     final data = quote;
     final course = data?['course'] as Map<String, dynamic>?;
-    final hasBatches = batches.isNotEmpty;
-    final batchRequired = data?['batch_required'] == true;
+    final hasOpenBatches = batches.isNotEmpty;
+    final availableBatches = batches.where((raw) {
+      final item = raw as Map<String, dynamic>;
+      return ((item['available_seats'] as num?)?.toInt() ?? 0) > 0;
+    }).toList();
+    final hasBatches = availableBatches.isNotEmpty;
+    final batchRequired = hasOpenBatches && selectedBatchId == null;
     final alreadyEnrolled = data?['already_enrolled'] == true;
-    final paymentPending = data?['payment_pending'] == true;
-    final isFree = data?['is_free'] == true && !batchRequired;
+    final paymentPending = data?['pending_payment'] != null;
+    final selectedBatch = selectedBatchId == null
+        ? null
+        : batches.cast<Map<String, dynamic>>().where((item) =>
+            (item['id'] as num).toInt() == selectedBatchId).firstOrNull;
+    final pricing = data?['pricing'] as Map<String, dynamic>? ?? {};
+    final amount = selectedBatch?['discounted_amount'] ?? pricing['discounted_amount'] ?? '0';
+    final baseAmount = selectedBatch?['base_amount'] ?? pricing['base_amount'] ?? '0';
+    final flashSaleApplied = selectedBatch?['flash_sale_applied'] ?? pricing['flash_sale_applied'] ?? false;
+    final isFree = (double.tryParse(amount.toString()) ?? 0) <= 0 && !batchRequired;
     final manualMethods = methods
         .where((item) => (item as Map<String, dynamic>)['key'] != 'bkash')
         .map((item) => item as Map<String, dynamic>)
@@ -237,9 +254,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             labelText: 'Available batch',
                             border: OutlineInputBorder(),
                           ),
-                          items: batches.map((raw) {
+                          items: availableBatches.map((raw) {
                             final item = raw as Map<String, dynamic>;
-                            final fee = (item['fee'] as num?)?.toDouble() ?? 0;
+                            final fee = double.tryParse(
+                                  (item['discounted_amount'] ?? item['fee'] ?? 0).toString()) ?? 0;
                             final title = item['title']?.toString() ?? 'Batch';
                             final start = item['starts_at']?.toString();
                             return DropdownMenuItem<int>(
@@ -254,7 +272,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                         ),
                         const SizedBox(height: 16),
                       ],
-                      if (batchRequired)
+                      if (batchRequired || (hasOpenBatches && !hasBatches))
                         _statusCard(
                           hasBatches ? 'Batch selection required' : 'No available batch seats',
                           hasBatches
@@ -272,13 +290,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                 const Text('Amount due'),
                                 const SizedBox(height: 6),
                                 Text(
-                                  '৳${((data['discounted_amount'] as num?)?.toDouble() ?? 0).toStringAsFixed(2)}',
+                                  '৳${(double.tryParse(amount.toString()) ?? 0).toStringAsFixed(2)}',
                                   style: Theme.of(context).textTheme.headlineMedium,
                                 ),
-                                if (data['flash_sale_applied'] == true)
+                                if (flashSaleApplied == true)
                                   const Chip(label: Text('Flash sale price applied')),
-                                if (data['base_amount'] != data['discounted_amount'])
-                                  Text('Original price: ৳${data['base_amount']}'),
+                                if (baseAmount.toString() != amount.toString())
+                                  Text('Original price: ৳$baseAmount'),
                               ],
                             ),
                           ),
