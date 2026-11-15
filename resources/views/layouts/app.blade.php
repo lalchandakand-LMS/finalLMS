@@ -387,6 +387,7 @@
                         <a href="{{ route('ebooks.orders') }}">My eBook library</a>
                     @endif
                     @if(auth()->user()->isAdmin())
+                        <a href="{{ route('admin.academic-levels.index') }}">Academic Levels</a>
                         <a href="{{ route('admin.batches.index') }}">Batches</a>
                         <a href="{{ route('admin.sms-campaigns.index') }}">SMS</a>
                         <a href="{{ route('admin.payments.index') }}">Payments</a>
