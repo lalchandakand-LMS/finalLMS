@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AcademicLevel;
 use App\Models\Course;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -68,6 +69,30 @@ class CourseCatalogFilterTest extends TestCase
     {
         $this->get(route('courses.index', ['sort' => 'random']))->assertSessionHasErrors('sort');
         $this->get(route('courses.index', ['min_price' => 5000, 'max_price' => 1000]))->assertSessionHasErrors('max_price');
+    }
+
+    public function test_catalog_filters_and_labels_courses_by_admin_created_academic_level(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $ssc = AcademicLevel::create(['name' => 'SSC', 'slug' => 'ssc', 'is_active' => true]);
+        $hsc = AcademicLevel::create(['name' => 'HSC', 'slug' => 'hsc', 'is_active' => true]);
+
+        $sscCourse = $this->course($teacher, 'SSC Physics', 2000);
+        $sscCourse->update(['academic_level_id' => $ssc->id]);
+        $hscCourse = $this->course($teacher, 'HSC Chemistry', 2500);
+        $hscCourse->update(['academic_level_id' => $hsc->id]);
+
+        $this->get(route('courses.index', ['academic_level_id' => $ssc->id]))
+            ->assertOk()
+            ->assertSee('SSC Physics')
+            ->assertSee('SSC')
+            ->assertDontSee('HSC Chemistry');
+
+        $this->get(route('courses.index'))
+            ->assertOk()
+            ->assertSee('SSC Physics')
+            ->assertSee('HSC Chemistry')
+            ->assertSee('HSC');
     }
 
     public function test_catalog_shows_empty_state_for_no_matches(): void
