@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Aloms\UniversalAiAssistant\AssistantSettings;
+use Aloms\UniversalAiAssistant\AssistantTokenBudget;
 use App\Models\PluginInstallation;
 use App\Models\User;
 use App\Services\AiDeveloperProviderEndpoint;

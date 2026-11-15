@@ -107,9 +107,7 @@ final class AssistantController
             foreach ($history as $item) $messages[] = ['role' => $item->message_role, 'content' => $item->content];
 
             // Reserve a conservative prompt-token estimate before allowing completion tokens.
-            // This keeps the configured daily total-token budget from being overspent by a
-            // large max_tokens value when only a small budget remains.
-            $promptPayload = json_encode($messages, JSON_THROW_ON_ERROR);
+            // This avoids sending an oversized completion allowance when little budget remains.
             $estimatedPromptTokens = AssistantTokenBudget::estimatePromptTokens($messages);
             $responseTokenLimit = AssistantTokenBudget::completionLimit(
                 (int) $settings['max_tokens'],
