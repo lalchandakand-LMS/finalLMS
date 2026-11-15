@@ -31,6 +31,13 @@ class ModuleRouteOwnershipTest extends TestCase
         $this->get('/_test/slider-route-enabled')->assertOk()->assertSeeText('slider route');
     }
 
+    public function test_every_route_owner_exists_in_the_first_party_module_catalog(): void
+    {
+        foreach (array_keys(config('module_routes')) as $module) {
+            $this->assertArrayHasKey($module, config('modules'), $module.' must have a first-party manifest.');
+        }
+    }
+
     public function test_core_module_manager_routes_are_not_owned_by_business_plugins(): void
     {
         $this->assertSame([], collect(config('module_routes'))
