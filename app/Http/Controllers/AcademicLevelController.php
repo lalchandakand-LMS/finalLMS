@@ -34,7 +34,7 @@ class AcademicLevelController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validated($request);
-        $data['slug'] = $this->uniqueSlug($data['slug'] ?: $data['name']);
+        $data['slug'] = $this->uniqueSlug($data['slug'] ?? $data['name']);
         AcademicLevel::create($data);
 
         return back()->with('success', 'Academic level created.');
@@ -43,7 +43,7 @@ class AcademicLevelController extends Controller
     public function update(Request $request, AcademicLevel $academicLevel): RedirectResponse
     {
         $data = $this->validated($request, $academicLevel);
-        $data['slug'] = $this->uniqueSlug($data['slug'] ?: $data['name'], $academicLevel->id);
+        $data['slug'] = $this->uniqueSlug($data['slug'] ?? $data['name'], $academicLevel->id);
         $academicLevel->update($data);
 
         return back()->with('success', 'Academic level updated.');
