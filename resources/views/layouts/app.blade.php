@@ -15,7 +15,8 @@
         $marketingConsent = request()->cookie('marketing_consent') === 'accepted';
         $isAdminLayout = auth()->check() && (auth()->user()->isAdmin() || auth()->user()->isBranchManager() || auth()->user()->isAccountant());
         $visitorPopup = null;
-        if (\Illuminate\Support\Facades\Schema::hasTable('visitor_popups') && ! $isAdminLayout) {
+        $popupAdsEnabled = $hasSettingsTable && app(\App\Services\Modules\ModuleRegistry::class)->isEnabled('popup_ads');
+        if ($popupAdsEnabled && \Illuminate\Support\Facades\Schema::hasTable('visitor_popups') && ! $isAdminLayout) {
             $visitorPopup = \App\Models\VisitorPopup::currentlyActive()->with('image')
                 ->where(function ($query) { $query->where('audience', 'all')->orWhere('audience', auth()->check() ? 'members' : 'guests'); })
                 ->orderByDesc('priority')->latest()->first();
@@ -303,7 +304,9 @@
             <a class="{{ request()->routeIs('admin.marketing.meta-ads.*') ? 'active' : '' }}" href="{{ route('admin.marketing.meta-ads.index') }}"><span>🔗</span><span class="nav-text">Meta Ads integration</span></a>
             <a class="{{ request()->routeIs('admin.comments.*') ? 'active' : '' }}" href="{{ route('admin.comments.index') }}"><span>💬</span><span class="nav-text">Comment moderation</span></a>
             <a class="{{ request()->routeIs('admin.support-tickets.*') ? 'active' : '' }}" href="{{ route('admin.support-tickets.index') }}"><span>🎧</span><span class="nav-text">Support tickets</span></a>
-            <a class="{{ request()->routeIs('admin.visitor-popups.*') ? 'active' : '' }}" href="{{ route('admin.visitor-popups.index') }}"><span>📣</span><span class="nav-text">Visitor popups</span></a>
+            @if(app(\App\Services\Modules\ModuleRegistry::class)->isEnabled('popup_ads'))
+                <a class="{{ request()->routeIs('admin.visitor-popups.*') ? 'active' : '' }}" href="{{ route('admin.visitor-popups.index') }}"><span>📣</span><span class="nav-text">Popup Ads</span></a>
+            @endif
             <a class="{{ request()->routeIs('admin.dashboard-announcements.*') ? 'active' : '' }}" href="{{ route('admin.dashboard-announcements.index') }}"><span>🔔</span><span class="nav-text">Dashboard announcements</span></a>
             <a href="{{ route('admin.backups.index') }}"><span>💾</span><span class="nav-text">Backup & restore</span></a>
             <a href="{{ route('admin.activity-logs.index') }}"><span>📋</span><span class="nav-text">Activity logs</span></a>
