@@ -103,6 +103,7 @@ class AdminModuleRegistryTest extends TestCase
             ->assertSee('Course Management')
             ->assertSee('Payment Services')
             ->assertSee('Website Slider & Banners')
+            ->assertSee('Popup Ads & Campaigns')
             ->assertSee('Existing routes are not all gated yet');
     }
 
