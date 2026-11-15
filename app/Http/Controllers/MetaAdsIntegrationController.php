@@ -2,11 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Course;
+use App\Models\DashboardAnnouncement;
+use App\Models\FlashSale;
 use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 use Throwable;
 
@@ -16,6 +21,14 @@ class MetaAdsIntegrationController extends Controller
 
     public function index(Request $request): View
     {
+        $boostCourses = Course::query()->where('status', 'published')->orderBy('title')->get(['id', 'title', 'slug', 'short_description', 'image_path']);
+        $boostNotices = DashboardAnnouncement::currentlyActive()
+            ->where('audience', 'all')->whereNull('branch_id')->orderBy('title')
+            ->get(['id', 'title', 'body', 'button_url']);
+        $boostOffers = FlashSale::query()->where('status', 'active')
+            ->where('starts_at', '<=', now())->where('ends_at', '>=', now())
+            ->orderBy('title')->get(['id', 'title', 'description', 'banner_path']);
+
         $token = $this->accessToken();
         $connected = filled($token);
         $accounts = [];
@@ -62,7 +75,7 @@ class MetaAdsIntegrationController extends Controller
         }
 
         return view('admin.marketing.meta-ads', [
-            'connected' => $connected,
+            'boostCourses' => $boostCourses,\n            'boostNotices' => $boostNotices,\n            'boostOffers' => $boostOffers,\n            'connected' => $connected,
             'configured' => filled(config('services.meta_ads.app_id')) && filled(config('services.meta_ads.app_secret')),
             'accounts' => $accounts,
             'pages' => $pages,
@@ -242,10 +255,11 @@ class MetaAdsIntegrationController extends Controller
         $data = $request->validate([
             'account_id' => ['required', 'string', 'regex:/^\d{5,30}$/'],
             'page_id' => ['required', 'string', 'regex:/^\d{5,30}$/'],
-            'name' => ['required', 'string', 'max:180'],
-            'message' => ['required', 'string', 'max:2000'],
-            'destination_url' => ['required', 'url:http,https', 'max:2048'],
-            'image_url' => ['required', 'url:http,https', 'max:2048'],
+            'name' => ['nullable', 'string', 'max:180'],
+            'message' => ['nullable', 'string', 'max:2000'],
+            'source_reference' => ['nullable', 'string', 'regex:/^(course|notice|offer):[0-9]+$/'],
+            'destination_url' => ['nullable', 'url:http,https', 'max:2048'],
+            'image_url' => ['nullable', 'url:http,https', 'max:2048'],
             'daily_budget_bdt' => ['required', 'integer', 'min:100', 'max:1000000'],
             'age_min' => ['required', 'integer', 'min:18', 'max:65'],
             'age_max' => ['required', 'integer', 'min:18', 'max:65', 'gte:age_min'],
