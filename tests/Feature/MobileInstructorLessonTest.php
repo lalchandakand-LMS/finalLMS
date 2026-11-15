@@ -122,7 +122,7 @@ class MobileInstructorLessonTest extends TestCase
         $plain = Str::random(80);
         $device = null;
 
-        if ($user->isStudent()) {
+        if (in_array($user->role, ['student', 'teacher'], true)) {
             $device = StudentDevice::create([
                 'user_id' => $user->id,
                 'device_hash' => hash('sha256', Str::random(64)),
