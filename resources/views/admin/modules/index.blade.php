@@ -9,7 +9,7 @@
 </div>
 <div class="panel" role="note" style="margin-bottom:20px;">
     <strong>{{ __('Important safety note') }}</strong>
-    <p class="muted" style="margin-bottom:0;">{{ __('This first-stage registry manages module lifecycle metadata and dependency rules. Existing routes are not all gated yet. Disabling does not uninstall code or delete data. Uploaded third-party PHP code is never executed.') }}</p>
+    <p class="muted" style="margin-bottom:0;">{{ __('This registry manages first-party module lifecycle and dependency rules. Mapped routes are now blocked when their owning module is disabled. Route ownership is being migrated in stages; routes not yet mapped remain active. Disabling never uninstalls code or deletes data. Uploaded third-party PHP code is never executed.') }}</p>
 </div>
 <div class="grid grid-2">
 @foreach($modules as $key => $module)
