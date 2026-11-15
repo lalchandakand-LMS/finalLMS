@@ -65,6 +65,10 @@ class AdminVerificationController extends Controller
             return back()->with('info', 'This email address is already verified.');
         }
 
+        if (in_array((string) config('mail.default'), ['log', 'array'], true)) {
+            return back()->with('error', 'Email delivery is not configured. Set up SMTP or another real mail provider in the server environment first.');
+        }
+
         $key = 'admin-verification-email:'.$user->id;
         if (RateLimiter::tooManyAttempts($key, 3)) {
             return back()->with('error', 'Email verification reminders are rate limited. Try again later.');
