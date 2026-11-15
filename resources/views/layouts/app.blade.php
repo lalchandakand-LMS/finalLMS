@@ -84,8 +84,8 @@
             @elseif(session('meta_pixel_event') === 'Lead')
                 fbq('track','Lead');
             @endif
-            @stack('meta_pixel_events')
         </script>
+        @stack('meta_pixel_events')
     @endif
     <style>
         :root {
