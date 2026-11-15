@@ -106,7 +106,7 @@ class BkashPaymentController extends Controller
     public function initiateEbook(Product $product, Request $request, PaymentGatewayManager $gateways): RedirectResponse
     {
         abort_unless($request->user()?->isStudent(), 403);
-        abort_unless($this->isConfigured(), 503, 'bKash checkout is not configured.');
+        abort_unless($gateways->isAvailable('bkash'), 503, 'bKash checkout is not enabled or configured.');
 
         $student = $request->user();
         $payment = DB::transaction(function () use ($product, $student): Payment {
@@ -210,8 +210,6 @@ class BkashPaymentController extends Controller
     public function callback(Request $request, PaymentGatewayManager $gateways): RedirectResponse
     {
         $paymentId = $request->query('paymentID');
-        $callbackStatus = strtolower((string) $request->query('status'));
-
         if (! is_string($paymentId) || $paymentId === '') {
             return redirect()->route('landing')->with('error', 'The bKash callback did not include a payment reference.');
         }
