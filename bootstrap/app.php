@@ -16,6 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('web', \App\Http\Middleware\EnsureInstalled::class);
         $middleware->appendToGroup('web', \App\Http\Middleware\TrackWebsiteVisit::class);
         $middleware->appendToGroup('web', \App\Http\Middleware\EnsureDeviceSessionActive::class);
+        $middleware->appendToGroup('web', \App\Http\Middleware\EnsureRouteModuleEnabled::class);
+        $middleware->appendToGroup('api', \App\Http\Middleware\EnsureRouteModuleEnabled::class);
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'module.enabled' => \App\Http\Middleware\EnsureModuleEnabled::class,
