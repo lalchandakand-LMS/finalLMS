@@ -436,8 +436,13 @@ class StudentCheckoutController extends Controller
             ->where('batch_id', $batch->id)
             ->where('status', 'pending')
             ->count();
+        $pendingComboPayments = DB::table('payment_combo_courses')
+            ->join('payments', 'payments.id', '=', 'payment_combo_courses.payment_id')
+            ->where('payment_combo_courses.batch_id', $batch->id)
+            ->where('payments.status', 'pending')
+            ->count();
 
-        return $enrollments + $pendingPayments < $batch->capacity;
+        return $enrollments + $pendingPayments + $pendingComboPayments < $batch->capacity;
     }
 
     private function isBkashConfigured(): bool
