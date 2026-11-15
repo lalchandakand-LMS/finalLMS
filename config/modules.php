@@ -14,6 +14,7 @@ return [
     'reporting' => ['name' => 'Analytics & Reporting', 'description' => 'Operational, academic and financial reports.', 'type' => 'module', 'dependencies' => ['core']],
     'storage' => ['name' => 'Storage & Backups', 'description' => 'Cloud storage, backups and media management.', 'type' => 'module', 'dependencies' => ['core']],
     'website_cms' => ['name' => 'Website & CMS', 'description' => 'Website builder, pages, blog and public content.', 'type' => 'module', 'dependencies' => ['core']],
+    'slider' => ['name' => 'Website Slider & Banners', 'description' => 'Homepage sliders, promotional banners, scheduling and media placement.', 'type' => 'module', 'dependencies' => ['core', 'website_cms', 'storage']],
     'mobile_api' => ['name' => 'Mobile App API', 'description' => 'Student and instructor application APIs.', 'type' => 'module', 'dependencies' => ['core', 'identity', 'academics']],
     'integrations' => ['name' => 'External Integrations', 'description' => 'Google, Meta and third-party service connectors.', 'type' => 'module', 'dependencies' => ['core']],
 ];
