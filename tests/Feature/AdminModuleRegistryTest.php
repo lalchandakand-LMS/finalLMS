@@ -96,4 +96,15 @@ class AdminModuleRegistryTest extends TestCase
         $this->patch(route('admin.modules.update', 'slider'), ['enabled' => false])->assertForbidden();
         $this->assertDatabaseCount('activity_logs', 0);
     }
+    public function test_runtime_middleware_blocks_a_disabled_module_and_allows_an_enabled_module(): void
+    {
+        Route::middleware('module.enabled:slider')->get('/_test/module-slider', fn () => response('enabled'));
+
+        Setting::setValue('module_registry', json_encode(['slider' => false]));
+        $this->get('/_test/module-slider')->assertNotFound();
+
+        Setting::setValue('module_registry', json_encode(['slider' => true]));
+        $this->get('/_test/module-slider')->assertOk()->assertSeeText('enabled');
+    }
+
 }
