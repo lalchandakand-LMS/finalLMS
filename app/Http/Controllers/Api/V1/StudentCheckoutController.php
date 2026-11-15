@@ -32,6 +32,7 @@ class StudentCheckoutController extends Controller
 
         $methods = collect(Setting::paymentMethods())
             ->filter(fn (array $method) => (bool) ($method['enabled'] ?? false))
+            ->reject(fn (array $method, string $key) => $key === 'bkash')
             ->map(fn (array $method, string $key) => [
                 'key' => $key,
                 'label' => (string) ($method['label'] ?? $key),
@@ -82,7 +83,7 @@ class StudentCheckoutController extends Controller
                     ];
                 })->values(),
                 'payment_methods' => $methods,
-                'online_bkash_available' => $this->isBkashConfigured(),
+                'online_bkash_available' => (bool) (Setting::paymentMethods()['bkash']['enabled'] ?? false) && $this->isBkashConfigured(),
                 'pricing' => [
                     'base_amount' => number_format($baseAmount, 2, '.', ''),
                     'discounted_amount' => number_format($discountedAmount, 2, '.', ''),
@@ -112,6 +113,7 @@ class StudentCheckoutController extends Controller
 
         $enabledMethods = collect(Setting::paymentMethods())
             ->filter(fn (array $method) => (bool) ($method['enabled'] ?? false))
+            ->reject(fn (array $method, string $key) => $key === 'bkash')
             ->keys()
             ->all();
 
@@ -248,7 +250,7 @@ class StudentCheckoutController extends Controller
         $student = $request->user();
         abort_unless($student->isStudent(), 403);
         abort_unless($course->status === 'published', 404);
-        abort_unless($this->isBkashConfigured(), 503, 'Online bKash checkout is not configured.');
+        abort_unless((bool) (Setting::paymentMethods()['bkash']['enabled'] ?? false) && $this->isBkashConfigured(), 503, 'Online bKash checkout is not enabled or configured.');
 
         $hasOpenBatches = $course->batches()->where('status', 'open')->exists();
         $validated = $request->validate([
