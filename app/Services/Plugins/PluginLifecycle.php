@@ -54,8 +54,8 @@ final class PluginLifecycle
                 throw new LogicException("Invalid plugin lifecycle transition: {$current} -> {$target}.");
             }
 
-            if ($target === 'active' && ! $this->hasVerifiedPackage($plugin, $attributes)) {
-                throw new LogicException('A plugin cannot be activated without a verified signed package.');
+            if (in_array($target, ['installed', 'active'], true) && ! $this->hasVerifiedPackage($plugin, $attributes)) {
+                throw new LogicException('A plugin cannot be installed or activated without a verified signed package.');
             }
 
             $plugin->fill($attributes);
