@@ -916,6 +916,7 @@ class _CourseCheckoutPageState extends State<CourseCheckoutPage> {
   String? error;
   int? selectedBatchId;
   String? selectedMethod;
+  PlatformFile? proofFile;
 
   @override
   void initState() { super.initState(); load(); }
@@ -979,8 +980,26 @@ class _CourseCheckoutPageState extends State<CourseCheckoutPage> {
     }
   }
 
+  Future<void> pickProof() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
+      withData: false,
+    );
+    if (!mounted || result == null || result.files.isEmpty) return;
+    final file = result.files.single;
+    if (file.size > 5 * 1024 * 1024) {
+      setState(() => error = 'Payment proof must be 5 MB or smaller.');
+      return;
+    }
+    setState(() {
+      proofFile = file;
+      error = null;
+    });
+  }
+
   Future<void> submitManual() async {
-    if (submitting || checkout == null || checkout!['already_enrolled'] == true) { return; }
+    if (submitting || checkout == null || checkout!['already_enrolled'] == true || checkout!['pending_payment'] != null) { return; }
     if (batches.isNotEmpty && selectedBatchId == null) {
       setState(() => error = 'Please select an available batch.');
       return;
@@ -1001,11 +1020,20 @@ class _CourseCheckoutPageState extends State<CourseCheckoutPage> {
         if (payableAmount > 0) 'transaction_reference': transactionReference.text.trim(),
         if (senderAccount.text.trim().isNotEmpty) 'sender_account': senderAccount.text.trim(),
       };
-      final response = await widget.api.postJson('/checkout/courses/${widget.slug}/manual', payload);
+      final fields = payload.map((key, value) => MapEntry(key, value.toString()));
+      final response = proofFile == null
+          ? await widget.api.postJson('/checkout/courses/${widget.slug}/manual', payload)
+          : await widget.api.postMultipart(
+              '/checkout/courses/${widget.slug}/manual',
+              fields,
+              attachment: proofFile,
+              fileField: 'proof',
+            );
       if (!mounted) { return; }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(response['message']?.toString() ?? 'Checkout submitted.')),
       );
+      proofFile = null;
       Navigator.of(context).pop(true);
     } catch (exception) {
       if (mounted) { setState(() => error = exception.toString()); }
@@ -1015,7 +1043,7 @@ class _CourseCheckoutPageState extends State<CourseCheckoutPage> {
   }
 
   Future<void> payWithBkash() async {
-    if (submitting || checkout == null || checkout!['already_enrolled'] == true) { return; }
+    if (submitting || checkout == null || checkout!['already_enrolled'] == true || checkout!['pending_payment'] != null) { return; }
     if (batches.isNotEmpty && selectedBatchId == null) {
       setState(() => error = 'Please select a batch first.');
       return;
@@ -1059,6 +1087,7 @@ class _CourseCheckoutPageState extends State<CourseCheckoutPage> {
     final course = checkout?['course'] as Map<String, dynamic>? ?? {};
     final manualMethods = methods.cast<Map<String, dynamic>>();
     final onlineBkash = checkout?['online_bkash_available'] == true;
+    final pendingPayment = checkout?['pending_payment'] as Map<String, dynamic>?;
     return Scaffold(
       appBar: AppBar(title: const Text('Course checkout')),
       body: loading
@@ -1083,6 +1112,12 @@ class _CourseCheckoutPageState extends State<CourseCheckoutPage> {
                         const Card(child: ListTile(
                           leading: Icon(Icons.check_circle, color: Colors.green),
                           title: Text('You are already enrolled in this course.'),
+                        )),
+                      if (pendingPayment != null)
+                        Card(child: ListTile(
+                          leading: const Icon(Icons.hourglass_top),
+                          title: const Text('Payment awaiting academy verification'),
+                          subtitle: Text('৳${pendingPayment['amount']} · ${pendingPayment['method']} · ${pendingPayment['transaction_reference']}'),
                         )),
                       if (batches.isNotEmpty) ...[
                         const SizedBox(height: 16),
@@ -1117,7 +1152,7 @@ class _CourseCheckoutPageState extends State<CourseCheckoutPage> {
                             Text('Flash Sale discount: ৳${checkout?['pricing']?['discount_amount']}'),
                         ]),
                       )),
-                      if (payableAmount > 0 && manualMethods.isNotEmpty) ...[
+                      if (payableAmount > 0 && manualMethods.isNotEmpty && pendingPayment == null) ...[
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
                           initialValue: selectedMethod,
@@ -1153,6 +1188,17 @@ class _CourseCheckoutPageState extends State<CourseCheckoutPage> {
                           controller: transactionReference,
                           decoration: const InputDecoration(labelText: 'Transaction reference', border: OutlineInputBorder()),
                         ),
+                        const SizedBox(height: 8),
+                        OutlinedButton.icon(
+                          onPressed: submitting ? null : pickProof,
+                          icon: const Icon(Icons.attach_file),
+                          label: Text(proofFile?.name ?? 'Attach payment proof (optional)'),
+                        ),
+                        if (proofFile != null)
+                          TextButton(
+                            onPressed: submitting ? null : () => setState(() => proofFile = null),
+                            child: const Text('Remove attachment'),
+                          ),
                       ],
                       if (payableAmount > 0 && manualMethods.isEmpty && !onlineBkash)
                         const Padding(
@@ -1167,6 +1213,7 @@ class _CourseCheckoutPageState extends State<CourseCheckoutPage> {
                       FilledButton.icon(
                         onPressed: submitting ||
                                 checkout?['already_enrolled'] == true ||
+                                pendingPayment != null ||
                                 selectedBatchFull ||
                                 (batches.isNotEmpty && selectedBatchId == null) ||
                                 (payableAmount > 0 && manualMethods.isEmpty)
@@ -1177,11 +1224,12 @@ class _CourseCheckoutPageState extends State<CourseCheckoutPage> {
                             : const Icon(Icons.send),
                         label: Text(payableAmount <= 0 ? 'Enroll free' : 'Submit manual payment'),
                       ),
-                      if (payableAmount > 0 && onlineBkash) ...[
+                      if (payableAmount > 0 && onlineBkash && pendingPayment == null) ...[
                         const SizedBox(height: 10),
                         OutlinedButton.icon(
                           onPressed: submitting ||
                                   checkout?['already_enrolled'] == true ||
+                                  pendingPayment != null ||
                                   selectedBatchFull ||
                                   (batches.isNotEmpty && selectedBatchId == null)
                               ? null
