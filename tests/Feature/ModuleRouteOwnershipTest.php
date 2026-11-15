@@ -33,9 +33,23 @@ class ModuleRouteOwnershipTest extends TestCase
 
     public function test_every_route_owner_exists_in_the_first_party_module_catalog(): void
     {
-        foreach (array_keys(config('module_routes')) as $module) {
+        foreach (array_merge(array_keys(config('module_routes')), array_keys(config('module_route_uris'))) as $module) {
             $this->assertArrayHasKey($module, config('modules'), $module.' must have a first-party manifest.');
         }
+    }
+
+    public function test_api_routes_are_gated_by_their_feature_and_mobile_app_plugins(): void
+    {
+        Route::middleware('api')->get('/api/v1/_test/mobile-feature', fn () => response('mobile feature'))
+            ->name('test.mobile-feature');
+
+        Setting::setValue('module_registry', json_encode(['mobile_api' => false]));
+
+        $this->get('/api/v1/_test/mobile-feature')->assertNotFound();
+
+        Setting::setValue('module_registry', json_encode(['mobile_api' => true, 'student_mobile_app' => true]));
+
+        $this->get('/api/v1/_test/mobile-feature')->assertOk()->assertSeeText('mobile feature');
     }
 
     public function test_core_module_manager_routes_are_not_owned_by_business_plugins(): void
