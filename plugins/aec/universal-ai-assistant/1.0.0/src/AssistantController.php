@@ -61,7 +61,7 @@ final class AssistantController
 
         $usedTokens = (int) DB::table('ai_assistant_messages')->where('message_role', 'assistant')
             ->whereDate('created_at', today())->sum('token_count');
-        $remainingDailyTokens = max(0, (int) $settings['daily_token_budget'] - $usedTokens);
+        $remainingDailyTokens = AssistantTokenBudget::remaining((int) $settings['daily_token_budget'], $usedTokens);
         if ($remainingDailyTokens < 1) {
             return response()->json(['message' => __('The institution daily AI token budget has been reached.')], 429);
         }
@@ -110,13 +110,15 @@ final class AssistantController
             // This keeps the configured daily total-token budget from being overspent by a
             // large max_tokens value when only a small budget remains.
             $promptPayload = json_encode($messages, JSON_THROW_ON_ERROR);
-            $estimatedPromptTokens = (int) ceil(mb_strlen($promptPayload) / 3);
-            $availableCompletionTokens = $remainingDailyTokens - $estimatedPromptTokens;
-            if ($availableCompletionTokens < 1) {
+            $estimatedPromptTokens = AssistantTokenBudget::estimatePromptTokens($messages);
+            $responseTokenLimit = AssistantTokenBudget::completionLimit(
+                (int) $settings['max_tokens'],
+                $remainingDailyTokens,
+                $estimatedPromptTokens
+            );
+            if ($responseTokenLimit < 1) {
                 return response()->json(['message' => __('The remaining daily AI token budget is insufficient for this prompt.')], 429);
             }
-            $responseTokenLimit = min((int) $settings['max_tokens'], $availableCompletionTokens);
-
             $response = Http::withToken($apiKey)->acceptJson()->timeout(40)->withOptions(array_merge([
                 'allow_redirects' => false,
                 'stream' => true,

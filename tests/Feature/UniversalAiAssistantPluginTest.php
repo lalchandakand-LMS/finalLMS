@@ -23,6 +23,7 @@ class UniversalAiAssistantPluginTest extends TestCase
     {
         parent::setUp();
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantSettings.php');
+        require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantTokenBudget.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantController.php');
         if (! Schema::hasTable('ai_assistant_settings')) {
             $migration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_15_180000_create_universal_ai_assistant_tables.php');
@@ -56,56 +57,23 @@ class UniversalAiAssistantPluginTest extends TestCase
         $this->assertArrayNotHasKey('api_key', AssistantSettings::publicSettings());
     }
 
-    public function test_assistant_caps_completion_tokens_to_the_remaining_daily_budget(): void
+    public function test_completion_limit_reserves_prompt_tokens_and_never_exceeds_remaining_daily_budget(): void
     {
-        $roles = array_fill_keys(AssistantSettings::ROLES, false);
-        $roles['student'] = true;
-        AssistantSettings::save([
-            'model' => 'gpt-4o-mini',
-            'base_url' => 'https://api.openai.com/v1',
-            'temperature' => 0.4,
-            'max_tokens' => 8192,
-            'global_enabled' => true,
-            'role_enabled' => $roles,
-            'daily_request_limit' => 20,
-            'daily_token_budget' => 5000,
-        ], 'test-secret-provider-key', false);
+        $messages = [
+            ['role' => 'system', 'content' => AssistantSettings::rolePrompt('student')],
+            ['role' => 'user', 'content' => 'Hello'],
+        ];
 
-        $user = User::factory()->create(['role' => 'student', 'email_verified_at' => now()]);
-        DB::table('ai_assistant_messages')->insert([
-            'conversation_id' => DB::table('ai_assistant_conversations')->insertGetId([
-                'user_id' => $user->id,
-                'assistant_role' => 'student',
-                'title' => 'Previous use',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]),
-            'message_role' => 'assistant',
-            'content' => 'Previous answer',
-            'token_count' => 1000,
-            'model' => 'gpt-4o-mini',
-            'created_at' => now(),
-        ]);
+        $remaining = AssistantTokenBudget::remaining(5000, 1000);
+        $estimatedPrompt = AssistantTokenBudget::estimatePromptTokens($messages);
+        $limit = AssistantTokenBudget::completionLimit(8192, $remaining, $estimatedPrompt);
 
-        Http::fake([
-            'api.openai.com/v1/chat/completions' => Http::response([
-                'choices' => [['message' => ['content' => 'A short answer.']]],
-                'usage' => ['total_tokens' => 80],
-            ], 200),
-        ]);
-
-        $this->app->instance(AiDeveloperProviderEndpoint::class, new AiDeveloperProviderEndpoint(
-            static fn (string $host): array => [['type' => 'A', 'ip' => '1.1.1.1']]
-        ));
-        $request = Request::create('/student/ai-assistant/messages', 'POST', ['message' => 'Hello']);
-        $request->setUserResolver(fn () => $user);
-        $response = (new \Aloms\UniversalAiAssistant\AssistantController())->send($request);
-
-        $this->assertSame(200, $response->getStatusCode());
-        Http::assertSent(function ($request): bool {
-            $limit = (int) ($request->data()['max_tokens'] ?? 0);
-            return $limit > 0 && $limit < 4000 && $limit <= 8192;
-        });
+        $this->assertGreaterThan(0, $estimatedPrompt);
+        $this->assertGreaterThan(0, $limit);
+        $this->assertLessThanOrEqual($remaining - $estimatedPrompt, $limit);
+        $this->assertLessThanOrEqual(8192, $limit);
+        $this->assertSame(0, AssistantTokenBudget::completionLimit(1200, 100, 100));
+        $this->assertSame(0, AssistantTokenBudget::remaining(1000, 1200));
     }
 
     public function test_assistant_refuses_prompt_when_daily_budget_is_already_exhausted(): void
