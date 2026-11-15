@@ -60,6 +60,21 @@ class AdminVerificationCenterTest extends TestCase
         Notification::assertSentTo($student, VerifyEmail::class);
     }
 
+    public function test_admin_is_warned_when_email_transport_only_logs_messages(): void
+    {
+        Notification::fake();
+        config(['mail.default' => 'log']);
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $guardian = User::factory()->create(['role' => 'guardian', 'email_verified_at' => null]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.verification-center.email', $guardian))
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        Notification::assertNothingSent();
+    }
+
     public function test_admin_can_send_phone_otp_without_marking_number_verified(): void
     {
         Http::fake();
