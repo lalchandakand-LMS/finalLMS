@@ -117,9 +117,17 @@ class PluginArchiveInstallerTest extends TestCase
         );
 
         $this->assertSame('installed', $installed->status);
-        $this->assertMatchesRegularExpression('/^[a-f0-9]{64}$/D', $installed->metadata['installed_tree_sha256'] ?? '');
         $this->assertFileExists($this->finalPath.'/src/Plugin.php');
         $this->assertFileExists($this->finalPath.'/resources/course.json');
+        $this->assertSame(1, $installed->metadata['integrity_version']);
+        $this->assertSame(
+            hash_file('sha256', $this->finalPath.'/src/Plugin.php'),
+            $installed->metadata['installed_file_hashes']['src/Plugin.php'],
+        );
+        $this->assertSame(
+            hash_file('sha256', $this->finalPath.'/resources/course.json'),
+            $installed->metadata['installed_file_hashes']['resources/course.json'],
+        );
     }
 
     public function test_rejects_zip_slip_and_does_not_write_outside_plugin_directory(): void

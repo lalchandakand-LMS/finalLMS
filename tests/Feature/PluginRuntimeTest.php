@@ -6,7 +6,6 @@ use App\Contracts\Plugins\PluginInterface;
 use App\Models\PluginInstallation;
 use App\Models\User;
 use App\Services\Plugins\PluginRuntime;
-use App\Services\Plugins\PluginTreeHasher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
 use RuntimeException;
@@ -74,17 +73,21 @@ class PluginRuntimeTest extends TestCase
 
     private function createPackage(string $entrypointContents, string $routeContents = ''): PluginInstallation
     {
-        $routesDirectory = $this->pluginDirectory.'/routes';
-        if (! is_dir($routesDirectory)) {
-            mkdir($routesDirectory, 0750, true);
-        }
-
-        file_put_contents($this->pluginDirectory.'/Plugin.php', $entrypointContents);
+        $files = ['Plugin.php' => $entrypointContents];
         if ($routeContents !== '') {
-            file_put_contents($routesDirectory.'/web.php', $routeContents);
+            $files['routes/web.php'] = $routeContents;
         }
 
-        $treeHash = app(PluginTreeHasher::class)->hash($this->pluginDirectory);
+        $hashes = [];
+        foreach ($files as $relative => $contents) {
+            $path = $this->pluginDirectory.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, $relative);
+            $directory = dirname($path);
+            if (! is_dir($directory)) {
+                mkdir($directory, 0750, true);
+            }
+            file_put_contents($path, $contents);
+            $hashes[$relative] = hash_file('sha256', $path);
+        }
 
         $plugin = new PluginInstallation();
         $plugin->forceFill([
@@ -98,7 +101,10 @@ class PluginRuntimeTest extends TestCase
             'signature_key_id' => 'test-release-key',
             'signature_verified_at' => now(),
             'package_path' => 'plugins/aec/runtime-demo/1.0.0',
-            'metadata' => ['installed_tree_sha256' => $treeHash],
+            'metadata' => [
+                'integrity_version' => 1,
+                'installed_file_hashes' => $hashes,
+            ],
         ])->save();
 
         return $plugin;

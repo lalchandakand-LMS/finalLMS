@@ -5,14 +5,16 @@ application boot, the runtime verifies:
 
 - the manifest still matches the registry identity;
 - the signing key ID remains configured as trusted;
-- the signature-verification timestamp and package checksum are present;
+- signature-verification metadata and the package SHA-256 are present;
 - the package path is the canonical plugins/vendor/plugin/version location;
-- no package path or entrypoint resolves through a symbolic link;
-- the installed file-tree SHA-256 digest matches the digest recorded at install.
+- the installed-file integrity record is present and supported;
+- every installed file matches its recorded SHA-256, with no missing, extra,
+  linked, special or out-of-root files.
 
-The installer records installed_tree_sha256 after safe extraction. Any change to
-an installed plugin file causes runtime registration to fail before its entrypoint
-is loaded.
+The secure ZIP installer records a sorted relative-path-to-SHA-256 map for every
+regular file it extracts. PluginIntegrityVerifier checks that exact file set
+before an entrypoint is loaded. A modified file or an extra PHP file therefore
+causes runtime registration to fail before require().
 
 ## Plugin entrypoint contract
 
@@ -40,9 +42,9 @@ moved to inactive with failed health status. The application continues booting.
 
 A signed plugin is trusted publisher code, not sandboxed code. Once activated,
 its PHP entrypoint runs inside the LMS PHP process with the process's privileges.
-The route context and file-integrity checks protect against accidental exposure
-and post-install file tampering; they do not sandbox malicious PHP. Only configure
-release public keys belonging to publishers whose code you trust.
+The route context and installed-file integrity checks protect against accidental
+exposure and post-install file tampering; they do not sandbox malicious PHP.
+Only configure release public keys belonging to publishers whose code you trust.
 
 The Admin Plugin Manager does not yet expose activation controls. Permission
 review, dependency/conflict preflight, activation/deactivation UX, uninstall,

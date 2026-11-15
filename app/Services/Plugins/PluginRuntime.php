@@ -12,7 +12,7 @@ final class PluginRuntime
 {
     public function __construct(
         private readonly PluginManifestValidator $manifestValidator,
-        private readonly PluginTreeHasher $treeHasher,
+        private readonly PluginIntegrityVerifier $integrityVerifier,
         private readonly PluginLifecycle $lifecycle,
     ) {
     }
@@ -50,11 +50,13 @@ final class PluginRuntime
             throw new RuntimeException('Only an active plugin may enter the runtime.');
         }
 
+        $trustedKeys = config('plugins.trusted_public_keys', []);
         if ($plugin->signature_verified_at === null
             || ! is_string($plugin->package_sha256)
             || preg_match('/^[a-f0-9]{64}$/D', $plugin->package_sha256) !== 1
             || ! is_string($plugin->signature_key_id)
-            || ! array_key_exists($plugin->signature_key_id, (array) config('plugins.trusted_public_keys', []))) {
+            || ! is_array($trustedKeys)
+            || ! array_key_exists($plugin->signature_key_id, $trustedKeys)) {
             throw new RuntimeException('The active plugin does not have current trusted signature metadata.');
         }
 
@@ -71,42 +73,16 @@ final class PluginRuntime
             throw new RuntimeException('The active plugin manifest is invalid.');
         }
 
-        [$vendor, $slug] = explode('.', (string) $plugin->plugin_key, 2);
-        $slug = str_replace('.', '-', $slug);
-        $expectedRelativePath = 'plugins/'.$vendor.'/'.$slug.'/'.$plugin->version;
-
-        if (! is_string($plugin->package_path) || ! hash_equals($expectedRelativePath, $plugin->package_path)) {
-            throw new RuntimeException('The active plugin path does not match its signed identity.');
-        }
-
-        $pluginsRootPath = base_path('plugins');
-        if (is_link($pluginsRootPath)) {
-            throw new RuntimeException('The private plugins directory cannot be a symbolic link.');
-        }
-
-        $pluginsRoot = realpath($pluginsRootPath);
-        $pluginDirectory = realpath($pluginsRootPath.'/'.$vendor.'/'.$slug.'/'.$plugin->version);
-        if ($pluginsRoot === false || $pluginDirectory === false
-            || ! str_starts_with($pluginDirectory, rtrim($pluginsRoot, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR)
-            || is_link($pluginsRootPath.'/'.$vendor)
-            || is_link($pluginsRootPath.'/'.$vendor.'/'.$slug)
-            || is_link($pluginsRootPath.'/'.$vendor.'/'.$slug.'/'.$plugin->version)) {
-            throw new RuntimeException('The active plugin directory is missing or outside the private plugins folder.');
-        }
-
-        $metadata = is_array($plugin->metadata) ? $plugin->metadata : [];
-        $expectedTreeHash = $metadata['installed_tree_sha256'] ?? null;
-        if (! is_string($expectedTreeHash) || preg_match('/^[a-f0-9]{64}$/D', $expectedTreeHash) !== 1) {
-            throw new RuntimeException('The active plugin has no installed file integrity record.');
-        }
-
-        $actualTreeHash = $this->treeHasher->hash($pluginDirectory);
-        if (! hash_equals($expectedTreeHash, $actualTreeHash)) {
-            throw new RuntimeException('The installed plugin files have changed since installation.');
-        }
+        // Reject modified, missing, extra, linked and out-of-root files before require().
+        $this->integrityVerifier->verify($plugin);
 
         if (! str_ends_with(strtolower((string) $plugin->manifest['entrypoint']), '.php')) {
             throw new RuntimeException('The plugin entrypoint must be a PHP file.');
+        }
+
+        $pluginDirectory = realpath(base_path((string) $plugin->package_path));
+        if ($pluginDirectory === false) {
+            throw new RuntimeException('The active plugin directory is unavailable.');
         }
 
         $entrypointPath = $pluginDirectory.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, $plugin->manifest['entrypoint']);

@@ -68,7 +68,7 @@ final class PluginArchiveInstaller
 
         try {
             $entries = $this->inspectArchive($zip);
-            $this->extractEntries($zip, $entries, $extractDirectory);
+            $fileHashes = $this->extractEntries($zip, $entries, $extractDirectory);
 
             $postExtractionChecksum = hash_file('sha256', $archive);
             if (! is_string($postExtractionChecksum) || ! hash_equals($checksum, $postExtractionChecksum)) {
@@ -98,7 +98,7 @@ final class PluginArchiveInstaller
             }
 
             try {
-                return $this->lifecycle->markInstalled((string) $plugin->plugin_key);
+                return $this->lifecycle->markInstalled((string) $plugin->plugin_key, $fileHashes);
             } catch (\Throwable $exception) {
                 $freshStatus = PluginInstallation::query()->find($plugin->getKey())?->status;
                 if (! in_array($freshStatus, ['installed', 'active'], true)) {
@@ -267,10 +267,12 @@ final class PluginArchiveInstaller
 
     /**
      * @param list<array{index:int,name:string,path:string,directory:bool,size:int}> $entries
+     * @return array<string, string>
      */
-    private function extractEntries(ZipArchive $zip, array $entries, string $root): void
+    private function extractEntries(ZipArchive $zip, array $entries, string $root): array
     {
         $maxFileBytes = max(1, (int) config('plugins.max_file_bytes', 20971520));
+        $hashes = [];
 
         foreach ($entries as $entry) {
             $destination = $root.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, $entry['path']);
@@ -333,7 +335,17 @@ final class PluginArchiveInstaller
             }
 
             chmod($destination, 0640);
+
+            $hash = hash_file('sha256', $destination);
+            if (! is_string($hash)) {
+                throw new RuntimeException('Unable to calculate an installed plugin file checksum.');
+            }
+            $hashes[$entry['path']] = $hash;
         }
+
+        ksort($hashes, SORT_STRING);
+
+        return $hashes;
     }
 
     private function assertVerifiedRegistryRecord(PluginInstallation $plugin): void
