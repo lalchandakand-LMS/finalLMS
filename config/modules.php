@@ -13,12 +13,12 @@ return [
     'staff_management' => ['name' => 'Staff & HR', 'description' => 'Staff records, roles, attendance and internal workflows.', 'type' => 'module', 'dependencies' => ['core', 'identity', 'branch_management']],
 
     // Academic delivery.
-    'academic_levels' => ['name' => 'Academic Levels', 'description' => 'Admin-managed academic levels shared by courses, batches, exams and website pages.', 'type' => 'module', 'dependencies' => ['core', 'identity', 'course_management', 'batch_management', 'exam_management', 'page_builder']],
-    'course_management' => ['name' => 'Course Management', 'description' => 'Courses, categories, curriculum and enrollment.', 'type' => 'module', 'dependencies' => ['core', 'identity', 'teacher_management']],
+    'academic_levels' => ['name' => 'Academic Levels', 'description' => 'Admin-managed academic levels shared by courses, batches, exams and website pages.', 'type' => 'module', 'dependencies' => ['core', 'identity']],
+    'course_management' => ['name' => 'Course Management', 'description' => 'Courses, categories, curriculum and enrollment.', 'type' => 'module', 'dependencies' => ['core', 'identity', 'teacher_management', 'academic_levels']],
     'lesson_management' => ['name' => 'Lesson & Learning Content', 'description' => 'Lessons, learning materials, video and course content.', 'type' => 'module', 'dependencies' => ['core', 'course_management', 'storage']],
-    'batch_management' => ['name' => 'Batch & Class Management', 'description' => 'Batches, class groups and schedules.', 'type' => 'module', 'dependencies' => ['core', 'course_management', 'branch_management']],
+    'batch_management' => ['name' => 'Batch & Class Management', 'description' => 'Batches, class groups and schedules.', 'type' => 'module', 'dependencies' => ['core', 'course_management', 'branch_management', 'academic_levels']],
     'attendance' => ['name' => 'Attendance', 'description' => 'Student and staff attendance tracking.', 'type' => 'module', 'dependencies' => ['core', 'identity', 'branch_management']],
-    'assignment' => ['name' => 'Assignments', 'description' => 'Assignment publishing, submissions and grading.', 'type' => 'module', 'dependencies' => ['core', 'course_management', 'student_management']],
+    'assignment' => ['name' => 'Assignments', 'description' => 'Assignment publishing, submissions and grading.', 'type' => 'module', 'dependencies' => ['core', 'course_management', 'student_management', 'academic_levels']],
     'exam_management' => ['name' => 'Exams & Assessments', 'description' => 'Exams, quizzes, question sets, grading and results.', 'type' => 'module', 'dependencies' => ['core', 'course_management', 'student_management']],
     'live_classes' => ['name' => 'Live Classes', 'description' => 'Live class scheduling, access and attendance.', 'type' => 'module', 'dependencies' => ['core', 'course_management', 'teacher_management']],
     'certificates' => ['name' => 'Certificates', 'description' => 'Certificate templates, issuance and verification.', 'type' => 'module', 'dependencies' => ['core', 'course_management', 'student_management']],
@@ -44,7 +44,7 @@ return [
 
     // Website, media and growth.
     'website_cms' => ['name' => 'Website CMS', 'description' => 'Website builder, pages, blog and public content.', 'type' => 'module', 'dependencies' => ['core']],
-    'page_builder' => ['name' => 'Page Builder', 'description' => 'Admin drag-and-drop page design, reusable sections, preview, publishing and navigation menus.', 'type' => 'module', 'dependencies' => ['core', 'website_cms', 'media_library']],
+    'page_builder' => ['name' => 'Page Builder', 'description' => 'Admin drag-and-drop page design, reusable sections, preview, publishing and navigation menus.', 'type' => 'module', 'dependencies' => ['core', 'website_cms', 'media_library', 'academic_levels']],
     'slider_builder' => ['name' => 'Slider Builder', 'description' => 'Admin-managed homepage sliders, banners, slide ordering, scheduling and responsive display.', 'type' => 'module', 'dependencies' => ['core', 'website_cms', 'media_library']],
     'slider' => ['name' => 'Website Slider & Banners', 'description' => 'Homepage sliders, promotional banners, scheduling and media placement.', 'type' => 'module', 'dependencies' => ['core', 'website_cms', 'storage']],
     'carousel_builder' => ['name' => 'Carousel Builder', 'description' => 'Reusable multi-item carousels for courses, teachers, testimonials and featured content with responsive layouts.', 'type' => 'module', 'dependencies' => ['core', 'website_cms', 'media_library']],
