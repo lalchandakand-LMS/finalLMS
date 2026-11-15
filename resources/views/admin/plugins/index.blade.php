@@ -20,7 +20,7 @@
 
 <div class="panel" role="note" style="margin-bottom:20px;">
     <strong>{{ __('Installation and activation are separate') }}</strong>
-    <p class="muted" style="margin-bottom:0;">{{ __('Packages are signature-verified and safely extracted. Installed plugin PHP code is not loaded or executed. Activation remains disabled until runtime route/API/job isolation and rollback safeguards are complete. Deactivation, update and uninstall controls will follow the same safety gate.') }}</p>
+    <p class="muted" style="margin-bottom:0;">{{ __('Only trusted, signed packages with intact installed-file hashes can be activated. Activation registers verified plugin routes on the next request. Deactivation blocks plugin routes immediately and retains installed files and data. Clear route cache before activation.') }}</p>
 </div>
 
 <section class="panel" style="margin-bottom:24px;">
@@ -66,6 +66,7 @@
                         <th>{{ __('Status') }}</th>
                         <th>{{ __('Signature') }}</th>
                         <th>{{ __('Installed') }}</th>
+                        <th>{{ __('Actions') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -80,6 +81,21 @@
                         <td><span class="badge {{ $plugin->status === 'installed' ? 'success' : 'warning' }}">{{ ucfirst(str_replace('_', ' ', $plugin->status)) }}</span></td>
                         <td>{{ $plugin->signature_verified_at ? __('Verified') : __('Not verified') }}</td>
                         <td>{{ $plugin->installed_at?->format('Y-m-d H:i') ?? '—' }}</td>
+                        <td>
+                            @if(in_array($plugin->status, ['installed', 'inactive'], true))
+                                <form method="POST" action="{{ route('admin.plugins.activate', $plugin->plugin_key) }}" style="display:inline;" onsubmit="return confirm('{{ __('Activate this signed plugin? Its code will execute as trusted application code.') }}')">
+                                    @csrf
+                                    <button class="btn primary" type="submit">{{ __('Activate') }}</button>
+                                </form>
+                            @elseif($plugin->status === 'active')
+                                <form method="POST" action="{{ route('admin.plugins.deactivate', $plugin->plugin_key) }}" style="display:inline;" onsubmit="return confirm('{{ __('Deactivate this plugin? Its data and installed files will be retained.') }}')">
+                                    @csrf
+                                    <button class="btn secondary" type="submit">{{ __('Deactivate') }}</button>
+                                </form>
+                            @else
+                                <span class="muted">—</span>
+                            @endif
+                        </td>
                     </tr>
                 @endforeach
                 </tbody>
