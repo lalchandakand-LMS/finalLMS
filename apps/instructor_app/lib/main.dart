@@ -348,6 +348,7 @@ class _InstructorHomeState extends State<InstructorHome> {
       }
       final students = response['data'] as List<dynamic>? ?? [];
       navigator.push<void>(ModalBottomSheetRoute<void>(
+        isScrollControlled: false,
         capturedThemes: capturedThemes,
         builder: (_) => SafeArea(child: ListView(
           padding: const EdgeInsets.all(16),
