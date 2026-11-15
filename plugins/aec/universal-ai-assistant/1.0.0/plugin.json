@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "key": "aec.universal-ai-assistant",
+  "name": "Universal AI Assistant",
+  "version": "1.0.0",
+  "type": "ai",
+  "entrypoint": "src/Plugin.php",
+  "requires": {"php": "^8.3", "laravel": "^12.0", "lms": "^1.0"},
+  "dependencies": [],
+  "conflicts": [],
+  "portals": ["admin", "branch", "teacher", "student", "guardian", "support_staff"],
+  "permissions": ["ai-assistant.configure", "ai-assistant.use"],
+  "capabilities": ["role-assistants", "encrypted-provider-credentials", "general-guidance-only"],
+  "migrations": "migrations"
+}

@@ -20,6 +20,10 @@ class AdminModuleRegistryTest extends TestCase
         $this->assertNotEmpty($catalog);
         $this->assertContains('slider', array_keys($catalog));
         foreach ($catalog as $module) {
+            if ($module['managed_by_plugin_manager'] ?? false) {
+                $this->assertFalse($module['enabled'], $module['key'].' must remain inactive until its plugin is installed and activated.');
+                continue;
+            }
             $this->assertTrue($module['enabled'], $module['key'].' should remain enabled by default.');
         }
     }
@@ -87,9 +91,10 @@ class AdminModuleRegistryTest extends TestCase
             'ai_builder',
             'ai_developer',
             'popup_ads',
+            'universal_ai_assistant',
         ] as $key) {
             $this->assertArrayHasKey($key, $catalog, "Expected independent module [{$key}].");
-            $this->assertSame('module', $catalog[$key]['type']);
+            $this->assertContains($catalog[$key]['type'], ['module', 'plugin']);
         }
     }
 

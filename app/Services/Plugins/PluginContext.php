@@ -17,6 +17,7 @@ final class PluginContext
         'teacher' => 'teacher',
         'student' => 'student',
         'guardian' => 'guardian',
+        'support_staff' => 'accountant',
         'public' => null,
     ];
 
@@ -46,10 +47,6 @@ final class PluginContext
         $this->app->instance($abstract, $instance);
     }
 
-    /**
-     * Register routes only for a portal declared in the signed manifest.
-     * Role and active-plugin middleware are attached to the entire route group.
-     */
     public function routesForPortal(string $portal, string $prefix, string $namePrefix, Closure $routes): void
     {
         if (! array_key_exists($portal, self::PORTAL_ROLES)
@@ -63,11 +60,7 @@ final class PluginContext
             throw new InvalidArgumentException('The plugin route prefix or route-name prefix is invalid.');
         }
 
-        $middleware = [
-            'web',
-            'plugin.active:'.$this->plugin->plugin_key,
-        ];
-
+        $middleware = ['web', 'plugin.active:'.$this->plugin->plugin_key];
         $role = self::PORTAL_ROLES[$portal];
         if ($role !== null) {
             $middleware[] = 'auth';
@@ -75,9 +68,6 @@ final class PluginContext
             $middleware[] = 'role:'.$role;
         }
 
-        Route::middleware($middleware)
-            ->prefix($prefix)
-            ->name($namePrefix)
-            ->group($routes);
+        Route::middleware($middleware)->prefix($prefix)->name($namePrefix)->group($routes);
     }
 }

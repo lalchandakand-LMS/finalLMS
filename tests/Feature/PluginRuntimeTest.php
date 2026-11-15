@@ -133,6 +133,7 @@ PHP;
         $this->actingAs($admin)->get('/plugins/runtime-check/health')->assertNotFound();
     }
 
+
     public function test_inactive_plugin_is_never_loaded(): void
     {
         $this->createPlugin($this->validEntrypoint(), 'inactive');
