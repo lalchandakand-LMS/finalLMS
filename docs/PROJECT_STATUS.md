@@ -291,3 +291,30 @@ No production deployment, production database mutation, live gateway activation 
 - Exact PR-head validation passed: 503 PHPUnit tests / 2,872 assertions, PHP lint, migrations, route listing, Vite build, cPanel package verification and CodeQL.
 - Main-branch CI for the merge commit must still be checked. No production deployment or production database migration was performed.
 - Issue #73 remains open for cPanel staging install/upgrade and rollback rehearsal, browser/mobile responsive/accessibility acceptance, and official payment-provider sandbox verification.
+
+## Live plugin-platform implementation update — 2026-11-15
+
+This section supersedes earlier plugin-platform implementation snapshots where they conflict.
+
+### Merged to main
+- PR [#242](https://github.com/lalchandakand-LMS/finalLMS/pull/242): owner-approved universal plugin architecture and complete module catalogue.
+- PR [#245](https://github.com/lalchandakand-LMS/finalLMS/pull/245), merge commit `1c295a6eb8c8cc56e1a3b5978a38b7bad32f4a79`: fail-closed declarative manifest validator, private `plugins/` directory contract and validator tests. Exact-head Laravel tests, package checks and CodeQL passed.
+- PR [#246](https://github.com/lalchandakand-LMS/finalLMS/pull/246), merge commit `4f9e760a46729dc4ac501c5db799057537c059db`: explicit boundary tests and independent catalogue entries for course builders, page/blog builders, AI Builder/Developer, OTP delivery adapters and Gmail. Exact-head Laravel tests, package checks and CodeQL passed.
+
+### Current implementation PR
+- PR workstream: persistent plugin registry and fail-closed lifecycle state machine.
+- Adds a dedicated `plugin_registry` table, Eloquent registry model and lifecycle transition service.
+- Activation is rejected unless the registry has signature-verification metadata, a SHA-256 package checksum, a trusted key identifier and a package path under the private `plugins/` directory.
+- State changes are transactional and locked; invalid transitions and unsupported registry attributes are rejected.
+- This is registry/lifecycle foundation only. It does not yet implement trusted signature verification, archive extraction, plugin PHP loading, route/job/API registration or Admin Plugin Manager UI. Do not mark any business feature as a fully installable plugin yet.
+
+### Remaining plugin-platform phases
+1. Signed release-key provisioning, package signature verification and private archive staging.
+2. Archive bomb/traversal/symlink/duplicate-path defenses and atomic extraction.
+3. Admin Plugin Manager UI with permissions, preflight, health and audit.
+4. Runtime registration for routes, APIs, events, jobs, schedules and portal navigation.
+5. Migrate existing first-party modules one by one, preserving records, URLs and permissions.
+6. Staging acceptance on isolated cPanel with install, update, deactivate, restore and rollback.
+
+Production deployment remains blocked until staging, backup/restore, rollback and all applicable release gates pass.
+
