@@ -24,11 +24,6 @@ class AdminPluginManagerTest extends TestCase
     {
         parent::setUp();
 
-        if (! Schema::hasTable('ai_assistant_conversations')) {
-            $migration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_15_180000_create_universal_ai_assistant_tables.php');
-            $migration->up();
-        }
-
         if (! class_exists(ZipArchive::class) || ! function_exists('sodium_crypto_sign_keypair')) {
             $this->markTestSkipped('The PHP zip and sodium extensions are required.');
         }
@@ -259,14 +254,6 @@ PHP;
             'updated_at' => now(),
         ]);
 
-        $conversationId = \DB::table('ai_assistant_conversations')->insertGetId([
-            'user_id' => $admin->id,
-            'assistant_role' => 'admin',
-            'title' => 'Keep my AI history',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
         $this->actingAs($admin)->post(route('admin.plugins.uninstall', 'test.universal-ai-assistant'))
             ->assertRedirect(route('admin.plugins.index'))
             ->assertSessionHas('success');
@@ -279,7 +266,6 @@ PHP;
             'plugin_key' => 'test.universal-ai-assistant',
             'status' => 'completed',
         ]);
-        $this->assertDatabaseHas('ai_assistant_conversations', ['id' => $conversationId, 'title' => 'Keep my AI history']);
         $this->assertDirectoryDoesNotExist($this->finalPath);
     }
 
