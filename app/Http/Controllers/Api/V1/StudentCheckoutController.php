@@ -33,8 +33,9 @@ class StudentCheckoutController extends Controller
                 ->where('course_id', $course->id)->where('status', 'open')->firstOrFail();
         }
 
-        $hasOpenBatches = $course->batches()->where('status', 'open')->exists();
-        abort_if($hasOpenBatches && ! $batch, 422, 'Select an open batch before checkout.');
+        $openBatches = $course->batches()->where('status', 'open')
+            ->orderBy('starts_at')
+            ->get(['id', 'title', 'fee', 'capacity', 'starts_at', 'ends_at']);
 
         $base = $batch && (float) $batch->fee > 0 ? (float) $batch->fee : (float) $course->price;
         $sale = FlashSale::activeForCourse($course->id, $student->id);
@@ -51,6 +52,15 @@ class StudentCheckoutController extends Controller
         return response()->json([
             'course' => ['id' => $course->id, 'slug' => $course->slug, 'title' => $course->title],
             'batch' => $batch ? ['id' => $batch->id, 'title' => $batch->title, 'fee' => (float) $batch->fee] : null,
+            'open_batches' => $openBatches->map(fn (Batch $openBatch) => [
+                'id' => $openBatch->id,
+                'title' => $openBatch->title,
+                'fee' => (float) $openBatch->fee,
+                'capacity' => (int) $openBatch->capacity,
+                'starts_at' => $openBatch->starts_at?->toIso8601String(),
+                'ends_at' => $openBatch->ends_at?->toIso8601String(),
+            ])->values(),
+            'batch_required' => $openBatches->isNotEmpty() && ! $batch,
             'currency' => 'BDT',
             'base_amount' => round($base, 2),
             'discounted_amount' => round($amount, 2),
