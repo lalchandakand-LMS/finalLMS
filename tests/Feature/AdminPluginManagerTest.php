@@ -67,6 +67,8 @@ class AdminPluginManagerTest extends TestCase
             \Illuminate\Support\Facades\File::deleteDirectory($this->finalPath);
         }
 
+        Schema::dropIfExists('plugin_activation_probe');
+
         parent::tearDown();
     }
 
@@ -215,7 +217,7 @@ use Illuminate\Database\Migrations\Migration;
 return new class extends Migration {
     public function up(): void
     {
-        throw new \\RuntimeException('Deliberate migration test failure.');
+        throw new \RuntimeException('Deliberate migration test failure.');
     }
 
     public function down(): void {}
