@@ -1,15 +1,15 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use App\\Models\\ApiToken;
-use App\\Models\\Branch;
-use App\\Models\\DashboardAnnouncement;
-use App\\Models\\StudentDevice;
-use App\\Models\\User;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Illuminate\\Support\\Str;
-use Tests\\TestCase;
+use App\Models\ApiToken;
+use App\Models\Branch;
+use App\Models\DashboardAnnouncement;
+use App\Models\StudentDevice;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
+use Tests\TestCase;
 
 class StudentNoticeApiTest extends TestCase
 {
