@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ActivityLog;
 use App\Models\PluginInstallation;
 use App\Services\Plugins\PluginUploadInstaller;
+use App\Services\Plugins\PluginUninstaller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
