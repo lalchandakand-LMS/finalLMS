@@ -208,3 +208,16 @@ Coupon discounts are calculated server-side, cannot stack with Flash Sales, and 
 - `POST /api/v1/question-set-attempts/{attempt}/submit` — submit and server-score objective questions; short answers enter `awaiting_manual` until a teacher grades them.
 
 Correct options, model answers and explanations are never returned by these mobile endpoints. The API enforces student role, course enrollment, course/quiz publication, attempt ownership, assigned question membership, attempt limits and server-side deadlines.
+
+
+## Instructor mobile device verification
+
+The Instructor App uses the same device verification endpoints as the Student App:
+
+- `POST /api/v1/auth/login` requires `device_id` (64 lowercase hexadecimal characters) and `device_name`. A new device receives `202 phone_verification_required` with a short-lived challenge token; no bearer token is issued yet.
+- `POST /api/v1/auth/verify-device` accepts the challenge token and six-digit SMS code. The first verified device is trusted; an additional or previously revoked device receives `202 pending_admin_approval` and remains unable to access protected APIs.
+- `POST /api/v1/auth/device-status` exchanges the pending challenge for a bearer token only after an administrator approves the device.
+- Every mobile bearer token is bound to an approved, account-owned device. Legacy Instructor tokens without that binding are rejected and revoked on their next request.
+- `POST /api/v1/auth/logout` revokes the current mobile token; `POST /api/v1/auth/logout-all` revokes all mobile tokens for the account.
+
+Administrator password login remains available as the web recovery route. Admin SMS MFA is not enabled by this workflow.
