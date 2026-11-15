@@ -156,6 +156,34 @@ class MobileInstructorDeviceMfaTest extends TestCase
         $this->assertNotNull($token->fresh()->revoked_at);
     }
 
+    public function test_approved_device_without_verified_phone_must_complete_otp_before_token_issue(): void
+    {
+        Http::fake(fn () => Http::response(['sid' => 'SM-test'], 201));
+        $teacher = User::factory()->create([
+            'role' => 'teacher',
+            'email_verified_at' => now(),
+            'phone_number' => '+8801712345678',
+        ]);
+        StudentDevice::create([
+            'user_id' => $teacher->id,
+            'device_hash' => hash('sha256', str_repeat('e', 64)),
+            'device_name' => 'Unverified legacy device',
+            'status' => 'approved',
+            'approved_at' => now(),
+            'phone_verified_at' => null,
+        ]);
+
+        $this->postJson('/api/v1/auth/login', [
+            'email' => $teacher->email,
+            'password' => 'password',
+            'device_name' => 'Aloms Instructor App',
+            'device_id' => str_repeat('e', 64),
+        ])->assertAccepted()
+            ->assertJsonPath('status', 'phone_verification_required');
+
+        $this->assertDatabaseCount('api_tokens', 0);
+    }
+
     public function test_teacher_mobile_login_requires_a_device_identifier(): void
     {
         $teacher = User::factory()->create([
