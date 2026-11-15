@@ -34,8 +34,7 @@ final class PluginLifecycle
 
         $allowedAttributes = [
             'health_status',
-            'health_message', 'last_health_check_at', 'installed_at',
-            'activated_at', 'metadata',
+            'health_message', 'last_health_check_at', 'metadata',
         ];
 
         if (array_diff(array_keys($attributes), $allowedAttributes) !== []) {

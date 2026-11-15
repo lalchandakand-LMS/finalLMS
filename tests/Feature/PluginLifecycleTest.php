@@ -62,6 +62,16 @@ class PluginLifecycleTest extends TestCase
         $this->assertNull($plugin->package_path);
     }
 
+    public function test_lifecycle_rejects_caller_controlled_install_and_activation_timestamps(): void
+    {
+        $this->plugin(['status' => 'staged']);
+
+        $this->expectException(\\InvalidArgumentException::class);
+        app(PluginLifecycle::class)->transition('aec.course-management', 'installed', [
+            'installed_at' => Carbon::now(),
+        ]);
+    }
+
     public function test_lifecycle_rejects_skipped_or_unknown_states(): void
     {
         $this->plugin();
