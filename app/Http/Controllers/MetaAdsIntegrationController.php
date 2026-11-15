@@ -82,7 +82,7 @@ class MetaAdsIntegrationController extends Controller
             'redirect_uri' => config('services.meta_ads.redirect_uri'),
             'state' => $state,
             'response_type' => 'code',
-            'scope' => 'ads_read,ads_management,business_management,pages_read_engagement',
+            'scope' => 'ads_read,ads_management,business_management,pages_read_engagement,pages_show_list',
         ]);
 
         return redirect('https://www.facebook.com/'.self::GRAPH_VERSION.'/dialog/oauth?'.$query);
