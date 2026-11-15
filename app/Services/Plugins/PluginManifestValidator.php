@@ -111,6 +111,20 @@ final class PluginManifestValidator
             }
         }
 
+        foreach (($manifest['permissions'] ?? []) as $permission) {
+            if (! is_string($permission) || preg_match('/^[a-z][a-z0-9_.:-]{0,119}$/D', $permission) !== 1) {
+                $errors[] = 'Manifest permissions must be explicit names; wildcard and self-granted permissions are forbidden.';
+                break;
+            }
+        }
+
+        foreach (($manifest['capabilities'] ?? []) as $capability) {
+            if (! is_string($capability) || preg_match('/^[a-z][a-z0-9_.-]{0,119}$/D', $capability) !== 1) {
+                $errors[] = 'Manifest capabilities must use explicit lowercase identifiers.';
+                break;
+            }
+        }
+
         if (array_key_exists('migrations', $manifest)
             && ! $this->isSafeRelativePath($manifest['migrations'], [])) {
             $errors[] = 'migrations must be a safe relative directory path.';
