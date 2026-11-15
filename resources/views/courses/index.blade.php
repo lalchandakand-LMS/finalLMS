@@ -48,6 +48,9 @@
             <label>{{ __('Search') }}
                 <input type="search" name="q" value="{{ request('q') }}" maxlength="120" placeholder="{{ __('Course title, topic or teacher') }}">
             </label>
+            <label>Academic level
+                <select name="academic_level_id"><option value="">All academic levels</option>@foreach($academicLevels as $academicLevel)<option value="{{ $academicLevel->id }}" @selected((string) request('academic_level_id') === (string) $academicLevel->id)>{{ $academicLevel->name }}</option>@endforeach</select>
+            </label>
             <label>{{ __('Category') }}
                 <select name="category">
                     <option value="">{{ __('All categories') }}</option>
@@ -132,6 +135,7 @@
                     <h2><a href="{{ route('courses.show', $course) }}">{{ $course->title }}</a></h2>
                     <p class="catalog-course-description">{{ \Illuminate\Support\Str::limit(strip_tags($course->description), 125) }}</p>
                     <div class="catalog-course-meta">
+                        @if($course->academicLevel)<span class="badge info">{{ $course->academicLevel->name }}</span>@endif
                         <span>♙ {{ $course->teacher?->name ?? __('Instructor to be announced') }}</span>
                         <span>▣ {{ number_format($course->students_count) }} {{ __('students') }}</span>
                         @if($course->level)<span>{{ __($course->level) }}</span>@endif
