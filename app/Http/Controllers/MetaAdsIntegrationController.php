@@ -187,10 +187,10 @@ class MetaAdsIntegrationController extends Controller
 
     public function resumeCampaign(Request $request, string $campaignId): RedirectResponse
     {
-        abort_unless(preg_match('/^\\d{5,30}$/', $campaignId) === 1, 404);
+        abort_unless(preg_match('/^\d{5,30}$/', $campaignId) === 1, 404);
 
         $data = $request->validate([
-            'account_id' => ['required', 'string', 'regex:/^\\d{5,30}$/'],
+            'account_id' => ['required', 'string', 'regex:/^\d{5,30}$/'],
         ]);
 
         $token = $this->accessToken();
@@ -206,16 +206,32 @@ class MetaAdsIntegrationController extends Controller
             abort_unless($campaignAccountId === $data['account_id'], 403, __('This campaign does not belong to the selected ad account.'));
             abort_unless(($campaign['status'] ?? '') === 'PAUSED', 409, __('Only a paused campaign can be resumed.'));
 
+            // For campaigns built by this LMS, activate the children first and the parent last.
+            // The campaign remains paused if a child activation fails, preventing delivery.
+            $localCampaign = \App\Models\MetaBoostCampaign::where('meta_campaign_id', $campaignId)->first();
+            if ($localCampaign && filled($localCampaign->meta_adset_id) && filled($localCampaign->meta_ad_id)) {
+                foreach ([$localCampaign->meta_ad_id, $localCampaign->meta_adset_id] as $childId) {
+                    Http::withToken($token)->asForm()->acceptJson()
+                        ->post('https://graph.facebook.com/'.self::GRAPH_VERSION.'/'.$childId, ['status' => 'ACTIVE'])
+                        ->throw();
+                }
+            }
+
             Http::withToken($token)->asForm()->acceptJson()->post('https://graph.facebook.com/'.self::GRAPH_VERSION.'/'.$campaignId, [
                 'status' => 'ACTIVE',
             ])->throw();
 
-            return redirect()->route('admin.marketing.meta-ads.index', ['account' => $data['account_id']])->with('success', __('Meta campaign resumed. It may now deliver and spend its configured budget.'));
+            if ($localCampaign) {
+                $localCampaign->update(['status' => 'running']);
+            }
+
+            return redirect()->route('admin.marketing.meta-ads.index', ['account' => $data['account_id']])->with('success', __('Meta campaign resumed. It may now deliver ads and spend its configured budget.'));
         } catch (Throwable $exception) {
+            report($exception);
+
             return redirect()->route('admin.marketing.meta-ads.index', ['account' => $data['account_id']])->with('error', __('Meta could not resume this campaign. Check its status and permissions.'));
         }
     }
-
 
     /**
      * Create a complete traffic campaign hierarchy in PAUSED state.
@@ -260,6 +276,7 @@ class MetaAdsIntegrationController extends Controller
             ])['data'] ?? [];
             $page = collect($pages)->first(fn (array $item) => (string) ($item['id'] ?? '') === $data['page_id']);
             abort_unless($page, 403, __('This Facebook Page is not accessible to the connected Meta user.'));
+            abort_unless(in_array('ADVERTISE', $page['tasks'] ?? [], true), 403, __('The connected Meta user needs the Advertise task on this Facebook Page.'));
 
             // Meta expects monetary values in the account currency's minor unit (poisha for BDT).
             $budgetInPoisha = (int) $data['daily_budget_bdt'] * 100;
