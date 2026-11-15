@@ -70,6 +70,13 @@
         <div><label for="home-featured-title">Featured courses heading</label><input id="home-featured-title" name="home_featured_title" maxlength="255" value="{{ old('home_featured_title', $settings['home_featured_title'] ?? '') }}"></div>
     </div>
     <label for="home-subtitle">Subtitle</label><textarea id="home-subtitle" name="home_subtitle" rows="3" maxlength="500">{{ old('home_subtitle', $settings['home_subtitle'] ?? '') }}</textarea>
+    <h3 style="margin-top:18px;">Reference layout section headings</h3>
+    <div class="grid grid-2">
+        <div><label for="home-batches-title">Online batches panel title</label><input id="home-batches-title" name="home_batches_title" maxlength="255" value="{{ old('home_batches_title', $settings['home_batches_title'] ?? 'Online Batches are ongoing!') }}"></div>
+        <div><label for="home-stats-title">Statistics panel title</label><input id="home-stats-title" name="home_stats_title" maxlength="255" value="{{ old('home_stats_title', $settings['home_stats_title'] ?? 'See the stats!') }}"></div>
+        <div><label for="home-paths-title">Learning path section title</label><input id="home-paths-title" name="home_paths_title" maxlength="255" value="{{ old('home_paths_title', $settings['home_paths_title'] ?? 'Choose Your Learning Path') }}"></div>
+        <div><label for="home-reviews-title">Student reviews section title</label><input id="home-reviews-title" name="home_reviews_title" maxlength="255" value="{{ old('home_reviews_title', $settings['home_reviews_title'] ?? 'What Our Students Say') }}"></div>
+    </div>
 </section>
 <section class="panel" style="margin-bottom:20px;">
     <h2>Homepage slider</h2>
