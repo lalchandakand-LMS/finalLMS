@@ -287,6 +287,7 @@ class AuthController extends Controller
                     ->whereKey($device->id)
                     ->where('user_id', $user->id)
                     ->where('status', 'approved')
+                    ->whereNotNull('phone_verified_at')
                     ->lockForUpdate()
                     ->firstOrFail();
 
