@@ -15,5 +15,5 @@ public upload directory and must never be web-accessible.
 
 Do not place secrets, user uploads, generated content, or unsigned packages in
 this directory. Do not expose this directory through public storage or a
-symbolic link. The runtime installer and loader are intentionally not enabled
-by this foundation tranche.
+symbolic link. The signed-package installer and runtime loader are enabled.
+Packages load only after signature verification, explicit activation and installed-file integrity checks.
