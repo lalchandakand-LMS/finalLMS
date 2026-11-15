@@ -255,7 +255,7 @@ class StudentCheckoutController extends Controller
         $student = $request->user();
         abort_unless($student->isStudent(), 403);
         abort_unless($course->status === 'published', 404);
-        abort_unless($gateways->isAvailable('bkash'), 503, 'Online bKash checkout is not enabled or configured.');
+        abort_unless((bool) (Setting::paymentMethods()['bkash']['enabled'] ?? false) && $gateways->isAvailable('bkash'), 503, 'Online bKash checkout is not enabled or configured.');
 
         $hasOpenBatches = $course->batches()->where('status', 'open')->exists();
         $validated = $request->validate([
