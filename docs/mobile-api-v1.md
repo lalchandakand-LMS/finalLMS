@@ -69,6 +69,16 @@ Revokes every active mobile token for the authenticated user.
 
 Wishlist routes are student-only. Course visibility and user ownership are enforced server-side; the API never accepts a client-supplied user ID for wishlist operations.
 
+## Student persistent cart endpoints
+
+- `GET /my/cart`: returns the authenticated student's cart across devices, with published course details, selected batch (if any), current server-calculated Flash Sale pricing and BDT totals.
+- `POST /my/cart`: add or update a course using `course_id` and optional `batch_id`. Only published courses and open batches belonging to that course are accepted; already-enrolled courses are rejected.
+- `PATCH /my/cart/{course_slug}`: update or clear the selected open batch for a cart item owned by the authenticated student.
+- `DELETE /my/cart/{course_slug}`: remove that student's cart item.
+- `DELETE /my/cart`: clear only the authenticated student's cart.
+
+Cart rows are persisted per account in `student_cart_items`, uniquely keyed by student and course. The server ignores client-supplied prices and recalculates the current course/batch fee and eligible Flash Sale for display. Cart mutation locks the course and batch and rechecks publication, batch ownership and enrollment. The cart is a saved selection, not a seat reservation or a completed order; batch capacity and price are revalidated by checkout. Coupon validation and multi-course payment are not part of this API slice.
+
 ## Student checkout and payment endpoints
 
 - `GET /checkout/courses/{course_slug}`: return published-course checkout details, open batches, batch capacity after active/completed enrollments and pending-payment seat reservations, enabled manual payment instructions, current server-calculated Flash Sale price, and whether online bKash is configured.
@@ -77,7 +87,7 @@ Wishlist routes are student-only. Course visibility and user ownership are enfor
 - `GET /my/payments`: paginated course payment history for the authenticated student.
 - `GET /my/payments/{payment_id}`: payment details for the authenticated student's own course payment only. Rejected-payment admin notes are visible only to the payment owner.
 
-Checkout locks the course and selected batch while rechecking publication, enrollment, pending payments, batch status/capacity and active Flash Sale eligibility. Pending payments reserve batch seats until reviewed. The API never trusts client-supplied prices, discounts, user IDs or payment status. This phase reuses existing Flash Sale pricing and manual/bKash payment records; coupon codes and a persistent cross-device cart are not implemented by these endpoints.
+Checkout locks the course and selected batch while rechecking publication, enrollment, pending payments, batch status/capacity and active Flash Sale eligibility. Pending payments reserve batch seats until reviewed. The API never trusts client-supplied prices, discounts, user IDs or payment status. This phase reuses existing Flash Sale pricing and manual/bKash payment records. The separate persistent cart endpoints are documented above; coupon codes and multi-course order checkout remain pending.
 
 ## Instructor endpoints
 
