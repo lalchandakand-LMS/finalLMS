@@ -992,8 +992,14 @@ class _StudentCartPageState extends State<StudentCartPage> {
         items = response['data'] as List<dynamic>? ?? [];
         totals = response['meta'] as Map<String, dynamic>? ?? {};
         paymentMethods = (options['data'] as Map<String, dynamic>?)?['payment_methods'] as List<dynamic>? ?? [];
-        if (selectedPaymentMethod == null && paymentMethods.isNotEmpty) {
-          selectedPaymentMethod = (paymentMethods.first as Map<String, dynamic>)['key']?.toString();
+        final availableMethodKeys = paymentMethods
+            .map((raw) => (raw as Map<String, dynamic>)['key']?.toString())
+            .whereType<String>()
+            .toSet();
+        if (!availableMethodKeys.contains(selectedPaymentMethod)) {
+          selectedPaymentMethod = paymentMethods.isEmpty
+              ? null
+              : (paymentMethods.first as Map<String, dynamic>)['key']?.toString();
         }
         if (items.isEmpty) couponPricing = {};
       });
