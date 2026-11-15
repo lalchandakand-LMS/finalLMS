@@ -322,7 +322,7 @@ class MetaAdsIntegrationTest extends TestCase
         Http::fake(function ($request) {
             $url = $request->url();
             if (str_contains($url, '/me/adaccounts')) return Http::response(['data' => [['id' => 'act_12345', 'account_id' => '12345', 'currency' => 'BDT']]]);
-            if (str_contains($url, '/me/accounts')) return Http::response(['data' => [['id' => '98765', 'name' => 'LMS Page', 'tasks' => ['ADVERTISE']]]]);
+            if (str_contains($url, '/me/accounts')) return Http::response(['data' => [['id' => '98765', 'name' => 'LMS Page', 'tasks' => ['ADVERTISE']]]]]);
             if (str_ends_with($url, '/act_12345/campaigns')) return Http::response(['id' => '111111111111121']);
             if (str_ends_with($url, '/act_12345/adsets')) return Http::response(['id' => '222222222222221']);
             if (str_ends_with($url, '/act_12345/adcreatives')) return Http::response(['id' => '333333333333331']);
