@@ -981,14 +981,14 @@ class _CourseCheckoutPageState extends State<CourseCheckoutPage> {
   }
 
   Future<void> pickProof() async {
-    final files = await FilePicker.pickFiles(
+    final file = await FilePicker.pickFile(
       type: FileType.custom,
       allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
     );
-    if (!mounted || files.isEmpty) { return; }
-    final file = files.first;
-    final fileSize = file.lengthSync() ?? await file.length() ?? 0;
-    if (fileSize > 5 * 1024 * 1024) {
+    if (!mounted || file == null) { return; }
+    final bytes = await file.readAsBytes();
+    if (!mounted) { return; }
+    if (bytes.lengthInBytes > 5 * 1024 * 1024) {
       setState(() => error = 'Payment proof must be 5 MB or smaller.');
       return;
     }
