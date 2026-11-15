@@ -15,7 +15,7 @@ The callback URL must be added to the Meta app's Valid OAuth Redirect URIs. The 
 ## Permissions requested
 
 - `ads_read`: read ad accounts, campaigns and insights.
-- `ads_management`: manage advertising objects; this integration currently only pauses campaigns.
+- `ads_management`: manage advertising objects; this integration can pause campaigns and resume them only after an explicit admin confirmation.
 - `business_management`: discover business assets where granted.
 - `pages_read_engagement`: read Page engagement details.
 - `pages_show_list`: list Pages available to the connected user.
@@ -27,8 +27,8 @@ Meta may require App Review and Standard Access before non-app-role users can us
 - OAuth state is random, stored in the authenticated session and checked on callback.
 - Long-lived access tokens are encrypted with Laravel's application key before storage in the existing settings table.
 - Never expose app secrets or access tokens in chat, logs, screenshots or source control.
-- The integration does not create, activate, resume or publish ads. It can read accounts/pages/campaigns/insights and pause a campaign.
-- Campaign activation and paid ad creation are deliberately excluded; a separate explicit approval and implementation are required before any action that can incur spend.
+- The integration does not create, activate, resume or publish ads. It can read accounts/pages/campaigns/insights, pause campaigns and resume a paused campaign after a spend warning and admin confirmation.
+- Paid ad creation is deliberately excluded. Resuming a paused campaign can incur spend and therefore requires an explicit confirmation on the campaign action.
 - Disconnect removes the stored encrypted token and selected account.
 
 After configuring server environment values, clear cached configuration using the deployment's normal Laravel process.
