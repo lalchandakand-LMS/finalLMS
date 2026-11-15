@@ -41,9 +41,6 @@ class PaymentGatewayManager
     {
         $rawRegistry = Setting::value('payment_gateway_registry');
         if ($rawRegistry === null) {
-            $rawRegistry = Setting::value('addon_registry');
-        }
-        if ($rawRegistry === null) {
             $legacyMethods = Setting::paymentMethods();
             $rawRegistry = json_encode(['bkash' => (bool) ($legacyMethods['bkash']['enabled'] ?? false) || (bool) config('services.bkash.enabled')]);
         }
