@@ -339,7 +339,7 @@ class _InstructorHomeState extends State<InstructorHome> {
   Future<void> showStudents(Map<String, dynamic> course) async {
     try {
       final response = await widget.api.get("/instructor/courses/${course['slug']}/students");
-      if (!context.mounted) {
+      if (!mounted) {
         return;
       }
       final students = response['data'] as List<dynamic>? ?? [];
@@ -472,12 +472,12 @@ class _InstructorHomeState extends State<InstructorHome> {
                   icon: const Icon(Icons.calendar_month),
                   onPressed: () async {
                     final picked = await showDatePicker(
-                      context: dialogContext,
+                      context: context,
                       initialDate: dueAt,
                       firstDate: DateTime.now(),
                       lastDate: DateTime.now().add(const Duration(days: 365)),
                     );
-                    if (!dialogContext.mounted) {
+                    if (!context.mounted) {
                       return;
                     }
                     if (picked != null) {
@@ -557,6 +557,9 @@ class _InstructorHomeState extends State<InstructorHome> {
       context: context,
       initialTime: TimeOfDay.fromDateTime(initial),
     );
+    if (!mounted) {
+      return null;
+    }
     if (time == null) {
       return null;
     }
