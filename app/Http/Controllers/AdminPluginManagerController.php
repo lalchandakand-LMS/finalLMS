@@ -19,6 +19,7 @@ class AdminPluginManagerController extends Controller
     {
         return view('admin.plugins.index', [
             'plugins' => PluginInstallation::query()->orderBy('plugin_key')->get(),
+            'settingsByPlugin' => PluginSetting::query()->get(['plugin_key', 'setting_key', 'updated_at'])->groupBy('plugin_key'),
             'maxPackageBytes' => (int) config('plugins.max_package_bytes', 52428800),
         ]);
     }
@@ -71,6 +72,36 @@ class AdminPluginManagerController extends Controller
             __('Plugin package verified and installed. Activation remains disabled until the isolated plugin runtime is complete.')
         );
     }
+    public function updateSettings(Request $request, PluginInstallation $plugin, PluginSettingsManager $settings): RedirectResponse
+    {
+        $validated = $request->validate([
+            'setting_key' => ['required', 'string', 'max:120', 'regex:/^[a-z][a-z0-9_.-]{0,119}$/'],
+            'value' => ['required', 'string', 'min:1', 'max:4096'],
+        ]);
+
+        try {
+            $settings->set($plugin, $validated['setting_key'], $validated['value']);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->with('error', $exception instanceof InvalidArgumentException || $exception instanceof \\RuntimeException
+                ? $exception->getMessage()
+                : __('Unable to save plugin setting; check server logs.'));
+        }
+
+        ActivityLog::create([
+            'user_id' => $request->user()->id,
+            'event' => 'admin.plugins.setting_updated',
+            'description' => 'Updated encrypted setting '.$validated['setting_key'].' for plugin '.$plugin->plugin_key.'.',
+            'method' => $request->method(),
+            'route' => $request->route()?->getName(),
+            'ip_address' => $request->ip(),
+            'user_agent' => substr((string) $request->userAgent(), 0, 1000),
+        ]);
+
+        return redirect()->route('admin.plugins.index')->with('success', __('Plugin setting saved securely. The value will not be displayed again.'));
+    }
+
     public function deactivate(Request $request, PluginInstallation $plugin, PluginDeactivator $deactivator): RedirectResponse
     {
         try {
