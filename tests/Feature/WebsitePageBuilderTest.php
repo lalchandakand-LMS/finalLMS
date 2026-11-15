@@ -45,6 +45,8 @@ class WebsitePageBuilderTest extends TestCase
         ]);
 
         auth()->logout();
+        $this->get(route('landing'))->assertOk()->assertSee('Programs')->assertSee('/pages/our-english-programs');
+
         $this->get(route('website-pages.show', 'our-english-programs'))
             ->assertOk()
             ->assertSee('Learn with confidence')
