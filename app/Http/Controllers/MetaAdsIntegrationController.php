@@ -151,6 +151,8 @@ class MetaAdsIntegrationController extends Controller
 
     public function pauseCampaign(Request $request, string $campaignId): RedirectResponse
     {
+        abort_unless(preg_match('/^\d{5,30}$/', $campaignId) === 1, 404);
+
         $data = $request->validate([
             'account_id' => ['required', 'string', 'regex:/^\d{5,30}$/'],
         ]);
@@ -166,6 +168,10 @@ class MetaAdsIntegrationController extends Controller
                 return preg_replace('/^act_/', '', $rawId) === $data['account_id'];
             });
             abort_unless($validAccount, 403, __('This ad account is not accessible to the connected Meta user.'));
+
+            $campaign = $this->graphGet($campaignId, $token, ['fields' => 'id,account_id']);
+            $campaignAccountId = preg_replace('/^act_/', '', (string) ($campaign['account_id'] ?? ''));
+            abort_unless($campaignAccountId === $data['account_id'], 403, __('This campaign does not belong to the selected ad account.'));
 
             Http::asForm()->acceptJson()->post('https://graph.facebook.com/'.self::GRAPH_VERSION.'/'.$campaignId, [
                 'status' => 'PAUSED',
