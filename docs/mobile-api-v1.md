@@ -136,3 +136,16 @@ Course ownership is checked server-side. The API does not accept a client-suppli
 - Token hashes, not bearer values, are persisted. Expired and revoked tokens are rejected.
 - The Student Flutter app now implements secure installation-ID and bearer-token storage, OTP entry, Admin-approval waiting UI, 15-second approval polling, session restoration and server-side logout. Flutter analyze/tests must pass for each release; real SMS and end-to-end approval still require isolated staging acceptance.
 - Enrollment purchase, cart/coupons, reviews, quizzes, assignments, live-class operations, notifications, and complete Flutter user interfaces are separate remaining deliverables.
+
+
+## Student course checkout
+
+All checkout endpoints require an approved student mobile bearer token.
+
+- `GET /api/v1/courses/{course:slug}/checkout?batch_id={id}` returns the current server-calculated BDT price, selected batch, enabled payment methods, and whether the student already has an enrollment or pending payment. If the course has open batches, a valid `batch_id` is required.
+- `POST /api/v1/courses/{course:slug}/checkout` creates a free enrollment or submits a manual payment. For paid courses send `payment_method`, `transaction_reference`, and optionally `sender_account` and multipart `proof` (JPG, PNG, or PDF, up to 5 MB). The server calculates the amount; client-supplied price, user ID, enrollment status, or payment status are ignored.
+- `POST /api/v1/courses/{course:slug}/checkout/bkash` with optional `batch_id` starts the configured bKash checkout and returns `checkout_url`. Open that URL in a secure browser/custom tab. The existing server callback executes/queries bKash and only grants enrollment after authoritative amount/reference verification. The browser return URL is not proof of payment.
+
+Responses use `status` values including `enrolled`, `payment_submitted`, `payment_method_required`, `already_enrolled`, and `payment_pending`. A submitted manual payment remains pending until academy review; it does not grant course access. bKash is available only when both the payment method and gateway configuration are enabled.
+
+Checkout validates published course state, student role, batch/course ownership and capacity, duplicate enrollments and pending payments, and applicable flash-sale pricing inside database transactions. Never send a price or user identifier as an authority from the app.
