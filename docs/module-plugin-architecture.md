@@ -36,5 +36,15 @@ A module shown as enabled is not proof that an external provider is configured o
 6. Academic, Finance, Student/Guardian, Teacher, Branch and Mobile modules.
 7. Signed package metadata, compatibility checks, permission scopes, install/upgrade/rollback and automated contract tests.
 
+## Signed package lifecycle boundary
+
+The separate package registry stores signed third-party package metadata in `plugin_registry`. Uploads are staged under the private `plugins/.staging` directory, checked against trusted Ed25519 public keys and SHA-256 checksums, then extracted into a canonical private path. Archive inspection rejects traversal, symlink entries, excessive entry counts, oversized files and compression bombs. Installed files receive an integrity manifest; the integrity verifier rejects changed, missing, extra or linked files.
+
+Before staging, the compatibility checker validates the declared PHP, Laravel and LMS version ranges and confirms that required plugins are installed and declared conflicts are absent. The supported constraint syntax is intentionally limited to exact versions, comparison operators, caret, tilde and `*`; unsupported expressions fail closed.
+
+The Admin Plugin Manager currently supports signed installation, audited deactivation and a confirmed uninstall that first verifies installed-file integrity, checks dependent plugins and moves package files to a private backup. The registry row and customer data are retained. A plugin must be inactive before uninstall. A package update flow, backup restore UI and third-party activation/runtime are not enabled yet.
+
+**Important:** uploaded PHP entrypoints are never included, autoloaded or executed. Activation remains unavailable until a reviewed, allow-listed runtime can guarantee route/API/job/event/UI gating and permission enforcement. This is an intentional security gate, not a claim that third-party plugin execution is complete.
+
 ## Security boundary
 The registry accepts only known first-party keys. It does not accept package paths, class names, arbitrary service providers, shell commands or executable uploads. An enabled catalog entry is not proof of external provider activation. Route gating supplements, and never replaces, authentication, role authorization or permission checks.
