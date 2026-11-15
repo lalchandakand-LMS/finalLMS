@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Throwable;
 
-final class PluginMigrationRunner
+class PluginMigrationRunner
 {
     public function __construct(private readonly PluginIntegrityVerifier $integrityVerifier) {}
 
