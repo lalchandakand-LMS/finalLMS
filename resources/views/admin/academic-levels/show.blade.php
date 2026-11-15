@@ -25,7 +25,7 @@
     @empty
         <p class="muted">No courses assigned to this level yet.</p>
     @endforelse
-    <a class="btn secondary" href="{{ route('admin.batches.index') }}">Manage batches</a>
+    <a class="btn secondary" href="{{ route('admin.batches.index', ['academic_level_id' => $academicLevel->id]) }}">Manage this level’s batches</a>
 </section>
 <section class="panel">
     <h2>Website pages · {{ $academicLevel->pages->count() }}</h2>
