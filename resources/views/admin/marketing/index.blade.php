@@ -65,7 +65,7 @@ MAIL_FROM_NAME="Your Academy"</pre>
             <a class="btn secondary" href="https://analytics.google.com/analytics/web/" target="_blank" rel="noopener">{{ __('Open Google Analytics') }}</a>
             <a class="btn secondary" href="https://search.google.com/search-console" target="_blank" rel="noopener">{{ __('Open Search Console') }}</a>
         </div>
-        <p class="muted" style="margin-top:14px;">{{ __('The LMS currently supports consent-gated Meta Pixel tracking and platform shortcuts. Creating, funding or editing live Meta Ads campaigns through this LMS requires a Meta Business app, approved Marketing API access, an ad account and authorized credentials. No live advertising action is performed here.') }}</p>
+        <p class="muted" style="margin-top:14px;">{{ __('The LMS currently supports consent-gated Meta Pixel tracking and platform shortcuts. Creating or activating new paid Meta Ads campaigns through this LMS requires a Meta Business app, approved Marketing API access, an ad account and authorized credentials. The connected Meta Ads tool can read reports and pause existing campaigns; it does not create or activate ads.') }}</p>
     </section>
 
     <section class="panel">
