@@ -3,6 +3,7 @@
 use App\Http\Controllers\AddonRegistryController;
 use App\Http\Controllers\AiDeveloperController;
 use App\Http\Controllers\AdminSettingsController;
+use App\Http\Controllers\MarketingCenterController;
 use App\Http\Controllers\SeoController;
 use App\Http\Controllers\AdminUpdateController;
 use App\Http\Controllers\AuthController;
@@ -411,6 +412,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::get('/news/{post}/edit', [BlogController::class, 'edit'])->name('admin.news.edit');
         Route::put('/news/{post}', [BlogController::class, 'update'])->name('admin.news.update');
         Route::delete('/news/{post}', [BlogController::class, 'destroy'])->name('admin.news.destroy');
+        Route::get('/marketing', [MarketingCenterController::class, 'index'])->name('admin.marketing.index');
         Route::get('/settings', [AdminSettingsController::class, 'index'])->name('admin.settings.index');
         Route::post('/settings', [AdminSettingsController::class, 'update'])->name('admin.settings.update');
 
