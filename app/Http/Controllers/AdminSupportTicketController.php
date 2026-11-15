@@ -1,13 +1,13 @@
 <?php
 
-namespace App\\Http\\Controllers;
+namespace App\Http\Controllers;
 
-use App\\Models\\SupportTicket;
-use App\\Models\\SupportTicketMessage;
-use Illuminate\\Http\\RedirectResponse;
-use Illuminate\\Http\\Request;
-use Illuminate\\View\\View;
-use Illuminate\\Support\\Facades\\DB;
+use App\Models\SupportTicket;
+use App\Models\SupportTicketMessage;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
+use Illuminate\Support\Facades\DB;
 
 class AdminSupportTicketController extends Controller
 {
