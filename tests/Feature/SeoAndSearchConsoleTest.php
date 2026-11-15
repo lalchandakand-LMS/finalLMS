@@ -126,6 +126,7 @@ class SeoAndSearchConsoleTest extends TestCase
             ->assertOk()
             ->assertSee('Marketing &amp; Boost Center', false)
             ->assertSee('Meta Pixel')
+            ->assertSee('Gmail / email verification delivery')
             ->assertSee('123456789012345')
             ->assertSee('G-ABC12345')
             ->assertSee(route('seo.sitemap'), false)
