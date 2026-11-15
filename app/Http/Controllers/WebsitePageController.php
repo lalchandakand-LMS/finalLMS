@@ -13,10 +13,15 @@ use Illuminate\View\View;
 
 class WebsitePageController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $pages = WebsitePage::with(['creator', 'academicLevel'])->latest()->paginate(25);
-        return view('admin.website-pages.index', compact('pages'));
+        $filters = $request->validate(['academic_level_id' => ['nullable', 'integer', 'exists:academic_levels,id']]);
+        $pages = WebsitePage::with(['creator', 'academicLevel'])
+            ->when($filters['academic_level_id'] ?? null, fn ($query, $levelId) => $query->where('academic_level_id', $levelId))
+            ->latest()->paginate(25)->withQueryString();
+        $academicLevels = AcademicLevel::query()->orderBy('sort_order')->orderBy('name')->get();
+
+        return view('admin.website-pages.index', compact('pages', 'academicLevels', 'filters'));
     }
 
     public function create(Request $request): View
