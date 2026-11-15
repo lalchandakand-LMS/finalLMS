@@ -97,6 +97,206 @@ class _InstructorLoginState extends State<InstructorLogin> {
   );
 }
 
+class InstructorAssessmentsPage extends StatefulWidget {
+  const InstructorAssessmentsPage({required this.api, super.key});
+  final MobileApi api;
+
+  @override
+  State<InstructorAssessmentsPage> createState() => _InstructorAssessmentsPageState();
+}
+
+class _InstructorAssessmentsPageState extends State<InstructorAssessmentsPage> {
+  List<dynamic> exams = [];
+  bool loading = true;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  Future<void> load() async {
+    if (mounted) { setState(() { loading = true; error = null; }); }
+    try {
+      final response = await widget.api.get('/instructor/exams');
+      if (!mounted) { return; }
+      setState(() => exams = response['data'] as List<dynamic>? ?? []);
+    } catch (exception) {
+      if (mounted) { setState(() => error = exception.toString()); }
+    } finally {
+      if (mounted) { setState(() => loading = false); }
+    }
+  }
+
+  Future<void> openResults(Map<String, dynamic> exam) async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => InstructorAssessmentResultsPage(api: widget.api, examId: (exam['id'] as num).toInt()),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      title: const Text('Assessments & Results'),
+      actions: [IconButton(onPressed: loading ? null : load, icon: const Icon(Icons.refresh))],
+    ),
+    body: loading
+      ? const Center(child: CircularProgressIndicator())
+      : error != null
+        ? Center(child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Text(error!),
+              const SizedBox(height: 12),
+              FilledButton(onPressed: load, child: const Text('Retry')),
+            ]),
+          ))
+        : RefreshIndicator(
+            onRefresh: load,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                const Text('Review published assessments for your assigned batches and inspect student scores and pass rates.'),
+                const SizedBox(height: 12),
+                if (exams.isEmpty)
+                  const Padding(padding: EdgeInsets.all(28), child: Center(child: Text('No assessments found for your batches.'))),
+                ...exams.map((item) {
+                  final exam = item as Map<String, dynamic>;
+                  return Card(child: ListTile(
+                    leading: const Icon(Icons.quiz_outlined),
+                    title: Text(exam['title']?.toString() ?? 'Assessment'),
+                    subtitle: Text(
+                      '${exam['course'] ?? ''} · ${exam['batch'] ?? ''}\n'
+                      '${exam['questions_count'] ?? 0} questions · ${exam['submitted_attempts_count'] ?? 0} submitted',
+                    ),
+                    isThreeLine: true,
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => openResults(exam),
+                  ));
+                }),
+              ],
+            ),
+          ),
+  );
+}
+
+class InstructorAssessmentResultsPage extends StatefulWidget {
+  const InstructorAssessmentResultsPage({required this.api, required this.examId, super.key});
+  final MobileApi api;
+  final int examId;
+
+  @override
+  State<InstructorAssessmentResultsPage> createState() => _InstructorAssessmentResultsPageState();
+}
+
+class _InstructorAssessmentResultsPageState extends State<InstructorAssessmentResultsPage> {
+  Map<String, dynamic>? payload;
+  bool loading = true;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  Future<void> load() async {
+    if (mounted) { setState(() { loading = true; error = null; }); }
+    try {
+      final response = await widget.api.get('/instructor/exams/${widget.examId}/results');
+      if (!mounted) { return; }
+      setState(() => payload = response);
+    } catch (exception) {
+      if (mounted) { setState(() => error = exception.toString()); }
+    } finally {
+      if (mounted) { setState(() => loading = false); }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final exam = payload?['exam'] as Map<String, dynamic>? ?? {};
+    final summary = payload?['summary'] as Map<String, dynamic>? ?? {};
+    final attempts = payload?['data'] as List<dynamic>? ?? [];
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(exam['title']?.toString() ?? 'Assessment results'),
+        actions: [IconButton(onPressed: loading ? null : load, icon: const Icon(Icons.refresh))],
+      ),
+      body: loading
+        ? const Center(child: CircularProgressIndicator())
+        : error != null
+          ? Center(child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Text(error!),
+                const SizedBox(height: 12),
+                FilledButton(onPressed: load, child: const Text('Retry')),
+              ]),
+            ))
+          : RefreshIndicator(
+              onRefresh: load,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  Text('${exam['course'] ?? ''} · ${exam['batch'] ?? ''}'),
+                  const SizedBox(height: 12),
+                  GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    childAspectRatio: 1.8,
+                    children: [
+                      _AssessmentMetric(label: 'Submissions', value: '${summary['submitted_attempts'] ?? 0}'),
+                      _AssessmentMetric(label: 'Passed', value: '${summary['passed_attempts'] ?? 0}'),
+                      _AssessmentMetric(label: 'Pass rate', value: '${summary['pass_rate'] ?? 0}%'),
+                      _AssessmentMetric(label: 'Average score', value: summary['average_score']?.toString() ?? '—'),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Text('Student results', style: Theme.of(context).textTheme.titleLarge),
+                  if (attempts.isEmpty) const ListTile(title: Text('No submitted attempts yet.')),
+                  ...attempts.map((item) {
+                    final attempt = item as Map<String, dynamic>;
+                    final student = attempt['student'] as Map<String, dynamic>? ?? {};
+                    final passed = attempt['passed'] == true;
+                    return Card(child: ListTile(
+                      leading: Icon(passed ? Icons.check_circle_outline : Icons.assignment_late_outlined,
+                        color: passed ? Colors.green : Theme.of(context).colorScheme.error),
+                      title: Text(student['name']?.toString() ?? 'Student'),
+                      subtitle: Text('Score: ${attempt['score'] ?? 0} · ${passed ? 'Passed' : 'Not passed'}'),
+                      trailing: Text(attempt['submitted_at']?.toString().split('T').first ?? ''),
+                    ));
+                  }),
+                ],
+              ),
+            ),
+    );
+  }
+}
+
+class _AssessmentMetric extends StatelessWidget {
+  const _AssessmentMetric({required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(value, style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 4),
+          Text(label, textAlign: TextAlign.center),
+        ],
+      ),
+    ),
+  );
+}
+
 class InstructorHome extends StatefulWidget {
   const InstructorHome({required this.api, required this.onLogout, super.key});
   final MobileApi api;
@@ -910,6 +1110,12 @@ class _InstructorHomeState extends State<InstructorHome> {
     }
   }
 
+  Future<void> openAssessments() async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => InstructorAssessmentsPage(api: widget.api),
+    ));
+  }
+
   Future<void> logout() async { await widget.api.logout(); widget.onLogout(); }
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -981,6 +1187,17 @@ class _InstructorHomeState extends State<InstructorHome> {
               onTap: () => viewSubmissions(assignment),
             ));
           }),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(child: Text('Assessments & Results', style: Theme.of(context).textTheme.titleLarge)),
+              OutlinedButton.icon(
+                onPressed: openAssessments,
+                icon: const Icon(Icons.analytics_outlined),
+                label: const Text('View results'),
+              ),
+            ],
+          ),
           const SizedBox(height: 24),
           Row(
             children: [
