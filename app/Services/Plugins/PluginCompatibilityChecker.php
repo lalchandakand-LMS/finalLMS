@@ -1,9 +1,9 @@
 <?php
 
-namespace App\\Services\\Plugins;
+namespace App\Services\Plugins;
 
-use App\\Models\\PluginInstallation;
-use Illuminate\\Foundation\\Application;
+use App\Models\PluginInstallation;
+use Illuminate\Foundation\Application;
 use InvalidArgumentException;
 
 final class PluginCompatibilityChecker
