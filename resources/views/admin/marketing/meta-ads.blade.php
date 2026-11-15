@@ -29,7 +29,7 @@
         <div class="panel">
             <h2>{{ __('Connect a Meta account') }}</h2>
             <p>{{ __('Authorize the LMS to read ad accounts, pages and campaign insights, and to pause campaigns. The LMS does not create, activate or spend money on ads.') }}</p>
-            <p class="muted">{{ __('Requested permissions: ads_read, ads_management, business_management and pages_read_engagement.') }}</p>
+            <p class="muted">{{ __('Requested permissions: ads_read, ads_management, business_management, pages_read_engagement and pages_show_list.') }}</p>
             <a class="btn primary {{ !$configured ? 'disabled' : '' }}" href="{{ $configured ? route('admin.marketing.meta-ads.connect') : '#' }}" @if(!$configured) aria-disabled="true" onclick="return false;" @endif>{{ __('Connect Facebook / Meta') }}</a>
         </div>
     @else
