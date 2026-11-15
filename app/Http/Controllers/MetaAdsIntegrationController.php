@@ -2,11 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Course;
+use App\Models\DashboardAnnouncement;
+use App\Models\FlashSale;
 use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 use Throwable;
 
@@ -16,6 +21,14 @@ class MetaAdsIntegrationController extends Controller
 
     public function index(Request $request): View
     {
+        $boostCourses = Course::query()->where('status', 'published')->orderBy('title')->get(['id', 'title', 'slug', 'short_description', 'image_path']);
+        $boostNotices = DashboardAnnouncement::currentlyActive()
+            ->where('audience', 'all')->whereNull('branch_id')->orderBy('title')
+            ->get(['id', 'title', 'body', 'button_url']);
+        $boostOffers = FlashSale::query()->where('status', 'active')
+            ->where('starts_at', '<=', now())->where('ends_at', '>=', now())
+            ->orderBy('title')->get(['id', 'title', 'description', 'banner_path']);
+
         $token = $this->accessToken();
         $connected = filled($token);
         $accounts = [];
@@ -62,6 +75,9 @@ class MetaAdsIntegrationController extends Controller
         }
 
         return view('admin.marketing.meta-ads', [
+            'boostCourses' => $boostCourses,
+            'boostNotices' => $boostNotices,
+            'boostOffers' => $boostOffers,
             'connected' => $connected,
             'configured' => filled(config('services.meta_ads.app_id')) && filled(config('services.meta_ads.app_secret')),
             'accounts' => $accounts,
@@ -242,14 +258,54 @@ class MetaAdsIntegrationController extends Controller
         $data = $request->validate([
             'account_id' => ['required', 'string', 'regex:/^\d{5,30}$/'],
             'page_id' => ['required', 'string', 'regex:/^\d{5,30}$/'],
-            'name' => ['required', 'string', 'max:180'],
-            'message' => ['required', 'string', 'max:2000'],
-            'destination_url' => ['required', 'url:http,https', 'max:2048'],
-            'image_url' => ['required', 'url:http,https', 'max:2048'],
+            'name' => ['nullable', 'string', 'max:180'],
+            'message' => ['nullable', 'string', 'max:2000'],
+            'source_reference' => ['nullable', 'string', 'regex:/^(course|notice|offer):[0-9]+$/'],
+            'destination_url' => ['nullable', 'url:http,https', 'max:2048'],
+            'image_url' => ['nullable', 'url:http,https', 'max:2048'],
             'daily_budget_bdt' => ['required', 'integer', 'min:100', 'max:1000000'],
             'age_min' => ['required', 'integer', 'min:18', 'max:65'],
             'age_max' => ['required', 'integer', 'min:18', 'max:65', 'gte:age_min'],
         ]);
+
+        if (filled($data['source_reference'] ?? null)) {
+            [$sourceType, $sourceId] = explode(':', $data['source_reference'], 2);
+            $source = match ($sourceType) {
+                'course' => Course::query()->where('status', 'published')->findOrFail((int) $sourceId),
+                'notice' => DashboardAnnouncement::currentlyActive()->where('audience', 'all')->whereNull('branch_id')->findOrFail((int) $sourceId),
+                'offer' => FlashSale::query()->where('status', 'active')->where('starts_at', '<=', now())->where('ends_at', '>=', now())->findOrFail((int) $sourceId),
+            };
+
+            $sourceMessage = match ($sourceType) {
+                'course' => (string) ($source->short_description ?: $source->title),
+                'notice' => (string) ($source->body ?: $source->title),
+                'offer' => (string) ($source->description ?: $source->title),
+            };
+            $sourceUrl = match ($sourceType) {
+                'course' => route('courses.show', $source),
+                'notice' => (is_string($source->button_url) && filter_var($source->button_url, FILTER_VALIDATE_URL) && in_array(parse_url($source->button_url, PHP_URL_SCHEME), ['http', 'https'], true))
+                    ? $source->button_url : route('notices.index'),
+                'offer' => route('flash-sales.public'),
+            };
+            $imagePath = match ($sourceType) {
+                'course' => $source->image_path,
+                'offer' => $source->banner_path,
+                default => null,
+            };
+            $data['name'] = filled($data['name'] ?? null) ? $data['name'] : $source->title.' - Meta Boost';
+            $data['message'] = filled($data['message'] ?? null) ? $data['message'] : mb_substr(trim(strip_tags($sourceMessage)), 0, 2000);
+            $data['destination_url'] = filled($data['destination_url'] ?? null) ? $data['destination_url'] : $sourceUrl;
+            if (! filled($data['image_url'] ?? null) && filled($imagePath)) {
+                $data['image_url'] = url(Storage::disk('public')->url($imagePath));
+            }
+        }
+
+        Validator::make($data, [
+            'name' => ['required', 'string', 'max:180'],
+            'message' => ['required', 'string', 'max:2000'],
+            'destination_url' => ['required', 'url:http,https', 'max:2048'],
+            'image_url' => ['required', 'url:http,https', 'max:2048'],
+        ])->validate();
 
         $token = $this->accessToken();
         abort_unless($token, 409, __('Connect Meta Ads first.'));
