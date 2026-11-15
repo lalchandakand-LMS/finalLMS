@@ -82,7 +82,12 @@
                         <td>{{ $plugin->signature_verified_at ? __('Verified') : __('Not verified') }}</td>
                         <td>{{ $plugin->installed_at?->format('Y-m-d H:i') ?? '—' }}</td>
                         <td>
-                            @if($plugin->status === 'inactive')
+                            @if($plugin->status === 'active')
+                                <form method="POST" action="{{ route('admin.plugins.deactivate', $plugin) }}">
+                                    @csrf
+                                    <button class="btn secondary" type="submit">{{ __('Deactivate') }}</button>
+                                </form>
+                            @elseif($plugin->status === 'inactive')
                                 <form method="POST" action="{{ route('admin.plugins.uninstall', $plugin) }}">
                                     @csrf
                                     <label style="display:block;font-size:12px;margin-bottom:6px;">
@@ -92,7 +97,7 @@
                                     <button class="btn danger" type="submit">{{ __('Uninstall') }}</button>
                                 </form>
                             @else
-                                <span class="muted">{{ __('Deactivate before uninstalling') }}</span>
+                                <span class="muted">{{ __('Activation is unavailable until the isolated runtime is complete') }}</span>
                             @endif
                             @if(is_array($plugin->metadata) && !empty($plugin->metadata['uninstall_backup_path']))
                                 <small class="muted">{{ __('Private backup retained') }}</small>
