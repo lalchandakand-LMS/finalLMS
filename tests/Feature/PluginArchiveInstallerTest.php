@@ -234,6 +234,19 @@ class PluginArchiveInstallerTest extends TestCase
         );
     }
 
+    public function test_rejects_registry_record_without_signature_verification(): void
+    {
+        $this->createArchive([
+            'src/Plugin.php' => '<?php return new class {};',
+        ]);
+        $plugin = $this->registeredPlugin();
+        $plugin->signature_verified_at = null;
+        $plugin->save();
+
+        $this->expectException(RuntimeException::class);
+        app(PluginArchiveInstaller::class)->installVerifiedPackage($plugin, $this->archivePath);
+    }
+
     public function test_rejects_existing_installation_without_overwriting_it(): void
     {
         $this->createArchive([
@@ -242,11 +255,15 @@ class PluginArchiveInstallerTest extends TestCase
         mkdir($this->finalPath, 0750, true);
         file_put_contents($this->finalPath.'/keep.txt', 'existing');
 
-        $this->expectException(RuntimeException::class);
-        app(PluginArchiveInstaller::class)->installVerifiedPackage(
-            $this->registeredPlugin(),
-            $this->archivePath,
-        );
+        try {
+            app(PluginArchiveInstaller::class)->installVerifiedPackage(
+                $this->registeredPlugin(),
+                $this->archivePath,
+            );
+            $this->fail('Existing plugin versions must never be overwritten.');
+        } catch (RuntimeException $exception) {
+            $this->assertStringContainsString('already exists', $exception->getMessage());
+        }
 
         $this->assertFileExists($this->finalPath.'/keep.txt');
     }

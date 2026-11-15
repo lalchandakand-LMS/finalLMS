@@ -70,6 +70,11 @@ final class PluginArchiveInstaller
             $entries = $this->inspectArchive($zip);
             $this->extractEntries($zip, $entries, $extractDirectory);
 
+            $postExtractionChecksum = hash_file('sha256', $archive);
+            if (! is_string($postExtractionChecksum) || ! hash_equals($checksum, $postExtractionChecksum)) {
+                throw new RuntimeException('The staged plugin archive changed during extraction.');
+            }
+
             $entrypoint = $extractDirectory.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, $plugin->manifest['entrypoint']);
             if (! is_file($entrypoint) || is_link($entrypoint)) {
                 throw new RuntimeException('The signed plugin entrypoint is missing from the package.');
@@ -338,6 +343,13 @@ final class PluginArchiveInstaller
             || preg_match('/^[a-f0-9]{64}$/D', $plugin->package_sha256) !== 1
             || ! is_string($plugin->signature_key_id) || trim($plugin->signature_key_id) === '') {
             throw new RuntimeException('Only a staged plugin with verified signature metadata can be installed.');
+        }
+
+        if (! hash_equals((string) $plugin->plugin_key, (string) ($plugin->manifest['key'] ?? ''))
+            || (string) $plugin->version !== (string) ($plugin->manifest['version'] ?? '')
+            || (string) $plugin->name !== (string) ($plugin->manifest['name'] ?? '')
+            || (string) $plugin->type !== (string) ($plugin->manifest['type'] ?? '')) {
+            throw new RuntimeException('The verified plugin manifest does not match its registry identity.');
         }
 
         $errors = $this->manifestValidator->errors($plugin->manifest);
