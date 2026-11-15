@@ -30,7 +30,8 @@ class AdminPaymentGatewayController extends Controller
                 __('This payment gateway cannot be enabled until its server configuration is complete.'));
         }
 
-        $saved = json_decode((string) Setting::value('payment_gateway_registry', Setting::value('addon_registry', '{}')), true);
+        $legacyDefault = ['bkash' => (bool) (Setting::paymentMethods()['bkash']['enabled'] ?? false) || (bool) config('services.bkash.enabled')];
+        $saved = json_decode((string) Setting::value('payment_gateway_registry', json_encode($legacyDefault)), true);
         $saved = is_array($saved) ? $saved : [];
         $saved[$key] = $enabled;
         Setting::setValue('payment_gateway_registry', json_encode($saved, JSON_THROW_ON_ERROR));
