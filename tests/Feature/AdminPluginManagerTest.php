@@ -249,4 +249,62 @@ class AdminPluginManagerTest extends TestCase
         ]);
     }
 
+
+    public function test_admin_can_rollback_to_a_verified_historical_plugin_version(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        if (! is_dir($this->finalPath.'/src')) {
+            mkdir($this->finalPath.'/src', 0750, true);
+        }
+        $entrypoint = $this->finalPath.'/src/Plugin.php';
+        file_put_contents($entrypoint, '<?php return new class {};');
+        $hash = hash_file('sha256', $entrypoint);
+
+        $plugin = new PluginInstallation();
+        $plugin->forceFill([
+            'plugin_key' => 'aec.course-management',
+            'name' => 'Course Management',
+            'version' => '2.0.0',
+            'type' => 'module',
+            'status' => 'inactive',
+            'manifest' => ['key' => 'aec.course-management', 'dependencies' => []],
+            'package_sha256' => str_repeat('c', 64),
+            'signature_key_id' => 'release-key-2',
+            'signature_verified_at' => now(),
+            'package_path' => 'plugins/aec/course-management/2.0.0',
+            'metadata' => ['integrity_version' => 1, 'installed_file_hashes' => ['src/Plugin.php' => str_repeat('d', 64)]],
+        ])->save();
+
+        PluginVersionRecord::query()->create([
+            'plugin_key' => 'aec.course-management',
+            'version' => '1.0.0',
+            'package_sha256' => str_repeat('a', 64),
+            'signature_key_id' => 'release-key-1',
+            'package_path' => 'plugins/aec/course-management/1.0.0',
+            'status' => 'installed',
+            'installed_at' => now()->subDay(),
+            'metadata' => [
+                'integrity_version' => 1,
+                'installed_file_hashes' => ['src/Plugin.php' => $hash],
+                'signature_verified_at' => now()->subDays(2)->toISOString(),
+            ],
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.plugins.rollback', $plugin), [
+            'version' => '1.0.0',
+            'confirm_rollback' => '1',
+        ])->assertRedirect(route('admin.plugins.index'))->assertSessionHas('success');
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'id' => $plugin->id,
+            'status' => 'inactive',
+            'version' => '1.0.0',
+            'package_path' => 'plugins/aec/course-management/1.0.0',
+        ]);
+        $this->assertDatabaseHas('activity_logs', [
+            'user_id' => $admin->id,
+            'event' => 'admin.plugins.rolled_back',
+        ]);
+    }
+
 }
