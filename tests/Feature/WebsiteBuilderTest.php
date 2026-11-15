@@ -113,7 +113,7 @@ class WebsiteBuilderTest extends TestCase
             ->assertSee('Posts')
             ->assertSee('Homepage slider')
             ->assertSee('Header navigation menu')
-            ->assertSee('Footer content &amp; links');
+            ->assertSee('Footer content & links');
     }
 
     public function test_non_admin_cannot_access_website_builder(): void
@@ -186,7 +186,7 @@ class WebsiteBuilderTest extends TestCase
 
         $this->actingAs($admin)->get(route('admin.website-builder.index'))
             ->assertOk()
-            ->assertSee('15 designs')
+            ->assertSee('16 designs')
             ->assertSee('Academy Modern')
             ->assertSee('Community Campus')
             ->assertSee('Reusable section block library')
