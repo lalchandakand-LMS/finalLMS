@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use Aloms\UniversalAiAssistant\AssistantSettings;
 use App\Models\PluginInstallation;
 use App\Models\User;
+use App\Services\AiDeveloperProviderEndpoint;
 use App\Services\Modules\ModuleRegistry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
