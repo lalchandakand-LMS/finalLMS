@@ -51,6 +51,35 @@
     </form>
 </section>
 
+<section class="panel" style="margin-bottom:24px;">
+    <h2>{{ __('First-party LMS modules') }}</h2>
+    <p class="muted">{{ __('Built-in business capabilities are catalogued here and retain their reviewed application code. Their enable/disable controls remain in Module Manager.') }}</p>
+    <div style="overflow-x:auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th>{{ __('Module') }}</th>
+                    <th>{{ __('Status') }}</th>
+                    <th>{{ __('Dependencies') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($firstPartyModules as $module)
+                    <tr>
+                        <td>
+                            <strong>{{ $module['name'] }}</strong>
+                            <div class="muted"><code>{{ $module['key'] }}</code></div>
+                        </td>
+                        <td><span class="badge {{ $module['enabled'] ? 'success' : 'warning' }}">{{ $module['enabled'] ? __('Enabled') : __('Disabled') }}</span></td>
+                        <td>{{ implode(', ', $module['dependencies']) ?: '—' }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+    <a class="btn secondary" href="{{ route('admin.modules.index') }}">{{ __('Manage first-party modules') }}</a>
+</section>
+
 <section class="panel">
     <h2>{{ __('Registered plugins') }}</h2>
     @if($plugins->isEmpty())
