@@ -59,7 +59,7 @@
                 @csrf
                 <label>Batch name<input name="title" maxlength="160" required></label>
                 <label>Branch<select name="branch_id" required><option value="">Select branch</option>@foreach($branches->where('is_active', true) as $branch)<option value="{{ $branch->id }}">{{ $branch->name }}</option>@endforeach</select></label>
-                <label>Course<select name="course_id" required><option value="">Select course</option>@foreach($courses as $course)<option value="{{ $course->id }}">{{ $course->title }}</option>@endforeach</select></label>
+                <label>Course<select name="course_id" required><option value="">Select course</option>@foreach($courses as $course)<option value="{{ $course->id }}">{{ $course->title }}{{ $course->academicLevel ? ' — '.$course->academicLevel->name : '' }}</option>@endforeach</select></label>
                 <label>Teacher<select name="teacher_id" required><option value="">Select teacher</option>@foreach($teachers as $teacher)<option value="{{ $teacher->id }}">{{ $teacher->name }}</option>@endforeach</select></label>
                 <label>Capacity<input type="number" name="capacity" min="1" max="1000" required></label>
                 <label>Start<input type="datetime-local" name="starts_at" required></label>
@@ -91,7 +91,7 @@
                         @method('PUT')
                         <label>Batch name<input name="title" value="{{ $batch->title }}" maxlength="160" required></label>
                         <label>Branch<select name="branch_id" required>@foreach($branches as $branch)<option value="{{ $branch->id }}" @selected($batch->branch_id === $branch->id)>{{ $branch->name }}</option>@endforeach</select></label>
-                        <label>Course<select name="course_id" required>@foreach($courses as $course)<option value="{{ $course->id }}" @selected($batch->course_id === $course->id)>{{ $course->title }}</option>@endforeach</select></label>
+                        <label>Course<select name="course_id" required>@foreach($courses as $course)<option value="{{ $course->id }}" @selected($batch->course_id === $course->id)>{{ $course->title }}{{ $course->academicLevel ? ' — '.$course->academicLevel->name : '' }}</option>@endforeach</select></label>
                         <label>Teacher<select name="teacher_id" required>@foreach($teachers as $teacher)<option value="{{ $teacher->id }}" @selected($batch->teacher_id === $teacher->id)>{{ $teacher->name }}</option>@endforeach</select></label>
                         <label>Capacity<input type="number" name="capacity" min="1" max="1000" value="{{ $batch->capacity }}" required></label>
                         <label>Fee (BDT)<input type="number" name="fee" min="0" step="0.01" value="{{ $batch->fee }}" required></label>
