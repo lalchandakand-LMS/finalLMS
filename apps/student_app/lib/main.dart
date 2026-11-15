@@ -977,7 +977,7 @@ class _StudentCartPageState extends State<StudentCartPage> {
     try {
       final response = await widget.api.get('/my/cart');
       final options = await widget.api.get('/my/cart/checkout/options');
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() {
         items = response['data'] as List<dynamic>? ?? [];
         totals = response['meta'] as Map<String, dynamic>? ?? {};
@@ -988,20 +988,20 @@ class _StudentCartPageState extends State<StudentCartPage> {
         if (items.isEmpty) couponPricing = {};
       });
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
       if (mounted) setState(() => loading = false);
     }
   }
 
   Future<void> applyCoupon() async {
-    if (couponController.text.trim().isEmpty) return;
+    if (couponController.text.trim().isEmpty) { return; }
     setState(() => applyingCoupon = true);
     try {
       final response = await widget.api.postJson('/my/cart/coupon', {
         'code': couponController.text.trim(),
       });
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() => couponPricing = response['data'] as Map<String, dynamic>? ?? {});
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Coupon applied to this cart.')));
     } catch (exception) {
@@ -1010,7 +1010,7 @@ class _StudentCartPageState extends State<StudentCartPage> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(exception.toString())));
       }
     } finally {
-      if (mounted) setState(() => applyingCoupon = false);
+      if (mounted) { setState(() => applyingCoupon = false); }
     }
   }
 
@@ -1055,10 +1055,10 @@ class _StudentCartPageState extends State<StudentCartPage> {
         'transaction_reference': transactionReferenceController.text.trim(),
         'sender_account': senderAccountController.text.trim(),
       };
-      if (selectedPaymentMethod != null) payload['payment_method'] = selectedPaymentMethod;
-      if (couponPricing.isNotEmpty) payload['coupon_code'] = couponController.text.trim();
+      if (selectedPaymentMethod != null) { payload['payment_method'] = selectedPaymentMethod; }
+      if (couponPricing.isNotEmpty) { payload['coupon_code'] = couponController.text.trim(); }
       final response = await widget.api.postJson('/my/cart/checkout/manual', payload);
-      if (!mounted) return;
+      if (!mounted) { return; }
       final data = response['data'] as Map<String, dynamic>? ?? {};
       final message = data['status'] == 'enrolled_free'
           ? 'Your cart courses are now enrolled.'
@@ -1070,9 +1070,9 @@ class _StudentCartPageState extends State<StudentCartPage> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
       await load();
     } catch (exception) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(exception.toString())));
+      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(exception.toString()))); }
     } finally {
-      if (mounted) setState(() => submitting = false);
+      if (mounted) { setState(() => submitting = false); }
     }
   }
 
@@ -1152,7 +1152,7 @@ class _StudentCartPageState extends State<StudentCartPage> {
                             style: Theme.of(context).textTheme.titleLarge),
                           const SizedBox(height: 12),
                           DropdownButtonFormField<String>(
-                            value: selectedPaymentMethod,
+                            initialValue: selectedPaymentMethod,
                             decoration: const InputDecoration(labelText: 'Payment method'),
                             items: paymentMethods.map((raw) {
                               final method = raw as Map<String, dynamic>;
