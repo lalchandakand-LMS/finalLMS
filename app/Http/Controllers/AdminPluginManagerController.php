@@ -100,7 +100,7 @@ class AdminPluginManagerController extends Controller
                 report($loggingException);
             }
 
-            return back()->with('error', $exception instanceof \\RuntimeException
+            return back()->with('error', $exception instanceof \RuntimeException
                 ? $exception->getMessage()
                 : __('Plugin deactivation failed; check server logs.'));
         }
