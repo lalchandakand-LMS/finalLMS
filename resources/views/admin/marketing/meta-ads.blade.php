@@ -54,7 +54,7 @@
                                 <select name="account" onchange="this.form.submit()">
                                     <option value="">{{ __('Choose an ad account') }}</option>
                                     @foreach($accounts as $account)
-                                        <option value="{{ $account['account_id'] }}" @selected($selectedAccount === (string) $account['id'])>{{ $account['name'] ?? $account['account_id'] }} ({{ $account['currency'] ?? '—' }})</option>
+                                        <option value="{{ $account['account_id'] }}" @selected($selectedAccount === (string) $account['account_id'])>{{ $account['name'] ?? $account['account_id'] }} ({{ $account['currency'] ?? '—' }})</option>
                                     @endforeach
                                 </select>
                             </label>
