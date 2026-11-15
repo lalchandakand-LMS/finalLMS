@@ -58,6 +58,7 @@ MAIL_FROM_NAME="Your Academy"</pre>
     <section class="panel" style="margin-bottom:20px;">
         <h2 style="margin-top:0;">{{ __('Advertising platforms') }}</h2>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <a class="btn primary" href="{{ route('admin.marketing.boost-campaigns.index') }}">{{ __('Meta Boost Planner') }}</a>
             <a class="btn primary" href="{{ route('admin.marketing.meta-ads.index') }}">{{ __('Connect Meta Ads to LMS') }}</a>
             <a class="btn secondary" href="https://adsmanager.facebook.com/adsmanager/manage/campaigns" target="_blank" rel="noopener">{{ __('Open Meta Ads Manager') }}</a>
             <a class="btn secondary" href="https://business.facebook.com/" target="_blank" rel="noopener">{{ __('Open Meta Business Suite') }}</a>
