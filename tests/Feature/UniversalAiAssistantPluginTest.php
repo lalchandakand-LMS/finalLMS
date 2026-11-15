@@ -19,6 +19,7 @@ class UniversalAiAssistantPluginTest extends TestCase
     {
         parent::setUp();
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantSettings.php');
+        require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantController.php');
         if (! Schema::hasTable('ai_assistant_settings')) {
             $migration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_15_180000_create_universal_ai_assistant_tables.php');
             $migration->up();
@@ -49,6 +50,96 @@ class UniversalAiAssistantPluginTest extends TestCase
         $this->assertSame('test-secret-provider-key', AssistantSettings::apiKey());
         $this->assertArrayNotHasKey('api_key_encrypted', AssistantSettings::publicSettings());
         $this->assertArrayNotHasKey('api_key', AssistantSettings::publicSettings());
+    }
+
+    public function test_assistant_caps_completion_tokens_to_the_remaining_daily_budget(): void
+    {
+        $roles = array_fill_keys(AssistantSettings::ROLES, false);
+        $roles['student'] = true;
+        AssistantSettings::save([
+            'model' => 'gpt-4o-mini',
+            'base_url' => 'https://api.openai.com/v1',
+            'temperature' => 0.4,
+            'max_tokens' => 8192,
+            'global_enabled' => true,
+            'role_enabled' => $roles,
+            'daily_request_limit' => 20,
+            'daily_token_budget' => 5000,
+        ], 'test-secret-provider-key', false);
+
+        $user = User::factory()->create(['role' => 'student', 'email_verified_at' => now()]);
+        DB::table('ai_assistant_messages')->insert([
+            'conversation_id' => DB::table('ai_assistant_conversations')->insertGetId([
+                'user_id' => $user->id,
+                'assistant_role' => 'student',
+                'title' => 'Previous use',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]),
+            'message_role' => 'assistant',
+            'content' => 'Previous answer',
+            'token_count' => 1000,
+            'model' => 'gpt-4o-mini',
+            'created_at' => now(),
+        ]);
+
+        Http::fake([
+            'api.openai.com/v1/chat/completions' => Http::response([
+                'choices' => [['message' => ['content' => 'A short answer.']]],
+                'usage' => ['total_tokens' => 80],
+            ], 200),
+        ]);
+
+        $request = Request::create('/student/ai-assistant/messages', 'POST', ['message' => 'Hello']);
+        $request->setUserResolver(fn () => $user);
+        $response = (new \Aloms\UniversalAiAssistant\AssistantController())->send($request);
+
+        $this->assertSame(200, $response->getStatusCode());
+        Http::assertSent(function ($request): bool {
+            $limit = (int) ($request->data()['max_tokens'] ?? 0);
+            return $limit > 0 && $limit < 4000 && $limit <= 8192;
+        });
+    }
+
+    public function test_assistant_refuses_prompt_when_daily_budget_is_already_exhausted(): void
+    {
+        $roles = array_fill_keys(AssistantSettings::ROLES, false);
+        $roles['student'] = true;
+        AssistantSettings::save([
+            'model' => 'gpt-4o-mini',
+            'base_url' => 'https://api.openai.com/v1',
+            'temperature' => 0.4,
+            'max_tokens' => 1200,
+            'global_enabled' => true,
+            'role_enabled' => $roles,
+            'daily_request_limit' => 20,
+            'daily_token_budget' => 1000,
+        ], 'test-secret-provider-key', false);
+
+        $user = User::factory()->create(['role' => 'student', 'email_verified_at' => now()]);
+        $conversationId = DB::table('ai_assistant_conversations')->insertGetId([
+            'user_id' => $user->id,
+            'assistant_role' => 'student',
+            'title' => 'Budget used',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('ai_assistant_messages')->insert([
+            'conversation_id' => $conversationId,
+            'message_role' => 'assistant',
+            'content' => 'Previous answer',
+            'token_count' => 1000,
+            'model' => 'gpt-4o-mini',
+            'created_at' => now(),
+        ]);
+
+        Http::fake();
+        $request = Request::create('/student/ai-assistant/messages', 'POST', ['message' => 'Hello']);
+        $request->setUserResolver(fn () => $user);
+        $response = (new \Aloms\UniversalAiAssistant\AssistantController())->send($request);
+
+        $this->assertSame(429, $response->getStatusCode());
+        Http::assertNothingSent();
     }
 
     public function test_accountant_is_only_explicitly_mapped_to_support_staff_assistant(): void
