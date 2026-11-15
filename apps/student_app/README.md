@@ -82,3 +82,10 @@ Correct answer indexes are never included in the question payload. The API check
 - Students can read and reply only to tickets they own. Closed tickets are read-only; create a new request for additional help.
 - Academy administrators can review tickets, reply, and update ticket status from **Admin → Support tickets**.
 - Ticket creation and replies are rate-limited; messages are rendered as escaped text.
+
+## Student course quizzes
+
+- Open **Course quizzes** from the Student Learning toolbar to see published quizzes attached to courses where the student has an active or completed enrollment.
+- Start or resume a timed attempt, save answers, and submit for server-side scoring. The server controls availability, question randomization, attempt limits and deadlines.
+- Objective questions are auto-scored; short-answer questions are sent to the teacher for manual review.
+- Correct options, model answers and explanations are not sent to the mobile app. Attempt data and answer writes are scoped to the signed-in student.
