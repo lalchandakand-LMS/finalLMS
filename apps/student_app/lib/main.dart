@@ -797,10 +797,10 @@ class _StudentNoticeBoardPageState extends State<StudentNoticeBoardPage> {
   }
 
   Future<void> load() async {
-    if (mounted) setState(() { loading = true; error = null; });
+    if (mounted) {\n      setState(() { loading = true; error = null; });\n    }
     try {
       final response = await widget.api.get('/my/notices');
-      if (!mounted) return;
+      if (!mounted) { return; }
       final meta = response['meta'] as Map<String, dynamic>? ?? {};
       setState(() {
         notices = response['data'] as List<dynamic>? ?? [];
@@ -845,7 +845,7 @@ class _StudentNoticeBoardPageState extends State<StudentNoticeBoardPage> {
             TextButton(
               onPressed: () async {
                 final uri = Uri.tryParse(buttonUrl);
-                if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) return;
+                if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) { return; }
                 await launchUrl(uri, mode: LaunchMode.externalApplication);
               },
               child: Text(notice['button_label'].toString()),
