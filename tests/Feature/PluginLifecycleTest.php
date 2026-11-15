@@ -48,6 +48,14 @@ class PluginLifecycleTest extends TestCase
         ]);
     }
 
+    public function test_signature_verification_timestamp_is_not_mass_assignable(): void
+    {
+        $plugin = $this->plugin();
+        $plugin->fill(['signature_verified_at' => Carbon::now()]);
+
+        $this->assertNull($plugin->signature_verified_at);
+    }
+
     public function test_lifecycle_rejects_skipped_or_unknown_states(): void
     {
         $this->plugin();
