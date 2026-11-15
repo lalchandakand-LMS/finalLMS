@@ -90,6 +90,25 @@ class SmsDeliveryReportTest extends TestCase
             ->assertSee('Sent');
     }
 
+    public function test_admin_can_see_secure_twilio_setup_status(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        config([
+            'services.twilio.sid' => null,
+            'services.twilio.token' => null,
+            'services.twilio.from' => null,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.sms-campaigns.index'))
+            ->assertOk()
+            ->assertSee('SMS gateway')
+            ->assertSee('TWILIO_ACCOUNT_SID')
+            ->assertSee('TWILIO_AUTH_TOKEN')
+            ->assertSee('TWILIO_FROM')
+            ->assertSee('Needs setup');
+    }
+
     public function test_sms_campaign_rejects_unsupported_audience(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
