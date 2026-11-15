@@ -245,7 +245,7 @@ PHP;
         ])->save();
 
         \DB::table('plugin_migrations')->insert([
-            'plugin_key' => 'aec.universal-ai-assistant',
+            'plugin_key' => 'test.universal-ai-assistant',
             'plugin_version' => '1.0.0',
             'migration' => '2026_11_15_000001_example.php',
             'status' => 'completed',
@@ -266,11 +266,11 @@ PHP;
             ->assertSessionHas('success');
 
         $this->assertDatabaseHas('plugin_registry', [
-            'plugin_key' => 'aec.universal-ai-assistant',
+            'plugin_key' => 'test.universal-ai-assistant',
             'status' => 'uninstalled',
         ]);
         $this->assertDatabaseHas('plugin_migrations', [
-            'plugin_key' => 'aec.universal-ai-assistant',
+            'plugin_key' => 'test.universal-ai-assistant',
             'status' => 'completed',
         ]);
         $this->assertDatabaseHas('ai_assistant_conversations', ['id' => $conversationId, 'title' => 'Keep my AI history']);
