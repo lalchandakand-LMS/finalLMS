@@ -21,6 +21,11 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::post('/auth/logout-all', [AuthController::class, 'logoutAll']);
         Route::get('/my/courses', [CourseController::class, 'myCourses']);
+        Route::get('/checkout/courses/{course:slug}', [StudentCheckoutController::class, 'options'])->middleware('throttle:30,1');
+        Route::post('/checkout/courses/{course:slug}/manual', [StudentCheckoutController::class, 'submitManual'])->middleware('throttle:10,1');
+        Route::post('/checkout/courses/{course:slug}/bkash', [StudentCheckoutController::class, 'initiateBkash'])->middleware('throttle:5,1');
+        Route::get('/my/payments', [StudentCheckoutController::class, 'history']);
+        Route::get('/my/payments/{payment}', [StudentCheckoutController::class, 'showPayment']);
         Route::get('/my/assignments', [StudentAssignmentController::class, 'index']);
         Route::get('/assignments/{assignment}', [StudentAssignmentController::class, 'show']);
         Route::post('/assignments/{assignment}/submit', [StudentAssignmentController::class, 'submit'])->middleware('throttle:10,1');
