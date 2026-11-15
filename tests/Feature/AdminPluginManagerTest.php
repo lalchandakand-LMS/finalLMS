@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\PluginInstallation;
 use App\Models\User;
 use App\Services\Plugins\PluginSignatureVerifier;
+use App\Services\Plugins\PluginMigrationRunner;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Schema;
@@ -152,6 +153,25 @@ PHP;
             'status' => 'inactive',
         ]);
         $this->assertFileExists($this->finalPath.'/src/Plugin.php');
+    }
+
+    public function test_plugin_migrations_run_before_activation_and_failure_keeps_plugin_inactive(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData())
+            ->assertRedirect(route('admin.plugins.index'));
+
+        $runner = $this->mock(PluginMigrationRunner::class);
+        $runner->shouldReceive('migrate')->once()->andThrow(new \\RuntimeException('Migration failure'));
+
+        $this->actingAs($admin)->post(route('admin.plugins.activate', 'aec.course-management'))
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'status' => 'installed',
+        ]);
     }
 
     public function test_activation_rejects_an_untrusted_release_key(): void
