@@ -1,13 +1,13 @@
 @extends('layouts.app')
 
-@section('title', isset($course) ? __('Edit course') . ' | ' . config('app.name') : __('Create course') . ' | ' . config('app.name'))
+@section('title', $course?->exists ? __('Edit course') . ' | ' . config('app.name') : __('Create course') . ' | ' . config('app.name'))
 
 @section('content')
     @php($selectedCategoryIds = collect(old('category_ids', $course?->categories?->pluck('id')->all() ?? []))->map(fn ($id) => (int) $id)->all())
     <div class="page-header">
         <div>
             <span class="badge info">{{ __('Admin') }}</span>
-            <h1 style="margin: 12px 0 0;">{{ isset($course) ? __('Edit course') : __('Create course') }}</h1>
+            <h1 style="margin: 12px 0 0;">{{ $course?->exists ? __('Edit course') : __('Create course') }}</h1>
         </div>
     </div>
 
