@@ -22,6 +22,21 @@ use Illuminate\Validation\Rule;
 
 class StudentCartCheckoutController extends Controller
 {
+    public function options(Request $request): JsonResponse
+    {
+        abort_unless($request->user()->isStudent(), 403);
+        $methods = collect(Setting::paymentMethods())
+            ->filter(fn (array $method) => (bool) ($method['enabled'] ?? false))
+            ->map(fn (array $method, string $key) => [
+                'key' => $key,
+                'label' => (string) ($method['label'] ?? $key),
+                'account' => (string) ($method['account'] ?? ''),
+                'instructions' => (string) ($method['instructions'] ?? ''),
+            ])->values();
+
+        return response()->json(['data' => ['payment_methods' => $methods]]);
+    }
+
     public function applyCoupon(Request $request): JsonResponse
     {
         $student = $request->user();
@@ -88,6 +103,7 @@ class StudentCartCheckoutController extends Controller
                     $course = $courses->get((int) $row->course_id);
                     $batch = $row->batch_id ? $batches->get((int) $row->batch_id) : null;
                     abort_if($row->batch_id && (! $batch || (int) $batch->course_id !== (int) $course->id || $batch->status !== 'open'), 409, 'A selected batch is no longer available.');
+                    abort_if(! $row->batch_id && $course->batches()->where('status', 'open')->exists(), 422, 'Select an open batch for each course before checkout.');
                     abort_if(Enrollment::query()->where('user_id', $student->id)->where('course_id', $course->id)->whereIn('status', ['active', 'completed'])->exists(), 409, 'You are already enrolled in a course in this cart.');
                     if ($batch) {
                         abort_if(! $this->hasAvailableSeat($batch), 409, 'A selected batch has no seats remaining.');
