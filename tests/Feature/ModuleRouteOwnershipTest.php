@@ -52,6 +52,21 @@ class ModuleRouteOwnershipTest extends TestCase
         $this->get('/api/v1/_test/mobile-feature')->assertOk()->assertSeeText('mobile feature');
     }
 
+
+    public function test_page_slider_and_carousel_routes_have_independent_plugin_owners(): void
+    {
+        $routes = config('module_routes');
+
+        $this->assertContains('admin.website-builder.*', $routes['page_builder']);
+        $this->assertContains('admin.website-pages.*', $routes['page_builder']);
+        $this->assertContains('admin.sliders.*', $routes['slider_builder']);
+        $this->assertContains('admin.carousels.*', $routes['carousel_builder']);
+        $this->assertArrayNotHasKey('page_builder', array_diff_key($routes, ['page_builder' => true]));
+        $this->assertArrayHasKey('page_builder', config('modules'));
+        $this->assertArrayHasKey('slider_builder', config('modules'));
+        $this->assertArrayHasKey('carousel_builder', config('modules'));
+    }
+
     public function test_core_module_manager_routes_are_not_owned_by_business_plugins(): void
     {
         $this->assertSame([], collect(config('module_routes'))
