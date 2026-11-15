@@ -5,7 +5,7 @@
 @section('content')
 <div class="page-header">
     <div><span class="badge info">Academic Level</span><h1 style="margin:12px 0 0;">{{ $academicLevel->name }}</h1><p class="muted">{{ $academicLevel->description }}</p></div>
-    <div class="cta-row"><a class="btn secondary" href="{{ route('admin.academic-levels.index') }}">All levels</a><a class="btn primary" href="{{ route('admin.courses.create') }}">Create course</a><a class="btn secondary" href="{{ route('admin.website-pages.create') }}">Create page</a></div>
+    <div class="cta-row"><a class="btn secondary" href="{{ route('admin.academic-levels.index') }}">All levels</a><a class="btn primary" href="{{ route('admin.courses.create', ['academic_level_id' => $academicLevel->id]) }}">Create course</a><a class="btn secondary" href="{{ route('admin.website-pages.create', ['academic_level_id' => $academicLevel->id]) }}">Create page</a></div>
 </div>
 <section class="panel" style="margin-bottom:18px;">
     <h2>Courses · {{ $academicLevel->courses->count() }}</h2>
