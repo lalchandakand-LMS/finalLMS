@@ -9,7 +9,7 @@
     @forelse($pages as $page)
         <div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:12px;">
             <div>
-                <strong>{{ $page->title }}</strong>
+                <strong>{{ $page->title }} @if($page->academicLevel)<span class="badge info">{{ $page->academicLevel->name }}</span>@endif</strong>
                 <div class="muted">/pages/{{ $page->slug }} · {{ ucfirst($page->status) }} · {{ $page->show_in_menu ? 'In menu' : 'Hidden from menu' }}</div>
                 <small class="muted">Updated {{ $page->updated_at?->diffForHumans() }}</small>
             </div>
