@@ -1,12 +1,12 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use App\\Models\\PluginInstallation;
-use App\\Models\\PluginVersionRecord;
-use App\\Services\\Plugins\\PluginRollbackService;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Illuminate\\Support\\Facades\\File;
+use App\Models\PluginInstallation;
+use App\Models\PluginVersionRecord;
+use App\Services\Plugins\PluginRollbackService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\File;
 use RuntimeException;
 use Tests\\TestCase;
 
