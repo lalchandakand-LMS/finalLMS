@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -45,6 +46,8 @@ class SeoAndSearchConsoleTest extends TestCase
             'key' => 'google_search_console_verification',
             'value' => 'google-site-token_123',
         ]);
+
+        Auth::logout();
 
         $this->get('/')
             ->assertOk()
