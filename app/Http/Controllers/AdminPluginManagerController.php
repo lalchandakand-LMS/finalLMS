@@ -7,6 +7,7 @@ use App\Models\PluginInstallation;
 use App\Services\Plugins\PluginIntegrityVerifier;
 use App\Services\Plugins\PluginLifecycle;
 use App\Services\Plugins\PluginManifestValidator;
+use App\Services\Plugins\PluginMigrationRunner;
 use App\Services\Plugins\PluginPackageRemover;
 use App\Services\Plugins\PluginUploadInstaller;
 use Illuminate\Http\RedirectResponse;
@@ -64,6 +65,7 @@ class AdminPluginManagerController extends Controller
         string $key,
         PluginManifestValidator $manifestValidator,
         PluginIntegrityVerifier $integrityVerifier,
+        PluginMigrationRunner $migrationRunner,
         PluginLifecycle $lifecycle,
     ): RedirectResponse {
         if (app()->routesAreCached()) {
@@ -97,6 +99,9 @@ class AdminPluginManagerController extends Controller
 
             $this->assertDependenciesAvailable($plugin);
             $integrityVerifier->verify($plugin);
+            // Run migrations only from the signature-verified and integrity-checked private package.
+            // A migration failure leaves the package installed but inactive.
+            $migrationRunner->migrate($plugin);
             $lifecycle->transition($plugin->plugin_key, 'active');
         } catch (Throwable $exception) {
             report($exception);
