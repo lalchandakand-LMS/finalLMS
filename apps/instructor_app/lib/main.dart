@@ -373,16 +373,19 @@ class _InstructorHomeState extends State<InstructorHome> {
     }
   }
   Future<void> showBatchStudents(Map<String, dynamic> batch) async {
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final capturedThemes = InheritedTheme.capture(from: context, to: navigator.context);
     try {
       final response = await widget.api.get('/instructor/batches/${batch['id']}');
-      if (!mounted) {
+      if (!navigator.mounted) {
         return;
       }
       final detail = response['batch'] as Map<String, dynamic>;
       final students = response['data'] as List<dynamic>? ?? [];
-      await showModalBottomSheet<void>(
-        context: context,
+      navigator.push<void>(ModalBottomSheetRoute<void>(
         isScrollControlled: true,
+        capturedThemes: capturedThemes,
         builder: (sheetContext) => SafeArea(
           child: SizedBox(
             height: MediaQuery.of(sheetContext).size.height * 0.75,
@@ -413,16 +416,16 @@ class _InstructorHomeState extends State<InstructorHome> {
             ),
           ),
         ),
-      );
+      ));
     } catch (e) {
-      if (!context.mounted) {
+      if (!navigator.mounted || !messenger.mounted) {
         return;
       }
       if (e is ApiException && (e.statusCode == 401 || e.statusCode == 403)) {
         widget.onLogout();
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      messenger.showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 
