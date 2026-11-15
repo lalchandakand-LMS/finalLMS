@@ -48,7 +48,7 @@ class StudentInvoiceController extends Controller
         return response()->view('student.invoices.print', [
             'invoice' => $invoice,
             'summary' => $this->totals($invoice),
-        ])->header('Cache-Control', 'private, no-store, max-age=0');
+        ])->header('Cache-Control', 'private, no-store, max-age=0')->header('X-Robots-Tag', 'noindex, nofollow')->header('Referrer-Policy', 'no-referrer');
     }
 
     public function printReceipt(Invoice $invoice, InvoicePayment $payment): View
@@ -58,7 +58,9 @@ class StudentInvoiceController extends Controller
         $payment->load('receiver:id,name');
 
         return response()->view('student.invoices.receipt-print', compact('invoice', 'payment'))
-            ->header('Cache-Control', 'private, no-store, max-age=0');
+            ->header('Cache-Control', 'private, no-store, max-age=0')
+            ->header('X-Robots-Tag', 'noindex, nofollow')
+            ->header('Referrer-Policy', 'no-referrer');
     }
 
     private function present(Invoice $invoice): array
