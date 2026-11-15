@@ -5,9 +5,12 @@ namespace Tests\Feature;
 use Aloms\UniversalAiAssistant\AssistantSettings;
 use App\Models\PluginInstallation;
 use App\Models\User;
+use App\Services\AiDeveloperProviderEndpoint;
 use App\Services\Modules\ModuleRegistry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -19,9 +22,15 @@ class UniversalAiAssistantPluginTest extends TestCase
     {
         parent::setUp();
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantSettings.php');
+        require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantController.php');
+        require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AdminSettingsController.php');
         if (! Schema::hasTable('ai_assistant_settings')) {
             $migration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_15_180000_create_universal_ai_assistant_tables.php');
             $migration->up();
+        }
+        if (Schema::hasTable('ai_assistant_settings') && ! Schema::hasColumn('ai_assistant_settings', 'retention_days')) {
+            $retentionMigration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_15_190000_add_ai_assistant_conversation_retention.php');
+            $retentionMigration->up();
         }
     }
 
@@ -30,6 +39,7 @@ class UniversalAiAssistantPluginTest extends TestCase
         $settings = AssistantSettings::record();
         $this->assertFalse($settings['global_enabled']);
         $this->assertSame('general_only', $settings['data_access_mode']);
+        $this->assertSame(365, $settings['retention_days']);
         foreach (AssistantSettings::ROLES as $role) $this->assertFalse($settings['role_enabled'][$role]);
         $this->assertNull(AssistantSettings::apiKey());
     }
@@ -49,6 +59,102 @@ class UniversalAiAssistantPluginTest extends TestCase
         $this->assertSame('test-secret-provider-key', AssistantSettings::apiKey());
         $this->assertArrayNotHasKey('api_key_encrypted', AssistantSettings::publicSettings());
         $this->assertArrayNotHasKey('api_key', AssistantSettings::publicSettings());
+    }
+
+    public function test_provider_model_discovery_returns_model_ids_without_exposing_api_credentials(): void
+    {
+        AssistantSettings::save([
+            'model' => 'gpt-4o-mini', 'base_url' => 'https://api.openai.com/v1',
+            'temperature' => 0.4, 'max_tokens' => 800, 'global_enabled' => false,
+            'role_enabled' => array_fill_keys(AssistantSettings::ROLES, false),
+            'daily_request_limit' => 20, 'daily_token_budget' => 50000, 'retention_days' => 365,
+        ], 'test-secret-provider-key', false);
+
+        app()->instance(AiDeveloperProviderEndpoint::class, new class extends AiDeveloperProviderEndpoint {
+            public function curlOptionsFor(string $url): array { return []; }
+        });
+        Http::fake([
+            'api.openai.com/v1/models' => Http::response([
+                'data' => [['id' => 'gpt-4o-mini'], ['id' => 'gpt-4.1'], ['id' => 'text-embedding-3-small']],
+            ], 200),
+        ]);
+
+        $response = (new \\Aloms\\UniversalAiAssistant\\AdminSettingsController())->models();
+        $payload = $response->getData(true);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame(['gpt-4.1', 'gpt-4o-mini', 'text-embedding-3-small'], $payload['models']);
+        $this->assertStringNotContainsString('test-secret-provider-key', json_encode($payload));
+        Http::assertSent(fn ($request) => $request->url() === 'https://api.openai.com/v1/models');
+    }
+
+    public function test_configured_retention_prunes_expired_conversations_and_cascades_messages(): void
+    {
+        AssistantSettings::save([
+            'model' => 'gpt-4o-mini', 'base_url' => 'https://api.openai.com/v1',
+            'temperature' => 0.4, 'max_tokens' => 800, 'global_enabled' => false,
+            'role_enabled' => array_fill_keys(AssistantSettings::ROLES, false),
+            'daily_request_limit' => 20, 'daily_token_budget' => 50000, 'retention_days' => 30,
+        ], null, false);
+        $user = User::factory()->create(['role' => 'student']);
+        $expiredId = \\DB::table('ai_assistant_conversations')->insertGetId([
+            'user_id' => $user->id, 'assistant_role' => 'student', 'title' => 'Expired',
+            'created_at' => now()->subDays(40), 'updated_at' => now()->subDays(40),
+        ]);
+        \\DB::table('ai_assistant_messages')->insert([
+            'conversation_id' => $expiredId, 'message_role' => 'user', 'content' => 'Old message',
+            'token_count' => null, 'model' => null, 'created_at' => now()->subDays(40),
+        ]);
+        $activeId = \\DB::table('ai_assistant_conversations')->insertGetId([
+            'user_id' => $user->id, 'assistant_role' => 'student', 'title' => 'Recent',
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        AssistantSettings::pruneExpiredConversations();
+
+        $this->assertDatabaseMissing('ai_assistant_conversations', ['id' => $expiredId]);
+        $this->assertDatabaseMissing('ai_assistant_messages', ['conversation_id' => $expiredId]);
+        $this->assertDatabaseHas('ai_assistant_conversations', ['id' => $activeId]);
+    }
+
+    public function test_sensitive_provider_tokens_are_redacted_before_saving_conversation_titles_and_sending_messages(): void
+    {
+        AssistantSettings::save([
+            'model' => 'gpt-4o-mini', 'base_url' => 'https://api.openai.com/v1',
+            'temperature' => 0.4, 'max_tokens' => 800, 'global_enabled' => true,
+            'role_enabled' => array_replace(array_fill_keys(AssistantSettings::ROLES, false), ['student' => true]),
+            'daily_request_limit' => 20, 'daily_token_budget' => 50000, 'retention_days' => 365,
+        ], 'test-secret-provider-key', false);
+
+        app()->instance(AiDeveloperProviderEndpoint::class, new class extends AiDeveloperProviderEndpoint {
+            public function curlOptionsFor(string $url): array { return []; }
+        });
+        Http::fake([
+            'api.openai.com/v1/chat/completions' => Http::response([
+                'choices' => [['message' => ['content' => 'Let us practise English.']]],
+                'usage' => ['total_tokens' => 12],
+            ], 200),
+        ]);
+
+        $user = User::factory()->create(['role' => 'student']);
+        $secret = 'sk-ABCDEFGHIJKLMNOPQRSTUVWXYZ123456';
+        $request = Request::create('/student/ai-assistant/messages', 'POST', [
+            'message' => 'Please help me; my key is '.$secret,
+        ]);
+        $request->setUserResolver(static fn () => $user);
+
+        $response = (new \\Aloms\\UniversalAiAssistant\\AssistantController())->send($request);
+        $this->assertSame(200, $response->getStatusCode());
+
+        $conversation = \\DB::table('ai_assistant_conversations')->where('user_id', $user->id)->first();
+        $message = \\DB::table('ai_assistant_messages')->where('conversation_id', $conversation->id)->where('message_role', 'user')->first();
+        $this->assertStringNotContainsString($secret, $conversation->title);
+        $this->assertStringContainsString('[REDACTED_SECRET]', $conversation->title);
+        $this->assertStringNotContainsString($secret, $message->content);
+        Http::assertSent(function ($request) use ($secret): bool {
+            $userPrompt = $request->data()['messages'][1]['content'] ?? '';
+            return str_contains($userPrompt, '[REDACTED_SECRET]') && ! str_contains($userPrompt, $secret);
+        });
     }
 
     public function test_accountant_is_only_explicitly_mapped_to_support_staff_assistant(): void
