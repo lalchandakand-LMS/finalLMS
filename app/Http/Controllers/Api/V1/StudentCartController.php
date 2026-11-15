@@ -82,21 +82,33 @@ class StudentCartController extends Controller
             'batch_id' => ['nullable', 'integer', Rule::exists('batches', 'id')->where(fn ($query) => $query->where('course_id', $request->input('course_id'))->where('status', 'open'))],
         ]);
 
-        $course = Course::query()->whereKey($validated['course_id'])->where('status', 'published')->firstOrFail();
-        abort_if(Enrollment::query()->where('user_id', $student->id)->where('course_id', $course->id)->whereIn('status', ['active', 'completed'])->exists(), 409, 'You are already enrolled in this course.');
-
         $batchId = $validated['batch_id'] ?? null;
-        if ($batchId) {
-            $batch = Batch::query()->whereKey($batchId)->where('course_id', $course->id)->where('status', 'open')->first();
-            abort_unless($batch, 422, 'Choose an open batch for this course.');
-        }
 
-        DB::table('student_cart_items')->updateOrInsert(
-            ['user_id' => $student->id, 'course_id' => $course->id],
-            ['batch_id' => $batchId, 'created_at' => now(), 'updated_at' => now()]
-        );
+        DB::transaction(function () use ($student, $validated, $batchId): void {
+            $course = Course::query()->whereKey($validated['course_id'])->lockForUpdate()->firstOrFail();
+            abort_unless($course->status === 'published', 404);
+            abort_if(Enrollment::query()->where('user_id', $student->id)->where('course_id', $course->id)->whereIn('status', ['active', 'completed'])->exists(), 409, 'You are already enrolled in this course.');
 
-        return response()->json(['message' => 'Course added to your cart.', 'data' => ['course_id' => $course->id]], 201);
+            if ($batchId) {
+                $batch = Batch::query()->whereKey($batchId)->where('course_id', $course->id)->where('status', 'open')->lockForUpdate()->first();
+                abort_unless($batch, 422, 'Choose an open batch for this course.');
+            }
+
+            $now = now();
+            DB::table('student_cart_items')->insertOrIgnore([
+                'user_id' => $student->id,
+                'course_id' => $course->id,
+                'batch_id' => $batchId,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+            DB::table('student_cart_items')
+                ->where('user_id', $student->id)
+                ->where('course_id', $course->id)
+                ->update(['batch_id' => $batchId, 'updated_at' => $now]);
+        });
+
+        return response()->json(['message' => 'Course added to your cart.', 'data' => ['course_id' => (int) $validated['course_id']]], 201);
     }
 
     public function update(Request $request, Course $course): JsonResponse
