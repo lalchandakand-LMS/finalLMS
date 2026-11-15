@@ -80,11 +80,11 @@ class MetaAdsIntegrationTest extends TestCase
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
 
         $this->actingAs($admin)
-            ->post(route('admin.marketing.meta-ads.campaigns.pause', 'campaign-1'), ['account_id' => '99999'])
+            ->post(route('admin.marketing.meta-ads.campaigns.pause', '111111111111112'), ['account_id' => '99999'])
             ->assertRedirect()
             ->assertSessionHas('error');
 
-        Http::assertNotSent(fn ($request) => str_ends_with($request->url(), '/campaign-1'));
+        Http::assertNotSent(fn ($request) => str_ends_with($request->url(), '/111111111111112'));
     }
     public function test_campaign_cannot_be_paused_through_a_different_ad_account(): void
     {
