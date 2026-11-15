@@ -86,6 +86,7 @@ class AdminModuleRegistryTest extends TestCase
             'page_builder',
             'ai_builder',
             'ai_developer',
+            'popup_ads',
         ] as $key) {
             $this->assertArrayHasKey($key, $catalog, "Expected independent module [{$key}].");
             $this->assertSame('module', $catalog[$key]['type']);
@@ -102,6 +103,7 @@ class AdminModuleRegistryTest extends TestCase
             ->assertSee('Course Management')
             ->assertSee('Payment Services')
             ->assertSee('Website Slider & Banners')
+            ->assertSee('Popup Ads & Campaigns')
             ->assertSee('Existing routes are not all gated yet');
     }
 

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\VisitorPopup;
 use App\Models\User;
+use App\Models\Setting;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -93,6 +94,28 @@ class VisitorPopupManagementTest extends TestCase
             ])->assertSessionHasErrors('button_url');
 
         $this->assertDatabaseCount('visitor_popups', 0);
+    }
+
+
+    public function test_disabling_popup_ads_hides_campaigns_and_blocks_admin_routes_without_deleting_data(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $popup = VisitorPopup::create([
+            'title' => 'Keep my campaign data',
+            'body' => 'This campaign must remain stored.',
+            'popup_type' => 'offer',
+            'audience' => 'all',
+            'frequency' => 'once_per_session',
+            'delay_seconds' => 0,
+            'is_active' => true,
+        ]);
+
+        Setting::setValue('module_registry', json_encode(['popup_ads' => false]));
+
+        $this->get(route('landing'))->assertOk()->assertDontSee('Keep my campaign data');
+        $this->actingAs($admin)->get(route('admin.visitor-popups.index'))->assertNotFound();
+
+        $this->assertDatabaseHas('visitor_popups', ['id' => $popup->id, 'title' => 'Keep my campaign data']);
     }
 
     public function test_non_admin_cannot_manage_popup_campaigns(): void
