@@ -11,6 +11,7 @@
         $googleAnalyticsId = $hasSettingsTable ? \App\Models\Setting::value('google_analytics_id') : null;
         $googleTagManagerId = $hasSettingsTable ? \App\Models\Setting::value('google_tag_manager_id') : null;
         $facebookPixelId = $hasSettingsTable ? \App\Models\Setting::value('facebook_pixel_id') : null;
+        $googleSearchConsoleVerification = $hasSettingsTable ? \\App\\Models\\Setting::value('google_search_console_verification') : null;
         $marketingConsent = request()->cookie('marketing_consent') === 'accepted';
         $isAdminLayout = auth()->check() && (auth()->user()->isAdmin() || auth()->user()->isBranchManager() || auth()->user()->isAccountant());
         $visitorPopup = null;
@@ -39,13 +40,21 @@
         if (!in_array($themeHeadingScale, ['0.9', '1', '1.1', '1.2'], true)) $themeHeadingScale = '1';
         if (!in_array($themeBodyScale, ['0.9', '1', '1.05', '1.1'], true)) $themeBodyScale = '1';
     @endphp
-    <title>@yield('title', config('app.name'))</title>
+    <title>@yield('title', $seoTitle)</title>
     <meta name="description" content="@yield('meta_description', $seoDescription)">
     <meta name="keywords" content="{{ $seoKeywords }}">
-    <meta property="og:title" content="{{ $seoTitle }}">
-    <meta property="og:description" content="{{ $seoDescription }}">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="{{ request()->url() }}">
+    <link rel="canonical" href="@yield('canonical_url', request()->url())">
+    <meta property="og:title" content="@yield('meta_title', $seoTitle)">
+    <meta property="og:description" content="@yield('meta_description', $seoDescription)">
+    <meta property="og:type" content="@yield('og_type', 'website')">
+    <meta property="og:url" content="@yield('canonical_url', request()->url())">
+    <meta property="og:site_name" content="{{ config('app.name') }}">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="@yield('meta_title', $seoTitle)">
+    <meta name="twitter:description" content="@yield('meta_description', $seoDescription)">
+    @if($googleSearchConsoleVerification)
+        <meta name="google-site-verification" content="{{ $googleSearchConsoleVerification }}">
+    @endif
     @if($marketingConsent && $googleAnalyticsId)
         <script async src="https://www.googletagmanager.com/gtag/js?id={{ urlencode($googleAnalyticsId) }}"></script>
         <script>
