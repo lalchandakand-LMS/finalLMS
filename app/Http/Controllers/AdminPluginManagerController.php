@@ -12,6 +12,7 @@ use App\Services\Plugins\PluginDeactivator;
 use App\Services\Plugins\PluginSettingsManager;
 use App\Services\Plugins\PluginHealthChecker;
 use App\Services\Plugins\PluginBackupRestorer;
+use App\Services\Plugins\PluginRollbackService;
 use App\Services\Modules\ModuleRegistry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
