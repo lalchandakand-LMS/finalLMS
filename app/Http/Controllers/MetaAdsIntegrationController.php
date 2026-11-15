@@ -77,7 +77,8 @@ class MetaAdsIntegrationController extends Controller
         return view('admin.marketing.meta-ads', [
             'boostCourses' => $boostCourses,
             'boostNotices' => $boostNotices,
-            'boostOffers' => $boostOffers,\n            'connected' => $connected,
+            'boostOffers' => $boostOffers,
+            'connected' => $connected,
             'configured' => filled(config('services.meta_ads.app_id')) && filled(config('services.meta_ads.app_secret')),
             'accounts' => $accounts,
             'pages' => $pages,
