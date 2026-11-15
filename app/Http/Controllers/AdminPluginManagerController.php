@@ -76,10 +76,16 @@ class AdminPluginManagerController extends Controller
     }
     public function updateSettings(Request $request, PluginInstallation $plugin, PluginSettingsManager $settings): RedirectResponse
     {
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'setting_key' => ['required', 'string', 'max:120', 'regex:/^[a-z][a-z0-9_.-]{0,119}$/'],
             'value' => ['required', 'string', 'min:1', 'max:4096'],
         ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput($request->except('value'));
+        }
+
+        $validated = $validator->validated();
 
         try {
             $settings->set($plugin, $validated['setting_key'], $validated['value']);
