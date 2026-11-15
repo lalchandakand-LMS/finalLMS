@@ -6,6 +6,7 @@
     @php
         $announcementSlides = \App\Models\DashboardAnnouncement::currentlyActive()
             ->whereIn('audience', ['all', auth()->user()->role])
+            ->where(fn ($query) => $query->whereNull('branch_id')->orWhere('branch_id', auth()->user()->branch_id))
             ->with('image')->orderByDesc('priority')->latest()->take(8)->get();
     @endphp
     @include('components.dashboard-announcement-slider')

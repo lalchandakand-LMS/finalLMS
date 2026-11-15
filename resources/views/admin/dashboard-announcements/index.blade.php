@@ -8,7 +8,7 @@
         <div class="page-header" style="margin-bottom:8px;"><div><h3 style="margin:0 0 6px;">{{ $item->title }}</h3><span class="badge info">{{ ucfirst($item->content_type) }}</span> <span class="badge {{ $item->is_active ? 'success' : 'warning' }}">{{ $item->is_active ? __('Active') : __('Inactive') }}</span></div><strong>{{ __('Priority') }}: {{ $item->priority }}</strong></div>
         @if($item->image)<img src="{{ $item->image->url }}" alt="{{ $item->title }}" style="width:100%;max-width:420px;max-height:150px;object-fit:cover;border-radius:12px;">@endif
         <p class="muted">{{ \Illuminate\Support\Str::limit($item->body, 180) }}</p>
-        <div class="meta-row"><small>{{ __('Audience') }}: {{ ucfirst($item->audience) }}</small><small>{{ $item->starts_at?->format('d M Y H:i') ?? __('Immediately') }} – {{ $item->ends_at?->format('d M Y H:i') ?? __('No end date') }}</small></div>
+        <div class="meta-row"><small>{{ __('Audience') }}: {{ ucfirst(str_replace('_', ' ', $item->audience)) }} · {{ __('Branch') }}: {{ $item->branch?->name ?? __('All branches') }}</small><small>{{ $item->starts_at?->format('d M Y H:i') ?? __('Immediately') }} – {{ $item->ends_at?->format('d M Y H:i') ?? __('No end date') }}</small></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
             <a class="btn secondary" href="{{ route('admin.dashboard-announcements.edit', $item) }}">{{ __('Edit') }}</a>
             <form method="POST" action="{{ route('admin.dashboard-announcements.toggle', $item) }}">@csrf @method('PATCH')<button class="btn secondary" type="submit">{{ $item->is_active ? __('Deactivate') : __('Activate') }}</button></form>
