@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:material_ui/material_ui.dart';
 import 'api_client.dart';
 import 'package:video_player/video_player.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 void main() => runApp(const StudentApp());
 
@@ -410,6 +411,12 @@ class _StudentHomeState extends State<StudentHome> {
     ));
   }
 
+  Future<void> openPayments() async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => PaymentHistoryPage(api: widget.api),
+    ));
+  }
+
   Widget _courseCard(dynamic item) {
     final course = item as Map<String, dynamic>;
     final imageUrl = course['image_url']?.toString();
@@ -488,6 +495,11 @@ class _StudentHomeState extends State<StudentHome> {
           onPressed: openWishlist,
           icon: const Icon(Icons.favorite_outline),
           tooltip: 'My wishlist',
+        ),
+        IconButton(
+          onPressed: openPayments,
+          icon: const Icon(Icons.receipt_long_outlined),
+          tooltip: 'Payment history',
         ),
         IconButton(
           onPressed: logout,
@@ -839,6 +851,21 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                         ),
                         const SizedBox(height: 8),
                         Text(course?['description']?.toString() ?? ''),
+                        if (!enrolled) ...[
+                          const SizedBox(height: 16),
+                          FilledButton.icon(
+                            onPressed: () async {
+                              final completed = await Navigator.of(context).push<bool>(
+                                MaterialPageRoute(
+                                  builder: (_) => CourseCheckoutPage(api: widget.api, slug: widget.slug),
+                                ),
+                              );
+                              if (completed == true && mounted) await load();
+                            },
+                            icon: const Icon(Icons.shopping_cart_checkout),
+                            label: const Text('Enroll / Purchase course'),
+                          ),
+                        ],
                         const SizedBox(height: 20),
                         Text('Course curriculum', style: Theme.of(context).textTheme.titleLarge),
                         if (lessons.isEmpty)
@@ -868,6 +895,411 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                         }),
                       ],
                     ),
+                  ),
+      );
+}
+
+class CourseCheckoutPage extends StatefulWidget {
+  const CourseCheckoutPage({required this.api, required this.slug, super.key});
+  final MobileApi api;
+  final String slug;
+  @override
+  State<CourseCheckoutPage> createState() => _CourseCheckoutPageState();
+}
+
+class _CourseCheckoutPageState extends State<CourseCheckoutPage> {
+  final transactionReference = TextEditingController();
+  final senderAccount = TextEditingController();
+  Map<String, dynamic>? checkout;
+  bool loading = true;
+  bool submitting = false;
+  String? error;
+  int? selectedBatchId;
+  String? selectedMethod;
+
+  @override
+  void initState() { super.initState(); load(); }
+
+  @override
+  void dispose() {
+    transactionReference.dispose();
+    senderAccount.dispose();
+    super.dispose();
+  }
+
+  List<dynamic> get batches => checkout?['batches'] as List<dynamic>? ?? [];
+  List<dynamic> get methods => checkout?['payment_methods'] as List<dynamic>? ?? [];
+
+  Map<String, dynamic>? get selectedBatch {
+    for (final item in batches) {
+      final batch = item as Map<String, dynamic>;
+      if (batch['id'] == selectedBatchId) return batch;
+    }
+    return null;
+  }
+
+  Map<String, dynamic>? get selectedMethodData {
+    for (final item in methods) {
+      final method = item as Map<String, dynamic>;
+      if (method['key'] == selectedMethod) return method;
+    }
+    return null;
+  }
+
+  double get payableAmount {
+    final batch = selectedBatch;
+    final pricing = checkout?['pricing'] as Map<String, dynamic>? ?? {};
+    return double.tryParse((batch?['discounted_amount'] ?? pricing['discounted_amount'] ?? 0).toString()) ?? 0;
+  }
+
+  bool get selectedBatchFull =>
+      selectedBatch != null && ((selectedBatch!['available_seats'] as num?)?.toInt() ?? 0) <= 0;
+
+  Future<void> load() async {
+    setState(() { loading = true; error = null; });
+    try {
+      final response = await widget.api.get('/checkout/courses/${widget.slug}');
+      if (!mounted) return;
+      final data = response['data'] as Map<String, dynamic>;
+      final nextBatches = data['batches'] as List<dynamic>? ?? [];
+      final nextMethods = data['payment_methods'] as List<dynamic>? ?? [];
+      setState(() {
+        checkout = data;
+        if (selectedBatchId == null && nextBatches.length == 1) {
+          selectedBatchId = (nextBatches.first as Map<String, dynamic>)['id'] as int;
+        }
+        if (selectedMethod == null && nextMethods.isNotEmpty) {
+          selectedMethod = (nextMethods.first as Map<String, dynamic>)['key']?.toString();
+        }
+      });
+    } catch (exception) {
+      if (mounted) setState(() => error = exception.toString());
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> submitManual() async {
+    if (submitting || checkout == null || checkout!['already_enrolled'] == true) return;
+    if (batches.isNotEmpty && selectedBatchId == null) {
+      setState(() => error = 'Please select an available batch.');
+      return;
+    }
+    if (selectedBatchFull) {
+      setState(() => error = 'This batch is full. Please select another batch.');
+      return;
+    }
+    if (payableAmount > 0 && (selectedMethod == null || transactionReference.text.trim().isEmpty)) {
+      setState(() => error = 'Choose a payment method and enter its transaction reference.');
+      return;
+    }
+    setState(() { submitting = true; error = null; });
+    try {
+      final payload = <String, dynamic>{
+        if (selectedBatchId != null) 'batch_id': selectedBatchId,
+        if (payableAmount > 0) 'payment_method': selectedMethod,
+        if (payableAmount > 0) 'transaction_reference': transactionReference.text.trim(),
+        if (senderAccount.text.trim().isNotEmpty) 'sender_account': senderAccount.text.trim(),
+      };
+      final response = await widget.api.postJson('/checkout/courses/${widget.slug}/manual', payload);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(response['message']?.toString() ?? 'Checkout submitted.')),
+      );
+      Navigator.of(context).pop(true);
+    } catch (exception) {
+      if (mounted) setState(() => error = exception.toString());
+    } finally {
+      if (mounted) setState(() => submitting = false);
+    }
+  }
+
+  Future<void> payWithBkash() async {
+    if (submitting || checkout == null || checkout!['already_enrolled'] == true) return;
+    if (batches.isNotEmpty && selectedBatchId == null) {
+      setState(() => error = 'Please select a batch first.');
+      return;
+    }
+    if (selectedBatchFull) {
+      setState(() => error = 'This batch is full. Please select another batch.');
+      return;
+    }
+    setState(() { submitting = true; error = null; });
+    try {
+      final response = await widget.api.postJson(
+        '/checkout/courses/${widget.slug}/bkash',
+        {if (selectedBatchId != null) 'batch_id': selectedBatchId},
+      );
+      final data = response['data'] as Map<String, dynamic>;
+      final uri = Uri.tryParse(data['checkout_url']?.toString() ?? '');
+      const allowedHosts = {
+        'tokenized.sandbox.bka.sh',
+        'tokenized.pay.bka.sh',
+        'checkout.sandbox.bka.sh',
+        'checkout.pay.bka.sh',
+      };
+      if (uri == null || uri.scheme != 'https' || !allowedHosts.contains(uri.host)) {
+        throw const FormatException('The bKash checkout link is invalid.');
+      }
+      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!opened) throw const FormatException('Could not open the bKash checkout page.');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Complete payment in bKash, then return and refresh your course status.')),
+      );
+    } catch (exception) {
+      if (mounted) setState(() => error = exception.toString());
+    } finally {
+      if (mounted) setState(() => submitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final course = checkout?['course'] as Map<String, dynamic>? ?? {};
+    final manualMethods = methods.cast<Map<String, dynamic>>();
+    final onlineBkash = checkout?['online_bkash_available'] == true;
+    return Scaffold(
+      appBar: AppBar(title: const Text('Course checkout')),
+      body: loading
+          ? const Center(child: CircularProgressIndicator())
+          : error != null && checkout == null
+              ? Center(child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    Text(error!),
+                    const SizedBox(height: 12),
+                    FilledButton(onPressed: load, child: const Text('Retry')),
+                  ]),
+                ))
+              : RefreshIndicator(
+                  onRefresh: load,
+                  child: ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      Text(course['title']?.toString() ?? 'Course',
+                          style: Theme.of(context).textTheme.headlineSmall),
+                      if (checkout?['already_enrolled'] == true)
+                        const Card(child: ListTile(
+                          leading: Icon(Icons.check_circle, color: Colors.green),
+                          title: Text('You are already enrolled in this course.'),
+                        )),
+                      if (batches.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<int>(
+                          value: selectedBatchId,
+                          decoration: const InputDecoration(labelText: 'Select batch', border: OutlineInputBorder()),
+                          items: batches.map((item) {
+                            final batch = item as Map<String, dynamic>;
+                            final seats = (batch['available_seats'] as num?)?.toInt() ?? 0;
+                            return DropdownMenuItem<int>(
+                              value: batch['id'] as int,
+                              enabled: seats > 0,
+                              child: Text('${batch['title']} · ${seats > 0 ? '$seats seats left' : 'Full'}'),
+                            );
+                          }).toList(),
+                          onChanged: submitting ? null : (value) => setState(() { selectedBatchId = value; error = null; }),
+                        ),
+                      ],
+                      const SizedBox(height: 18),
+                      Card(child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text('Amount due', style: Theme.of(context).textTheme.titleMedium),
+                          const SizedBox(height: 6),
+                          Text('৳${payableAmount.toStringAsFixed(2)}',
+                              style: Theme.of(context).textTheme.headlineMedium),
+                          if (selectedBatch?['discount_amount'] != null &&
+                              (double.tryParse(selectedBatch!['discount_amount'].toString()) ?? 0) > 0)
+                            Text('Flash Sale discount: ৳${selectedBatch!['discount_amount']}'),
+                          if (batches.isEmpty &&
+                              (double.tryParse((checkout?['pricing']?['discount_amount'] ?? '0').toString()) ?? 0) > 0)
+                            Text('Flash Sale discount: ৳${checkout?['pricing']?['discount_amount']}'),
+                        ]),
+                      )),
+                      if (payableAmount > 0 && manualMethods.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          value: selectedMethod,
+                          decoration: const InputDecoration(labelText: 'Manual payment method', border: OutlineInputBorder()),
+                          items: manualMethods.map((method) => DropdownMenuItem<String>(
+                            value: method['key']?.toString(),
+                            child: Text(method['label']?.toString() ?? method['key'].toString()),
+                          )).toList(),
+                          onChanged: submitting ? null : (value) => setState(() => selectedMethod = value),
+                        ),
+                        if (selectedMethodData != null) ...[
+                          const SizedBox(height: 12),
+                          Card(child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Text(selectedMethodData!['label']?.toString() ?? 'Payment instructions',
+                                  style: Theme.of(context).textTheme.titleMedium),
+                              if ((selectedMethodData!['account']?.toString() ?? '').isNotEmpty)
+                                SelectableText('Account: ${selectedMethodData!['account']}'),
+                              if ((selectedMethodData!['instructions']?.toString() ?? '').isNotEmpty)
+                                Text(selectedMethodData!['instructions'].toString()),
+                            ]),
+                          )),
+                        ],
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: senderAccount,
+                          keyboardType: TextInputType.phone,
+                          decoration: const InputDecoration(labelText: 'Your sender account (optional)', border: OutlineInputBorder()),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: transactionReference,
+                          decoration: const InputDecoration(labelText: 'Transaction reference', border: OutlineInputBorder()),
+                        ),
+                      ],
+                      if (payableAmount > 0 && manualMethods.isEmpty && !onlineBkash)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Text('No payment methods are available. Please contact the academy.'),
+                        ),
+                      if (error != null) ...[
+                        const SizedBox(height: 12),
+                        Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                      ],
+                      const SizedBox(height: 20),
+                      FilledButton.icon(
+                        onPressed: submitting ||
+                                checkout?['already_enrolled'] == true ||
+                                selectedBatchFull ||
+                                (batches.isNotEmpty && selectedBatchId == null) ||
+                                (payableAmount > 0 && manualMethods.isEmpty)
+                            ? null
+                            : submitManual,
+                        icon: submitting
+                            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                            : const Icon(Icons.send),
+                        label: Text(payableAmount <= 0 ? 'Enroll free' : 'Submit manual payment'),
+                      ),
+                      if (payableAmount > 0 && onlineBkash) ...[
+                        const SizedBox(height: 10),
+                        OutlinedButton.icon(
+                          onPressed: submitting ||
+                                  checkout?['already_enrolled'] == true ||
+                                  selectedBatchFull ||
+                                  (batches.isNotEmpty && selectedBatchId == null)
+                              ? null
+                              : payWithBkash,
+                          icon: const Icon(Icons.account_balance_wallet_outlined),
+                          label: const Text('Pay securely with bKash'),
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      Text(
+                        'Course access is activated only after the academy approves manual payment or bKash verifies the transaction.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+    );
+  }
+}
+
+class PaymentHistoryPage extends StatefulWidget {
+  const PaymentHistoryPage({required this.api, super.key});
+  final MobileApi api;
+  @override
+  State<PaymentHistoryPage> createState() => _PaymentHistoryPageState();
+}
+
+class _PaymentHistoryPageState extends State<PaymentHistoryPage> {
+  List<dynamic> payments = [];
+  bool loading = true;
+  String? error;
+
+  @override
+  void initState() { super.initState(); load(); }
+
+  Future<void> load() async {
+    setState(() { loading = true; error = null; });
+    try {
+      final response = await widget.api.get('/my/payments');
+      if (!mounted) return;
+      setState(() => payments = response['data'] as List<dynamic>? ?? []);
+    } catch (exception) {
+      if (mounted) setState(() => error = exception.toString());
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> showPayment(dynamic item) async {
+    final payment = item as Map<String, dynamic>;
+    try {
+      final response = await widget.api.get('/my/payments/${payment['id']}');
+      if (!mounted) return;
+      final detail = response['data'] as Map<String, dynamic>;
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(detail['course']?['title']?.toString() ?? 'Payment details'),
+          content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Amount: ৳${detail['amount']} ${detail['currency'] ?? 'BDT'}'),
+            Text('Method: ${detail['method']}'),
+            Text('Status: ${detail['status']}'),
+            Text('Reference: ${detail['transaction_reference']}'),
+            if ((detail['sender_account']?.toString() ?? '').isNotEmpty)
+              Text('Sender account: ${detail['sender_account']}'),
+            if ((detail['admin_note']?.toString() ?? '').isNotEmpty)
+              Text('Admin note: ${detail['admin_note']}'),
+          ]),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close')),
+          ],
+        ),
+      );
+    } catch (exception) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(exception.toString())));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(
+          title: const Text('Payment history'),
+          actions: [IconButton(onPressed: load, icon: const Icon(Icons.refresh), tooltip: 'Refresh')],
+        ),
+        body: loading
+            ? const Center(child: CircularProgressIndicator())
+            : error != null
+                ? Center(child: Text(error!))
+                : RefreshIndicator(
+                    onRefresh: load,
+                    child: payments.isEmpty
+                        ? ListView(children: const [
+                            SizedBox(height: 80),
+                            Center(child: Text('No course payments found.')),
+                          ])
+                        : ListView.separated(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: payments.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 8),
+                            itemBuilder: (context, index) {
+                              final payment = payments[index] as Map<String, dynamic>;
+                              final status = payment['status']?.toString() ?? 'pending';
+                              return Card(
+                                child: ListTile(
+                                  leading: Icon(
+                                    status == 'approved' ? Icons.check_circle_outline
+                                        : status == 'rejected' ? Icons.error_outline
+                                        : Icons.hourglass_top,
+                                  ),
+                                  title: Text(payment['course']?['title']?.toString() ?? 'Course payment'),
+                                  subtitle: Text('৳${payment['amount']} · ${payment['method']} · ${status}\n${payment['transaction_reference'] ?? ''}'),
+                                  isThreeLine: true,
+                                  trailing: const Icon(Icons.chevron_right),
+                                  onTap: () => showPayment(payment),
+                                ),
+                              );
+                            },
+                          ),
                   ),
       );
 }
