@@ -1,13 +1,12 @@
 <?php
 
-namespace App\\Http\\Controllers;
+namespace App\Http\Controllers;
 
-use App\\Models\\BlogPost;
-use App\\Models\\Course;
-use App\\Models\\Setting;
-use App\\Models\\WebsitePage;
-use Illuminate\\Http\\Response;
-use Illuminate\\Support\\Facades\\Schema;
+use App\Models\BlogPost;
+use App\Models\Course;
+use App\Models\WebsitePage;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Schema;
 
 class SeoController extends Controller
 {
@@ -25,7 +24,7 @@ class SeoController extends Controller
         ]);
 
         if (Schema::hasTable('courses')) {
-            Course::query()->where('status', 'published')->select(['slug', 'updated_at'])->orderBy('id')
+            Course::query()->where('status', 'published')->select(['id', 'slug', 'updated_at'])->orderBy('id')
                 ->chunk(200, function ($courses) use ($urls) {
                     foreach ($courses as $course) {
                         $urls->push(['loc' => route('courses.show', $course), 'lastmod' => $course->updated_at]);
@@ -35,7 +34,7 @@ class SeoController extends Controller
 
         if (Schema::hasTable('blog_posts')) {
             BlogPost::query()->where('status', 'published')->whereNotNull('published_at')
-                ->where('published_at', '<=', now())->select(['slug', 'updated_at'])->orderBy('id')
+                ->where('published_at', '<=', now())->select(['id', 'slug', 'updated_at'])->orderBy('id')
                 ->chunk(200, function ($posts) use ($urls) {
                     foreach ($posts as $post) {
                         $urls->push(['loc' => route('news.show', $post), 'lastmod' => $post->updated_at]);
@@ -44,7 +43,7 @@ class SeoController extends Controller
         }
 
         if (Schema::hasTable('website_pages')) {
-            WebsitePage::published()->select(['slug', 'updated_at'])->orderBy('id')
+            WebsitePage::published()->select(['id', 'slug', 'updated_at'])->orderBy('id')
                 ->chunk(200, function ($pages) use ($urls) {
                     foreach ($pages as $page) {
                         $urls->push(['loc' => route('website-pages.show', $page->slug), 'lastmod' => $page->updated_at]);
@@ -69,7 +68,7 @@ class SeoController extends Controller
     public function robots(): Response
     {
         $sitemapUrl = url('/sitemap.xml');
-        $body = "User-agent: *\\nAllow: /\\nDisallow: /admin\\nDisallow: /dashboard\\n\\nSitemap: {$sitemapUrl}\\n";
+        $body = "User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /dashboard\n\nSitemap: {$sitemapUrl}\n";
 
         return response($body, 200, ['Content-Type' => 'text/plain; charset=UTF-8']);
     }
