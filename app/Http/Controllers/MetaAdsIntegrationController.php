@@ -216,6 +216,146 @@ class MetaAdsIntegrationController extends Controller
         }
     }
 
+
+    /**
+     * Create a complete traffic campaign hierarchy in PAUSED state.
+     * Nothing can deliver or spend until an administrator explicitly resumes it.
+     */
+    public function createCampaign(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'account_id' => ['required', 'string', 'regex:/^\d{5,30}$/'],
+            'page_id' => ['required', 'string', 'regex:/^\d{5,30}$/'],
+            'name' => ['required', 'string', 'max:180'],
+            'message' => ['required', 'string', 'max:2000'],
+            'destination_url' => ['required', 'url:http,https', 'max:2048'],
+            'image_url' => ['required', 'url:http,https', 'max:2048'],
+            'daily_budget_bdt' => ['required', 'integer', 'min:100', 'max:1000000'],
+            'age_min' => ['required', 'integer', 'min:18', 'max:65'],
+            'age_max' => ['required', 'integer', 'min:18', 'max:65', 'gte:age_min'],
+        ]);
+
+        $token = $this->accessToken();
+        abort_unless($token, 409, __('Connect Meta Ads first.'));
+
+        $accountId = $data['account_id'];
+        $redirect = ['account' => $accountId];
+
+        try {
+            $accounts = $this->graphGet('me/adaccounts', $token, [
+                'fields' => 'id,account_id,currency',
+                'limit' => 100,
+            ])['data'] ?? [];
+            $account = collect($accounts)->first(function (array $item) use ($accountId): bool {
+                $id = preg_replace('/^act_/', '', (string) ($item['account_id'] ?? $item['id'] ?? ''));
+
+                return $id === $accountId;
+            });
+            abort_unless($account, 403, __('This ad account is not accessible to the connected Meta user.'));
+            abort_unless(strtoupper((string) ($account['currency'] ?? '')) === 'BDT', 422, __('Choose a BDT ad account. This form accepts budgets in Bangladeshi Taka only.'));
+
+            $pages = $this->graphGet('me/accounts', $token, [
+                'fields' => 'id,name,tasks',
+                'limit' => 100,
+            ])['data'] ?? [];
+            $page = collect($pages)->first(fn (array $item) => (string) ($item['id'] ?? '') === $data['page_id']);
+            abort_unless($page, 403, __('This Facebook Page is not accessible to the connected Meta user.'));
+
+            // Meta expects monetary values in the account currency's minor unit (poisha for BDT).
+            $budgetInPoisha = (int) $data['daily_budget_bdt'] * 100;
+            $accountPath = 'act_'.$accountId;
+
+            $campaign = Http::withToken($token)->asForm()->acceptJson()
+                ->post('https://graph.facebook.com/'.self::GRAPH_VERSION.'/'.$accountPath.'/campaigns', [
+                    'name' => $data['name'],
+                    'objective' => 'OUTCOME_TRAFFIC',
+                    'status' => 'PAUSED',
+                    'special_ad_categories' => '[]',
+                ])->throw()->json();
+            $campaignId = (string) ($campaign['id'] ?? '');
+            abort_if($campaignId === '', 502, __('Meta did not return a campaign ID.'));
+
+            $targeting = [
+                'geo_locations' => ['countries' => ['BD']],
+                'age_min' => (int) $data['age_min'],
+                'age_max' => (int) $data['age_max'],
+                'publisher_platforms' => ['facebook', 'instagram'],
+                'facebook_positions' => ['feed'],
+                'instagram_positions' => ['stream'],
+            ];
+
+            $adSet = Http::withToken($token)->asForm()->acceptJson()
+                ->post('https://graph.facebook.com/'.self::GRAPH_VERSION.'/'.$accountPath.'/adsets', [
+                    'name' => $data['name'].' - Bangladesh audience',
+                    'campaign_id' => $campaignId,
+                    'daily_budget' => $budgetInPoisha,
+                    'billing_event' => 'IMPRESSIONS',
+                    'optimization_goal' => 'LINK_CLICKS',
+                    'bid_strategy' => 'LOWEST_COST_WITHOUT_CAP',
+                    'destination_type' => 'WEBSITE',
+                    'targeting' => json_encode($targeting, JSON_THROW_ON_ERROR),
+                    'status' => 'PAUSED',
+                ])->throw()->json();
+            $adSetId = (string) ($adSet['id'] ?? '');
+            abort_if($adSetId === '', 502, __('Meta did not return an ad set ID.'));
+
+            $story = [
+                'page_id' => $data['page_id'],
+                'link_data' => [
+                    'link' => $data['destination_url'],
+                    'message' => $data['message'],
+                    'image_url' => $data['image_url'],
+                    'call_to_action' => [
+                        'type' => 'LEARN_MORE',
+                        'value' => ['link' => $data['destination_url']],
+                    ],
+                ],
+            ];
+            $creative = Http::withToken($token)->asForm()->acceptJson()
+                ->post('https://graph.facebook.com/'.self::GRAPH_VERSION.'/'.$accountPath.'/adcreatives', [
+                    'name' => $data['name'].' - creative',
+                    'object_story_spec' => json_encode($story, JSON_THROW_ON_ERROR),
+                ])->throw()->json();
+            $creativeId = (string) ($creative['id'] ?? '');
+            abort_if($creativeId === '', 502, __('Meta did not return an ad creative ID.'));
+
+            $ad = Http::withToken($token)->asForm()->acceptJson()
+                ->post('https://graph.facebook.com/'.self::GRAPH_VERSION.'/'.$accountPath.'/ads', [
+                    'name' => $data['name'].' - ad',
+                    'adset_id' => $adSetId,
+                    'creative' => json_encode(['creative_id' => $creativeId], JSON_THROW_ON_ERROR),
+                    'status' => 'PAUSED',
+                ])->throw()->json();
+            $adId = (string) ($ad['id'] ?? '');
+            abort_if($adId === '', 502, __('Meta did not return an ad ID.'));
+
+            \App\Models\MetaBoostCampaign::create([
+                'title' => $data['name'],
+                'destination_url' => $data['destination_url'],
+                'objective' => 'traffic',
+                'audience_description' => __('Age :min–:max, Facebook and Instagram feeds', ['min' => $data['age_min'], 'max' => $data['age_max']]),
+                'target_location' => 'Bangladesh',
+                'daily_budget_bdt' => $data['daily_budget_bdt'],
+                'status' => 'paused',
+                'meta_campaign_id' => $campaignId,
+                'meta_adset_id' => $adSetId,
+                'meta_creative_id' => $creativeId,
+                'meta_ad_id' => $adId,
+                'meta_page_id' => $data['page_id'],
+                'created_by' => $request->user()->id,
+                'notes' => __('Created from LMS. Campaign, ad set and ad are all PAUSED pending explicit approval.'),
+            ]);
+
+            return redirect()->route('admin.marketing.meta-ads.index', $redirect)
+                ->with('success', __('Meta campaign, ad set and ad created in PAUSED mode. Review the details before resuming; no ad is delivering now.'));
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return redirect()->route('admin.marketing.meta-ads.index', $redirect)
+                ->with('error', __('Meta could not finish creating the paused campaign. Check the account currency, Page permissions, image URL, budget minimum and Meta App Review status. Any objects already created remain paused.'));
+        }
+    }
+
     private function accessToken(): ?string
     {
         $encrypted = Setting::value('meta_ads_access_token');
