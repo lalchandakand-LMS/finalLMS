@@ -47,7 +47,7 @@ class InstructorAssessmentController extends Controller
     public function results(Request $request, Exam $exam): JsonResponse
     {
         $teacher = $request->user();
-        abort_unless($teacher?->isTeacher() || $teacher?->isAdmin(), 403);
+        abort_unless($teacher?->isTeacher(), 403);
         abort_unless($exam->batch()->where('teacher_id', $teacher->id)->exists(), 404);
 
         $attempts = $exam->attempts()
