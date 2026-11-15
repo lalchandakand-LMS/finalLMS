@@ -64,6 +64,8 @@ class ModuleRouteOwnershipTest extends TestCase
         $this->assertArrayHasKey('page_builder', config('modules'));
         $this->assertArrayHasKey('slider_builder', config('modules'));
         $this->assertArrayHasKey('carousel_builder', config('modules'));
+        $this->assertContains('admin.academic-levels.*', $routes['academic_levels']);
+        $this->assertArrayHasKey('academic_levels', config('modules'));
     }
 
     public function test_core_module_manager_routes_are_not_owned_by_business_plugins(): void
