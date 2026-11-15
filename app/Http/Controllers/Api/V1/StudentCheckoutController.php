@@ -9,7 +9,7 @@ use App\Models\Enrollment;
 use App\Models\FlashSale;
 use App\Models\Payment;
 use App\Models\Setting;
-use App\Services\Payments\BkashCheckoutService;
+use App\Services\Payments\PaymentGatewayManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -250,12 +250,12 @@ class StudentCheckoutController extends Controller
         };
     }
 
-    public function initiateBkash(Request $request, Course $course, BkashCheckoutService $bkash): JsonResponse
+    public function initiateBkash(Request $request, Course $course, PaymentGatewayManager $gateways): JsonResponse
     {
         $student = $request->user();
         abort_unless($student->isStudent(), 403);
         abort_unless($course->status === 'published', 404);
-        abort_unless((bool) (Setting::paymentMethods()['bkash']['enabled'] ?? false) && $this->isBkashConfigured(), 503, 'Online bKash checkout is not enabled or configured.');
+        abort_unless((bool) (Setting::paymentMethods()['bkash']['enabled'] ?? false) && $gateways->isAvailable('bkash'), 503, 'Online bKash checkout is not enabled or configured.');
 
         $hasOpenBatches = $course->batches()->where('status', 'open')->exists();
         $validated = $request->validate([
@@ -319,36 +319,19 @@ class StudentCheckoutController extends Controller
         });
 
         try {
-            $token = $bkash->grantToken();
-            $created = $bkash->createPayment(
-                $token,
-                number_format((float) $payment->amount, 2, '.', ''),
-                $payment->transaction_reference,
+            $checkout = $gateways->driver('bkash')->createCheckout(
+                $payment,
                 route('payments.bkash.callback'),
                 (string) $student->id
             );
-
-            $paymentId = $created['paymentID'] ?? null;
-            $checkoutUrl = $created['bkashURL'] ?? null;
-            $checkoutHost = is_string($checkoutUrl) ? parse_url($checkoutUrl, PHP_URL_HOST) : null;
-            $allowedHosts = ['tokenized.sandbox.bka.sh', 'tokenized.pay.bka.sh', 'checkout.sandbox.bka.sh', 'checkout.pay.bka.sh'];
-
-            if (($created['statusCode'] ?? null) !== '0000'
-                || ! is_string($paymentId) || $paymentId === ''
-                || ! is_string($checkoutUrl)
-                || parse_url($checkoutUrl, PHP_URL_SCHEME) !== 'https'
-                || ! in_array($checkoutHost, $allowedHosts, true)) {
-                throw new \RuntimeException('bKash returned an invalid checkout response.');
-            }
-
-            $payment->update(['gateway_payment_id' => $paymentId]);
+            $payment->update(['gateway_payment_id' => $checkout['payment_id']]);
 
             return response()->json([
                 'data' => [
                     'payment_id' => $payment->id,
                     'amount' => $payment->amount,
-                    'currency' => 'BDT',
-                    'checkout_url' => $checkoutUrl,
+                    'currency' => $payment->currency,
+                    'checkout_url' => $checkout['checkout_url'],
                     'status' => 'pending',
                 ],
             ], 201);
