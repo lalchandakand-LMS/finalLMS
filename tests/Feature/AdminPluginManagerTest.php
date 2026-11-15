@@ -73,7 +73,15 @@ class AdminPluginManagerTest extends TestCase
     {
         $zip = new ZipArchive();
         $this->assertTrue($zip->open($this->archivePath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === true);
-        $this->assertTrue($zip->addFromString('src/Plugin.php', '<?php return new class {};'));
+        $entrypoint = <<<'PHP'
+<?php
+
+return new class implements \App\Contracts\Plugins\PluginContract {
+    public function register(\App\Services\Plugins\PluginContext $context): void {}
+    public function boot(\App\Services\Plugins\PluginContext $context): void {}
+};
+PHP;
+        $this->assertTrue($zip->addFromString('src/Plugin.php', $entrypoint));
         $this->assertTrue($zip->close());
 
         $bytes = file_get_contents($this->archivePath);
@@ -100,7 +108,7 @@ class AdminPluginManagerTest extends TestCase
             ->assertOk()
             ->assertSee('Plugin Manager')
             ->assertSee('Install a signed plugin')
-            ->assertSee('Activation remains disabled');
+            ->assertSee('Activation checks file integrity');
 
         $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData())
             ->assertRedirect(route('admin.plugins.index'))
@@ -192,6 +200,70 @@ class AdminPluginManagerTest extends TestCase
             'version' => '1.0.0',
         ]);
         $this->assertDirectoryDoesNotExist($this->finalPath);
+    }
+
+
+    public function test_admin_can_activate_and_deactivate_a_verified_plugin(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+
+        $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData())
+            ->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+
+        $this->actingAs($admin)->post(route('admin.plugins.activate', 'aec.course-management'))
+            ->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'status' => 'active',
+        ]);
+        $this->assertDatabaseHas('activity_logs', [
+            'user_id' => $admin->id,
+            'event' => 'admin.plugins.activated',
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.plugins.deactivate', 'aec.course-management'))
+            ->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'status' => 'inactive',
+        ]);
+        $this->assertDatabaseHas('activity_logs', [
+            'user_id' => $admin->id,
+            'event' => 'admin.plugins.deactivated',
+        ]);
+    }
+
+    public function test_admin_cannot_activate_a_plugin_after_its_files_are_tampered_with(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+
+        $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData())
+            ->assertRedirect(route('admin.plugins.index'));
+
+        file_put_contents($this->finalPath.'/src/Plugin.php', '<?php echo "tampered";');
+
+        $this->actingAs($admin)->post(route('admin.plugins.activate', 'aec.course-management'))
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'status' => 'installed',
+        ]);
+    }
+
+    public function test_non_admin_cannot_activate_or_deactivate_plugins(): void
+    {
+        $student = User::factory()->create(['role' => 'student', 'email_verified_at' => now()]);
+
+        $this->actingAs($student)->post(route('admin.plugins.activate', 'aec.course-management'))->assertForbidden();
+        $this->actingAs($student)->post(route('admin.plugins.deactivate', 'aec.course-management'))->assertForbidden();
+        $this->assertDatabaseCount('plugin_registry', 0);
     }
 
     public function test_invalid_manifest_json_does_not_create_a_registry_record(): void

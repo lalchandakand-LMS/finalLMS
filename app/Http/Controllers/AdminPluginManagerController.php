@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\PluginInstallation;
+use App\Services\Plugins\PluginActivationService;
 use App\Services\Plugins\PluginUploadInstaller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -66,9 +67,77 @@ class AdminPluginManagerController extends Controller
 
         return redirect()->route('admin.plugins.index')->with(
             'success',
-            __('Plugin package verified and installed. Activation remains disabled until the isolated plugin runtime is complete.')
+            __('Plugin package verified and installed. Review dependencies and activate it when ready.')
         );
     }
+
+    public function activate(Request $request, string $pluginKey, PluginActivationService $activation): RedirectResponse
+    {
+        try {
+            $plugin = $activation->activate($pluginKey);
+        } catch (Throwable $exception) {
+            report($exception);
+            $this->recordLifecycleEvent($request, 'admin.plugins.activation_failed', 'Activation rejected for '.$pluginKey);
+
+            return back()->with(
+                'error',
+                $exception instanceof InvalidArgumentException
+                    ? $exception->getMessage()
+                    : __('Plugin activation preflight failed. Check package integrity, trusted key, dependencies and server logs.')
+            );
+        }
+
+        $this->recordLifecycleEvent(
+            $request,
+            'admin.plugins.activated',
+            'Activated plugin '.$plugin->plugin_key.' version '.$plugin->version
+        );
+
+        return redirect()->route('admin.plugins.index')->with('success', __('Plugin activated. Runtime verification will run on the next request.'));
+    }
+
+    public function deactivate(Request $request, string $pluginKey, PluginActivationService $activation): RedirectResponse
+    {
+        try {
+            $plugin = $activation->deactivate($pluginKey);
+        } catch (Throwable $exception) {
+            report($exception);
+            $this->recordLifecycleEvent($request, 'admin.plugins.deactivation_failed', 'Deactivation rejected for '.$pluginKey);
+
+            return back()->with(
+                'error',
+                $exception instanceof InvalidArgumentException
+                    ? $exception->getMessage()
+                    : __('Plugin deactivation failed. Check active dependents and server logs.')
+            );
+        }
+
+        $this->recordLifecycleEvent(
+            $request,
+            'admin.plugins.deactivated',
+            'Deactivated plugin '.$plugin->plugin_key.' version '.$plugin->version
+        );
+
+        return redirect()->route('admin.plugins.index')->with('success', __('Plugin deactivated. Its routes are now blocked.'));
+    }
+
+    private function recordLifecycleEvent(Request $request, string $event, string $description): void
+    {
+        try {
+            ActivityLog::create([
+                'user_id' => $request->user()->id,
+                'event' => $event,
+                'description' => mb_substr($description, 0, 500),
+                'method' => $request->method(),
+                'route' => $request->route()?->getName(),
+                'ip_address' => $request->ip(),
+                'user_agent' => substr((string) $request->userAgent(), 0, 1000),
+            ]);
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+    }
+
     private function recordFailure(Request $request): void
     {
         try {

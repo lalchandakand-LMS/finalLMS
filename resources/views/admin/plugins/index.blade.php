@@ -77,7 +77,7 @@
                         </td>
                         <td><code>{{ $plugin->version }}</code></td>
                         <td>{{ ucfirst($plugin->type) }}</td>
-                        <td><span class="badge {{ $plugin->status === 'installed' ? 'success' : 'warning' }}">{{ ucfirst(str_replace('_', ' ', $plugin->status)) }}</span></td>
+                        <td><span class="badge {{ in_array($plugin->status, ['installed', 'active', 'inactive'], true) ? 'success' : 'warning' }}">{{ ucfirst(str_replace('_', ' ', $plugin->status)) }}</span></td>
                         <td>{{ $plugin->signature_verified_at ? __('Verified') : __('Not verified') }}</td>
                         <td>{{ $plugin->installed_at?->format('Y-m-d H:i') ?? '—' }}</td>
                     </tr>
