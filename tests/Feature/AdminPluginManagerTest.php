@@ -76,9 +76,9 @@ class AdminPluginManagerTest extends TestCase
         $entrypoint = <<<'PHP'
 <?php
 
-return new class implements \\App\\Contracts\\Plugins\\PluginContract {
-    public function register(\\App\\Services\\Plugins\\PluginContext $context): void {}
-    public function boot(\\App\\Services\\Plugins\\PluginContext $context): void {}
+return new class implements \App\\Contracts\\Plugins\\PluginContract {
+    public function register(\App\\Services\\Plugins\\PluginContext $context): void {}
+    public function boot(\App\\Services\\Plugins\\PluginContext $context): void {}
 };
 PHP;
         $this->assertTrue($zip->addFromString('src/Plugin.php', $entrypoint));
