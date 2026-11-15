@@ -175,8 +175,17 @@ class MobileLessonVideoStreamingTest extends TestCase
 
     private function storeToken(User $user, string $plainToken, ?StudentDevice $device = null): ApiToken
     {
+        $device ??= StudentDevice::create([
+            'user_id' => $user->id,
+            'device_hash' => hash('sha256', Str::random(64)),
+            'device_name' => 'Mobile video test device',
+            'status' => 'approved',
+            'phone_verified_at' => now(),
+            'approved_at' => now(),
+        ]);
+
         return $user->apiTokens()->create([
-            'student_device_id' => $device?->id,
+            'student_device_id' => $device->id,
             'name' => 'Mobile video test',
             'token_hash' => hash('sha256', $plainToken),
             'expires_at' => now()->addDay(),
