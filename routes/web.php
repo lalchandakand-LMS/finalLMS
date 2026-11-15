@@ -382,6 +382,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::post('/invoices', [InvoiceController::class, 'store'])->name('admin.invoices.store');
         Route::post('/invoices/{invoice}/payments', [InvoiceController::class, 'receivePayment'])->name('admin.invoices.payments.store');
         Route::get('/academic-levels', [AcademicLevelController::class, 'index'])->name('admin.academic-levels.index');
+        Route::get('/academic-levels/{academicLevel}', [AcademicLevelController::class, 'show'])->name('admin.academic-levels.show');
         Route::post('/academic-levels', [AcademicLevelController::class, 'store'])->name('admin.academic-levels.store');
         Route::put('/academic-levels/{academicLevel}', [AcademicLevelController::class, 'update'])->name('admin.academic-levels.update');
         Route::delete('/academic-levels/{academicLevel}', [AcademicLevelController::class, 'destroy'])->name('admin.academic-levels.destroy');
