@@ -33,6 +33,10 @@ class StudentCheckoutController extends Controller
                 ->where('course_id', $course->id)->where('status', 'open')->firstOrFail();
         }
 
+        $hasOpenBatches = $course->batches()->where('status', 'open')->exists();
+        if ($batch) {
+            abort_unless($this->hasAvailableSeat($batch), 409, 'The selected batch is full or unavailable.');
+        }
         $openBatches = $course->batches()->where('status', 'open')
             ->orderBy('starts_at')
             ->get(['id', 'title', 'fee', 'capacity', 'starts_at', 'ends_at'])
@@ -62,7 +66,7 @@ class StudentCheckoutController extends Controller
                 'starts_at' => $openBatch->starts_at?->toIso8601String(),
                 'ends_at' => $openBatch->ends_at?->toIso8601String(),
             ])->values(),
-            'batch_required' => $openBatches->isNotEmpty() && ! $batch,
+            'batch_required' => $hasOpenBatches && ! $batch,
             'currency' => 'BDT',
             'base_amount' => round($base, 2),
             'discounted_amount' => round($amount, 2),
