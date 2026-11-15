@@ -429,6 +429,12 @@ class _StudentHomeState extends State<StudentHome> {
     ));
   }
 
+  Future<void> openNotices() async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => StudentNoticeBoardPage(api: widget.api),
+    ));
+  }
+
   Widget _courseCard(dynamic item) {
     final course = item as Map<String, dynamic>;
     final imageUrl = course['image_url']?.toString();
@@ -512,6 +518,11 @@ class _StudentHomeState extends State<StudentHome> {
           onPressed: openWishlist,
           icon: const Icon(Icons.favorite_outline),
           tooltip: 'My wishlist',
+        ),
+        IconButton(
+          onPressed: openNotices,
+          icon: const Icon(Icons.campaign_outlined),
+          tooltip: 'Notice board',
         ),
         IconButton(
           onPressed: openInvoices,
@@ -763,6 +774,166 @@ class _WishlistPageState extends State<WishlistPage> {
                         ),
                       ),
       );
+}
+
+class StudentNoticeBoardPage extends StatefulWidget {
+  const StudentNoticeBoardPage({required this.api, super.key});
+  final MobileApi api;
+
+  @override
+  State<StudentNoticeBoardPage> createState() => _StudentNoticeBoardPageState();
+}
+
+class _StudentNoticeBoardPageState extends State<StudentNoticeBoardPage> {
+  List<dynamic> notices = [];
+  bool loading = true;
+  String? error;
+  int unreadCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  Future<void> load() async {
+    if (mounted) setState(() { loading = true; error = null; });
+    try {
+      final response = await widget.api.get('/my/notices');
+      if (!mounted) return;
+      final meta = response['meta'] as Map<String, dynamic>? ?? {};
+      setState(() {
+        notices = response['data'] as List<dynamic>? ?? [];
+        unreadCount = (meta['unread_count'] as num?)?.toInt() ?? 0;
+      });
+    } catch (exception) {
+      if (mounted) setState(() => error = exception.toString());
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> openNotice(Map<String, dynamic> notice) async {
+    final id = (notice['id'] as num).toInt();
+    final wasRead = notice['is_read'] == true;
+    if (!wasRead) {
+      try {
+        await widget.api.post('/notices/$id/read');
+        if (mounted) {
+          setState(() {
+            notice['is_read'] = true;
+            unreadCount = (unreadCount - 1).clamp(0, 1 << 30);
+          });
+        }
+      } catch (exception) {
+        if (mounted) setState(() => error = exception.toString());
+      }
+    }
+    if (!mounted) return;
+    final buttonUrl = notice['button_url']?.toString() ?? '';
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(notice['title']?.toString() ?? 'Notice'),
+        content: SingleChildScrollView(
+          child: Text(notice['body']?.toString().trim().isNotEmpty == true
+              ? notice['body'].toString()
+              : 'No additional details.'),
+        ),
+        actions: [
+          if (buttonUrl.isNotEmpty && (notice['button_label']?.toString() ?? '').isNotEmpty)
+            TextButton(
+              onPressed: () async {
+                final uri = Uri.tryParse(buttonUrl);
+                if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) return;
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              },
+              child: Text(notice['button_label'].toString()),
+            ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      title: const Text('Notice Board'),
+      actions: [
+        IconButton(
+          onPressed: loading ? null : load,
+          tooltip: 'Refresh notices',
+          icon: const Icon(Icons.refresh),
+        ),
+      ],
+    ),
+    body: loading
+        ? const Center(child: CircularProgressIndicator())
+        : error != null && notices.isEmpty
+            ? Center(child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Text(error!),
+                  const SizedBox(height: 12),
+                  FilledButton(onPressed: load, child: const Text('Retry')),
+                ]),
+              ))
+            : RefreshIndicator(
+                onRefresh: load,
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    Card(
+                      child: ListTile(
+                        leading: const Icon(Icons.mark_email_unread_outlined),
+                        title: Text('$unreadCount unread notices'),
+                        subtitle: const Text('Academy and branch announcements for your account.'),
+                      ),
+                    ),
+                    if (notices.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(32),
+                        child: Center(child: Text('There are no active notices right now.')),
+                      ),
+                    ...notices.map((item) {
+                      final notice = item as Map<String, dynamic>;
+                      final isRead = notice['is_read'] == true;
+                      return Card(
+                        child: ListTile(
+                          leading: Icon(
+                            isRead ? Icons.mark_email_read_outlined : Icons.mark_email_unread_outlined,
+                            color: isRead ? null : Theme.of(context).colorScheme.primary,
+                          ),
+                          title: Text(
+                            notice['title']?.toString() ?? 'Notice',
+                            style: TextStyle(fontWeight: isRead ? FontWeight.normal : FontWeight.bold),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if ((notice['branch']?.toString() ?? '').isNotEmpty)
+                                Text(notice['branch'].toString()),
+                              const SizedBox(height: 4),
+                              Text(
+                                notice['body']?.toString() ?? '',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => openNotice(notice),
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+  );
 }
 
 class CourseDetailsPage extends StatefulWidget {
