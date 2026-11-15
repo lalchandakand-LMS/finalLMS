@@ -97,7 +97,13 @@
                                 <p class="muted" style="margin:5px 0;">{{ $campaign['objective'] ?? '—' }} · {{ $campaign['effective_status'] ?? $campaign['status'] ?? '—' }}</p>
                                 <small class="muted">{{ __('Campaign ID') }}: {{ $campaign['id'] }}</small>
                             </div>
-                            @if(!in_array($campaign['effective_status'] ?? $campaign['status'] ?? '', ['PAUSED', 'ARCHIVED', 'DELETED'], true))
+                            @if(($campaign['status'] ?? '') === 'PAUSED')
+                                <form method="POST" action="{{ route('admin.marketing.meta-ads.campaigns.resume', $campaign['id']) }}" onsubmit="return confirm('{{ __('Resume this campaign? It may start delivering ads and spend its configured budget. Continue only if you approve this spend.') }}')">
+                                    @csrf
+                                    <input type="hidden" name="account_id" value="{{ $selectedAccount }}">
+                                    <button class="btn primary" type="submit">{{ __('Resume campaign') }}</button>
+                                </form>
+                            @elseif(!in_array($campaign['effective_status'] ?? $campaign['status'] ?? '', ['PAUSED', 'ARCHIVED', 'DELETED'], true))
                                 <form method="POST" action="{{ route('admin.marketing.meta-ads.campaigns.pause', $campaign['id']) }}" onsubmit="return confirm('{{ __('Pause this Meta campaign now? This will stop its delivery.') }}')">
                                     @csrf
                                     <input type="hidden" name="account_id" value="{{ $selectedAccount }}">
