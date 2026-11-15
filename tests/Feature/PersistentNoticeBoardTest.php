@@ -41,7 +41,7 @@ class PersistentNoticeBoardTest extends TestCase
             ->assertSee('Student branch notice')
             ->assertSee('1 unread');
 
-        $this->assertDatabaseHas('dashboard_announcement_reads', [
+        $this->assertDatabaseMissing('dashboard_announcement_reads', [
             'announcement_id' => $notice->id,
             'user_id' => $student->id,
         ]);
