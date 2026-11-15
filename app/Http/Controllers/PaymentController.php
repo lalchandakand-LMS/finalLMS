@@ -353,9 +353,19 @@ class PaymentController extends Controller
                 }
 
                 foreach ($comboItems as $item) {
+                    if ($item->batch_id) {
+                        $batch = Batch::query()->lockForUpdate()->find($item->batch_id);
+                        if (! $batch || $batch->course_id !== $item->course_id
+                            || $batch->status !== 'open' || ! $this->hasAvailableSeat($batch, false)) {
+                            return 'full';
+                        }
+                    }
+                }
+
+                foreach ($comboItems as $item) {
                     Enrollment::firstOrCreate(
                         ['user_id' => $payment->user_id, 'course_id' => $item->course_id],
-                        ['status' => 'active']
+                        ['batch_id' => $item->batch_id, 'status' => 'active']
                     );
                 }
             } else {
@@ -370,6 +380,8 @@ class PaymentController extends Controller
                 'reviewed_by' => auth()->id(),
                 'reviewed_at' => now(),
             ]);
+            DB::table('coupon_redemptions')->where('payment_id', $payment->id)
+                ->where('status', 'reserved')->update(['status' => 'redeemed', 'redeemed_at' => now(), 'updated_at' => now()]);
 
             return 'approved';
         });
@@ -403,12 +415,20 @@ class PaymentController extends Controller
             return back()->with('info', 'This payment has already been reviewed.');
         }
 
-        $payment->update([
-            'status' => 'rejected',
-            'admin_note' => $validated['admin_note'] ?? null,
-            'reviewed_by' => auth()->id(),
-            'reviewed_at' => now(),
-        ]);
+        DB::transaction(function () use ($payment, $validated): void {
+            $locked = Payment::query()->lockForUpdate()->findOrFail($payment->id);
+            if ($locked->status !== 'pending') {
+                return;
+            }
+            $locked->update([
+                'status' => 'rejected',
+                'admin_note' => $validated['admin_note'] ?? null,
+                'reviewed_by' => auth()->id(),
+                'reviewed_at' => now(),
+            ]);
+            DB::table('coupon_redemptions')->where('payment_id', $locked->id)
+                ->where('status', 'reserved')->update(['status' => 'released', 'updated_at' => now()]);
+        });
 
         return back()->with('success', 'Payment rejected. The student can submit a corrected payment.');
     }
