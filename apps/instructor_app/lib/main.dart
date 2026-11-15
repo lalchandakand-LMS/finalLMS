@@ -337,7 +337,6 @@ class _InstructorHomeState extends State<InstructorHome> {
   }
 
   Future<void> showStudents(Map<String, dynamic> course) async {
-    final messenger = ScaffoldMessenger.of(context);
     try {
       final response = await widget.api.get("/instructor/courses/${course['slug']}/students");
       if (!context.mounted) {
@@ -521,7 +520,6 @@ class _InstructorHomeState extends State<InstructorHome> {
     if (payload == null) {
       return;
     }
-    final messenger = ScaffoldMessenger.of(context);
     try {
       await widget.api.postJson(
         '/instructor/batches/${payload.remove('batch_id')}/assignments',
@@ -535,7 +533,10 @@ class _InstructorHomeState extends State<InstructorHome> {
       );
       await load();
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.toString())));
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 
@@ -762,7 +763,6 @@ class _InstructorHomeState extends State<InstructorHome> {
   }
 
   Future<void> viewSubmissions(Map<String, dynamic> assignment) async {
-    final messenger = ScaffoldMessenger.of(context);
     try {
       final response = await widget.api.get(
         '/instructor/assignments/${assignment['id']}/submissions',
@@ -807,7 +807,10 @@ class _InstructorHomeState extends State<InstructorHome> {
         ),
       );
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.toString())));
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 
