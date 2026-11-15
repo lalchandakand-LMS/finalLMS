@@ -217,9 +217,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
         .where((item) => (item as Map<String, dynamic>)['key'] != 'bkash')
         .map((item) => item as Map<String, dynamic>)
         .toList();
-    final bkashEnabled = methods.any(
-      (item) => (item as Map<String, dynamic>)['key'] == 'bkash',
-    );
+    final bkashEnabled = data?['online_bkash_available'] == true &&
+        methods.any(
+          (item) => (item as Map<String, dynamic>)['key'] == 'bkash',
+        );
 
     return Scaffold(
       appBar: AppBar(title: const Text('Course checkout')),
