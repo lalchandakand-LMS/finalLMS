@@ -15,7 +15,10 @@ class PluginLifecycleTest extends TestCase
 
     private function plugin(array $overrides = []): PluginInstallation
     {
-        return PluginInstallation::query()->create(array_merge([
+        $signatureVerifiedAt = $overrides['signature_verified_at'] ?? null;
+        unset($overrides['signature_verified_at']);
+
+        $plugin = PluginInstallation::query()->create(array_merge([
             'plugin_key' => 'aec.course-management',
             'name' => 'Course Management',
             'version' => '1.0.0',
@@ -23,6 +26,12 @@ class PluginLifecycleTest extends TestCase
             'status' => 'discovered',
             'manifest' => ['schema_version' => 1, 'key' => 'aec.course-management'],
         ], $overrides));
+
+        if ($signatureVerifiedAt !== null) {
+            $plugin->forceFill(['signature_verified_at' => $signatureVerifiedAt])->save();
+        }
+
+        return $plugin;
     }
 
     public function test_registry_persists_manifest_and_lifecycle_status(): void
