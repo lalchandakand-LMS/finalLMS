@@ -128,6 +128,7 @@ final class PluginManifestValidator
     {
         return is_string($value)
             && strlen($value) <= 160
+            && str_contains($value, '.')
             && preg_match('/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/D', $value) === 1;
     }
 

@@ -65,6 +65,11 @@ final class PluginSignatureVerifier
         }
 
         $this->assertFinalPackagePath($finalRelativePath);
+        [$vendor, $slug] = explode('.', $manifest['key'], 2);
+        $expectedPath = 'plugins/'.$vendor.'/'.str_replace('.', '-', $slug).'/'.$manifest['version'];
+        if (! hash_equals($expectedPath, $finalRelativePath)) {
+            throw new InvalidArgumentException('Plugin destination path does not match its signed identity.');
+        }
         $payload = self::payloadForSignature($manifest, $checksum);
 
         try {
@@ -138,9 +143,17 @@ final class PluginSignatureVerifier
             throw new InvalidArgumentException('The staged plugin archive is not a regular file.');
         }
 
-        $root = realpath((string) config('plugins.staging_directory'));
+        $pluginsDirectory = base_path('plugins');
+        $stagingDirectory = (string) config('plugins.staging_directory');
+        if (is_link($pluginsDirectory) || is_link($stagingDirectory)) {
+            throw new InvalidArgumentException('The private plugins and staging directories must not be symbolic links.');
+        }
+
+        $pluginsRoot = realpath($pluginsDirectory);
+        $root = realpath($stagingDirectory);
         $real = realpath($path);
-        if ($root === false || $real === false) {
+        if ($pluginsRoot === false || $root === false || $real === false
+            || ! str_starts_with($root, rtrim($pluginsRoot, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR)) {
             throw new RuntimeException('The private plugin staging directory or archive does not exist.');
         }
 
