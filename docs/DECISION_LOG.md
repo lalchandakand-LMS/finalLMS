@@ -1,6 +1,6 @@
 # Owner Decision Log — Alom's English Center LMS
 
-Last consolidated: 2026-11-10
+Last consolidated: 2026-11-15
 
 This file records decisions that should not be casually reversed by a developer or AI agent. If the owner gives a newer explicit instruction, append a dated decision and update dependent documentation/code.
 
@@ -75,7 +75,6 @@ This file records decisions that should not be casually reversed by a developer 
 - AI agents must read these files and inspect actual source before coding. They must not invent implementation or CI status.
 - Preserve a dated history; do not erase previous decisions without recording why they changed.
 
-
 ## D-012 — Post-launch content and application updates
 - Routine website/LMS content and configuration (courses, lessons, homepage, pricing, flash sales, eBooks, notices, translations and supported settings) must be maintainable by Admin through existing no-code modules.
 - Application-code updates must use a trusted, versioned, signed release from the CI pipeline, not arbitrary ZIP uploads or arbitrary URLs.
@@ -94,8 +93,8 @@ This file records decisions that should not be casually reversed by a developer 
 - Student web/browser sign-in allows one approved browser device at a time. First browser device is activated after SMS OTP; additional or previously revoked devices require SMS OTP and Admin approval. Approving a new device revokes the previous approved browser device, and its server-side web session is invalidated on the next protected request.
 - The mobile API shares this approved-device registry. Student mobile login requires a secure 64-character installation ID; new/revoked devices require SMS OTP and additional devices require Admin approval. Student bearer tokens are bound to an approved device and are rejected/revoked if that device is no longer approved. Admin approval/revocation invalidates prior mobile tokens. Teacher API login remains password-based.
 - Flutter client UI/secure storage/polling implementation and real SMS delivery on staging remain separate acceptance checks.
-## D-015 — eBook store implementation tranche (2026-11-14)
 
+## D-015 — eBook store implementation tranche (2026-11-14)
 - The approved eBook/PDF store scope in D-007 was implemented in focused PR #124 and merged to `main` as `65c5e20b79bf9709ebd4a713552d9f531258cfe0`, without merging the stale broad commerce PR.
 - Paid eBook access must remain private and must be granted only after an Admin independently verifies the manual payment. Free eBooks may be fulfilled immediately.
 - A student must not be able to repeatedly check out an already-active entitlement to reset its download limit. Expired or exhausted entitlements may be repurchased.
@@ -103,3 +102,20 @@ This file records decisions that should not be casually reversed by a developer 
 - PR #124 is an implementation tranche, not a complete commerce system. It does not activate bKash/Nagad/SSLCommerz, automate payment verification, provide refunds/revocation UI, or satisfy staging/production acceptance.
 - Merge completed after exact-head Laravel CI, cPanel package verification, CodeQL and full diff review passed. Production rollout remains a separate release gate; isolated staging acceptance is still required.
 
+## D-016 — Universal plugin platform across all portals and builders (2026-11-15)
+- Replace the limited fixed allow-list Add-on Registry with a secure universal plugin platform using one private application-root `plugins/` directory.
+- Admin must be able to discover, install, configure, activate, deactivate, update and uninstall trusted plugins through a Plugin Manager, with compatibility/dependency checks, health status, version history and audit logs.
+- Plugin contract supports all five operational panels: unified Admin, Branch, Teacher, Student and Guardian, with declared portal scope and permission capabilities enforced server-side. Existing branch isolation and verified guardian-child privacy cannot be bypassed by plugins.
+- Plugin families include integrations (GA4, GTM, Meta Pixel, Google Search Console where supported, storage, SMS/email and payment providers), slider/post/course/page builders, portal modules and AI Builder/AI Developer.
+- Existing builders and integrations must be integrated/migrated without duplicating data models or breaking current content. AI output is draft-only until human approval; AI cannot autonomously install plugins, alter permissions, delete data, publish or deploy.
+- Install/update requires signed trusted packages, checksum and manifest verification, private staging, archive/path safety, compatibility/dependency checks and verified backup before data-changing migrations. Uninstall defaults to retaining plugin data; no silent destructive purge.
+- Plugin code is never served from public web root; no arbitrary unsigned PHP/JS execution, shell/Composer runtime install, or direct production activation.
+- Architecture and delivery contract: `docs/UNIVERSAL_PLUGIN_PLATFORM.md`; implementation tracked by Issue #241. This is an approved product direction, not a claim that the plugin runtime or installer is already implemented.
+
+## D-017 — Every optional LMS module is plugin-managed (2026-11-15)
+- Owner explicitly requires every optional module to be independently listed and managed through the universal Plugin Manager, not merely external integrations.
+- This includes SMS, Gmail/Google Workspace and other email adapters, OTP/account verification, Notice Board, notifications, AI Developer and AI Builder, course management, course creation/curriculum, lesson delivery, live classes, admission, branch, teacher, student, guardian, batch, attendance, exam/quiz, assignment, results, certificates, fees, payment adapters, eBooks, reports, support desk, CMS, homepage, sliders, posts/blog, page/forms/menu/popup builders, SEO, analytics, storage and backup adapters.
+- Each module declares its own portal availability, server-enforced permissions, dependencies, settings, health checks, lifecycle and data-retention policy. Providers are replaceable independently; disabling Gmail must not disable notices, and disabling SMS must not remove OTP or lock out all account recovery.
+- Course management, course creation, lesson delivery and live class remain distinct plugin entries with shared services and dependency declarations. Disabling one must not delete records or disable unrelated modules.
+- Core is limited to protected platform infrastructure: plugin runtime/registry, authentication and recovery primitives, authorization/policy enforcement, branch/guardian isolation, database integrity, audit/security logging, secrets encryption, rate limiting, private-file authorization and backup/update safety. These protected safeguards cannot be disabled or removed by plugins.
+- Full module inventory and acceptance definition: `docs/PLUGIN_MODULE_CATALOG.md`. The catalogue documents approved scope; it is not a claim that all listed plugins are implemented.
