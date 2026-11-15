@@ -113,7 +113,7 @@ class WebsiteBuilderTest extends TestCase
             ->assertSee('Posts')
             ->assertSee('Homepage slider')
             ->assertSee('Header navigation menu')
-            ->assertSee('Footer content & links');
+            ->assertSee('Footer content & links', false);
     }
 
     public function test_non_admin_cannot_access_website_builder(): void
@@ -180,7 +180,7 @@ class WebsiteBuilderTest extends TestCase
         ])->assertSessionHasErrors('homepage_template');
     }
 
-    public function test_homepage_builder_offers_exactly_fifteen_design_presets(): void
+    public function test_homepage_builder_offers_exactly_sixteen_design_presets(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
 
