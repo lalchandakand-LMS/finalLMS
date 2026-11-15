@@ -62,21 +62,6 @@ final class AssistantService
             ]);
         }
 
-        $budget = $settings->monthly_token_budget;
-        $responseTokenLimit = (int) $settings->max_tokens;
-        if ($budget !== null) {
-            $used = (int) DB::table('ai_assistant_usage')->where('user_id', $user->id)
-                ->where('created_at', '>=', now()->startOfMonth())->sum('total_tokens');
-            $estimatedPromptTokens = 0;
-            foreach ($messages ?? [] as $unused) {
-                // The prompt is assembled below; this placeholder is intentionally not used.
-            }
-            if ($used >= (int) $budget) {
-                throw new RuntimeException('The monthly AI token budget for this account has been reached.');
-            }
-            $responseTokenLimit = min($responseTokenLimit, max(1, (int) $budget - $used));
-        }
-
         DB::table('ai_assistant_messages')->insert([
             'conversation_id' => $conversationId,
             'user_id' => $user->id,
@@ -94,6 +79,22 @@ final class AssistantService
         ]];
         foreach ($history as $item) {
             $messages[] = ['role' => $item->role, 'content' => $item->content];
+        }
+
+        $budget = $settings->monthly_token_budget;
+        $responseTokenLimit = (int) $settings->max_tokens;
+        if ($budget !== null) {
+            $used = (int) DB::table('ai_assistant_usage')->where('user_id', $user->id)
+                ->where('created_at', '>=', now()->startOfMonth())->sum('total_tokens');
+            $estimatedPromptTokens = 0;
+            foreach ($messages as $promptMessage) {
+                $estimatedPromptTokens += (int) ceil(mb_strlen((string) $promptMessage['content']) / 3);
+            }
+            $available = (int) $budget - $used - $estimatedPromptTokens;
+            if ($available < 1) {
+                throw new RuntimeException('The monthly AI token budget for this account has been reached.');
+            }
+            $responseTokenLimit = min($responseTokenLimit, $available);
         }
 
         $response = Http::withToken($apiKey)->acceptJson()->timeout(35)->post('https://api.openai.com/v1/chat/completions', [
