@@ -27,13 +27,14 @@ class AdminDeviceSessionManagementTest extends TestCase
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
         $student = User::factory()->create(['role' => 'student']);
+        $signedInAt = now()->subHour();
         $session = DeviceSession::create([
             'user_id' => $student->id,
             'session_hash' => hash('sha256', 'student-browser-session'),
             'device_name' => 'Android · Chrome',
             'user_agent' => 'Android Chrome',
             'ip_address' => '203.0.113.10',
-            'logged_in_at' => now()->subHour(),
+            'logged_in_at' => $signedInAt,
             'last_seen_at' => now(),
         ]);
 
@@ -41,7 +42,9 @@ class AdminDeviceSessionManagementTest extends TestCase
             ->get(route('admin.security.sessions.index'))
             ->assertOk()
             ->assertSee($student->email)
-            ->assertSee('Android');
+            ->assertSee('Android')
+            ->assertSee('Signed in')
+            ->assertSee($signedInAt->format('d M Y, h:i A'));
 
         $this->actingAs($admin)
             ->patch(route('admin.security.sessions.revoke', $session))

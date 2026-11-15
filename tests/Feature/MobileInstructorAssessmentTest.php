@@ -91,7 +91,7 @@ class MobileInstructorAssessmentTest extends TestCase
             ->assertForbidden();
         $this->withToken($this->token(User::factory()->create(['role' => 'admin'])))
             ->getJson('/api/v1/instructor/exams/'.$exam->id.'/results')
-            ->assertForbidden();
+            ->assertUnauthorized();
     }
 
     private function fixture(): array
@@ -126,7 +126,7 @@ class MobileInstructorAssessmentTest extends TestCase
     {
         $plain = Str::random(80);
         $device = null;
-        if ($user->isStudent()) {
+        if (in_array($user->role, ['student', 'teacher'], true)) {
             $device = StudentDevice::create([
                 'user_id' => $user->id,
                 'device_hash' => hash('sha256', Str::random(64)),

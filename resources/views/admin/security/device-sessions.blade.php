@@ -39,9 +39,9 @@
     </form>
 
     <div style="overflow-x:auto;">
-        <table style="width:100%;min-width:900px;border-collapse:collapse;">
+        <table style="width:100%;min-width:1040px;border-collapse:collapse;">
             <thead><tr style="text-align:left;border-bottom:1px solid var(--border);">
-                <th style="padding:10px;">{{ __('Account') }}</th><th>{{ __('Role / branch') }}</th><th>{{ __('Device') }}</th><th>{{ __('IP address') }}</th><th>{{ __('Last activity') }}</th><th>{{ __('Status') }}</th><th>{{ __('Action') }}</th>
+                <th style="padding:10px;">{{ __('Account') }}</th><th>{{ __('Role / branch') }}</th><th>{{ __('Device') }}</th><th>{{ __('IP address') }}</th><th>{{ __('Signed in') }}</th><th>{{ __('Last activity') }}</th><th>{{ __('Status') }}</th><th>{{ __('Action') }}</th>
             </tr></thead>
             <tbody>
             @forelse($sessions as $session)
@@ -51,6 +51,7 @@
                     <td>{{ ucfirst(str_replace('_', ' ', $session->user->role)) }}<br><small class="muted">{{ $session->user->branch?->name ?? '—' }}</small></td>
                     <td>{{ $session->device_name ?? '—' }}</td>
                     <td>{{ $session->ip_address ?? '—' }}</td>
+                    <td>{{ $session->logged_in_at?->format('d M Y, h:i A') ?? '—' }}</td>
                     <td>{{ $session->last_seen_at?->format('d M Y, h:i A') ?? '—' }}</td>
                     <td><span class="badge {{ $session->revoked_at ? 'warning' : ($isActive ? 'success' : 'secondary') }}">{{ $session->revoked_at ? __('Revoked') : ($isActive ? __('Active') : __('Expired')) }}</span></td>
                     <td>
@@ -65,7 +66,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="7" class="muted" style="padding:18px;">{{ __('No tracked sessions yet. Sessions are recorded when users sign in again.') }}</td></tr>
+                <tr><td colspan="8" class="muted" style="padding:18px;">{{ __('No tracked sessions yet. Sessions are recorded when users sign in again.') }}</td></tr>
             @endforelse
             </tbody>
         </table>

@@ -23,7 +23,7 @@ class AuthController extends Controller
             'email' => ['required', 'email', 'max:255'],
             'password' => ['required', 'string', 'max:200'],
             'device_name' => ['required', 'string', 'min:2', 'max:100'],
-            'device_id' => ['nullable', 'string', 'regex:/^[a-f0-9]{64}$/'],
+            'device_id' => ['required', 'string', 'regex:/^[a-f0-9]{64}$/'],
         ]);
 
         $user = User::query()->where('email', $validated['email'])->first();
@@ -35,16 +35,12 @@ class AuthController extends Controller
             return response()->json(['message' => 'This account cannot use the mobile applications.'], 403);
         }
 
-        if ($user->isTeacher()) {
-            return $this->issueToken($user, null, $validated['device_name']);
-        }
-
         if (! $user->phone_number) {
-            return response()->json(['message' => 'A verified mobile number is required. Contact the academy administrator.'], 422);
+            return response()->json(['message' => 'A registered mobile number is required for device verification. Contact the academy administrator.'], 422);
         }
 
         if (empty($validated['device_id'])) {
-            return response()->json(['message' => 'A secure mobile installation identifier is required for student sign-in.'], 422);
+            return response()->json(['message' => 'A secure mobile installation identifier is required for sign-in.'], 422);
         }
 
         $deviceHash = hash('sha256', $validated['device_id']);
@@ -53,7 +49,7 @@ class AuthController extends Controller
             ->where('device_hash', $deviceHash)
             ->first();
 
-        if ($device?->status === 'approved') {
+        if ($device?->status === 'approved' && $device->phone_verified_at) {
             DB::transaction(function () use ($user, $device): void {
                 User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
                 StudentDevice::query()
@@ -115,7 +111,7 @@ class AuthController extends Controller
         });
 
         try {
-            $sms->send($user->phone_number, "Alom's English Center: Your mobile app login code is {$otp}. It expires in 10 minutes.");
+            $sms->send($user->phone_number, "Alom's English Center: Your mobile app login verification code is {$otp}. It expires in 10 minutes.");
         } catch (Throwable $exception) {
             $device->forceFill([
                 'status' => 'sms_failed',
@@ -160,24 +156,24 @@ class AuthController extends Controller
             return response()->json(['message' => 'Too many incorrect codes. Start a new login after the cooldown.'], 429);
         }
 
-        if ($device->status !== 'pending_phone_verification'
-            || ! $device->phone_otp_hash
-            || ! $device->phone_otp_expires_at?->isFuture()
-            || ! Hash::check($validated['code'], $device->phone_otp_hash)) {
-            RateLimiter::hit($key, 600);
-
-            return response()->json(['message' => 'The verification code is invalid or expired.'], 422);
-        }
-
-        $result = DB::transaction(function () use ($device): string {
+        $result = DB::transaction(function () use ($device, $validated, $challengeHash): string {
             User::query()->whereKey($device->user_id)->lockForUpdate()->firstOrFail();
             $locked = StudentDevice::query()->whereKey($device->id)->lockForUpdate()->firstOrFail();
 
             if ($locked->status !== 'pending_phone_verification'
-                || ! $locked->phone_otp_hash
-                || ! $locked->phone_otp_expires_at?->isFuture()
-                || ! $locked->api_challenge_expires_at?->isFuture()) {
+                || ! $locked->api_challenge_expires_at?->isFuture()
+                || ! hash_equals((string) $locked->api_challenge_hash, $challengeHash)) {
                 return 'expired';
+            }
+
+            if (! $locked->phone_otp_hash || ! $locked->phone_otp_expires_at?->isFuture()) {
+                return 'invalid';
+            }
+
+            // Re-check the OTP against the locked, latest row to prevent a stale
+            // verification request from consuming a newly-issued challenge.
+            if (! Hash::check($validated['code'], $locked->phone_otp_hash)) {
+                return 'invalid';
             }
 
             $hasPriorDevice = StudentDevice::query()
@@ -201,6 +197,12 @@ class AuthController extends Controller
 
             return $requiresAdminApproval ? 'approval_required' : 'approved';
         });
+
+        if ($result === 'invalid') {
+            RateLimiter::hit($key, 600);
+
+            return response()->json(['message' => 'The verification code is invalid or expired.'], 422);
+        }
 
         RateLimiter::clear($key);
 
@@ -285,6 +287,7 @@ class AuthController extends Controller
                     ->whereKey($device->id)
                     ->where('user_id', $user->id)
                     ->where('status', 'approved')
+                    ->whereNotNull('phone_verified_at')
                     ->lockForUpdate()
                     ->firstOrFail();
 
