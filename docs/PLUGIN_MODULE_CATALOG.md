@@ -116,3 +116,11 @@ Each plugin declares one or more of: `admin`, `branch`, `teacher`, `student`, `g
 A catalogue entry is not a completed plugin. A module is complete only after its package, manifest, lifecycle, settings, permissions, health checks, full workflow, bilingual UI, tests and cPanel packaging are delivered. Deactivation tests must prove all entry points are blocked. Uninstall must retain data by default and provide a reviewed backup/data-retention report. Provider activation additionally requires official documentation and sandbox/merchant acceptance.
 
 Implementation order: core registry and runtime → safe lifecycle manager → migrate first-party modules in dependency order → communication/identity adapters → academic modules and builders → integrations → AI plugins → full security/regression and staging acceptance.
+
+
+## Popup Ads & Campaigns (first-party plugin)
+- Canonical plugin key: `popup_ads`; package source belongs in the private `plugins/` tree.
+- Admin-managed campaigns support safe rich text, images/banners, image-only or text-only creative, custom HTTPS or same-site destinations, CTA labels, preview, schedule, audience/portal targeting, priority, responsive layouts and frequency caps.
+- Campaign delivery and analytics are independently enabled; disabling the plugin hides visitor-facing campaigns without deleting campaign data.
+- Existing Visitor Popup CRUD and rendering are the legacy implementation to migrate into this plugin. Do not create a parallel popup table, route family or competing frontend renderer.
+- Never render raw administrator HTML. Sanitize allowed formatting and reject scripts, event attributes, unsafe URL schemes, embedded objects and untrusted remote scripts.
