@@ -33,8 +33,7 @@ final class PluginLifecycle
         }
 
         $allowedAttributes = [
-            'name', 'version', 'type', 'manifest', 'package_sha256',
-            'signature_key_id', 'package_path', 'health_status',
+            'health_status',
             'health_message', 'last_health_check_at', 'installed_at',
             'activated_at', 'metadata',
         ];
