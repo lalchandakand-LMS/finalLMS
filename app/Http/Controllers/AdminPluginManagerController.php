@@ -9,6 +9,7 @@ use App\Services\Plugins\PluginUploadInstaller;
 use App\Services\Plugins\PluginUninstaller;
 use App\Services\Plugins\PluginDeactivator;
 use App\Services\Plugins\PluginSettingsManager;
+use App\Services\Plugins\PluginHealthChecker;
 use App\Services\Modules\ModuleRegistry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -77,6 +78,27 @@ class AdminPluginManagerController extends Controller
             __('Plugin package verified and installed. Activation remains disabled until the isolated plugin runtime is complete.')
         );
     }
+    public function healthCheck(Request $request, PluginInstallation $plugin, PluginHealthChecker $checker): RedirectResponse
+    {
+        $checked = $checker->check($plugin);
+
+        ActivityLog::create([
+            'user_id' => $request->user()->id,
+            'event' => 'admin.plugins.health_checked',
+            'description' => 'Plugin health check '.$checked->health_status.' for '.$checked->plugin_key.'.',
+            'method' => $request->method(),
+            'route' => $request->route()?->getName(),
+            'ip_address' => $request->ip(),
+            'user_agent' => substr((string) $request->userAgent(), 0, 1000),
+        ]);
+
+        if ($checked->health_status !== 'healthy') {
+            return back()->with('error', __('Plugin health check failed. The package must remain inactive pending review.'));
+        }
+
+        return back()->with('success', __('Plugin package integrity and signing trust verified.'));
+    }
+
     public function updateSettings(Request $request, PluginInstallation $plugin, PluginSettingsManager $settings): RedirectResponse
     {
         $validator = Validator::make($request->all(), [
