@@ -115,6 +115,23 @@ class SeoAndSearchConsoleTest extends TestCase
             ->assertDontSee('connect.facebook.net', false);
     }
 
+    public function test_admin_marketing_center_shows_tracking_and_search_endpoints(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        Setting::setValue('facebook_pixel_id', '123456789012345');
+        Setting::setValue('google_analytics_id', 'G-ABC12345');
+
+        $this->actingAs($admin)
+            ->get(route('admin.marketing.index'))
+            ->assertOk()
+            ->assertSee('Marketing &amp; Boost Center', false)
+            ->assertSee('Meta Pixel')
+            ->assertSee('123456789012345')
+            ->assertSee('G-ABC12345')
+            ->assertSee(route('seo.sitemap'), false)
+            ->assertSee('adsmanager.facebook.com', false);
+    }
+
     public function test_sitemap_does_not_include_admin_paths(): void
     {
         $this->get('/sitemap.xml')
