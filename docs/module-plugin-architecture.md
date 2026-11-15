@@ -23,7 +23,7 @@ The manifest separates organization and people (branches, students, teachers, gu
 - The admin Module Manager exposes lifecycle state and records changes in the activity log.
 
 ## Important implementation boundary
-The first-stage registry now includes a route-ownership map and a global route guard for mapped web and API route names. This allows a disabled module's mapped routes to return 404 while preserving the Core Module Manager. The map is an incremental migration artifact: routes not yet assigned in config/module_routes.php remain unaffected and must be mapped before a module can be considered fully isolated.
+The registry includes route-ownership maps for named web routes (config/module_routes.php) and URI-based API routes (config/module_route_uris.php). A shared web/API middleware guard blocks mapped routes with 404 when any owning module is disabled, while preserving the Core Module Manager. The maps are an incremental migration artifact: routes not yet assigned remain unaffected and must be mapped before a module can be considered fully isolated.
 
 A module shown as enabled is not proof that an external provider is configured or live.
 
