@@ -12,6 +12,7 @@ use App\Services\Plugins\PluginSettingsManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Validator;
 use InvalidArgumentException;
 use Throwable;
 
