@@ -18,7 +18,7 @@ class StudentSupportTicketController extends Controller
 
         $tickets = SupportTicket::query()
             ->where('user_id', $student->id)
-            ->with('latestMessage')
+            ->with(['latestMessage', 'branch:id,name'])
             ->latest('last_message_at')
             ->paginate(15);
 
@@ -62,7 +62,7 @@ class StudentSupportTicketController extends Controller
 
         return response()->json([
             'message' => 'Your support request has been submitted.',
-            'data' => $this->ticketData($ticket->load('latestMessage')),
+            'data' => $this->ticketData($ticket->load(['latestMessage', 'branch'])),
         ], 201);
     }
 
