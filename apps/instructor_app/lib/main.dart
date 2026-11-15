@@ -344,10 +344,11 @@ class _InstructorHomeState extends State<InstructorHome> {
         return;
       }
       final students = response['data'] as List<dynamic>? ?? [];
+      final titleStyle = Theme.of(pageContext).textTheme.titleLarge;
       showModalBottomSheet<void>(context: pageContext, builder: (sheetContext) => SafeArea(child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text('Students — ${course['title']}', style: Theme.of(sheetContext).textTheme.titleLarge),
+          Text('Students — ${course['title']}', style: titleStyle),
           ...students.map((item) {
             final student = item['student'] as Map<String, dynamic>;
             return ListTile(title: Text(student['name']?.toString() ?? 'Student'), subtitle: Text(student['email']?.toString() ?? ''));
@@ -559,7 +560,7 @@ class _InstructorHomeState extends State<InstructorHome> {
       context: pickerContext,
       initialTime: TimeOfDay.fromDateTime(initial),
     );
-    if (!pickerContext.mounted) {
+    if (!mounted) {
       return null;
     }
     if (time == null) {
