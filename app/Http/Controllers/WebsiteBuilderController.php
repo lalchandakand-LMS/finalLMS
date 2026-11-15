@@ -420,6 +420,7 @@ class WebsiteBuilderController extends Controller
     public static function homepageTemplates(): array
     {
         return [
+            'redwans-method' => ['label' => "Redwan’s Method", 'description' => 'Reference homepage layout with a dark teal hero area, batch and statistics panels, pastel learning paths, dual student-review carousels and a multi-column footer.'],
             'academy-modern' => ['label' => 'Academy Modern', 'description' => 'Balanced academy layout with a clear learning-first hero.'],
             'bold-academy' => ['label' => 'Bold Academy', 'description' => 'Large typography and high-contrast calls to action.'],
             'minimal-learning' => ['label' => 'Minimal Learning', 'description' => 'Quiet whitespace and reduced visual decoration.'],
