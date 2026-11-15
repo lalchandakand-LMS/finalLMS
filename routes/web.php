@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AcademicLevelController;
 use App\Http\Controllers\AddonRegistryController;
 use App\Http\Controllers\AdminModuleRegistryController;
 use App\Http\Controllers\AdminPaymentGatewayController;
