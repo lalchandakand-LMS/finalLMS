@@ -286,7 +286,7 @@ class StudentDeviceAccessController extends Controller
             ->where('device_hash', $deviceHash)
             ->first();
 
-        if ($device?->status === 'approved') {
+        if ($device?->status === 'approved' && $device->phone_verified_at) {
             $hasAnotherApprovedDevice = StudentDevice::query()
                 ->where('user_id', $user->id)
                 ->where('id', '!=', $device->id)
