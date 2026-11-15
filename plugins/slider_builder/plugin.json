@@ -24,7 +24,10 @@
     "website.sliders.update",
     "website.sliders.publish"
   ],
-  "routes": [],
+  "routes": [
+    "admin.sliders.*",
+    "sliders.*"
+  ],
   "settings": [],
   "events": [],
   "directory": "plugins/slider_builder",
