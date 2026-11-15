@@ -257,9 +257,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       ],
                       if (batchRequired)
                         _statusCard(
-                          'Batch selection required',
-                          'Choose an available batch to see the correct price and continue.',
-                          Icons.event_available,
+                          hasBatches ? 'Batch selection required' : 'No available batch seats',
+                          hasBatches
+                              ? 'Choose an available batch to see the correct price and continue.'
+                              : 'All open batches are currently full. Please contact the academy or try again later.',
+                          Icons.event_busy,
                         )
                       else if (data != null) ...[
                         Card(
