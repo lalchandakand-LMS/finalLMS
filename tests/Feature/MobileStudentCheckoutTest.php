@@ -1,18 +1,18 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use App\\Models\\ApiToken;
-use App\\Models\\Batch;
-use App\\Models\\Branch;
-use App\\Models\\Course;
-use App\\Models\\Payment;
-use App\\Models\\Setting;
-use App\\Models\\StudentDevice;
-use App\\Models\\User;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Illuminate\\Support\\Str;
-use Tests\\TestCase;
+use App\Models\ApiToken;
+use App\Models\Batch;
+use App\Models\Branch;
+use App\Models\Course;
+use App\Models\Payment;
+use App\Models\Setting;
+use App\Models\StudentDevice;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
+use Tests\TestCase;
 
 class MobileStudentCheckoutTest extends TestCase
 {
