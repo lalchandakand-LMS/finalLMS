@@ -234,6 +234,7 @@ class MobileApi {
     String path,
     Map<String, String> fields, {
     PlatformFile? attachment,
+    String fileField = 'attachment',
   }) async {
     final token = await readToken();
     if (token == null) {
@@ -250,7 +251,7 @@ class MobileApi {
     if (attachment != null) {
       final bytes = await attachment.readAsBytes();
       request.files.add(http.MultipartFile.fromBytes(
-        'attachment',
+        fileField,
         bytes,
         filename: attachment.name,
       ));
@@ -321,6 +322,46 @@ class MobileApi {
       await storage.delete(key: _tokenKey);
     }
     return _decode(response);
+  }
+
+  Future<Map<String, dynamic>> checkoutQuote(
+    String slug, {
+    int? batchId,
+  }) {
+    final query = batchId == null ? '' : '?batch_id=$batchId';
+    return get('/courses/${Uri.encodeComponent(slug)}/checkout$query');
+  }
+
+  Future<Map<String, dynamic>> submitManualCheckout(
+    String slug, {
+    int? batchId,
+    required String paymentMethod,
+    required String transactionReference,
+    String? senderAccount,
+    PlatformFile? proof,
+  }) {
+    return postMultipart(
+      '/courses/${Uri.encodeComponent(slug)}/checkout',
+      {
+        if (batchId != null) 'batch_id': batchId.toString(),
+        'payment_method': paymentMethod,
+        'transaction_reference': transactionReference,
+        if (senderAccount != null && senderAccount.trim().isNotEmpty)
+          'sender_account': senderAccount.trim(),
+      },
+      attachment: proof,
+      fileField: 'proof',
+    );
+  }
+
+  Future<Map<String, dynamic>> startBkashCheckout(
+    String slug, {
+    int? batchId,
+  }) {
+    return postJson(
+      '/courses/${Uri.encodeComponent(slug)}/checkout/bkash',
+      {if (batchId != null) 'batch_id': batchId},
+    );
   }
 
   Future<void> logout() async {
