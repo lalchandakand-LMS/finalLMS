@@ -20,7 +20,8 @@ return new class extends Migration
     {
         $hasHistory = Schema::hasTable('ai_assistant_conversations') && DB::table('ai_assistant_conversations')->exists();
         $hasMessages = Schema::hasTable('ai_assistant_messages') && DB::table('ai_assistant_messages')->exists();
-        if ($hasHistory || $hasMessages) {
+        $hasSettings = Schema::hasTable('ai_assistant_settings') && DB::table('ai_assistant_settings')->exists();
+        if ($hasHistory || $hasMessages || $hasSettings) {
             throw new RuntimeException('AI assistant history exists. Export or explicitly erase retained AI data before rolling back retention settings.');
         }
 
