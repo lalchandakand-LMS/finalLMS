@@ -99,6 +99,8 @@ Route::post('/news/{post:slug}/comments', [CommentController::class, 'storePost'
 Route::post('/courses/{course}/comments', [CommentController::class, 'storeCourse'])->middleware(['auth', 'throttle:5,1'])->name('courses.comments.store');
 Route::post('/language', [LocaleController::class, 'update'])->middleware('throttle:20,1')->name('locale.update');
 Route::get('/payments/bkash/callback', [BkashPaymentController::class, 'callback'])->middleware('throttle:30,1')->name('payments.bkash.callback');
+Route::get('/student/invoices/{invoice}/print', [\\App\\Http\\Controllers\\Api\\V1\\StudentInvoiceController::class, 'printInvoice'])->middleware(['signed', 'throttle:30,1'])->name('student.invoices.print');
+Route::get('/student/invoices/{invoice}/payments/{payment}/print', [\\App\\Http\\Controllers\\Api\\V1\\StudentInvoiceController::class, 'printReceipt'])->middleware(['signed', 'throttle:30,1'])->name('student.invoices.receipts.print');
 
 Route::get('/flash-sale', [FlashSaleController::class, 'publicIndex'])->name('flash-sales.public');
 Route::get('/contests', [QuizContestController::class, 'index'])->name('contests.index');
