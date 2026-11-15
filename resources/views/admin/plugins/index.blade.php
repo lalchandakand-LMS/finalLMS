@@ -111,6 +111,13 @@
                         <td>{{ $plugin->signature_verified_at ? __('Verified') : __('Not verified') }}</td>
                         <td>{{ $plugin->installed_at?->format('Y-m-d H:i') ?? '—' }}</td>
                         <td>
+                            @if(in_array($plugin->status, ['installed', 'active', 'inactive'], true))
+                                <form method="POST" action="{{ route('admin.plugins.health-check', $plugin) }}" style="margin-bottom:8px;">
+                                    @csrf
+                                    <button class="btn secondary" type="submit">{{ __('Run health check') }}</button>
+                                </form>
+                                <small class="muted">{{ __('Health:') }} {{ ucfirst($plugin->health_status) }}</small>
+                            @endif
                             @if($plugin->status === 'active')
                                 <form method="POST" action="{{ route('admin.plugins.deactivate', $plugin) }}">
                                     @csrf
