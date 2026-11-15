@@ -59,6 +59,20 @@ return [
     'student_mobile_app' => ['name' => 'Student Mobile App', 'description' => 'Student application API capabilities and app services.', 'type' => 'module', 'dependencies' => ['core', 'mobile_api', 'student_portal']],
     'instructor_mobile_app' => ['name' => 'Instructor Mobile App', 'description' => 'Instructor application API capabilities and app services.', 'type' => 'module', 'dependencies' => ['core', 'mobile_api', 'teacher_management']],
 
+    // Independent first-party builders and AI modules.
+    'course_builder' => ['name' => 'Course Create & Curriculum Builder', 'description' => 'Course authoring, curriculum, lessons, resources and publishing tools.', 'type' => 'module', 'dependencies' => ['core', 'course_management', 'lesson_management']],
+    'course_content_studio' => ['name' => 'Course Content Studio', 'description' => 'Reusable course posts, learning blocks and content authoring.', 'type' => 'module', 'dependencies' => ['core', 'course_management', 'lesson_management']],
+    'blog_post_builder' => ['name' => 'Post & Blog Builder', 'description' => 'News, blog posts, categories, tags, comments and SEO authoring.', 'type' => 'module', 'dependencies' => ['core', 'website_cms']],
+    'page_builder' => ['name' => 'Page & Landing Builder', 'description' => 'Reusable page sections, landing pages, preview and publishing.', 'type' => 'module', 'dependencies' => ['core', 'website_cms']],
+    'ai_builder' => ['name' => 'AI Builder', 'description' => 'Draft website, course, quiz, notice and content assets for human review.', 'type' => 'module', 'dependencies' => ['core', 'identity']],
+    'ai_developer' => ['name' => 'AI Developer', 'description' => 'Permission-scoped diagnostics and development assistance.', 'type' => 'module', 'dependencies' => ['core', 'identity']],
+
+    // Independent verification workflows and delivery adapters.
+    'otp_verification' => ['name' => 'OTP Verification', 'description' => 'Provider-neutral OTP workflow, expiry, replay protection and throttling.', 'type' => 'module', 'dependencies' => ['core', 'identity', 'communications']],
+    'sms_otp' => ['name' => 'SMS OTP Adapter', 'description' => 'Deliver OTP through an enabled SMS provider.', 'type' => 'module', 'dependencies' => ['core', 'otp_verification', 'sms']],
+    'email_otp' => ['name' => 'Email OTP Adapter', 'description' => 'Deliver OTP through enabled email providers.', 'type' => 'module', 'dependencies' => ['core', 'otp_verification', 'email']],
+    'gmail' => ['name' => 'Gmail / Google Workspace Adapter', 'description' => 'Google OAuth/API email delivery connector, separate from generic email.', 'type' => 'module', 'dependencies' => ['core', 'email']],
+
     // Extensible third-party connections.
     'integrations' => ['name' => 'External Integrations', 'description' => 'Allow-listed Google, Meta and third-party connectors.', 'type' => 'module', 'dependencies' => ['core']],
 ];
