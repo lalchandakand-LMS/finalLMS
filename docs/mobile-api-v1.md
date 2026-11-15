@@ -74,6 +74,12 @@ Wishlist routes are student-only. Course visibility and user ownership are enfor
 - `GET /instructor/courses`: courses assigned to the authenticated instructor.
 - `GET /instructor/courses/{course_slug}/students`: active/completed students in that instructor's own course only.
 
+- `GET /instructor/courses/{course_slug}/lessons`: list the complete ordered lesson outline for the authenticated instructor's own course, including draft-course lessons.
+- `POST /instructor/courses/{course_slug}/lessons`: create a lesson with title, content, duration (1–600 minutes), order, optional preview flag and optional HTTPS YouTube/Vimeo video URL.
+- `PUT /instructor/courses/{course_slug}/lessons/{lesson_id}`: update lesson metadata/content. The lesson must belong to the specified course and the course must belong to the authenticated instructor.
+- `DELETE /instructor/courses/{course_slug}/lessons/{lesson_id}`: delete an owned lesson and clean up its private video, thumbnail and attachment files.
+- Lesson authoring endpoints never accept a client-supplied instructor ID. Uploaded media and attachment upload are not part of this mobile API slice; use the secured web lesson manager for those operations.
+
 Course ownership is checked server-side. The API does not accept a client-supplied instructor or student ID to select another user's records.
 
 - `GET /instructor/live-classes?batch_id=&status=&per_page=`: paginated live classes belonging only to the authenticated instructor's batches. Optional status values: `scheduled`, `live`, `completed`, `cancelled`; page size is limited to 50.

@@ -140,44 +140,256 @@ class _InstructorHomeState extends State<InstructorHome> {
       }
     }
   }
+  Future<Map<String, dynamic>?> editLessonDialog({Map<String, dynamic>? lesson, required int nextOrder}) async {
+    final title = TextEditingController(text: lesson?['title']?.toString() ?? '');
+    final content = TextEditingController(text: lesson?['content']?.toString() ?? '');
+    final duration = TextEditingController(text: lesson?['duration_minutes']?.toString() ?? '15');
+    final order = TextEditingController(text: lesson?['order']?.toString() ?? nextOrder.toString());
+    final videoUrl = TextEditingController(text: lesson?['video_url']?.toString() ?? '');
+    bool preview = lesson?['is_preview'] == true;
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(lesson == null ? 'Create lesson' : 'Edit lesson'),
+          content: SizedBox(
+            width: 480,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(controller: title, decoration: const InputDecoration(labelText: 'Lesson title')),
+                  TextField(controller: content, minLines: 3, maxLines: 7, decoration: const InputDecoration(labelText: 'Lesson content / notes')),
+                  TextField(controller: duration, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Duration (minutes)')),
+                  TextField(controller: order, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Lesson order')),
+                  TextField(controller: videoUrl, keyboardType: TextInputType.url, decoration: const InputDecoration(labelText: 'YouTube / Vimeo HTTPS URL (optional)')),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Free preview lesson'),
+                    value: preview,
+                    onChanged: (value) => setDialogState(() => preview = value),
+                  ),
+                  const Text('Video uploads and PDF attachments are managed from the secure web lesson editor.', style: TextStyle(fontSize: 12)),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+            FilledButton(
+              onPressed: () {
+                final minutes = int.tryParse(duration.text.trim());
+                final position = int.tryParse(order.text.trim());
+                if (title.text.trim().isEmpty || content.text.trim().isEmpty || minutes == null || minutes < 1 || minutes > 600 || position == null || position < 1) {
+                  return;
+                }
+                Navigator.pop(dialogContext, {
+                  'title': title.text.trim(),
+                  'content': content.text.trim(),
+                  'duration_minutes': minutes,
+                  'order': position,
+                  'video_url': videoUrl.text.trim(),
+                  'is_preview': preview,
+                });
+              },
+              child: Text(lesson == null ? 'Create' : 'Save changes'),
+            ),
+          ],
+        ),
+      ),
+    );
+    title.dispose();
+    content.dispose();
+    duration.dispose();
+    order.dispose();
+    videoUrl.dispose();
+    return result;
+  }
+
+  Future<void> manageLessons(Map<String, dynamic> course) async {
+    final slug = course['slug']?.toString();
+    if (slug == null || slug.isEmpty) {
+      return;
+    }
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final capturedThemes = InheritedTheme.capture(from: context, to: navigator.context);
+    List<dynamic> lessons = [];
+    bool busy = true;
+    String? loadError;
+    Future<void> refreshLessons(void Function(void Function()) update) async {
+      update(() { busy = true; loadError = null; });
+      try {
+        final response = await widget.api.get('/instructor/courses/$slug/lessons');
+        lessons = response['data'] as List<dynamic>? ?? [];
+      } catch (e) {
+        loadError = e.toString();
+      } finally {
+        update(() => busy = false);
+      }
+    }
+    await refreshLessons(setState);
+    if (!navigator.mounted) {
+      return;
+    }
+    navigator.push<void>(ModalBottomSheetRoute<void>(
+      isScrollControlled: true,
+      capturedThemes: capturedThemes,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) => SafeArea(
+          child: SizedBox(
+            height: MediaQuery.of(sheetContext).size.height * 0.82,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
+                  child: Row(
+                    children: [
+                      Expanded(child: Text('Lessons — ${course['title']}', style: Theme.of(sheetContext).textTheme.titleLarge)),
+                      FilledButton.icon(
+                        onPressed: busy ? null : () async {
+                          final payload = await editLessonDialog(nextOrder: lessons.length + 1);
+                          if (payload == null) {
+                            return;
+                          }
+                          try {
+                            await widget.api.postJson('/instructor/courses/$slug/lessons', payload);
+                            await refreshLessons(setSheetState);
+                          } catch (e) {
+                            if (messenger.mounted) {
+                              messenger.showSnackBar(SnackBar(content: Text(e.toString())));
+                            }
+                          }
+                        },
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add'),
+                      ),
+                    ],
+                  ),
+                ),
+                if (busy) const LinearProgressIndicator(),
+                if (loadError != null) ListTile(title: Text(loadError!), trailing: IconButton(onPressed: () => refreshLessons(setSheetState), icon: const Icon(Icons.refresh))),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: lessons.length,
+                    itemBuilder: (context, index) {
+                      final lesson = lessons[index] as Map<String, dynamic>;
+                      final lessonId = lesson['id'];
+                      return ListTile(
+                        leading: CircleAvatar(child: Text('${lesson['order']}')),
+                        title: Text(lesson['title']?.toString() ?? 'Lesson'),
+                        subtitle: Text('${lesson['duration_minutes'] ?? 0} min · ${lesson['is_preview'] == true ? 'Preview' : 'Enrolled students'}'),
+                        trailing: PopupMenuButton<String>(
+                          onSelected: (action) async {
+                            if (action == 'edit') {
+                              final payload = await editLessonDialog(lesson: lesson, nextOrder: index + 1);
+                              if (payload == null) {
+                                return;
+                              }
+                              try {
+                                await widget.api.putJson('/instructor/courses/$slug/lessons/$lessonId', payload);
+                                await refreshLessons(setSheetState);
+                              } catch (e) {
+                                if (messenger.mounted) {
+                              messenger.showSnackBar(SnackBar(content: Text(e.toString())));
+                            }
+                              }
+                            } else {
+                              if (!sheetContext.mounted) {
+                                return;
+                              }
+                              final confirmed = await showDialog<bool>(
+                                context: sheetContext,
+                                builder: (dialogContext) => AlertDialog(
+                                  title: const Text('Delete lesson?'),
+                                  content: Text('“${lesson['title']}” will be permanently removed.'),
+                                  actions: [
+                                    TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+                                    FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Delete')),
+                                  ],
+                                ),
+                              );
+                              if (confirmed == true) {
+                                try {
+                                  await widget.api.deleteJson('/instructor/courses/$slug/lessons/$lessonId');
+                                  await refreshLessons(setSheetState);
+                                } catch (e) {
+                                  if (messenger.mounted) {
+                              messenger.showSnackBar(SnackBar(content: Text(e.toString())));
+                            }
+                                }
+                              }
+                            }
+                          },
+                          itemBuilder: (context) => const [
+                            PopupMenuItem(value: 'edit', child: Text('Edit lesson')),
+                            PopupMenuItem(value: 'delete', child: Text('Delete lesson')),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                if (!busy && lessons.isEmpty && loadError == null) const Padding(padding: EdgeInsets.all(24), child: Text('No lessons yet. Add your first lesson.')),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ));
+  }
+
   Future<void> showStudents(Map<String, dynamic> course) async {
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final titleStyle = Theme.of(context).textTheme.titleLarge;
+    final capturedThemes = InheritedTheme.capture(from: context, to: navigator.context);
     try {
       final response = await widget.api.get("/instructor/courses/${course['slug']}/students");
-      if (!mounted) {
+      if (!navigator.mounted) {
         return;
       }
       final students = response['data'] as List<dynamic>? ?? [];
-      showModalBottomSheet<void>(context: context, builder: (context) => SafeArea(child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text('Students — ${course['title']}', style: Theme.of(context).textTheme.titleLarge),
-          ...students.map((item) {
-            final student = item['student'] as Map<String, dynamic>;
-            return ListTile(title: Text(student['name']?.toString() ?? 'Student'), subtitle: Text(student['email']?.toString() ?? ''));
-          }),
-          if (students.isEmpty) const ListTile(title: Text('No enrolled students yet.')),
-        ],
-      )));
+      navigator.push<void>(ModalBottomSheetRoute<void>(
+        isScrollControlled: false,
+        capturedThemes: capturedThemes,
+        builder: (_) => SafeArea(child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Text('Students — ${course['title']}', style: titleStyle),
+            ...students.map((item) {
+              final student = item['student'] as Map<String, dynamic>;
+              return ListTile(title: Text(student['name']?.toString() ?? 'Student'), subtitle: Text(student['email']?.toString() ?? ''));
+            }),
+            if (students.isEmpty) const ListTile(title: Text('No enrolled students yet.')),
+          ],
+        )),
+      ));
     } catch (e) {
-      if (!mounted) {
+      if (!navigator.mounted || !messenger.mounted) {
         return;
       }
       if (e is ApiException && (e.statusCode == 401 || e.statusCode == 403)) {
         widget.onLogout();
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      messenger.showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
   Future<void> showBatchStudents(Map<String, dynamic> batch) async {
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final capturedThemes = InheritedTheme.capture(from: context, to: navigator.context);
     try {
       final response = await widget.api.get('/instructor/batches/${batch['id']}');
-      if (!mounted) return;
+      if (!navigator.mounted) {
+        return;
+      }
       final detail = response['batch'] as Map<String, dynamic>;
       final students = response['data'] as List<dynamic>? ?? [];
-      await showModalBottomSheet<void>(
-        context: context,
+      navigator.push<void>(ModalBottomSheetRoute<void>(
         isScrollControlled: true,
+        capturedThemes: capturedThemes,
         builder: (sheetContext) => SafeArea(
           child: SizedBox(
             height: MediaQuery.of(sheetContext).size.height * 0.75,
@@ -208,14 +420,16 @@ class _InstructorHomeState extends State<InstructorHome> {
             ),
           ),
         ),
-      );
+      ));
     } catch (e) {
-      if (!mounted) return;
+      if (!navigator.mounted || !messenger.mounted) {
+        return;
+      }
       if (e is ApiException && (e.statusCode == 401 || e.statusCode == 403)) {
         widget.onLogout();
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      messenger.showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 
@@ -234,7 +448,7 @@ class _InstructorHomeState extends State<InstructorHome> {
     final payload = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+        builder: (dialogStateContext, setDialogState) => AlertDialog(
           title: const Text('Create assignment'),
           content: SingleChildScrollView(child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -272,11 +486,14 @@ class _InstructorHomeState extends State<InstructorHome> {
                   icon: const Icon(Icons.calendar_month),
                   onPressed: () async {
                     final picked = await showDatePicker(
-                      context: context,
+                      context: dialogStateContext,
                       initialDate: dueAt,
                       firstDate: DateTime.now(),
                       lastDate: DateTime.now().add(const Duration(days: 365)),
                     );
+                    if (!dialogStateContext.mounted) {
+                      return;
+                    }
                     if (picked != null) {
                       setDialogState(() => dueAt = DateTime(
                         picked.year, picked.month, picked.day, 23, 59,
@@ -330,27 +547,38 @@ class _InstructorHomeState extends State<InstructorHome> {
       );
       await load();
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      if (!mounted) {
+        return;
       }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 
   Future<DateTime?> _pickDateTime(DateTime initial) async {
-    final date = await showDatePicker(
-      context: context,
-      initialDate: initial,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-    );
-    if (date == null || !mounted) {
+    final navigator = Navigator.of(context);
+    final barrierLabel = MaterialLocalizations.of(context).modalBarrierDismissLabel;
+    final date = await navigator.push<DateTime>(RawDialogRoute<DateTime>(
+      pageBuilder: (_, __, ___) => DatePickerDialog(
+        initialDate: initial,
+        firstDate: DateTime.now(),
+        lastDate: DateTime.now().add(const Duration(days: 365)),
+      ),
+      barrierDismissible: true,
+      barrierLabel: barrierLabel,
+      transitionDuration: const Duration(milliseconds: 200),
+      transitionBuilder: (_, animation, __, child) => FadeTransition(opacity: animation, child: child),
+    ));
+    if (!navigator.mounted || date == null) {
       return null;
     }
-    final time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(initial),
-    );
-    if (time == null) {
+    final time = await navigator.push<TimeOfDay>(RawDialogRoute<TimeOfDay>(
+      pageBuilder: (_, __, ___) => TimePickerDialog(initialTime: TimeOfDay.fromDateTime(initial)),
+      barrierDismissible: true,
+      barrierLabel: barrierLabel,
+      transitionDuration: const Duration(milliseconds: 200),
+      transitionBuilder: (_, animation, __, child) => FadeTransition(opacity: animation, child: child),
+    ));
+    if (!navigator.mounted || time == null) {
       return null;
     }
     return DateTime(date.year, date.month, date.day, time.hour, time.minute);
@@ -465,7 +693,7 @@ class _InstructorHomeState extends State<InstructorHome> {
     title.dispose();
     description.dispose();
     meetingUrl.dispose();
-    if (payload == null) {
+    if (payload == null || !mounted) {
       return;
     }
     try {
@@ -479,9 +707,10 @@ class _InstructorHomeState extends State<InstructorHome> {
       );
       await load();
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      if (!mounted) {
+        return;
       }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 
@@ -599,9 +828,10 @@ class _InstructorHomeState extends State<InstructorHome> {
         ),
       );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      if (!mounted) {
+        return;
       }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 
@@ -657,7 +887,7 @@ class _InstructorHomeState extends State<InstructorHome> {
     );
     score.dispose();
     feedback.dispose();
-    if (payload == null) {
+    if (payload == null || !mounted) {
       return;
     }
     try {
@@ -673,9 +903,10 @@ class _InstructorHomeState extends State<InstructorHome> {
       );
       await load();
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      if (!mounted) {
+        return;
       }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 
@@ -696,7 +927,20 @@ class _InstructorHomeState extends State<InstructorHome> {
               leading: const Icon(Icons.menu_book),
               title: Text(course['title']?.toString() ?? 'Course'),
               subtitle: Text("${course['students_count'] ?? 0} enrolled students · ${course['status'] ?? ''}"),
-              trailing: const Icon(Icons.people_outline),
+              trailing: PopupMenuButton<String>(
+                tooltip: 'Course actions',
+                onSelected: (action) {
+                  if (action == 'lessons') {
+                    manageLessons(course);
+                  } else {
+                    showStudents(course);
+                  }
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(value: 'students', child: Text('View students')),
+                  PopupMenuItem(value: 'lessons', child: Text('Manage lessons')),
+                ],
+              ),
               onTap: () => showStudents(course),
             ));
           }),
