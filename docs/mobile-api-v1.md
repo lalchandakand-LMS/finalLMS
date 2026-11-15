@@ -175,3 +175,10 @@ Course ownership is checked server-side. The API does not accept a client-suppli
 - `POST /my/cart/checkout/manual`: submit one manual payment for the cart with `payment_method`, `transaction_reference`, optional `sender_account`, optional `coupon_code` and optional private `proof` file.
 
 Coupon discounts are calculated server-side, cannot stack with Flash Sales, and are capped by eligible subtotal and configured maximum discount. Coupon usage is reserved while payment is pending, consumed only on Admin approval and released on rejection. Multi-course payments are snapshotted against the payment; batch selection is rechecked when Admin approves, and access is granted only after approval. Free carts enroll immediately. bKash cart checkout is not included in this API yet.
+
+
+## Student invoice and receipt endpoints
+
+- `GET /my/invoices`: paginated invoices belonging to the authenticated student, including gross paid, approved refunds, net paid, outstanding balance and short-lived print links.
+- `GET /my/invoices/{invoice}`: detailed invoice and payment receipt history. Cross-student invoice access returns 404.
+- Invoice and individual receipt print links are short-lived signed HTTPS URLs (10-minute expiry). They render standalone print-ready HTML with a Print / Save as PDF action; links are private/no-store and do not expose the student's invoices through guessable IDs.
