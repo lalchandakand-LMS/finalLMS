@@ -437,6 +437,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::get('/marketing/meta-ads/connect', [MetaAdsIntegrationController::class, 'connect'])->middleware('throttle:10,1')->name('admin.marketing.meta-ads.connect');
         Route::get('/marketing/meta-ads/callback', [MetaAdsIntegrationController::class, 'callback'])->middleware('throttle:10,1')->name('admin.marketing.meta-ads.callback');
         Route::post('/marketing/meta-ads/disconnect', [MetaAdsIntegrationController::class, 'disconnect'])->name('admin.marketing.meta-ads.disconnect');
+        Route::post('/marketing/meta-ads/campaigns', [MetaAdsIntegrationController::class, 'createCampaign'])->middleware('throttle:5,1')->name('admin.marketing.meta-ads.campaigns.store');
         Route::post('/marketing/meta-ads/campaigns/{campaignId}/pause', [MetaAdsIntegrationController::class, 'pauseCampaign'])->middleware('throttle:10,1')->name('admin.marketing.meta-ads.campaigns.pause');
         Route::post('/marketing/meta-ads/campaigns/{campaignId}/resume', [MetaAdsIntegrationController::class, 'resumeCampaign'])->middleware('throttle:10,1')->name('admin.marketing.meta-ads.campaigns.resume');
         Route::get('/settings', [AdminSettingsController::class, 'index'])->name('admin.settings.index');
