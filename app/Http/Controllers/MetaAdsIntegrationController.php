@@ -173,9 +173,8 @@ class MetaAdsIntegrationController extends Controller
             $campaignAccountId = preg_replace('/^act_/', '', (string) ($campaign['account_id'] ?? ''));
             abort_unless($campaignAccountId === $data['account_id'], 403, __('This campaign does not belong to the selected ad account.'));
 
-            Http::asForm()->acceptJson()->post('https://graph.facebook.com/'.self::GRAPH_VERSION.'/'.$campaignId, [
+            Http::withToken($token)->asForm()->acceptJson()->post('https://graph.facebook.com/'.self::GRAPH_VERSION.'/'.$campaignId, [
                 'status' => 'PAUSED',
-                'access_token' => $token,
             ])->throw();
 
             return redirect()->route('admin.marketing.meta-ads.index', ['account' => $data['account_id']])->with('success', __('Meta campaign paused.'));
@@ -202,9 +201,6 @@ class MetaAdsIntegrationController extends Controller
 
     private function graphGet(string $path, string $token, array $query = []): array
     {
-        return Http::acceptJson()->get('https://graph.facebook.com/'.self::GRAPH_VERSION.'/'.$path, [
-            ...$query,
-            'access_token' => $token,
-        ])->throw()->json() ?? [];
+        return Http::withToken($token)->acceptJson()->get('https://graph.facebook.com/'.self::GRAPH_VERSION.'/'.$path, $query)->throw()->json() ?? [];
     }
 }
