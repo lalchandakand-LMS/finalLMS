@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\InstructorLessonController;
 use App\Http\Controllers\Api\V1\StudentAssignmentController;
 use App\Http\Controllers\Api\V1\StudentExamController;
 use App\Http\Controllers\Api\V1\StudentCheckoutController;
+use App\Http\Controllers\Api\V1\StudentCartController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -27,7 +28,12 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/checkout/courses/{course:slug}/manual', [StudentCheckoutController::class, 'submitManual'])->middleware('throttle:10,1');
         Route::post('/checkout/courses/{course:slug}/bkash', [StudentCheckoutController::class, 'initiateBkash'])->middleware('throttle:5,1');
         Route::get('/my/payments', [StudentCheckoutController::class, 'history']);
-        Route::get('/my/payments/{payment}', [StudentCheckoutController::class, 'showPayment']);\n        Route::get('/my/cart', [StudentCartController::class, 'index']);\n        Route::post('/my/cart', [StudentCartController::class, 'store'])->middleware('throttle:30,1');\n        Route::patch('/my/cart/{course:slug}', [StudentCartController::class, 'update'])->middleware('throttle:30,1');\n        Route::delete('/my/cart/{course:slug}', [StudentCartController::class, 'destroy']);\n        Route::delete('/my/cart', [StudentCartController::class, 'clear']);
+        Route::get('/my/payments/{payment}', [StudentCheckoutController::class, 'showPayment']);
+        Route::get('/my/cart', [StudentCartController::class, 'index']);
+        Route::post('/my/cart', [StudentCartController::class, 'store'])->middleware('throttle:30,1');
+        Route::patch('/my/cart/{course:slug}', [StudentCartController::class, 'update'])->middleware('throttle:30,1');
+        Route::delete('/my/cart/{course:slug}', [StudentCartController::class, 'destroy']);
+        Route::delete('/my/cart', [StudentCartController::class, 'clear']);
         Route::get('/my/assignments', [StudentAssignmentController::class, 'index']);
         Route::get('/assignments/{assignment}', [StudentAssignmentController::class, 'show']);
         Route::post('/assignments/{assignment}/submit', [StudentAssignmentController::class, 'submit'])->middleware('throttle:10,1');
