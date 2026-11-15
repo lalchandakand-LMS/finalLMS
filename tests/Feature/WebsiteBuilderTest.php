@@ -92,6 +92,19 @@ class WebsiteBuilderTest extends TestCase
         $this->get('/')->assertOk()->assertSee('Alom Learning')->assertSee('Learn with confidence.')->assertSee('Courses')->assertSee('Admissions')->assertDontSee('Unsafe menu');
     }
 
+
+    public function test_reference_homepage_design_is_available_as_a_main_builder_preset(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->get(route('admin.website-builder.index'))
+            ->assertOk()
+            ->assertSee('Redwan’s Method')
+            ->assertSee('Homepage slider')
+            ->assertSee('Header navigation menu')
+            ->assertSee('Footer content &amp; links');
+    }
+
     public function test_non_admin_cannot_access_website_builder(): void
     {
         $student = User::factory()->create(['role' => 'student']);
