@@ -2848,9 +2848,13 @@ class _StudentNoticesPageState extends State<StudentNoticesPage> {
         unreadCount = (meta['unread_count'] as num?)?.toInt() ?? 0;
       });
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) {
+        setState(() => error = exception.toString());
+      }
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) {
+        setState(() => loading = false);
+      }
     }
   }
 
