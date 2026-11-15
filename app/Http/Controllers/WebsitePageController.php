@@ -15,7 +15,7 @@ class WebsitePageController extends Controller
 {
     public function index(): View
     {
-        $pages = WebsitePage::with('creator')->latest()->paginate(25);
+        $pages = WebsitePage::with(['creator', 'academicLevel'])->latest()->paginate(25);
         return view('admin.website-pages.index', compact('pages'));
     }
 
