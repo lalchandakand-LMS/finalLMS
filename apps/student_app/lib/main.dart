@@ -958,6 +958,16 @@ class _StudentCartPageState extends State<StudentCartPage> {
   String? error;
   String? selectedPaymentMethod;
 
+  Map<String, dynamic>? get selectedMethodData {
+    for (final raw in paymentMethods) {
+      final method = raw as Map<String, dynamic>;
+      if (method['key']?.toString() == selectedPaymentMethod) {
+        return method;
+      }
+    }
+    return null;
+  }
+
   @override
   void initState() {
     super.initState();
