@@ -15,24 +15,27 @@ class PluginLifecycleTest extends TestCase
 
     private function plugin(array $overrides = []): PluginInstallation
     {
-        $signatureVerifiedAt = $overrides['signature_verified_at'] ?? null;
-        $status = $overrides['status'] ?? 'discovered';
-        unset($overrides['signature_verified_at'], $overrides['status']);
+        $protectedFields = [
+            'status', 'signature_verified_at', 'package_sha256',
+            'signature_key_id', 'package_path',
+        ];
+        $protectedAttributes = [];
+        foreach ($protectedFields as $field) {
+            if (array_key_exists($field, $overrides)) {
+                $protectedAttributes[$field] = $overrides[$field];
+                unset($overrides[$field]);
+            }
+        }
 
         $plugin = PluginInstallation::query()->create(array_merge([
             'plugin_key' => 'aec.course-management',
             'name' => 'Course Management',
             'version' => '1.0.0',
             'type' => 'module',
-            'status' => 'discovered',
             'manifest' => ['schema_version' => 1, 'key' => 'aec.course-management'],
         ], $overrides));
 
-        $protectedAttributes = ['status' => $status];
-        if ($signatureVerifiedAt !== null) {
-            $protectedAttributes['signature_verified_at'] = $signatureVerifiedAt;
-        }
-        $plugin->forceFill($protectedAttributes)->save();
+        $plugin->forceFill(array_merge(['status' => 'discovered'], $protectedAttributes))->save();
 
         return $plugin;
     }
@@ -54,10 +57,19 @@ class PluginLifecycleTest extends TestCase
     public function test_signature_verification_timestamp_is_not_mass_assignable(): void
     {
         $plugin = $this->plugin();
-        $plugin->fill(['signature_verified_at' => Carbon::now(), 'status' => 'active']);
+        $plugin->fill([
+            'signature_verified_at' => Carbon::now(),
+            'status' => 'active',
+            'package_sha256' => str_repeat('f', 64),
+            'signature_key_id' => 'attacker-key',
+            'package_path' => 'plugins/attacker/payload/1.0.0',
+        ]);
 
         $this->assertNull($plugin->signature_verified_at);
         $this->assertSame('discovered', $plugin->status);
+        $this->assertNull($plugin->package_sha256);
+        $this->assertNull($plugin->signature_key_id);
+        $this->assertNull($plugin->package_path);
     }
 
     public function test_lifecycle_rejects_skipped_or_unknown_states(): void
