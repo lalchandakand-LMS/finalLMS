@@ -234,7 +234,7 @@ class AdminPluginManagerTest extends TestCase
         $uninstalled = app(\\App\\Services\\Plugins\\PluginUninstaller::class)->uninstall($plugin);
         $this->assertSame('uninstalled', $uninstalled->status);
 
-        $this->actingAs($admin)->post(route('admin.plugins.restore', $uninstalled))
+        $this->actingAs($admin)->post(route('admin.plugins.restore', $uninstalled), ['confirm_restore' => '1'])
             ->assertRedirect(route('admin.plugins.index'))
             ->assertSessionHas('success');
 
