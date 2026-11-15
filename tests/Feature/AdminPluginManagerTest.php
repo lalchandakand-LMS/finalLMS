@@ -23,6 +23,11 @@ class AdminPluginManagerTest extends TestCase
     {
         parent::setUp();
 
+        if (! Schema::hasTable('ai_assistant_conversations')) {
+            $migration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_15_180000_create_universal_ai_assistant_tables.php');
+            $migration->up();
+        }
+
         if (! class_exists(ZipArchive::class) || ! function_exists('sodium_crypto_sign_keypair')) {
             $this->markTestSkipped('The PHP zip and sodium extensions are required.');
         }
