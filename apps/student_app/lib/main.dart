@@ -411,6 +411,12 @@ class _StudentHomeState extends State<StudentHome> {
     ));
   }
 
+  Future<void> openCart() async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => StudentCartPage(api: widget.api),
+    ));
+  }
+
   Future<void> openPayments() async {
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => PaymentHistoryPage(api: widget.api),
@@ -490,6 +496,11 @@ class _StudentHomeState extends State<StudentHome> {
           onPressed: openExams,
           icon: const Icon(Icons.quiz_outlined),
           tooltip: 'My exams',
+        ),
+        IconButton(
+          onPressed: openCart,
+          icon: const Icon(Icons.shopping_cart_outlined),
+          tooltip: 'My cart',
         ),
         IconButton(
           onPressed: openWishlist,
@@ -758,6 +769,7 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
   bool enrolled = false;
   bool wishlisted = false;
   bool wishlistBusy = false;
+  bool cartBusy = false;
   bool loading = true;
   String? error;
 
@@ -787,6 +799,26 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
       if (mounted) { setState(() => error = exception.toString()); }
     } finally {
       if (mounted) { setState(() => loading = false); }
+    }
+  }
+
+  Future<void> addToCart() async {
+    final item = course;
+    if (item == null || cartBusy) return;
+    setState(() => cartBusy = true);
+    try {
+      await widget.api.postJson('/my/cart', {'course_id': (item['id'] as num).toInt()});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Course saved in your cart.')),
+        );
+      }
+    } catch (exception) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(exception.toString())));
+      }
+    } finally {
+      if (mounted) setState(() => cartBusy = false);
     }
   }
 
@@ -853,6 +885,11 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                         Text(course?['description']?.toString() ?? ''),
                         if (!enrolled) ...[
                           const SizedBox(height: 16),
+                          OutlinedButton.icon(
+                            onPressed: cartBusy ? null : addToCart,
+                            icon: const Icon(Icons.add_shopping_cart),
+                            label: Text(cartBusy ? 'Adding…' : 'Add to cart'),
+                          ),
                           FilledButton.icon(
                             onPressed: () async {
                               final completed = await Navigator.of(context).push<bool>(
@@ -897,6 +934,129 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                     ),
                   ),
       );
+}
+
+class StudentCartPage extends StatefulWidget {
+  const StudentCartPage({required this.api, super.key});
+  final MobileApi api;
+
+  @override
+  State<StudentCartPage> createState() => _StudentCartPageState();
+}
+
+class _StudentCartPageState extends State<StudentCartPage> {
+  List<dynamic> items = [];
+  Map<String, dynamic> totals = {};
+  bool loading = true;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  Future<void> load() async {
+    setState(() { loading = true; error = null; });
+    try {
+      final response = await widget.api.get('/my/cart');
+      if (!mounted) return;
+      setState(() {
+        items = response['data'] as List<dynamic>? ?? [];
+        totals = response['meta'] as Map<String, dynamic>? ?? {};
+      });
+    } catch (exception) {
+      if (mounted) setState(() => error = exception.toString());
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> remove(Map<String, dynamic> item) async {
+    final course = item['course'] as Map<String, dynamic>;
+    try {
+      await widget.api.delete('/my/cart/${course['slug']}');
+      if (mounted) await load();
+    } catch (exception) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(exception.toString())));
+    }
+  }
+
+  Future<void> clear() async {
+    try {
+      await widget.api.delete('/my/cart');
+      if (mounted) await load();
+    } catch (exception) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(exception.toString())));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      title: const Text('My cart'),
+      actions: [
+        if (items.isNotEmpty)
+          IconButton(onPressed: clear, tooltip: 'Clear cart', icon: const Icon(Icons.delete_sweep_outlined)),
+        IconButton(onPressed: load, tooltip: 'Refresh cart', icon: const Icon(Icons.refresh)),
+      ],
+    ),
+    body: loading
+      ? const Center(child: CircularProgressIndicator())
+      : error != null
+        ? Center(child: Text(error!))
+        : items.isEmpty
+          ? const Center(child: Text('Your cart is empty. Add courses to keep them here.'))
+          : RefreshIndicator(
+              onRefresh: load,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  ...items.map((raw) {
+                    final item = raw as Map<String, dynamic>;
+                    final course = item['course'] as Map<String, dynamic>;
+                    final pricing = item['pricing'] as Map<String, dynamic>;
+                    final batch = item['batch'] as Map<String, dynamic>?;
+                    return Card(
+                      child: ListTile(
+                        title: Text(course['title']?.toString() ?? 'Course'),
+                        subtitle: Text([
+                          if (batch != null) 'Batch: ${batch['title']}',
+                          '৳${pricing['total']}',
+                          if ((pricing['discount_amount']?.toString() ?? '0.00') != '0.00')
+                            'Discount: ৳${pricing['discount_amount']}',
+                        ].join(' • ')),
+                        trailing: IconButton(
+                          tooltip: 'Remove course',
+                          onPressed: () => remove(item),
+                          icon: const Icon(Icons.delete_outline),
+                        ),
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 12),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text('Items: ${totals['items_count'] ?? items.length}'),
+                          Text('Subtotal: ৳${totals['subtotal'] ?? '0.00'}'),
+                          Text('Discount: ৳${totals['discount_total'] ?? '0.00'}'),
+                          const Divider(),
+                          Text('Estimated total: ৳${totals['total'] ?? '0.00'}',
+                            style: Theme.of(context).textTheme.titleLarge),
+                          const SizedBox(height: 8),
+                          const Text('Batch selection, coupon validation and multi-course payment will be confirmed securely at checkout.'),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+  );
 }
 
 class CourseCheckoutPage extends StatefulWidget {
