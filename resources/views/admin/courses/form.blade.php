@@ -24,6 +24,17 @@
             </label>
 
             <label>
+                Academic level
+                <select name="academic_level_id">
+                    <option value="">No academic level</option>
+                    @foreach($academicLevels as $academicLevel)
+                        <option value="{{ $academicLevel->id }}" @selected((string) old('academic_level_id', $course?->academic_level_id ?? '') === (string) $academicLevel->id)>{{ $academicLevel->name }}</option>
+                    @endforeach
+                </select>
+                <small class="muted">Batches and exams created for this course will belong to the same academic level.</small>
+            </label>
+
+            <label>
                 {{ __('Course image') }}
                 @if($course?->image_path)<img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($course->image_path) }}" alt="{{ $course->title }}" style="display:block;width:220px;max-width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:12px;margin:8px 0;">@endif
                 <input type="file" name="image" accept="image/jpeg,image/png,image/webp">
