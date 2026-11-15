@@ -14,7 +14,7 @@
 <form method="POST" action="{{ route('admin.website-builder.update') }}">
 @csrf
 <section class="panel" style="margin-bottom:20px;">
-    <div class="page-header"><div><h2>Choose a homepage design</h2><p class="muted">Select one of 15 responsive visual presets. Your courses, users, media, homepage copy and saved sections remain unchanged when you switch designs.</p></div><span class="badge info">15 designs</span></div>
+    <div class="page-header"><div><h2>Choose a homepage design</h2><p class="muted">Select one of 16 responsive visual presets. Your courses, users, media, homepage copy and saved sections remain unchanged when you switch designs.</p></div><span class="badge info">16 designs</span></div>
     <div class="grid grid-3">
         @foreach($templates as $templateKey => $template)
             <label class="card" style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;border:2px solid {{ old('homepage_template', $activeTemplate) === $templateKey ? 'var(--primary)' : 'var(--border)' }};">
