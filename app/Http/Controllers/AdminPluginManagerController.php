@@ -50,15 +50,19 @@ class AdminPluginManagerController extends Controller
             );
         }
 
-        ActivityLog::create([
-            'user_id' => $request->user()->id,
-            'event' => 'admin.plugins.installed',
-            'description' => 'Installed signed plugin '.$plugin->plugin_key.' version '.$plugin->version,
-            'method' => $request->method(),
-            'route' => $request->route()?->getName(),
-            'ip_address' => $request->ip(),
-            'user_agent' => substr((string) $request->userAgent(), 0, 1000),
-        ]);
+        try {
+            ActivityLog::create([
+                'user_id' => $request->user()->id,
+                'event' => 'admin.plugins.installed',
+                'description' => 'Installed signed plugin '.$plugin->plugin_key.' version '.$plugin->version,
+                'method' => $request->method(),
+                'route' => $request->route()?->getName(),
+                'ip_address' => $request->ip(),
+                'user_agent' => substr((string) $request->userAgent(), 0, 1000),
+            ]);
+        } catch (Throwable $exception) {
+            report($exception);
+        }
 
         return redirect()->route('admin.plugins.index')->with(
             'success',
