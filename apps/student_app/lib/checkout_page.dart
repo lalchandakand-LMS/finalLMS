@@ -84,14 +84,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
   }
 
   Future<void> pickProof() async {
-    final result = await FilePicker.platform.pickFiles(
+    final file = await FilePicker.pickFile(
       type: FileType.custom,
       allowedExtensions: const ['jpg', 'jpeg', 'png', 'pdf'],
-      withData: true,
     );
-    if (result == null || result.files.isEmpty) return;
-    final file = result.files.single;
-    if (file.size > 5 * 1024 * 1024) {
+    if (file == null) return;
+    final bytes = await file.readAsBytes();
+    if (bytes.lengthInBytes > 5 * 1024 * 1024) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Proof file must be 5 MB or smaller.')),
@@ -233,7 +232,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                         Text('Choose a batch', style: Theme.of(context).textTheme.titleMedium),
                         const SizedBox(height: 8),
                         DropdownButtonFormField<int>(
-                          value: selectedBatchId,
+                          initialValue: selectedBatchId,
                           decoration: const InputDecoration(
                             labelText: 'Available batch',
                             border: OutlineInputBorder(),
@@ -309,7 +308,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                         ] else ...[
                           if (manualMethods.isNotEmpty) ...[
                             DropdownButtonFormField<String>(
-                              value: selectedMethod,
+                              initialValue: selectedMethod,
                               decoration: const InputDecoration(
                                 labelText: 'Manual payment method',
                                 border: OutlineInputBorder(),
