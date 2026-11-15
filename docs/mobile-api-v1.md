@@ -190,3 +190,10 @@ Coupon discounts are calculated server-side, cannot stack with Flash Sales, and 
 - `POST /api/v1/my/notices/{announcement}/read` — mark a currently visible notice as read; other-audience and other-branch notices return 404.
 - `GET /api/v1/courses/{course:slug}/reviews` — public, paginated list of approved course comments only.
 - `POST /api/v1/my/courses/{course:slug}/reviews` — authenticated active/completed student submits a 2–2000 character review for moderation; one pending review per student/course.
+
+
+## Instructor assessment analytics
+
+- `GET /api/v1/instructor/exams` — paginated assessments belonging to the authenticated instructor's batches, with question and submitted-attempt counts.
+- `GET /api/v1/instructor/exams/{exam}/results` — paginated submitted results for an assessment owned by the instructor, including average/highest score, pass count/rate and student names. Other instructors' assessment IDs return 404.
+- These endpoints are read-only. Assessment/question authoring and editing remain in the existing secured web instructor workflow.
