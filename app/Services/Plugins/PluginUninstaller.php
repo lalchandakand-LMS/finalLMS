@@ -1,9 +1,9 @@
 <?php
 
-namespace App\\Services\\Plugins;
+namespace App\Services\Plugins;
 
-use App\\Models\\PluginInstallation;
-use Illuminate\\Support\\Facades\\DB;
+use App\Models\PluginInstallation;
+use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Throwable;
 
@@ -83,7 +83,7 @@ final class PluginUninstaller
         $current = $root;
 
         foreach (array_filter(explode(DIRECTORY_SEPARATOR, trim($relative, DIRECTORY_SEPARATOR)), 'strlen') as $segment) {
-            if ($segment === '.' || $segment === '..' || str_contains($segment, '\\\\')) {
+            if ($segment === '.' || $segment === '..' || str_contains($segment, '\\')) {
                 throw new RuntimeException('Unsafe plugin backup directory path.');
             }
 
