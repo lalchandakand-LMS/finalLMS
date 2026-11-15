@@ -989,9 +989,13 @@ class _StudentCartPageState extends State<StudentCartPage> {
   Future<void> clear() async {
     try {
       await widget.api.delete('/my/cart');
-      if (mounted) await load();
+      if (mounted) {
+        await load();
+      }
     } catch (exception) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(exception.toString())));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(exception.toString())));
+      }
     }
   }
 
