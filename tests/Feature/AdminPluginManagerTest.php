@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\PluginInstallation;
+use App\Models\PluginVersionRecord;
 use App\Models\User;
 use App\Services\Plugins\PluginSignatureVerifier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
