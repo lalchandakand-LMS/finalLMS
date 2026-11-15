@@ -12,9 +12,9 @@
     </div>
 
     <div class="panel" style="max-width: 800px; margin: 0 auto;">
-        <form method="POST" enctype="multipart/form-data" action="{{ isset($course) ? route('admin.courses.update', $course) : route('admin.courses.store') }}">
+        <form method="POST" enctype="multipart/form-data" action="{{ $course?->exists ? route('admin.courses.update', $course) : route('admin.courses.store') }}">
             @csrf
-            @if(isset($course))
+            @if($course?->exists)
                 @method('PUT')
             @endif
 
