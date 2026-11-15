@@ -1,14 +1,14 @@
 <?php
 
-namespace App\\Http\\Controllers\\Api\\V1;
+namespace App\Http\Controllers\Api\V1;
 
-use App\\Http\\Controllers\\Controller;
-use App\\Models\\Comment;
-use App\\Models\\Course;
-use App\\Models\\DashboardAnnouncement;
-use App\\Models\\DashboardAnnouncementRead;
-use Illuminate\\Http\\JsonResponse;
-use Illuminate\\Http\\Request;
+use App\Http\Controllers\Controller;
+use App\Models\Comment;
+use App\Models\Course;
+use App\Models\DashboardAnnouncement;
+use App\Models\DashboardAnnouncementRead;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class StudentEngagementController extends Controller
 {
