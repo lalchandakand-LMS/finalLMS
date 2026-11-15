@@ -17,7 +17,8 @@ The callback URL must be added to the Meta app's Valid OAuth Redirect URIs. The 
 - `ads_read`: read ad accounts, campaigns and insights.
 - `ads_management`: manage advertising objects; this integration currently only pauses campaigns.
 - `business_management`: discover business assets where granted.
-- `pages_read_engagement`: list Pages available to the connected user.
+- `pages_read_engagement`: read Page engagement details.
+- `pages_show_list`: list Pages available to the connected user.
 
 Meta may require App Review and Standard Access before non-app-role users can use Marketing API capabilities. Actual availability depends on the connected user's asset roles and Meta approval.
 
