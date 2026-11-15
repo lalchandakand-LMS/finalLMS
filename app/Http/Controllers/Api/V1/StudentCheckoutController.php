@@ -35,7 +35,9 @@ class StudentCheckoutController extends Controller
 
         $openBatches = $course->batches()->where('status', 'open')
             ->orderBy('starts_at')
-            ->get(['id', 'title', 'fee', 'capacity', 'starts_at', 'ends_at']);
+            ->get(['id', 'title', 'fee', 'capacity', 'starts_at', 'ends_at'])
+            ->filter(fn (Batch $openBatch) => $this->hasAvailableSeat($openBatch))
+            ->values();
 
         $base = $batch && (float) $batch->fee > 0 ? (float) $batch->fee : (float) $course->price;
         $sale = FlashSale::activeForCourse($course->id, $student->id);
