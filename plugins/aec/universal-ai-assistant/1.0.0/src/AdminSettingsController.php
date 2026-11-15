@@ -9,8 +9,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
-use Throwable;
 use Illuminate\View\View;
+use Throwable;
 
 final class AdminSettingsController
 {
@@ -34,14 +34,28 @@ final class AdminSettingsController
             $baseUrl = rtrim((string) AssistantSettings::record()['base_url'], '/');
             $curlOptions = app(AiDeveloperProviderEndpoint::class)->curlOptionsFor($baseUrl);
             $response = Http::withToken($apiKey)->acceptJson()->timeout(20)
-                ->withOptions(array_merge(['allow_redirects' => false], $curlOptions))
+                ->withOptions(array_merge(['allow_redirects' => false, 'stream' => true], $curlOptions))
                 ->get($baseUrl.'/models');
 
             if (! $response->successful()) {
                 return response()->json(['message' => __('The provider could not return its available models.')], 502);
             }
 
-            $models = collect($response->json('data', []))
+            $maxBytes = 524288;
+            $contentLength = $response->header('Content-Length');
+            if (is_numeric($contentLength) && (int) $contentLength > $maxBytes) {
+                return response()->json(['message' => __('The provider model list exceeded the configured response size limit.')], 502);
+            }
+            $body = $response->toPsrResponse()->getBody();
+            $raw = '';
+            while (! $body->eof()) {
+                $raw .= $body->read(min(8192, $maxBytes + 1 - strlen($raw)));
+                if (strlen($raw) > $maxBytes) {
+                    return response()->json(['message' => __('The provider model list exceeded the configured response size limit.')], 502);
+                }
+            }
+            $payload = json_decode($raw, true);
+            $models = collect(is_array($payload['data'] ?? null) ? $payload['data'] : [])
                 ->map(static fn ($item) => is_array($item) ? ($item['id'] ?? null) : null)
                 ->filter(static fn ($id) => is_string($id) && $id !== '' && strlen($id) <= 120)
                 ->unique()
