@@ -29,6 +29,8 @@ class MobileStudentCheckoutTest extends TestCase
             ->assertJsonPath('data.course.id', $course->id)
             ->assertJsonPath('data.batches.0.id', $batch->id)
             ->assertJsonPath('data.batches.0.available_seats', 20)
+            ->assertJsonPath('data.batches.0.base_amount', '2500.00')
+            ->assertJsonPath('data.batches.0.discounted_amount', '2500.00')
             ->assertJsonPath('data.payment_methods.0.key', 'manual')
             ->assertJsonPath('data.pricing.base_amount', '3000.00');
 
@@ -50,6 +52,11 @@ class MobileStudentCheckoutTest extends TestCase
             'status' => 'pending',
             'amount' => '2500.00',
         ]);
+
+        $this->withToken($token)->getJson('/api/v1/checkout/courses/'.$course->slug)
+            ->assertOk()
+            ->assertJsonPath('data.pending_payment.status', 'pending')
+            ->assertJsonPath('data.pending_payment.transaction_reference', 'AEC-MOBILE-REF-001');
 
         $this->withToken($token)->getJson('/api/v1/my/payments')
             ->assertOk()

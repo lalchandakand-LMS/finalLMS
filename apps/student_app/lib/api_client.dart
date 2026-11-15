@@ -234,6 +234,7 @@ class MobileApi {
     String path,
     Map<String, String> fields, {
     PlatformFile? attachment,
+    String fileField = 'attachment',
   }) async {
     final token = await readToken();
     if (token == null) {
@@ -250,7 +251,7 @@ class MobileApi {
     if (attachment != null) {
       final bytes = await attachment.readAsBytes();
       request.files.add(http.MultipartFile.fromBytes(
-        'attachment',
+        fileField,
         bytes,
         filename: attachment.name,
       ));

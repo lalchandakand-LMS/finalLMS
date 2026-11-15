@@ -40,6 +40,12 @@ class StudentCheckoutController extends Controller
             ])->values();
 
         $sale = FlashSale::activeForCourse($course->id, $request->user()->id);
+        $pendingPayment = Payment::query()
+            ->where('user_id', $request->user()->id)
+            ->where('course_id', $course->id)
+            ->where('status', 'pending')
+            ->latest()
+            ->first();
         $baseAmount = (float) $course->price;
         $discountedAmount = $sale ? $sale->discountedPrice($baseAmount) : $baseAmount;
 
@@ -51,7 +57,9 @@ class StudentCheckoutController extends Controller
                     'title' => $course->title,
                     'price' => number_format($baseAmount, 2, '.', ''),
                 ],
-                'batches' => $batches->map(function (Batch $batch): array {
+                'batches' => $batches->map(function (Batch $batch) use ($course, $sale): array {
+                    $baseAmount = (float) $batch->fee > 0 ? (float) $batch->fee : (float) $course->price;
+                    $discountedAmount = $sale ? $sale->discountedPrice($baseAmount) : $baseAmount;
                     $occupied = Enrollment::query()
                         ->where('batch_id', $batch->id)
                         ->whereIn('status', ['active', 'completed'])
@@ -64,6 +72,10 @@ class StudentCheckoutController extends Controller
                         'starts_at' => $batch->starts_at?->toIso8601String(),
                         'ends_at' => $batch->ends_at?->toIso8601String(),
                         'fee' => number_format((float) $batch->fee, 2, '.', ''),
+                        'base_amount' => number_format($baseAmount, 2, '.', ''),
+                        'discounted_amount' => number_format($discountedAmount, 2, '.', ''),
+                        'discount_amount' => number_format(max(0, $baseAmount - $discountedAmount), 2, '.', ''),
+                        'flash_sale_applied' => $sale !== null,
                         'capacity' => $batch->capacity,
                         'occupied' => $occupied + $pending,
                         'available_seats' => max(0, $batch->capacity - $occupied - $pending),
@@ -80,6 +92,14 @@ class StudentCheckoutController extends Controller
                 'already_enrolled' => $course->enrollments()
                     ->where('user_id', $request->user()->id)
                     ->exists(),
+                'pending_payment' => $pendingPayment ? [
+                    'id' => $pendingPayment->id,
+                    'amount' => $pendingPayment->amount,
+                    'method' => $pendingPayment->method,
+                    'status' => $pendingPayment->status,
+                    'transaction_reference' => $pendingPayment->transaction_reference,
+                    'created_at' => $pendingPayment->created_at?->toIso8601String(),
+                ] : null,
             ],
         ]);
     }
