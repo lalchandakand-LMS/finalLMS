@@ -15,6 +15,7 @@ final class PluginUploadInstaller
         private readonly PluginLifecycle $lifecycle,
         private readonly PluginSignatureVerifier $signatureVerifier,
         private readonly PluginArchiveInstaller $archiveInstaller,
+        private readonly PluginCompatibilityChecker $compatibilityChecker,
     ) {
     }
 
@@ -33,6 +34,11 @@ final class PluginUploadInstaller
         $errors = $this->manifestValidator->errors($manifest);
         if ($errors !== []) {
             throw new InvalidArgumentException('The plugin manifest is invalid: '.implode(' ', $errors));
+        }
+
+        $compatibilityErrors = $this->compatibilityChecker->errors($manifest);
+        if ($compatibilityErrors !== []) {
+            throw new InvalidArgumentException('The plugin is incompatible: '.implode(' ', $compatibilityErrors));
         }
 
         if (strtolower($upload->getClientOriginalExtension()) !== 'zip') {
