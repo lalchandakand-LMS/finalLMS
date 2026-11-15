@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\StudentAssignmentController;
 use App\Http\Controllers\Api\V1\StudentExamController;
 use App\Http\Controllers\Api\V1\StudentCheckoutController;
 use App\Http\Controllers\Api\V1\StudentInvoiceController;
+use App\Http\Controllers\Api\V1\StudentEngagementController;
 use App\Http\Controllers\Api\V1\StudentCartController;
 use App\Http\Controllers\Api\V1\StudentCartCheckoutController;
 use Illuminate\Support\Facades\Route;
@@ -19,7 +20,8 @@ Route::prefix('v1')->group(function (): void {
     Route::post('/auth/device-status', [AuthController::class, 'deviceStatus'])->middleware('throttle:30,1');
 
     Route::get('/courses', [CourseController::class, 'index'])->middleware('throttle:60,1');
-    Route::get('/courses/{course:slug}', [CourseController::class, 'show'])->middleware(['api.token:optional', 'throttle:60,1']);\n    Route::get('/courses/{course:slug}/reviews', [StudentEngagementController::class, 'courseReviews'])->middleware('throttle:60,1');
+    Route::get('/courses/{course:slug}', [CourseController::class, 'show'])->middleware(['api.token:optional', 'throttle:60,1']);
+    Route::get('/courses/{course:slug}/reviews', [StudentEngagementController::class, 'courseReviews'])->middleware('throttle:60,1');
 
     Route::middleware(['api.token', 'throttle:120,1'])->group(function (): void {
         Route::get('/auth/me', [AuthController::class, 'me']);
@@ -29,7 +31,10 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/checkout/courses/{course:slug}', [StudentCheckoutController::class, 'options'])->middleware('throttle:30,1');
         Route::post('/checkout/courses/{course:slug}/manual', [StudentCheckoutController::class, 'submitManual'])->middleware('throttle:10,1');
         Route::post('/checkout/courses/{course:slug}/bkash', [StudentCheckoutController::class, 'initiateBkash'])->middleware('throttle:5,1');
-        Route::get('/my/notices', [StudentEngagementController::class, 'notices']);\n        Route::post('/my/notices/{announcement}/read', [StudentEngagementController::class, 'markNoticeRead'])->middleware('throttle:60,1');\n        Route::post('/my/courses/{course:slug}/reviews', [StudentEngagementController::class, 'submitCourseReview'])->middleware('throttle:5,1');\n        Route::get('/my/invoices', [StudentInvoiceController::class, 'index']);
+        Route::get('/my/notices', [StudentEngagementController::class, 'notices']);
+        Route::post('/my/notices/{announcement}/read', [StudentEngagementController::class, 'markNoticeRead'])->middleware('throttle:60,1');
+        Route::post('/my/courses/{course:slug}/reviews', [StudentEngagementController::class, 'submitCourseReview'])->middleware('throttle:5,1');
+        Route::get('/my/invoices', [StudentInvoiceController::class, 'index']);
         Route::get('/my/invoices/{invoice}', [StudentInvoiceController::class, 'show']);
         Route::get('/my/payments', [StudentCheckoutController::class, 'history']);
         Route::get('/my/payments/{payment}', [StudentCheckoutController::class, 'showPayment']);
