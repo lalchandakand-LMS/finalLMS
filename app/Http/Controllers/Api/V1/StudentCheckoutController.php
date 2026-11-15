@@ -40,6 +40,12 @@ class StudentCheckoutController extends Controller
             ])->values();
 
         $sale = FlashSale::activeForCourse($course->id, $request->user()->id);
+        $pendingPayment = Payment::query()
+            ->where('user_id', $request->user()->id)
+            ->where('course_id', $course->id)
+            ->where('status', 'pending')
+            ->latest()
+            ->first();
         $baseAmount = (float) $course->price;
         $discountedAmount = $sale ? $sale->discountedPrice($baseAmount) : $baseAmount;
 
@@ -86,6 +92,14 @@ class StudentCheckoutController extends Controller
                 'already_enrolled' => $course->enrollments()
                     ->where('user_id', $request->user()->id)
                     ->exists(),
+                'pending_payment' => $pendingPayment ? [
+                    'id' => $pendingPayment->id,
+                    'amount' => $pendingPayment->amount,
+                    'method' => $pendingPayment->method,
+                    'status' => $pendingPayment->status,
+                    'transaction_reference' => $pendingPayment->transaction_reference,
+                    'created_at' => $pendingPayment->created_at?->toIso8601String(),
+                ] : null,
             ],
         ]);
     }
