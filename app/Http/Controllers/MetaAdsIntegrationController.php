@@ -265,6 +265,45 @@ class MetaAdsIntegrationController extends Controller
             'age_max' => ['required', 'integer', 'min:18', 'max:65', 'gte:age_min'],
         ]);
 
+        if (filled($data['source_reference'] ?? null)) {
+            [$sourceType, $sourceId] = explode(':', $data['source_reference'], 2);
+            $source = match ($sourceType) {
+                'course' => Course::query()->where('status', 'published')->findOrFail((int) $sourceId),
+                'notice' => DashboardAnnouncement::currentlyActive()->where('audience', 'all')->whereNull('branch_id')->findOrFail((int) $sourceId),
+                'offer' => FlashSale::query()->where('status', 'active')->where('starts_at', '<=', now())->where('ends_at', '>=', now())->findOrFail((int) $sourceId),
+            };
+
+            $sourceMessage = match ($sourceType) {
+                'course' => (string) ($source->short_description ?: $source->title),
+                'notice' => (string) ($source->body ?: $source->title),
+                'offer' => (string) ($source->description ?: $source->title),
+            };
+            $sourceUrl = match ($sourceType) {
+                'course' => route('courses.show', $source),
+                'notice' => (is_string($source->button_url) && filter_var($source->button_url, FILTER_VALIDATE_URL) && in_array(parse_url($source->button_url, PHP_URL_SCHEME), ['http', 'https'], true))
+                    ? $source->button_url : route('notices.index'),
+                'offer' => route('flash-sales.public'),
+            };
+            $imagePath = match ($sourceType) {
+                'course' => $source->image_path,
+                'offer' => $source->banner_path,
+                default => null,
+            };
+            $data['name'] = filled($data['name'] ?? null) ? $data['name'] : $source->title.' - Meta Boost';
+            $data['message'] = filled($data['message'] ?? null) ? $data['message'] : mb_substr(trim(strip_tags($sourceMessage)), 0, 2000);
+            $data['destination_url'] = filled($data['destination_url'] ?? null) ? $data['destination_url'] : $sourceUrl;
+            if (! filled($data['image_url'] ?? null) && filled($imagePath)) {
+                $data['image_url'] = url(Storage::disk('public')->url($imagePath));
+            }
+        }
+
+        Validator::make($data, [
+            'name' => ['required', 'string', 'max:180'],
+            'message' => ['required', 'string', 'max:2000'],
+            'destination_url' => ['required', 'url:http,https', 'max:2048'],
+            'image_url' => ['required', 'url:http,https', 'max:2048'],
+        ])->validate();
+
         $token = $this->accessToken();
         abort_unless($token, 409, __('Connect Meta Ads first.'));
 
