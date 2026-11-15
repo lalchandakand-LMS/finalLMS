@@ -2634,7 +2634,9 @@ class _ExamDetailPageState extends State<ExamDetailPage> {
     } catch (exception) {
       if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => starting = false);
+      if (mounted) {
+        setState(() => starting = false);
+      }
     }
   }
 
@@ -2654,7 +2656,9 @@ class _ExamDetailPageState extends State<ExamDetailPage> {
     } catch (exception) {
       if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => saving = false);
+      if (mounted) {
+        setState(() => saving = false);
+      }
     }
   }
 
