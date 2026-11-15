@@ -89,6 +89,9 @@ class MobileInstructorAssessmentTest extends TestCase
         $this->withToken($this->token(User::factory()->create(['role' => 'student'])))
             ->getJson('/api/v1/instructor/exams')
             ->assertForbidden();
+        $this->withToken($this->token(User::factory()->create(['role' => 'admin'])))
+            ->getJson('/api/v1/instructor/exams/'.$exam->id.'/results')
+            ->assertForbidden();
     }
 
     private function fixture(): array
