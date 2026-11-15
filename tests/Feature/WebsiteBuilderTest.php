@@ -192,7 +192,7 @@ class WebsiteBuilderTest extends TestCase
             ->assertSee('Reusable section block library')
             ->assertSee('Call to action');
 
-        $this->assertCount(15, \App\Http\Controllers\WebsiteBuilderController::homepageTemplates());
+        $this->assertCount(16, \App\Http\Controllers\WebsiteBuilderController::homepageTemplates());
     }
 
     public function test_admin_can_customize_global_typography_and_background_theme(): void
