@@ -49,7 +49,7 @@ class AuthController extends Controller
             ->where('device_hash', $deviceHash)
             ->first();
 
-        if ($device?->status === 'approved') {
+        if ($device?->status === 'approved' && $device->phone_verified_at) {
             DB::transaction(function () use ($user, $device): void {
                 User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
                 StudentDevice::query()
