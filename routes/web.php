@@ -427,6 +427,11 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::put('/news/{post}', [BlogController::class, 'update'])->name('admin.news.update');
         Route::delete('/news/{post}', [BlogController::class, 'destroy'])->name('admin.news.destroy');
         Route::get('/marketing', [MarketingCenterController::class, 'index'])->name('admin.marketing.index');
+        Route::get('/marketing/meta-ads', [MetaAdsIntegrationController::class, 'index'])->name('admin.marketing.meta-ads.index');
+        Route::get('/marketing/meta-ads/connect', [MetaAdsIntegrationController::class, 'connect'])->middleware('throttle:10,1')->name('admin.marketing.meta-ads.connect');
+        Route::get('/marketing/meta-ads/callback', [MetaAdsIntegrationController::class, 'callback'])->middleware('throttle:10,1')->name('admin.marketing.meta-ads.callback');
+        Route::post('/marketing/meta-ads/disconnect', [MetaAdsIntegrationController::class, 'disconnect'])->name('admin.marketing.meta-ads.disconnect');
+        Route::post('/marketing/meta-ads/campaigns/{campaignId}/pause', [MetaAdsIntegrationController::class, 'pauseCampaign'])->middleware('throttle:10,1')->name('admin.marketing.meta-ads.campaigns.pause');
         Route::get('/settings', [AdminSettingsController::class, 'index'])->name('admin.settings.index');
         Route::post('/settings', [AdminSettingsController::class, 'update'])->name('admin.settings.update');
 
