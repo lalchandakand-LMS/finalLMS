@@ -15,14 +15,17 @@ use Illuminate\View\View;
 
 class BatchController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
+        $filters = $request->validate(['academic_level_id' => ['nullable', 'integer', 'exists:academic_levels,id']]);
         $branches = Branch::withCount('batches')->orderBy('name')->get();
-        $batches = Batch::with(['branch', 'course.academicLevel', 'teacher'])->latest('starts_at')->get();
-        $courses = Course::orderBy('title')->get();
+        $batches = Batch::with(['branch', 'course.academicLevel', 'teacher'])
+            ->when($filters['academic_level_id'] ?? null, fn ($query, $levelId) => $query->whereHas('course', fn ($courses) => $courses->where('academic_level_id', $levelId)))
+            ->latest('starts_at')->get();
+        $courses = Course::with('academicLevel')->orderBy('title')->get();
         $teachers = User::where('role', 'teacher')->orderBy('name')->get();
 
-        return view('admin.batches.index', compact('branches', 'batches', 'courses', 'teachers'));
+        return view('admin.batches.index', compact('branches', 'batches', 'courses', 'teachers', 'filters'));
     }
 
     public function branchManagerIndex(Request $request): View
