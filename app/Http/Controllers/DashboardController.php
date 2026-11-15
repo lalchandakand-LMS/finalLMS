@@ -23,6 +23,7 @@ class DashboardController extends Controller
         $user = Auth::user();
         $announcementSlides = DashboardAnnouncement::currentlyActive()
             ->whereIn('audience', ['all', $user->role])
+            ->where(fn ($query) => $query->whereNull('branch_id')->orWhere('branch_id', $user->branch_id))
             ->with('image')
             ->orderByDesc('priority')->latest()->take(8)->get();
 
