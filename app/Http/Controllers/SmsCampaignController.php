@@ -25,12 +25,36 @@ class SmsCampaignController extends Controller
         return view('admin.sms.index', compact('campaigns', 'eligibleCount'));
     }
 
+    public function show(Request $request, SmsCampaign $campaign): View
+    {
+        $filters = $request->validate([
+            'status' => ['nullable', Rule::in(['pending', 'sent', 'failed', 'skipped'])],
+        ]);
+
+        $base = $campaign->recipients();
+        $counts = [
+            'pending' => (clone $base)->where('status', 'pending')->count(),
+            'sent' => (clone $base)->where('status', 'sent')->count(),
+            'failed' => (clone $base)->where('status', 'failed')->count(),
+            'skipped' => (clone $base)->where('status', 'skipped')->count(),
+        ];
+
+        $recipients = $campaign->recipients()
+            ->with('user:id,name,email,phone_number')
+            ->when($filters['status'] ?? null, fn ($query, string $status) => $query->where('status', $status))
+            ->latest()
+            ->paginate(50)
+            ->withQueryString();
+
+        return view('admin.sms.show', compact('campaign', 'recipients', 'counts', 'filters'));
+    }
+
     public function store(Request $request, SmsGateway $sms): RedirectResponse
     {
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:120'],
             'message' => ['required', 'string', 'max:1500'],
-            'audience' => ['required', 'in:all,student,teacher'],
+            'audience' => ['required', Rule::in(['all', 'student', 'teacher', 'guardian', 'branch_manager'])],
         ]);
 
         $users = User::query()
