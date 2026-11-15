@@ -16,19 +16,27 @@ class EnsureRouteModuleEnabled
 
     public function handle(Request $request, Closure $next): Response
     {
-        $routeName = $request->route()?->getName();
-        if (! is_string($routeName) || $routeName === '') {
-            return $next($request);
+        $route = $request->route();
+        $routeName = $route?->getName();
+        $routeUri = $route?->uri();
+
+        if (is_string($routeName) && $routeName !== '') {
+            foreach (config('module_routes', []) as $module => $patterns) {
+                foreach ($patterns as $pattern) {
+                    if (Str::is($pattern, $routeName)) {
+                        abort_unless($this->modules->isEnabled($module), 404, 'This LMS module is currently disabled.');
+                        return $next($request);
+                    }
+                }
+            }
         }
 
-        foreach (config('module_routes', []) as $module => $patterns) {
-            foreach ($patterns as $pattern) {
-                if (Str::is($pattern, $routeName)) {
-                    abort_unless($this->modules->isEnabled($module), 404, 'This LMS module is currently disabled.');
-
-                    // A route has one owning module. Do not let a broad later
-                    // pattern accidentally override its ownership.
-                    return $next($request);
+        if (is_string($routeUri) && $routeUri !== '') {
+            foreach (config('module_route_uris', []) as $module => $patterns) {
+                foreach ($patterns as $pattern) {
+                    if (Str::is($pattern, $routeUri)) {
+                        abort_unless($this->modules->isEnabled($module), 404, 'This LMS module is currently disabled.');
+                    }
                 }
             }
         }
