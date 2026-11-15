@@ -60,3 +60,11 @@ Correct answer indexes are never included in the question payload. The API check
 - Open My Cart from the Student home toolbar to view saved courses and current server-calculated BDT totals.
 - Remove an individual course or clear the cart. Cart contents persist across approved devices because they are stored against the authenticated student account.
 - A cart does not reserve a batch seat or lock a price. Batch capacity, Flash Sale eligibility and payable amount are checked again at checkout. Coupon codes are validated server-side, cannot stack with Flash Sales, and enforce date, minimum spend, course eligibility and usage limits. Multi-course cart checkout creates one manual payment; coupon use is reserved until Admin approval and released if payment is rejected. Free carts enroll immediately. bKash cart checkout and printable invoices/receipts are not included yet.
+
+
+## Student invoices and receipts
+
+- Open **My invoices & receipts** from the Student app toolbar.
+- View invoice totals, discounts, paid amounts, approved refunds, outstanding balance and payment references.
+- Print or save an invoice and each individual payment receipt as PDF using a short-lived signed print link. The print page opens in the system browser and provides the native Print / Save as PDF action.
+- Invoice APIs return only records owned by the signed-in student. Print links expire after 10 minutes and return no-store responses.
