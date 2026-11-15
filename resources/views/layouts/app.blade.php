@@ -240,6 +240,7 @@
     @if($isAdminLayout)
         <aside class="admin-sidebar" aria-label="Admin navigation">
             <a class="admin-sidebar-brand" href="{{ route('dashboard') }}"><span>📘</span><strong>Alom’s English Center<br><small style="font-weight:500;color:#a9bee0;">Admin workspace</small></strong></a>
+            <a class="{{ request()->routeIs('notices.*') ? 'active' : '' }}" href="{{ route('notices.index') }}"><span>🔔</span><span class="nav-text">Notice Board</span></a>
             @if(auth()->user()->isAdmin())
             <div class="admin-sidebar-label">Overview</div>
             <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><span>▦</span><span class="nav-text">Dashboard</span></a>
@@ -345,6 +346,7 @@
                     @endforeach
                 @auth
                     <a href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a>
+                    <a href="{{ route('notices.index') }}">{{ __('Notice Board') }}</a>
                     <a href="{{ route('profile.edit') }}">{{ __('Profile') }}</a>
                     <a href="{{ route('live-classes.index') }}">{{ __('Live classes') }}</a>
                     @if(auth()->user()->isStudent())
