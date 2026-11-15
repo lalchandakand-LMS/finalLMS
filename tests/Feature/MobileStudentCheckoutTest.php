@@ -53,6 +53,11 @@ class MobileStudentCheckoutTest extends TestCase
             'amount' => '2500.00',
         ]);
 
+        $this->withToken($token)->getJson('/api/v1/checkout/courses/'.$course->slug)
+            ->assertOk()
+            ->assertJsonPath('data.pending_payment.status', 'pending')
+            ->assertJsonPath('data.pending_payment.transaction_reference', 'AEC-MOBILE-REF-001');
+
         $this->withToken($token)->getJson('/api/v1/my/payments')
             ->assertOk()
             ->assertJsonPath('meta.total', 1)
