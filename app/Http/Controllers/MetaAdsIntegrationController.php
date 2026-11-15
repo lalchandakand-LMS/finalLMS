@@ -157,7 +157,11 @@ class MetaAdsIntegrationController extends Controller
 
         try {
             $accounts = $this->graphGet('me/adaccounts', $token, ['fields' => 'id', 'limit' => 100])['data'] ?? [];
-            $validAccount = collect($accounts)->contains(fn ($account) => (string) ($account['id'] ?? '') === $data['account_id']);
+            $validAccount = collect($accounts)->contains(function ($account) use ($data): bool {
+                $rawId = (string) ($account['account_id'] ?? $account['id'] ?? '');
+
+                return preg_replace('/^act_/', '', $rawId) === $data['account_id'];
+            });
             abort_unless($validAccount, 403, __('This ad account is not accessible to the connected Meta user.'));
 
             Http::asForm()->acceptJson()->post('https://graph.facebook.com/'.self::GRAPH_VERSION.'/'.$campaignId, [
