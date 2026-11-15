@@ -135,6 +135,20 @@ class PluginLifecycleTest extends TestCase
         app(PluginLifecycle::class)->transition('aec.course-management', 'active');
     }
 
+    public function test_activation_rejects_traversal_inside_private_plugin_path(): void
+    {
+        $this->plugin([
+            'status' => 'installed',
+            'signature_verified_at' => Carbon::now(),
+            'package_sha256' => str_repeat('e', 64),
+            'signature_key_id' => 'release-key-2026',
+            'package_path' => 'plugins/aec/../course/1.0.0',
+        ]);
+
+        $this->expectException(LogicException::class);
+        app(PluginLifecycle::class)->transition('aec.course-management', 'active');
+    }
+
     public function test_active_plugin_can_be_deactivated_without_deleting_its_registry_record(): void
     {
         $this->plugin([
