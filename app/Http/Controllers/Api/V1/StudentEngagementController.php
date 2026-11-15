@@ -79,6 +79,73 @@ class StudentEngagementController extends Controller
         return response()->json(['message' => 'Notice marked as read.']);
     }
 
+    public function instructorNotices(Request $request): JsonResponse
+    {
+        $teacher = $request->user();
+        abort_unless($teacher->isTeacher(), 403);
+
+        $visible = DashboardAnnouncement::currentlyActive()
+            ->whereIn('audience', ['all', 'teacher'])
+            ->where(fn ($query) => $query->whereNull('branch_id')->orWhere('branch_id', $teacher->branch_id));
+
+        $unreadCount = (clone $visible)
+            ->whereDoesntHave('reads', fn ($query) => $query->where('user_id', $teacher->id))
+            ->count();
+
+        $page = (clone $visible)
+            ->with(['course:id,title,slug'])
+            ->withExists(['reads as is_read' => fn ($query) => $query->where('user_id', $teacher->id)])
+            ->orderByDesc('priority')
+            ->latest()
+            ->paginate(20);
+
+        return response()->json([
+            'data' => $page->getCollection()->map(fn (DashboardAnnouncement $notice): array => [
+                'id' => $notice->id,
+                'title' => $notice->title,
+                'body' => $notice->body,
+                'content_type' => $notice->content_type,
+                'course' => $notice->course ? [
+                    'title' => $notice->course->title,
+                    'slug' => $notice->course->slug,
+                ] : null,
+                'button_label' => $notice->button_label,
+                'button_url' => $notice->button_url,
+                'priority' => $notice->priority,
+                'is_read' => (bool) $notice->is_read,
+                'published_at' => $notice->created_at?->toIso8601String(),
+                'ends_at' => $notice->ends_at?->toIso8601String(),
+            ])->values(),
+            'meta' => [
+                'unread_count' => $unreadCount,
+                'current_page' => $page->currentPage(),
+                'last_page' => $page->lastPage(),
+                'total' => $page->total(),
+            ],
+        ]);
+    }
+
+    public function markInstructorNoticeRead(Request $request, DashboardAnnouncement $announcement): JsonResponse
+    {
+        $teacher = $request->user();
+        abort_unless($teacher->isTeacher(), 403);
+
+        $visible = DashboardAnnouncement::currentlyActive()
+            ->whereKey($announcement->id)
+            ->whereIn('audience', ['all', 'teacher'])
+            ->where(fn ($query) => $query->whereNull('branch_id')->orWhere('branch_id', $teacher->branch_id))
+            ->exists();
+
+        abort_unless($visible, 404);
+
+        DashboardAnnouncementRead::query()->updateOrCreate(
+            ['announcement_id' => $announcement->id, 'user_id' => $teacher->id],
+            ['read_at' => now()]
+        );
+
+        return response()->json(['message' => 'Notice marked as read.']);
+    }
+
     public function courseReviews(Course $course): JsonResponse
     {
         abort_unless($course->status === 'published', 404);

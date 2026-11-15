@@ -62,6 +62,8 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/instructor/batches', [InstructorAssignmentController::class, 'batches']);
         Route::get('/instructor/batches/{batch}', [InstructorAssignmentController::class, 'showBatch']);
         Route::get('/instructor/assignments', [InstructorAssignmentController::class, 'index']);
+        Route::get('/instructor/notices', [StudentEngagementController::class, 'instructorNotices']);
+        Route::post('/instructor/notices/{announcement}/read', [StudentEngagementController::class, 'markInstructorNoticeRead'])->middleware('throttle:60,1');
         Route::get('/instructor/exams', [InstructorAssessmentController::class, 'index']);
         Route::get('/instructor/exams/{exam}/results', [InstructorAssessmentController::class, 'results']);
         Route::get('/instructor/live-classes', [InstructorLiveClassController::class, 'index']);
