@@ -49,6 +49,7 @@ class AdminVerificationCenterTest extends TestCase
     public function test_admin_can_resend_unverified_email_notification(): void
     {
         Notification::fake();
+        config(['mail.default' => 'smtp']);
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
         $student = User::factory()->create(['role' => 'student', 'email_verified_at' => null]);
 
