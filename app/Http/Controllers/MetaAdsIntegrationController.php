@@ -174,7 +174,7 @@ class MetaAdsIntegrationController extends Controller
 
             return redirect()->route('admin.marketing.meta-ads.index', ['account' => $data['account_id']])->with('success', __('Meta campaign paused.'));
         } catch (Throwable $exception) {
-            report($exception);
+            
 
             return redirect()->route('admin.marketing.meta-ads.index', ['account' => $data['account_id']])->with('error', __('Meta could not pause this campaign. Check its status and permissions.'));
         }
