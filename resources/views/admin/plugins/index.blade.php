@@ -92,8 +92,12 @@
                                     @csrf
                                     <button class="btn secondary" type="submit">{{ __('Deactivate') }}</button>
                                 </form>
-                            @else
-                                <span class="muted">—</span>
+                            @endif
+                            @if(in_array($plugin->status, ['installed', 'inactive', 'failed'], true))
+                                <form method="POST" action="{{ route('admin.plugins.uninstall', $plugin->plugin_key) }}" style="display:inline;" onsubmit="return confirm('{{ __('Uninstall this plugin package? Conversation history, LMS data and migration records will be retained.') }}')">
+                                    @csrf
+                                    <button class="btn danger" type="submit">{{ __('Uninstall') }}</button>
+                                </form>
                             @endif
                         </td>
                     </tr>
