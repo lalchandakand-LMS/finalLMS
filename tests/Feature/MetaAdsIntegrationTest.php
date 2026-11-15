@@ -86,4 +86,21 @@ class MetaAdsIntegrationTest extends TestCase
 
         Http::assertNotSent(fn ($request) => str_ends_with($request->url(), '/campaign-1'));
     }
+    public function test_campaign_cannot_be_paused_through_a_different_ad_account(): void
+    {
+        Setting::setValue('meta_ads_access_token', Crypt::encryptString('secret-token'));
+        Http::fake([
+            'https://graph.facebook.com/v27.0/me/adaccounts*' => Http::response(['data' => [['id' => 'act_12345', 'account_id' => '12345']]]),
+            'https://graph.facebook.com/v27.0/111111111111111*' => Http::response(['id' => '111111111111111', 'account_id' => '54321']),
+        ]);
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.marketing.meta-ads.campaigns.pause', '111111111111111'), ['account_id' => '12345'])
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        Http::assertNotSent(fn ($request) => $request->method() === 'POST' && str_ends_with($request->url(), '/111111111111111'));
+    }
+
 }
