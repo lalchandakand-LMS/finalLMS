@@ -1085,7 +1085,10 @@ class _CourseCheckoutPageState extends State<CourseCheckoutPage> {
   @override
   Widget build(BuildContext context) {
     final course = checkout?['course'] as Map<String, dynamic>? ?? {};
-    final manualMethods = methods.cast<Map<String, dynamic>>();
+    final manualMethods = methods
+        .cast<Map<String, dynamic>>()
+        .where((method) => method['key'] != 'bkash')
+        .toList();
     final onlineBkash = checkout?['online_bkash_available'] == true;
     final pendingPayment = checkout?['pending_payment'] as Map<String, dynamic>?;
     return Scaffold(
