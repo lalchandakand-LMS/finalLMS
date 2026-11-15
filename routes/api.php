@@ -35,6 +35,7 @@ Route::prefix('v1')->group(function (): void {
         Route::patch('/my/cart/{course:slug}', [StudentCartController::class, 'update'])->middleware('throttle:30,1');
         Route::delete('/my/cart/{course:slug}', [StudentCartController::class, 'destroy']);
         Route::delete('/my/cart', [StudentCartController::class, 'clear']);
+        Route::get('/my/cart/checkout/options', [StudentCartCheckoutController::class, 'options']);
         Route::post('/my/cart/coupon', [StudentCartCheckoutController::class, 'applyCoupon'])->middleware('throttle:10,1');
         Route::post('/my/cart/checkout/manual', [StudentCartCheckoutController::class, 'submitManual'])->middleware('throttle:5,1');
         Route::get('/my/assignments', [StudentAssignmentController::class, 'index']);
