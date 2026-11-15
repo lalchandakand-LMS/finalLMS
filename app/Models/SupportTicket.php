@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class SupportTicket extends Model
 {
@@ -27,8 +28,8 @@ class SupportTicket extends Model
         return $this->hasMany(SupportTicketMessage::class, 'ticket_id')->orderBy('created_at');
     }
 
-    public function latestMessage(): HasMany
+    public function latestMessage(): HasOne
     {
-        return $this->hasMany(SupportTicketMessage::class, 'ticket_id')->latestOfMany();
+        return $this->hasOne(SupportTicketMessage::class, 'ticket_id')->latestOfMany();
     }
 }
