@@ -68,6 +68,26 @@ class ModuleRouteOwnershipTest extends TestCase
         $this->assertArrayHasKey('academic_levels', config('modules'));
     }
 
+    public function test_every_declared_plugin_dependency_exists_in_the_module_catalog(): void
+    {
+        foreach (config('modules', []) as $module => $manifest) {
+            foreach ($manifest['dependencies'] ?? [] as $dependency) {
+                $this->assertArrayHasKey(
+                    $dependency,
+                    config('modules', []),
+                    "{$module} depends on missing module {$dependency}."
+                );
+            }
+        }
+    }
+
+    public function test_every_uri_route_owner_exists_in_the_first_party_module_catalog(): void
+    {
+        foreach (array_keys(config('module_route_uris', [])) as $module) {
+            $this->assertArrayHasKey($module, config('modules', []), $module.' must have a first-party manifest.');
+        }
+    }
+
     public function test_core_module_manager_routes_are_not_owned_by_business_plugins(): void
     {
         $this->assertSame([], collect(config('module_routes'))
