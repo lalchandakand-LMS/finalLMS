@@ -64,7 +64,7 @@ class CourseController extends Controller
         $enrolled = $user && $user->isStudent()
             && $course->enrollments()->where('user_id', $user->id)->whereIn('status', ['active', 'completed'])->exists();
 
-        $course->load(['teacher:id,name', 'lessons']);
+        $course->load(['teacher:id,name', 'academicLevel:id,name,slug', 'lessons']);
         $lessons = $course->lessons
             ->filter(fn (Lesson $lesson) => $enrolled || $isInstructor || $lesson->is_preview)
             ->values();
@@ -337,6 +337,7 @@ class CourseController extends Controller
             'price' => (float) $course->price,
             'image_url' => $course->image_path ? url('/storage/'.$course->image_path) : null,
             'instructor' => $course->teacher ? ['id' => $course->teacher->id, 'name' => $course->teacher->name] : null,
+            'academic_level' => $course->academicLevel ? ['id' => $course->academicLevel->id, 'name' => $course->academicLevel->name, 'slug' => $course->academicLevel->slug] : null,
         ];
     }
 }
