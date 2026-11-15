@@ -74,3 +74,11 @@ Correct answer indexes are never included in the question payload. The API check
 
 - Academy notices are available from the Student Learning toolbar; the feed shows unread state and supports marking notices as read. Results are restricted to active notices targeted to all students or students in the learner's branch.
 - Course detail pages display approved reviews. Enrolled students may submit a review; new submissions remain pending until an administrator moderates them.
+
+
+## Student support tickets
+
+- Open **Contact support** from the Student Learning toolbar to view previous requests or create a new ticket.
+- Students can read and reply only to tickets they own. Closed tickets are read-only; create a new request for additional help.
+- Academy administrators can review tickets, reply, and update ticket status from **Admin → Support tickets**.
+- Ticket creation and replies are rate-limited; messages are rendered as escaped text.
