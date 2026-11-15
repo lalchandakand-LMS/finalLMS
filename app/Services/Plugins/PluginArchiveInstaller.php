@@ -13,6 +13,7 @@ final class PluginArchiveInstaller
     public function __construct(
         private readonly PluginManifestValidator $manifestValidator,
         private readonly PluginLifecycle $lifecycle,
+        private readonly PluginMigrationRunner $migrationRunner,
     ) {
     }
 
@@ -20,7 +21,8 @@ final class PluginArchiveInstaller
      * Extract a previously signature-verified ZIP into the canonical private
      * plugins/vendor/plugin/version directory and mark it installed.
      *
-     * No plugin PHP code is loaded or executed by this service.
+     * Plugin entrypoints are not loaded here. Signed migrations may execute only after
+     * the extracted package has been installed and its file integrity verified.
      */
     public function installVerifiedPackage(PluginInstallation $plugin, string $stagedArchivePath): PluginInstallation
     {
@@ -102,9 +104,21 @@ final class PluginArchiveInstaller
                 $metadata['integrity_version'] = 1;
                 $metadata['installed_file_hashes'] = $fileHashes;
 
-                return $this->lifecycle->transition((string) $plugin->plugin_key, 'installed', [
+                $installed = $this->lifecycle->transition((string) $plugin->plugin_key, 'installed', [
                     'metadata' => $metadata,
                 ]);
+
+                try {
+                    $this->migrationRunner->migrate($installed);
+                } catch (\Throwable $migrationException) {
+                    $this->lifecycle->transition((string) $plugin->plugin_key, 'failed', [
+                        'health_status' => 'failed',
+                        'health_message' => 'A signed plugin migration or integrity check failed. Review server logs before retrying.',
+                    ]);
+                    throw $migrationException;
+                }
+
+                return $installed->fresh();
             } catch (\Throwable $exception) {
                 $freshStatus = PluginInstallation::query()->find($plugin->getKey())?->status;
                 if (! in_array($freshStatus, ['installed', 'active'], true)) {

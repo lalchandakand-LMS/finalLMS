@@ -7,6 +7,7 @@ use App\Models\PluginInstallation;
 use App\Services\Plugins\PluginIntegrityVerifier;
 use App\Services\Plugins\PluginLifecycle;
 use App\Services\Plugins\PluginManifestValidator;
+use App\Services\Plugins\PluginPackageRemover;
 use App\Services\Plugins\PluginUploadInstaller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -139,6 +140,40 @@ class AdminPluginManagerController extends Controller
 
         return redirect()->route('admin.plugins.index')->with('success',
             __('Plugin deactivated. Its installed files and data were retained.'));
+    }
+
+
+    public function uninstall(Request $request, string $key, PluginLifecycle $lifecycle, PluginPackageRemover $remover): RedirectResponse
+    {
+        try {
+            $plugin = PluginInstallation::query()->where('plugin_key', $key)->firstOrFail();
+            if (! in_array($plugin->status, ['installed', 'inactive', 'failed'], true)) {
+                throw new LogicException('Deactivate the plugin before uninstalling it.');
+            }
+
+            $dependent = PluginInstallation::query()->where('status', 'active')
+                ->where('plugin_key', '!=', $plugin->plugin_key)
+                ->get()
+                ->first(fn (PluginInstallation $candidate): bool =>
+                    in_array($plugin->plugin_key, $candidate->manifest['dependencies'] ?? [], true)
+                );
+            if ($dependent) {
+                throw new LogicException('An active plugin depends on this plugin: '.$dependent->plugin_key);
+            }
+
+            $plugin = $lifecycle->transition($plugin->plugin_key, 'uninstalled');
+            $remover->remove($plugin);
+        } catch (Throwable $exception) {
+            report($exception);
+            $this->recordFailure($request, 'admin.plugins.uninstall_failed');
+            return back()->with('error', __('Plugin uninstall was blocked or package cleanup failed. Plugin data and migration records were retained.'));
+        }
+
+        $this->audit($request, 'admin.plugins.uninstalled',
+            'Uninstalled plugin '.$plugin->plugin_key.'; application data and migration history were retained.');
+
+        return redirect()->route('admin.plugins.index')->with('success',
+            __('Plugin uninstalled. Its executable package was removed; plugin data and migration records were retained.'));
     }
 
     private function assertDependenciesAvailable(PluginInstallation $plugin): void
