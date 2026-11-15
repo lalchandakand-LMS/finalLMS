@@ -177,6 +177,8 @@ class AdminPluginManagerController extends Controller
 
     public function restore(Request $request, PluginInstallation $plugin, PluginBackupRestorer $restorer): RedirectResponse
     {
+        $request->validate(['confirm_restore' => ['required', 'accepted']]);
+
         try {
             $restored = $restorer->restore($plugin);
 
