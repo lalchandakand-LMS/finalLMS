@@ -56,6 +56,9 @@ final class PluginMigrationRunner
 
     public function rollback(PluginInstallation $plugin): void
     {
+        if (! in_array($plugin->status, ['installed', 'inactive'], true)) {
+            throw new RuntimeException('Deactivate the plugin before rolling back its migrations.');
+        }
         $this->integrityVerifier->verify($plugin);
         $root = $this->migrationRoot($plugin);
         if ($root === null) return;
@@ -102,7 +105,9 @@ final class PluginMigrationRunner
         }
 
         $candidate = $packageRoot.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, $relative);
-        if (is_link($candidate) || ! is_dir($candidate)) return null;
+        if (is_link($candidate) || ! is_dir($candidate)) {
+            throw new RuntimeException('The signed manifest declares a plugin migration directory that is missing or unsafe.');
+        }
         $real = realpath($candidate);
         if ($real === false || ! str_starts_with($real, rtrim($packageRoot, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR)) {
             throw new RuntimeException('The plugin migration directory resolves outside its package.');

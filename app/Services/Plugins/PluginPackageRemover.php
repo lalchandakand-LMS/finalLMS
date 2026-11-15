@@ -27,8 +27,14 @@ final class PluginPackageRemover
         $rootPath = base_path('plugins');
         if (is_link($rootPath)) throw new RuntimeException('The private plugins root must not be a symbolic link.');
         $root = realpath($rootPath);
+        if ($root === false) throw new RuntimeException('The private plugins directory is unavailable.');
+        $current = $rootPath;
+        foreach (explode('/', substr($expected, strlen('plugins/'))) as $segment) {
+            $current .= DIRECTORY_SEPARATOR.$segment;
+            if (is_link($current)) throw new RuntimeException('Plugin uninstall stopped because a path segment is a symbolic link.');
+        }
         $target = base_path($expected);
-        if ($root === false || is_link($target) || ! is_dir($target)) return;
+        if (is_link($target) || ! is_dir($target)) return;
         $real = realpath($target);
         if ($real === false || ! str_starts_with($real, rtrim($root, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR)) {
             throw new RuntimeException('The plugin directory resolves outside the private plugins folder.');

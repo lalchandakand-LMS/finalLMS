@@ -21,7 +21,8 @@ final class PluginArchiveInstaller
      * Extract a previously signature-verified ZIP into the canonical private
      * plugins/vendor/plugin/version directory and mark it installed.
      *
-     * No plugin PHP code is loaded or executed by this service.
+     * Plugin entrypoints are not loaded here. Signed migrations may execute only after
+     * the extracted package has been installed and its file integrity verified.
      */
     public function installVerifiedPackage(PluginInstallation $plugin, string $stagedArchivePath): PluginInstallation
     {
@@ -109,7 +110,7 @@ final class PluginArchiveInstaller
 
                 try {
                     $this->migrationRunner->migrate($installed);
-                } catch (\\Throwable $migrationException) {
+                } catch (\Throwable $migrationException) {
                     $this->lifecycle->transition((string) $plugin->plugin_key, 'failed', [
                         'health_status' => 'failed',
                         'health_message' => 'A signed plugin migration or integrity check failed. Review server logs before retrying.',
