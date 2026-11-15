@@ -18,6 +18,19 @@ class AcademicLevelController extends Controller
         return view('admin.academic-levels.index', compact('levels'));
     }
 
+    public function show(AcademicLevel $academicLevel): View
+    {
+        $academicLevel->load([
+            'courses.teacher',
+            'courses.batches.branch',
+            'courses.batches.teacher',
+            'courses.batches.exams',
+            'pages',
+        ]);
+
+        return view('admin.academic-levels.show', compact('academicLevel'));
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validated($request);
