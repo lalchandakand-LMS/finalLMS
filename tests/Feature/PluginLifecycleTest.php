@@ -101,7 +101,7 @@ class PluginLifecycleTest extends TestCase
         $this->plugin(['status' => 'staged']);
 
         try {
-            app(PluginLifecycle::class)->transition('aec.course-management', 'installed');
+            app(PluginLifecycle::class)->markInstalled('aec.course-management');
             $this->fail('Unsigned packages must not be marked as installed.');
         } catch (LogicException $exception) {
             $this->assertStringContainsString('verified signed package', $exception->getMessage());
