@@ -62,6 +62,10 @@ class WebsiteBuilderTest extends TestCase
             'home_title' => 'Learn English confidently',
             'home_subtitle' => 'Courses for every learner.',
             'home_featured_title' => 'Featured courses',
+            'home_batches_title' => 'New batches open',
+            'home_stats_title' => 'Our live numbers',
+            'home_paths_title' => 'Choose a study path',
+            'home_reviews_title' => 'Learners recommend us',
             'footer_title' => 'Alom Learning',
             'footer_text' => 'Learn with confidence.',
             'footer_links' => [
@@ -81,6 +85,10 @@ class WebsiteBuilderTest extends TestCase
         $this->assertDatabaseHas('settings', ['key' => 'site_name', 'value' => 'Alom English Center']);
         $this->assertDatabaseHas('settings', ['key' => 'site_logo_media_id', 'value' => (string) $logo->id]);
         $this->assertDatabaseHas('settings', ['key' => 'home_title', 'value' => 'Learn English confidently']);
+        $this->assertDatabaseHas('settings', ['key' => 'home_batches_title', 'value' => 'New batches open']);
+        $this->assertDatabaseHas('settings', ['key' => 'home_stats_title', 'value' => 'Our live numbers']);
+        $this->assertDatabaseHas('settings', ['key' => 'home_paths_title', 'value' => 'Choose a study path']);
+        $this->assertDatabaseHas('settings', ['key' => 'home_reviews_title', 'value' => 'Learners recommend us']);
         $savedSlides = json_decode((string) Setting::value('home_slides'), true);
         $this->assertSame($slide->id, $savedSlides[0]['image_id']);
         $savedFooterLinks = json_decode((string) Setting::value('footer_links'), true);
@@ -89,7 +97,7 @@ class WebsiteBuilderTest extends TestCase
         $savedHeaderLinks = json_decode((string) Setting::value('header_links'), true);
         $this->assertSame([['label' => 'Admissions', 'url' => '/admissions']], $savedHeaderLinks);
         Auth::logout();
-        $this->get('/')->assertOk()->assertSee('Alom Learning')->assertSee('Learn with confidence.')->assertSee('Courses')->assertSee('Admissions')->assertDontSee('Unsafe menu');
+        $this->get('/')->assertOk()->assertSee('Alom Learning')->assertSee('Learn with confidence.')->assertSee('New batches open')->assertSee('Our live numbers')->assertSee('Choose a study path')->assertSee('Learners recommend us')->assertSee('Courses')->assertSee('Admissions')->assertDontSee('Unsafe menu');
     }
 
 
