@@ -337,28 +337,32 @@ class _InstructorHomeState extends State<InstructorHome> {
   }
 
   Future<void> showStudents(Map<String, dynamic> course) async {
+    final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final titleStyle = Theme.of(context).textTheme.titleLarge;
+    final capturedThemes = InheritedTheme.capture(from: context, to: navigator.context);
     try {
       final response = await widget.api.get("/instructor/courses/${course['slug']}/students");
-      if (!mounted || !context.mounted) {
+      if (!navigator.mounted) {
         return;
       }
-      final pageContext = context;
       final students = response['data'] as List<dynamic>? ?? [];
-      showModalBottomSheet<void>(context: pageContext, builder: (sheetContext) => SafeArea(child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text('Students — ${course['title']}', style: titleStyle),
-          ...students.map((item) {
-            final student = item['student'] as Map<String, dynamic>;
-            return ListTile(title: Text(student['name']?.toString() ?? 'Student'), subtitle: Text(student['email']?.toString() ?? ''));
-          }),
-          if (students.isEmpty) const ListTile(title: Text('No enrolled students yet.')),
-        ],
-      )));
+      navigator.push<void>(ModalBottomSheetRoute<void>(
+        capturedThemes: capturedThemes,
+        builder: (_) => SafeArea(child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Text('Students — ${course['title']}', style: titleStyle),
+            ...students.map((item) {
+              final student = item['student'] as Map<String, dynamic>;
+              return ListTile(title: Text(student['name']?.toString() ?? 'Student'), subtitle: Text(student['email']?.toString() ?? ''));
+            }),
+            if (students.isEmpty) const ListTile(title: Text('No enrolled students yet.')),
+          ],
+        )),
+      ));
     } catch (e) {
-      if (!mounted || !messenger.mounted) {
+      if (!navigator.mounted || !messenger.mounted) {
         return;
       }
       if (e is ApiException && (e.statusCode == 401 || e.statusCode == 403)) {
@@ -544,27 +548,31 @@ class _InstructorHomeState extends State<InstructorHome> {
   }
 
   Future<DateTime?> _pickDateTime(DateTime initial) async {
-    final date = await showDatePicker(
-      context: context,
-      initialDate: initial,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-    );
-    if (!mounted || !context.mounted) {
+    final navigator = Navigator.of(context);
+    final capturedThemes = InheritedTheme.capture(from: context, to: navigator.context);
+    final barrierLabel = MaterialLocalizations.of(context).modalBarrierDismissLabel;
+    final date = await navigator.push<DateTime>(RawDialogRoute<DateTime>(
+      pageBuilder: (_, __, ___) => DatePickerDialog(
+        initialDate: initial,
+        firstDate: DateTime.now(),
+        lastDate: DateTime.now().add(const Duration(days: 365)),
+      ),
+      barrierDismissible: true,
+      barrierLabel: barrierLabel,
+      transitionDuration: const Duration(milliseconds: 200),
+      transitionBuilder: (_, animation, __, child) => FadeTransition(opacity: animation, child: child),
+    ));
+    if (!navigator.mounted || date == null) {
       return null;
     }
-    if (date == null) {
-      return null;
-    }
-    final pickerContext = context;
-    final time = await showTimePicker(
-      context: pickerContext,
-      initialTime: TimeOfDay.fromDateTime(initial),
-    );
-    if (!mounted || !pickerContext.mounted) {
-      return null;
-    }
-    if (time == null) {
+    final time = await navigator.push<TimeOfDay>(RawDialogRoute<TimeOfDay>(
+      pageBuilder: (_, __, ___) => TimePickerDialog(initialTime: TimeOfDay.fromDateTime(initial)),
+      barrierDismissible: true,
+      barrierLabel: barrierLabel,
+      transitionDuration: const Duration(milliseconds: 200),
+      transitionBuilder: (_, animation, __, child) => FadeTransition(opacity: animation, child: child),
+    ));
+    if (!navigator.mounted || time == null) {
       return null;
     }
     return DateTime(date.year, date.month, date.day, time.hour, time.minute);
