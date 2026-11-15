@@ -76,15 +76,17 @@ class AdminModuleRegistryTest extends TestCase
             'sms',
             'email',
             'mobile_verification',
+            'otp_verification',
+            'sms_otp',
+            'email_otp',
+            'gmail',
+            'course_builder',
+            'course_content_studio',
+            'blog_post_builder',
+            'page_builder',
             'ai_builder',
+            'ai_developer',
         ] as $key) {
-            if ($key === 'ai_builder') {
-                // AI Developer exists today; AI Builder remains a separately tracked
-                // first-party plugin target until its runtime migration is implemented.
-                $this->assertArrayNotHasKey($key, $catalog);
-                continue;
-            }
-
             $this->assertArrayHasKey($key, $catalog, "Expected independent module [{$key}].");
             $this->assertSame('module', $catalog[$key]['type']);
         }
