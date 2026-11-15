@@ -15,7 +15,7 @@ class AdminSupportTicketController extends Controller
     {
         $tickets = SupportTicket::query()
             ->with(['user:id,name,email', 'branch:id,name', 'latestMessage'])
-            ->when($request->filled('status'), fn ($query) => $query->where('status', $request->string('status')))
+            ->when(in_array($request->input('status'), ['open', 'in_progress', 'closed'], true), fn ($query) => $query->where('status', $request->input('status')))
             ->latest('last_message_at')
             ->paginate(20)
             ->withQueryString();
