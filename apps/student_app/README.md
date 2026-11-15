@@ -59,7 +59,7 @@ Correct answer indexes are never included in the question payload. The API check
 - Add a published course to the account-owned cart from Course Details.
 - Open My Cart from the Student home toolbar to view saved courses and current server-calculated BDT totals.
 - Remove an individual course or clear the cart. Cart contents persist across approved devices because they are stored against the authenticated student account.
-- A cart does not reserve a batch seat or lock a price. Batch capacity, Flash Sale eligibility and payable amount are checked again at checkout. Coupon codes are validated server-side, cannot stack with Flash Sales, and enforce date, minimum spend, course eligibility and usage limits. Multi-course cart checkout creates one manual payment; coupon use is reserved until Admin approval and released if payment is rejected. Free carts enroll immediately. bKash cart checkout and printable invoices/receipts are not included yet.
+- A cart does not reserve a batch seat or lock a price. Batch capacity, Flash Sale eligibility and payable amount are checked again at checkout. Coupon codes are validated server-side, cannot stack with Flash Sales, and enforce date, minimum spend, course eligibility and usage limits. Multi-course cart checkout creates one manual payment; coupon use is reserved until Admin approval and released if payment is rejected. Free carts enroll immediately. bKash cart checkout remains outside the current manual-payment cart flow; student invoice and receipt history is available in the app.
 
 
 ## Student invoices and receipts
