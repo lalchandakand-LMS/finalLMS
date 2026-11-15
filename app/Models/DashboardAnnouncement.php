@@ -9,7 +9,7 @@ class DashboardAnnouncement extends Model
 {
     protected $fillable = [
         'title', 'body', 'content_type', 'course_id', 'blog_post_id', 'image_media_id',
-        'button_label', 'button_url', 'audience', 'priority', 'is_active',
+        'button_label', 'button_url', 'audience', 'branch_id', 'priority', 'is_active',
         'starts_at', 'ends_at', 'created_by',
     ];
 
@@ -32,6 +32,11 @@ class DashboardAnnouncement extends Model
     public function image(): BelongsTo
     {
         return $this->belongsTo(MediaAsset::class, 'image_media_id');
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     public function scopeCurrentlyActive($query)
