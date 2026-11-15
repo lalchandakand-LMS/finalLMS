@@ -380,6 +380,10 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('admin.activity-logs.index');
         Route::post('/invoices', [InvoiceController::class, 'store'])->name('admin.invoices.store');
         Route::post('/invoices/{invoice}/payments', [InvoiceController::class, 'receivePayment'])->name('admin.invoices.payments.store');
+        Route::get('/academic-levels', [AcademicLevelController::class, 'index'])->name('admin.academic-levels.index');
+        Route::post('/academic-levels', [AcademicLevelController::class, 'store'])->name('admin.academic-levels.store');
+        Route::put('/academic-levels/{academicLevel}', [AcademicLevelController::class, 'update'])->name('admin.academic-levels.update');
+        Route::delete('/academic-levels/{academicLevel}', [AcademicLevelController::class, 'destroy'])->name('admin.academic-levels.destroy');
         Route::get('/batches', [BatchController::class, 'index'])->name('admin.batches.index');
         Route::get('/batches/{batch}/exams', [ExamController::class, 'teacherIndex'])->name('admin.batches.exams.index');
         Route::post('/batches/{batch}/exams', [ExamController::class, 'store'])->middleware('throttle:10,1')->name('admin.batches.exams.store');
