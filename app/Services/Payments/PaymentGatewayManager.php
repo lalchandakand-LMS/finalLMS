@@ -45,7 +45,7 @@ class PaymentGatewayManager
         }
         if ($rawRegistry === null) {
             $legacyMethods = Setting::paymentMethods();
-            $rawRegistry = json_encode(['bkash' => (bool) ($legacyMethods['bkash']['enabled'] ?? false)]);
+            $rawRegistry = json_encode(['bkash' => (bool) ($legacyMethods['bkash']['enabled'] ?? false) || (bool) config('services.bkash.enabled')]);
         }
         $saved = json_decode((string) $rawRegistry, true);
         $saved = is_array($saved) ? $saved : [];
