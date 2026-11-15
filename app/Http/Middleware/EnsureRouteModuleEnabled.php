@@ -25,7 +25,7 @@ class EnsureRouteModuleEnabled
                 foreach ($patterns as $pattern) {
                     if (Str::is($pattern, $routeName)) {
                         abort_unless($this->modules->isEnabled($module), 404, 'This LMS module is currently disabled.');
-                        return $next($request);
+                        break;
                     }
                 }
             }
