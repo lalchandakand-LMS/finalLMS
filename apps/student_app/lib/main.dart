@@ -811,12 +811,12 @@ class _StudentSupportPageState extends State<StudentSupportPage> {
     if (mounted) setState(() { loading = true; error = null; });
     try {
       final response = await widget.api.get('/my/support-tickets');
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() => tickets = response['data'] as List<dynamic>? ?? []);
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) { setState(() => loading = false); }
     }
   }
 
@@ -871,15 +871,15 @@ class _StudentSupportPageState extends State<StudentSupportPage> {
         'message': message.text.trim(),
       });
       await load();
-      if (!mounted) return;
+      if (!mounted) { return; }
       final data = response['data'] as Map<String, dynamic>;
       await openTicket(data);
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
       subject.dispose();
       message.dispose();
-      if (mounted) setState(() => creating = false);
+      if (mounted) { setState(() => creating = false); }
     }
   }
 
@@ -987,12 +987,12 @@ class _SupportTicketConversationPageState extends State<SupportTicketConversatio
     if (mounted) setState(() { loading = true; error = null; });
     try {
       final response = await widget.api.get('/my/support-tickets/${widget.ticketId}');
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() => ticket = response['data'] as Map<String, dynamic>);
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) { setState(() => loading = false); }
     }
   }
 
@@ -1004,9 +1004,9 @@ class _SupportTicketConversationPageState extends State<SupportTicketConversatio
       reply.clear();
       await load();
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => sending = false);
+      if (mounted) { setState(() => sending = false); }
     }
   }
 
@@ -1355,7 +1355,7 @@ class _StudentCartPageState extends State<StudentCartPage> {
     } catch (exception) {
       if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) { setState(() => loading = false); }
     }
   }
 
@@ -3175,7 +3175,7 @@ class _StudentNoticesPageState extends State<StudentNoticesPage> {
     setState(() { loading = true; error = null; });
     try {
       final response = await widget.api.get('/my/notices');
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() {
         notices = response['data'] as List<dynamic>? ?? [];
         final meta = response['meta'] as Map<String, dynamic>? ?? {};
