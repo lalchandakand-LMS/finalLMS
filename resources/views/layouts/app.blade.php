@@ -22,6 +22,13 @@
         }
         $isPublicLayout = ! $isAdminLayout;
         $websiteHeaderLinks = $isPublicLayout && $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('header_links', '[]'), true) : [];
+        $publishedPageLinks = $isPublicLayout && \Illuminate\Support\Facades\Schema::hasTable('website_pages')
+            ? \App\Models\WebsitePage::published()->where('show_in_menu', true)->orderBy('menu_order')->orderBy('title')->get()
+                ->map(fn ($page) => ['label' => $page->menu_label ?: $page->title, 'url' => route('website-pages.show', $page->slug)])->all()
+            : [];
+        $websiteHeaderLinks = collect(is_array($websiteHeaderLinks) ? $websiteHeaderLinks : [])
+            ->concat($publishedPageLinks)->filter(fn ($link) => is_array($link) && !empty($link['label']) && !empty($link['url']))
+            ->unique('url')->values()->all();
         $websiteFooterTitle = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('footer_title', config('app.name')) : config('app.name');
         $websiteFooterText = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('footer_text', '') : '';
         $websiteFooterLinks = $isPublicLayout && $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('footer_links', '[]'), true) : [];
