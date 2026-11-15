@@ -94,15 +94,36 @@
                                 @endforeach
                             </select>
                         </label>
-                        <label>{{ __('Course / offer landing page URL') }}
-                            <input type="url" name="destination_url" required maxlength="2048" value="{{ old('destination_url') }}" placeholder="https://your-lms-domain.example/courses/...">
+                        <label style="grid-column:1 / -1;">{{ __('Choose LMS content to boost (optional)') }}
+                            <select name="source_reference" id="meta-boost-source">
+                                <option value="">{{ __('Choose a course, notice or active offer — or enter a URL manually') }}</option>
+                                <optgroup label="{{ __('Published courses') }}">
+                                    @foreach($boostCourses as $course)
+                                        <option value="course:{{ $course->id }}" data-title="{{ $course->title }}" data-message="{{ $course->short_description ?: $course->title }}" data-url="{{ route('courses.show', $course) }}" data-image="{{ $course->image_path ? url(\Illuminate\Support\Facades\Storage::disk('public')->url($course->image_path)) : '' }}" @selected(old('source_reference') === 'course:'.$course->id)>{{ $course->title }}</option>
+                                    @endforeach
+                                </optgroup>
+                                <optgroup label="{{ __('Active public notices') }}">
+                                    @foreach($boostNotices as $notice)
+                                        <option value="notice:{{ $notice->id }}" data-title="{{ $notice->title }}" data-message="{{ \Illuminate\Support\Str::limit(strip_tags($notice->body), 2000) }}" data-url="{{ $notice->button_url ?: route('notices.index') }}" data-image="" @selected(old('source_reference') === 'notice:'.$notice->id)>{{ $notice->title }}</option>
+                                    @endforeach
+                                </optgroup>
+                                <optgroup label="{{ __('Active offers') }}">
+                                    @foreach($boostOffers as $offer)
+                                        <option value="offer:{{ $offer->id }}" data-title="{{ $offer->title }}" data-message="{{ \Illuminate\Support\Str::limit(strip_tags($offer->description), 2000) }}" data-url="{{ route('flash-sales.public') }}" data-image="{{ $offer->banner_path ? url(\Illuminate\Support\Facades\Storage::disk('public')->url($offer->banner_path)) : '' }}" @selected(old('source_reference') === 'offer:'.$offer->id)>{{ $offer->title }}</option>
+                                    @endforeach
+                                </optgroup>
+                            </select>
+                            <small class="muted">{{ __('Selecting content fills its landing page and suggested ad copy. You can edit the copy and URL before creating a paused draft. If the content has no image, provide a public image URL below.') }}</small>
+                        </label>
+                        <label>{{ __('Landing page URL') }}
+                            <input type="url" id="meta-boost-destination" name="destination_url" maxlength="2048" value="{{ old('destination_url') }}" placeholder="https://your-lms-domain.example/courses/...">
                         </label>
                         <label>{{ __('Public image URL (HTTPS recommended)') }}
-                            <input type="url" name="image_url" required maxlength="2048" value="{{ old('image_url') }}" placeholder="https://your-domain.example/storage/course-banner.jpg">
+                            <input type="url" id="meta-boost-image" name="image_url" maxlength="2048" value="{{ old('image_url') }}" placeholder="https://your-domain.example/storage/course-banner.jpg">
                         </label>
                     </div>
                     <label>{{ __('Ad message') }}
-                        <textarea name="message" rows="3" maxlength="2000" required>{{ old('message') }}</textarea>
+                        <textarea id="meta-boost-message" name="message" rows="3" maxlength="2000" required>{{ old('message') }}</textarea>
                     </label>
                     <div class="grid grid-3">
                         <label>{{ __('Daily budget (BDT)') }}
