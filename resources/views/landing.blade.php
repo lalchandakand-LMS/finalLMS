@@ -276,17 +276,17 @@
         @endif
         <div class="home-paths__footer"><a class="home-button home-button--primary" href="{{ route('courses.index') }}">{{ __('Browse all courses') }}</a></div>
     </section>
-    @if($hasLearnerVoices)
-        @php
-            $testimonialRows = [
+    @php
+        $testimonialRows = [
                 $learnerVoices->values()->slice(0, 6),
                 $learnerVoices->values()->slice(6, 6),
-            ];
-            if ($testimonialRows[1]->isEmpty()) {
-                $testimonialRows[1] = $testimonialRows[0];
-            }
-        @endphp
-        <section class="home-testimonials"><div class="home-section-heading home-section-heading--dark"><span class="home-heading-kicker">{{ __('Student reviews') }}</span><h2>{{ $homeReviewsTitle }}</h2><p>{{ __('Approved feedback from our learners') }}</p></div>
+        ];
+        if ($testimonialRows[1]->isEmpty()) {
+            $testimonialRows[1] = $testimonialRows[0];
+        }
+    @endphp
+    <section class="home-testimonials"><div class="home-section-heading home-section-heading--dark"><span class="home-heading-kicker">{{ __('Student reviews') }}</span><h2>{{ $homeReviewsTitle }}</h2><p>{{ __('Approved feedback from our learners') }}</p></div>
+        @if($hasLearnerVoices)
             @foreach($testimonialRows as $rowIndex => $row)
                 <div class="home-testimonial-viewport">
                     <div class="home-testimonial-track {{ $rowIndex === 1 ? 'home-testimonial-track--reverse' : '' }}">
@@ -305,8 +305,10 @@
                     </div>
                 </div>
             @endforeach
-        </section>
-    @endif
+        @else
+            <p class="home-empty home-empty--dark">{{ __('Student reviews will appear here after approved feedback is received.') }}</p>
+        @endif
+    </section>
 
     @php
         $builderSections = $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('website_sections', '[]'), true) : [];
