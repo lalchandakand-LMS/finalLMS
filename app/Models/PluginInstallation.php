@@ -13,7 +13,6 @@ class PluginInstallation extends Model
         'name',
         'version',
         'type',
-        'status',
         'manifest',
         'package_sha256',
         'signature_key_id',
