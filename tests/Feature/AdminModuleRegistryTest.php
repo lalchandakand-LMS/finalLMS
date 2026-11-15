@@ -31,7 +31,7 @@ class AdminModuleRegistryTest extends TestCase
         $this->actingAs($admin)->get(route('admin.modules.index'))
             ->assertOk()
             ->assertSee('LMS Module Manager')
-            ->assertSee('Academic Management')
+            ->assertSee('Course Management')
             ->assertSee('Payment Services')
             ->assertSee('Website Slider & Banners')
             ->assertSee('Existing routes are not all gated yet');
