@@ -9,7 +9,8 @@
   "dependencies": [
     "core",
     "course_management",
-    "branch_management"
+    "branch_management",
+    "academic_levels"
   ],
   "permissions": [],
   "routes": [],
