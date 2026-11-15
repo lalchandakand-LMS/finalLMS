@@ -808,15 +808,15 @@ class _StudentSupportPageState extends State<StudentSupportPage> {
   }
 
   Future<void> load() async {
-    if (mounted) setState(() { loading = true; error = null; });
+    if (mounted) { setState(() { loading = true; error = null; }); }
     try {
       final response = await widget.api.get('/my/support-tickets');
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() => tickets = response['data'] as List<dynamic>? ?? []);
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) { setState(() => loading = false); }
     }
   }
 
@@ -879,7 +879,7 @@ class _StudentSupportPageState extends State<StudentSupportPage> {
     } finally {
       subject.dispose();
       message.dispose();
-      if (mounted) setState(() => creating = false);
+      if (mounted) { setState(() => creating = false); }
     }
   }
 
@@ -997,7 +997,7 @@ class _SupportTicketConversationPageState extends State<SupportTicketConversatio
   }
 
   Future<void> sendReply() async {
-    if (sending || reply.text.trim().length < 2) return;
+    if (sending || reply.text.trim().length < 2) { return; }
     setState(() { sending = true; error = null; });
     try {
       await widget.api.postJson('/my/support-tickets/${widget.ticketId}/messages', {'message': reply.text.trim()});
@@ -1006,7 +1006,7 @@ class _SupportTicketConversationPageState extends State<SupportTicketConversatio
     } catch (exception) {
       if (mounted) setState(() => error = exception.toString());
     } finally {
-      if (mounted) setState(() => sending = false);
+      if (mounted) { setState(() => sending = false); }
     }
   }
 
