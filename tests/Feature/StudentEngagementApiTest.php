@@ -90,9 +90,7 @@ class StudentEngagementApiTest extends TestCase
             'status' => 'pending',
         ]);
 
-        Comment::create([
-            'commentable_type' => $course->getMorphClass(),
-            'commentable_id' => $course->id,
+        $course->comments()->create([
             'author_id' => $student->id,
             'body' => 'Approved public review.',
             'status' => 'approved',
