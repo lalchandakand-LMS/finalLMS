@@ -2857,7 +2857,7 @@ class _StudentNoticesPageState extends State<StudentNoticesPage> {
       if (mounted) {
         setState(() {
           notice['is_read'] = true;
-          unreadCount = (unreadCount - 1).clamp(0, 999999);
+          unreadCount = (unreadCount - 1).clamp(0, 999999).toInt();
         });
       }
     } catch (exception) {
