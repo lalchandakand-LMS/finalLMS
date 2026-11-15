@@ -283,7 +283,12 @@ class StudentCartCheckoutController extends Controller
     {
         $occupied = Enrollment::query()->where('batch_id', $batch->id)->whereIn('status', ['active', 'completed'])->count();
         $pending = Payment::query()->where('batch_id', $batch->id)->where('status', 'pending')->count();
+        $pendingCombo = DB::table('payment_combo_courses')
+            ->join('payments', 'payments.id', '=', 'payment_combo_courses.payment_id')
+            ->where('payment_combo_courses.batch_id', $batch->id)
+            ->where('payments.status', 'pending')
+            ->count();
 
-        return $occupied + $pending < $batch->capacity;
+        return $occupied + $pending + $pendingCombo < $batch->capacity;
     }
 }
