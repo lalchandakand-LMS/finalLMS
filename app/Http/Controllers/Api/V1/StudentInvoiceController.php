@@ -43,7 +43,7 @@ class StudentInvoiceController extends Controller
 
     public function printInvoice(Invoice $invoice): View
     {
-        $invoice->load(['user:id,name,email,phone', 'course:id,title', 'batch:id,title', 'payments.receiver:id,name', 'refunds']);
+        $invoice->load(['user:id,name,email,phone_number', 'course:id,title', 'batch:id,title', 'payments.receiver:id,name', 'refunds']);
 
         return response()->view('student.invoices.print', [
             'invoice' => $invoice,
