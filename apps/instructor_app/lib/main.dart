@@ -297,6 +297,120 @@ class _AssessmentMetric extends StatelessWidget {
   );
 }
 
+class InstructorNoticesPage extends StatefulWidget {
+  const InstructorNoticesPage({required this.api, super.key});
+  final MobileApi api;
+
+  @override
+  State<InstructorNoticesPage> createState() => _InstructorNoticesPageState();
+}
+
+class _InstructorNoticesPageState extends State<InstructorNoticesPage> {
+  List<dynamic> notices = [];
+  int unreadCount = 0;
+  bool loading = true;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  Future<void> load() async {
+    if (mounted) {
+      setState(() { loading = true; error = null; });
+    }
+    try {
+      final response = await widget.api.get('/instructor/notices');
+      if (!mounted) return;
+      setState(() {
+        notices = response['data'] as List<dynamic>? ?? [];
+        final meta = response['meta'] as Map<String, dynamic>? ?? {};
+        unreadCount = (meta['unread_count'] as num?)?.toInt() ?? 0;
+      });
+    } catch (exception) {
+      if (mounted) setState(() => error = exception.toString());
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> markRead(Map<String, dynamic> notice) async {
+    if (notice['is_read'] == true) return;
+    try {
+      await widget.api.postJson('/instructor/notices/${notice['id']}/read', {});
+      if (!mounted) return;
+      setState(() {
+        notice['is_read'] = true;
+        if (unreadCount > 0) unreadCount--;
+      });
+    } catch (exception) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(exception.toString())),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      title: const Text('Notices'),
+      actions: [IconButton(onPressed: loading ? null : load, icon: const Icon(Icons.refresh))],
+    ),
+    body: loading
+      ? const Center(child: CircularProgressIndicator())
+      : error != null
+        ? Center(child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Text(error!),
+              const SizedBox(height: 12),
+              FilledButton(onPressed: load, child: const Text('Retry')),
+            ]),
+          ))
+        : RefreshIndicator(
+            onRefresh: load,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Text('$unreadCount unread notices', style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 8),
+                if (notices.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.all(28),
+                    child: Center(child: Text('No notices available right now.')),
+                  ),
+                ...notices.map((item) {
+                  final notice = item as Map<String, dynamic>;
+                  final isRead = notice['is_read'] == true;
+                  return Card(
+                    child: ListTile(
+                      leading: Icon(
+                        isRead ? Icons.mark_email_read_outlined : Icons.mark_email_unread_outlined,
+                        color: isRead ? null : Theme.of(context).colorScheme.primary,
+                      ),
+                      title: Text(notice['title']?.toString() ?? 'Notice'),
+                      subtitle: Text([
+                        if ((notice['body']?.toString() ?? '').isNotEmpty) notice['body'].toString(),
+                        if ((notice['published_at']?.toString() ?? '').isNotEmpty)
+                          'Published ${notice['published_at'].toString().split('T').first}',
+                        if ((notice['course']?['title']?.toString() ?? '').isNotEmpty)
+                          'Course: ${notice['course']['title']}',
+                      ].join('\n')),
+                      isThreeLine: true,
+                      trailing: isRead ? const Icon(Icons.check) : const Icon(Icons.chevron_right),
+                      onTap: () => markRead(notice),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+  );
+}
+
 class InstructorHome extends StatefulWidget {
   const InstructorHome({required this.api, required this.onLogout, super.key});
   final MobileApi api;
@@ -1116,10 +1230,16 @@ class _InstructorHomeState extends State<InstructorHome> {
     ));
   }
 
+  Future<void> openNotices() async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => InstructorNoticesPage(api: widget.api),
+    ));
+  }
+
   Future<void> logout() async { await widget.api.logout(); widget.onLogout(); }
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Instructor Workspace'), actions: [IconButton(onPressed: logout, icon: const Icon(Icons.logout), tooltip: 'Sign out')]),
+    appBar: AppBar(title: const Text('Instructor Workspace'), actions: [IconButton(onPressed: openNotices, icon: const Icon(Icons.campaign_outlined), tooltip: 'Notices'), IconButton(onPressed: logout, icon: const Icon(Icons.logout), tooltip: 'Sign out')]),
     body: RefreshIndicator(
       onRefresh: load,
       child: loading ? const Center(child: CircularProgressIndicator())
