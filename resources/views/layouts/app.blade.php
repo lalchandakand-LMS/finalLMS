@@ -11,7 +11,7 @@
         $googleAnalyticsId = $hasSettingsTable ? \App\Models\Setting::value('google_analytics_id') : null;
         $googleTagManagerId = $hasSettingsTable ? \App\Models\Setting::value('google_tag_manager_id') : null;
         $facebookPixelId = $hasSettingsTable ? \App\Models\Setting::value('facebook_pixel_id') : null;
-        $googleSearchConsoleVerification = $hasSettingsTable ? \\App\\Models\\Setting::value('google_search_console_verification') : null;
+        $googleSearchConsoleVerification = $hasSettingsTable ? \App\Models\Setting::value('google_search_console_verification') : null;
         $marketingConsent = request()->cookie('marketing_consent') === 'accepted';
         $isAdminLayout = auth()->check() && (auth()->user()->isAdmin() || auth()->user()->isBranchManager() || auth()->user()->isAccountant());
         $visitorPopup = null;
