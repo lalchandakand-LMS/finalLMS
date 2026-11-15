@@ -79,7 +79,7 @@ class StudentCartController extends Controller
 
         $validated = $request->validate([
             'course_id' => ['required', 'integer', Rule::exists('courses', 'id')->where(fn ($query) => $query->where('status', 'published'))],
-            'batch_id' => ['nullable', 'integer', 'exists:batches,id'],
+            'batch_id' => [$courseHasOpenBatches = Course::query()->whereKey($request->input('course_id'))->whereHas('batches', fn ($query) => $query->where('status', 'open'))->exists() ? 'required' : 'nullable', 'integer', Rule::exists('batches', 'id')->where(fn ($query) => $query->where('course_id', $request->input('course_id'))->where('status', 'open'))],
         ]);
 
         $course = Course::query()->whereKey($validated['course_id'])->where('status', 'published')->firstOrFail();
@@ -106,7 +106,7 @@ class StudentCartController extends Controller
         abort_unless($course->status === 'published', 404);
 
         $validated = $request->validate([
-            'batch_id' => ['nullable', 'integer', Rule::exists('batches', 'id')->where(fn ($query) => $query->where('course_id', $course->id)->where('status', 'open'))],
+            'batch_id' => [$course->batches()->where('status', 'open')->exists() ? 'required' : 'nullable', 'integer', Rule::exists('batches', 'id')->where(fn ($query) => $query->where('course_id', $course->id)->where('status', 'open'))],
         ]);
 
         $updated = DB::table('student_cart_items')
