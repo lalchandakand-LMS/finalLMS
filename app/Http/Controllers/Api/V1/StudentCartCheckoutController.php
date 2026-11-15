@@ -257,11 +257,10 @@ class StudentCartCheckoutController extends Controller
     {
         abort_if($hasFlashSale, 422, 'Coupon codes cannot be combined with a Flash Sale.');
         abort_if($subtotal < (float) $coupon->minimum_subtotal, 422, 'Your cart does not meet the coupon minimum subtotal.');
-        $reserved = fn ($query) => $query->whereIn('status', ['reserved', 'redeemed']);
         if ($coupon->usage_limit !== null) {
-            abort_if($coupon->redemptions()->where($reserved)->count() >= $coupon->usage_limit, 409, 'This coupon has reached its usage limit.');
+            abort_if($coupon->redemptions()->whereIn('status', ['reserved', 'redeemed'])->count() >= $coupon->usage_limit, 409, 'This coupon has reached its usage limit.');
         }
-        abort_if($coupon->redemptions()->where('user_id', $userId)->where($reserved)->count() >= $coupon->per_user_limit, 409, 'You have reached this coupon usage limit.');
+        abort_if($coupon->redemptions()->where('user_id', $userId)->whereIn('status', ['reserved', 'redeemed'])->count() >= $coupon->per_user_limit, 409, 'You have reached this coupon usage limit.');
         $eligibleIds = $coupon->courses()->pluck('courses.id')->all();
         if ($eligibleIds !== []) {
             abort_if($items->whereIn('course_id', $eligibleIds)->isEmpty(), 422, 'This coupon does not apply to your cart.');
