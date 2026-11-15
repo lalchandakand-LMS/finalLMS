@@ -337,15 +337,14 @@ class _InstructorHomeState extends State<InstructorHome> {
   }
 
   Future<void> showStudents(Map<String, dynamic> course) async {
-    final pageContext = context;
     try {
       final response = await widget.api.get("/instructor/courses/${course['slug']}/students");
-      if (!pageContext.mounted) {
+      if (!mounted) {
         return;
       }
       final students = response['data'] as List<dynamic>? ?? [];
-      final titleStyle = Theme.of(pageContext).textTheme.titleLarge;
-      showModalBottomSheet<void>(context: pageContext, builder: (sheetContext) => SafeArea(child: ListView(
+      final titleStyle = Theme.of(context).textTheme.titleLarge;
+      showModalBottomSheet<void>(context: context, builder: (sheetContext) => SafeArea(child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           Text('Students — ${course['title']}', style: titleStyle),
@@ -357,14 +356,14 @@ class _InstructorHomeState extends State<InstructorHome> {
         ],
       )));
     } catch (e) {
-      if (!pageContext.mounted) {
+      if (!mounted) {
         return;
       }
       if (e is ApiException && (e.statusCode == 401 || e.statusCode == 403)) {
         widget.onLogout();
         return;
       }
-      ScaffoldMessenger.of(pageContext).showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
   Future<void> showBatchStudents(Map<String, dynamic> batch) async {
@@ -543,21 +542,20 @@ class _InstructorHomeState extends State<InstructorHome> {
   }
 
   Future<DateTime?> _pickDateTime(DateTime initial) async {
-    final pickerContext = context;
     final date = await showDatePicker(
-      context: pickerContext,
+      context: context,
       initialDate: initial,
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    if (!pickerContext.mounted) {
+    if (!mounted) {
       return null;
     }
     if (date == null) {
       return null;
     }
     final time = await showTimePicker(
-      context: pickerContext,
+      context: context,
       initialTime: TimeOfDay.fromDateTime(initial),
     );
     if (!mounted) {
