@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -64,10 +63,8 @@ class SeoAndSearchConsoleTest extends TestCase
             ->assertSessionHasErrors('google_search_console_verification');
     }
 
-    public function test_sitemap_does_not_include_unpublished_content(): void
+    public function test_sitemap_does_not_include_admin_paths(): void
     {
-        Setting::setValue('google_search_console_verification', 'verification-token');
-
         $this->get('/sitemap.xml')
             ->assertOk()
             ->assertDontSee('/admin');
