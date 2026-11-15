@@ -44,8 +44,8 @@
             $asset = \App\Models\MediaAsset::query()->whereKey($slide['image_id'])->where('mime_type', 'like', 'image/%')->first();
             return $asset ? ['asset' => $asset, 'title' => $slide['title'] ?? '', 'subtitle' => $slide['subtitle'] ?? '', 'button_label' => $slide['button_label'] ?? '', 'button_url' => $slide['button_url'] ?? ''] : null;
         })->filter()->values();
-        $homepageTemplate = (string) ($hasSettingsTable ? \App\Models\Setting::value('homepage_template', 'academy-modern') : 'academy-modern');
-        $homepageTemplate = array_key_exists($homepageTemplate, \App\Http\Controllers\WebsiteBuilderController::homepageTemplates()) ? $homepageTemplate : 'academy-modern';
+        $homepageTemplate = (string) ($hasSettingsTable ? \App\Models\Setting::value('homepage_template', 'redwans-method') : 'academy-modern');
+        $homepageTemplate = array_key_exists($homepageTemplate, \App\Http\Controllers\WebsiteBuilderController::homepageTemplates()) ? $homepageTemplate : 'redwans-method';
 
         $homeBatchesTitle = $hasSettingsTable ? \App\Models\Setting::value('home_batches_title', 'Online Batches are ongoing!') : 'Online Batches are ongoing!';
         $homeStatsTitle = $hasSettingsTable ? \App\Models\Setting::value('home_stats_title', 'See the stats!') : 'See the stats!';
