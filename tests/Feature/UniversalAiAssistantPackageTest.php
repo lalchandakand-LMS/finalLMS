@@ -7,6 +7,7 @@ use App\Services\Plugins\PluginManifestValidator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 use Tests\TestCase;
@@ -20,7 +21,10 @@ class UniversalAiAssistantPackageTest extends TestCase
         parent::setUp();
 
         require_once base_path('plugins/.source/aec/universal-ai-assistant/1.0.0/src/AssistantService.php');
-        if (! Schema::hasTable('ai_assistant_settings')) {\n            $migration = require base_path('plugins/.source/aec/universal-ai-assistant/1.0.0/database/migrations/2026_11_15_000001_create_ai_assistant_tables.php');\n            $migration->up();\n        }
+        if (! Schema::hasTable('ai_assistant_settings')) {
+            $migration = require base_path('plugins/.source/aec/universal-ai-assistant/1.0.0/database/migrations/2026_11_15_000001_create_ai_assistant_tables.php');
+            $migration->up();
+        }
     }
 
     public function test_source_manifest_is_valid_and_declares_all_supported_roles(): void
@@ -113,7 +117,7 @@ class UniversalAiAssistantPackageTest extends TestCase
             'created_at' => now()->subDays(40),
         ]);
 
-        (new \\Aloms\\UniversalAiAssistant\\AssistantService())->pruneExpiredConversations();
+        (new \Aloms\UniversalAiAssistant\AssistantService())->pruneExpiredConversations();
 
         $this->assertDatabaseMissing('ai_assistant_conversations', ['id' => $conversationId]);
         $this->assertDatabaseMissing('ai_assistant_messages', ['conversation_id' => $conversationId]);
