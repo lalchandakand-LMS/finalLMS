@@ -986,7 +986,7 @@ class _CourseCheckoutPageState extends State<CourseCheckoutPage> {
       allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
       withData: false,
     );
-    if (!mounted || result == null || result.files.isEmpty) return;
+    if (!mounted || result == null || result.files.isEmpty) { return; }
     final file = result.files.single;
     if (file.size > 5 * 1024 * 1024) {
       setState(() => error = 'Payment proof must be 5 MB or smaller.');
