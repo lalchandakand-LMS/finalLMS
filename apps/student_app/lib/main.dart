@@ -976,9 +976,13 @@ class _StudentCartPageState extends State<StudentCartPage> {
     final course = item['course'] as Map<String, dynamic>;
     try {
       await widget.api.delete('/my/cart/${course['slug']}');
-      if (mounted) await load();
+      if (mounted) {
+        await load();
+      }
     } catch (exception) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(exception.toString())));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(exception.toString())));
+      }
     }
   }
 
