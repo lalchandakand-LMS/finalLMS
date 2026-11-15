@@ -18,7 +18,7 @@ class AdminVerificationCenterTest extends TestCase
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
         foreach (['student', 'guardian', 'teacher', 'branch_manager'] as $role) {
             User::factory()->create([
-                'name' => ucfirst(str_replace('_', ' ', $role)).' Account',
+                'name' => ucwords(str_replace('_', ' ', $role)).' Account',
                 'role' => $role,
                 'email_verified_at' => $role === 'student' ? now() : null,
                 'phone_number' => '+8801'.str_pad((string) random_int(300000000, 999999999), 9, '0', STR_PAD_LEFT),
