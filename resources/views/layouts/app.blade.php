@@ -44,16 +44,19 @@
     <meta name="description" content="@yield('meta_description', $seoDescription)">
     <meta name="keywords" content="{{ $seoKeywords }}">
     <link rel="canonical" href="@yield('canonical_url', request()->url())">
-    <meta property="og:title" content="@yield('meta_title', $seoTitle)">
+    <meta property="og:title" content="@yield('meta_title', trim($__env->yieldContent('title')) ?: $seoTitle)">
     <meta property="og:description" content="@yield('meta_description', $seoDescription)">
     <meta property="og:type" content="@yield('og_type', 'website')">
     <meta property="og:url" content="@yield('canonical_url', request()->url())">
     <meta property="og:site_name" content="{{ config('app.name') }}">
     <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="@yield('meta_title', $seoTitle)">
+    <meta name="twitter:title" content="@yield('meta_title', trim($__env->yieldContent('title')) ?: $seoTitle)">
     <meta name="twitter:description" content="@yield('meta_description', $seoDescription)">
     @if($googleSearchConsoleVerification)
         <meta name="google-site-verification" content="{{ $googleSearchConsoleVerification }}">
+    @endif
+    @if(auth()->check())
+        <meta name="robots" content="noindex, nofollow">
     @endif
     @if($marketingConsent && $googleAnalyticsId)
         <script async src="https://www.googletagmanager.com/gtag/js?id={{ urlencode($googleAnalyticsId) }}"></script>
