@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -64,6 +66,53 @@ class SeoAndSearchConsoleTest extends TestCase
                 'google_search_console_verification' => '<script>alert(1)</script>',
             ])
             ->assertSessionHasErrors('google_search_console_verification');
+    }
+
+    public function test_student_registration_emits_meta_pixel_event_after_marketing_consent(): void
+    {
+        Notification::fake();
+        Setting::setValue('facebook_pixel_id', '123456789012345');
+
+        $payload = [
+            'name' => 'Pixel Test Student',
+            'email' => 'pixel-student@example.test',
+            'phone_number' => '+8801712345678',
+            'password' => 'StrongPassword123!',
+            'password_confirmation' => 'StrongPassword123!',
+        ];
+
+        $this->withCookie('marketing_consent', 'accepted')
+            ->post(route('register.store'), $payload)
+            ->assertRedirect(route('login'));
+
+        $this->withCookie('marketing_consent', 'accepted')
+            ->get(route('login'))
+            ->assertOk()
+            ->assertSee("fbq('track','CompleteRegistration')", false);
+    }
+
+    public function test_meta_pixel_registration_event_is_not_rendered_without_marketing_consent(): void
+    {
+        Notification::fake();
+        Setting::setValue('facebook_pixel_id', '123456789012345');
+
+        $payload = [
+            'name' => 'No Consent Student',
+            'email' => 'no-consent-student@example.test',
+            'phone_number' => '+8801812345678',
+            'password' => 'StrongPassword123!',
+            'password_confirmation' => 'StrongPassword123!',
+        ];
+
+        $this->withCookie('marketing_consent', 'declined')
+            ->post(route('register.store'), $payload)
+            ->assertRedirect(route('login'));
+
+        $this->withCookie('marketing_consent', 'declined')
+            ->get(route('login'))
+            ->assertOk()
+            ->assertDontSee("fbq('track','CompleteRegistration')", false)
+            ->assertDontSee('connect.facebook.net', false);
     }
 
     public function test_sitemap_does_not_include_admin_paths(): void
