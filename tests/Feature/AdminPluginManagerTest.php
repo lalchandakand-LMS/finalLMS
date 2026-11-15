@@ -222,6 +222,51 @@ PHP;
         $this->assertFileExists($this->finalPath.'/src/Plugin.php');
     }
 
+
+    public function test_admin_can_uninstall_inactive_plugin_without_deleting_application_data(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        if (! is_dir($this->finalPath)) mkdir($this->finalPath, 0750, true);
+        file_put_contents($this->finalPath.'/src.php', '<?php // signed test package');
+
+        $plugin = new PluginInstallation();
+        $plugin->forceFill([
+            'plugin_key' => 'aec.course-management',
+            'name' => 'Course Management',
+            'version' => '1.0.0',
+            'type' => 'module',
+            'status' => 'inactive',
+            'manifest' => $this->manifest,
+            'package_path' => 'plugins/aec/course-management/1.0.0',
+            'signature_verified_at' => now(),
+            'package_sha256' => str_repeat('a', 64),
+            'signature_key_id' => 'test-release-key',
+        ])->save();
+
+        \DB::table('plugin_migrations')->insert([
+            'plugin_key' => 'aec.course-management',
+            'plugin_version' => '1.0.0',
+            'migration' => '2026_11_15_000001_example.php',
+            'status' => 'completed',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.plugins.uninstall', 'aec.course-management'))
+            ->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'status' => 'uninstalled',
+        ]);
+        $this->assertDatabaseHas('plugin_migrations', [
+            'plugin_key' => 'aec.course-management',
+            'status' => 'completed',
+        ]);
+        $this->assertDirectoryDoesNotExist($this->finalPath);
+    }
+
     public function test_non_admin_cannot_view_or_install_plugins(): void
     {
         $student = User::factory()->create(['role' => 'student', 'email_verified_at' => now()]);
