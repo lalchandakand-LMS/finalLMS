@@ -28,6 +28,7 @@ class AdminCouponController extends Controller
         $courseIds = $data['course_ids'] ?? [];
         unset($data['course_ids']);
         $data['code'] = Str::upper(trim($data['code']));
+        $data['is_active'] = $request->boolean('is_active');
         $data['created_by'] = $request->user()->id;
         $coupon = Coupon::create($data);
         $coupon->courses()->sync($courseIds);
@@ -41,6 +42,7 @@ class AdminCouponController extends Controller
         $courseIds = $data['course_ids'] ?? [];
         unset($data['course_ids']);
         $data['code'] = Str::upper(trim($data['code']));
+        $data['is_active'] = $request->boolean('is_active');
         $coupon->update($data);
         $coupon->courses()->sync($courseIds);
 
