@@ -142,7 +142,7 @@ Course ownership is checked server-side. The API does not accept a client-suppli
 
 All checkout endpoints require an approved student mobile bearer token.
 
-- `GET /api/v1/courses/{course:slug}/checkout?batch_id={id}` returns the current server-calculated BDT price, selected batch, enabled payment methods, and whether the student already has an enrollment or pending payment. If the course has open batches, a valid `batch_id` is required.
+- `GET /api/v1/courses/{course:slug}/checkout?batch_id={id}` returns the current server-calculated BDT price, selected batch, enabled payment methods, and whether the student already has an enrollment or pending payment. It also returns `open_batches` containing only open batches with available seats and `batch_required=true` until one is selected. Pass a valid `batch_id` to receive the batch-specific quote.
 - `POST /api/v1/courses/{course:slug}/checkout` creates a free enrollment or submits a manual payment. For paid courses send `payment_method`, `transaction_reference`, and optionally `sender_account` and multipart `proof` (JPG, PNG, or PDF, up to 5 MB). The server calculates the amount; client-supplied price, user ID, enrollment status, or payment status are ignored.
 - `POST /api/v1/courses/{course:slug}/checkout/bkash` with optional `batch_id` starts the configured bKash checkout and returns `checkout_url`. Open that URL in a secure browser/custom tab. The existing server callback executes/queries bKash and only grants enrollment after authoritative amount/reference verification. The browser return URL is not proof of payment.
 
