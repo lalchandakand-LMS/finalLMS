@@ -137,6 +137,12 @@
                             @endif
                             @if(is_array($plugin->metadata) && !empty($plugin->metadata['uninstall_backup_path']))
                                 <small class="muted">{{ __('Private backup retained') }}</small>
+                                @if($plugin->status === 'uninstalled')
+                                    <form method="POST" action="{{ route('admin.plugins.restore', $plugin) }}" style="margin-top:8px;">
+                                        @csrf
+                                        <button class="btn secondary" type="submit">{{ __('Verify and restore backup') }}</button>
+                                    </form>
+                                @endif
                             @endif
                             @if(!in_array($plugin->status, ['uninstalled', 'failed'], true))
                                 <details style="margin-top:10px;">
