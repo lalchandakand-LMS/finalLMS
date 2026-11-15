@@ -231,7 +231,7 @@ class AdminPluginManagerTest extends TestCase
             ],
         ])->save();
 
-        $uninstalled = app(\\App\\Services\\Plugins\\PluginUninstaller::class)->uninstall($plugin);
+        $uninstalled = app(\App\Services\Plugins\PluginUninstaller::class)->uninstall($plugin);
         $this->assertSame('uninstalled', $uninstalled->status);
 
         $this->actingAs($admin)->post(route('admin.plugins.restore', $uninstalled), ['confirm_restore' => '1'])
