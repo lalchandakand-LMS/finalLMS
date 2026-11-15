@@ -4,6 +4,7 @@ namespace App\Services\Modules;
 
 use App\Models\PluginInstallation;
 use App\Models\Setting;
+use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
 
 class ModuleRegistry
@@ -18,7 +19,9 @@ class ModuleRegistry
         foreach ($definitions as $key => $definition) {
             $pluginKey = $definition['plugin_key'] ?? null;
             if (is_string($pluginKey) && $pluginKey !== '') {
-                $plugin = PluginInstallation::query()->where('plugin_key', $pluginKey)->first();
+                $plugin = Schema::hasTable('plugin_registry')
+                    ? PluginInstallation::query()->where('plugin_key', $pluginKey)->first()
+                    : null;
                 $installed = $plugin !== null && in_array($plugin->status, ['installed', 'active', 'inactive', 'failed'], true);
                 $enabled = $plugin?->status === 'active';
                 $catalog[$key] = [
