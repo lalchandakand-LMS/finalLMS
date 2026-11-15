@@ -298,6 +298,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::post('/plugins/{plugin}/deactivate', [AdminPluginManagerController::class, 'deactivate'])->middleware('throttle:10,1')->name('admin.plugins.deactivate');
         Route::post('/plugins/{plugin}/uninstall', [AdminPluginManagerController::class, 'uninstall'])->middleware('throttle:5,10')->name('admin.plugins.uninstall');
         Route::post('/plugins/{plugin}/restore', [AdminPluginManagerController::class, 'restore'])->middleware('throttle:5,10')->name('admin.plugins.restore');
+        Route::post('/plugins/{plugin}/rollback', [AdminPluginManagerController::class, 'rollback'])->middleware('throttle:5,10')->name('admin.plugins.rollback');
         Route::get('/support-tickets', [AdminSupportTicketController::class, 'index'])->name('admin.support-tickets.index');
         Route::get('/support-tickets/{ticket}', [AdminSupportTicketController::class, 'show'])->name('admin.support-tickets.show');
         Route::post('/support-tickets/{ticket}/messages', [AdminSupportTicketController::class, 'reply'])->middleware('throttle:10,1')->name('admin.support-tickets.reply');
