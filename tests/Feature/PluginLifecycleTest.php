@@ -54,6 +54,31 @@ class PluginLifecycleTest extends TestCase
         app(PluginLifecycle::class)->transition('aec.course-management', 'loaded');
     }
 
+    public function test_installation_requires_a_verified_signed_package(): void
+    {
+        $this->plugin(['status' => 'staged']);
+
+        try {
+            app(PluginLifecycle::class)->transition('aec.course-management', 'installed');
+            $this->fail('Unsigned packages must not be marked as installed.');
+        } catch (LogicException $exception) {
+            $this->assertStringContainsString('verified signed package', $exception->getMessage());
+        }
+
+        $plugin = PluginInstallation::query()->firstOrFail();
+        $plugin->forceFill([
+            'signature_verified_at' => Carbon::now(),
+            'package_sha256' => str_repeat('d', 64),
+            'signature_key_id' => 'release-key-2026',
+            'package_path' => 'plugins/aec/aec.course-management/1.0.0',
+        ])->save();
+
+        $installed = app(PluginLifecycle::class)->transition('aec.course-management', 'installed');
+
+        $this->assertSame('installed', $installed->status);
+        $this->assertNotNull($installed->installed_at);
+    }
+
     public function test_activation_requires_signature_metadata_and_private_package_path(): void
     {
         $this->plugin(['status' => 'installed']);
