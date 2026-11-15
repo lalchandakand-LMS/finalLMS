@@ -161,6 +161,20 @@
                                     @endif
                                 </details>
                             @endif
+                            @php($versionRecords = $versionHistoryByPlugin->get($plugin->plugin_key, collect()))
+                            @if($versionRecords->isNotEmpty())
+                                <details style="margin-top:10px;">
+                                    <summary>{{ __('Version history') }}</summary>
+                                    <ul>
+                                        @foreach($versionRecords as $versionRecord)
+                                            <li>
+                                                <code>{{ $versionRecord->version }}</code>
+                                                <small class="muted">{{ substr($versionRecord->package_sha256, 0, 12) }} · {{ $versionRecord->installed_at?->format('Y-m-d H:i') }}</small>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                </details>
+                            @endif
                         </td>
                     </tr>
                 @endforeach
