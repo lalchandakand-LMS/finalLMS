@@ -423,6 +423,12 @@ class _StudentHomeState extends State<StudentHome> {
     ));
   }
 
+  Future<void> openNotices() async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => StudentNoticesPage(api: widget.api),
+    ));
+  }
+
   Future<void> openInvoices() async {
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => StudentInvoicesPage(api: widget.api),
@@ -512,6 +518,11 @@ class _StudentHomeState extends State<StudentHome> {
           onPressed: openWishlist,
           icon: const Icon(Icons.favorite_outline),
           tooltip: 'My wishlist',
+        ),
+        IconButton(
+          onPressed: openNotices,
+          icon: const Icon(Icons.campaign_outlined),
+          tooltip: 'Notice board',
         ),
         IconButton(
           onPressed: openInvoices,
