@@ -102,6 +102,29 @@
                             @if(is_array($plugin->metadata) && !empty($plugin->metadata['uninstall_backup_path']))
                                 <small class="muted">{{ __('Private backup retained') }}</small>
                             @endif
+                            @if(!in_array($plugin->status, ['uninstalled', 'failed'], true))
+                                <details style="margin-top:10px;">
+                                    <summary>{{ __('Configure settings') }}</summary>
+                                    <form method="POST" action="{{ route('admin.plugins.settings.update', $plugin) }}" style="margin-top:8px;">
+                                        @csrf
+                                        @method('PUT')
+                                        <label>{{ __('Setting key') }}</label>
+                                        <input type="text" name="setting_key" maxlength="120" pattern="[a-z][a-z0-9_.-]{0,119}" required>
+                                        <label>{{ __('Value (encrypted at rest)') }}</label>
+                                        <input type="password" name="value" maxlength="4096" autocomplete="new-password" required>
+                                        <button class="btn secondary" type="submit">{{ __('Save securely') }}</button>
+                                    </form>
+                                    @php($configuredSettings = $settingsByPlugin->get($plugin->plugin_key, collect()))
+                                    @if($configuredSettings->isNotEmpty())
+                                        <small class="muted">{{ __('Saved keys (values hidden):') }}</small>
+                                        <ul>
+                                            @foreach($configuredSettings as $configuredSetting)
+                                                <li><code>{{ $configuredSetting->setting_key }}</code> — {{ __('configured') }}</li>
+                                            @endforeach
+                                        </ul>
+                                    @endif
+                                </details>
+                            @endif
                         </td>
                     </tr>
                 @endforeach
