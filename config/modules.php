@@ -43,6 +43,8 @@ return [
 
     // Website, media and growth.
     'website_cms' => ['name' => 'Website CMS', 'description' => 'Website builder, pages, blog and public content.', 'type' => 'module', 'dependencies' => ['core']],
+    'page_builder' => ['name' => 'Page Builder', 'description' => 'Admin drag-and-drop page design, reusable sections, preview, publishing and navigation menus.', 'type' => 'module', 'dependencies' => ['core', 'website_cms', 'media_library']],
+    'slider_builder' => ['name' => 'Slider Builder', 'description' => 'Admin-managed homepage sliders, banners, slide ordering, scheduling and responsive display.', 'type' => 'module', 'dependencies' => ['core', 'website_cms', 'media_library']],
     'slider' => ['name' => 'Website Slider & Banners', 'description' => 'Homepage sliders, promotional banners, scheduling and media placement.', 'type' => 'module', 'dependencies' => ['core', 'website_cms', 'storage']],
     'media_library' => ['name' => 'Media Library', 'description' => 'Image, document and media asset management.', 'type' => 'module', 'dependencies' => ['core', 'storage']],
     'storage' => ['name' => 'Storage & Backups', 'description' => 'Local/cloud storage, backups and media infrastructure.', 'type' => 'module', 'dependencies' => ['core']],
