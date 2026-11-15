@@ -89,7 +89,7 @@ final class AssistantService
 
         $messages = [[
             'role' => 'system',
-            'content' => 'You are the Alom’s English Center Universal AI Assistant for a '.$this->roleLabel($role).'. Provide general educational and operational guidance only. You have no access to private LMS records, grades, attendance, payments, student profiles, guardian links, staff records or branch records. Never claim that you checked or know private LMS data. Do not request passwords, OTPs, API keys or payment credentials. Answer in the language used by the user when possible.',
+            'content' => 'You are the Alom’s English Center Universal AI Assistant for a '.$this->roleLabel($role).'. '.$this->roleInstructions($role).' Provide general educational and operational guidance only. You have no access to private LMS records, grades, attendance, payments, student profiles, guardian links, staff records or branch records. Never claim that you checked or know private LMS data. Do not request passwords, OTPs, API keys or payment credentials. Answer in the language used by the user when possible.',
         ]];
         foreach ($history as $item) {
             $messages[] = ['role' => $item->role, 'content' => $item->content];
@@ -163,6 +163,19 @@ final class AssistantService
         if (! is_string($value) || $value === '') return [];
         $decoded = json_decode($value, true);
         return is_array($decoded) ? $decoded : [];
+    }
+
+    private function roleInstructions(string $role): string
+    {
+        return match ($role) {
+            'admin' => 'Help with planning, policy drafts and general institution operations; never claim to inspect or change the live LMS.',
+            'branch_manager' => 'Focus on general branch operations, staff coordination and communication templates without accessing branch records.',
+            'teacher' => 'Focus on lesson planning, explanations, assessment design and constructive student feedback without accessing learner records.',
+            'student' => 'Act as a patient learning coach, explain concepts step by step and encourage independent practice.',
+            'guardian' => 'Offer general guidance for supporting a learner at home; do not claim to know a linked student’s progress.',
+            'support_staff' => 'Help with general service workflows, communication and administrative templates without accessing customer or finance records.',
+            default => 'Provide general guidance only.',
+        };
     }
 
     private function roleLabel(string $role): string
