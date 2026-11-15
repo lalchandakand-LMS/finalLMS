@@ -54,13 +54,19 @@ class StudentDeviceAccessController extends Controller
         }
 
         $user = $device->user;
-        $result = DB::transaction(function () use ($device, $user): string {
+        $result = DB::transaction(function () use ($device, $user, $validated): string {
             User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
             $lockedDevice = StudentDevice::query()->whereKey($device->id)->lockForUpdate()->firstOrFail();
             if ($lockedDevice->status !== 'pending_phone_verification'
                 || ! $lockedDevice->phone_otp_hash
                 || ! $lockedDevice->phone_otp_expires_at?->isFuture()) {
                 return 'expired';
+            }
+
+            // Re-check the submitted code against the locked row so a concurrent
+            // resend cannot let a stale OTP consume the replacement challenge.
+            if (! Hash::check($validated['code'], $lockedDevice->phone_otp_hash)) {
+                return 'invalid';
             }
 
             $hasPriorDevice = StudentDevice::query()
@@ -85,6 +91,12 @@ class StudentDeviceAccessController extends Controller
 
             return $requiresAdminApproval ? 'approval_required' : 'approved';
         });
+
+        if ($result === 'invalid') {
+            RateLimiter::hit($key, 600);
+
+            return back()->withErrors(['code' => 'The verification code is invalid or expired.']);
+        }
 
         RateLimiter::clear($key);
 
@@ -179,33 +191,60 @@ class StudentDeviceAccessController extends Controller
 
     public function reject(StudentDevice $device): RedirectResponse
     {
-        if ($device->status !== 'pending_admin_approval') {
-            return back()->with('error', 'This device is not awaiting approval.');
-        }
+        $rejected = DB::transaction(function () use ($device): bool {
+            User::query()->whereKey($device->user_id)->lockForUpdate()->firstOrFail();
+            $target = StudentDevice::query()->whereKey($device->id)->lockForUpdate()->first();
 
-        $device->forceFill(['status' => 'rejected', 'rejected_at' => now()])->save();
+            if (! $target || $target->status !== 'pending_admin_approval' || ! $target->phone_verified_at) {
+                return false;
+            }
+
+            $target->forceFill([
+                'status' => 'rejected',
+                'rejected_at' => now(),
+                'phone_otp_hash' => null,
+                'phone_otp_expires_at' => null,
+                'api_challenge_hash' => null,
+                'api_challenge_expires_at' => null,
+            ])->save();
+
+            return true;
+        });
+
+        if (! $rejected) {
+            return back()->with('error', 'This phone-verified device is not awaiting approval.');
+        }
 
         return back()->with('success', 'Additional device request rejected.');
     }
 
     public function revoke(StudentDevice $device): RedirectResponse
     {
-        if ($device->status !== 'approved') {
-            return back()->with('error', 'Only an approved device can be revoked.');
-        }
+        $revoked = DB::transaction(function () use ($device): bool {
+            User::query()->whereKey($device->user_id)->lockForUpdate()->firstOrFail();
+            $target = StudentDevice::query()->whereKey($device->id)->lockForUpdate()->first();
 
-        DB::transaction(function () use ($device): void {
-            $device->forceFill(['status' => 'revoked'])->save();
+            if (! $target || $target->status !== 'approved') {
+                return false;
+            }
+
+            $target->forceFill(['status' => 'revoked'])->save();
             DB::table('api_tokens')
-                ->where('student_device_id', $device->id)
+                ->where('student_device_id', $target->id)
                 ->whereNull('revoked_at')
                 ->update(['revoked_at' => now(), 'updated_at' => now()]);
-            DeviceSession::query()->where('student_device_id', $device->id)->whereNull('revoked_at')->update([
+            DeviceSession::query()->where('student_device_id', $target->id)->whereNull('revoked_at')->update([
                 'revoked_at' => now(),
                 'revoke_reason' => 'Trusted device revoked by administrator',
                 'updated_at' => now(),
             ]);
+
+            return true;
         });
+
+        if (! $revoked) {
+            return back()->with('error', 'Only an approved device can be revoked.');
+        }
 
         return back()->with('success', 'Device access revoked. Its web and mobile sessions are now invalid.');
     }
