@@ -66,6 +66,7 @@
                         <th>{{ __('Status') }}</th>
                         <th>{{ __('Signature') }}</th>
                         <th>{{ __('Installed') }}</th>
+                        <th>{{ __('Actions') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -80,6 +81,23 @@
                         <td><span class="badge {{ $plugin->status === 'installed' ? 'success' : 'warning' }}">{{ ucfirst(str_replace('_', ' ', $plugin->status)) }}</span></td>
                         <td>{{ $plugin->signature_verified_at ? __('Verified') : __('Not verified') }}</td>
                         <td>{{ $plugin->installed_at?->format('Y-m-d H:i') ?? '—' }}</td>
+                        <td>
+                            @if($plugin->status === 'inactive')
+                                <form method="POST" action="{{ route('admin.plugins.uninstall', $plugin) }}">
+                                    @csrf
+                                    <label style="display:block;font-size:12px;margin-bottom:6px;">
+                                        <input type="checkbox" name="confirm_uninstall" value="1" required>
+                                        {{ __('Confirm backup and uninstall') }}
+                                    </label>
+                                    <button class="btn danger" type="submit">{{ __('Uninstall') }}</button>
+                                </form>
+                            @else
+                                <span class="muted">{{ __('Deactivate before uninstalling') }}</span>
+                            @endif
+                            @if(is_array($plugin->metadata) && !empty($plugin->metadata['uninstall_backup_path']))
+                                <small class="muted">{{ __('Private backup retained') }}</small>
+                            @endif
+                        </td>
                     </tr>
                 @endforeach
                 </tbody>
