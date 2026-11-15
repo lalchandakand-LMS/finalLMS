@@ -1001,7 +1001,12 @@ class _StudentCartPageState extends State<StudentCartPage> {
               ? null
               : (paymentMethods.first as Map<String, dynamic>)['key']?.toString();
         }
-        if (items.isEmpty) couponPricing = {};
+        if (items.isEmpty) {
+          couponPricing = {};
+          couponController.clear();
+          transactionReferenceController.clear();
+          senderAccountController.clear();
+        }
       });
     } catch (exception) {
       if (mounted) { setState(() => error = exception.toString()); }
