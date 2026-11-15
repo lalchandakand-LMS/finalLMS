@@ -50,7 +50,7 @@ class WebsiteBuilderController extends Controller
     {
         $allowed = [
             'homepage_template', 'site_name', 'site_logo_media_id', 'site_favicon_media_id',
-            'site_primary_color', 'site_background_color', 'site_background_style', 'site_font_family', 'site_heading_scale', 'site_body_scale', 'home_title', 'home_subtitle', 'home_featured_title',
+            'site_primary_color', 'site_background_color', 'site_background_style', 'site_font_family', 'site_heading_scale', 'site_body_scale', 'home_title', 'home_subtitle', 'home_featured_title', 'home_batches_title', 'home_stats_title', 'home_paths_title', 'home_reviews_title',
             'home_slides', 'home_slider_autoplay', 'home_slider_interval', 'home_slider_arrows', 'home_slider_dots', 'home_slider_pause_hover', 'home_slider_height', 'home_slider_mobile_height', 'home_slider_overlay', 'footer_title', 'footer_text', 'footer_links', 'header_links', 'sections',
         ];
         $draft = $request->only($allowed);
@@ -74,6 +74,10 @@ class WebsiteBuilderController extends Controller
             'home_title' => ['nullable', 'string', 'max:255'],
             'home_subtitle' => ['nullable', 'string', 'max:500'],
             'home_featured_title' => ['nullable', 'string', 'max:255'],
+            'home_batches_title' => ['nullable', 'string', 'max:255'],
+            'home_stats_title' => ['nullable', 'string', 'max:255'],
+            'home_paths_title' => ['nullable', 'string', 'max:255'],
+            'home_reviews_title' => ['nullable', 'string', 'max:255'],
             'home_slides' => ['nullable', 'array', 'max:8'],
             'home_slider_autoplay' => ['nullable', 'boolean'],
             'home_slider_interval' => ['nullable', 'integer', 'min:3000', 'max:12000'],
@@ -294,6 +298,10 @@ class WebsiteBuilderController extends Controller
             'home_title' => ['nullable', 'string', 'max:255'],
             'home_subtitle' => ['nullable', 'string', 'max:500'],
             'home_featured_title' => ['nullable', 'string', 'max:255'],
+            'home_batches_title' => ['nullable', 'string', 'max:255'],
+            'home_stats_title' => ['nullable', 'string', 'max:255'],
+            'home_paths_title' => ['nullable', 'string', 'max:255'],
+            'home_reviews_title' => ['nullable', 'string', 'max:255'],
             'home_slides' => ['nullable', 'array', 'max:8'],
             'home_slider_autoplay' => ['nullable', 'boolean'],
             'home_slider_interval' => ['nullable', 'integer', 'min:3000', 'max:12000'],
@@ -390,7 +398,7 @@ class WebsiteBuilderController extends Controller
             return ['label' => $label, 'url' => $url];
         })->filter()->take(20)->values()->all();
 
-        foreach (['homepage_template', 'site_name', 'site_logo_media_id', 'site_favicon_media_id', 'site_primary_color', 'site_background_color', 'site_background_style', 'site_font_family', 'site_heading_scale', 'site_body_scale', 'home_title', 'home_subtitle', 'home_featured_title', 'home_slider_autoplay', 'home_slider_interval', 'home_slider_arrows', 'home_slider_dots', 'home_slider_pause_hover', 'home_slider_height', 'home_slider_mobile_height', 'home_slider_overlay', 'footer_title', 'footer_text'] as $key) {
+        foreach (['homepage_template', 'site_name', 'site_logo_media_id', 'site_favicon_media_id', 'site_primary_color', 'site_background_color', 'site_background_style', 'site_font_family', 'site_heading_scale', 'site_body_scale', 'home_title', 'home_subtitle', 'home_featured_title', 'home_batches_title', 'home_stats_title', 'home_paths_title', 'home_reviews_title', 'home_slider_autoplay', 'home_slider_interval', 'home_slider_arrows', 'home_slider_dots', 'home_slider_pause_hover', 'home_slider_height', 'home_slider_mobile_height', 'home_slider_overlay', 'footer_title', 'footer_text'] as $key) {
             if (array_key_exists($key, $validated)) {
                 Setting::setValue($key, $validated[$key] ?? '');
             }
