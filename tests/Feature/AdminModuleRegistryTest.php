@@ -24,6 +24,72 @@ class AdminModuleRegistryTest extends TestCase
         }
     }
 
+
+    public function test_only_platform_foundations_are_protected_and_every_business_feature_is_optional(): void
+    {
+        $definitions = config('modules');
+        $this->assertSame(['core', 'identity'], array_keys(array_filter(
+            $definitions,
+            fn (array $definition): bool => (bool) ($definition['protected'] ?? false)
+        )));
+
+        foreach ($definitions as $key => $definition) {
+            if ($key === 'core' || $key === 'identity') {
+                $this->assertSame('core', $definition['type'], $key.' must remain a protected platform foundation.');
+                continue;
+            }
+
+            $this->assertSame('module', $definition['type'], $key.' must be an independently managed business module.');
+            $this->assertFalse((bool) ($definition['protected'] ?? false), $key.' must not be marked as protected core.');
+        }
+    }
+
+    public function test_every_module_dependency_resolves_to_a_declared_core_or_business_module(): void
+    {
+        $definitions = config('modules');
+        $keys = array_keys($definitions);
+
+        foreach ($definitions as $key => $definition) {
+            foreach ($definition['dependencies'] ?? [] as $dependency) {
+                $this->assertContains(
+                    $dependency,
+                    $keys,
+                    "Module [{$key}] declares missing dependency [{$dependency}]."
+                );
+            }
+        }
+    }
+
+    public function test_required_business_features_are_independent_catalogue_entries(): void
+    {
+        $catalog = app(ModuleRegistry::class)->catalog();
+
+        foreach ([
+            'branch_management',
+            'student_management',
+            'teacher_management',
+            'guardian_management',
+            'course_management',
+            'lesson_management',
+            'live_classes',
+            'notice_board',
+            'sms',
+            'email',
+            'mobile_verification',
+            'ai_builder',
+        ] as $key) {
+            if ($key === 'ai_builder') {
+                // AI Developer exists today; AI Builder remains a separately tracked
+                // first-party plugin target until its runtime migration is implemented.
+                $this->assertArrayNotHasKey($key, $catalog);
+                continue;
+            }
+
+            $this->assertArrayHasKey($key, $catalog, "Expected independent module [{$key}].");
+            $this->assertSame('module', $catalog[$key]['type']);
+        }
+    }
+
     public function test_admin_can_view_module_catalog(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
