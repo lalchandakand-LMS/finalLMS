@@ -182,3 +182,11 @@ Coupon discounts are calculated server-side, cannot stack with Flash Sales, and 
 - `GET /my/invoices`: paginated invoices belonging to the authenticated student, including gross paid, approved refunds, net paid, outstanding balance and short-lived print links.
 - `GET /my/invoices/{invoice}`: detailed invoice and payment receipt history. Cross-student invoice access returns 404.
 - Invoice and individual receipt print links are short-lived signed HTTPS URLs (10-minute expiry). They render standalone print-ready HTML with a Print / Save as PDF action; links are private/no-store and do not expose the student's invoices through guessable IDs.
+
+
+## Student engagement: notices and course reviews
+
+- `GET /api/v1/my/notices` — authenticated student notice feed, scoped by role and branch; includes unread count and read state.
+- `POST /api/v1/my/notices/{announcement}/read` — mark a currently visible notice as read; other-audience and other-branch notices return 404.
+- `GET /api/v1/courses/{course:slug}/reviews` — public, paginated list of approved course comments only.
+- `POST /api/v1/my/courses/{course:slug}/reviews` — authenticated active/completed student submits a 2–2000 character review for moderation; one pending review per student/course.

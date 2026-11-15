@@ -918,6 +918,9 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                         Text('Course curriculum', style: Theme.of(context).textTheme.titleLarge),
                         if (lessons.isEmpty)
                           const ListTile(title: Text('No preview lessons are available.')),
+                        const SizedBox(height: 24),
+                        Text('Student reviews', style: Theme.of(context).textTheme.titleLarge),
+                        CourseReviewsPanel(api: widget.api, slug: widget.slug, canReview: enrolled),
                         ...lessons.map((item) {
                           final lesson = item as Map<String, dynamic>;
                           return Card(
@@ -2631,7 +2634,9 @@ class _ExamDetailPageState extends State<ExamDetailPage> {
     } catch (exception) {
       if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => starting = false);
+      if (mounted) {
+        setState(() => starting = false);
+      }
     }
   }
 
@@ -2651,7 +2656,9 @@ class _ExamDetailPageState extends State<ExamDetailPage> {
     } catch (exception) {
       if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => saving = false);
+      if (mounted) {
+        setState(() => saving = false);
+      }
     }
   }
 
@@ -2811,4 +2818,223 @@ class _ExamDetailPageState extends State<ExamDetailPage> {
             ),
     );
   }
+}
+
+
+class StudentNoticesPage extends StatefulWidget {
+  const StudentNoticesPage({required this.api, super.key});
+  final MobileApi api;
+
+  @override
+  State<StudentNoticesPage> createState() => _StudentNoticesPageState();
+}
+
+class _StudentNoticesPageState extends State<StudentNoticesPage> {
+  List<dynamic> notices = [];
+  bool loading = true;
+  String? error;
+  int unreadCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  Future<void> load() async {
+    setState(() { loading = true; error = null; });
+    try {
+      final response = await widget.api.get('/my/notices');
+      if (!mounted) return;
+      setState(() {
+        notices = response['data'] as List<dynamic>? ?? [];
+        final meta = response['meta'] as Map<String, dynamic>? ?? {};
+        unreadCount = (meta['unread_count'] as num?)?.toInt() ?? 0;
+      });
+    } catch (exception) {
+      if (mounted) {
+        setState(() => error = exception.toString());
+      }
+    } finally {
+      if (mounted) {
+        setState(() => loading = false);
+      }
+    }
+  }
+
+  Future<void> markRead(Map<String, dynamic> notice) async {
+    try {
+      await widget.api.postJson('/my/notices/${notice['id']}/read', const {});
+      if (mounted) {
+        setState(() {
+          notice['is_read'] = true;
+          unreadCount = (unreadCount - 1).clamp(0, 999999).toInt();
+        });
+      }
+    } catch (exception) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(exception.toString())));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      title: Text(unreadCount > 0 ? 'Academy notices ($unreadCount)' : 'Academy notices'),
+      actions: [IconButton(onPressed: load, icon: const Icon(Icons.refresh))],
+    ),
+    body: loading
+        ? const Center(child: CircularProgressIndicator())
+        : error != null
+            ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Text(error!),
+                TextButton(onPressed: load, child: const Text('Retry')),
+              ]))
+            : notices.isEmpty
+                ? const Center(child: Text('No notices are available right now.'))
+                : RefreshIndicator(
+                    onRefresh: load,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(12),
+                      itemCount: notices.length,
+                      itemBuilder: (context, index) {
+                        final notice = notices[index] as Map<String, dynamic>;
+                        final read = notice['is_read'] == true;
+                        return Card(
+                          child: ListTile(
+                            leading: Icon(read ? Icons.notifications_none : Icons.notifications_active,
+                                color: read ? null : Theme.of(context).colorScheme.primary),
+                            title: Text(notice['title']?.toString() ?? 'Academy notice',
+                                style: TextStyle(fontWeight: read ? FontWeight.normal : FontWeight.bold)),
+                            subtitle: Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                Text(notice['body']?.toString() ?? ''),
+                                if (notice['course'] is Map<String, dynamic>)
+                                  Text('Course: ${(notice['course'] as Map<String, dynamic>)['title'] ?? ''}'),
+                                if (notice['published_at'] != null)
+                                  Text(notice['published_at'].toString(), style: Theme.of(context).textTheme.bodySmall),
+                              ]),
+                            ),
+                            isThreeLine: true,
+                            trailing: read ? const Icon(Icons.done, size: 18) : const Icon(Icons.mark_email_read_outlined),
+                            onTap: read ? null : () => markRead(notice),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+  );
+}
+
+class CourseReviewsPanel extends StatefulWidget {
+  const CourseReviewsPanel({required this.api, required this.slug, required this.canReview, super.key});
+  final MobileApi api;
+  final String slug;
+  final bool canReview;
+
+  @override
+  State<CourseReviewsPanel> createState() => _CourseReviewsPanelState();
+}
+
+class _CourseReviewsPanelState extends State<CourseReviewsPanel> {
+  final controller = TextEditingController();
+  List<dynamic> reviews = [];
+  bool loading = true;
+  bool submitting = false;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> load() async {
+    try {
+      final response = await widget.api.get('/courses/${widget.slug}/reviews');
+      if (mounted) {
+        setState(() {
+          reviews = response['data'] as List<dynamic>? ?? [];
+          loading = false;
+        });
+      }
+    } catch (exception) {
+      if (mounted) {
+        setState(() {
+          error = exception.toString();
+          loading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> submit() async {
+    final body = controller.text.trim();
+    if (body.length < 2 || submitting) return;
+    setState(() => submitting = true);
+    try {
+      await widget.api.postJson('/my/courses/${widget.slug}/reviews', {'body': body});
+      controller.clear();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Review submitted for admin moderation.')),
+        );
+      }
+    } catch (exception) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(exception.toString())));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => submitting = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      if (widget.canReview) ...[
+        TextField(
+          controller: controller,
+          minLines: 2,
+          maxLines: 5,
+          maxLength: 2000,
+          decoration: const InputDecoration(
+            hintText: 'Share your experience with this course',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        Align(
+          alignment: Alignment.centerRight,
+          child: FilledButton(
+            onPressed: submitting ? null : submit,
+            child: Text(submitting ? 'Submitting…' : 'Submit review'),
+          ),
+        ),
+      ],
+      if (loading) const Center(child: CircularProgressIndicator()),
+      if (error != null) Text(error!),
+      if (!loading && reviews.isEmpty) const Text('No approved reviews yet.'),
+      ...reviews.map((item) {
+        final review = item as Map<String, dynamic>;
+        return Card(
+          child: ListTile(
+            leading: const CircleAvatar(child: Icon(Icons.person_outline)),
+            title: Text(review['author']?.toString() ?? 'Student'),
+            subtitle: Text(review['body']?.toString() ?? ''),
+          ),
+        );
+      }),
+    ],
+  );
 }
