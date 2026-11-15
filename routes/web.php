@@ -52,6 +52,7 @@ use App\Http\Controllers\StorageManagerController;
 use App\Http\Controllers\AdminAnalyticsController;
 use App\Http\Controllers\AdminCommentController;
 use App\Http\Controllers\AdminDashboardAnnouncementController;
+use App\Http\Controllers\NoticeBoardController;
 use App\Http\Controllers\AdminDeviceSessionController;
 use App\Http\Controllers\AdminVisitorPopupController;
 use App\Http\Controllers\AdminCourseCategoryController;
@@ -255,6 +256,8 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
 
     Route::post('/contests/{contest}/submit', [QuizContestController::class, 'submit'])->middleware('throttle:5,1')->name('contests.submit');
 
+    Route::get('/notices', [NoticeBoardController::class, 'index'])->name('notices.index');
+    Route::post('/notices/{announcement}/read', [NoticeBoardController::class, 'markRead'])->middleware('throttle:60,1')->name('notices.read');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
