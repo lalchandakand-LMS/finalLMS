@@ -13,7 +13,7 @@ class PluginSignatureVerifierTest extends TestCase
     use RefreshDatabase;
 
     private string $archivePath;
-    private array $keyPair;
+    private string $keyPair;
     private array $manifest;
 
     protected function setUp(): void
