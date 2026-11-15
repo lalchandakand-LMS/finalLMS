@@ -115,6 +115,8 @@ jobs:
           grep -Fxq 'public/index.php' "$RUNNER_TEMP/cpanel-files.txt"
           grep -Fxq 'vendor/autoload.php' "$RUNNER_TEMP/cpanel-files.txt"
           grep -Fxq 'VERSION' "$RUNNER_TEMP/cpanel-files.txt"
+          grep -Fxq 'plugins/.htaccess' "$RUNNER_TEMP/cpanel-files.txt"
+          grep -Fxq 'plugins/.staging/.htaccess' "$RUNNER_TEMP/cpanel-files.txt"
           grep -Fxq 'deployment/.env.example' "$RUNNER_TEMP/cpanel-files.txt"
       - uses: actions/upload-artifact@v7
         with:
