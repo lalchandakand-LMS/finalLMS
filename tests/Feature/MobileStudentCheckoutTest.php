@@ -30,7 +30,7 @@ class MobileStudentCheckoutTest extends TestCase
             ->assertJsonPath('data.batches.0.id', $batch->id)
             ->assertJsonPath('data.batches.0.available_seats', 1)
             ->assertJsonPath('data.payment_methods.0.key', 'manual')
-            ->assertJsonPath('data.pricing.base_amount', '2500.00');
+            ->assertJsonPath('data.pricing.base_amount', '3000.00');
 
         $this->withToken($token)->postJson('/api/v1/checkout/courses/'.$course->slug.'/manual', [
             'batch_id' => $batch->id,
@@ -70,10 +70,22 @@ class MobileStudentCheckoutTest extends TestCase
             'transaction_reference' => 'AEC-MOBILE-REF-002',
         ])->assertCreated();
 
-        $this->withToken($token)->postJson('/api/v1/checkout/courses/'.$course->slug.'/manual', [
+        $secondStudent = User::factory()->create(['role' => 'student']);
+        $secondToken = $this->token($secondStudent);
+        $this->withToken($secondToken)->getJson('/api/v1/checkout/courses/'.$course->slug)
+            ->assertOk()
+            ->assertJsonPath('data.batches.0.available_seats', 0);
+
+        $this->withToken($secondToken)->postJson('/api/v1/checkout/courses/'.$course->slug.'/manual', [
             'batch_id' => $batch->id,
             'payment_method' => 'manual',
             'transaction_reference' => 'AEC-MOBILE-REF-003',
+        ])->assertStatus(409)->assertJsonPath('message', 'The selected batch is full or no longer available.');
+
+        $this->withToken($token)->postJson('/api/v1/checkout/courses/'.$course->slug.'/manual', [
+            'batch_id' => $batch->id,
+            'payment_method' => 'manual',
+            'transaction_reference' => 'AEC-MOBILE-REF-004',
         ])->assertStatus(409);
 
         $this->assertDatabaseCount('payments', 1);
