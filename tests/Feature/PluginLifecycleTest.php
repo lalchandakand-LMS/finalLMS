@@ -66,7 +66,7 @@ class PluginLifecycleTest extends TestCase
     {
         $this->plugin(['status' => 'staged']);
 
-        $this->expectException(\\InvalidArgumentException::class);
+        $this->expectException(\InvalidArgumentException::class);
         app(PluginLifecycle::class)->transition('aec.course-management', 'installed', [
             'installed_at' => Carbon::now(),
         ]);
