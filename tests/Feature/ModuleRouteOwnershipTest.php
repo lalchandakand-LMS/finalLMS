@@ -98,6 +98,11 @@ class ModuleRouteOwnershipTest extends TestCase
         }
     }
 
+    public function test_plugin_lifecycle_contract_is_composer_autoloadable(): void
+    {
+        $this->assertTrue(interface_exists(\\App\\Plugins\\PluginContract::class));
+    }
+
     public function test_core_module_manager_routes_are_not_owned_by_business_plugins(): void
     {
         $this->assertSame([], collect(config('module_routes'))
