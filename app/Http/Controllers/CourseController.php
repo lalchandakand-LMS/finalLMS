@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AcademicLevel;
 use App\Models\Certificate;
 use App\Models\Course;
 use App\Models\CourseCategory;
@@ -237,7 +238,7 @@ class CourseController extends Controller
     {
         $teachers = User::query()->where('role', 'teacher')->orderBy('name')->get();
         $categories = CourseCategory::query()->orderBy('sort_order')->orderBy('name')->get();
-        $academicLevels = \\App\\Models\\AcademicLevel::query()->where('is_active', true)->orderBy('sort_order')->orderBy('name')->get();
+        $academicLevels = AcademicLevel::query()->where('is_active', true)->orderBy('sort_order')->orderBy('name')->get();
 
         return view('admin.courses.form', ['course' => null, 'teachers' => $teachers, 'categories' => $categories, 'academicLevels' => $academicLevels]);
     }
