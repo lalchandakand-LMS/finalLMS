@@ -20,7 +20,7 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/auth/me', [AuthController::class, 'me']);
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::post('/auth/logout-all', [AuthController::class, 'logoutAll']);
-        Route::get('/my/courses', [CourseController::class, 'myCourses']);
+        Route::get('/my/courses', [CourseController::class, 'myCourses']);\n        Route::get('/courses/{course:slug}/checkout', [StudentCheckoutController::class, 'quote']);\n        Route::post('/courses/{course:slug}/checkout', [StudentCheckoutController::class, 'store'])->middleware('throttle:10,1');\n        Route::post('/courses/{course:slug}/checkout/bkash', [StudentCheckoutController::class, 'bkash'])->middleware('throttle:5,1');
         Route::get('/my/assignments', [StudentAssignmentController::class, 'index']);
         Route::get('/assignments/{assignment}', [StudentAssignmentController::class, 'show']);
         Route::post('/assignments/{assignment}/submit', [StudentAssignmentController::class, 'submit'])->middleware('throttle:10,1');
