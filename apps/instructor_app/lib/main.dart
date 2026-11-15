@@ -549,7 +549,6 @@ class _InstructorHomeState extends State<InstructorHome> {
 
   Future<DateTime?> _pickDateTime(DateTime initial) async {
     final navigator = Navigator.of(context);
-    final capturedThemes = InheritedTheme.capture(from: context, to: navigator.context);
     final barrierLabel = MaterialLocalizations.of(context).modalBarrierDismissLabel;
     final date = await navigator.push<DateTime>(RawDialogRoute<DateTime>(
       pageBuilder: (_, __, ___) => DatePickerDialog(
