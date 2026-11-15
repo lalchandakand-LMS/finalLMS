@@ -32,6 +32,7 @@ class CourseController extends Controller
             'teacher' => ['nullable', 'integer', 'min:1'],
             'category' => ['nullable', 'integer', 'min:1'],
             'level' => ['nullable', 'string', 'max:40'],
+            'academic_level_id' => ['nullable', 'integer', 'exists:academic_levels,id'],
             'language' => ['nullable', 'string', 'max:40'],
             'min_price' => ['nullable', 'numeric', 'min:0', 'max:100000000'],
             'max_price' => ['nullable', 'numeric', 'min:0', 'max:100000000', 'gte:min_price'],
@@ -78,6 +79,9 @@ class CourseController extends Controller
         if (! empty($validated['level'])) {
             $query->where('level', $validated['level']);
         }
+        if (! empty($validated['academic_level_id'])) {
+            $query->where('academic_level_id', $validated['academic_level_id']);
+        }
         if (! empty($validated['language'])) {
             $query->where('language', $validated['language']);
         }
@@ -101,6 +105,7 @@ class CourseController extends Controller
             ->whereIn('id', Course::query()->where('status', 'published')->select('teacher_id'))
             ->orderBy('name')
             ->get(['id', 'name']);
+        $academicLevels = AcademicLevel::query()->where('is_active', true)->orderBy('sort_order')->orderBy('name')->get();
         $categories = CourseCategory::query()
             ->where('is_visible', true)
             ->where(function ($builder): void {
@@ -112,7 +117,7 @@ class CourseController extends Controller
             ->orderBy('name')
             ->get(['id', 'name']);
 
-        return view('courses.index', compact('courses', 'teachers', 'categories'));
+        return view('courses.index', compact('courses', 'teachers', 'categories', 'academicLevels'));
     }
 
     public function myCourses(): View
@@ -126,6 +131,7 @@ class CourseController extends Controller
             ->whereHas('course', fn ($query) => $query->where('status', 'published'))
             ->with([
                 'course.teacher',
+                'course.academicLevel',
                 'course.lessons' => fn ($lessons) => $lessons->orderBy('order')->orderBy('id'),
                 'course.curriculumItems' => fn ($items) => $items
                     ->whereHas('post', fn ($posts) => $posts->where('status', 'published')
