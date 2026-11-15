@@ -96,6 +96,7 @@ class TeacherApplicationTest extends TestCase
             'email' => 'approved.teacher@example.com',
             'role' => 'teacher',
         ]);
+        $this->assertNotNull(User::where('email', 'approved.teacher@example.com')->value('phone_verified_at'));
         $this->assertSame('approved', $application->fresh()->status);
     }
 }
