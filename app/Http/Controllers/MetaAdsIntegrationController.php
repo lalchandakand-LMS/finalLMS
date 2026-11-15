@@ -1,13 +1,13 @@
 <?php
 
-namespace App\\Http\\Controllers;
+namespace App\Http\Controllers;
 
-use App\\Models\\Setting;
-use Illuminate\\Http\\RedirectResponse;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Facades\\Crypt;
-use Illuminate\\Support\\Facades\\Http;
-use Illuminate\\View\\View;
+use App\Models\Setting;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Http;
+use Illuminate\View\View;
 use Throwable;
 
 class MetaAdsIntegrationController extends Controller
@@ -28,7 +28,7 @@ class MetaAdsIntegrationController extends Controller
         if ($connected) {
             try {
                 $accounts = $this->graphGet('me/adaccounts', $token, [
-                    'fields' => 'id,name,account_status,currency,timezone_name',
+                    'fields' => 'id,account_id,name,account_status,currency,timezone_name',
                     'limit' => 100,
                 ])['data'] ?? [];
                 $pages = $this->graphGet('me/accounts', $token, [
@@ -36,7 +36,12 @@ class MetaAdsIntegrationController extends Controller
                     'limit' => 100,
                 ])['data'] ?? [];
 
-                $allowedAccountIds = collect($accounts)->pluck('id')->map(fn ($id) => (string) $id);
+                $accounts = array_map(function (array $account): array {
+                    $account['account_id'] = preg_replace('/^act_/', '', (string) ($account['account_id'] ?? $account['id'] ?? ''));
+
+                    return $account;
+                }, $accounts);
+                $allowedAccountIds = collect($accounts)->pluck('account_id')->map(fn ($id) => (string) $id);
                 if ($selectedAccount !== '' && $allowedAccountIds->contains($selectedAccount)) {
                     Setting::setValue('meta_ads_account_id', $selectedAccount);
                     $campaigns = $this->graphGet('act_'.$selectedAccount.'/campaigns', $token, [
@@ -52,7 +57,6 @@ class MetaAdsIntegrationController extends Controller
                     $error = __('The selected ad account is not available to this connection.');
                 }
             } catch (Throwable $exception) {
-                report($exception);
                 $error = __('Meta could not return account data. Check the granted permissions and reconnect if needed.');
             }
         }
@@ -128,7 +132,6 @@ class MetaAdsIntegrationController extends Controller
 
             return redirect()->route('admin.marketing.meta-ads.index')->with('success', __('Meta Ads account connected. Campaigns remain under your control.'));
         } catch (Throwable $exception) {
-            report($exception);
 
             return redirect()->route('admin.marketing.meta-ads.index')->with('error', __('Meta connection failed. Verify the app settings, redirect URI and permissions.'));
         }
@@ -149,14 +152,14 @@ class MetaAdsIntegrationController extends Controller
     public function pauseCampaign(Request $request, string $campaignId): RedirectResponse
     {
         $data = $request->validate([
-            'account_id' => ['required', 'string', 'regex:/^\\d{5,30}$/'],
+            'account_id' => ['required', 'string', 'regex:/^\d{5,30}$/'],
         ]);
 
         $token = $this->accessToken();
         abort_unless($token, 409, __('Connect Meta Ads first.'));
 
         try {
-            $accounts = $this->graphGet('me/adaccounts', $token, ['fields' => 'id', 'limit' => 100])['data'] ?? [];
+            $accounts = $this->graphGet('me/adaccounts', $token, ['fields' => 'id,account_id', 'limit' => 100])['data'] ?? [];
             $validAccount = collect($accounts)->contains(function ($account) use ($data): bool {
                 $rawId = (string) ($account['account_id'] ?? $account['id'] ?? '');
 
