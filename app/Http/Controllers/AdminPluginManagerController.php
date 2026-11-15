@@ -216,6 +216,52 @@ class AdminPluginManagerController extends Controller
         return redirect()->route('admin.plugins.index')->with('success', __('Plugin backup verified and restored. The plugin remains inactive.'));
     }
 
+
+    public function rollback(Request $request, PluginInstallation $plugin, PluginRollbackService $rollback): RedirectResponse
+    {
+        $validated = $request->validate([
+            'version' => ['required', 'string', 'max:80', 'regex:/^\\d+\\.\\d+\\.\\d+(?:[-+][A-Za-z0-9.-]+)?$/'],
+            'confirm_rollback' => ['required', 'accepted'],
+        ]);
+
+        try {
+            $restored = $rollback->rollback($plugin, $validated['version']);
+            ActivityLog::create([
+                'user_id' => $request->user()->id,
+                'event' => 'admin.plugins.rolled_back',
+                'description' => 'Rolled back plugin '.$restored->plugin_key.' to verified version '.$restored->version.'.',
+                'method' => $request->method(),
+                'route' => $request->route()?->getName(),
+                'ip_address' => $request->ip(),
+                'user_agent' => substr((string) $request->userAgent(), 0, 1000),
+            ]);
+        } catch (Throwable $exception) {
+            report($exception);
+            try {
+                ActivityLog::create([
+                    'user_id' => $request->user()->id,
+                    'event' => 'admin.plugins.rollback_failed',
+                    'description' => 'Plugin rollback was rejected for '.$plugin->plugin_key.'.',
+                    'method' => $request->method(),
+                    'route' => $request->route()?->getName(),
+                    'ip_address' => $request->ip(),
+                    'user_agent' => substr((string) $request->userAgent(), 0, 1000),
+                ]);
+            } catch (Throwable $loggingException) {
+                report($loggingException);
+            }
+
+            return back()->with('error', $exception instanceof \\RuntimeException
+                ? $exception->getMessage()
+                : __('Plugin rollback failed. The current version remains available for review.'));
+        }
+
+        return redirect()->route('admin.plugins.index')->with(
+            'success',
+            __('Plugin rolled back to the verified historical version. It remains inactive until separately reviewed.')
+        );
+    }
+
     public function uninstall(Request $request, PluginInstallation $plugin, PluginUninstaller $uninstaller): RedirectResponse
     {
         $request->validate(['confirm_uninstall' => ['required', 'accepted']]);
