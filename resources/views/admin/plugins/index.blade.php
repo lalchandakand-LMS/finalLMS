@@ -20,7 +20,7 @@
 
 <div class="panel" role="note" style="margin-bottom:20px;">
     <strong>{{ __('Installation and activation are separate') }}</strong>
-    <p class="muted" style="margin-bottom:0;">{{ __('Packages are signature-verified and safely extracted. Installed plugin PHP code is not loaded or executed. Activation remains disabled until runtime route/API/job isolation and rollback safeguards are complete. Deactivation, update and uninstall controls will follow the same safety gate.') }}</p>
+    <p class="muted" style="margin-bottom:0;">{{ __('Packages are signature-verified and safely extracted. Installed plugin PHP code is not loaded or executed. Verified historical rollback is available for versions with complete integrity evidence; package updates and activation remain disabled until isolated runtime safeguards are complete.') }}</p>
 </div>
 
 <section class="panel" style="margin-bottom:24px;">
