@@ -19,10 +19,10 @@ class WebsitePageController extends Controller
         return view('admin.website-pages.index', compact('pages'));
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
         return view('admin.website-pages.form', [
-            'page' => new WebsitePage(['template' => 'standard', 'sections' => []]),
+            'page' => new WebsitePage(['template' => 'standard', 'sections' => [], 'academic_level_id' => $request->integer('academic_level_id') ?: null]),
             'media' => MediaAsset::query()->where('mime_type', 'like', 'image/%')->latest()->limit(200)->get(),
             'academicLevels' => AcademicLevel::query()->where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(),
         ]);
