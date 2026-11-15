@@ -109,7 +109,7 @@ class StudentCartCheckoutController extends Controller
                     $discount = $this->couponDiscount($coupon, $eligibleSubtotal);
                 }
 
-                $total = max(0, round($pricing['subtotal'] - $discount, 2));
+                abort_if($items->count() > 1 && $pricing['has_flash_sale'], 422, 'Add Flash Sale courses to your cart and check them out individually.');\n                $total = max(0, round($pricing['subtotal'] - $discount, 2));
                 if ($total <= 0) {
                     foreach ($items as $item) {
                         Enrollment::firstOrCreate(
@@ -219,18 +219,15 @@ class StudentCartCheckoutController extends Controller
         $lineTotals = [];
         $hasSale = false;
         foreach ($items as $item) {
-            $base = $item->batch && (float) $item->batch->fee > 0
-                ? (float) $item->batch->fee
-                : (float) $item->course->price;
-            if (! isset($item->course)) {
+            if (isset($item->course)) {
+                $base = $item->batch && (float) $item->batch->fee > 0
+                    ? (float) $item->batch->fee : (float) $item->course->price;
+            } else {
                 $base = $item->batch_id && (float) ($item->batch_fee ?? 0) > 0
                     ? (float) $item->batch_fee : (float) $item->price;
-                $sale = FlashSale::activeForCourse((int) $item->course_id, $studentId);
-                $amount = $sale ? $sale->discountedPrice($base) : $base;
-            } else {
-                $sale = FlashSale::activeForCourse((int) $item->course_id, $studentId);
-                $amount = $sale ? $sale->discountedPrice($base) : $base;
             }
+            $sale = FlashSale::activeForCourse((int) $item->course_id, $studentId);
+            $amount = $sale ? $sale->discountedPrice($base) : $base;
             $hasSale = $hasSale || $sale !== null;
             $subtotal += $amount;
             $lineTotals[(int) $item->course_id] = $amount;
