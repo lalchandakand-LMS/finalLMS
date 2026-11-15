@@ -68,6 +68,16 @@ class ModuleRouteOwnershipTest extends TestCase
         $this->assertArrayHasKey('academic_levels', config('modules'));
     }
 
+    public function test_academic_levels_is_a_foundation_for_consumer_plugins_not_their_dependent(): void
+    {
+        $modules = config('modules');
+
+        $this->assertSame(['core', 'identity'], $modules['academic_levels']['dependencies']);
+        foreach (['course_management', 'batch_management', 'exam_management', 'page_builder'] as $consumer) {
+            $this->assertContains('academic_levels', $modules[$consumer]['dependencies']);
+        }
+    }
+
     public function test_every_declared_plugin_dependency_exists_in_the_module_catalog(): void
     {
         foreach (config('modules', []) as $module => $manifest) {
