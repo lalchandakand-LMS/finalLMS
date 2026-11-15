@@ -1,0 +1,77 @@
+name: Flutter mobile apps
+
+on:
+  pull_request:
+    paths:
+      - "apps/student_app/**"
+      - "apps/instructor_app/**"
+      - ".github/workflows/flutter.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "apps/student_app/**"
+      - "apps/instructor_app/**"
+      - ".github/workflows/flutter.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flutter-mobile-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: ${{ matrix.app }} • analyze, test, APK
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app:
+          - apps/student_app
+          - apps/instructor_app
+
+    defaults:
+      run:
+        working-directory: ${{ matrix.app }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Generate Android platform scaffold
+        run: flutter create --platforms=android --org com.alomsenglishcenter --project-name "aloms_${PWD##*/}" .
+
+      - name: Remove untracked Flutter template test
+        run: |
+          if ! git ls-files --error-unmatch test/widget_test.dart >/dev/null 2>&1; then
+            rm -f test/widget_test.dart
+          fi
+
+      - name: Enable built-in Kotlin for federated plugins
+        run: |
+          if grep -q '^android.builtInKotlin=' android/gradle.properties; then
+            sed -i 's/^android.builtInKotlin=.*/android.builtInKotlin=true/' android/gradle.properties
+          else
+            echo 'android.builtInKotlin=true' >> android/gradle.properties
+          fi
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze --no-pub
+
+      - name: Run tests
+        run: flutter test --no-pub
+
+      - name: Build release APK
+        run: flutter build apk --release --no-pub
