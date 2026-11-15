@@ -22,7 +22,7 @@ class PluginContextTest extends TestCase
             Route::get('/health', fn () => response('ok'))->name('health');
         });
 
-        $route = app('router')->getRoutes()->getByName('test.support_ai.health');
+        $route = collect(app('router')->getRoutes()->getRoutes())->first(fn ($candidate) => $candidate->uri() === 'test/support-ai/health');
         $this->assertNotNull($route);
         $this->assertContains('plugin.active:aec.support-staff-test', $route->middleware());
         $this->assertContains('role:accountant', $route->middleware());
