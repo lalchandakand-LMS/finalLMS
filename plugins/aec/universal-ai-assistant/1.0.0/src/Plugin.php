@@ -19,6 +19,7 @@ return new class implements PluginContract
 
         $context->routesForPortal('admin', 'admin/ai-assistant', 'admin.ai-assistant.', function (): void {
             Route::get('/settings', [AdminSettingsController::class, 'index'])->name('settings');
+            Route::get('/models', [AdminSettingsController::class, 'models'])->middleware('throttle:10,1')->name('models');
             Route::put('/settings', [AdminSettingsController::class, 'update'])->middleware('throttle:10,1')->name('settings.update');
             Route::get('/', [AssistantController::class, 'index'])->name('index');
             Route::post('/messages', [AssistantController::class, 'send'])->middleware('throttle:10,1')->name('messages.store');

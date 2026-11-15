@@ -25,6 +25,7 @@ final class AssistantSettings
             'data_access_mode' => 'general_only',
             'daily_request_limit' => 20,
             'daily_token_budget' => 50000,
+            'retention_days' => 365,
         ];
     }
 
@@ -41,6 +42,7 @@ final class AssistantSettings
         $data['global_enabled'] = (bool) ($data['global_enabled'] ?? false);
         $data['daily_request_limit'] = (int) ($data['daily_request_limit'] ?? 20);
         $data['daily_token_budget'] = (int) ($data['daily_token_budget'] ?? 50000);
+        $data['retention_days'] = max(1, min(3650, (int) ($data['retention_days'] ?? 365)));
         $data['data_access_mode'] = (string) ($data['data_access_mode'] ?? 'general_only');
 
         return array_replace(self::defaults(), $data);
@@ -61,6 +63,7 @@ final class AssistantSettings
             'data_access_mode' => $settings['data_access_mode'],
             'daily_request_limit' => $settings['daily_request_limit'],
             'daily_token_budget' => $settings['daily_token_budget'],
+            'retention_days' => $settings['retention_days'],
             'has_api_key' => filled($settings['api_key_encrypted']),
         ];
     }
@@ -100,10 +103,20 @@ final class AssistantSettings
                 'data_access_mode' => 'general_only',
                 'daily_request_limit' => $values['daily_request_limit'],
                 'daily_token_budget' => $values['daily_token_budget'],
+                'retention_days' => (int) ($values['retention_days'] ?? $current['retention_days']),
                 'updated_at' => now(),
                 'created_at' => now(),
             ]
         );
+    }
+
+    public static function pruneExpiredConversations(): int
+    {
+        $retentionDays = max(1, min(3650, (int) self::record()['retention_days']));
+
+        return DB::table('ai_assistant_conversations')
+            ->where('updated_at', '<', now()->subDays($retentionDays))
+            ->delete();
     }
 
     public static function roleForUser(string $role): ?string

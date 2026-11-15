@@ -15,7 +15,10 @@
     @method('PUT')
     <h2>{{ __('Provider & model') }}</h2>
     <div class="form-grid">
-        <div><label for="ai-model">{{ __('Model') }}</label><input id="ai-model" name="model" value="{{ old('model', $settings['model']) }}" maxlength="120" required></div>
+        <div><label for="ai-model">{{ __('Model') }}</label><input id="ai-model" name="model" list="ai-model-options" value="{{ old('model', $settings['model']) }}" maxlength="120" required>
+            <datalist id="ai-model-options"></datalist>
+            <button class="btn secondary" id="ai-load-models" type="button" data-url="{{ $modelsUrl }}">{{ __('Load available models') }}</button>
+            <small id="ai-model-status" class="muted" role="status">{{ __('Save the provider key first, then load the models available to that key.') }}</small></div>
         <div><label for="ai-base-url">{{ __('Provider API base URL') }}</label><input id="ai-base-url" name="base_url" type="url" value="{{ old('base_url', $settings['base_url']) }}" required><small class="muted">{{ __('HTTPS and a server allow-listed host are required.') }}</small></div>
         <div class="full-width">
             <label for="ai-api-key">{{ __('API key') }}</label>
@@ -27,6 +30,7 @@
         <div><label for="ai-max-tokens">{{ __('Maximum output tokens') }}</label><input id="ai-max-tokens" name="max_tokens" type="number" min="1" max="8192" value="{{ old('max_tokens', $settings['max_tokens']) }}" required></div>
         <div><label for="ai-daily-requests">{{ __('Daily request limit per user') }}</label><input id="ai-daily-requests" name="daily_request_limit" type="number" min="1" max="500" value="{{ old('daily_request_limit', $settings['daily_request_limit']) }}" required></div>
         <div><label for="ai-daily-tokens">{{ __('Institution daily token budget') }}</label><input id="ai-daily-tokens" name="daily_token_budget" type="number" min="1000" max="5000000" value="{{ old('daily_token_budget', $settings['daily_token_budget']) }}" required></div>
+        <div><label for="ai-retention">{{ __('Conversation retention (days)') }}</label><input id="ai-retention" name="retention_days" type="number" min="1" max="3650" value="{{ old('retention_days', $settings['retention_days']) }}" required><small class="muted">{{ __('Expired conversations and their messages are automatically purged when the assistant is opened or used.') }}</small></div>
     </div>
     <hr>
     <h2>{{ __('Assistant access') }}</h2>
@@ -46,4 +50,37 @@
     <p class="muted">{{ __('Private LMS data access is disabled and cannot be enabled in this release. The assistant receives only the conversation text. Student records, grades, attendance, payments, guardian links, staff and branch data are never retrieved.') }}</p>
     <button class="btn primary" type="submit">{{ __('Save AI settings') }}</button>
 </form>
+<script>
+(() => {
+    const button = document.getElementById('ai-load-models');
+    const input = document.getElementById('ai-model');
+    const list = document.getElementById('ai-model-options');
+    const status = document.getElementById('ai-model-status');
+    if (!button || !input || !list || !status) return;
+    button.addEventListener('click', async () => {
+        button.disabled = true;
+        status.textContent = 'Loading models…';
+        try {
+            const response = await fetch(button.dataset.url, {
+                headers: {'Accept': 'application/json'},
+                credentials: 'same-origin'
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Unable to load models.');
+            list.replaceChildren();
+            const models = Array.isArray(data.models) ? data.models : [];
+            models.forEach((model) => {
+                const option = document.createElement('option');
+                option.value = model;
+                list.appendChild(option);
+            });
+            status.textContent = models.length ? 'Loaded ' + models.length + ' available models.' : 'No models were returned by the provider.';
+        } catch (error) {
+            status.textContent = error.message || 'Unable to load models.';
+        } finally {
+            button.disabled = false;
+        }
+    });
+})();
+</script>
 @endsection

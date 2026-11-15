@@ -16,6 +16,7 @@ final class AssistantController
     {
         $role = AssistantSettings::roleForUser((string) $request->user()->role);
         abort_unless($role !== null && $this->isAvailable($role), 404);
+        AssistantSettings::pruneExpiredConversations();
 
         $routeName = match ($role) {
             'admin' => 'admin.ai-assistant.messages.store',
@@ -25,10 +26,38 @@ final class AssistantController
             'guardian' => 'guardian.ai-assistant.messages.store',
             default => 'support.ai-assistant.messages.store',
         };
+        $indexRoute = match ($role) {
+            'admin' => 'admin.ai-assistant.index',
+            'branch_manager' => 'branch.ai-assistant.index',
+            'teacher' => 'teacher.ai-assistant.index',
+            'student' => 'student.ai-assistant.index',
+            'guardian' => 'guardian.ai-assistant.index',
+            default => 'support.ai-assistant.index',
+        };
+
+        $conversationId = $request->integer('conversation_id');
+        $activeConversation = null;
+        $messages = collect();
+        if ($conversationId > 0) {
+            $activeConversation = DB::table('ai_assistant_conversations')
+                ->where('id', $conversationId)
+                ->where('user_id', $request->user()->id)
+                ->where('assistant_role', $role)
+                ->first();
+            abort_unless($activeConversation, 404);
+
+            $messages = DB::table('ai_assistant_messages')
+                ->where('conversation_id', $activeConversation->id)
+                ->orderBy('id')
+                ->get();
+        }
 
         return view('universal-ai-assistant::chat', [
             'role' => $role,
             'messageRoute' => $routeName,
+            'indexRoute' => $indexRoute,
+            'activeConversation' => $activeConversation,
+            'messages' => $messages,
             'conversations' => DB::table('ai_assistant_conversations')
                 ->where('user_id', $request->user()->id)
                 ->where('assistant_role', $role)
@@ -42,12 +71,14 @@ final class AssistantController
     {
         $role = AssistantSettings::roleForUser((string) $request->user()->role);
         abort_unless($role !== null && $this->isAvailable($role), 404);
+        AssistantSettings::pruneExpiredConversations();
 
         $validated = $request->validate([
             'message' => ['required', 'string', 'min:1', 'max:4000'],
             'conversation_id' => ['nullable', 'integer', 'min:1'],
         ]);
 
+        $message = $this->redactSensitiveText(trim($validated['message']));
         $settings = AssistantSettings::record();
         $todayRequests = DB::table('ai_assistant_messages')
             ->join('ai_assistant_conversations', 'ai_assistant_conversations.id', '=', 'ai_assistant_messages.conversation_id')
@@ -76,14 +107,13 @@ final class AssistantController
             $conversationId = DB::table('ai_assistant_conversations')->insertGetId([
                 'user_id' => $request->user()->id,
                 'assistant_role' => $role,
-                'title' => mb_substr(trim($validated['message']), 0, 100),
+                'title' => mb_substr($message, 0, 100),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
             $conversation = DB::table('ai_assistant_conversations')->where('id', $conversationId)->first();
         }
 
-        $message = $this->redactSensitiveText(trim($validated['message']));
         DB::table('ai_assistant_messages')->insert([
             'conversation_id' => $conversation->id,
             'message_role' => 'user',
