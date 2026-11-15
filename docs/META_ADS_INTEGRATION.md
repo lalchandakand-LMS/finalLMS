@@ -27,7 +27,7 @@ Meta may require App Review and Standard Access before non-app-role users can us
 - OAuth state is random, stored in the authenticated session and checked on callback.
 - Long-lived access tokens are encrypted with Laravel's application key before storage in the existing settings table.
 - Never expose app secrets or access tokens in chat, logs, screenshots or source control.
-- The integration does not create, activate, resume or publish ads. It can read accounts/pages/campaigns/insights, pause campaigns and resume a paused campaign after a spend warning and admin confirmation.
+- The integration does not create or publish ads. It can read accounts/pages/campaigns/insights, pause campaigns and resume a paused campaign only after a spend warning and explicit admin confirmation.
 - Paid ad creation is deliberately excluded. Resuming a paused campaign can incur spend and therefore requires an explicit confirmation on the campaign action.
 - Disconnect removes the stored encrypted token and selected account.
 
