@@ -2960,12 +2960,19 @@ class _CourseReviewsPanelState extends State<CourseReviewsPanel> {
   Future<void> load() async {
     try {
       final response = await widget.api.get('/courses/${widget.slug}/reviews');
-      if (mounted) setState(() {
-        reviews = response['data'] as List<dynamic>? ?? [];
-        loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          reviews = response['data'] as List<dynamic>? ?? [];
+          loading = false;
+        });
+      }
     } catch (exception) {
-      if (mounted) setState(() { error = exception.toString(); loading = false; });
+      if (mounted) {
+        setState(() {
+          error = exception.toString();
+          loading = false;
+        });
+      }
     }
   }
 
@@ -2986,7 +2993,9 @@ class _CourseReviewsPanelState extends State<CourseReviewsPanel> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(exception.toString())));
       }
     } finally {
-      if (mounted) setState(() => submitting = false);
+      if (mounted) {
+        setState(() => submitting = false);
+      }
     }
   }
 
