@@ -11,6 +11,7 @@ use App\Services\Plugins\PluginUninstaller;
 use App\Services\Plugins\PluginDeactivator;
 use App\Services\Plugins\PluginSettingsManager;
 use App\Services\Plugins\PluginHealthChecker;
+use App\Services\Plugins\PluginBackupRestorer;
 use App\Services\Modules\ModuleRegistry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -172,6 +173,45 @@ class AdminPluginManagerController extends Controller
         }
 
         return redirect()->route('admin.plugins.index')->with('success', __('Plugin deactivated. Its files and data were preserved.'));
+    }
+
+    public function restore(Request $request, PluginInstallation $plugin, PluginBackupRestorer $restorer): RedirectResponse
+    {
+        try {
+            $restored = $restorer->restore($plugin);
+
+            ActivityLog::create([
+                'user_id' => $request->user()->id,
+                'event' => 'admin.plugins.restored',
+                'description' => 'Restored plugin '.$restored->plugin_key.' version '.$restored->version.' from its verified private backup.',
+                'method' => $request->method(),
+                'route' => $request->route()?->getName(),
+                'ip_address' => $request->ip(),
+                'user_agent' => substr((string) $request->userAgent(), 0, 1000),
+            ]);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            try {
+                ActivityLog::create([
+                    'user_id' => $request->user()->id,
+                    'event' => 'admin.plugins.restore_failed',
+                    'description' => 'Plugin backup restore was rejected for '.$plugin->plugin_key.'.',
+                    'method' => $request->method(),
+                    'route' => $request->route()?->getName(),
+                    'ip_address' => $request->ip(),
+                    'user_agent' => substr((string) $request->userAgent(), 0, 1000),
+                ]);
+            } catch (Throwable $loggingException) {
+                report($loggingException);
+            }
+
+            return back()->with('error', $exception instanceof InvalidArgumentException || $exception instanceof \RuntimeException
+                ? $exception->getMessage()
+                : __('Plugin restore failed. The backup was preserved where possible; check server logs.'));
+        }
+
+        return redirect()->route('admin.plugins.index')->with('success', __('Plugin backup verified and restored. The plugin remains inactive.'));
     }
 
     public function uninstall(Request $request, PluginInstallation $plugin, PluginUninstaller $uninstaller): RedirectResponse
