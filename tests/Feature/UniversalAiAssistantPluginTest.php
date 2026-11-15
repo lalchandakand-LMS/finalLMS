@@ -18,6 +18,10 @@ class UniversalAiAssistantPluginTest extends TestCase
     {
         parent::setUp();
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantSettings.php');
+        if (! \\Illuminate\\Support\\Facades\\Schema::hasTable('ai_assistant_settings')) {
+            $migration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_15_180000_create_universal_ai_assistant_tables.php');
+            $migration->up();
+        }
     }
 
     public function test_assistant_settings_are_disabled_by_default_and_private_data_access_is_denied(): void
