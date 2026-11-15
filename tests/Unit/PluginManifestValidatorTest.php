@@ -92,4 +92,27 @@ class PluginManifestValidatorTest extends TestCase
         $this->assertContains('Invalid or missing semantic version.', $errors);
         $this->assertContains('Missing or invalid requires.laravel.', $errors);
     }
+    public function test_rejects_wildcard_or_malformed_permissions_and_capabilities(): void
+    {
+        $manifest = $this->validManifest();
+        $manifest['permissions'] = ['*'];
+        $manifest['capabilities'] = ['run-anything'];
+
+        $errors = app(PluginManifestValidator::class)->errors($manifest);
+
+        $this->assertContains(
+            'Manifest permissions must be explicit names; wildcard and self-granted permissions are forbidden.',
+            $errors,
+        );
+    }
+
+    public function test_accepts_explicit_permission_and_capability_identifiers(): void
+    {
+        $manifest = $this->validManifest();
+        $manifest['permissions'] = ['courses.view', 'branch:students.manage'];
+        $manifest['capabilities'] = ['course-catalog', 'reports.export'];
+
+        $this->assertTrue(app(PluginManifestValidator::class)->isValid($manifest));
+    }
+
 }
