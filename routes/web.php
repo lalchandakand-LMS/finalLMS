@@ -3,6 +3,7 @@
 use App\Http\Controllers\AddonRegistryController;
 use App\Http\Controllers\AiDeveloperController;
 use App\Http\Controllers\AdminSettingsController;
+use App\Http\Controllers\AdminVerificationController;
 use App\Http\Controllers\AdminUpdateController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\StudentDeviceAccessController;
@@ -302,6 +303,9 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::put('/comments/{comment}', [AdminCommentController::class, 'update'])->name('admin.comments.update');
         Route::delete('/comments/{comment}', [AdminCommentController::class, 'destroy'])->name('admin.comments.destroy');
         Route::get('/student-devices', [StudentDeviceAccessController::class, 'adminIndex'])->name('admin.student-devices.index');
+        Route::get('/verification-center', [AdminVerificationController::class, 'index'])->name('admin.verification-center.index');
+        Route::post('/verification-center/{user}/email', [AdminVerificationController::class, 'resendEmail'])->middleware('throttle:3,1')->name('admin.verification-center.email');
+        Route::post('/verification-center/{user}/phone', [AdminVerificationController::class, 'sendPhoneCode'])->middleware('throttle:3,1')->name('admin.verification-center.phone');
         Route::get('/security/sessions', [AdminDeviceSessionController::class, 'index'])->name('admin.security.sessions.index');
         Route::patch('/security/sessions/{deviceSession}/revoke', [AdminDeviceSessionController::class, 'revoke'])->name('admin.security.sessions.revoke');
         Route::get('/teacher-applications', [TeacherApplicationController::class, 'adminIndex'])->name('admin.teacher-applications.index');
