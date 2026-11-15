@@ -66,6 +66,11 @@ class StudentCheckoutController extends Controller
                         ->whereIn('status', ['active', 'completed'])
                         ->count();
                     $pending = Payment::query()->where('batch_id', $batch->id)->where('status', 'pending')->count();
+                    $pendingCombo = DB::table('payment_combo_courses')
+                        ->join('payments', 'payments.id', '=', 'payment_combo_courses.payment_id')
+                        ->where('payment_combo_courses.batch_id', $batch->id)
+                        ->where('payments.status', 'pending')
+                        ->count();
 
                     return [
                         'id' => $batch->id,
@@ -78,8 +83,8 @@ class StudentCheckoutController extends Controller
                         'discount_amount' => number_format(max(0, $baseAmount - $discountedAmount), 2, '.', ''),
                         'flash_sale_applied' => $sale !== null,
                         'capacity' => $batch->capacity,
-                        'occupied' => $occupied + $pending,
-                        'available_seats' => max(0, $batch->capacity - $occupied - $pending),
+                        'occupied' => $occupied + $pending + $pendingCombo,
+                        'available_seats' => max(0, $batch->capacity - $occupied - $pending - $pendingCombo),
                     ];
                 })->values(),
                 'payment_methods' => $methods,
@@ -433,8 +438,13 @@ class StudentCheckoutController extends Controller
             ->where('batch_id', $batch->id)
             ->where('status', 'pending')
             ->count();
+        $pendingComboPayments = DB::table('payment_combo_courses')
+            ->join('payments', 'payments.id', '=', 'payment_combo_courses.payment_id')
+            ->where('payment_combo_courses.batch_id', $batch->id)
+            ->where('payments.status', 'pending')
+            ->count();
 
-        return $enrollments + $pendingPayments < $batch->capacity;
+        return $enrollments + $pendingPayments + $pendingComboPayments < $batch->capacity;
     }
 
     private function isBkashConfigured(): bool

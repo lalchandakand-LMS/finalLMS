@@ -116,7 +116,7 @@ Course ownership is checked server-side. The API does not accept a client-suppli
 - Teacher API login remains password-based and is not subject to the student SMS device policy.
 - Token hashes, not bearer values, are persisted. Expired and revoked tokens are rejected.
 - The Student Flutter app now implements secure installation-ID and bearer-token storage, OTP entry, Admin-approval waiting UI, 15-second approval polling, session restoration and server-side logout. Flutter analyze/tests must pass for each release; real SMS and end-to-end approval still require isolated staging acceptance.
-- Mobile course checkout now supports batch selection, server-priced Flash Sale discounts, manual payment submission, bKash checkout initiation and private payment history. Coupon codes, a persistent cross-device cart, reviews, notices and support remain separate deliverables. Mobile exam and text-assignment screens are implemented; assignment attachment upload remains pending.
+- Mobile course checkout now supports batch selection, server-priced Flash Sale discounts, manual payment submission, bKash checkout initiation and private payment history. Persistent cart, coupon validation, and manual single-/multi-course cart checkout are implemented in the current development branch; printable invoices/receipts, reviews, notices and support remain separate deliverables. Mobile exam and text-assignment screens are implemented; assignment attachment upload remains pending.
 
 
 ## Student assignment endpoints
@@ -162,3 +162,16 @@ Course ownership is checked server-side. The API does not accept a client-suppli
 - Token hashes, not bearer values, are persisted. Expired and revoked tokens are rejected.
 - The Student Flutter app now implements secure installation-ID and bearer-token storage, OTP entry, Admin-approval waiting UI, 15-second approval polling, session restoration and server-side logout. Flutter analyze/tests must pass for each release; real SMS and end-to-end approval still require isolated staging acceptance.
 - Enrollment purchase, cart/coupons, reviews, quizzes, assignments, live-class operations, notifications, and complete Flutter user interfaces are separate remaining deliverables.
+
+
+## Student cart, coupons and cart checkout
+
+- `GET /my/cart`: account-owned cart contents and current server-calculated BDT totals.
+- `POST /my/cart`: add a published course and optional open batch; seats and prices are not reserved.
+- `PATCH /my/cart/{course_slug}`: select or clear an open batch for a saved course.
+- `DELETE /my/cart/{course_slug}` and `DELETE /my/cart`: remove one course or clear the cart.
+- `GET /my/cart/checkout/options`: list enabled manual payment methods and their academy instructions.
+- `POST /my/cart/coupon` with `code`: preview a coupon against eligible cart items; server enforces active dates, minimum subtotal, course scope and global/per-student limits.
+- `POST /my/cart/checkout/manual`: submit one manual payment for the cart with `payment_method`, `transaction_reference`, optional `sender_account`, optional `coupon_code` and optional private `proof` file.
+
+Coupon discounts are calculated server-side, cannot stack with Flash Sales, and are capped by eligible subtotal and configured maximum discount. Coupon usage is reserved while payment is pending, consumed only on Admin approval and released on rejection. Multi-course payments are snapshotted against the payment; batch selection is rechecked when Admin approves, and access is granted only after approval. Free carts enroll immediately. bKash cart checkout is not included in this API yet.

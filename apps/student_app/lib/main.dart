@@ -945,10 +945,28 @@ class StudentCartPage extends StatefulWidget {
 }
 
 class _StudentCartPageState extends State<StudentCartPage> {
+  final couponController = TextEditingController();
+  final transactionReferenceController = TextEditingController();
+  final senderAccountController = TextEditingController();
   List<dynamic> items = [];
+  List<dynamic> paymentMethods = [];
   Map<String, dynamic> totals = {};
+  Map<String, dynamic> couponPricing = {};
   bool loading = true;
+  bool applyingCoupon = false;
+  bool submitting = false;
   String? error;
+  String? selectedPaymentMethod;
+
+  Map<String, dynamic>? get selectedMethodData {
+    for (final raw in paymentMethods) {
+      final method = raw as Map<String, dynamic>;
+      if (method['key']?.toString() == selectedPaymentMethod) {
+        return method;
+      }
+    }
+    return null;
+  }
 
   @override
   void initState() {
@@ -956,19 +974,64 @@ class _StudentCartPageState extends State<StudentCartPage> {
     load();
   }
 
+  @override
+  void dispose() {
+    couponController.dispose();
+    transactionReferenceController.dispose();
+    senderAccountController.dispose();
+    super.dispose();
+  }
+
   Future<void> load() async {
-    setState(() { loading = true; error = null; });
+    setState(() { loading = true; error = null; couponPricing = {}; });
     try {
       final response = await widget.api.get('/my/cart');
-      if (!mounted) return;
+      final options = await widget.api.get('/my/cart/checkout/options');
+      if (!mounted) { return; }
       setState(() {
         items = response['data'] as List<dynamic>? ?? [];
         totals = response['meta'] as Map<String, dynamic>? ?? {};
+        paymentMethods = (options['data'] as Map<String, dynamic>?)?['payment_methods'] as List<dynamic>? ?? [];
+        final availableMethodKeys = paymentMethods
+            .map((raw) => (raw as Map<String, dynamic>)['key']?.toString())
+            .whereType<String>()
+            .toSet();
+        if (!availableMethodKeys.contains(selectedPaymentMethod)) {
+          selectedPaymentMethod = paymentMethods.isEmpty
+              ? null
+              : (paymentMethods.first as Map<String, dynamic>)['key']?.toString();
+        }
+        if (items.isEmpty) {
+          couponPricing = {};
+          couponController.clear();
+          transactionReferenceController.clear();
+          senderAccountController.clear();
+        }
       });
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
       if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> applyCoupon() async {
+    if (couponController.text.trim().isEmpty) { return; }
+    setState(() => applyingCoupon = true);
+    try {
+      final response = await widget.api.postJson('/my/cart/coupon', {
+        'code': couponController.text.trim(),
+      });
+      if (!mounted) { return; }
+      setState(() => couponPricing = response['data'] as Map<String, dynamic>? ?? {});
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Coupon applied to this cart.')));
+    } catch (exception) {
+      if (mounted) {
+        setState(() => couponPricing = {});
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(exception.toString())));
+      }
+    } finally {
+      if (mounted) { setState(() => applyingCoupon = false); }
     }
   }
 
@@ -977,6 +1040,7 @@ class _StudentCartPageState extends State<StudentCartPage> {
     try {
       await widget.api.delete('/my/cart/${course['slug']}');
       if (mounted) {
+        setState(() => couponPricing = {});
         await load();
       }
     } catch (exception) {
@@ -990,12 +1054,46 @@ class _StudentCartPageState extends State<StudentCartPage> {
     try {
       await widget.api.delete('/my/cart');
       if (mounted) {
+        setState(() => couponPricing = {});
         await load();
       }
     } catch (exception) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(exception.toString())));
       }
+    }
+  }
+
+  Future<void> checkout() async {
+    final estimatedTotal = double.tryParse((couponPricing['total'] ?? totals['total'] ?? '0').toString()) ?? 0;
+    if (estimatedTotal > 0 && (selectedPaymentMethod == null || transactionReferenceController.text.trim().isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Select a payment method and enter the transaction reference.')));
+      return;
+    }
+    setState(() => submitting = true);
+    try {
+      final payload = <String, dynamic>{
+        'transaction_reference': transactionReferenceController.text.trim(),
+        'sender_account': senderAccountController.text.trim(),
+      };
+      if (selectedPaymentMethod != null) { payload['payment_method'] = selectedPaymentMethod; }
+      if (couponPricing.isNotEmpty) { payload['coupon_code'] = couponController.text.trim(); }
+      final response = await widget.api.postJson('/my/cart/checkout/manual', payload);
+      if (!mounted) { return; }
+      final data = response['data'] as Map<String, dynamic>? ?? {};
+      final message = data['status'] == 'enrolled_free'
+          ? 'Your cart courses are now enrolled.'
+          : 'Payment submitted. Your courses will unlock after payment approval.';
+      transactionReferenceController.clear();
+      senderAccountController.clear();
+      couponController.clear();
+      setState(() { couponPricing = {}; });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      await load();
+    } catch (exception) {
+      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(exception.toString()))); }
+    } finally {
+      if (mounted) { setState(() => submitting = false); }
     }
   }
 
@@ -1051,12 +1149,70 @@ class _StudentCartPageState extends State<StudentCartPage> {
                         children: [
                           Text('Items: ${totals['items_count'] ?? items.length}'),
                           Text('Subtotal: ৳${totals['subtotal'] ?? '0.00'}'),
-                          Text('Discount: ৳${totals['discount_total'] ?? '0.00'}'),
-                          const Divider(),
-                          Text('Estimated total: ৳${totals['total'] ?? '0.00'}',
+                          Text('Flash sale discount: ৳${totals['discount_total'] ?? '0.00'}'),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: couponController,
+                            textCapitalization: TextCapitalization.characters,
+                            decoration: InputDecoration(
+                              labelText: 'Coupon code',
+                              suffixIcon: IconButton(
+                                onPressed: applyingCoupon ? null : applyCoupon,
+                                icon: applyingCoupon
+                                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                                    : const Icon(Icons.check_circle_outline),
+                              ),
+                            ),
+                          ),
+                          if (couponPricing.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Text('Coupon ${couponPricing['code']} applied: −৳${couponPricing['discount']}'),
+                          ],
+                          const Divider(height: 24),
+                          Text('Payable: ৳${couponPricing['total'] ?? totals['total'] ?? '0.00'}',
                             style: Theme.of(context).textTheme.titleLarge),
+                          const SizedBox(height: 12),
+                          DropdownButtonFormField<String>(
+                            initialValue: selectedPaymentMethod,
+                            decoration: const InputDecoration(labelText: 'Payment method'),
+                            items: paymentMethods.map((raw) {
+                              final method = raw as Map<String, dynamic>;
+                              return DropdownMenuItem<String>(
+                                value: method['key']?.toString(),
+                                child: Text(method['label']?.toString() ?? method['key'].toString()),
+                              );
+                            }).toList(),
+                            onChanged: (value) => setState(() => selectedPaymentMethod = value),
+                          ),
+                          if (selectedMethodData != null) ...[
+                            const SizedBox(height: 6),
+                            Text([
+                              if ((selectedMethodData!['account']?.toString() ?? '').isNotEmpty)
+                                'Academy account: ${selectedMethodData!['account']}',
+                              if ((selectedMethodData!['instructions']?.toString() ?? '').isNotEmpty)
+                                selectedMethodData!['instructions'].toString(),
+                            ].join(' • ')),
+                          ],
                           const SizedBox(height: 8),
-                          const Text('Batch selection, coupon validation and multi-course payment will be confirmed securely at checkout.'),
+                          TextField(
+                            controller: senderAccountController,
+                            decoration: const InputDecoration(labelText: 'Your sender account (optional)'),
+                          ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: transactionReferenceController,
+                            decoration: const InputDecoration(labelText: 'Transaction reference'),
+                          ),
+                          const SizedBox(height: 16),
+                          FilledButton.icon(
+                            onPressed: submitting ? null : checkout,
+                            icon: submitting
+                                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                                : const Icon(Icons.lock_outline),
+                            label: Text(submitting ? 'Submitting…' : 'Submit cart checkout'),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text('Payment is reviewed by the academy. Course access is granted after approval. Coupon discounts cannot be combined with Flash Sales.'),
                         ],
                       ),
                     ),
