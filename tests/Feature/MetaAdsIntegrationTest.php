@@ -351,7 +351,7 @@ class MetaAdsIntegrationTest extends TestCase
         ]);
 
         Http::assertSent(fn ($request) => str_ends_with($request->url(), '/act_12345/adcreatives')
-            && str_contains((string) $request['object_story_spec'], rawurlencode(route('courses.show', $course))));
+            && data_get(json_decode((string) $request['object_story_spec'], true), 'link_data.link') === route('courses.show', $course));
     }
 
 
