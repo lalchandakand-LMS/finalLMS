@@ -39,6 +39,12 @@ return [
         'base_url' => env('NAGAD_BASE_URL'),
     ],
 
+    'meta_ads' => [
+        'app_id' => env('META_ADS_APP_ID'),
+        'app_secret' => env('META_ADS_APP_SECRET'),
+        'redirect_uri' => env('META_ADS_REDIRECT_URI', rtrim((string) env('APP_URL', 'http://localhost'), '/').'/admin/marketing/meta-ads/callback'),
+    ],
+
     'twilio' => [
         'sid' => env('TWILIO_ACCOUNT_SID'),
         'token' => env('TWILIO_AUTH_TOKEN'),

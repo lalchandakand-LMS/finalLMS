@@ -5,6 +5,8 @@ use App\Http\Controllers\AiDeveloperController;
 use App\Http\Controllers\AdminSettingsController;
 use App\Http\Controllers\AdminVerificationController;
 use App\Http\Controllers\MarketingCenterController;
+use App\Http\Controllers\MetaAdsIntegrationController;
+use App\Http\Controllers\MetaBoostCampaignController;
 use App\Http\Controllers\SeoController;
 use App\Http\Controllers\AdminUpdateController;
 use App\Http\Controllers\AuthController;
@@ -427,6 +429,16 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::put('/news/{post}', [BlogController::class, 'update'])->name('admin.news.update');
         Route::delete('/news/{post}', [BlogController::class, 'destroy'])->name('admin.news.destroy');
         Route::get('/marketing', [MarketingCenterController::class, 'index'])->name('admin.marketing.index');
+        Route::get('/marketing/boost-campaigns', [MetaBoostCampaignController::class, 'index'])->name('admin.marketing.boost-campaigns.index');
+        Route::post('/marketing/boost-campaigns', [MetaBoostCampaignController::class, 'store'])->middleware('throttle:10,1')->name('admin.marketing.boost-campaigns.store');
+        Route::put('/marketing/boost-campaigns/{campaign}', [MetaBoostCampaignController::class, 'update'])->name('admin.marketing.boost-campaigns.update');
+        Route::delete('/marketing/boost-campaigns/{campaign}', [MetaBoostCampaignController::class, 'destroy'])->name('admin.marketing.boost-campaigns.destroy');
+        Route::get('/marketing/meta-ads', [MetaAdsIntegrationController::class, 'index'])->name('admin.marketing.meta-ads.index');
+        Route::get('/marketing/meta-ads/connect', [MetaAdsIntegrationController::class, 'connect'])->middleware('throttle:10,1')->name('admin.marketing.meta-ads.connect');
+        Route::get('/marketing/meta-ads/callback', [MetaAdsIntegrationController::class, 'callback'])->middleware('throttle:10,1')->name('admin.marketing.meta-ads.callback');
+        Route::post('/marketing/meta-ads/disconnect', [MetaAdsIntegrationController::class, 'disconnect'])->name('admin.marketing.meta-ads.disconnect');
+        Route::post('/marketing/meta-ads/campaigns/{campaignId}/pause', [MetaAdsIntegrationController::class, 'pauseCampaign'])->middleware('throttle:10,1')->name('admin.marketing.meta-ads.campaigns.pause');
+        Route::post('/marketing/meta-ads/campaigns/{campaignId}/resume', [MetaAdsIntegrationController::class, 'resumeCampaign'])->middleware('throttle:10,1')->name('admin.marketing.meta-ads.campaigns.resume');
         Route::get('/settings', [AdminSettingsController::class, 'index'])->name('admin.settings.index');
         Route::post('/settings', [AdminSettingsController::class, 'update'])->name('admin.settings.update');
 

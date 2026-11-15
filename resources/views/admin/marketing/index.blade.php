@@ -58,12 +58,14 @@ MAIL_FROM_NAME="Your Academy"</pre>
     <section class="panel" style="margin-bottom:20px;">
         <h2 style="margin-top:0;">{{ __('Advertising platforms') }}</h2>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <a class="btn primary" href="https://adsmanager.facebook.com/adsmanager/manage/campaigns" target="_blank" rel="noopener">{{ __('Open Meta Ads Manager') }}</a>
+            <a class="btn primary" href="{{ route('admin.marketing.boost-campaigns.index') }}">{{ __('Meta Boost Planner') }}</a>
+            <a class="btn primary" href="{{ route('admin.marketing.meta-ads.index') }}">{{ __('Connect Meta Ads to LMS') }}</a>
+            <a class="btn secondary" href="https://adsmanager.facebook.com/adsmanager/manage/campaigns" target="_blank" rel="noopener">{{ __('Open Meta Ads Manager') }}</a>
             <a class="btn secondary" href="https://business.facebook.com/" target="_blank" rel="noopener">{{ __('Open Meta Business Suite') }}</a>
             <a class="btn secondary" href="https://analytics.google.com/analytics/web/" target="_blank" rel="noopener">{{ __('Open Google Analytics') }}</a>
             <a class="btn secondary" href="https://search.google.com/search-console" target="_blank" rel="noopener">{{ __('Open Search Console') }}</a>
         </div>
-        <p class="muted" style="margin-top:14px;">{{ __('The LMS currently supports consent-gated Meta Pixel tracking and platform shortcuts. Creating, funding or editing live Meta Ads campaigns through this LMS requires a Meta Business app, approved Marketing API access, an ad account and authorized credentials. No live advertising action is performed here.') }}</p>
+        <p class="muted" style="margin-top:14px;">{{ __('The LMS currently supports consent-gated Meta Pixel tracking and platform shortcuts. Creating or activating new paid Meta Ads campaigns through this LMS requires a Meta Business app, approved Marketing API access, an ad account and authorized credentials. The connected Meta Ads tool can read reports, pause campaigns and resume a paused campaign only after an explicit spend-warning confirmation; it does not create new ads.') }}</p>
     </section>
 
     <section class="panel">
