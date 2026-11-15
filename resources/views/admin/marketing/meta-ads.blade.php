@@ -7,7 +7,7 @@
         <div>
             <span class="badge info">{{ __('Admin only') }}</span>
             <h1 style="margin:12px 0 0;">{{ __('Facebook & Instagram Ads') }}</h1>
-            <p class="muted">{{ __('Connect your Meta business assets, inspect campaign performance and pause campaigns from the LMS.') }}</p>
+            <p class="muted">{{ __('Connect your Meta business assets, inspect campaign performance, pause campaigns and resume them after a spend warning.') }}</p>
         </div>
         <a class="btn secondary" href="{{ route('admin.marketing.index') }}">{{ __('Marketing center') }}</a>
     </div>
