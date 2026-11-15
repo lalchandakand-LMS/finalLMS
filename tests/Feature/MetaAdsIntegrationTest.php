@@ -20,7 +20,7 @@ class MetaAdsIntegrationTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.marketing.meta-ads.index'))
             ->assertOk()
-            ->assertSee('Facebook &amp; Instagram Ads');
+            ->assertSee('Facebook & Instagram Ads');
     }
 
     public function test_non_admin_cannot_access_meta_ads_integration(): void
