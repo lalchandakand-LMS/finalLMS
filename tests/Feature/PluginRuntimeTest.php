@@ -91,10 +91,10 @@ class PluginRuntimeTest extends TestCase
 return new class implements \App\Contracts\Plugins\PluginContract {
     public function register(\App\Services\Plugins\PluginContext $context): void
     {
-        $context->instance('plugin.runtime.registered', true);
         $context->routesForPortal('PORTAL', 'plugins/runtime-check', 'plugins.runtime_check.', function (): void {
             \Illuminate\Support\Facades\Route::get('/health', fn () => response()->json(['ok' => true]));
         });
+        $context->instance('plugin.runtime.registered', true);
     }
 
     public function boot(\App\Services\Plugins\PluginContext $context): void
