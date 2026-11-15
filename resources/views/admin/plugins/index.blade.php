@@ -180,6 +180,14 @@
                                             <li>
                                                 <code>{{ $versionRecord->version }}</code>
                                                 <small class="muted">{{ substr($versionRecord->package_sha256, 0, 12) }} · {{ $versionRecord->installed_at?->format('Y-m-d H:i') }}</small>
+                                                @if($plugin->status === 'inactive' && $plugin->version !== $versionRecord->version && data_get($versionRecord->metadata, 'integrity_version') === 1 && !empty(data_get($versionRecord->metadata, 'installed_file_hashes')))
+                                                    <form method="POST" action="{{ route('admin.plugins.rollback', $plugin) }}" style="display:inline-block; margin-left:8px;">
+                                                        @csrf
+                                                        <input type="hidden" name="version" value="{{ $versionRecord->version }}">
+                                                        <label><input type="checkbox" name="confirm_rollback" value="1" required> {{ __('Confirm rollback') }}</label>
+                                                        <button type="submit" class="btn btn-sm btn-outline-warning">{{ __('Rollback') }}</button>
+                                                    </form>
+                                                @endif
                                             </li>
                                         @endforeach
                                     </ul>
