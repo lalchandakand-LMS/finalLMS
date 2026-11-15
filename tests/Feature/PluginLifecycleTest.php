@@ -16,7 +16,8 @@ class PluginLifecycleTest extends TestCase
     private function plugin(array $overrides = []): PluginInstallation
     {
         $signatureVerifiedAt = $overrides['signature_verified_at'] ?? null;
-        unset($overrides['signature_verified_at']);
+        $status = $overrides['status'] ?? 'discovered';
+        unset($overrides['signature_verified_at'], $overrides['status']);
 
         $plugin = PluginInstallation::query()->create(array_merge([
             'plugin_key' => 'aec.course-management',
@@ -27,9 +28,11 @@ class PluginLifecycleTest extends TestCase
             'manifest' => ['schema_version' => 1, 'key' => 'aec.course-management'],
         ], $overrides));
 
+        $protectedAttributes = ['status' => $status];
         if ($signatureVerifiedAt !== null) {
-            $plugin->forceFill(['signature_verified_at' => $signatureVerifiedAt])->save();
+            $protectedAttributes['signature_verified_at'] = $signatureVerifiedAt;
         }
+        $plugin->forceFill($protectedAttributes)->save();
 
         return $plugin;
     }
@@ -51,9 +54,10 @@ class PluginLifecycleTest extends TestCase
     public function test_signature_verification_timestamp_is_not_mass_assignable(): void
     {
         $plugin = $this->plugin();
-        $plugin->fill(['signature_verified_at' => Carbon::now()]);
+        $plugin->fill(['signature_verified_at' => Carbon::now(), 'status' => 'active']);
 
         $this->assertNull($plugin->signature_verified_at);
+        $this->assertSame('discovered', $plugin->status);
     }
 
     public function test_lifecycle_rejects_skipped_or_unknown_states(): void
