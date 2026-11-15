@@ -58,6 +58,7 @@ use App\Http\Controllers\GuardianController;
 use App\Http\Controllers\StorageManagerController;
 use App\Http\Controllers\AdminAnalyticsController;
 use App\Http\Controllers\AdminCommentController;
+use App\Http\Controllers\AdminSupportTicketController;
 use App\Http\Controllers\AdminDashboardAnnouncementController;
 use App\Http\Controllers\NoticeBoardController;
 use App\Http\Controllers\AdminDeviceSessionController;
@@ -284,6 +285,10 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         ->name('courses.lessons.complete');
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
+        Route::get('/support-tickets', [AdminSupportTicketController::class, 'index'])->name('admin.support-tickets.index');
+        Route::get('/support-tickets/{ticket}', [AdminSupportTicketController::class, 'show'])->name('admin.support-tickets.show');
+        Route::post('/support-tickets/{ticket}/messages', [AdminSupportTicketController::class, 'reply'])->middleware('throttle:10,1')->name('admin.support-tickets.reply');
+        Route::patch('/support-tickets/{ticket}/status', [AdminSupportTicketController::class, 'updateStatus'])->name('admin.support-tickets.status');
         Route::get('/ebooks', [AdminProductController::class, 'index'])->name('admin.ebooks.index');
         Route::post('/ebooks', [AdminProductController::class, 'store'])->name('admin.ebooks.store');
         Route::put('/ebooks/{product}', [AdminProductController::class, 'update'])->name('admin.ebooks.update');
