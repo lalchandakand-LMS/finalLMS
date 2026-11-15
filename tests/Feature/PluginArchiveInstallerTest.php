@@ -117,6 +117,7 @@ class PluginArchiveInstallerTest extends TestCase
         );
 
         $this->assertSame('installed', $installed->status);
+        $this->assertMatchesRegularExpression('/^[a-f0-9]{64}$/D', $installed->metadata['installed_tree_sha256'] ?? '');
         $this->assertFileExists($this->finalPath.'/src/Plugin.php');
         $this->assertFileExists($this->finalPath.'/resources/course.json');
     }

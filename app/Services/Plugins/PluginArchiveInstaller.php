@@ -98,7 +98,7 @@ final class PluginArchiveInstaller
             }
 
             try {
-                return $this->lifecycle->transition((string) $plugin->plugin_key, 'installed');
+                return $this->lifecycle->markInstalled((string) $plugin->plugin_key);
             } catch (\Throwable $exception) {
                 $freshStatus = PluginInstallation::query()->find($plugin->getKey())?->status;
                 if (! in_array($freshStatus, ['installed', 'active'], true)) {

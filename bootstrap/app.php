@@ -23,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'activity.log' => \App\Http\Middleware\LogUserActivity::class,
             'student.device' => \App\Http\Middleware\EnsureStudentDeviceIsApproved::class,
             'api.token' => \App\Http\Middleware\AuthenticateApiToken::class,
+            'plugin.active' => \App\Http\Middleware\EnsurePluginIsActive::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

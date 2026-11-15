@@ -13,6 +13,15 @@ class PluginLifecycleTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config(['plugins.trusted_public_keys' => [
+            'release-key-2026' => 'test-public-key-placeholder',
+        ]]);
+    }
+
     private function plugin(array $overrides = []): PluginInstallation
     {
         $attributes = array_merge([
@@ -106,10 +115,22 @@ class PluginLifecycleTest extends TestCase
             'package_path' => 'plugins/aec/course-management/1.0.0',
         ])->save();
 
-        $installed = app(PluginLifecycle::class)->transition('aec.course-management', 'installed');
+        $installedPath = base_path('plugins/aec/course-management/1.0.0');
+        if (is_dir($installedPath)) {
+            \Illuminate\Support\Facades\File::deleteDirectory($installedPath);
+        }
+        mkdir($installedPath, 0750, true);
+        file_put_contents($installedPath.'/Plugin.php', '<?php return true;');
 
-        $this->assertSame('installed', $installed->status);
-        $this->assertNotNull($installed->installed_at);
+        try {
+            $installed = app(PluginLifecycle::class)->markInstalled('aec.course-management');
+
+            $this->assertSame('installed', $installed->status);
+            $this->assertNotNull($installed->installed_at);
+            $this->assertMatchesRegularExpression('/^[a-f0-9]{64}$/D', $installed->metadata['installed_tree_sha256'] ?? '');
+        } finally {
+            \Illuminate\Support\Facades\File::deleteDirectory($installedPath);
+        }
     }
 
     public function test_activation_requires_signature_metadata_and_private_package_path(): void
@@ -129,12 +150,27 @@ class PluginLifecycleTest extends TestCase
             'package_sha256' => str_repeat('a', 64),
             'signature_key_id' => 'release-key-2026',
             'package_path' => 'plugins/aec/course-management/1.0.0',
+            'metadata' => ['installed_tree_sha256' => str_repeat('1', 64)],
         ])->save();
 
         $active = app(PluginLifecycle::class)->transition('aec.course-management', 'active');
 
         $this->assertSame('active', $active->status);
         $this->assertNotNull($active->activated_at);
+    }
+
+    public function test_activation_requires_an_installed_file_integrity_record(): void
+    {
+        $this->plugin([
+            'status' => 'installed',
+            'signature_verified_at' => Carbon::now(),
+            'package_sha256' => str_repeat('a', 64),
+            'signature_key_id' => 'release-key-2026',
+            'package_path' => 'plugins/aec/course-management/1.0.0',
+        ]);
+
+        $this->expectException(LogicException::class);
+        app(PluginLifecycle::class)->transition('aec.course-management', 'active');
     }
 
     public function test_activation_rejects_paths_outside_private_plugins_directory(): void
