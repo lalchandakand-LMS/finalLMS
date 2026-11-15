@@ -3,6 +3,7 @@
 use App\Http\Controllers\AddonRegistryController;
 use App\Http\Controllers\AiDeveloperController;
 use App\Http\Controllers\AdminSettingsController;
+use App\Http\Controllers\SeoController;
 use App\Http\Controllers\AdminUpdateController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\StudentDeviceAccessController;
@@ -63,6 +64,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/install', [InstallController::class, 'index'])->name('install.index');
 Route::post('/install', [InstallController::class, 'install'])->middleware('throttle:5,1')->name('install.store');
+
+Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('seo.sitemap');
+Route::get('/robots.txt', [SeoController::class, 'robots'])->name('seo.robots');
 
 Route::get('/', function () {
     return auth()->check() ? redirect('/dashboard') : view('landing');
