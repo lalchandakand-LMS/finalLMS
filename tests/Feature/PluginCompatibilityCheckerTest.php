@@ -1,12 +1,12 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use App\\Models\\PluginInstallation;
-use App\\Services\\Plugins\\PluginCompatibilityChecker;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
+use App\Models\PluginInstallation;
+use App\Services\Plugins\PluginCompatibilityChecker;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use InvalidArgumentException;
-use Tests\\TestCase;
+use Tests\TestCase;
 
 class PluginCompatibilityCheckerTest extends TestCase
 {
