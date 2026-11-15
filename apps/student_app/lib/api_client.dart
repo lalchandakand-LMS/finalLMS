@@ -324,12 +324,23 @@ class MobileApi {
     return _decode(response);
   }
 
-  Future<Map<String, dynamic>> checkoutQuote(
+  Future<Map<String, dynamic>> checkoutQuote(String slug) async {
+    final response = await get('/checkout/courses/${Uri.encodeComponent(slug)}');
+    final data = response['data'];
+    if (data is! Map<String, dynamic>) {
+      throw const FormatException('Unexpected checkout options response.');
+    }
+    return data;
+  }
+
+  Future<Map<String, dynamic>> submitFreeCheckout(
     String slug, {
     int? batchId,
   }) {
-    final query = batchId == null ? '' : '?batch_id=$batchId';
-    return get('/courses/${Uri.encodeComponent(slug)}/checkout$query');
+    return postJson(
+      '/checkout/courses/${Uri.encodeComponent(slug)}/manual',
+      {if (batchId != null) 'batch_id': batchId},
+    );
   }
 
   Future<Map<String, dynamic>> submitManualCheckout(
@@ -341,7 +352,7 @@ class MobileApi {
     PlatformFile? proof,
   }) {
     return postMultipart(
-      '/courses/${Uri.encodeComponent(slug)}/checkout',
+      '/checkout/courses/${Uri.encodeComponent(slug)}/manual',
       {
         if (batchId != null) 'batch_id': batchId.toString(),
         'payment_method': paymentMethod,
@@ -359,7 +370,7 @@ class MobileApi {
     int? batchId,
   }) {
     return postJson(
-      '/courses/${Uri.encodeComponent(slug)}/checkout/bkash',
+      '/checkout/courses/${Uri.encodeComponent(slug)}/bkash',
       {if (batchId != null) 'batch_id': batchId},
     );
   }
