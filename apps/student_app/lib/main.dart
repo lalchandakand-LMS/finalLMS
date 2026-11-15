@@ -429,6 +429,12 @@ class _StudentHomeState extends State<StudentHome> {
     ));
   }
 
+
+  Future<void> openSupport() async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => StudentSupportPage(api: widget.api),
+    ));
+  }
   Future<void> openInvoices() async {
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => StudentInvoicesPage(api: widget.api),
@@ -518,6 +524,11 @@ class _StudentHomeState extends State<StudentHome> {
           onPressed: openWishlist,
           icon: const Icon(Icons.favorite_outline),
           tooltip: 'My wishlist',
+        ),
+        IconButton(
+          onPressed: openSupport,
+          icon: const Icon(Icons.support_agent_outlined),
+          tooltip: 'Contact support',
         ),
         IconButton(
           onPressed: openNotices,
@@ -774,6 +785,313 @@ class _WishlistPageState extends State<WishlistPage> {
                         ),
                       ),
       );
+}
+
+class StudentSupportPage extends StatefulWidget {
+  const StudentSupportPage({required this.api, super.key});
+  final MobileApi api;
+
+  @override
+  State<StudentSupportPage> createState() => _StudentSupportPageState();
+}
+
+class _StudentSupportPageState extends State<StudentSupportPage> {
+  List<dynamic> tickets = [];
+  bool loading = true;
+  bool creating = false;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  Future<void> load() async {
+    if (mounted) setState(() { loading = true; error = null; });
+    try {
+      final response = await widget.api.get('/my/support-tickets');
+      if (!mounted) return;
+      setState(() => tickets = response['data'] as List<dynamic>? ?? []);
+    } catch (exception) {
+      if (mounted) setState(() => error = exception.toString());
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> createTicket() async {
+    final subject = TextEditingController();
+    final message = TextEditingController();
+    final submitted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('New support request'),
+        content: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(
+              controller: subject,
+              maxLength: 160,
+              decoration: const InputDecoration(labelText: 'Subject', border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: message,
+              minLines: 4,
+              maxLines: 7,
+              maxLength: 5000,
+              decoration: const InputDecoration(labelText: 'Describe your question or issue', border: OutlineInputBorder()),
+            ),
+          ]),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Submit'),
+          ),
+        ],
+      ),
+    );
+    if (submitted != true) {
+      subject.dispose();
+      message.dispose();
+      return;
+    }
+    if (subject.text.trim().length < 5 || message.text.trim().length < 5) {
+      setState(() => error = 'Please enter a subject and a message of at least five characters.');
+      subject.dispose();
+      message.dispose();
+      return;
+    }
+    setState(() { creating = true; error = null; });
+    try {
+      final response = await widget.api.postJson('/my/support-tickets', {
+        'subject': subject.text.trim(),
+        'message': message.text.trim(),
+      });
+      await load();
+      if (!mounted) return;
+      final data = response['data'] as Map<String, dynamic>;
+      await openTicket(data);
+    } catch (exception) {
+      if (mounted) setState(() => error = exception.toString());
+    } finally {
+      subject.dispose();
+      message.dispose();
+      if (mounted) setState(() => creating = false);
+    }
+  }
+
+  Future<void> openTicket(Map<String, dynamic> ticket) async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => SupportTicketConversationPage(
+        api: widget.api,
+        ticketId: (ticket['id'] as num).toInt(),
+      ),
+    ));
+    await load();
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      title: const Text('Student Support'),
+      actions: [
+        IconButton(onPressed: loading ? null : load, icon: const Icon(Icons.refresh), tooltip: 'Refresh'),
+      ],
+    ),
+    floatingActionButton: FloatingActionButton.extended(
+      onPressed: creating ? null : createTicket,
+      icon: const Icon(Icons.add),
+      label: const Text('New request'),
+    ),
+    body: loading
+        ? const Center(child: CircularProgressIndicator())
+        : error != null && tickets.isEmpty
+            ? Center(child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Text(error!),
+                  const SizedBox(height: 12),
+                  FilledButton(onPressed: load, child: const Text('Retry')),
+                ]),
+              ))
+            : RefreshIndicator(
+                onRefresh: load,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+                  children: [
+                    const Text('Ask the academy a question or report a problem. Replies from the support team will appear in your ticket.'),
+                    const SizedBox(height: 12),
+                    if (tickets.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(32),
+                        child: Center(child: Text('You have not opened a support request yet.')),
+                      ),
+                    ...tickets.map((item) {
+                      final ticket = item as Map<String, dynamic>;
+                      final status = ticket['status']?.toString() ?? 'open';
+                      return Card(
+                        child: ListTile(
+                          leading: const Icon(Icons.support_agent),
+                          title: Text(ticket['subject']?.toString() ?? 'Support request'),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(ticket['last_message']?.toString() ?? ''),
+                              const SizedBox(height: 4),
+                              Text('Ticket #${ticket['id']} · ${status.replaceAll('_', ' ')}'),
+                            ],
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => openTicket(ticket),
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+  );
+}
+
+class SupportTicketConversationPage extends StatefulWidget {
+  const SupportTicketConversationPage({required this.api, required this.ticketId, super.key});
+  final MobileApi api;
+  final int ticketId;
+
+  @override
+  State<SupportTicketConversationPage> createState() => _SupportTicketConversationPageState();
+}
+
+class _SupportTicketConversationPageState extends State<SupportTicketConversationPage> {
+  final reply = TextEditingController();
+  Map<String, dynamic>? ticket;
+  bool loading = true;
+  bool sending = false;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  @override
+  void dispose() {
+    reply.dispose();
+    super.dispose();
+  }
+
+  Future<void> load() async {
+    if (mounted) setState(() { loading = true; error = null; });
+    try {
+      final response = await widget.api.get('/my/support-tickets/${widget.ticketId}');
+      if (!mounted) return;
+      setState(() => ticket = response['data'] as Map<String, dynamic>);
+    } catch (exception) {
+      if (mounted) setState(() => error = exception.toString());
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> sendReply() async {
+    if (sending || reply.text.trim().length < 2) return;
+    setState(() { sending = true; error = null; });
+    try {
+      await widget.api.postJson('/my/support-tickets/${widget.ticketId}/messages', {'message': reply.text.trim()});
+      reply.clear();
+      await load();
+    } catch (exception) {
+      if (mounted) setState(() => error = exception.toString());
+    } finally {
+      if (mounted) setState(() => sending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final messages = ticket?['messages'] as List<dynamic>? ?? [];
+    final closed = ticket?['status'] == 'closed';
+    return Scaffold(
+      appBar: AppBar(title: Text(ticket?['subject']?.toString() ?? 'Support ticket')),
+      body: loading
+          ? const Center(child: CircularProgressIndicator())
+          : error != null && ticket == null
+              ? Center(child: Text(error!))
+              : Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
+                        children: [
+                          Expanded(child: Text('Ticket #${widget.ticketId} · ${ticket?['status'] ?? 'open'}')),
+                          IconButton(onPressed: load, icon: const Icon(Icons.refresh), tooltip: 'Refresh conversation'),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView(
+                        padding: const EdgeInsets.all(12),
+                        children: messages.map((item) {
+                          final message = item as Map<String, dynamic>;
+                          final fromAcademy = message['sender_role'] == 'admin';
+                          return Align(
+                            alignment: fromAcademy ? Alignment.centerLeft : Alignment.centerRight,
+                            child: Container(
+                              constraints: const BoxConstraints(maxWidth: 340),
+                              margin: const EdgeInsets.symmetric(vertical: 5),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: fromAcademy ? Theme.of(context).colorScheme.surfaceContainerHighest : Theme.of(context).colorScheme.primaryContainer,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(message['sender_name']?.toString() ?? 'Support', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                  const SizedBox(height: 4),
+                                  Text(message['body']?.toString() ?? ''),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                    if (error != null)
+                      Padding(padding: const EdgeInsets.all(8), child: Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
+                    if (closed)
+                      const Padding(padding: EdgeInsets.all(16), child: Text('This ticket is closed. Open a new request if you need more help.'))
+                    else
+                      SafeArea(
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: reply,
+                                  minLines: 1,
+                                  maxLines: 4,
+                                  maxLength: 5000,
+                                  decoration: const InputDecoration(hintText: 'Write a reply...', border: OutlineInputBorder()),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              IconButton.filled(
+                                onPressed: sending ? null : sendReply,
+                                icon: sending ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.send),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+    );
+  }
 }
 
 class CourseDetailsPage extends StatefulWidget {
