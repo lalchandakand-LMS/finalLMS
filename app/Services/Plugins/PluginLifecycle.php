@@ -102,7 +102,7 @@ final class PluginLifecycle
         }
 
         foreach (array_slice($segments, 1) as $segment) {
-            if (preg_match('/^[A-Za-z0-9_.-]+$/D', $segment) !== 1
+            if (preg_match('/^[A-Za-z0-9_.+-]+$/D', $segment) !== 1
                 || $segment === '.' || $segment === '..') {
                 return false;
             }

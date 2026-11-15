@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AddonRegistryController;
 use App\Http\Controllers\AdminModuleRegistryController;
+use App\Http\Controllers\AdminPluginManagerController;
 use App\Http\Controllers\AdminPaymentGatewayController;
 use App\Http\Controllers\AiDeveloperController;
 use App\Http\Controllers\AdminSettingsController;
@@ -289,6 +290,8 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
     Route::middleware('role:admin')->prefix('admin')->group(function () {
         Route::get('/modules', [AdminModuleRegistryController::class, 'index'])->name('admin.modules.index');
         Route::patch('/modules/{key}', [AdminModuleRegistryController::class, 'update'])->where('key', '[a-z_]+')->middleware('throttle:20,1')->name('admin.modules.update');
+        Route::get('/plugins', [AdminPluginManagerController::class, 'index'])->name('admin.plugins.index');
+        Route::post('/plugins/install', [AdminPluginManagerController::class, 'install'])->middleware('throttle:3,10')->name('admin.plugins.install');
         Route::get('/support-tickets', [AdminSupportTicketController::class, 'index'])->name('admin.support-tickets.index');
         Route::get('/support-tickets/{ticket}', [AdminSupportTicketController::class, 'show'])->name('admin.support-tickets.show');
         Route::post('/support-tickets/{ticket}/messages', [AdminSupportTicketController::class, 'reply'])->middleware('throttle:10,1')->name('admin.support-tickets.reply');

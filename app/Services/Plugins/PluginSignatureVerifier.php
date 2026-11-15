@@ -179,7 +179,7 @@ final class PluginSignatureVerifier
 
         foreach (array_slice($segments, 1) as $segment) {
             if ($segment === '.' || $segment === '..'
-                || preg_match('/^[A-Za-z0-9][A-Za-z0-9_.-]{0,119}$/D', $segment) !== 1) {
+                || preg_match('/^[A-Za-z0-9][A-Za-z0-9_.+-]{0,119}$/D', $segment) !== 1) {
                 throw new InvalidArgumentException('Plugin destination contains an unsafe path segment.');
             }
         }
