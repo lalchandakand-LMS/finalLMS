@@ -39,7 +39,15 @@ class PaymentGatewayManager
     /** @return array<string, array<string, mixed>> */
     public function catalog(): array
     {
-        $saved = json_decode((string) Setting::value('payment_gateway_registry', Setting::value('addon_registry', '{}')), true);
+        $rawRegistry = Setting::value('payment_gateway_registry');
+        if ($rawRegistry === null) {
+            $rawRegistry = Setting::value('addon_registry');
+        }
+        if ($rawRegistry === null) {
+            $legacyMethods = Setting::paymentMethods();
+            $rawRegistry = json_encode(['bkash' => (bool) ($legacyMethods['bkash']['enabled'] ?? false)]);
+        }
+        $saved = json_decode((string) $rawRegistry, true);
         $saved = is_array($saved) ? $saved : [];
         $catalog = [];
 
