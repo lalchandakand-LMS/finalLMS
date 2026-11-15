@@ -93,6 +93,9 @@ class UniversalAiAssistantPluginTest extends TestCase
             ], 200),
         ]);
 
+        $this->app->instance(AiDeveloperProviderEndpoint::class, new AiDeveloperProviderEndpoint(
+            static fn (string $host): array => [['type' => 'A', 'ip' => '1.1.1.1']]
+        ));
         $request = Request::create('/student/ai-assistant/messages', 'POST', ['message' => 'Hello']);
         $request->setUserResolver(fn () => $user);
         $response = (new \Aloms\UniversalAiAssistant\AssistantController())->send($request);
@@ -137,6 +140,9 @@ class UniversalAiAssistantPluginTest extends TestCase
         ]);
 
         Http::fake();
+        $this->app->instance(AiDeveloperProviderEndpoint::class, new AiDeveloperProviderEndpoint(
+            static fn (string $host): array => [['type' => 'A', 'ip' => '1.1.1.1']]
+        ));
         $request = Request::create('/student/ai-assistant/messages', 'POST', ['message' => 'Hello']);
         $request->setUserResolver(fn () => $user);
         $response = (new \Aloms\UniversalAiAssistant\AssistantController())->send($request);
