@@ -20,8 +20,7 @@ class UniversalAiAssistantPackageTest extends TestCase
         parent::setUp();
 
         require_once base_path('plugins/.source/aec/universal-ai-assistant/1.0.0/src/AssistantService.php');
-        $migration = require base_path('plugins/.source/aec/universal-ai-assistant/1.0.0/database/migrations/2026_11_15_000001_create_ai_assistant_tables.php');
-        $migration->up();
+        if (! Schema::hasTable('ai_assistant_settings')) {\n            $migration = require base_path('plugins/.source/aec/universal-ai-assistant/1.0.0/database/migrations/2026_11_15_000001_create_ai_assistant_tables.php');\n            $migration->up();\n        }
     }
 
     public function test_source_manifest_is_valid_and_declares_all_supported_roles(): void
@@ -93,6 +92,31 @@ class UniversalAiAssistantPackageTest extends TestCase
 
         $this->expectException(RuntimeException::class);
         (new \Aloms\UniversalAiAssistant\AssistantService())->reply($other, 'Show my history.', $conversationId);
+    }
+
+    public function test_conversation_retention_removes_expired_history_and_cascades_messages(): void
+    {
+        $this->saveSettings(['student' => true], ['retention_days' => 30]);
+        $student = User::factory()->create(['role' => 'student']);
+        $conversationId = DB::table('ai_assistant_conversations')->insertGetId([
+            'user_id' => $student->id,
+            'role' => 'student',
+            'title' => 'Expired conversation',
+            'created_at' => now()->subDays(40),
+            'updated_at' => now()->subDays(40),
+        ]);
+        DB::table('ai_assistant_messages')->insert([
+            'conversation_id' => $conversationId,
+            'user_id' => $student->id,
+            'role' => 'user',
+            'content' => 'Old message',
+            'created_at' => now()->subDays(40),
+        ]);
+
+        (new \\Aloms\\UniversalAiAssistant\\AssistantService())->pruneExpiredConversations();
+
+        $this->assertDatabaseMissing('ai_assistant_conversations', ['id' => $conversationId]);
+        $this->assertDatabaseMissing('ai_assistant_messages', ['conversation_id' => $conversationId]);
     }
 
     public function test_monthly_budget_limits_the_requested_output_tokens(): void

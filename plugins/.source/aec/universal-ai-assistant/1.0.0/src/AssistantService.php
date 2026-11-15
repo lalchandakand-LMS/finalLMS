@@ -19,8 +19,22 @@ final class AssistantService
         'accountant' => 'Support Staff',
     ];
 
+    public function pruneExpiredConversations(): void
+    {
+        $settings = DB::table('ai_assistant_settings')->where('id', 1)->first();
+        if (! $settings) {
+            return;
+        }
+
+        $retentionDays = max(1, (int) $settings->retention_days);
+        DB::table('ai_assistant_conversations')
+            ->where('updated_at', '<', now()->subDays($retentionDays))
+            ->delete();
+    }
+
     public function reply(User $user, string $message, ?int $conversationId = null): array
     {
+        $this->pruneExpiredConversations();
         $settings = DB::table('ai_assistant_settings')->where('id', 1)->first();
         if (! $settings || ! $settings->enabled) {
             throw new RuntimeException('The Universal AI Assistant is currently disabled by the administrator.');

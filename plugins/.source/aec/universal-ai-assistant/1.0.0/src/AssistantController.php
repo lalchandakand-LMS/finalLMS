@@ -10,8 +10,9 @@ use RuntimeException;
 
 final class AssistantController
 {
-    public function index(Request $request): View
+    public function index(Request $request, AssistantService $assistant): View
     {
+        $assistant->pruneExpiredConversations();
         $user = $request->user();
         $role = $this->roleKey((string) $user->role);
         $routePrefix = Str::beforeLast((string) $request->route()->getName(), '.');
