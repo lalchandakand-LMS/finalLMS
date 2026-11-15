@@ -120,10 +120,10 @@ PHP;
 
         $route = app('router')->getRoutes()->getByName('plugins.runtime_check.health');
         $this->assertNotNull($route);
-        $this->assertContains('plugin.active:test.runtime-check', $route->gatherMiddleware());
-        $this->assertContains('role:admin', $route->gatherMiddleware());
-        $this->assertContains('auth', $route->gatherMiddleware());
-        $this->assertContains('verified', $route->gatherMiddleware());
+        $this->assertContains('plugin.active:test.runtime-check', $route->middleware());
+        $this->assertContains('role:admin', $route->middleware());
+        $this->assertContains('auth', $route->middleware());
+        $this->assertContains('verified', $route->middleware());
 
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
         $this->actingAs($admin)->get('/plugins/runtime-check/health')->assertOk()->assertJson(['ok' => true]);
