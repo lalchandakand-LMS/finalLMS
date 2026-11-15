@@ -1,9 +1,10 @@
 # Universal AI Assistant data schema
 
-The signed package migration directory is processed by the LMS Plugin Migration Runner after
-the package has been installed and its file integrity verified. This first AI add-on version
-uses the LMS-owned additive schema migration at
-database/migrations/2026_11_15_180000_create_universal_ai_assistant_tables.php because these
-tables are part of the current LMS storage release. Conversation and settings records are
-retained when the plugin is deactivated or uninstalled. Uninstall never runs destructive down
-migrations. Package migration records are tracked separately per plugin key and version.
+This plugin owns the optional AI settings, conversations and messages schema.
+The signed package migration is run by the LMS Plugin Migration Runner only after
+signature verification, private-path installation and installed-file integrity checks.
+
+Deactivation and uninstall do not run migration down methods. Conversation history,
+settings and user data are retained. An explicit rollback refuses to drop these tables
+while any settings, conversations or messages remain; export/erase must be an explicit
+separate administrator operation.
