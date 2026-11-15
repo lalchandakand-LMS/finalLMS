@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\Modules\ModuleRegistry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class UniversalAiAssistantPluginTest extends TestCase
@@ -18,6 +19,10 @@ class UniversalAiAssistantPluginTest extends TestCase
     {
         parent::setUp();
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantSettings.php');
+        if (! Schema::hasTable('ai_assistant_settings')) {
+            $migration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_15_180000_create_universal_ai_assistant_tables.php');
+            $migration->up();
+        }
     }
 
     public function test_assistant_settings_are_disabled_by_default_and_private_data_access_is_denied(): void
@@ -65,6 +70,44 @@ class UniversalAiAssistantPluginTest extends TestCase
     {
         $this->expectException(\InvalidArgumentException::class);
         app(ModuleRegistry::class)->setEnabled('universal_ai_assistant', true);
+    }
+
+
+    public function test_removing_ai_plugin_code_preserves_conversation_history(): void
+    {
+        $user = User::factory()->create(['role' => 'student', 'email_verified_at' => now()]);
+        $conversationId = \DB::table('ai_assistant_conversations')->insertGetId([
+            'user_id' => $user->id,
+            'assistant_role' => 'student',
+            'title' => 'Keep after uninstall',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $relative = 'plugins/test/ai-data-retention/1.0.0';
+        $directory = base_path($relative);
+        \Illuminate\Support\Facades\File::ensureDirectoryExists($directory);
+        file_put_contents($directory.'/entry.php', '<?php // test-only package');
+
+        $plugin = new PluginInstallation();
+        $plugin->forceFill([
+            'plugin_key' => 'test.ai-data-retention',
+            'name' => 'AI Retention Test',
+            'version' => '1.0.0',
+            'type' => 'ai',
+            'status' => 'inactive',
+            'manifest' => [],
+            'package_path' => $relative,
+        ])->save();
+
+        app(\App\Services\Plugins\PluginLifecycle::class)->transition('test.ai-data-retention', 'uninstalled');
+        app(\App\Services\Plugins\PluginPackageRemover::class)->remove($plugin->fresh());
+
+        $this->assertDatabaseHas('ai_assistant_conversations', [
+            'id' => $conversationId,
+            'title' => 'Keep after uninstall',
+        ]);
+        $this->assertDirectoryDoesNotExist($directory);
     }
 
     public function test_assistant_conversation_schema_retains_records_when_plugin_is_inactive(): void

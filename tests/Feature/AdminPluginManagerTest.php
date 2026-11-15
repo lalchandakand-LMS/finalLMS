@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\Plugins\PluginSignatureVerifier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 use ZipArchive;
 
@@ -253,14 +254,6 @@ PHP;
             'updated_at' => now(),
         ]);
 
-        $conversationId = \DB::table('ai_assistant_conversations')->insertGetId([
-            'user_id' => $admin->id,
-            'assistant_role' => 'admin',
-            'title' => 'Keep my AI history',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
         $this->actingAs($admin)->post(route('admin.plugins.uninstall', 'test.universal-ai-assistant'))
             ->assertRedirect(route('admin.plugins.index'))
             ->assertSessionHas('success');
@@ -273,7 +266,6 @@ PHP;
             'plugin_key' => 'test.universal-ai-assistant',
             'status' => 'completed',
         ]);
-        $this->assertDatabaseHas('ai_assistant_conversations', ['id' => $conversationId, 'title' => 'Keep my AI history']);
         $this->assertDirectoryDoesNotExist($this->finalPath);
     }
 
