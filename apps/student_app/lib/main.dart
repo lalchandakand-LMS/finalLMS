@@ -973,7 +973,7 @@ class _StudentCartPageState extends State<StudentCartPage> {
   }
 
   Future<void> load() async {
-    setState(() { loading = true; error = null; });
+    setState(() { loading = true; error = null; couponPricing = {}; });
     try {
       final response = await widget.api.get('/my/cart');
       final options = await widget.api.get('/my/cart/checkout/options');
@@ -1163,6 +1163,15 @@ class _StudentCartPageState extends State<StudentCartPage> {
                             }).toList(),
                             onChanged: (value) => setState(() => selectedPaymentMethod = value),
                           ),
+                          if (selectedMethodData != null) ...[
+                            const SizedBox(height: 6),
+                            Text([
+                              if ((selectedMethodData!['account']?.toString() ?? '').isNotEmpty)
+                                'Academy account: ${selectedMethodData!['account']}',
+                              if ((selectedMethodData!['instructions']?.toString() ?? '').isNotEmpty)
+                                selectedMethodData!['instructions'].toString(),
+                            ].join(' • ')),
+                          ],
                           const SizedBox(height: 8),
                           TextField(
                             controller: senderAccountController,
