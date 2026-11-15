@@ -35,7 +35,7 @@ class AcademicLevelManagementTest extends TestCase
         ])->assertRedirect();
 
         $this->assertDatabaseHas('academic_levels', ['id' => $level->id, 'slug' => 'ssc-equivalent']);
-        $this->get(route('admin.academic-levels.index'))->assertOk()->assertSee('SSC &amp; Equivalent');
+        $this->get(route('admin.academic-levels.index'))->assertOk()->assertSee('SSC & Equivalent');
     }
 
     public function test_courses_and_pages_can_be_assigned_to_a_level_and_level_cannot_be_deleted_while_in_use(): void
