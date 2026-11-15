@@ -314,7 +314,16 @@ class MobileApiFoundationTest extends TestCase
         $ownCourse = Course::factory()->create(['teacher_id' => $teacher->id, 'title' => 'My class']);
         $otherCourse = Course::factory()->create(['teacher_id' => $otherTeacher->id, 'title' => 'Other class']);
         Enrollment::create(['user_id' => $student->id, 'course_id' => $ownCourse->id, 'status' => 'active']);
+        $ownedDevice = StudentDevice::create([
+            'user_id' => $teacher->id,
+            'device_hash' => hash('sha256', Str::random(64)),
+            'device_name' => 'Instructor test device',
+            'status' => 'approved',
+            'phone_verified_at' => now(),
+            'approved_at' => now(),
+        ]);
         $teacher->apiTokens()->create([
+            'student_device_id' => $ownedDevice->id,
             'name' => 'Instructor app',
             'token_hash' => hash('sha256', 'instructor-owned-token-0123456789012345678901234567890123456789'),
             'expires_at' => now()->addDay(),
@@ -349,7 +358,16 @@ class MobileApiFoundationTest extends TestCase
         $otherLesson = $otherCourse->lessons()->create([
             'title' => 'Private lesson', 'content' => 'Not yours', 'duration_minutes' => 10, 'order' => 1,
         ]);
+        $lessonsDevice = StudentDevice::create([
+            'user_id' => $teacher->id,
+            'device_hash' => hash('sha256', Str::random(64)),
+            'device_name' => 'Instructor test device',
+            'status' => 'approved',
+            'phone_verified_at' => now(),
+            'approved_at' => now(),
+        ]);
         $teacher->apiTokens()->create([
+            'student_device_id' => $lessonsDevice->id,
             'name' => 'Instructor app',
             'token_hash' => hash('sha256', 'teacher-lessons-token-0123456789012345678901234567890123456789'),
             'expires_at' => now()->addDay(),

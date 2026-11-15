@@ -30,19 +30,25 @@ class AuthenticateApiToken
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 
-        if ($token->user->isStudent()) {
-            $deviceApproved = $token->student_device_id !== null
-                && \App\Models\StudentDevice::query()
-                    ->whereKey($token->student_device_id)
-                    ->where('user_id', $token->user_id)
-                    ->where('status', 'approved')
-                    ->exists();
+        // Mobile tokens are valid only for the supported app roles and must
+        // remain bound to an approved, account-owned trusted device.
+        if (! in_array($token->user->role, ['student', 'teacher'], true)) {
+            $token->forceFill(['revoked_at' => now()])->save();
 
-            if (! $deviceApproved) {
-                $token->forceFill(['revoked_at' => now()])->save();
+            return response()->json(['message' => 'This account role cannot use the mobile applications. Sign in again.'], 401);
+        }
 
-                return response()->json(['message' => 'This student device is not approved. Sign in again after device verification.'], 401);
-            }
+        $deviceApproved = $token->student_device_id !== null
+            && \App\Models\StudentDevice::query()
+                ->whereKey($token->student_device_id)
+                ->where('user_id', $token->user_id)
+                ->where('status', 'approved')
+                ->exists();
+
+        if (! $deviceApproved) {
+            $token->forceFill(['revoked_at' => now()])->save();
+
+            return response()->json(['message' => 'This mobile device is not approved. Sign in again after device verification.'], 401);
         }
 
         $token->forceFill(['last_used_at' => now()])->save();

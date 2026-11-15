@@ -325,6 +325,38 @@ class StudentDeviceApprovalTest extends TestCase
         ]);
     }
 
+    public function test_admin_device_approval_queue_lists_pending_devices_for_all_supported_roles(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+
+        foreach (['student', 'teacher', 'guardian', 'branch_manager', 'accountant'] as $index => $role) {
+            $user = User::factory()->create([
+                'name' => 'Pending '.ucfirst(str_replace('_', ' ', $role)),
+                'role' => $role,
+                'phone_number' => '+88017'.str_pad((string) (30000000 + $index), 8, '0', STR_PAD_LEFT),
+            ]);
+
+            StudentDevice::create([
+                'user_id' => $user->id,
+                'device_hash' => hash('sha256', str_repeat(dechex($index + 1), 64)),
+                'device_name' => 'New trusted device',
+                'status' => 'pending_admin_approval',
+                'phone_verified_at' => now(),
+            ]);
+        }
+
+        $response = $this->actingAs($admin)->get(route('admin.student-devices.index'));
+
+        $response->assertOk()
+            ->assertSee('Trusted device approvals')
+            ->assertSee('Account / role')
+            ->assertSee('Pending Student')
+            ->assertSee('Pending Teacher')
+            ->assertSee('Pending Guardian')
+            ->assertSee('Pending Branch manager')
+            ->assertSee('Pending Accountant');
+    }
+
     public function test_admin_password_login_remains_available_without_sms_for_recovery(): void
     {
         Http::fake();
