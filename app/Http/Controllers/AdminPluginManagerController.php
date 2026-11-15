@@ -91,7 +91,7 @@ class AdminPluginManagerController extends Controller
                 report($loggingException);
             }
 
-            return back()->with('error', $exception instanceof InvalidArgumentException || $exception instanceof \\RuntimeException
+            return back()->with('error', $exception instanceof InvalidArgumentException || $exception instanceof \RuntimeException
                 ? $exception->getMessage()
                 : __('Plugin uninstall failed. The package backup was preserved where possible; check server logs.'));
         }
