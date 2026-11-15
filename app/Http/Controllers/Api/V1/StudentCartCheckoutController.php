@@ -109,7 +109,8 @@ class StudentCartCheckoutController extends Controller
                     $discount = $this->couponDiscount($coupon, $eligibleSubtotal);
                 }
 
-                abort_if($items->count() > 1 && $pricing['has_flash_sale'], 422, 'Add Flash Sale courses to your cart and check them out individually.');\n                $total = max(0, round($pricing['subtotal'] - $discount, 2));
+                abort_if($items->count() > 1 && $pricing['has_flash_sale'], 422, 'Add Flash Sale courses to your cart and check them out individually.');
+                $total = max(0, round($pricing['subtotal'] - $discount, 2));
                 if ($total <= 0) {
                     foreach ($items as $item) {
                         Enrollment::firstOrCreate(
