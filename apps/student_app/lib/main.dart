@@ -797,7 +797,9 @@ class _StudentNoticeBoardPageState extends State<StudentNoticeBoardPage> {
   }
 
   Future<void> load() async {
-    if (mounted) {\n      setState(() { loading = true; error = null; });\n    }
+    if (mounted) {
+      setState(() { loading = true; error = null; });
+    }
     try {
       final response = await widget.api.get('/my/notices');
       if (!mounted) { return; }
