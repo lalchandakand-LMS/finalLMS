@@ -6,7 +6,7 @@
   "type": "first_party",
   "status": "metadata_only",
   "provider": null,
-  "dependencies": ["core", "identity", "course_management", "batch_management", "exam_management", "page_builder"],
+  "dependencies": ["core", "identity"],
   "permissions": ["academic-levels.view", "academic-levels.manage"],
   "routes": ["admin.academic-levels.*"],
   "settings": [],
