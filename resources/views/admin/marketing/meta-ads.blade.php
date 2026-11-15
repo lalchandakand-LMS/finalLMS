@@ -54,7 +54,7 @@
                                 <select name="account" onchange="this.form.submit()">
                                     <option value="">{{ __('Choose an ad account') }}</option>
                                     @foreach($accounts as $account)
-                                        <option value="{{ $account['id'] }}" @selected($selectedAccount === (string) $account['id'])>{{ $account['name'] ?? $account['id'] }} ({{ $account['currency'] ?? '—' }})</option>
+                                        <option value="{{ $account['account_id'] }}" @selected($selectedAccount === (string) $account['id'])>{{ $account['name'] ?? $account['account_id'] }} ({{ $account['currency'] ?? '—' }})</option>
                                     @endforeach
                                 </select>
                             </label>
@@ -78,7 +78,7 @@
             <h2>{{ __('Last 30 days performance') }}</h2>
             <div class="grid grid-4" style="margin-bottom:18px;">
                 @foreach([
-                    __('Spend') => ($insights['spend'] ?? '0').' '.(collect($accounts)->firstWhere('id', $selectedAccount)['currency'] ?? 'currency'),
+                    __('Spend') => ($insights['spend'] ?? '0').' '.(collect($accounts)->firstWhere('account_id', $selectedAccount)['currency'] ?? 'currency'),
                     __('Impressions') => number_format((int) ($insights['impressions'] ?? 0)),
                     __('Clicks') => number_format((int) ($insights['clicks'] ?? 0)),
                     __('Reach') => number_format((int) ($insights['reach'] ?? 0)),
