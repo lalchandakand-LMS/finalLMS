@@ -22,8 +22,11 @@ class UniversalAiAssistantPackageTest extends TestCase
 
         require_once base_path('plugins/.source/aec/universal-ai-assistant/1.0.0/src/AssistantService.php');
         if (! Schema::hasTable('ai_assistant_settings')) {
+            // MySQL DDL commits the active test transaction; restart it after creating optional plugin tables.
+            DB::rollBack();
             $migration = require base_path('plugins/.source/aec/universal-ai-assistant/1.0.0/database/migrations/2026_11_15_000001_create_ai_assistant_tables.php');
             $migration->up();
+            DB::beginTransaction();
         }
     }
 
