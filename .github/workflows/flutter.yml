@@ -50,6 +50,12 @@ jobs:
       - name: Generate Android platform scaffold
         run: flutter create --platforms=android --org com.alomsenglishcenter --project-name "aloms_${PWD##*/}" .
 
+      - name: Remove untracked Flutter template test
+        run: |
+          if ! git ls-files --error-unmatch test/widget_test.dart >/dev/null 2>&1; then
+            rm -f test/widget_test.dart
+          fi
+
       - name: Enable built-in Kotlin for federated plugins
         run: |
           if grep -q '^android.builtInKotlin=' android/gradle.properties; then
