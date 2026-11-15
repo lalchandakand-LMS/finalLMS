@@ -39,6 +39,12 @@ return [
         'base_url' => env('NAGAD_BASE_URL'),
     ],
 
+    'twilio' => [
+        'sid' => env('TWILIO_ACCOUNT_SID'),
+        'token' => env('TWILIO_AUTH_TOKEN'),
+        'from' => env('TWILIO_FROM'),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Third Party Services
