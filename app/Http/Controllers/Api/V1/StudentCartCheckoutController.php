@@ -1,24 +1,24 @@
 <?php
 
-namespace App\\Http\\Controllers\\Api\\V1;
+namespace App\Http\Controllers\Api\V1;
 
-use App\\Http\\Controllers\\Controller;
-use App\\Models\\Batch;
-use App\\Models\\Course;
-use App\\Models\\CourseCombo;
-use App\\Models\\Coupon;
-use App\\Models\\CouponRedemption;
-use App\\Models\\Enrollment;
-use App\\Models\\FlashSale;
-use App\\Models\\Payment;
-use App\\Models\\PaymentComboCourse;
-use App\\Models\\Setting;
-use Illuminate\\Http\\JsonResponse;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\Support\\Facades\\Storage;
-use Illuminate\\Support\\Str;
-use Illuminate\\Validation\\Rule;
+use App\Http\Controllers\Controller;
+use App\Models\Batch;
+use App\Models\Course;
+use App\Models\CourseCombo;
+use App\Models\Coupon;
+use App\Models\CouponRedemption;
+use App\Models\Enrollment;
+use App\Models\FlashSale;
+use App\Models\Payment;
+use App\Models\PaymentComboCourse;
+use App\Models\Setting;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class StudentCartCheckoutController extends Controller
 {
@@ -186,7 +186,7 @@ class StudentCartCheckoutController extends Controller
                     'course_count' => $items->count(), 'payment_status' => 'pending',
                 ];
             });
-        } catch (\\Throwable $exception) {
+        } catch (\Throwable $exception) {
             if ($proofPath) {
                 Storage::disk('local')->delete($proofPath);
             }
