@@ -15,6 +15,10 @@ final class AssistantController
         $assistant->pruneExpiredConversations();
         $user = $request->user();
         $role = $this->roleKey((string) $user->role);
+        $settings = \\DB::table('ai_assistant_settings')->where('id', 1)->first();
+        $roleSettings = is_string($settings?->role_settings) ? json_decode($settings->role_settings, true) : [];
+        abort_unless($settings && (bool) $settings->enabled && is_array($roleSettings) && ($roleSettings[$role] ?? false) === true, 403,
+            __('The AI Assistant is not enabled for your account role.'));
         $routePrefix = Str::beforeLast((string) $request->route()->getName(), '.');
         $conversation = null;
         $messages = [];
