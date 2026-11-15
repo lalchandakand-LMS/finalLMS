@@ -321,7 +321,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::post('/updates/{preparation}/extract', [AdminUpdateController::class, 'extract'])->middleware('throttle:5,10')->name('admin.updates.extract');
         Route::post('/updates/{preparation}/backup', [AdminUpdateController::class, 'createBackup'])->middleware('throttle:6,10')->name('admin.updates.backup');
         Route::post('/updates/{preparation}/preflight', [AdminUpdateController::class, 'preflight'])->middleware('throttle:7,10')->name('admin.updates.preflight');
-        Route::get('/flash-sales', [FlashSaleController::class, 'index'])->name('admin.flash-sales.index');
+        Route::get('/coupons', [AdminCouponController::class, 'index'])->name('admin.coupons.index');\n        Route::post('/coupons', [AdminCouponController::class, 'store'])->name('admin.coupons.store');\n        Route::put('/coupons/{coupon}', [AdminCouponController::class, 'update'])->name('admin.coupons.update');\n        Route::delete('/coupons/{coupon}', [AdminCouponController::class, 'destroy'])->name('admin.coupons.destroy');\n        Route::get('/flash-sales', [FlashSaleController::class, 'index'])->name('admin.flash-sales.index');
         Route::post('/flash-sales', [FlashSaleController::class, 'store'])->name('admin.flash-sales.store');
         Route::put('/flash-sales/{flashSale}', [FlashSaleController::class, 'update'])->name('admin.flash-sales.update');
         Route::delete('/flash-sales/{flashSale}', [FlashSaleController::class, 'destroy'])->name('admin.flash-sales.destroy');
