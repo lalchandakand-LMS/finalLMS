@@ -42,6 +42,7 @@ class CourseController extends Controller
         $query = Course::query()
             ->with([
                 'teacher',
+                'academicLevel',
                 'categories',
                 'curriculumItems' => fn ($items) => $items
                     ->whereHas('post', fn ($posts) => $posts->published())
