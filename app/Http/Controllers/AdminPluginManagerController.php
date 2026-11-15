@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\PluginInstallation;
+use App\Models\PluginSetting;
 use App\Services\Plugins\PluginUploadInstaller;
 use App\Services\Plugins\PluginUninstaller;
 use App\Services\Plugins\PluginDeactivator;
+use App\Services\Plugins\PluginSettingsManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -84,7 +86,7 @@ class AdminPluginManagerController extends Controller
         } catch (Throwable $exception) {
             report($exception);
 
-            return back()->with('error', $exception instanceof InvalidArgumentException || $exception instanceof \\RuntimeException
+            return back()->with('error', $exception instanceof InvalidArgumentException || $exception instanceof \RuntimeException
                 ? $exception->getMessage()
                 : __('Unable to save plugin setting; check server logs.'));
         }
