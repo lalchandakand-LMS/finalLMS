@@ -2,9 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\ApiToken;
+use App\Models\Branch;
 use App\Models\Course;
-use App\Models\Enrollment;
 use App\Models\Payment;
 use App\Models\Setting;
 use App\Models\StudentDevice;
@@ -87,9 +86,15 @@ class StudentCheckoutApiTest extends TestCase
         $student = User::factory()->create(['role' => 'student']);
         $course = $this->course(900);
         $otherCourse = $this->course(700);
+        $branch = Branch::create(['name' => 'Checkout Test Branch', 'slug' => 'checkout-test-branch']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
         $batch = $otherCourse->batches()->create([
+            'branch_id' => $branch->id,
+            'teacher_id' => $teacher->id,
             'title' => 'Different course batch',
             'capacity' => 10,
+            'starts_at' => now()->addDay(),
+            'ends_at' => now()->addDays(30),
             'fee' => 900,
             'status' => 'open',
         ]);
