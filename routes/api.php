@@ -37,7 +37,7 @@ Route::prefix('v1')->group(function (): void {
         Route::delete('/my/cart', [StudentCartController::class, 'clear']);
         Route::get('/my/cart/checkout/options', [StudentCartCheckoutController::class, 'options']);
         Route::post('/my/cart/coupon', [StudentCartCheckoutController::class, 'applyCoupon'])->middleware('throttle:10,1');
-        Route::post('/my/cart/checkout/manual', [StudentCartCheckoutController::class, 'submitManual'])->middleware('throttle:5,1');
+        Route::post('/my/cart/checkout/manual', [StudentCartCheckoutController::class, 'submitManual'])->middleware('throttle:30,1');
         Route::get('/my/assignments', [StudentAssignmentController::class, 'index']);
         Route::get('/assignments/{assignment}', [StudentAssignmentController::class, 'show']);
         Route::post('/assignments/{assignment}/submit', [StudentAssignmentController::class, 'submit'])->middleware('throttle:10,1');
