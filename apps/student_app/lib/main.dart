@@ -918,7 +918,10 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                         Text('Course curriculum', style: Theme.of(context).textTheme.titleLarge),
                         if (lessons.isEmpty)
                           const ListTile(title: Text('No preview lessons are available.')),
-                        const SizedBox(height: 24),\n                        Text('Student reviews', style: Theme.of(context).textTheme.titleLarge),\n                        CourseReviewsPanel(api: widget.api, slug: widget.slug, canReview: enrolled),\n                        ...lessons.map((item) {
+                        const SizedBox(height: 24),
+                        Text('Student reviews', style: Theme.of(context).textTheme.titleLarge),
+                        CourseReviewsPanel(api: widget.api, slug: widget.slug, canReview: enrolled),
+                        ...lessons.map((item) {
                           final lesson = item as Map<String, dynamic>;
                           return Card(
                             child: ListTile(
