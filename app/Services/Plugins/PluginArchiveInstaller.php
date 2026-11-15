@@ -13,6 +13,8 @@ final class PluginArchiveInstaller
     public function __construct(
         private readonly PluginManifestValidator $manifestValidator,
         private readonly PluginLifecycle $lifecycle,
+        private readonly PluginIntegrityVerifier $integrityVerifier,
+        private readonly PluginMigrationRunner $migrationRunner,
     ) {
     }
 
@@ -102,9 +104,22 @@ final class PluginArchiveInstaller
                 $metadata['integrity_version'] = 1;
                 $metadata['installed_file_hashes'] = $fileHashes;
 
-                return $this->lifecycle->transition((string) $plugin->plugin_key, 'installed', [
+                $installed = $this->lifecycle->transition((string) $plugin->plugin_key, 'installed', [
                     'metadata' => $metadata,
                 ]);
+
+                try {
+                    $this->integrityVerifier->verify($installed);
+                    $this->migrationRunner->migrate($installed);
+                } catch (\\Throwable $migrationException) {
+                    $this->lifecycle->transition((string) $plugin->plugin_key, 'failed', [
+                        'health_status' => 'failed',
+                        'health_message' => 'A signed plugin migration or integrity check failed. Review server logs before retrying.',
+                    ]);
+                    throw $migrationException;
+                }
+
+                return $installed->fresh();
             } catch (\Throwable $exception) {
                 $freshStatus = PluginInstallation::query()->find($plugin->getKey())?->status;
                 if (! in_array($freshStatus, ['installed', 'active'], true)) {

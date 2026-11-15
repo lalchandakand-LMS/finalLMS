@@ -52,9 +52,12 @@ final class PluginUploadInstaller
         $existing = PluginInstallation::query()->where('plugin_key', $pluginKey)->first();
 
         if ($existing) {
-            $retryableState = in_array($existing->status, ['discovered', 'validated', 'staged', 'failed'], true)
-                && $existing->installed_at === null
-                && $existing->activated_at === null
+            $retryableState = (
+                in_array($existing->status, ['discovered', 'validated', 'staged', 'failed'], true)
+                    && $existing->installed_at === null
+                    && $existing->activated_at === null
+                ) || $existing->status === 'uninstalled';
+            $retryableState = $retryableState
                 && ($existing->package_path === null || hash_equals($finalPath, (string) $existing->package_path))
                 && ! file_exists($finalAbsolutePath)
                 && ! is_link($finalAbsolutePath);
