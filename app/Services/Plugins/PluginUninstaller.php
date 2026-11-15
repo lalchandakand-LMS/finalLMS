@@ -66,7 +66,7 @@ final class PluginUninstaller
     {
         $dependents = PluginInstallation::query()
             ->whereIn('status', ['installed', 'active', 'inactive'])
-            ->whereKeyNot($plugin->getKey())
+            ->where('id', '!=', $plugin->getKey())
             ->get(['plugin_key', 'manifest']);
 
         foreach ($dependents as $dependent) {
