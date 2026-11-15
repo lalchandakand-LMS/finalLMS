@@ -25,7 +25,8 @@ This inventory prevents duplicate integrations and distinguishes existing applic
 - First-party module catalogue and route ownership gates are separate from signed third-party package records.
 - Signed ZIP upload validates manifest shape, trusted Ed25519 key, package SHA-256, private staging and archive safety before extraction.
 - Installed package files have a recorded integrity manifest and health check.
-- Immutable version history records plugin key, version, package checksum, signing key ID and private package path.
+- Immutable version history records plugin key, version, package checksum, signing key ID, private package path, installed-file hashes and signature-verification timestamp.
+- Historical rollback is exposed in the Admin Plugin Manager only for inactive plugins and only after the historical package passes complete installed-file integrity verification; rollback is audited and always leaves the plugin inactive.
 - Compatibility/dependency/conflict checks run before package staging.
 - Plugin settings are encrypted at rest; setting values are not rendered, logged or flashed back into validation sessions.
 - Deactivation is dependency-aware. Uninstall requires an inactive plugin, verifies file integrity, checks dependents and moves code into a private backup without deleting registry or customer data.
@@ -34,7 +35,7 @@ This inventory prevents duplicate integrations and distinguishes existing applic
 ## Remaining acceptance gaps — do not mark issue complete yet
 
 1. A reviewed, allow-listed runtime for activation with complete web/API/job/event/navigation gating and per-portal permission grants. Third-party activation remains disabled intentionally.
-2. Safe package update and rollback flow with version-to-version compatibility checks; verified uninstall backup restore is implemented.
+2. Safe signed package update flow with staged extraction, version-to-version compatibility checks and atomic switch/rollback; historical rollback and verified uninstall backup restore are implemented.
 3. Declarative hook/event and job registry with disable-time revocation tests.
 4. Explicit role/branch/guardian permission scopes and tenant isolation for each plugin-provided endpoint.
 5. Plugin-specific settings schemas, provider-specific secret rotation and configuration validation; generic encrypted key/value storage and explicit non-wildcard manifest permission identifiers are only a foundation.
