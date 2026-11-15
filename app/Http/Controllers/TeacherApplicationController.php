@@ -82,7 +82,9 @@ class TeacherApplicationController extends Controller
         $application->update(['status' => 'pending_admin_review','phone_verified_at' => now(),'otp_hash' => null,'otp_expires_at' => null]);
         RateLimiter::clear($key);
         $request->session()->forget('teacher_application_id');
-        return redirect()->route('login')->with('success', 'Mobile verified. Your teacher application is awaiting administrator document review.');
+        return redirect()->route('login')
+            ->with('success', 'Mobile verified. Your teacher application is awaiting administrator document review.')
+            ->with('meta_pixel_event', 'Lead');
     }
 
     public function adminIndex(): View

@@ -55,7 +55,9 @@ class AuthController extends Controller
         event(new Registered($user));
 
         // Do not create an authenticated session until the student's first device has passed SMS verification.
-        return redirect()->route('login')->with('success', 'Student account created. Sign in to verify your mobile number and register this device.');
+        return redirect()->route('login')
+            ->with('success', 'Student account created. Sign in to verify your mobile number and register this device.')
+            ->with('meta_pixel_event', 'CompleteRegistration');
     }
 
     public function logout(Request $request): RedirectResponse

@@ -72,6 +72,7 @@ class AdminSettingsController extends Controller
             'google_analytics_id' => ['nullable', 'regex:/^G-[A-Z0-9]+$/i'],
             'google_tag_manager_id' => ['nullable', 'regex:/^GTM-[A-Z0-9]+$/i'],
             'facebook_pixel_id' => ['nullable', 'regex:/^\d{5,20}$/'],
+            'google_search_console_verification' => ['nullable', 'string', 'max:255', 'regex:/^[A-Za-z0-9_-]+$/'],
             'payment_methods' => ['sometimes', 'array'],
             'payment_methods.bkash.enabled' => ['required_with:payment_methods', 'boolean'],
             'payment_methods.bkash.label' => ['required_with:payment_methods', 'string', 'max:50'],

@@ -11,6 +11,7 @@
         $googleAnalyticsId = $hasSettingsTable ? \App\Models\Setting::value('google_analytics_id') : null;
         $googleTagManagerId = $hasSettingsTable ? \App\Models\Setting::value('google_tag_manager_id') : null;
         $facebookPixelId = $hasSettingsTable ? \App\Models\Setting::value('facebook_pixel_id') : null;
+        $googleSearchConsoleVerification = $hasSettingsTable ? \App\Models\Setting::value('google_search_console_verification') : null;
         $marketingConsent = request()->cookie('marketing_consent') === 'accepted';
         $isAdminLayout = auth()->check() && (auth()->user()->isAdmin() || auth()->user()->isBranchManager() || auth()->user()->isAccountant());
         $visitorPopup = null;
@@ -38,14 +39,27 @@
         $themeBodyScale = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('site_body_scale', '1') : '1';
         if (!in_array($themeHeadingScale, ['0.9', '1', '1.1', '1.2'], true)) $themeHeadingScale = '1';
         if (!in_array($themeBodyScale, ['0.9', '1', '1.05', '1.1'], true)) $themeBodyScale = '1';
+        $pageSeoTitle = trim($__env->yieldContent('seo_title')) ?: (trim($__env->yieldContent('title')) ?: $seoTitle);
+        $pageSeoDescription = trim($__env->yieldContent('seo_description')) ?: (trim($__env->yieldContent('meta_description')) ?: $seoDescription);
     @endphp
-    <title>@yield('title', config('app.name'))</title>
-    <meta name="description" content="@yield('meta_description', $seoDescription)">
+    <title>@yield('title', $pageSeoTitle)</title>
+    <meta name="description" content="{{ $pageSeoDescription }}">
     <meta name="keywords" content="{{ $seoKeywords }}">
-    <meta property="og:title" content="{{ $seoTitle }}">
-    <meta property="og:description" content="{{ $seoDescription }}">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="{{ request()->url() }}">
+    <link rel="canonical" href="@yield('canonical_url', request()->url())">
+    <meta property="og:title" content="{{ $pageSeoTitle }}">
+    <meta property="og:description" content="{{ $pageSeoDescription }}">
+    <meta property="og:type" content="@yield('og_type', 'website')">
+    <meta property="og:url" content="@yield('canonical_url', request()->url())">
+    <meta property="og:site_name" content="{{ config('app.name') }}">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{{ $pageSeoTitle }}">
+    <meta name="twitter:description" content="{{ $pageSeoDescription }}">
+    @if($googleSearchConsoleVerification)
+        <meta name="google-site-verification" content="{{ $googleSearchConsoleVerification }}">
+    @endif
+    @if(auth()->check())
+        <meta name="robots" content="noindex, nofollow">
+    @endif
     @if($marketingConsent && $googleAnalyticsId)
         <script async src="https://www.googletagmanager.com/gtag/js?id={{ urlencode($googleAnalyticsId) }}"></script>
         <script>
@@ -65,7 +79,13 @@
             !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
             fbq('init','{{ $facebookPixelId }}');
             fbq('track','PageView');
+            @if(session('meta_pixel_event') === 'CompleteRegistration')
+                fbq('track','CompleteRegistration');
+            @elseif(session('meta_pixel_event') === 'Lead')
+                fbq('track','Lead');
+            @endif
         </script>
+        @stack('meta_pixel_events')
     @endif
     <style>
         :root {
@@ -274,6 +294,7 @@
             <a href="{{ route('admin.storage.index') }}"><span>🗄️</span><span class="nav-text">Storage manager</span></a>
             <a href="{{ route('admin.news.index') }}"><span>📰</span><span class="nav-text">Blog & news</span></a>
             <a class="{{ request()->routeIs('admin.analytics.*') ? 'active' : '' }}" href="{{ route('admin.analytics.index') }}"><span>📈</span><span class="nav-text">Website analytics</span></a>
+            <a class="{{ request()->routeIs('admin.marketing.*') ? 'active' : '' }}" href="{{ route('admin.marketing.index') }}"><span>📣</span><span class="nav-text">Marketing & Boost</span></a>
             <a class="{{ request()->routeIs('admin.comments.*') ? 'active' : '' }}" href="{{ route('admin.comments.index') }}"><span>💬</span><span class="nav-text">Comment moderation</span></a>
             <a class="{{ request()->routeIs('admin.visitor-popups.*') ? 'active' : '' }}" href="{{ route('admin.visitor-popups.index') }}"><span>📣</span><span class="nav-text">Visitor popups</span></a>
             <a class="{{ request()->routeIs('admin.dashboard-announcements.*') ? 'active' : '' }}" href="{{ route('admin.dashboard-announcements.index') }}"><span>🔔</span><span class="nav-text">Dashboard announcements</span></a>

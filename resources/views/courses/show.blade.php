@@ -4,6 +4,16 @@
 @section('seo_title', $course->seo_title ?: $course->title)
 @section('seo_description', $course->seo_description ?: ($course->short_description ?: \Illuminate\Support\Str::limit(strip_tags($course->description), 160)))
 
+@push('meta_pixel_events')
+<script>
+    fbq('track', 'ViewContent', {
+        content_name: @json($course->title),
+        content_ids: [@json((string) $course->id)],
+        content_type: 'product'
+    });
+</script>
+@endpush
+
 @section('content')
     @php($activeFlashSale = \App\Models\FlashSale::activeForCourse($course->id, auth()->id()))
     @php($courseBasePrice = (float) $course->price)
