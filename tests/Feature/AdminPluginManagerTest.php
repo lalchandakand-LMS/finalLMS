@@ -162,7 +162,7 @@ PHP;
             ->assertRedirect(route('admin.plugins.index'));
 
         $runner = $this->mock(PluginMigrationRunner::class);
-        $runner->shouldReceive('migrate')->once()->andThrow(new \\RuntimeException('Migration failure'));
+        $runner->shouldReceive('migrate')->once()->andThrow(new \RuntimeException('Migration failure'));
 
         $this->actingAs($admin)->post(route('admin.plugins.activate', 'aec.course-management'))
             ->assertRedirect()
