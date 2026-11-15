@@ -95,8 +95,6 @@ class StudentCheckoutController extends Controller
             ->keys()
             ->all();
 
-        abort_if($enabledMethods === [], 422, 'There are no manual payment methods available.');
-
         $hasOpenBatches = $course->batches()->where('status', 'open')->exists();
         $validated = $request->validate([
             'batch_id' => [
@@ -106,12 +104,13 @@ class StudentCheckoutController extends Controller
                     ->where('course_id', $course->id)
                     ->where('status', 'open')),
             ],
-            'payment_method' => ['required', Rule::in($enabledMethods)],
+            'payment_method' => ['nullable', 'string', Rule::in($enabledMethods)],
             'sender_account' => ['nullable', 'string', 'max:50'],
             'transaction_reference' => [
-                'required',
+                'nullable',
                 'string',
                 'max:120',
+                Rule::requiredIf(fn () => filled($request->input('payment_method'))),
                 Rule::unique('payments', 'transaction_reference')
                     ->where(fn ($query) => $query->where('method', $request->input('payment_method'))),
             ],
@@ -122,7 +121,7 @@ class StudentCheckoutController extends Controller
         $proofPath = null;
 
         try {
-            $result = DB::transaction(function () use ($course, $student, $validated, $proof, &$proofPath): array {
+            $result = DB::transaction(function () use ($course, $student, $validated, $proof, $enabledMethods, &$proofPath): array {
                 $lockedCourse = Course::query()->lockForUpdate()->findOrFail($course->id);
                 abort_unless($lockedCourse->status === 'published', 404);
 
@@ -166,6 +165,11 @@ class StudentCheckoutController extends Controller
                     );
 
                     return ['status' => 'enrolled_free'];
+                }
+
+                if (! in_array($validated['payment_method'] ?? null, $enabledMethods, true)
+                    || blank($validated['transaction_reference'] ?? null)) {
+                    return ['status' => 'payment_details_required'];
                 }
 
                 $proofPath = $proof?->store('payment-proofs', 'local');
@@ -212,6 +216,7 @@ class StudentCheckoutController extends Controller
             'enrolled_free' => response()->json(['message' => 'Free course enrollment completed.', 'data' => ['status' => 'active']], 201),
             'already_enrolled' => response()->json(['message' => 'You are already enrolled in this course.'], 409),
             'payment_pending' => response()->json(['message' => 'A payment is already waiting for review.'], 409),
+            'payment_details_required' => response()->json(['message' => 'Choose an enabled payment method and provide its transaction reference.'], 422),
             'batch_full' => response()->json(['message' => 'The selected batch is full or no longer available.'], 409),
             'sale_unavailable' => response()->json(['message' => 'The Flash Sale is no longer available. Refresh checkout and try again.'], 409),
             default => response()->json(['message' => 'The course is no longer available.'], 409),
