@@ -84,7 +84,7 @@
                     <input type="hidden" name="account_id" value="{{ $selectedAccount }}">
                     <div class="grid grid-2">
                         <label>{{ __('Campaign name') }}
-                            <input name="name" maxlength="180" required value="{{ old('name') }}" placeholder="{{ __('e.g. HSC English Course - November') }}">
+                            <input id="meta-boost-name" name="name" maxlength="180" required value="{{ old('name') }}" placeholder="{{ __('e.g. HSC English Course - November') }}">
                         </label>
                         <label>{{ __('Facebook Page') }}
                             <select name="page_id" required>
@@ -195,4 +195,39 @@
             <li>{{ __('Creating a campaign never activates it. Only a separate explicit Resume action can start delivery and spend.') }}</li>
         </ul>
     </div>
+
+    @if($connected)
+        <script>
+            (() => {
+                const source = document.getElementById('meta-boost-source');
+                if (!source) return;
+                const applySelection = () => {
+                    const option = source.options[source.selectedIndex];
+                    if (!option || !option.value) return;
+                    const name = document.getElementById('meta-boost-name');
+                    const destination = document.getElementById('meta-boost-destination');
+                    const message = document.getElementById('meta-boost-message');
+                    const image = document.getElementById('meta-boost-image');
+                    if (name && (!name.value || name.dataset.sourceFilled === '1')) {
+                        name.value = (option.dataset.title || 'LMS content') + ' - Meta Boost';
+                        name.dataset.sourceFilled = '1';
+                    }
+                    if (destination && (!destination.value || destination.dataset.sourceFilled === '1')) {
+                        destination.value = option.dataset.url || '';
+                        destination.dataset.sourceFilled = '1';
+                    }
+                    if (message && (!message.value || message.dataset.sourceFilled === '1')) {
+                        message.value = option.dataset.message || option.dataset.title || '';
+                        message.dataset.sourceFilled = '1';
+                    }
+                    if (image && (!image.value || image.dataset.sourceFilled === '1') && option.dataset.image) {
+                        image.value = option.dataset.image;
+                        image.dataset.sourceFilled = '1';
+                    }
+                };
+                source.addEventListener('change', applySelection);
+                if (source.value) applySelection();
+            })();
+        </script>
+    @endif
 @endsection
