@@ -33,9 +33,11 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('website_pages', function (Blueprint $table): void {
+            $table->dropIndex(['academic_level_id', 'status']);
             $table->dropConstrainedForeignId('academic_level_id');
         });
         Schema::table('courses', function (Blueprint $table): void {
+            $table->dropIndex(['academic_level_id', 'status']);
             $table->dropConstrainedForeignId('academic_level_id');
         });
         Schema::dropIfExists('academic_levels');
