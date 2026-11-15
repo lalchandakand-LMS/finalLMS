@@ -35,7 +35,7 @@ class WebsiteBuilderController extends Controller
         $customBlocks = json_decode((string) Setting::value('homepage_custom_blocks', '[]'), true);
         $customBlocks = is_array($customBlocks) ? $customBlocks : [];
         $templates = self::homepageTemplates();
-        $activeTemplate = (string) ($settings['homepage_template'] ?? 'academy-modern');
+        $activeTemplate = (string) ($settings['homepage_template'] ?? 'redwans-method');
         if (!array_key_exists($activeTemplate, $templates)) {
             $activeTemplate = 'academy-modern';
         }
