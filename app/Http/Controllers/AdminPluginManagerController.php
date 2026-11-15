@@ -9,6 +9,7 @@ use App\Services\Plugins\PluginUploadInstaller;
 use App\Services\Plugins\PluginUninstaller;
 use App\Services\Plugins\PluginDeactivator;
 use App\Services\Plugins\PluginSettingsManager;
+use App\Services\Modules\ModuleRegistry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -18,10 +19,11 @@ use Throwable;
 
 class AdminPluginManagerController extends Controller
 {
-    public function index(): View
+    public function index(ModuleRegistry $modules): View
     {
         return view('admin.plugins.index', [
             'plugins' => PluginInstallation::query()->orderBy('plugin_key')->get(),
+            'firstPartyModules' => $modules->catalog(),
             'settingsByPlugin' => PluginSetting::query()->get(['plugin_key', 'setting_key', 'updated_at'])->groupBy('plugin_key'),
             'maxPackageBytes' => (int) config('plugins.max_package_bytes', 52428800),
         ]);
