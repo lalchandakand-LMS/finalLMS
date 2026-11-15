@@ -42,6 +42,20 @@
     </section>
 
     <section class="panel" style="margin-bottom:20px;">
+        <h2 style="margin-top:0;">{{ __('Gmail / email verification delivery') }}</h2>
+        <p class="muted">{{ __('Email verification links use Laravel mail delivery. For Gmail, configure SMTP on the server; keep the Google App Password in environment secrets, never in the LMS settings database.') }}</p>
+        <pre style="white-space:pre-wrap;background:#f5f7fb;padding:14px;border-radius:10px;">MAIL_MAILER=smtp
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_SCHEME=tls
+MAIL_USERNAME=your-google-workspace-address
+MAIL_PASSWORD=your-google-app-password
+MAIL_FROM_ADDRESS=your-google-workspace-address
+MAIL_FROM_NAME="Your Academy"</pre>
+        <small class="muted">{{ __('Use a Google App Password with 2-Step Verification, then clear the application config cache after updating server environment variables. Do not paste credentials into this page.') }}</small>
+    </section>
+
+    <section class="panel" style="margin-bottom:20px;">
         <h2 style="margin-top:0;">{{ __('Advertising platforms') }}</h2>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
             <a class="btn primary" href="https://adsmanager.facebook.com/adsmanager/manage/campaigns" target="_blank" rel="noopener">{{ __('Open Meta Ads Manager') }}</a>
