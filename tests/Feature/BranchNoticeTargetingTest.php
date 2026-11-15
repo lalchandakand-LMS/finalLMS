@@ -43,6 +43,28 @@ class BranchNoticeTargetingTest extends TestCase
             ->assertOk()->assertDontSee('Rangpur branch notice');
     }
 
+    public function test_branch_targeting_is_also_enforced_on_the_profile_announcement_slider(): void
+    {
+        $rangpur = $this->branch('Rangpur');
+        $dhaka = $this->branch('Dhaka');
+        $rangpurStudent = User::factory()->create(['role' => 'student', 'branch_id' => $rangpur->id]);
+        $dhakaStudent = User::factory()->create(['role' => 'student', 'branch_id' => $dhaka->id]);
+
+        DashboardAnnouncement::create([
+            'title' => 'Rangpur profile-only notice',
+            'content_type' => 'custom',
+            'audience' => 'student',
+            'branch_id' => $rangpur->id,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($rangpurStudent)->get(route('profile.edit'))
+            ->assertOk()->assertSee('Rangpur profile-only notice');
+
+        $this->actingAs($dhakaStudent)->get(route('profile.edit'))
+            ->assertOk()->assertDontSee('Rangpur profile-only notice');
+    }
+
     public function test_global_notice_remains_visible_across_branches(): void
     {
         $rangpur = $this->branch('Rangpur');
@@ -61,21 +83,26 @@ class BranchNoticeTargetingTest extends TestCase
         $this->actingAs($dhakaStudent)->get(route('dashboard'))->assertSee('Academy-wide notice');
     }
 
-    public function test_branch_manager_can_be_selected_as_notice_audience(): void
+    public function test_branch_manager_can_be_selected_as_notice_audience_and_is_branch_scoped(): void
     {
-        $branch = $this->branch('Rangpur');
-        $manager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $branch->id]);
+        $rangpur = $this->branch('Rangpur');
+        $dhaka = $this->branch('Dhaka');
+        $rangpurManager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $rangpur->id]);
+        $dhakaManager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $dhaka->id]);
 
         DashboardAnnouncement::create([
-            'title' => 'Branch manager operations notice',
+            'title' => 'Rangpur branch manager operations notice',
             'content_type' => 'custom',
             'audience' => 'branch_manager',
-            'branch_id' => $branch->id,
+            'branch_id' => $rangpur->id,
             'is_active' => true,
         ]);
 
-        $this->actingAs($manager)->get(route('dashboard'))
-            ->assertOk()->assertSee('Branch manager operations notice');
+        $this->actingAs($rangpurManager)->get(route('dashboard'))
+            ->assertOk()->assertSee('Rangpur branch manager operations notice');
+
+        $this->actingAs($dhakaManager)->get(route('dashboard'))
+            ->assertOk()->assertDontSee('Rangpur branch manager operations notice');
     }
 
     public function test_admin_can_create_a_branch_targeted_notice(): void
