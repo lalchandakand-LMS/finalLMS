@@ -8,7 +8,6 @@ use App\Models\InvoicePayment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
-use Illuminate\View\View;
 
 class StudentInvoiceController extends Controller
 {
