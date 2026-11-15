@@ -91,7 +91,7 @@ class MobileInstructorAssessmentTest extends TestCase
             ->assertForbidden();
         $this->withToken($this->token(User::factory()->create(['role' => 'admin'])))
             ->getJson('/api/v1/instructor/exams/'.$exam->id.'/results')
-            ->assertForbidden();
+            ->assertUnauthorized();
     }
 
     private function fixture(): array
