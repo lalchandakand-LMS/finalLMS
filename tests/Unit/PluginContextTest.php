@@ -18,7 +18,7 @@ class PluginContextTest extends TestCase
         ]);
 
         $context = new PluginContext(app(), app('router'), $plugin);
-        $context->routesForPortal('support_staff', '_test/support-ai', 'test.support_ai.', function (): void {
+        $context->routesForPortal('support_staff', 'test/support-ai', 'test.support_ai.', function (): void {
             Route::get('/health', fn () => response('ok'))->name('health');
         });
 
