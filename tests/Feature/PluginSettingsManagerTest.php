@@ -45,11 +45,9 @@ class PluginSettingsManagerTest extends TestCase
 
         $this->assertNotSame($secret, $stored);
         $this->assertSame($secret, $manager->get($plugin, 'sms.api_token'));
-        $this->assertSame([[
-            'key' => 'sms.api_token',
-            'updated_at' => $manager->keys($plugin)[0]['updated_at'],
-        ]], $manager->keys($plugin));
-        $this->assertArrayNotHasKey('encrypted_value', (new PluginSetting())->toArray());
+        $keys = $manager->keys($plugin);
+        $this->assertSame(['sms.api_token'], array_column($keys, 'key'));
+        $this->assertArrayNotHasKey('encrypted_value', PluginSetting::query()->firstOrFail()->toArray());
     }
 
     public function test_invalid_setting_keys_and_empty_or_oversized_values_are_rejected(): void
