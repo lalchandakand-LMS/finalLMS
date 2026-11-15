@@ -18,6 +18,9 @@
             <div style="position:absolute;bottom:8px;left:0;right:0;display:flex;justify-content:center;gap:6px;">@foreach($announcementSlides as $index => $slide)<button type="button" data-slide-dot="{{ $index }}" aria-label="{{ __('Go to announcement') }} {{ $index + 1 }}" style="width:8px;height:8px;padding:0;border:0;border-radius:50%;background:{{ $index === 0 ? '#fff' : 'rgba(255,255,255,.4)' }};"></button>@endforeach</div>
         @endif
     </div>
+    <div style="padding:10px 18px;text-align:right;background:#f7f9fc;">
+        <a href="{{ route('notices.index') }}" style="font-weight:700;">{{ __('View all notices') }} →</a>
+    </div>
 </section>
 @if($announcementSlides->count() > 1)
 <script>
