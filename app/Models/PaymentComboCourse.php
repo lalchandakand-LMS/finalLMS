@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PaymentComboCourse extends Model
 {
-    protected $fillable = ['payment_id', 'course_id', 'course_title', 'position'];
+    protected $fillable = ['payment_id', 'course_id', 'batch_id', 'course_title', 'position'];
 
     public function payment(): BelongsTo
     {
