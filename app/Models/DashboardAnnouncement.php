@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class DashboardAnnouncement extends Model
 {
@@ -37,6 +38,11 @@ class DashboardAnnouncement extends Model
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    public function reads(): HasMany
+    {
+        return $this->hasMany(DashboardAnnouncementRead::class, 'announcement_id');
     }
 
     public function scopeCurrentlyActive($query)
