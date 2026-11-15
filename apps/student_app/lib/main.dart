@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:file_picker/file_picker.dart';
 import 'package:material_ui/material_ui.dart';
 import 'api_client.dart';
+import 'checkout_page.dart';
 import 'package:video_player/video_player.dart';
 
 void main() => runApp(const StudentApp());
@@ -839,6 +840,20 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                         ),
                         const SizedBox(height: 8),
                         Text(course?['description']?.toString() ?? ''),
+                        const SizedBox(height: 16),
+                        if (!enrolled)
+                          FilledButton.icon(
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => CheckoutPage(
+                                  api: widget.api,
+                                  slug: widget.slug,
+                                ),
+                              ),
+                            ).then((_) => load()),
+                            icon: const Icon(Icons.shopping_cart_checkout),
+                            label: const Text('Buy / Enroll in this course'),
+                          ),
                         const SizedBox(height: 20),
                         Text('Course curriculum', style: Theme.of(context).textTheme.titleLarge),
                         if (lessons.isEmpty)
