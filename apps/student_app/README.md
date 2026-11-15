@@ -20,7 +20,7 @@ Override the API URL for staging/local builds using `--dart-define=API_BASE_URL=
 - Bearer tokens are stored in secure storage, validated when restoring a session, and revoked server-side on sign-out.
 - If an Admin revokes the device, its next API request is rejected and the app returns to sign-in.
 
-Current screens: sign-in, OTP verification, Admin approval waiting/status screen, secure token persistence, server-side logout, searchable course catalog with instructor/title search, server-side sorting and paginated loading, course details, preview lesson access, enrolled-course progress overview, and a video player for privately hosted lesson media. Video streams use the authenticated API token, server-side enrollment/preview checks, private no-store responses and HTTP byte-range seeking. Course wishlist is available through the mobile API and Student app. Student assignments are available through a paginated list and detail screen, with due-date/late-policy visibility, text-answer or private file attachment submission (PDF, DOC, DOCX, JPG and PNG up to 10 MB), and returned grading status, score and feedback. Attachment uploads use authenticated multipart requests, private storage and owner/enrollment-checked downloads. Course purchase/checkout, cart/coupons, quizzes, reviews, notices and support screens remain pending.
+Current screens: sign-in, OTP verification, Admin approval waiting/status screen, secure token persistence, server-side logout, searchable course catalog with instructor/title search, server-side sorting and paginated loading, course details, preview lesson access, enrolled-course progress overview, and a video player for privately hosted lesson media. Video streams use the authenticated API token, server-side enrollment/preview checks, private no-store responses and HTTP byte-range seeking. Course wishlist is available through the mobile API and Student app. Student assignments are available through a paginated list and detail screen, with due-date/late-policy visibility, text-answer or private file attachment submission (PDF, DOC, DOCX, JPG and PNG up to 10 MB), and returned grading status, score and feedback. Attachment uploads use authenticated multipart requests, private storage and owner/enrollment-checked downloads. Course checkout now supports open-batch selection, server-calculated Flash Sale totals, free enrollment, manual payment with optional private proof upload, secure bKash checkout launch and student-owned payment history/details. Persistent cart, coupon codes, printable invoices/receipts, reviews, notices and support screens remain pending.
 
 The backend SMS service must be configured and the full OTP/admin-approval path must be tested on isolated staging before distributing the app.
 
@@ -43,3 +43,12 @@ Correct answer indexes are never included in the question payload. The API check
 - Uses `file_picker ^13.3.3 and flutter_secure_storage ^10.3.4` with in-memory bytes so the same picker works on Android, iOS and web.
 - The app accepts PDF, DOC, DOCX, JPG and PNG files up to 10 MB; the Laravel API independently validates MIME type and size.
 - Uploads use authenticated multipart requests and private server storage.
+
+
+## Course checkout and payments
+
+- Course details opens a checkout screen backed by `GET /checkout/courses/{course_slug}`; available batch seats and prices come from the server.
+- Free courses can be enrolled without payment details. Paid manual checkout accepts the enabled method, transaction reference, optional sender account and optional JPG/PNG/PDF proof (maximum 5 MB).
+- Online bKash checkout is initiated by the server. The app only opens HTTPS URLs on the allow-listed bKash gateway hosts; payment completion is determined by the server-side callback, not by the app or a browser return URL.
+- A pending payment is shown and blocks duplicate submissions until Admin review. The Payment History screen lists the student's own course payments and fetches owner-scoped details.
+- The backend does not yet provide a persistent cross-device cart or coupon-code engine. Printable invoices/receipts and real bKash sandbox acceptance remain separate release tasks.
