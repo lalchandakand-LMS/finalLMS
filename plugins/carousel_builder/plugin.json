@@ -24,7 +24,10 @@
     "website.carousels.update",
     "website.carousels.publish"
   ],
-  "routes": [],
+  "routes": [
+    "admin.carousels.*",
+    "carousels.*"
+  ],
   "settings": [],
   "events": [],
   "directory": "plugins/carousel_builder",
