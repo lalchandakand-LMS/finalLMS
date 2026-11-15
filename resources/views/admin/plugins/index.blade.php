@@ -140,6 +140,10 @@
                                 @if($plugin->status === 'uninstalled')
                                     <form method="POST" action="{{ route('admin.plugins.restore', $plugin) }}" style="margin-top:8px;">
                                         @csrf
+                                        <label style="display:block;font-size:12px;margin-bottom:6px;">
+                                            <input type="checkbox" name="confirm_restore" value="1" required>
+                                            {{ __('Confirm verified backup restore (plugin remains inactive)') }}
+                                        </label>
                                         <button class="btn secondary" type="submit">{{ __('Verify and restore backup') }}</button>
                                     </form>
                                 @endif
