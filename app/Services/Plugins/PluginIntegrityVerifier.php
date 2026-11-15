@@ -39,6 +39,15 @@ final class PluginIntegrityVerifier
             throw new RuntimeException('The private plugins directory is unavailable.');
         }
 
+        // Reject symlinks in every parent segment, not only at the final package path.
+        $currentPath = $pluginsRoot;
+        foreach (explode('/', substr($relativeRoot, strlen('plugins/'))) as $segment) {
+            $currentPath .= DIRECTORY_SEPARATOR.$segment;
+            if (is_link($currentPath)) {
+                throw new RuntimeException('Symbolic links are forbidden in plugin installation path segments.');
+            }
+        }
+
         $pluginDirectory = $pluginsRoot.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, substr($relativeRoot, strlen('plugins/')));
         if (is_link($pluginDirectory) || ! is_dir($pluginDirectory)) {
             throw new RuntimeException('The installed plugin directory is missing or unsafe.');

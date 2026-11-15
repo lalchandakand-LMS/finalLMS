@@ -20,7 +20,7 @@ class PluginIntegrityVerifierTest extends TestCase
     {
         parent::setUp();
 
-        $this->packagePath = 'plugins/aec/integrity-check/1.0.0';
+        $this->packagePath = 'plugins/integrityvendor/integrity-check/1.0.0';
         $this->absolutePath = base_path($this->packagePath);
         if (! is_dir($this->absolutePath)) {
             mkdir($this->absolutePath, 0750, true);
@@ -51,7 +51,7 @@ class PluginIntegrityVerifierTest extends TestCase
 
         $plugin = new PluginInstallation();
         $plugin->forceFill([
-            'plugin_key' => 'aec.integrity-check',
+            'plugin_key' => 'integrityvendor.integrity-check',
             'name' => 'Integrity Check',
             'version' => '1.0.0',
             'type' => 'module',
@@ -116,6 +116,28 @@ class PluginIntegrityVerifierTest extends TestCase
 
         $this->expectException(RuntimeException::class);
         app(PluginIntegrityVerifier::class)->verify($plugin);
+    }
+
+    public function test_rejects_symlinked_parent_directory_even_when_target_is_inside_plugins_root(): void
+    {
+        $plugin = $this->registeredPlugin();
+        $vendorRoot = base_path('plugins/integrityvendor');
+        $movedVendorRoot = base_path('plugins/integrityvendor-target-'.bin2hex(random_bytes(4)));
+
+        $this->assertTrue(rename($vendorRoot, $movedVendorRoot));
+        $this->assertTrue(symlink($movedVendorRoot, $vendorRoot));
+
+        try {
+            $this->expectException(RuntimeException::class);
+            app(PluginIntegrityVerifier::class)->verify($plugin);
+        } finally {
+            if (is_link($vendorRoot)) {
+                unlink($vendorRoot);
+            }
+            if (is_dir($movedVendorRoot)) {
+                rename($movedVendorRoot, $vendorRoot);
+            }
+        }
     }
 
     public function test_rejects_registry_path_that_does_not_match_plugin_identity(): void
