@@ -77,4 +77,28 @@ class PaymentGatewayPluginSystemTest extends TestCase
         $this->patch(route('admin.payment-gateways.update', 'bkash'), ['enabled' => false])->assertForbidden();
         $this->assertDatabaseCount('activity_logs', 0);
     }
+
+    public function test_explicit_registry_disable_blocks_gateway_even_when_credentials_are_present(): void
+    {
+        config([
+            'services.bkash.enabled' => true,
+            'services.bkash.username' => 'merchant-user',
+            'services.bkash.password' => 'configured-password',
+            'services.bkash.app_key' => 'configured-key',
+            'services.bkash.app_secret' => 'configured-secret',
+            'services.bkash.base_url' => 'https://tokenized.sandbox.bka.sh/v1.2.0-beta',
+            'services.bkash.verify_ssl' => true,
+        ]);
+        Setting::setValue('payment_gateway_registry', json_encode(['bkash' => false]));
+
+        $this->assertFalse(app(\App\Services\Payments\PaymentGatewayManager::class)->isAvailable('bkash'));
+    }
+
+    public function test_only_registered_gateway_adapters_can_be_resolved(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        app(\App\Services\Payments\PaymentGatewayManager::class)->driver('untrusted_provider');
+    }
+
 }
