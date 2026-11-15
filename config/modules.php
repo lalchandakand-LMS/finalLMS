@@ -13,6 +13,7 @@ return [
     'staff_management' => ['name' => 'Staff & HR', 'description' => 'Staff records, roles, attendance and internal workflows.', 'type' => 'module', 'dependencies' => ['core', 'identity', 'branch_management']],
 
     // Academic delivery.
+    'academic_levels' => ['name' => 'Academic Levels', 'description' => 'Admin-managed academic levels shared by courses, batches, exams and website pages.', 'type' => 'module', 'dependencies' => ['core', 'identity', 'course_management', 'batch_management', 'exam_management', 'page_builder']],
     'course_management' => ['name' => 'Course Management', 'description' => 'Courses, categories, curriculum and enrollment.', 'type' => 'module', 'dependencies' => ['core', 'identity', 'teacher_management']],
     'lesson_management' => ['name' => 'Lesson & Learning Content', 'description' => 'Lessons, learning materials, video and course content.', 'type' => 'module', 'dependencies' => ['core', 'course_management', 'storage']],
     'batch_management' => ['name' => 'Batch & Class Management', 'description' => 'Batches, class groups and schedules.', 'type' => 'module', 'dependencies' => ['core', 'course_management', 'branch_management']],
