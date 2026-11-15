@@ -5,6 +5,7 @@ use App\Http\Controllers\AiDeveloperController;
 use App\Http\Controllers\AdminSettingsController;
 use App\Http\Controllers\AdminVerificationController;
 use App\Http\Controllers\MarketingCenterController;
+use App\Http\Controllers\MetaAdsIntegrationController;
 use App\Http\Controllers\SeoController;
 use App\Http\Controllers\AdminUpdateController;
 use App\Http\Controllers\AuthController;
