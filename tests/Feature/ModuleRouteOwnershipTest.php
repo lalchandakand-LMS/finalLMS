@@ -61,7 +61,6 @@ class ModuleRouteOwnershipTest extends TestCase
         $this->assertContains('admin.website-pages.*', $routes['page_builder']);
         $this->assertContains('admin.sliders.*', $routes['slider_builder']);
         $this->assertContains('admin.carousels.*', $routes['carousel_builder']);
-        $this->assertArrayNotHasKey('page_builder', array_diff_key($routes, ['page_builder' => true]));
         $this->assertArrayHasKey('page_builder', config('modules'));
         $this->assertArrayHasKey('slider_builder', config('modules'));
         $this->assertArrayHasKey('carousel_builder', config('modules'));
