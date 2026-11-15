@@ -141,7 +141,7 @@ class StudentCartCheckoutController extends Controller
                             'status' => 'redeemed', 'redeemed_at' => now(),
                         ]);
                     }
-                    DB::table('student_cart_items')->where('user_id', $student->id)->delete();
+                    DB::table('student_cart_items')->whereIn('id', $cart->pluck('id'))->delete();
 
                     return ['status' => 'enrolled_free', 'course_count' => $items->count()];
                 }
