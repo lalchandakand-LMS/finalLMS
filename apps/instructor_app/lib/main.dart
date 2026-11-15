@@ -337,16 +337,16 @@ class _InstructorHomeState extends State<InstructorHome> {
   }
 
   Future<void> showStudents(Map<String, dynamic> course) async {
-    final pageContext = context;
-    final messenger = ScaffoldMessenger.of(pageContext);
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final titleStyle = Theme.of(context).textTheme.titleLarge;
     try {
       final response = await widget.api.get("/instructor/courses/${course['slug']}/students");
-      if (!pageContext.mounted) {
+      if (!navigator.mounted) {
         return;
       }
       final students = response['data'] as List<dynamic>? ?? [];
-      final titleStyle = Theme.of(pageContext).textTheme.titleLarge;
-      showModalBottomSheet<void>(context: pageContext, builder: (sheetContext) => SafeArea(child: ListView(
+      showModalBottomSheet<void>(context: navigator.context, builder: (sheetContext) => SafeArea(child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           Text('Students — ${course['title']}', style: titleStyle),
@@ -358,7 +358,7 @@ class _InstructorHomeState extends State<InstructorHome> {
         ],
       )));
     } catch (e) {
-      if (!pageContext.mounted) {
+      if (!navigator.mounted || !messenger.mounted) {
         return;
       }
       if (e is ApiException && (e.statusCode == 401 || e.statusCode == 403)) {
@@ -544,24 +544,24 @@ class _InstructorHomeState extends State<InstructorHome> {
   }
 
   Future<DateTime?> _pickDateTime(DateTime initial) async {
-    final pickerContext = context;
+    final navigator = Navigator.of(context);
     final date = await showDatePicker(
-      context: pickerContext,
+      context: navigator.context,
       initialDate: initial,
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    if (!pickerContext.mounted) {
+    if (!navigator.mounted) {
       return null;
     }
     if (date == null) {
       return null;
     }
     final time = await showTimePicker(
-      context: pickerContext,
+      context: navigator.context,
       initialTime: TimeOfDay.fromDateTime(initial),
     );
-    if (!pickerContext.mounted) {
+    if (!navigator.mounted) {
       return null;
     }
     if (time == null) {
