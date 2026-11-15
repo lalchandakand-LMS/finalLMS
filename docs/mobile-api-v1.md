@@ -161,7 +161,7 @@ Course ownership is checked server-side. The API does not accept a client-suppli
 - Teacher API login remains password-based and is not subject to the student SMS device policy.
 - Token hashes, not bearer values, are persisted. Expired and revoked tokens are rejected.
 - The Student Flutter app now implements secure installation-ID and bearer-token storage, OTP entry, Admin-approval waiting UI, 15-second approval polling, session restoration and server-side logout. Flutter analyze/tests must pass for each release; real SMS and end-to-end approval still require isolated staging acceptance.
-- Enrollment purchase, cart/coupons, reviews, quizzes, assignments, live-class operations, notifications, and complete Flutter user interfaces are separate remaining deliverables.
+- Enrollment purchase, cart/coupons, course reviews, notices, assignments, exams and the initial Student support-ticket workflow now have API and Flutter screens. Remaining mobile scope includes broader follow-up/notification UX and instructor assessment, analytics, messaging and notice workflows.
 
 
 ## Student cart, coupons and cart checkout
@@ -190,3 +190,12 @@ Coupon discounts are calculated server-side, cannot stack with Flash Sales, and 
 - `POST /api/v1/my/notices/{announcement}/read` — mark a currently visible notice as read; other-audience and other-branch notices return 404.
 - `GET /api/v1/courses/{course:slug}/reviews` — public, paginated list of approved course comments only.
 - `POST /api/v1/my/courses/{course:slug}/reviews` — authenticated active/completed student submits a 2–2000 character review for moderation; one pending review per student/course.
+
+
+## Student support tickets
+
+- `GET /api/v1/my/support-tickets` — paginated tickets owned by the authenticated student, with latest message and status.
+- `POST /api/v1/my/support-tickets` — create a ticket with `subject` (5–160 characters) and `message` (5–5000 characters); the server assigns the student and branch.
+- `GET /api/v1/my/support-tickets/{ticket}` — view the owned ticket conversation. Other students' ticket IDs return 404.
+- `POST /api/v1/my/support-tickets/{ticket}/messages` — reply to an owned open/in-progress ticket; closed tickets return 409.
+- Admin manages all tickets through the Admin Support Tickets inbox, sends academy replies, and changes ticket status to open, in progress or closed. The first release is text-only; no attachment upload or external helpdesk provider is configured.
