@@ -98,6 +98,26 @@ class ModuleRouteOwnershipTest extends TestCase
         }
     }
 
+    public function test_a_module_cannot_be_enabled_when_a_required_dependency_is_disabled(): void
+    {
+        Setting::setValue('module_registry', json_encode(['academic_levels' => false]));
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Enable required module first: academic_levels');
+
+        app(ModuleRegistry::class)->setEnabled('course_management', true);
+    }
+
+    public function test_a_foundation_module_cannot_be_disabled_while_consumers_are_enabled(): void
+    {
+        Setting::setValue('module_registry', json_encode(['academic_levels' => true]));
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Disable dependent module first: course_management');
+
+        app(ModuleRegistry::class)->setEnabled('academic_levels', false);
+    }
+
     public function test_plugin_lifecycle_contract_is_composer_autoloadable(): void
     {
         $this->assertTrue(interface_exists(\\App\\Plugins\\PluginContract::class));
