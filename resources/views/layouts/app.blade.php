@@ -299,6 +299,7 @@
             <a href="{{ route('admin.expenses.index') }}"><span>💸</span><span class="nav-text">Expenses & reports</span></a>
             <div class="admin-sidebar-label">Website & tools</div>
             <a class="{{ request()->routeIs('admin.modules.*') ? 'active' : '' }}" href="{{ route('admin.modules.index') }}"><span>🧩</span><span class="nav-text">Module Manager</span></a>
+            <a class="{{ request()->routeIs('admin.plugins.*') ? 'active' : '' }}" href="{{ route('admin.plugins.index') }}"><span>🧰</span><span class="nav-text">Plugin Manager</span></a>
             <a href="{{ route('admin.website-builder.index') }}"><span>🖥️</span><span class="nav-text">Main Page Builder</span></a>
             <a href="{{ route('admin.website-pages.index') }}"><span>📄</span><span class="nav-text">Custom pages</span></a>
             <a href="{{ route('admin.news.index') }}"><span>📰</span><span class="nav-text">Posts & News</span></a>
