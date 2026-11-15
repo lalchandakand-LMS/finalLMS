@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\StudentAssignmentController;
 use App\Http\Controllers\Api\V1\StudentExamController;
 use App\Http\Controllers\Api\V1\StudentCheckoutController;
 use App\Http\Controllers\Api\V1\StudentInvoiceController;
+use App\Http\Controllers\Api\V1\StudentSupportTicketController;
 use App\Http\Controllers\Api\V1\StudentEngagementController;
 use App\Http\Controllers\Api\V1\StudentCartController;
 use App\Http\Controllers\Api\V1\StudentCartCheckoutController;
@@ -28,6 +29,10 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::post('/auth/logout-all', [AuthController::class, 'logoutAll']);
         Route::get('/my/courses', [CourseController::class, 'myCourses']);
+        Route::get('/my/support-tickets', [StudentSupportTicketController::class, 'index']);
+        Route::post('/my/support-tickets', [StudentSupportTicketController::class, 'store'])->middleware('throttle:5,1');
+        Route::get('/my/support-tickets/{ticket}', [StudentSupportTicketController::class, 'show']);
+        Route::post('/my/support-tickets/{ticket}/messages', [StudentSupportTicketController::class, 'reply'])->middleware('throttle:10,1');
         Route::get('/checkout/courses/{course:slug}', [StudentCheckoutController::class, 'options'])->middleware('throttle:30,1');
         Route::post('/checkout/courses/{course:slug}/manual', [StudentCheckoutController::class, 'submitManual'])->middleware('throttle:10,1');
         Route::post('/checkout/courses/{course:slug}/bkash', [StudentCheckoutController::class, 'initiateBkash'])->middleware('throttle:5,1');
