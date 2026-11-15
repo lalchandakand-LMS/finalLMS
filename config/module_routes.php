@@ -22,6 +22,7 @@ return [
     'student_portal' => ['student.dashboard.*', 'student.profile.*', 'student.wishlist.*', 'student.courses.*', 'student.invoices.print', 'student.invoices.receipts.print'],
     'lesson_management' => ['courses.lessons.*', 'courses.content.*', 'admin.lessons.*', 'admin.course-content-posts.*', 'admin.courses.lessons.*'],
     'batch_management' => ['teacher.batches.*', 'admin.batches.*', 'batches.*', 'branch-manager.batches.*'],
+    'academic_levels' => ['admin.academic-levels.*'],
     'course_management' => ['courses.*', 'course-combos.*', 'teacher.courses.*', 'admin.courses.*', 'admin.course-categories.*', 'admin.course-builder.*', 'courses.comments.*', 'admin.course-combos.*'],
     'finance' => ['admin.finance.*', 'accountant.*', 'admin.activity-logs.*'],
     'refund_management' => ['admin.finance.refunds.*', 'admin.refunds.*', 'refunds.*', 'accountant.refunds.*'],
