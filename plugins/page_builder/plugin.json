@@ -16,7 +16,10 @@
     "page.edit",
     "page.preview",
     "page.publish",
-    "page.navigation.manage"
+    "page.navigation.manage",
+    "homepage.design.manage",
+    "homepage.sections.manage",
+    "navigation.menus.manage"
   ],
   "permissions": [
     "website.pages.view",
@@ -25,7 +28,10 @@
     "website.pages.publish",
     "website.navigation.manage"
   ],
-  "routes": [],
+  "routes": [
+    "admin.website-builder.*",
+    "admin.website-pages.*"
+  ],
   "settings": [],
   "events": [],
   "directory": "plugins/page_builder",
