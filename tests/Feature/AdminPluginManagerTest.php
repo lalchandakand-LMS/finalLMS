@@ -194,7 +194,6 @@ PHP;
             'status' => 'failed',
             'signature_verified_at' => null,
         ]);
-        $this->assertDatabaseHas('ai_assistant_conversations', ['id' => $conversationId, 'title' => 'Keep my AI history']);
         $this->assertDirectoryDoesNotExist($this->finalPath);
     }
 
@@ -274,6 +273,7 @@ PHP;
             'plugin_key' => 'aec.universal-ai-assistant',
             'status' => 'completed',
         ]);
+        $this->assertDatabaseHas('ai_assistant_conversations', ['id' => $conversationId, 'title' => 'Keep my AI history']);
         $this->assertDirectoryDoesNotExist($this->finalPath);
     }
 
