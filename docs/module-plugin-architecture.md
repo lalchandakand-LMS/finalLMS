@@ -23,7 +23,9 @@ The manifest separates organization and people (branches, students, teachers, gu
 - The admin Module Manager exposes lifecycle state and records changes in the activity log.
 
 ## Important implementation boundary
-This is the foundation stage. Existing application routes and navigation are not all runtime-gated by module state yet. Each existing route group must be mapped to its owning module and protected by module.enabled:<module-key> as part of staged migration. A module shown as enabled is not proof that an external provider is configured or live.
+The first-stage registry now includes a route-ownership map and a global route guard for mapped web and API route names. This allows a disabled module's mapped routes to return 404 while preserving the Core Module Manager. The map is an incremental migration artifact: routes not yet assigned in config/module_routes.php remain unaffected and must be mapped before a module can be considered fully isolated.
+
+A module shown as enabled is not proof that an external provider is configured or live.
 
 ## Migration sequence
 1. Registry, manifests, dependency validation, admin lifecycle UI and runtime middleware.
