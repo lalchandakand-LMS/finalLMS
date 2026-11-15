@@ -77,6 +77,19 @@ class AdminPluginManagerController extends Controller
             $uninstalled = $uninstaller->uninstall($plugin);
         } catch (Throwable $exception) {
             report($exception);
+            try {
+                ActivityLog::create([
+                    'user_id' => $request->user()->id,
+                    'event' => 'admin.plugins.uninstall_failed',
+                    'description' => 'Plugin uninstall was rejected for '.$plugin->plugin_key.'.',
+                    'method' => $request->method(),
+                    'route' => $request->route()?->getName(),
+                    'ip_address' => $request->ip(),
+                    'user_agent' => substr((string) $request->userAgent(), 0, 1000),
+                ]);
+            } catch (Throwable $loggingException) {
+                report($loggingException);
+            }
 
             return back()->with('error', $exception instanceof InvalidArgumentException || $exception instanceof \\RuntimeException
                 ? $exception->getMessage()
