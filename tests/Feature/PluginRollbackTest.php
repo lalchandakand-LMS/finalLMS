@@ -32,7 +32,8 @@ class PluginRollbackTest extends TestCase
 
     private function plugin(string $status = 'inactive'): PluginInstallation
     {
-        return PluginInstallation::query()->create([
+        $plugin = new PluginInstallation();
+        $plugin->forceFill([
             'plugin_key' => 'aec.analytics',
             'name' => 'Analytics',
             'version' => '2.0.0',
@@ -44,7 +45,9 @@ class PluginRollbackTest extends TestCase
             'signature_verified_at' => now(),
             'package_path' => 'plugins/aec/analytics/2.0.0',
             'metadata' => ['integrity_version' => 1, 'installed_file_hashes' => ['src/Plugin.php' => str_repeat('d', 64)]],
-        ]);
+        ])->save();
+
+        return $plugin;
     }
 
     private function historicalVersion(string $contents = 'trusted old plugin'): PluginVersionRecord
