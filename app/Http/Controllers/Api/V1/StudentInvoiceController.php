@@ -41,7 +41,7 @@ class StudentInvoiceController extends Controller
         return response()->json(['data' => $this->present($invoice)]);
     }
 
-    public function printInvoice(Invoice $invoice): View
+    public function printInvoice(Invoice $invoice)
     {
         $invoice->load(['user:id,name,email,phone_number', 'course:id,title', 'batch:id,title', 'payments.receiver:id,name', 'refunds']);
 
@@ -51,10 +51,10 @@ class StudentInvoiceController extends Controller
         ])->header('Cache-Control', 'private, no-store, max-age=0')->header('X-Robots-Tag', 'noindex, nofollow')->header('Referrer-Policy', 'no-referrer');
     }
 
-    public function printReceipt(Invoice $invoice, InvoicePayment $payment): View
+    public function printReceipt(Invoice $invoice, InvoicePayment $payment)
     {
         abort_unless((int) $payment->invoice_id === (int) $invoice->id, 404);
-        $invoice->load(['user:id,name,email,phone', 'course:id,title', 'batch:id,title']);
+        $invoice->load(['user:id,name,email,phone_number', 'course:id,title', 'batch:id,title']);
         $payment->load('receiver:id,name');
 
         return response()->view('student.invoices.receipt-print', compact('invoice', 'payment'))
