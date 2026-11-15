@@ -44,6 +44,8 @@ final class PluginVersionHistory
             'installed_at' => $plugin->installed_at ?? now(),
             'metadata' => [
                 'integrity_version' => data_get($plugin->metadata, 'integrity_version'),
+                'installed_file_hashes' => data_get($plugin->metadata, 'installed_file_hashes', []),
+                'signature_verified_at' => $plugin->signature_verified_at?->toISOString(),
                 'file_count' => count(data_get($plugin->metadata, 'installed_file_hashes', [])),
             ],
         ]);
