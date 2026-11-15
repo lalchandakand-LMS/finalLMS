@@ -8,7 +8,7 @@ use App\Services\Plugins\PluginRollbackService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
 use RuntimeException;
-use Tests\\TestCase;
+use Tests\TestCase;
 
 class PluginRollbackTest extends TestCase
 {
