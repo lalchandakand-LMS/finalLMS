@@ -1,14 +1,14 @@
 <?php
 
-namespace App\\Http\\Controllers\\Api\\V1;
+namespace App\Http\Controllers\Api\V1;
 
-use App\\Http\\Controllers\\Controller;
-use App\\Models\\Invoice;
-use App\\Models\\InvoicePayment;
-use Illuminate\\Http\\JsonResponse;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Facades\\URL;
-use Illuminate\\View\\View;
+use App\Http\Controllers\Controller;
+use App\Models\Invoice;
+use App\Models\InvoicePayment;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\URL;
+use Illuminate\View\View;
 
 class StudentInvoiceController extends Controller
 {
