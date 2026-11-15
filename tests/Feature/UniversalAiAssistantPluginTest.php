@@ -79,7 +79,7 @@ class UniversalAiAssistantPluginTest extends TestCase
             ], 200),
         ]);
 
-        $response = (new \\Aloms\\UniversalAiAssistant\\AdminSettingsController())->models();
+        $response = (new \Aloms\UniversalAiAssistant\AdminSettingsController())->models();
         $payload = $response->getData(true);
 
         $this->assertSame(200, $response->getStatusCode());
@@ -97,15 +97,15 @@ class UniversalAiAssistantPluginTest extends TestCase
             'daily_request_limit' => 20, 'daily_token_budget' => 50000, 'retention_days' => 30,
         ], null, false);
         $user = User::factory()->create(['role' => 'student']);
-        $expiredId = \\DB::table('ai_assistant_conversations')->insertGetId([
+        $expiredId = \DB::table('ai_assistant_conversations')->insertGetId([
             'user_id' => $user->id, 'assistant_role' => 'student', 'title' => 'Expired',
             'created_at' => now()->subDays(40), 'updated_at' => now()->subDays(40),
         ]);
-        \\DB::table('ai_assistant_messages')->insert([
+        \DB::table('ai_assistant_messages')->insert([
             'conversation_id' => $expiredId, 'message_role' => 'user', 'content' => 'Old message',
             'token_count' => null, 'model' => null, 'created_at' => now()->subDays(40),
         ]);
-        $activeId = \\DB::table('ai_assistant_conversations')->insertGetId([
+        $activeId = \DB::table('ai_assistant_conversations')->insertGetId([
             'user_id' => $user->id, 'assistant_role' => 'student', 'title' => 'Recent',
             'created_at' => now(), 'updated_at' => now(),
         ]);
@@ -143,11 +143,11 @@ class UniversalAiAssistantPluginTest extends TestCase
         ]);
         $request->setUserResolver(static fn () => $user);
 
-        $response = (new \\Aloms\\UniversalAiAssistant\\AssistantController())->send($request);
+        $response = (new \Aloms\UniversalAiAssistant\AssistantController())->send($request);
         $this->assertSame(200, $response->getStatusCode());
 
-        $conversation = \\DB::table('ai_assistant_conversations')->where('user_id', $user->id)->first();
-        $message = \\DB::table('ai_assistant_messages')->where('conversation_id', $conversation->id)->where('message_role', 'user')->first();
+        $conversation = \DB::table('ai_assistant_conversations')->where('user_id', $user->id)->first();
+        $message = \DB::table('ai_assistant_messages')->where('conversation_id', $conversation->id)->where('message_role', 'user')->first();
         $this->assertStringNotContainsString($secret, $conversation->title);
         $this->assertStringContainsString('[REDACTED_SECRET]', $conversation->title);
         $this->assertStringNotContainsString($secret, $message->content);
