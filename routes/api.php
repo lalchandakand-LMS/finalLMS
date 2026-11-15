@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\StudentAssignmentController;
 use App\Http\Controllers\Api\V1\StudentExamController;
 use App\Http\Controllers\Api\V1\StudentCheckoutController;
 use App\Http\Controllers\Api\V1\StudentCartController;
+use App\Http\Controllers\Api\V1\StudentCartCheckoutController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
