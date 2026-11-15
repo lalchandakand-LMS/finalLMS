@@ -208,10 +208,11 @@ class CourseController extends Controller
             'search' => ['nullable', 'string', 'max:120'],
             'status' => ['nullable', Rule::in(['published', 'draft', 'archived'])],
             'teacher_id' => ['nullable', 'integer', 'min:1'],
+            'academic_level_id' => ['nullable', 'integer', 'exists:academic_levels,id'],
         ]);
 
         $query = Course::query()
-            ->with(['teacher', 'categories'])
+            ->with(['teacher', 'categories', 'academicLevel'])
             ->withCount(['enrollments', 'lessons', 'curriculumItems'])
             ->latest();
 
@@ -227,11 +228,15 @@ class CourseController extends Controller
         if (! empty($filters['teacher_id'])) {
             $query->where('teacher_id', $filters['teacher_id']);
         }
+        if (! empty($filters['academic_level_id'])) {
+            $query->where('academic_level_id', $filters['academic_level_id']);
+        }
 
         $courses = $query->paginate(20)->withQueryString();
         $teachers = User::query()->where('role', 'teacher')->orderBy('name')->get(['id', 'name']);
+        $academicLevels = AcademicLevel::query()->orderBy('sort_order')->orderBy('name')->get();
 
-        return view('admin.courses.index', compact('courses', 'teachers', 'filters'));
+        return view('admin.courses.index', compact('courses', 'teachers', 'academicLevels', 'filters'));
     }
 
     public function create(Request $request): View
