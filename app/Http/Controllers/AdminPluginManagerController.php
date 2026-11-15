@@ -69,6 +69,33 @@ class AdminPluginManagerController extends Controller
             __('Plugin package verified and installed. Activation remains disabled until the isolated plugin runtime is complete.')
         );
     }
+    public function uninstall(Request $request, PluginInstallation $plugin, PluginUninstaller $uninstaller): RedirectResponse
+    {
+        $request->validate(['confirm_uninstall' => ['required', 'accepted']]);
+
+        try {
+            $uninstalled = $uninstaller->uninstall($plugin);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->with('error', $exception instanceof InvalidArgumentException || $exception instanceof \\RuntimeException
+                ? $exception->getMessage()
+                : __('Plugin uninstall failed. The package backup was preserved where possible; check server logs.'));
+        }
+
+        ActivityLog::create([
+            'user_id' => $request->user()->id,
+            'event' => 'admin.plugins.uninstalled',
+            'description' => 'Moved plugin '.$uninstalled->plugin_key.' version '.$uninstalled->version.' to private backup.',
+            'method' => $request->method(),
+            'route' => $request->route()?->getName(),
+            'ip_address' => $request->ip(),
+            'user_agent' => substr((string) $request->userAgent(), 0, 1000),
+        ]);
+
+        return redirect()->route('admin.plugins.index')->with('success', __('Plugin uninstalled. Its files were retained in a private backup; plugin data was not deleted.'));
+    }
+
     private function recordFailure(Request $request): void
     {
         try {
