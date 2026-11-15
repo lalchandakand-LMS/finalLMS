@@ -1,21 +1,21 @@
 <?php
 
-namespace App\\Http\\Controllers\\Api\\V1;
+namespace App\Http\Controllers\Api\V1;
 
-use App\\Http\\Controllers\\Controller;
-use App\\Models\\Batch;
-use App\\Models\\Course;
-use App\\Models\\Enrollment;
-use App\\Models\\FlashSale;
-use App\\Models\\Payment;
-use App\\Models\\Setting;
-use App\\Services\\Payments\\BkashCheckoutService;
-use Illuminate\\Http\\JsonResponse;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\Support\\Facades\\Storage;
-use Illuminate\\Support\\Str;
-use Illuminate\\Validation\\Rule;
+use App\Http\Controllers\Controller;
+use App\Models\Batch;
+use App\Models\Course;
+use App\Models\Enrollment;
+use App\Models\FlashSale;
+use App\Models\Payment;
+use App\Models\Setting;
+use App\Services\Payments\BkashCheckoutService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Throwable;
 
 class StudentCheckoutController extends Controller
@@ -306,7 +306,7 @@ class StudentCheckoutController extends Controller
                 || ! is_string($checkoutUrl)
                 || parse_url($checkoutUrl, PHP_URL_SCHEME) !== 'https'
                 || ! in_array($checkoutHost, $allowedHosts, true)) {
-                throw new \\RuntimeException('bKash returned an invalid checkout response.');
+                throw new \RuntimeException('bKash returned an invalid checkout response.');
             }
 
             $payment->update(['gateway_payment_id' => $paymentId]);
