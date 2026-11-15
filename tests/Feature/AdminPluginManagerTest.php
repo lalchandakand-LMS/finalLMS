@@ -73,7 +73,15 @@ class AdminPluginManagerTest extends TestCase
     {
         $zip = new ZipArchive();
         $this->assertTrue($zip->open($this->archivePath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === true);
-        $this->assertTrue($zip->addFromString('src/Plugin.php', '<?php return new class {};'));
+        $entrypoint = <<<'PHP'
+<?php
+
+return new class implements \\App\\Contracts\\Plugins\\PluginContract {
+    public function register(\\App\\Services\\Plugins\\PluginContext $context): void {}
+    public function boot(\\App\\Services\\Plugins\\PluginContext $context): void {}
+};
+PHP;
+        $this->assertTrue($zip->addFromString('src/Plugin.php', $entrypoint));
         $this->assertTrue($zip->close());
 
         $bytes = file_get_contents($this->archivePath);
