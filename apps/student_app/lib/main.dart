@@ -423,6 +423,12 @@ class _StudentHomeState extends State<StudentHome> {
     ));
   }
 
+  Future<void> openInvoices() async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => StudentInvoicesPage(api: widget.api),
+    ));
+  }
+
   Widget _courseCard(dynamic item) {
     final course = item as Map<String, dynamic>;
     final imageUrl = course['image_url']?.toString();
@@ -506,6 +512,11 @@ class _StudentHomeState extends State<StudentHome> {
           onPressed: openWishlist,
           icon: const Icon(Icons.favorite_outline),
           tooltip: 'My wishlist',
+        ),
+        IconButton(
+          onPressed: openInvoices,
+          icon: const Icon(Icons.request_quote_outlined),
+          tooltip: 'My invoices & receipts',
         ),
         IconButton(
           onPressed: openPayments,
@@ -1220,6 +1231,227 @@ class _StudentCartPageState extends State<StudentCartPage> {
                 ],
               ),
             ),
+  );
+}
+
+class StudentInvoicesPage extends StatefulWidget {
+  const StudentInvoicesPage({required this.api, super.key});
+  final MobileApi api;
+
+  @override
+  State<StudentInvoicesPage> createState() => _StudentInvoicesPageState();
+}
+
+class _StudentInvoicesPageState extends State<StudentInvoicesPage> {
+  List<dynamic> invoices = [];
+  bool loading = true;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  Future<void> load() async {
+    setState(() { loading = true; error = null; });
+    try {
+      final response = await widget.api.get('/my/invoices');
+      if (!mounted) { return; }
+      setState(() => invoices = response['data'] as List<dynamic>? ?? []);
+    } catch (exception) {
+      if (mounted) { setState(() => error = exception.toString()); }
+    } finally {
+      if (mounted) { setState(() => loading = false); }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('My invoices & receipts'), actions: [
+      IconButton(onPressed: load, icon: const Icon(Icons.refresh), tooltip: 'Refresh'),
+    ]),
+    body: loading
+      ? const Center(child: CircularProgressIndicator())
+      : error != null
+        ? Center(child: Text(error!))
+        : invoices.isEmpty
+          ? const Center(child: Text('No invoices have been issued to your account yet.'))
+          : RefreshIndicator(
+              onRefresh: load,
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: invoices.length,
+                itemBuilder: (context, index) {
+                  final invoice = invoices[index] as Map<String, dynamic>;
+                  final course = invoice['course'] as Map<String, dynamic>?;
+                  return Card(
+                    child: ListTile(
+                      leading: const CircleAvatar(child: Icon(Icons.receipt_long_outlined)),
+                      title: Text(invoice['title']?.toString() ?? 'Invoice'),
+                      subtitle: Text([
+                        invoice['invoice_number']?.toString() ?? '',
+                        if (course != null) course['title']?.toString() ?? '',
+                        'Paid ৳${invoice['net_paid'] ?? '0.00'}',
+                        'Due ৳${invoice['outstanding'] ?? invoice['amount'] ?? '0.00'}',
+                      ].where((value) => value.isNotEmpty).join(' • ')),
+                      trailing: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(invoice['status']?.toString().toUpperCase() ?? 'UNPAID',
+                            style: Theme.of(context).textTheme.labelSmall),
+                          const Icon(Icons.chevron_right),
+                        ],
+                      ),
+                      onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => StudentInvoiceDetailsPage(
+                          api: widget.api,
+                          invoiceId: (invoice['id'] as num).toInt(),
+                        ),
+                      )),
+                    ),
+                  );
+                },
+              ),
+            ),
+  );
+}
+
+class StudentInvoiceDetailsPage extends StatefulWidget {
+  const StudentInvoiceDetailsPage({
+    required this.api,
+    required this.invoiceId,
+    super.key,
+  });
+  final MobileApi api;
+  final int invoiceId;
+
+  @override
+  State<StudentInvoiceDetailsPage> createState() => _StudentInvoiceDetailsPageState();
+}
+
+class _StudentInvoiceDetailsPageState extends State<StudentInvoiceDetailsPage> {
+  Map<String, dynamic>? invoice;
+  bool loading = true;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  Future<void> load() async {
+    setState(() { loading = true; error = null; });
+    try {
+      final response = await widget.api.get('/my/invoices/${widget.invoiceId}');
+      if (!mounted) { return; }
+      setState(() => invoice = response['data'] as Map<String, dynamic>?);
+    } catch (exception) {
+      if (mounted) { setState(() => error = exception.toString()); }
+    } finally {
+      if (mounted) { setState(() => loading = false); }
+    }
+  }
+
+  Future<void> openPrintable(String? url) async {
+    if (url == null || url.isEmpty) { return; }
+    final uri = Uri.tryParse(url);
+    if (uri == null || uri.scheme != 'https') {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('The print link is invalid.')));
+      return;
+    }
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open the print view.')));
+    }
+  }
+
+  String money(dynamic value) => '৳${value?.toString() ?? '0.00'}';
+
+  @override
+  Widget build(BuildContext context) {
+    final data = invoice;
+    final payments = data?['payments'] as List<dynamic>? ?? [];
+    return Scaffold(
+      appBar: AppBar(title: const Text('Invoice details'), actions: [
+        IconButton(onPressed: load, icon: const Icon(Icons.refresh), tooltip: 'Refresh'),
+      ]),
+      body: loading
+        ? const Center(child: CircularProgressIndicator())
+        : error != null
+          ? Center(child: Text(error!))
+          : data == null
+            ? const Center(child: Text('Invoice not found.'))
+            : ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  Card(child: Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Row(children: [
+                        Expanded(child: Text(data['title']?.toString() ?? 'Invoice',
+                          style: Theme.of(context).textTheme.titleLarge)),
+                        Chip(label: Text(data['status']?.toString().toUpperCase() ?? 'UNPAID')),
+                      ]),
+                      Text(data['invoice_number']?.toString() ?? ''),
+                      if (data['course'] is Map<String, dynamic>)
+                        Text('Course: ${(data['course'] as Map<String, dynamic>)['title']}'),
+                      if (data['batch'] is Map<String, dynamic>)
+                        Text('Batch: ${(data['batch'] as Map<String, dynamic>)['title']}'),
+                      if (data['due_date'] != null) Text('Due date: ${data['due_date']}'),
+                      if ((data['description'] ?? '').toString().isNotEmpty)
+                        Padding(padding: const EdgeInsets.only(top: 8), child: Text(data['description'].toString())),
+                      const Divider(height: 28),
+                      _invoiceLine('Subtotal', money(data['subtotal'])),
+                      _invoiceLine('Discount', money(((double.tryParse(data['subtotal'].toString()) ?? 0) - (double.tryParse(data['amount'].toString()) ?? 0)).toStringAsFixed(2))),
+                      _invoiceLine('Invoice total', money(data['amount']), bold: true),
+                      _invoiceLine('Gross paid', money(data['gross_paid'])),
+                      _invoiceLine('Refunded', money(data['refunded'])),
+                      _invoiceLine('Net paid', money(data['net_paid'])),
+                      _invoiceLine('Outstanding', money(data['outstanding']), bold: true),
+                      const SizedBox(height: 16),
+                      SizedBox(width: double.infinity, child: OutlinedButton.icon(
+                        onPressed: () => openPrintable(data['print_url']?.toString()),
+                        icon: const Icon(Icons.picture_as_pdf_outlined),
+                        label: const Text('Print / save invoice as PDF'),
+                      )),
+                    ]),
+                  )),
+                  const SizedBox(height: 12),
+                  Text('Payment receipts', style: Theme.of(context).textTheme.titleLarge),
+                  if (payments.isEmpty)
+                    const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('No payments recorded yet.')))
+                  else
+                    ...payments.map((raw) {
+                      final payment = raw as Map<String, dynamic>;
+                      return Card(child: ListTile(
+                        leading: const Icon(Icons.verified_outlined),
+                        title: Text(money(payment['amount'])),
+                        subtitle: Text([
+                          payment['method']?.toString() ?? '',
+                          payment['paid_at']?.toString() ?? '',
+                          if ((payment['reference'] ?? '').toString().isNotEmpty)
+                            'Ref: ${payment['reference']}',
+                        ].where((value) => value.isNotEmpty).join(' • ')),
+                        trailing: IconButton(
+                          tooltip: 'Print receipt',
+                          onPressed: () => openPrintable(payment['print_url']?.toString()),
+                          icon: const Icon(Icons.print_outlined),
+                        ),
+                      ));
+                    }),
+                ],
+              ),
+    );
+  }
+
+  Widget _invoiceLine(String label, String value, {bool bold = false}) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(children: [
+      Expanded(child: Text(label, style: bold ? const TextStyle(fontWeight: FontWeight.bold) : null)),
+      Text(value, style: bold ? const TextStyle(fontWeight: FontWeight.bold) : null),
+    ]),
   );
 }
 
