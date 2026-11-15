@@ -68,3 +68,9 @@ Correct answer indexes are never included in the question payload. The API check
 - View invoice totals, discounts, paid amounts, approved refunds, outstanding balance and payment references.
 - Print or save an invoice and each individual payment receipt as PDF using a short-lived signed print link. The print page opens in the system browser and provides the native Print / Save as PDF action.
 - Invoice APIs return only records owned by the signed-in student. Print links expire after 10 minutes and return no-store responses.
+
+
+### Notices and course reviews
+
+- Academy notices are available from the Student Learning toolbar; the feed shows unread state and supports marking notices as read. Results are restricted to active notices targeted to all students or students in the learner's branch.
+- Course detail pages display approved reviews. Enrolled students may submit a review; new submissions remain pending until an administrator moderates them.
