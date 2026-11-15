@@ -14,6 +14,12 @@ class UniversalAiAssistantPluginTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantSettings.php');
+    }
+
     public function test_assistant_settings_are_disabled_by_default_and_private_data_access_is_denied(): void
     {
         $settings = AssistantSettings::record();
