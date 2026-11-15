@@ -1245,7 +1245,10 @@ class StudentInvoicesPage extends StatefulWidget {
 class _StudentInvoicesPageState extends State<StudentInvoicesPage> {
   List<dynamic> invoices = [];
   bool loading = true;
+  bool loadingMore = false;
   String? error;
+  int currentPage = 1;
+  int lastPage = 1;
 
   @override
   void initState() {
@@ -1253,23 +1256,47 @@ class _StudentInvoicesPageState extends State<StudentInvoicesPage> {
     load();
   }
 
-  Future<void> load() async {
-    setState(() { loading = true; error = null; });
+  Future<void> load({bool append = false}) async {
+    if (append && (loadingMore || currentPage >= lastPage)) { return; }
+    setState(() {
+      if (append) {
+        loadingMore = true;
+      } else {
+        loading = true;
+        error = null;
+      }
+    });
     try {
-      final response = await widget.api.get('/my/invoices');
+      final nextPage = append ? currentPage + 1 : 1;
+      final response = await widget.api.get('/my/invoices?page=$nextPage');
       if (!mounted) { return; }
-      setState(() => invoices = response['data'] as List<dynamic>? ?? []);
+      final pageItems = response['data'] as List<dynamic>? ?? [];
+      final meta = response['meta'] as Map<String, dynamic>? ?? {};
+      setState(() {
+        if (append) {
+          invoices.addAll(pageItems);
+        } else {
+          invoices = pageItems;
+        }
+        currentPage = (meta['current_page'] as num?)?.toInt() ?? nextPage;
+        lastPage = (meta['last_page'] as num?)?.toInt() ?? currentPage;
+      });
     } catch (exception) {
       if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) { setState(() => loading = false); }
+      if (mounted) {
+        setState(() {
+          loading = false;
+          loadingMore = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('My invoices & receipts'), actions: [
-      IconButton(onPressed: load, icon: const Icon(Icons.refresh), tooltip: 'Refresh'),
+      IconButton(onPressed: () => load(), icon: const Icon(Icons.refresh), tooltip: 'Refresh'),
     ]),
     body: loading
       ? const Center(child: CircularProgressIndicator())
@@ -1278,11 +1305,26 @@ class _StudentInvoicesPageState extends State<StudentInvoicesPage> {
         : invoices.isEmpty
           ? const Center(child: Text('No invoices have been issued to your account yet.'))
           : RefreshIndicator(
-              onRefresh: load,
+              onRefresh: () => load(),
               child: ListView.builder(
+                physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(16),
-                itemCount: invoices.length,
+                itemCount: invoices.length + (currentPage < lastPage ? 1 : 0),
                 itemBuilder: (context, index) {
+                  if (index == invoices.length) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Center(
+                        child: TextButton.icon(
+                          onPressed: loadingMore ? null : () => load(append: true),
+                          icon: loadingMore
+                              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                              : const Icon(Icons.expand_more),
+                          label: Text(loadingMore ? 'Loading…' : 'Load more invoices'),
+                        ),
+                      ),
+                    );
+                  }
                   final invoice = invoices[index] as Map<String, dynamic>;
                   final course = invoice['course'] as Map<String, dynamic>?;
                   return Card(
