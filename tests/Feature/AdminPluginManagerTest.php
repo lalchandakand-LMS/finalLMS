@@ -7,7 +7,6 @@ use App\Models\User;
 use App\Services\Plugins\PluginSignatureVerifier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 use ZipArchive;
 
@@ -66,8 +65,6 @@ class AdminPluginManagerTest extends TestCase
         if (isset($this->finalPath) && is_dir($this->finalPath) && ! is_link($this->finalPath)) {
             \Illuminate\Support\Facades\File::deleteDirectory($this->finalPath);
         }
-
-        Schema::dropIfExists('plugin_activation_probe');
 
         parent::tearDown();
     }
@@ -168,19 +165,22 @@ PHP;
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration {
     public function up(): void
     {
-        Schema::create('plugin_activation_probe', function (Blueprint $table): void {
-            $table->id();
-        });
+        DB::table('settings')->insert([
+            'key' => 'plugin_activation_probe',
+            'value' => 'ran',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('plugin_activation_probe');
+        DB::table('settings')->where('key', 'plugin_activation_probe')->delete();
     }
 };
 PHP;
@@ -192,7 +192,7 @@ PHP;
             ->assertRedirect(route('admin.plugins.index'))
             ->assertSessionHas('success');
 
-        $this->assertTrue(Schema::hasTable('plugin_activation_probe'));
+        $this->assertDatabaseHas('settings', ['key' => 'plugin_activation_probe', 'value' => 'ran']);
         $this->assertDatabaseHas('plugin_migrations', [
             'plugin_key' => 'aec.course-management',
             'plugin_version' => '1.0.0',
