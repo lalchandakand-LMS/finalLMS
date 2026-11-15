@@ -302,4 +302,57 @@ class MetaAdsIntegrationTest extends TestCase
     }
 
 
+    public function test_admin_can_create_a_paused_boost_from_a_published_lms_course(): void
+    {
+        config(['services.meta_ads.app_id' => 'test-app']);
+        Setting::setValue('meta_ads_access_token', Crypt::encryptString('secret-token'));
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $teacher = User::factory()->create(['role' => 'teacher', 'email_verified_at' => now()]);
+        $course = Course::create([
+            'teacher_id' => $teacher->id,
+            'title' => 'Spoken English Masterclass',
+            'slug' => 'spoken-english-masterclass',
+            'description' => 'Complete spoken English course.',
+            'short_description' => 'Build confidence speaking English.',
+            'price' => 1500,
+            'status' => 'published',
+        ]);
+
+        Http::fake(function ($request) {
+            $url = $request->url();
+            if (str_contains($url, '/me/adaccounts')) return Http::response(['data' => [['id' => 'act_12345', 'account_id' => '12345', 'currency' => 'BDT']]]);
+            if (str_contains($url, '/me/accounts')) return Http::response(['data' => [['id' => '98765', 'name' => 'LMS Page', 'tasks' => ['ADVERTISE']]]);
+            if (str_ends_with($url, '/act_12345/campaigns')) return Http::response(['id' => '111111111111121']);
+            if (str_ends_with($url, '/act_12345/adsets')) return Http::response(['id' => '222222222222221']);
+            if (str_ends_with($url, '/act_12345/adcreatives')) return Http::response(['id' => '333333333333331']);
+            if (str_ends_with($url, '/act_12345/ads')) return Http::response(['id' => '444444444444441']);
+
+            return Http::response(['error' => ['message' => 'Unexpected request']], 500);
+        });
+
+        $this->actingAs($admin)
+            ->post(route('admin.marketing.meta-ads.campaigns.store'), [
+                'account_id' => '12345',
+                'page_id' => '98765',
+                'source_reference' => 'course:'.$course->id,
+                'image_url' => 'https://lms.example/images/course.jpg',
+                'daily_budget_bdt' => 300,
+                'age_min' => 18,
+                'age_max' => 45,
+            ])
+            ->assertRedirect(route('admin.marketing.meta-ads.index', ['account' => '12345']))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('meta_boost_campaigns', [
+            'title' => 'Spoken English Masterclass - Meta Boost',
+            'destination_url' => route('courses.show', $course),
+            'meta_campaign_id' => '111111111111121',
+            'status' => 'paused',
+        ]);
+
+        Http::assertSent(fn ($request) => str_ends_with($request->url(), '/act_12345/adcreatives')
+            && str_contains((string) $request['object_story_spec'], rawurlencode(route('courses.show', $course))));
+    }
+
+
 }
