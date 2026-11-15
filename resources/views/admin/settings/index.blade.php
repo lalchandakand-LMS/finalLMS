@@ -221,6 +221,16 @@
                     <label for="facebook-pixel-id">{{ __('Meta (Facebook) Pixel ID') }}</label>
                     <input id="facebook-pixel-id" type="text" name="facebook_pixel_id" inputmode="numeric" value="{{ old('facebook_pixel_id', $settings['facebook_pixel_id'] ?? '') }}">
                 </div>
+                <div>
+                    <label for="google-search-console-verification">{{ __('Google Search Console verification token') }}</label>
+                    <input id="google-search-console-verification" type="text" name="google_search_console_verification" maxlength="255" autocomplete="off" value="{{ old('google_search_console_verification', $settings['google_search_console_verification'] ?? '') }}">
+                    <small class="muted">{{ __('Paste only the content value from the Google site verification meta tag, not the full HTML tag.') }}</small>
+                </div>
+                <div>
+                    <label>{{ __('Sitemap URL') }}</label>
+                    <input type="text" readonly value="{{ url('/sitemap.xml') }}">
+                    <small class="muted">{{ __('Submit this URL in Google Search Console after your website is publicly accessible.') }}</small>
+                </div>
             </div>
 
             <hr style="border: 0; border-top: 1px solid var(--border); margin: 28px 0;">
