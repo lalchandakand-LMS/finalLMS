@@ -337,13 +337,14 @@ class _InstructorHomeState extends State<InstructorHome> {
   }
 
   Future<void> showStudents(Map<String, dynamic> course) async {
+    final pageContext = context;
     try {
       final response = await widget.api.get("/instructor/courses/${course['slug']}/students");
-      if (!mounted) {
+      if (!pageContext.mounted) {
         return;
       }
       final students = response['data'] as List<dynamic>? ?? [];
-      showModalBottomSheet<void>(context: context, builder: (sheetContext) => SafeArea(child: ListView(
+      showModalBottomSheet<void>(context: pageContext, builder: (sheetContext) => SafeArea(child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           Text('Students — ${course['title']}', style: Theme.of(sheetContext).textTheme.titleLarge),
@@ -355,14 +356,14 @@ class _InstructorHomeState extends State<InstructorHome> {
         ],
       )));
     } catch (e) {
-      if (!mounted) {
+      if (!pageContext.mounted) {
         return;
       }
       if (e is ApiException && (e.statusCode == 401 || e.statusCode == 403)) {
         widget.onLogout();
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(pageContext).showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
   Future<void> showBatchStudents(Map<String, dynamic> batch) async {
@@ -434,7 +435,7 @@ class _InstructorHomeState extends State<InstructorHome> {
     final payload = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+        builder: (dialogStateContext, setDialogState) => AlertDialog(
           title: const Text('Create assignment'),
           content: SingleChildScrollView(child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -472,12 +473,12 @@ class _InstructorHomeState extends State<InstructorHome> {
                   icon: const Icon(Icons.calendar_month),
                   onPressed: () async {
                     final picked = await showDatePicker(
-                      context: context,
+                      context: dialogStateContext,
                       initialDate: dueAt,
                       firstDate: DateTime.now(),
                       lastDate: DateTime.now().add(const Duration(days: 365)),
                     );
-                    if (!context.mounted) {
+                    if (!dialogStateContext.mounted) {
                       return;
                     }
                     if (picked != null) {
@@ -541,23 +542,24 @@ class _InstructorHomeState extends State<InstructorHome> {
   }
 
   Future<DateTime?> _pickDateTime(DateTime initial) async {
+    final pickerContext = context;
     final date = await showDatePicker(
-      context: context,
+      context: pickerContext,
       initialDate: initial,
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    if (!mounted) {
+    if (!pickerContext.mounted) {
       return null;
     }
     if (date == null) {
       return null;
     }
     final time = await showTimePicker(
-      context: context,
+      context: pickerContext,
       initialTime: TimeOfDay.fromDateTime(initial),
     );
-    if (!mounted) {
+    if (!pickerContext.mounted) {
       return null;
     }
     if (time == null) {
