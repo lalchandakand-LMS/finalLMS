@@ -360,7 +360,7 @@ class _StudentHomeState extends State<StudentHome> {
         widget.api.get('/courses?$query'),
         if (!loadMore) widget.api.get('/my/courses'),
       ]);
-      if (!mounted) return;
+      if (!mounted) { return; }
       final catalogResponse = results[0];
       final nextCourses = catalogResponse['data'] as List<dynamic>? ?? [];
       final meta = catalogResponse['meta'] as Map<String, dynamic>? ?? {};
@@ -657,12 +657,12 @@ class _WishlistPageState extends State<WishlistPage> {
     });
     try {
       final response = await widget.api.get('/my/wishlist');
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() => courses = response['data'] as List<dynamic>? ?? []);
     } catch (exception) {
       if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) { setState(() => loading = false); }
     }
   }
 
@@ -860,7 +860,7 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                                   builder: (_) => CourseCheckoutPage(api: widget.api, slug: widget.slug),
                                 ),
                               );
-                              if (completed == true && mounted) await load();
+                              if (completed == true && mounted) { await load(); }
                             },
                             icon: const Icon(Icons.shopping_cart_checkout),
                             label: const Text('Enroll / Purchase course'),
@@ -933,7 +933,7 @@ class _CourseCheckoutPageState extends State<CourseCheckoutPage> {
   Map<String, dynamic>? get selectedBatch {
     for (final item in batches) {
       final batch = item as Map<String, dynamic>;
-      if (batch['id'] == selectedBatchId) return batch;
+      if (batch['id'] == selectedBatchId) { return batch; }
     }
     return null;
   }
@@ -941,7 +941,7 @@ class _CourseCheckoutPageState extends State<CourseCheckoutPage> {
   Map<String, dynamic>? get selectedMethodData {
     for (final item in methods) {
       final method = item as Map<String, dynamic>;
-      if (method['key'] == selectedMethod) return method;
+      if (method['key'] == selectedMethod) { return method; }
     }
     return null;
   }
@@ -959,7 +959,7 @@ class _CourseCheckoutPageState extends State<CourseCheckoutPage> {
     setState(() { loading = true; error = null; });
     try {
       final response = await widget.api.get('/checkout/courses/${widget.slug}');
-      if (!mounted) return;
+      if (!mounted) { return; }
       final data = response['data'] as Map<String, dynamic>;
       final nextBatches = data['batches'] as List<dynamic>? ?? [];
       final nextMethods = data['payment_methods'] as List<dynamic>? ?? [];
@@ -973,14 +973,14 @@ class _CourseCheckoutPageState extends State<CourseCheckoutPage> {
         }
       });
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) { setState(() => loading = false); }
     }
   }
 
   Future<void> submitManual() async {
-    if (submitting || checkout == null || checkout!['already_enrolled'] == true) return;
+    if (submitting || checkout == null || checkout!['already_enrolled'] == true) { return; }
     if (batches.isNotEmpty && selectedBatchId == null) {
       setState(() => error = 'Please select an available batch.');
       return;
@@ -1002,20 +1002,20 @@ class _CourseCheckoutPageState extends State<CourseCheckoutPage> {
         if (senderAccount.text.trim().isNotEmpty) 'sender_account': senderAccount.text.trim(),
       };
       final response = await widget.api.postJson('/checkout/courses/${widget.slug}/manual', payload);
-      if (!mounted) return;
+      if (!mounted) { return; }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(response['message']?.toString() ?? 'Checkout submitted.')),
       );
       Navigator.of(context).pop(true);
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => submitting = false);
+      if (mounted) { setState(() => submitting = false); }
     }
   }
 
   Future<void> payWithBkash() async {
-    if (submitting || checkout == null || checkout!['already_enrolled'] == true) return;
+    if (submitting || checkout == null || checkout!['already_enrolled'] == true) { return; }
     if (batches.isNotEmpty && selectedBatchId == null) {
       setState(() => error = 'Please select a batch first.');
       return;
@@ -1042,15 +1042,15 @@ class _CourseCheckoutPageState extends State<CourseCheckoutPage> {
         throw const FormatException('The bKash checkout link is invalid.');
       }
       final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-      if (!opened) throw const FormatException('Could not open the bKash checkout page.');
-      if (!mounted) return;
+      if (!opened) { throw const FormatException('Could not open the bKash checkout page.'); }
+      if (!mounted) { return; }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Complete payment in bKash, then return and refresh your course status.')),
       );
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => submitting = false);
+      if (mounted) { setState(() => submitting = false); }
     }
   }
 
@@ -1087,7 +1087,7 @@ class _CourseCheckoutPageState extends State<CourseCheckoutPage> {
                       if (batches.isNotEmpty) ...[
                         const SizedBox(height: 16),
                         DropdownButtonFormField<int>(
-                          value: selectedBatchId,
+                          initialValue: selectedBatchId,
                           decoration: const InputDecoration(labelText: 'Select batch', border: OutlineInputBorder()),
                           items: batches.map((item) {
                             final batch = item as Map<String, dynamic>;
@@ -1120,7 +1120,7 @@ class _CourseCheckoutPageState extends State<CourseCheckoutPage> {
                       if (payableAmount > 0 && manualMethods.isNotEmpty) ...[
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
-                          value: selectedMethod,
+                          initialValue: selectedMethod,
                           decoration: const InputDecoration(labelText: 'Manual payment method', border: OutlineInputBorder()),
                           items: manualMethods.map((method) => DropdownMenuItem<String>(
                             value: method['key']?.toString(),
@@ -1221,12 +1221,12 @@ class _PaymentHistoryPageState extends State<PaymentHistoryPage> {
     setState(() { loading = true; error = null; });
     try {
       final response = await widget.api.get('/my/payments');
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() => payments = response['data'] as List<dynamic>? ?? []);
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) { setState(() => loading = false); }
     }
   }
 
@@ -1234,7 +1234,7 @@ class _PaymentHistoryPageState extends State<PaymentHistoryPage> {
     final payment = item as Map<String, dynamic>;
     try {
       final response = await widget.api.get('/my/payments/${payment['id']}');
-      if (!mounted) return;
+      if (!mounted) { return; }
       final detail = response['data'] as Map<String, dynamic>;
       await showDialog<void>(
         context: context,
@@ -1256,7 +1256,7 @@ class _PaymentHistoryPageState extends State<PaymentHistoryPage> {
         ),
       );
     } catch (exception) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(exception.toString())));
+      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(exception.toString()))); }
     }
   }
 
@@ -1292,7 +1292,7 @@ class _PaymentHistoryPageState extends State<PaymentHistoryPage> {
                                         : Icons.hourglass_top,
                                   ),
                                   title: Text(payment['course']?['title']?.toString() ?? 'Course payment'),
-                                  subtitle: Text('৳${payment['amount']} · ${payment['method']} · ${status}\n${payment['transaction_reference'] ?? ''}'),
+                                  subtitle: Text('৳${payment['amount']} · ${payment['method']} · $status\n${payment['transaction_reference'] ?? ''}'),
                                   isThreeLine: true,
                                   trailing: const Icon(Icons.chevron_right),
                                   onTap: () => showPayment(payment),
@@ -1350,7 +1350,7 @@ class _LessonPlayerPageState extends State<LessonPlayerPage> {
       final response = await widget.api.get(
         '/courses/${widget.slug}/lessons/${widget.lessonId}',
       );
-      if (!mounted) return;
+      if (!mounted) { return; }
       final data = response['lesson'] as Map<String, dynamic>;
       setState(() => lesson = data);
       final streamPath = data['video_stream_path']?.toString();
@@ -1358,9 +1358,9 @@ class _LessonPlayerPageState extends State<LessonPlayerPage> {
         await initializeVideo(streamPath);
       }
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) { setState(() => loading = false); }
     }
   }
 
@@ -1400,7 +1400,7 @@ class _LessonPlayerPageState extends State<LessonPlayerPage> {
       );
       if (mounted) setState(() => lesson?['is_completed'] = true);
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
       if (mounted) setState(() => saving = false);
     }
@@ -1566,12 +1566,12 @@ class _AssignmentsPageState extends State<AssignmentsPage> {
     setState(() { loading = true; error = null; });
     try {
       final response = await widget.api.get('/my/assignments');
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() => assignments = response['data'] as List<dynamic>? ?? []);
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) { setState(() => loading = false); }
     }
   }
 
@@ -1644,16 +1644,16 @@ class _AssignmentDetailPageState extends State<AssignmentDetailPage> {
   Future<void> load() async {
     try {
       final response = await widget.api.get('/assignments/${widget.id}');
-      if (!mounted) return;
+      if (!mounted) { return; }
       final item = response['assignment'] as Map<String, dynamic>;
       setState(() {
         assignment = item;
         answer.text = (item['submission'] as Map<String, dynamic>?)?['answer']?.toString() ?? '';
       });
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) { setState(() => loading = false); }
     }
   }
 
@@ -1671,7 +1671,7 @@ class _AssignmentDetailPageState extends State<AssignmentDetailPage> {
       }
       if (mounted) { setState(() { attachment = picked; error = null; }); }
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     }
   }
 
@@ -1683,12 +1683,12 @@ class _AssignmentDetailPageState extends State<AssignmentDetailPage> {
         {'answer': answer.text.trim()},
         attachment: attachment,
       );
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() => attachment = null);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Assignment submitted.')));
       await load();
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
       if (mounted) setState(() => saving = false);
     }
@@ -1782,12 +1782,12 @@ class _ExamsPageState extends State<ExamsPage> {
     setState(() { loading = true; error = null; });
     try {
       final response = await widget.api.get('/my/exams');
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() => exams = response['data'] as List<dynamic>? ?? []);
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) { setState(() => loading = false); }
     }
   }
 
@@ -1891,7 +1891,7 @@ class _ExamDetailPageState extends State<ExamDetailPage> {
       final nextAttempt = data['attempt'] as Map<String, dynamic>?;
       final nextQuestions = data['questions'] as List<dynamic>? ?? [];
       final nextResult = data['result'] as Map<String, dynamic>?;
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() {
         exam = data;
         attempt = nextAttempt;
@@ -1916,9 +1916,9 @@ class _ExamDetailPageState extends State<ExamDetailPage> {
         deadline = null;
       }
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) { setState(() => loading = false); }
     }
   }
 
@@ -1957,7 +1957,7 @@ class _ExamDetailPageState extends State<ExamDetailPage> {
       final data = response['data'] as Map<String, dynamic>;
       final nextAttempt = data['attempt'] as Map<String, dynamic>;
       final nextQuestions = data['questions'] as List<dynamic>? ?? [];
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() {
         attempt = nextAttempt;
         attemptId = (nextAttempt['id'] as num).toInt();
@@ -1980,7 +1980,7 @@ class _ExamDetailPageState extends State<ExamDetailPage> {
         _setDeadline(DateTime.parse(deadlineValue).toLocal());
       }
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
       if (mounted) setState(() => starting = false);
     }
@@ -2000,7 +2000,7 @@ class _ExamDetailPageState extends State<ExamDetailPage> {
         );
       }
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
       if (mounted) setState(() => saving = false);
     }
@@ -2014,7 +2014,7 @@ class _ExamDetailPageState extends State<ExamDetailPage> {
       final response = await widget.api.postJson('/exam-attempts/$id/submit', {
         'answers': _answerPayload(),
       });
-      if (!mounted) return;
+      if (!mounted) { return; }
       clock?.cancel();
       setState(() {
         result = response['data'] as Map<String, dynamic>;
@@ -2025,9 +2025,9 @@ class _ExamDetailPageState extends State<ExamDetailPage> {
         SnackBar(content: Text(automatic ? 'Time ended. Your exam was submitted.' : 'Exam submitted successfully.')),
       );
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) { setState(() => error = exception.toString()); }
     } finally {
-      if (mounted) setState(() => submitting = false);
+      if (mounted) { setState(() => submitting = false); }
     }
   }
 
