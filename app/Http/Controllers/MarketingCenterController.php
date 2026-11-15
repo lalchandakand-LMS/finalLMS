@@ -18,6 +18,14 @@ class MarketingCenterController extends Controller
             ])
             ->pluck('value', 'key');
 
+        $mailMailer = (string) config('mail.default');
+        $mailHost = (string) config('mail.mailers.smtp.host');
+        $mailReady = $mailMailer === 'smtp'
+            && filled($mailHost)
+            && filled(config('mail.mailers.smtp.username'))
+            && filled(config('mail.mailers.smtp.password'))
+            && filled(config('mail.from.address'));
+
         $integrations = [
             'meta_pixel' => [
                 'label' => 'Meta Pixel',
@@ -38,6 +46,13 @@ class MarketingCenterController extends Controller
                 'label' => 'Google Search Console',
                 'configured' => filled($settings->get('google_search_console_verification')),
                 'detail' => filled($settings->get('google_search_console_verification')) ? 'Verification token saved' : 'Not verified',
+            ],
+            'email_delivery' => [
+                'label' => 'Email verification delivery',
+                'configured' => $mailReady,
+                'detail' => $mailReady
+                    ? ($mailHost === 'smtp.gmail.com' ? 'Gmail SMTP configured' : 'SMTP configured: '.$mailHost)
+                    : 'SMTP credentials are not configured in the server environment',
             ],
         ];
 
