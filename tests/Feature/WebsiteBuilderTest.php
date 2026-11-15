@@ -100,6 +100,9 @@ class WebsiteBuilderTest extends TestCase
         $this->actingAs($admin)->get(route('admin.website-builder.index'))
             ->assertOk()
             ->assertSee('Redwan’s Method')
+            ->assertSee('Homepage Builder')
+            ->assertSee('Pages')
+            ->assertSee('Posts')
             ->assertSee('Homepage slider')
             ->assertSee('Header navigation menu')
             ->assertSee('Footer content &amp; links');
