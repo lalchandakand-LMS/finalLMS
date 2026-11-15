@@ -24,6 +24,7 @@
     @forelse($levels as $level)
         <details style="padding:12px 0;border-bottom:1px solid var(--border);">
             <summary><strong>{{ $level->name }}</strong> <span class="muted">· {{ $level->courses_count }} courses · {{ $level->pages_count }} pages · {{ $level->is_active ? 'Active' : 'Inactive' }}</span></summary>
+            <p style="margin:10px 0;"><a class="btn secondary" href="{{ route('admin.academic-levels.show', $level) }}">Manage this level</a></p>
             <form method="POST" action="{{ route('admin.academic-levels.update', $level) }}" class="grid grid-2" style="margin-top:12px;">
                 @csrf @method('PUT')
                 <label>Name<input name="name" value="{{ $level->name }}" maxlength="120" required></label>
