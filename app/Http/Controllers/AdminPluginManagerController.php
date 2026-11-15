@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\PluginInstallation;
 use App\Services\Plugins\PluginUploadInstaller;
 use App\Services\Plugins\PluginUninstaller;
+use App\Services\Plugins\PluginDeactivator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -70,6 +71,43 @@ class AdminPluginManagerController extends Controller
             __('Plugin package verified and installed. Activation remains disabled until the isolated plugin runtime is complete.')
         );
     }
+    public function deactivate(Request $request, PluginInstallation $plugin, PluginDeactivator $deactivator): RedirectResponse
+    {
+        try {
+            $updated = $deactivator->deactivate($plugin);
+            ActivityLog::create([
+                'user_id' => $request->user()->id,
+                'event' => 'admin.plugins.deactivated',
+                'description' => 'Deactivated plugin '.$updated->plugin_key.' version '.$updated->version.'.',
+                'method' => $request->method(),
+                'route' => $request->route()?->getName(),
+                'ip_address' => $request->ip(),
+                'user_agent' => substr((string) $request->userAgent(), 0, 1000),
+            ]);
+        } catch (Throwable $exception) {
+            report($exception);
+            try {
+                ActivityLog::create([
+                    'user_id' => $request->user()->id,
+                    'event' => 'admin.plugins.deactivate_failed',
+                    'description' => 'Plugin deactivation was rejected for '.$plugin->plugin_key.'.',
+                    'method' => $request->method(),
+                    'route' => $request->route()?->getName(),
+                    'ip_address' => $request->ip(),
+                    'user_agent' => substr((string) $request->userAgent(), 0, 1000),
+                ]);
+            } catch (Throwable $loggingException) {
+                report($loggingException);
+            }
+
+            return back()->with('error', $exception instanceof \\RuntimeException
+                ? $exception->getMessage()
+                : __('Plugin deactivation failed; check server logs.'));
+        }
+
+        return redirect()->route('admin.plugins.index')->with('success', __('Plugin deactivated. Its files and data were preserved.'));
+    }
+
     public function uninstall(Request $request, PluginInstallation $plugin, PluginUninstaller $uninstaller): RedirectResponse
     {
         $request->validate(['confirm_uninstall' => ['required', 'accepted']]);
