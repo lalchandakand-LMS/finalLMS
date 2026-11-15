@@ -363,7 +363,7 @@ class _InstructorHomeState extends State<InstructorHome> {
         widget.onLogout();
         return;
       }
-      messenger.showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
   Future<void> showBatchStudents(Map<String, dynamic> batch) async {
@@ -473,7 +473,7 @@ class _InstructorHomeState extends State<InstructorHome> {
                   icon: const Icon(Icons.calendar_month),
                   onPressed: () async {
                     final picked = await showDatePicker(
-                      context: context,
+                      context: dialogContext,
                       initialDate: dueAt,
                       firstDate: DateTime.now(),
                       lastDate: DateTime.now().add(const Duration(days: 365)),
@@ -546,7 +546,7 @@ class _InstructorHomeState extends State<InstructorHome> {
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    if (!context.mounted) {
+    if (!mounted) {
       return null;
     }
     if (date == null) {
@@ -677,7 +677,7 @@ class _InstructorHomeState extends State<InstructorHome> {
     try {
       final batchId = payload.remove('batch_id');
       await widget.api.postJson('/instructor/batches/$batchId/live-classes', payload);
-      if (!context.mounted) {
+      if (!mounted) {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
@@ -704,13 +704,12 @@ class _InstructorHomeState extends State<InstructorHome> {
     if (recordingUrl != null) {
       payload['recording_url'] = recordingUrl.trim().isEmpty ? null : recordingUrl.trim();
     }
-    final messenger = ScaffoldMessenger.of(context);
     try {
       await widget.api.patchJson('/instructor/live-classes/${liveClass['id']}', payload);
       if (!mounted) {
         return;
       }
-      messenger.showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Live class updated.')),
       );
       await load();
@@ -822,7 +821,6 @@ class _InstructorHomeState extends State<InstructorHome> {
     final feedback = TextEditingController(
       text: submission['feedback']?.toString() ?? '',
     );
-    final messenger = ScaffoldMessenger.of(context);
     final payload = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -876,12 +874,15 @@ class _InstructorHomeState extends State<InstructorHome> {
       if (!mounted) {
         return;
       }
-      messenger.showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Grade saved successfully.')),
       );
       await load();
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.toString())));
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 
