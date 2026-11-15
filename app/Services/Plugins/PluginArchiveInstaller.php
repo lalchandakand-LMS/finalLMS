@@ -13,7 +13,6 @@ final class PluginArchiveInstaller
     public function __construct(
         private readonly PluginManifestValidator $manifestValidator,
         private readonly PluginLifecycle $lifecycle,
-        private readonly PluginIntegrityVerifier $integrityVerifier,
         private readonly PluginMigrationRunner $migrationRunner,
     ) {
     }
@@ -109,7 +108,6 @@ final class PluginArchiveInstaller
                 ]);
 
                 try {
-                    $this->integrityVerifier->verify($installed);
                     $this->migrationRunner->migrate($installed);
                 } catch (\\Throwable $migrationException) {
                     $this->lifecycle->transition((string) $plugin->plugin_key, 'failed', [

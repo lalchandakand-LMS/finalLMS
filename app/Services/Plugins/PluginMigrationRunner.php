@@ -10,8 +10,11 @@ use Throwable;
 
 final class PluginMigrationRunner
 {
+    public function __construct(private readonly PluginIntegrityVerifier $integrityVerifier) {}
+
     public function migrate(PluginInstallation $plugin): void
     {
+        $this->integrityVerifier->verify($plugin);
         $root = $this->migrationRoot($plugin);
         if ($root === null) return;
 
@@ -53,6 +56,7 @@ final class PluginMigrationRunner
 
     public function rollback(PluginInstallation $plugin): void
     {
+        $this->integrityVerifier->verify($plugin);
         $root = $this->migrationRoot($plugin);
         if ($root === null) return;
 

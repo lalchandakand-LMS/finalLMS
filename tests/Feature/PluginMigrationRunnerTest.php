@@ -57,6 +57,10 @@ PHP);
             'status' => 'installed',
             'manifest' => ['migrations' => 'migrations'],
             'package_path' => $this->relative,
+            'metadata' => [
+                'integrity_version' => 1,
+                'installed_file_hashes' => ['migrations/2026_11_15_000001_create_plugin_probe.php' => hash_file('sha256', $file)],
+            ],
         ])->save();
 
         $runner = app(PluginMigrationRunner::class);
