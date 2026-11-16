@@ -2,7 +2,9 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use RuntimeException;
 
 return new class extends Migration
 {
@@ -40,6 +42,13 @@ return new class extends Migration
 
     public function down(): void
     {
+        $hasReservations = Schema::hasTable('ai_assistant_token_reservations')
+            && DB::table('ai_assistant_token_reservations')->exists();
+        $hasBudgetDays = Schema::hasTable('ai_assistant_budget_days')
+            && DB::table('ai_assistant_budget_days')->exists();
+        if ($hasReservations || $hasBudgetDays) {
+            throw new RuntimeException('Export or explicitly erase AI usage reservations before rolling back this migration.');
+        }
         Schema::dropIfExists('ai_assistant_token_reservations');
         Schema::dropIfExists('ai_assistant_budget_days');
     }
