@@ -295,6 +295,11 @@ PHP;
             'version' => '1.1.0',
             'status' => 'failed',
         ]);
+
+        // A plugin with unresolved migration state must not be activated automatically.
+        $this->actingAs($admin)->post(route('admin.plugins.activate', 'aec.course-management'))
+            ->assertRedirect()
+            ->assertSessionHas('error');
     }
 
     public function test_partial_package_migration_rollback_marks_plugin_failed_and_non_activatable(): void
