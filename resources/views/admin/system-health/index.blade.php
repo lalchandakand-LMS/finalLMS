@@ -13,6 +13,20 @@
     </div>
 
     <section class="panel" style="margin-bottom:18px;">
+        <h2>{{ __('Scheduler heartbeat') }}</h2>
+        @if($schedulerHeartbeat && \Illuminate\Support\Carbon::parse($schedulerHeartbeat)->greaterThan(now()->subMinutes(10)))
+            <span class="badge success">{{ __('Recent heartbeat') }}</span>
+            <p class="muted">{{ __('Last scheduler heartbeat:') }} {{ \Illuminate\Support\Carbon::parse($schedulerHeartbeat)->diffForHumans() }}</p>
+        @elseif($schedulerHeartbeat)
+            <span class="badge danger">{{ __('Heartbeat is stale') }}</span>
+            <p class="muted">{{ __('Last scheduler heartbeat:') }} {{ \Illuminate\Support\Carbon::parse($schedulerHeartbeat)->diffForHumans() }}. {{ __('Check the cPanel cron configuration.') }}</p>
+        @else
+            <span class="badge warning">{{ __('No heartbeat recorded yet') }}</span>
+            <p class="muted">{{ __('Configure the Laravel scheduler cron job to begin monitoring.') }}</p>
+        @endif
+    </section>
+
+    <section class="panel" style="margin-bottom:18px;">
         <h2>{{ __('Run health check') }}</h2>
         <p class="muted">{{ __('Checks use temporary data only. They do not modify student, course, enrollment or payment records.') }}</p>
         <form method="POST" action="{{ route('admin.system-health.run') }}">
