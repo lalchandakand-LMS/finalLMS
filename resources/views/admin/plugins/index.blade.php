@@ -75,6 +75,22 @@
                         <td>
                             <strong>{{ $plugin->name }}</strong>
                             <div class="muted"><code>{{ $plugin->plugin_key }}</code></div>
+                            @if(!empty($plugin->manifest['permissions']))
+                                <details style="margin-top:8px;">
+                                    <summary>{{ __('Permission grants') }}</summary>
+                                    <form method="POST" action="{{ route('admin.plugins.permissions', $plugin->plugin_key) }}" style="margin-top:8px;">
+                                        @csrf
+                                        @method('PUT')
+                                        @foreach($plugin->manifest['permissions'] as $permission)
+                                            <label style="display:block;margin:5px 0;">
+                                                <input type="checkbox" name="permissions[]" value="{{ $permission }}" @checked(in_array($permission, $plugin->metadata['granted_permissions'] ?? [], true))>
+                                                <code>{{ $permission }}</code>
+                                            </label>
+                                        @endforeach
+                                        <button class="btn secondary" type="submit">{{ __('Save grants') }}</button>
+                                    </form>
+                                </details>
+                            @endif
                         </td>
                         <td><code>{{ $plugin->version }}</code></td>
                         <td>{{ ucfirst($plugin->type) }}</td>

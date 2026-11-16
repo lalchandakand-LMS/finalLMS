@@ -73,6 +73,7 @@ class PluginRuntimeTest extends TestCase
             'signature_verified_at' => now(),
             'package_path' => $this->packagePath,
             'metadata' => [
+                'granted_permissions' => ['runtime.check'],
                 'integrity_version' => 1,
                 'installed_file_hashes' => [
                     'src/Plugin.php' => hash_file('sha256', $entrypointPath),
@@ -93,7 +94,7 @@ return new class implements \App\Contracts\Plugins\PluginContract {
     {
         $context->routesForPortal('PORTAL', 'plugins/runtime-check', 'plugins.runtime_check.', function (): void {
             \Illuminate\Support\Facades\Route::get('/health', fn () => response()->json(['ok' => true]))->name('health');
-        });
+        }, 'runtime.check');
         $context->instance('plugin.runtime.registered', true);
     }
 
@@ -133,6 +134,24 @@ PHP;
         $this->actingAs($admin)->get('/plugins/runtime-check/health')->assertNotFound();
     }
 
+
+    public function test_authenticated_plugin_routes_require_an_explicit_admin_grant(): void
+    {
+        $plugin = $this->createPlugin($this->validEntrypoint());
+        $metadata = $plugin->metadata ?? [];
+        $metadata['granted_permissions'] = [];
+        $plugin->forceFill(['metadata' => $metadata])->save();
+
+        app(PluginRuntime::class)->registerActivePlugins();
+
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $this->actingAs($admin)->get('/plugins/runtime-check/health')->assertForbidden();
+
+        $metadata['granted_permissions'] = ['runtime.check'];
+        $plugin->forceFill(['metadata' => $metadata])->save();
+
+        $this->actingAs($admin)->get('/plugins/runtime-check/health')->assertOk()->assertJson(['ok' => true]);
+    }
 
     public function test_inactive_plugin_is_never_loaded(): void
     {
