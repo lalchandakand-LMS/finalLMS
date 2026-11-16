@@ -177,6 +177,50 @@ class AdminPluginManagerController extends Controller
     }
 
 
+    public function rollbackMigrations(
+        Request $request,
+        string $key,
+        PluginSignatureVerifier $signatureVerifier,
+        PluginManifestValidator $manifestValidator,
+        PluginIntegrityVerifier $integrityVerifier,
+        PluginMigrationRunner $migrationRunner,
+        PluginVersionHistoryRecorder $history,
+    ): RedirectResponse {
+        $request->validate(['confirm_rollback' => ['required', 'accepted']]);
+
+        try {
+            $plugin = PluginInstallation::query()->where('plugin_key', $key)->firstOrFail();
+            if (! in_array($plugin->status, ['installed', 'inactive'], true)) {
+                throw new LogicException('Deactivate the plugin and ensure it is installed before rolling back migrations.');
+            }
+
+            $signatureVerifier->verifyInstalledSignature($plugin);
+            $errors = $manifestValidator->errors($plugin->manifest ?? []);
+            if ($errors !== []) {
+                throw new RuntimeException('The plugin manifest is invalid: '.implode(' ', $errors));
+            }
+            if (! hash_equals((string) $plugin->plugin_key, (string) $plugin->manifest['key'])
+                || (string) $plugin->name !== (string) $plugin->manifest['name']
+                || (string) $plugin->version !== (string) $plugin->manifest['version']
+                || (string) $plugin->type !== (string) $plugin->manifest['type']) {
+                throw new RuntimeException('The plugin manifest identity does not match its installed registry record.');
+            }
+
+            $integrityVerifier->verify($plugin);
+            $migrationRunner->rollback($plugin);
+            $history->record($plugin, 'migrations_rolled_back', $request->user());
+            $this->audit($request, 'admin.plugins.migrations_rolled_back',
+                'Rolled back completed migrations for plugin '.$plugin->plugin_key.' version '.$plugin->version);
+        } catch (Throwable $exception) {
+            report($exception);
+            $this->recordFailure($request, 'admin.plugins.migration_rollback_failed');
+            return back()->with('error', __('Migration rollback was blocked or failed. The plugin package and registry were retained; review server logs and database state.'));
+        }
+
+        return redirect()->route('admin.plugins.index')->with('success',
+            __('Completed migrations for this plugin version were rolled back. The plugin remains installed and inactive.'));
+    }
+
     public function uninstall(Request $request, string $key, PluginLifecycle $lifecycle, PluginPackageRemover $remover, PluginVersionHistoryRecorder $history): RedirectResponse
     {
         $plugin = null;
