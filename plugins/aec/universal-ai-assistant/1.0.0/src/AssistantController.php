@@ -110,7 +110,7 @@ final class AssistantController
                 $authorizedContext = app(AssistantContextBuilder::class)->build($request->user(), $role);
                 if ($authorizedContext !== []) {
                     $sourceIds = [];
-                    foreach (['courses', 'batches', 'enrollments', 'linked_students'] as $sourceGroup) {
+                    foreach (['courses', 'batches', 'enrollments', 'linked_students', 'assignments', 'exams'] as $sourceGroup) {
                         foreach ($authorizedContext[$sourceGroup] ?? [] as $source) {
                             if (isset($source['source'])) $sourceIds[] = $source['source'];
                             foreach ($source['lesson_titles'] ?? [] as $lesson) {
