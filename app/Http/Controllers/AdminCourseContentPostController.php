@@ -121,9 +121,9 @@ class AdminCourseContentPostController extends Controller
                 if ($newThumbnail) {
                     $data['thumbnail_path'] = $newThumbnail;
                     $data['thumbnail_media_id'] = null;
-                } elseif ($removeThumbnail) {
+                } elseif ($removeThumbnail || ! empty($data['thumbnail_media_id'])) {
                     $data['thumbnail_path'] = null;
-                    $data['thumbnail_media_id'] = null;
+                    if ($removeThumbnail) $data['thumbnail_media_id'] = null;
                 }
 
                 if ($newFile) {
