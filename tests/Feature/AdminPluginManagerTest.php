@@ -414,6 +414,8 @@ PHP;
     public function test_admin_can_update_and_restore_a_signed_plugin_version(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        // These tests exercise authorization and lifecycle behavior, not the route's production rate limit.
+        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
         $this->manifest['migrations'] = 'migrations';
         $migrationV1 = <<<'PHP'
 <?php
@@ -684,6 +686,8 @@ PHP;
     public function test_non_admin_cannot_view_or_install_plugins(): void
     {
         $student = User::factory()->create(['role' => 'student', 'email_verified_at' => now()]);
+        // Keep authorization assertions independent from shared test-cache throttle counters.
+        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
 
         $this->actingAs($student)->get(route('admin.plugins.index'))->assertForbidden();
         $this->actingAs($student)->post(route('admin.plugins.install'), [])->assertForbidden();
