@@ -101,11 +101,23 @@ class PluginMigrationRunner
         $root = $this->migrationRoot($plugin);
         if ($root === null) return;
 
-        $records = DB::table('plugin_migrations')->where([
+        $identity = [
             'plugin_key' => $plugin->plugin_key,
             'plugin_version' => $plugin->version,
-            'status' => 'completed',
-        ])->orderByDesc('id')->get();
+        ];
+
+        // A prior rollback may have partially committed DDL. Do not replay it
+        // automatically after a process crash or a failed down() method.
+        $interrupted = DB::table('plugin_migrations')->where($identity)
+            ->whereIn('status', ['rolling_back', 'rollback_failed'])->exists();
+        if ($interrupted) {
+            throw new RuntimeException(
+                'A previous plugin migration rollback did not complete. Manual database recovery is required before retrying.'
+            );
+        }
+
+        $records = DB::table('plugin_migrations')->where($identity)
+            ->where('status', 'completed')->orderByDesc('id')->get();
 
         foreach ($records as $record) {
             if (! is_string($record->migration)
@@ -113,20 +125,39 @@ class PluginMigrationRunner
                 throw new RuntimeException('A recorded plugin migration name is unsafe; rollback was stopped.');
             }
 
-            $file = $root.DIRECTORY_SEPARATOR.$record->migration;
-            $realFile = realpath($file);
-            if (! is_file($file) || is_link($file) || $realFile === false
-                || ! str_starts_with($realFile, rtrim($root, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR)) {
-                throw new RuntimeException('A recorded plugin migration file is missing or unsafe; rollback was stopped.');
+            $claimed = DB::table('plugin_migrations')->where('id', $record->id)
+                ->where('status', 'completed')
+                ->update(['status' => 'rolling_back', 'updated_at' => now()]);
+            if ($claimed !== 1) {
+                throw new RuntimeException('The plugin migration rollback is already being processed.');
             }
-            $migration = require $file;
-            if (! $migration instanceof Migration) {
-                throw new RuntimeException('A plugin rollback file did not return a Laravel Migration instance.');
+
+            try {
+                $file = $root.DIRECTORY_SEPARATOR.$record->migration;
+                $realFile = realpath($file);
+                if (! is_file($file) || is_link($file) || $realFile === false
+                    || ! str_starts_with($realFile, rtrim($root, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR)) {
+                    throw new RuntimeException('A recorded plugin migration file is missing or unsafe; rollback was stopped.');
+                }
+                $migration = require $file;
+                if (! $migration instanceof Migration) {
+                    throw new RuntimeException('A plugin rollback file did not return a Laravel Migration instance.');
+                }
+                $migration->down();
+                DB::table('plugin_migrations')->where('id', $record->id)->where('status', 'rolling_back')->update([
+                    'status' => 'rolled_back', 'updated_at' => now(),
+                ]);
+            } catch (Throwable $exception) {
+                DB::table('plugin_migrations')->where('id', $record->id)->where('status', 'rolling_back')->update([
+                    'status' => 'rollback_failed',
+                    'error_message' => 'Migration rollback failed; inspect server logs and database state.',
+                    'updated_at' => now(),
+                ]);
+                throw new RuntimeException(
+                    'A plugin migration rollback failed. Manual database recovery is required before retrying.',
+                    previous: $exception,
+                );
             }
-            $migration->down();
-            DB::table('plugin_migrations')->where('id', $record->id)->update([
-                'status' => 'rolled_back', 'updated_at' => now(),
-            ]);
         }
     }
 
