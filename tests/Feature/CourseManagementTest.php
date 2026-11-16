@@ -20,6 +20,8 @@ class CourseManagementTest extends TestCase
             ->get(route('admin.courses.create'))
             ->assertOk()
             ->assertSee('Create course')
+            ->assertSee('action="'.route('admin.courses.store').'"', false)
+            ->assertDontSee('name="_method"', false)
             ->assertSee('name="title"', false)
             ->assertSee('name="description"', false)
             ->assertSee('name="teacher_id"', false)
