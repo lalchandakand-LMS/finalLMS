@@ -50,7 +50,7 @@ return [
     'course_builder' => ['name' => 'Course Create & Curriculum Builder', 'description' => 'Course authoring, curriculum and publishing tools.', 'type' => 'module', 'dependencies' => ['core', 'course_management', 'lesson_management']],
     'course_content_studio' => ['name' => 'Course Content Studio', 'description' => 'Reusable course posts and learning content authoring.', 'type' => 'module', 'dependencies' => ['core', 'course_management', 'lesson_management']],
     'blog_post_builder' => ['name' => 'Post & Blog Builder', 'description' => 'News, blog posts, categories, tags and SEO authoring.', 'type' => 'module', 'dependencies' => ['core', 'website_cms']],
-    'slider_builder' => ['name' => 'Slider Builder', 'description' => 'Admin-managed homepage sliders, banners and responsive display.', 'type' => 'module', 'dependencies' => ['core', 'website_cms', 'media_library']],
+    'slider_builder' => ['name' => 'Slider Builder', 'description' => 'Admin-managed homepage sliders, banners and responsive display.', 'type' => 'module', 'dependencies' => ['core', 'website_cms', 'media_library', 'slider']],
     'carousel_builder' => ['name' => 'Carousel Builder', 'description' => 'Responsive multi-item content carousels.', 'type' => 'module', 'dependencies' => ['core', 'website_cms', 'media_library']],
     'page_builder' => ['name' => 'Page & Landing Builder', 'description' => 'Reusable page sections and publishing.', 'type' => 'module', 'dependencies' => ['core', 'website_cms', 'media_library', 'academic_levels']],
     'ai_builder' => ['name' => 'AI Builder', 'description' => 'Draft website, course, quiz, notice and content assets for review.', 'type' => 'module', 'dependencies' => ['core', 'identity']],
