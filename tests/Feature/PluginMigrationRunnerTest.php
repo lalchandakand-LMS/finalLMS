@@ -221,4 +221,62 @@ PHP);
         ]);
     }
 
+
+    public function test_interrupted_rolling_back_state_requires_manual_recovery(): void
+    {
+        $name = '2026_11_15_000004_create_interrupted_rollback_probe.php';
+        $file = $this->root.'/migrations/'.$name;
+        file_put_contents($file, <<<'PHP'
+<?php
+return new class extends \\Illuminate\\Database\\Migrations\\Migration {
+    public function up(): void {
+        \\Illuminate\\Support\\Facades\\Schema::create('plugin_interrupted_rollback_probe', function (\\Illuminate\\Database\\Schema\\Blueprint $table): void {
+            $table->id();
+        });
+    }
+    public function down(): void {
+        \\Illuminate\\Support\\Facades\\Schema::dropIfExists('plugin_interrupted_rollback_probe');
+    }
+};
+PHP);
+
+        $plugin = new PluginInstallation();
+        $plugin->forceFill([
+            'plugin_key' => 'test.migration-check',
+            'name' => 'Migration Check',
+            'version' => '1.0.0',
+            'type' => 'module',
+            'status' => 'installed',
+            'manifest' => ['migrations' => 'migrations'],
+            'package_path' => $this->relative,
+            'metadata' => [
+                'integrity_version' => 1,
+                'installed_file_hashes' => ['migrations/'.$name => hash_file('sha256', $file)],
+            ],
+        ])->save();
+
+        $runner = app(PluginMigrationRunner::class);
+        $runner->migrate($plugin);
+        \\DB::table('plugin_migrations')->where([
+            'plugin_key' => 'test.migration-check',
+            'plugin_version' => '1.0.0',
+            'migration' => $name,
+        ])->update(['status' => 'rolling_back']);
+
+        try {
+            $runner->rollback($plugin);
+            $this->fail('An interrupted rollback must require manual database recovery.');
+        } catch (\\RuntimeException $exception) {
+            $this->assertStringContainsString('manual database recovery is required', strtolower($exception->getMessage()));
+        }
+
+        $this->assertTrue(Schema::hasTable('plugin_interrupted_rollback_probe'));
+        $this->assertDatabaseHas('plugin_migrations', [
+            'plugin_key' => 'test.migration-check',
+            'plugin_version' => '1.0.0',
+            'migration' => $name,
+            'status' => 'rolling_back',
+        ]);
+    }
+
 }
