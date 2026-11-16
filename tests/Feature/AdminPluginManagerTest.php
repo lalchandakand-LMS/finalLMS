@@ -510,6 +510,29 @@ PHP;
             'plugin_key' => 'aec.course-management',
             'action' => 'version_restored',
         ]);
+
+        // The restore operation also snapshots the version being left, allowing
+        // a verified forward restore without re-uploading the package.
+        $forwardSnapshot = DB::table('plugin_version_history')
+            ->where('plugin_key', 'aec.course-management')
+            ->where('action', 'version_snapshot')
+            ->where('version', '1.1.0')
+            ->orderByDesc('id')
+            ->first();
+        $this->assertNotNull($forwardSnapshot);
+
+        $this->actingAs($admin)->post(route('admin.plugins.restore', ['aec.course-management', $forwardSnapshot->id]), [
+            'confirm_restore' => '1',
+        ])->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'version' => '1.1.0',
+            'status' => 'inactive',
+        ]);
+        $this->assertTrue(Schema::hasTable('plugin_version_v2_probe'));
+        $this->assertFalse(Schema::hasTable('plugin_version_v1_probe'));
     }
 
     public function test_admin_can_run_plugin_health_check_and_record_version_history(): void
