@@ -155,17 +155,18 @@ class UniversalAiAssistantPluginTest extends TestCase
         $branchB = Branch::query()->create(['name' => 'Context Branch B', 'slug' => 'context-branch-b', 'is_active' => true]);
         $manager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $branchA->id]);
         $teacher = User::factory()->create(['role' => 'teacher']);
+        $otherTeacher = User::factory()->create(['role' => 'teacher']);
         $studentA = User::factory()->create(['role' => 'student', 'branch_id' => $branchA->id]);
         $studentB = User::factory()->create(['role' => 'student', 'branch_id' => $branchB->id]);
         $courseA = Course::factory()->create(['teacher_id' => $teacher->id, 'title' => 'Scoped Course A']);
-        $courseB = Course::factory()->create(['teacher_id' => $teacher->id, 'title' => 'Private Course B']);
+        $courseB = Course::factory()->create(['teacher_id' => $otherTeacher->id, 'title' => 'Private Course B']);
         $batchA = Batch::query()->create([
             'branch_id' => $branchA->id, 'course_id' => $courseA->id, 'teacher_id' => $teacher->id,
             'title' => 'Scoped Batch A', 'capacity' => 20, 'starts_at' => now()->addDay(),
             'ends_at' => now()->addMonth(), 'fee' => 1000, 'status' => 'open',
         ]);
         $batchB = Batch::query()->create([
-            'branch_id' => $branchB->id, 'course_id' => $courseB->id, 'teacher_id' => $teacher->id,
+            'branch_id' => $branchB->id, 'course_id' => $courseB->id, 'teacher_id' => $otherTeacher->id,
             'title' => 'Private Batch B', 'capacity' => 20, 'starts_at' => now()->addDay(),
             'ends_at' => now()->addMonth(), 'fee' => 1000, 'status' => 'open',
         ]);
@@ -198,9 +199,15 @@ class UniversalAiAssistantPluginTest extends TestCase
 
         $builder = new AssistantContextBuilder(app(PluginResourceAccess::class));
         $branchContext = $builder->build($manager, 'branch_manager');
+        $teacherContext = $builder->build($teacher, 'teacher');
         $studentContext = $builder->build($studentA, 'student');
 
         $this->assertSame(['Scoped Course A'], array_column($branchContext['courses'], 'title'));
+        $this->assertSame(['Scoped Course A'], array_column($teacherContext['courses'], 'title'));
+        $this->assertSame([$studentA->id], array_column($teacherContext['assigned_students'], 'id'));
+        $this->assertSame('submitted', $teacherContext['assignments'][0]['student_status'][0]['status']);
+        $this->assertSame(1, $teacherContext['learning_progress'][0]['completed_lessons']);
+        $this->assertStringNotContainsString('Private Course B', json_encode($teacherContext));
         $this->assertSame(['Scoped Batch A'], array_column($branchContext['batches'], 'title'));
         $this->assertSame(['Scoped Course A'], array_column($studentContext['courses'], 'title'));
         $this->assertSame(['Scoped Batch A'], array_column($studentContext['batches'], 'title'));
