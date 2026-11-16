@@ -128,7 +128,7 @@ final class AssistantTokenBudget
      */
     public static function persistPrompt(int $reservationId, callable $persistPrompt): void
     {
-        DB::transaction(function () use ($reservationId, $persistPrompt): void {
+        $persisted = DB::transaction(function () use ($reservationId, $persistPrompt): bool {
             $reservation = DB::table('ai_assistant_token_reservations')
                 ->where('id', $reservationId)
                 ->lockForUpdate()
@@ -136,7 +136,7 @@ final class AssistantTokenBudget
 
             if (! $reservation || $reservation->status !== 'pending'
                 || now()->greaterThanOrEqualTo($reservation->expires_at)) {
-                throw new RuntimeException('The AI token reservation is no longer active or has expired.');
+                return false;
             }
 
             $persistPrompt();
@@ -147,7 +147,13 @@ final class AssistantTokenBudget
                     'prompt_persisted' => true,
                     'updated_at' => now(),
                 ]);
+
+            return true;
         }, 3);
+
+        if (! $persisted) {
+            throw new RuntimeException('The AI token reservation is no longer active or has expired.');
+        }
     }
 
     /**
@@ -155,7 +161,7 @@ final class AssistantTokenBudget
      */
     public static function settle(int $reservationId, int $actualTokens, callable $persistResponse): void
     {
-        DB::transaction(function () use ($reservationId, $actualTokens, $persistResponse): void {
+        $settled = DB::transaction(function () use ($reservationId, $actualTokens, $persistResponse): bool {
             $reservation = DB::table('ai_assistant_token_reservations')
                 ->where('id', $reservationId)
                 ->lockForUpdate()
@@ -163,7 +169,7 @@ final class AssistantTokenBudget
 
             if (! $reservation || $reservation->status !== 'pending'
                 || now()->greaterThanOrEqualTo($reservation->expires_at)) {
-                throw new RuntimeException('The AI token reservation is no longer active or has expired.');
+                return false;
             }
 
             DB::table('ai_assistant_budget_days')
@@ -180,7 +186,13 @@ final class AssistantTokenBudget
                     'actual_tokens' => max(0, $actualTokens),
                     'updated_at' => now(),
                 ]);
+
+            return true;
         }, 3);
+
+        if (! $settled) {
+            throw new RuntimeException('The AI token reservation is no longer active or has expired.');
+        }
     }
 
     /**
