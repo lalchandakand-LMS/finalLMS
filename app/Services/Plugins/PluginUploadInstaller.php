@@ -180,7 +180,7 @@ final class PluginUploadInstaller
 
         // Verify and retain a complete restore point before changing registry metadata.
         $this->signatureVerifier->verifyInstalledSignature($plugin);
-        $this->archiveInstaller->verifyInstalledPackage($plugin);
+        app(PluginIntegrityVerifier::class)->verify($plugin);
         $snapshot = [
             'name' => $plugin->name,
             'version' => $plugin->version,
