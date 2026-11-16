@@ -18,7 +18,7 @@ final class PluginLifecycle
         'inactive' => ['active', 'update_staged', 'uninstalled', 'failed'],
         'update_staged' => ['active', 'inactive', 'failed'],
         'failed' => ['inactive', 'uninstalled'],
-        'uninstalled' => [],
+        'uninstalled' => ['failed'],
     ];
 
     public function transition(string $pluginKey, string $target, array $attributes = []): PluginInstallation
