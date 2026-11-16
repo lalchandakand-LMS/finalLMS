@@ -105,6 +105,13 @@
 
             <label>
                 {{ __('Teacher') }}
+                <label class="form-label">Academic level</label>
+                <select name="academic_level_id">
+                    <option value="">No academic level</option>
+                    @foreach($academicLevels as $academicLevel)
+                        <option value="{{ $academicLevel->id }}" {{ (string) old('academic_level_id', $course?->academic_level_id ?? '') === (string) $academicLevel->id ? 'selected' : '' }}>{{ $academicLevel->name }}</option>
+                    @endforeach
+                </select>
                 <select name="teacher_id" required>
                     <option value="">{{ __('Select a teacher') }}</option>
                     @foreach($teachers as $teacher)
