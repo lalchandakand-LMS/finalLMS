@@ -386,12 +386,12 @@ class VisitorPopupManagementTest extends TestCase
         $this->assertSame(0, PopupAdEvent::query()->count());
 
         // With marketing_consent cookie, impression and click are recorded cleanly without PII columns.
-        $this->withUnencryptedCookie('marketing_consent', 'accepted')
+        $this->withHeader('Cookie', 'marketing_consent=accepted')
             ->postJson(route('popups.events', $popup->id), ['event' => 'impression'])
             ->assertOk()
             ->assertJson(['recorded' => true]);
 
-        $this->withUnencryptedCookie('marketing_consent', 'accepted')
+        $this->withHeader('Cookie', 'marketing_consent=accepted')
             ->postJson(route('popups.events', $popup->id), ['event' => 'click'])
             ->assertOk()
             ->assertJson(['recorded' => true]);
