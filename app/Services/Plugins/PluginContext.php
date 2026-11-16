@@ -47,7 +47,7 @@ final class PluginContext
         $this->app->instance($abstract, $instance);
     }
 
-    public function routesForPortal(string $portal, string $prefix, string $namePrefix, Closure $routes): void
+    public function routesForPortal(string $portal, string $prefix, string $namePrefix, Closure $routes, ?string $permission = null): void
     {
         if (! array_key_exists($portal, self::PORTAL_ROLES)
             || ! in_array($portal, $this->plugin->manifest['portals'] ?? [], true)) {
@@ -63,9 +63,20 @@ final class PluginContext
         $middleware = ['web', 'plugin.active:'.$this->plugin->plugin_key];
         $role = self::PORTAL_ROLES[$portal];
         if ($role !== null) {
+            $declaredPermissions = $this->plugin->manifest['permissions'] ?? [];
+            if ($declaredPermissions !== []) {
+                if (! is_string($permission) || ! in_array($permission, $declaredPermissions, true)) {
+                    throw new InvalidArgumentException('Authenticated plugin routes must declare one of the permissions in the signed manifest.');
+                }
+                $middleware[] = 'plugin.permission:'.$this->plugin->plugin_key.','.$permission;
+            } elseif ($permission !== null) {
+                throw new InvalidArgumentException('A plugin route cannot request a permission absent from its signed manifest.');
+            }
             $middleware[] = 'auth';
             $middleware[] = 'verified';
             $middleware[] = 'role:'.$role;
+        } elseif ($permission !== null) {
+            throw new InvalidArgumentException('Public plugin routes cannot use authenticated permission grants.');
         }
 
         Route::middleware($middleware)->prefix($prefix)->name($namePrefix)->group($routes);
