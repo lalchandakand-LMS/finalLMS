@@ -310,7 +310,8 @@
     </section>
 
     @php
-        $builderSections    @php
+        $builderSections = [];
+    @php
         $builderSections = $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('website_sections', '[]'), true) : [];
         $builderSections = is_array($builderSections) ? $builderSections : [];
     @endphp
