@@ -46,6 +46,37 @@
 @endif
 </section>
 
+@if($post->product)
+<section style="padding:16px;margin:16px 0;border:1px solid var(--border);border-radius:12px;">
+<h2 style="margin-top:0">{{ __('PDF Preview Pages') }} ({{ $post->product->previewPages->count() }}/10)</h2>
+<p class="muted">{{ __('Upload up to ten sample page images. Full PDF downloads remain protected by payment approval and download permissions.') }}</p>
+@if($post->product->previewPages->isNotEmpty())
+<div class="grid grid-3" style="margin:12px 0;">
+@foreach($post->product->previewPages as $previewPage)
+<article class="course-item">
+<a href="{{ route('ebooks.preview', [$post->product->slug, $previewPage]) }}" target="_blank" rel="noopener noreferrer">
+<img src="{{ route('ebooks.preview', [$post->product->slug, $previewPage]) }}" alt="{{ $previewPage->alt_text ?: __('Sample page :number', ['number' => $previewPage->page_number]) }}" loading="lazy" style="width:100%;max-height:180px;object-fit:contain;border-radius:8px;">
+</a>
+<p class="muted">{{ __('Page :number', ['number' => $previewPage->page_number]) }}</p>
+<form method="POST" action="{{ route('admin.ebooks.preview-pages.destroy', [$post->product, $previewPage]) }}" onsubmit="return confirm('{{ __('Remove this sample page?') }}')">
+@csrf @method('DELETE')
+<button class="btn secondary" type="submit">{{ __('Remove preview') }}</button>
+</form>
+</article>
+@endforeach
+</div>
+@endif
+@if($post->product->previewPages->count() < 10)
+<form method="POST" action="{{ route('admin.ebooks.preview-pages.store', $post->product) }}" enctype="multipart/form-data">
+@csrf
+<label>{{ __('Sample page image') }}<input type="file" name="page_image" accept="image/jpeg,image/png,image/webp" required></label>
+<label>{{ __('Alternative text (optional)') }}<input type="text" name="alt_text" maxlength="180"></label>
+<button class="btn primary" type="submit">{{ __('Upload preview page') }}</button>
+</form>
+@endif
+</section>
+@endif
+
 <label>{{ __('Categories (select one or more)') }}</label>
 <div class="grid grid-3" style="margin-bottom:16px;">@foreach($categories as $category)<label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" name="category_ids[]" value="{{ $category->id }}" @checked(in_array($category->id, old('category_ids', $post->exists ? $post->categories->pluck('id')->all() : []))) style="width:auto;">{{ $category->name }}</label>@endforeach</div>
 <label>{{ __('Tags (comma separated)') }}<input name="tags" maxlength="1000" value="{{ old('tags', implode(', ', $post->tags ?? [])) }}" placeholder="grammar, speaking, beginner"></label>
