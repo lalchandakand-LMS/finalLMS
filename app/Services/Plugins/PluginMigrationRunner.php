@@ -99,18 +99,19 @@ class PluginMigrationRunner
         }
         $this->integrityVerifier->verify($plugin);
 
-        // A failed migration may have partially committed DDL. Even when the
-        // plugin itself is in a failed health state, never roll back other
-        // completed migrations around an unresolved failed/running migration.
-        if ($plugin->status === 'failed' && DB::table('plugin_migrations')
+        // A failed migration may have partially committed DDL. Never roll
+        // back other completed migrations around an unresolved failed/running row.
+        $unresolvedMigration = DB::table('plugin_migrations')
             ->where('plugin_key', $plugin->plugin_key)
             ->where('plugin_version', $plugin->version)
             ->whereIn('status', ['failed', 'running'])
-            ->exists()) {
+            ->exists();
+        if ($unresolvedMigration) {
             throw new RuntimeException(
                 'A failed or interrupted migration requires manual database recovery before version restore.'
             );
         }
+
         $root = $this->migrationRoot($plugin);
         if ($root === null) return;
 
