@@ -62,6 +62,9 @@ class AttendanceController extends Controller
         $attendanceBackUrl = $user->isBranchManager()
             ? route('admin.branch-workspace.batches.index')
             : ($user->isAdmin() ? route('admin.batches.index') : route('teacher.batches.index'));
+        $attendanceReportUrl = $user->isBranchManager()
+            ? route('admin.branch-workspace.attendance.reports')
+            : ($user->isAdmin() ? route('admin.attendance.reports') : route('teacher.attendance.reports'));
 
         return view('teacher.batches.attendance', compact(
             'batch',
@@ -69,7 +72,8 @@ class AttendanceController extends Controller
             'attendance',
             'auditHistory',
             'attendanceStoreRoute',
-            'attendanceBackUrl'
+            'attendanceBackUrl',
+            'attendanceReportUrl'
         ));
     }
 
