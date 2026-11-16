@@ -70,7 +70,7 @@ class AttendanceSyncController extends Controller
                     ]);
                 }
 
-                $enrolled = $batch->enrollments()
+                abort_unless($student->branch_id === null || (int) $student->branch_id === (int) $batch->branch_id, 403, 'This batch is outside your branch.');\n            $enrolled = $batch->enrollments()
                     ->where('user_id', $record['student_id'])
                     ->where('status', 'active')
                     ->exists();
