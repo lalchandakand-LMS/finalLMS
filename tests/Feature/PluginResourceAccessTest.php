@@ -52,10 +52,11 @@ class PluginResourceAccessTest extends TestCase
         $studentB = User::factory()->create(['role' => 'student', 'branch_id' => $branchB->id]);
         $courseA = Course::factory()->create(['teacher_id' => $teacher->id]);
         $courseB = Course::factory()->create(['teacher_id' => $teacher->id]);
+        $courseC = Course::factory()->create(['teacher_id' => $teacher->id]);
         $batchA = $this->batch($courseA, $teacher, $branchA, 'Branch A Batch');
         $batchB = $this->batch($courseB, $teacher, $branchB, 'Branch B Batch');
         $enrollmentA = Enrollment::query()->create(['user_id' => $studentA->id, 'course_id' => $courseA->id, 'batch_id' => $batchA->id, 'status' => 'active']);
-        $directEnrollmentA = Enrollment::query()->create(['user_id' => $studentA2->id, 'course_id' => $courseA->id, 'status' => 'active']);
+        $directEnrollmentA = Enrollment::query()->create(['user_id' => $studentA2->id, 'course_id' => $courseC->id, 'status' => 'active']);
         Enrollment::query()->create(['user_id' => $studentB->id, 'course_id' => $courseB->id, 'batch_id' => $batchB->id, 'status' => 'active']);
 
         $access = app(PluginResourceAccess::class);
@@ -66,12 +67,13 @@ class PluginResourceAccessTest extends TestCase
         $this->assertTrue($access->allows($manager, $batchA));
         $this->assertFalse($access->allows($manager, $batchB));
         $this->assertTrue($access->allows($manager, $courseA));
+        $this->assertTrue($access->allows($manager, $courseC));
         $this->assertFalse($access->allows($manager, $courseB));
         $this->assertEqualsCanonicalizing(
             [$studentA->id, $studentA2->id],
             $access->scopeQuery(User::query(), $manager)->pluck('id')->all()
         );
-        $this->assertSame([$courseA->id], $access->scopeQuery(Course::query(), $manager)->pluck('id')->all());
+        $this->assertEqualsCanonicalizing([$courseA->id, $courseC->id], $access->scopeQuery(Course::query(), $manager)->pluck('id')->all());
         $this->assertSame([$batchA->id], $access->scopeQuery(Batch::query(), $manager)->pluck('id')->all());
         $this->assertEqualsCanonicalizing(
             [$enrollmentA->id, $directEnrollmentA->id],

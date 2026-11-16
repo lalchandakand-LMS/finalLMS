@@ -91,7 +91,12 @@ final class PluginResourceAccess
 
                 return $branchId === null
                     ? $this->denyQuery($query)
-                    : $query->whereHas('batches', fn ($batches) => $batches->where('branch_id', $branchId));
+                    : $query->where(function ($courses) use ($branchId): void {
+                        $courses->whereHas('batches', fn ($batches) => $batches->where('branch_id', $branchId))
+                            ->orWhereHas('enrollments', fn ($enrollments) =>
+                                $enrollments->whereHas('user', fn ($users) => $users->where('branch_id', $branchId))
+                            );
+                    });
             }
 
             if ($actor->isStudent()) {
@@ -213,7 +218,12 @@ final class PluginResourceAccess
         if ($actor->isBranchManager()) {
             return $this->hasActiveBranch($actor)
                 && $actor->branch_id !== null
-                && Batch::query()->where('course_id', $course->id)->where('branch_id', $actor->branch_id)->exists();
+                && (
+                    Batch::query()->where('course_id', $course->id)->where('branch_id', $actor->branch_id)->exists()
+                    || Enrollment::query()->where('course_id', $course->id)
+                        ->whereHas('user', fn ($users) => $users->where('branch_id', $actor->branch_id))
+                        ->exists()
+                );
         }
 
         if ($actor->isStudent()) {
