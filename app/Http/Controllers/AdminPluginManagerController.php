@@ -192,7 +192,7 @@ class AdminPluginManagerController extends Controller
             ->where('plugin_key', $plugin->plugin_key)
             ->where('action', 'package_update_snapshot')
             ->where('version', '!=', $plugin->version)
-            ->latest('created_at')
+            ->orderByDesc('created_at')->orderByDesc('id')
             ->first();
 
         $details = $snapshotRecord?->details;
@@ -256,9 +256,12 @@ class AdminPluginManagerController extends Controller
             $integrityVerifier->verify($candidate);
             $signatureVerifier->verifyInstalledSignature($plugin);
             $integrityVerifier->verify($plugin);
+
+            // Enter a non-activatable state before running down() migrations. If any
+            // migration fails midway, the catch below marks the plugin failed.
+            $plugin = $lifecycle->transition($plugin->plugin_key, 'update_staged');
             $migrationRunner->rollback($plugin);
 
-            $lifecycle->transition($plugin->plugin_key, 'update_staged');
             $plugin->forceFill([
                 'name' => $snapshot['name'],
                 'version' => $snapshot['version'],
