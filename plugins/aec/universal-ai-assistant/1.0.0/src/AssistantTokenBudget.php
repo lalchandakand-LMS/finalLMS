@@ -65,7 +65,14 @@ final class AssistantTokenBudget
                 ->whereDate('ai_assistant_messages.created_at', $date)
                 ->count();
 
-            if ($todayRequests > max(0, $dailyRequestLimit)) {
+            $pendingRequests = (int) DB::table('ai_assistant_token_reservations')
+                ->where('budget_date', $date)
+                ->where('user_id', $userId)
+                ->where('status', 'pending')
+                ->where('expires_at', '>', now())
+                ->count();
+
+            if ($todayRequests + $pendingRequests + 1 > max(0, $dailyRequestLimit)) {
                 return null;
             }
 
