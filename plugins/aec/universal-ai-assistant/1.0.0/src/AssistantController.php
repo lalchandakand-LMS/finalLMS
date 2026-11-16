@@ -66,7 +66,7 @@ final class AssistantController
         ]);
     }
 
-    public function send(Request $request, AiProvider $provider): JsonResponse
+    public function send(Request $request, AiProvider $provider): JsonResponse|StreamedResponse
     {
         $role = AssistantSettings::roleForUser((string) $request->user()->role);
         abort_unless($role !== null && $this->isAvailable($role), 404);
@@ -143,35 +143,62 @@ final class AssistantController
                 ]);
             });
 
-            $providerResult = $provider->complete(
-                $apiKey,
-                rtrim((string) $settings['base_url'], '/'),
-                (string) $settings['model'],
-                $messages,
-                (float) $settings['temperature'],
-                (int) $responseTokenLimit
-            );
-            $answer = $providerResult['content'];
-            $reportedTokens = $providerResult['total_tokens'];
-            $answer = $this->redactSensitiveText(trim($answer));
-            $tokens = is_int($reportedTokens) && $reportedTokens > 0
-                ? $reportedTokens
-                : AssistantTokenBudget::estimatePromptTokens(array_merge($messages, [
-                    ['role' => 'assistant', 'content' => $answer],
-                ]));
-            AssistantTokenBudget::settle($reservationId, $tokens, function () use ($conversation, $answer, $tokens, $settings): void {
-                DB::table('ai_assistant_messages')->insert([
-                    'conversation_id' => $conversation->id,
-                    'message_role' => 'assistant',
-                    'content' => $answer,
-                    'token_count' => $tokens,
-                    'model' => (string) $settings['model'],
-                    'created_at' => now(),
-                ]);
-            });
-            DB::table('ai_assistant_conversations')->where('id', $conversation->id)->update(['updated_at' => now()]);
+            return response()->stream(function () use ($provider, $apiKey, $settings, $messages, $responseTokenLimit, $reservationId, $conversation, $role): void {
+                $emit = static function (array $event): void {
+                    echo 'data: '.json_encode($event, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE)."\n\n";
+                    if (ob_get_level() > 0) @ob_flush();
+                    flush();
+                };
 
-            return response()->json(['conversation_id' => $conversation->id, 'response' => $answer]);
+                $pending = '';
+                try {
+                    $result = $provider->stream(
+                        $apiKey,
+                        rtrim((string) $settings['base_url'], '/'),
+                        (string) $settings['model'],
+                        $messages,
+                        (float) $settings['temperature'],
+                        (int) $responseTokenLimit,
+                        function (string $delta) use (&$pending, $emit): void {
+                            $pending .= $delta;
+                            if (strlen($pending) > 256) {
+                                $safeLength = strlen($pending) - 256;
+                                $safe = substr($pending, 0, $safeLength);
+                                $pending = substr($pending, $safeLength);
+                                $emit(['type' => 'delta', 'content' => $this->redactSensitiveText($safe)]);
+                            }
+                        }
+                    );
+
+                    if ($pending !== '') $emit(['type' => 'delta', 'content' => $this->redactSensitiveText($pending)]);
+                    $answer = $this->redactSensitiveText(trim($result['content']));
+                    $tokens = is_int($result['total_tokens']) && $result['total_tokens'] > 0
+                        ? $result['total_tokens']
+                        : AssistantTokenBudget::estimatePromptTokens(array_merge($messages, [
+                            ['role' => 'assistant', 'content' => $answer],
+                        ]));
+                    AssistantTokenBudget::settle($reservationId, $tokens, function () use ($conversation, $answer, $tokens, $settings): void {
+                        DB::table('ai_assistant_messages')->insert([
+                            'conversation_id' => $conversation->id,
+                            'message_role' => 'assistant',
+                            'content' => $answer,
+                            'token_count' => $tokens,
+                            'model' => (string) $settings['model'],
+                            'created_at' => now(),
+                        ]);
+                    });
+                    DB::table('ai_assistant_conversations')->where('id', $conversation->id)->update(['updated_at' => now()]);
+                    $emit(['type' => 'done', 'conversation_id' => $conversation->id]);
+                } catch (Throwable) {
+                    try { AssistantTokenBudget::release($reservationId); } catch (Throwable) {}
+                    $emit(['type' => 'error', 'message' => __('The AI stream failed. Retry after checking provider health.')]);
+                }
+            }, 200, [
+                'Content-Type' => 'text/event-stream; charset=UTF-8',
+                'Cache-Control' => 'no-cache, no-transform',
+                'X-Accel-Buffering' => 'no',
+            ]);
+
         } catch (Throwable) {
             if (isset($reservationId)) {
                 try { AssistantTokenBudget::release($reservationId); } catch (Throwable) {}
