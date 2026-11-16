@@ -127,6 +127,11 @@
                                 </form>
                             @endif
                             @if(in_array($plugin->status, ['installed', 'inactive'], true))
+                                <form method="POST" action="{{ route('admin.plugins.rollback-migrations', $plugin->plugin_key) }}" style="display:inline;" onsubmit="return confirm('{{ __('Roll back every completed migration for this plugin version? This can change or remove plugin data. The plugin must remain inactive. Back up the database first.') }}')">
+                                    @csrf
+                                    <input type="hidden" name="confirm_rollback" value="1">
+                                    <button class="btn danger" type="submit">{{ __('Rollback migrations') }}</button>
+                                </form>
                                 <form method="POST" action="{{ route('admin.plugins.activate', $plugin->plugin_key) }}" style="display:inline;" onsubmit="return confirm('{{ __('Activate this signed plugin? Its code will execute as trusted application code.') }}')">
                                     @csrf
                                     <button class="btn primary" type="submit">{{ __('Activate') }}</button>
