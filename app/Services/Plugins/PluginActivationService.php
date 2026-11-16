@@ -120,7 +120,7 @@ final class PluginActivationService
         $versions = [
             'php' => PHP_VERSION,
             'laravel' => \Illuminate\Foundation\Application::VERSION,
-            'lms' => (string) config('plugins.lms_version', '1.0.0'),
+            'lms' => (string) (config('plugins.lms_version') ?: '1.0.0'),
         ];
 
         foreach ($versions as $component => $currentVersion) {
