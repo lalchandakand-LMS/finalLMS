@@ -40,8 +40,7 @@ authentication, role, permission and resource-scope middleware.
 
 The current module-catalog audit maps every HTTP-facing module to web and/or API
 route ownership. The only intentionally unmapped keys are service/foundation
-modules with no direct HTTP endpoints: core, communications, ai_builder,
-otp_verification, sms_otp, email_otp and gmail. The route-ownership feature test
+modules with no direct HTTP endpoints: core, communications, otp_verification, sms_otp, email_otp and gmail. The route-ownership feature test
 fails if another module is introduced without an explicit route-ownership
 decision.
 
