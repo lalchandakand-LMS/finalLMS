@@ -50,6 +50,16 @@ class AdminWebsiteMenuTest extends TestCase
             ->assertSessionHasErrors('parent_id');
     }
 
+    public function test_menu_rejects_protocol_relative_backslash_and_plain_http_urls(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        foreach (['//evil.example', '/\\evil.example', 'http://evil.example'] as $url) {
+            $this->actingAs($admin)->from(route('admin.website-menu.index'))
+                ->post(route('admin.website-menu.store'), ['label' => 'Unsafe link', 'url' => $url])
+                ->assertSessionHasErrors('url');
+        }
+    }
+
     public function test_admin_can_reorder_menu_items(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
