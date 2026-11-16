@@ -3,6 +3,17 @@
 @section('content')
 <div class="container-fluid">
     <div class="mb-4"><a href="{{ route('admin.academic-levels.index') }}">← Academic Levels</a><h1 class="h3 mt-2">{{ $academicLevel->name }}</h1><p class="text-muted">{{ $academicLevel->description }}</p></div>
+    <div class="card card-body mb-4"><div class="d-flex justify-content-between align-items-center"><h2 class="h5 mb-0">Batches & Exams</h2><a href="{{ route('admin.batches.index', ['academic_level_id' => $academicLevel->id]) }}">Manage batches</a></div>
+        @php($batches = $academicLevel->courses->flatMap(fn ($course) => $course->batches))
+        @forelse($batches as $batch)
+            <div class="border-top py-2 mt-2"><strong>{{ $batch->title }}</strong> <span class="text-muted">· {{ $batch->course?->title }} · {{ $batch->branch?->name }}</span>
+                <div class="small text-muted">{{ $batch->exams->count() }} exam(s)</div>
+                <a href="{{ route('admin.batches.exams.index', $batch) }}" class="btn btn-sm btn-outline-primary mt-1">Manage exams</a>
+            </div>
+        @empty
+            <p class="text-muted mb-0">No batches assigned to this level yet.</p>
+        @endforelse
+    </div>
     <div class="row g-3 mb-4">
         <div class="col-md-6"><div class="card card-body"><h2 class="h5">Courses</h2><ul class="mb-0">@forelse($academicLevel->courses as $course)<li><a href="{{ route('admin.courses.index', ['academic_level_id' => $academicLevel->id]) }}">{{ $course->title }}</a></li>@empty<li class="text-muted">No courses assigned.</li>@endforelse</ul></div></div>
         <div class="col-md-6"><div class="card card-body"><h2 class="h5">Website Pages</h2><ul class="mb-0">@forelse($academicLevel->pages as $page)<li><a href="{{ route('admin.website-pages.edit', $page) }}">{{ $page->title }}</a></li>@empty<li class="text-muted">No pages assigned.</li>@endforelse</ul></div></div>
