@@ -4,11 +4,9 @@ namespace Aloms\UniversalAiAssistant;
 
 use App\Contracts\Ai\AiProvider;
 use App\Models\ActivityLog;
-use App\Services\AiDeveloperProviderEndpoint;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 use Throwable;
