@@ -16,6 +16,9 @@
         $isAdminLayout = auth()->check() && (auth()->user()->isAdmin() || auth()->user()->isBranchManager() || auth()->user()->isAccountant());
         $isPublicLayout = ! $isAdminLayout;
         $websiteHeaderLinks = $isPublicLayout && $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('header_links', '[]'), true) : [];
+        $websitePageLinks = $isPublicLayout && \Illuminate\Support\Facades\Schema::hasTable('website_pages')
+            ? \App\Models\WebsitePage::query()->where('status', 'published')->where('show_in_menu', true)->orderBy('menu_order')->orderBy('title')->get(['title', 'slug', 'menu_label'])
+            : collect();
         $websiteFooterTitle = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('footer_title', config('app.name')) : config('app.name');
         $websiteFooterText = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('footer_text', '') : '';
         $websiteFooterLinks = $isPublicLayout && $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('footer_links', '[]'), true) : [];
