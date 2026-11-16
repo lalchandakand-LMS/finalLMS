@@ -64,6 +64,7 @@ class VisitorPopupManagementTest extends TestCase
             'installed_at' => now(),
             'activated_at' => now(),
             'metadata' => [
+                'granted_permissions' => ['popup-ads.manage'],
                 'integrity_version' => 1,
                 'installed_file_hashes' => $hashes,
             ],
