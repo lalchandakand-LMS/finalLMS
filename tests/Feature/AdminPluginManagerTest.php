@@ -791,6 +791,7 @@ PHP;
             'plugin_key' => 'aec.course-management',
             'action' => 'package_restored',
         ]);
+        @unlink(storage_path('app/private/plugin-recovery/'.$snapshot->details['recovery_path']));
     }
 
     public function test_admin_can_uninstall_inactive_plugin_without_deleting_application_data(): void
