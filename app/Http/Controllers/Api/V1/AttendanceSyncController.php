@@ -7,7 +7,7 @@ use App\Models\Attendance;
 use App\Models\Batch;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\DB;\nuse Illuminate\Support\Facades\URL;\nuse Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AttendanceSyncController extends Controller
