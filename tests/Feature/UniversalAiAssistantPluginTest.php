@@ -23,6 +23,7 @@ class UniversalAiAssistantPluginTest extends TestCase
     {
         parent::setUp();
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantSettings.php');
+        require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/OpenAiCompatibleProvider.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantTokenBudget.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantController.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AdminSettingsController.php');
@@ -38,6 +39,24 @@ class UniversalAiAssistantPluginTest extends TestCase
             $budgetMigration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_16_120000_create_ai_assistant_token_reservations.php');
             $budgetMigration->up();
         }
+    }
+
+    public function test_provider_model_capabilities_fail_closed_and_omit_unsupported_parameters(): void
+    {
+        $provider = new OpenAiCompatibleProvider(new AiDeveloperProviderEndpoint(
+            static fn (string $host): array => [['type' => 'A', 'ip' => '1.1.1.1']]
+        ));
+
+        $chat = $provider->capabilities('gpt-4o-mini');
+        $reasoning = $provider->capabilities('o3-mini');
+
+        $this->assertNotNull($chat);
+        $this->assertTrue($chat['temperature']);
+        $this->assertSame('max_tokens', $chat['output_token_parameter']);
+        $this->assertNotNull($reasoning);
+        $this->assertFalse($reasoning['temperature']);
+        $this->assertSame('max_completion_tokens', $reasoning['output_token_parameter']);
+        $this->assertNull($provider->capabilities('unverified-custom-model'));
     }
 
     public function test_assistant_settings_are_disabled_by_default_and_private_data_access_is_denied(): void
