@@ -12,7 +12,14 @@
     "branch_management"
   ],
   "permissions": [],
-  "routes": [],
+  "routes": [
+    "teacher.applications.*",
+    "admin.teacher-applications.*",
+    "admin.teachers.*",
+    "teacher.profile.*",
+    "teacher.apply",
+    "teacher.apply.*"
+  ],
   "settings": [],
   "events": [],
   "directory": "plugins/teacher_management",
