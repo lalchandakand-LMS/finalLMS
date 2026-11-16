@@ -175,6 +175,8 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
             Route::get('/students', [BatchController::class, 'branchManagerStudents'])->middleware('admin.permission:branch.students')->name('students.index');
             Route::post('/batches', [BatchController::class, 'branchManagerStore'])->middleware('admin.permission:branch.batches')->name('batches.store');
             Route::put('/batches/{batch}', [BatchController::class, 'branchManagerUpdate'])->middleware('admin.permission:branch.batches')->name('batches.update');
+            Route::get('/batches/{batch}/attendance', [AttendanceController::class, 'index'])->middleware('admin.permission:branch.attendance')->name('batches.attendance.index');
+            Route::post('/batches/{batch}/attendance', [AttendanceController::class, 'store'])->middleware(['admin.permission:branch.attendance', 'throttle:30,1'])->name('batches.attendance.store');
         });
 
     Route::middleware('role:accountant')
