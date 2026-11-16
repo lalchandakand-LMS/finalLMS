@@ -20,9 +20,9 @@ final class PluginArchiveInstaller
      * Extract a previously signature-verified ZIP into the canonical private
      * plugins/vendor/plugin/version directory and mark it installed.
      *
-     * Plugin entrypoints and migrations are not executed during installation.
-     * Migrations run only during explicit activation preflight, after installed-file
-     * integrity and trusted-signature checks have passed.
+     * Plugin entrypoints are never executed during installation. Signed migrations are
+     * run by PluginUploadInstaller after extraction and installed-file integrity metadata
+     * are recorded; the plugin remains inactive until explicit Admin activation.
      */
     public function installVerifiedPackage(PluginInstallation $plugin, string $stagedArchivePath): PluginInstallation
     {
