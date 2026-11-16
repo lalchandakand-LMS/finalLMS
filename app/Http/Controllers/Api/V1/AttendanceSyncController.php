@@ -393,7 +393,7 @@ class AttendanceSyncController extends Controller
                 ], $existing->status === 'present' ? 200 : 409);
             }
 
-            $attendance = Attendance::query()->create([
+            $inserted = DB::table('attendances')->insertOrIgnore([
                 'batch_id' => $batch->id,
                 'student_id' => $student->id,
                 'marked_by' => $qrSession->created_by,
@@ -404,7 +404,25 @@ class AttendanceSyncController extends Controller
                 'location_accuracy_m' => $data['location_accuracy_m'],
                 'location_captured_at' => $capturedAt,
                 'source' => 'qr',
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
+
+            $attendance = Attendance::query()
+                ->where('batch_id', $batch->id)
+                ->where('student_id', $student->id)
+                ->whereDate('attendance_date', $qrSession->attendance_date)
+                ->firstOrFail();
+
+            if ($inserted === 0) {
+                return response()->json([
+                    'data' => [
+                        'status' => $attendance->status === 'present' ? 'duplicate' : 'conflict',
+                        'attendance_id' => $attendance->id,
+                        'server_status' => $attendance->status,
+                    ],
+                ], $attendance->status === 'present' ? 200 : 409);
+            }
 
             DB::table('attendance_qr_checkins')->insert([
                 'session_id' => $qrSession->id,
