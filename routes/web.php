@@ -298,6 +298,8 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::get('/plugins', [AdminPluginManagerController::class, 'index'])->name('admin.plugins.index');
         Route::post('/plugins/install', [AdminPluginManagerController::class, 'install'])->middleware('throttle:3,10')->name('admin.plugins.install');
         Route::put('/plugins/{key}/permissions', [AdminPluginManagerController::class, 'updatePermissions'])->where('key', '[a-z0-9.-]+')->middleware('throttle:10,1')->name('admin.plugins.permissions');
+        Route::post('/plugins/{key}/settings', [AdminPluginManagerController::class, 'storeSetting'])->where('key', '[a-z0-9.-]+')->middleware('throttle:10,1')->name('admin.plugins.settings.store');
+        Route::delete('/plugins/{key}/settings/{settingKey}', [AdminPluginManagerController::class, 'deleteSetting'])->where(['key' => '[a-z0-9.-]+', 'settingKey' => '[a-z][a-z0-9_.-]{0,119}'])->middleware('throttle:10,1')->name('admin.plugins.settings.delete');
         Route::post('/plugins/{key}/health-check', [AdminPluginManagerController::class, 'healthCheck'])->where('key', '[a-z0-9.-]+')->middleware('throttle:10,1')->name('admin.plugins.health-check');
         Route::post('/plugins/{key}/activate', [AdminPluginManagerController::class, 'activate'])->where('key', '[a-z0-9.-]+')->middleware('throttle:5,1')->name('admin.plugins.activate');
         Route::post('/plugins/{key}/deactivate', [AdminPluginManagerController::class, 'deactivate'])->where('key', '[a-z0-9.-]+')->middleware('throttle:5,1')->name('admin.plugins.deactivate');
