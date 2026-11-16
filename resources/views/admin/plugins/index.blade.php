@@ -93,6 +93,32 @@
                                 </details>
                             @endif
 
+                            @php($settingsForPlugin = $pluginSettings[$plugin->plugin_key] ?? [])
+                            @if(in_array($plugin->status, ['installed', 'active', 'inactive'], true))
+                                <details style="margin-top:8px;">
+                                    <summary>{{ __('Encrypted plugin settings') }} ({{ count($settingsForPlugin) }})</summary>
+                                    <form method="POST" action="{{ route('admin.plugins.settings.store', $plugin->plugin_key) }}" style="margin-top:8px;display:grid;gap:8px;max-width:420px;">
+                                        @csrf
+                                        <label>{{ __('Setting key') }}<input name="setting_key" maxlength="120" pattern="[a-z][a-z0-9_.-]{0,119}" placeholder="api_key" required></label>
+                                        <label>{{ __('Secret / value') }}<input type="password" name="setting_value" maxlength="4096" autocomplete="new-password" required></label>
+                                        <button class="btn secondary" type="submit">{{ __('Save encrypted setting') }}</button>
+                                    </form>
+                                    @forelse($settingsForPlugin as $storedSetting)
+                                        <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+                                            <code>{{ $storedSetting['key'] }}</code>
+                                            <span class="muted">{{ $storedSetting['updated_at']?->format('Y-m-d H:i') }}</span>
+                                            <form method="POST" action="{{ route('admin.plugins.settings.delete', [$plugin->plugin_key, $storedSetting['key']]) }}" onsubmit="return confirm('{{ __('Delete this plugin setting?') }}')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button class="btn danger" type="submit">{{ __('Delete') }}</button>
+                                            </form>
+                                        </div>
+                                    @empty
+                                        <p class="muted">{{ __('No plugin settings saved.') }}</p>
+                                    @endforelse
+                                </details>
+                            @endif
+
                             @if($plugin->versionHistory->isNotEmpty())
                                 <details style="margin-top:8px;">
                                     <summary>{{ __('Version history') }}</summary>
