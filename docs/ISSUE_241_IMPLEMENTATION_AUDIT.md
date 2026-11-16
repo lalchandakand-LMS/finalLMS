@@ -1,6 +1,6 @@
 # Issue #241 — implementation and compatibility audit
 
-**Repository baseline:** `main` at `348d9a7e5e868632a671e55a226170ad86c8f2bc`  
+**Repository baseline:** `main` at `b4a8ec3baec3ff25e9468b6d574c8735fc62eb49`  
 **Audit scope:** existing plugin runtime, manager, package installer, lifecycle, portal routing and first-party packages.  
 **Status:** foundation exists; the universal platform acceptance criteria are not yet complete.
 
@@ -19,7 +19,7 @@
 | Admin lifecycle UI | `AdminPluginManagerController`, Plugin Manager view | Signed ZIP install, activate, deactivate and uninstall; uninstall retains application data and migration records |
 | Plugin migrations | `PluginMigrationRunner` | Tracks plugin migrations and checks installed-file integrity |
 
-The current repository includes a first-party Universal AI Assistant package. Popup Ads is being handled separately in PR #267. Existing module registry entries and builders are not yet all independently installable packages.
+The current repository includes a first-party Universal AI Assistant package. Popup Ads and Announcements was merged into `main` in PR #267. Existing module registry entries and builders are not yet all independently installable packages.
 
 ## Gaps against Issue #241
 
