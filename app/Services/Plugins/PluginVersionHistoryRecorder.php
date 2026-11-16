@@ -9,6 +9,21 @@ use Throwable;
 
 final class PluginVersionHistoryRecorder
 {
+    public function recordSnapshot(PluginInstallation $plugin, ?User $actor, array $snapshot): void
+    {
+        PluginVersionHistory::query()->create([
+            'plugin_key' => $plugin->plugin_key,
+            'version' => $plugin->version,
+            'package_sha256' => $plugin->package_sha256,
+            'signature_key_id' => $plugin->signature_key_id,
+            'action' => 'version_snapshot',
+            'status' => $plugin->status,
+            'actor_id' => $actor?->id ?? auth()->id(),
+            'details' => ['snapshot' => $snapshot],
+            'created_at' => now(),
+        ]);
+    }
+
     public function record(
         PluginInstallation $plugin,
         string $action,
