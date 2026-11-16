@@ -1,14 +1,14 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use App\\Models\\PluginInstallation;
-use App\\Services\\Plugins\\PluginContext;
-use App\\Services\\Plugins\\PluginHookRegistry;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Illuminate\\Support\\Facades\\Route;
+use App\Models\PluginInstallation;
+use App\Services\Plugins\PluginContext;
+use App\Services\Plugins\PluginHookRegistry;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Route;
 use InvalidArgumentException;
-use Tests\\TestCase;
+use Tests\TestCase;
 
 class PluginHookRegistryTest extends TestCase
 {
