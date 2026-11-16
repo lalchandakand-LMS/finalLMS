@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "key": "ai_developer",
+  "name": "AI Developer",
+  "description": "Permission-scoped diagnostics and development assistance.",
+  "type": "first_party",
+  "status": "metadata_only",
+  "provider": null,
+  "dependencies": [
+    "core",
+    "identity"
+  ],
+  "permissions": [],
+  "routes": [],
+  "settings": [],
+  "events": [],
+  "directory": "plugins/ai_developer",
+  "safety": {
+    "trusted_code_only": true,
+    "execute_uploaded_code": false,
+    "disable_preserves_data": true
+  }
+}
