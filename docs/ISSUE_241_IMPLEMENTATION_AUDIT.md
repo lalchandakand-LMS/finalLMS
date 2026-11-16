@@ -25,9 +25,10 @@ The current repository includes a first-party Universal AI Assistant package. Po
 
 ### P0 — authorization and isolation
 
-- Manifest `permissions` are validated and stored, but the runtime does not yet enforce individual permission grants. `routesForPortal()` currently adds role middleware only.
-- Portal roles are mapped to Admin, Branch Manager, Teacher, Student and Guardian, but the framework does not automatically enforce branch ownership, assigned course/batch ownership, student enrollment, or guardian-child relationships for plugin data operations.
-- Permission grants need an explicit administrator-controlled model. A plugin must not grant itself permissions merely by declaring them in its manifest.
+- **Implemented in this branch:** authenticated plugin route groups must name a permission present in the signed manifest. Runtime middleware checks that permission against the manifest and the administrator-approved `metadata.granted_permissions` list. Missing grants are denied by default.
+- **Implemented in this branch:** the Admin Plugin Manager can grant/revoke only manifest-declared permissions. Changes are audited and take effect on the next request; a package cannot grant itself permission.
+- **Applied to Universal AI Assistant:** Admin routes require `ai-assistant.configure`; Branch Manager, Teacher, Student, Guardian and Support Staff routes require `ai-assistant.use`.
+- **Still required:** portal roles are mapped, but this permission gate does not automatically enforce branch ownership, assigned course/batch ownership, student enrollment, or guardian-child relationships for plugin data operations. Those resource-level checks must be added and tested before sensitive first-party modules are exposed.
 
 ### P1 — lifecycle completeness
 
