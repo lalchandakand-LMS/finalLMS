@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Aloms\UniversalAiAssistant\AssistantContextBuilder;
+use Aloms\UniversalAiAssistant\AssistantAudit;
 use Aloms\UniversalAiAssistant\AssistantSettings;
 use Aloms\UniversalAiAssistant\AssistantTokenBudget;
 use Aloms\UniversalAiAssistant\OpenAiCompatibleProvider;
@@ -88,13 +89,13 @@ class UniversalAiAssistantPluginTest extends TestCase
                 ['Content-Type' => 'text/event-stream']
             ),
         ]);
-        Route::post('/__test-ai-assistant/scoped-context', [\\Aloms\\UniversalAiAssistant\\AssistantController::class, 'send']);
+        Route::post('/__test-ai-assistant/scoped-context', [\Aloms\UniversalAiAssistant\AssistantController::class, 'send']);
 
         $response = $this->actingAs($student)->postJson('/__test-ai-assistant/scoped-context', ['message' => 'What course am I enrolled in?']);
         $response->assertOk();
         $response->streamedContent();
 
-        $audit = \\DB::table('ai_assistant_audit_events')->where('event', 'role_context_retrieved')->first();
+        $audit = \DB::table('ai_assistant_audit_events')->where('event', 'role_context_retrieved')->first();
         $this->assertNotNull($audit);
         $metadata = json_decode($audit->metadata, true);
         $this->assertContains('course:'.$course->id, $metadata['source_ids']);
