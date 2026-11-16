@@ -8,7 +8,7 @@ These checks are manual in this first delivery slice. They do not automatically 
 
 ## cPanel and external uptime monitoring
 
-Laravel exposes the lightweight application liveness route at /up. Configure an independent uptime monitor outside the hosting account to request https://YOUR-DOMAIN/up every 1–5 minutes and alert at least two independent contacts after consecutive failures. Because the monitor runs outside cPanel, it can still report a full server outage.
+Laravel exposes the lightweight application liveness route at /up. Configure an independent uptime monitor outside the hosting account to request https://YOUR-DOMAIN/up every 1–5 minutes and alert at least two independent contacts after consecutive failures. Because the monitor runs outside cPanel, it can still report a full server outage. Configure it to probe both `/up` and the public homepage, and set a response-time alert threshold (a practical starting point is 3 seconds for three consecutive checks) so slow page delivery is reported as well as hard downtime.
 
 For scheduled heartbeat monitoring, configure the hosting cron to run Laravel's scheduler every minute:
 
