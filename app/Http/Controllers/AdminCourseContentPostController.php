@@ -9,6 +9,9 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\UploadedFile;
+use Throwable;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -60,16 +63,30 @@ class AdminCourseContentPostController extends Controller
         $data = $this->validated($request);
         $data['author_id'] = $request->user()->id;
         $categoryIds = $data['category_ids'] ?? [];
-        unset($data['category_ids']);
+        $thumbnailFile = $data['thumbnail_file'] ?? null;
+        unset($data['category_ids'], $data['thumbnail_file']);
         $data['slug'] = $this->uniqueSlug(($data['slug'] ?? '') ?: $data['title']);
         $data['published_at'] = $data['status'] === 'published' ? ($data['published_at'] ?? now()) : null;
 
-        $post = DB::transaction(function () use ($data, $categoryIds): CourseContentPost {
-            $post = CourseContentPost::create($data);
-            $post->categories()->sync($categoryIds);
+        $storedPath = null;
+        try {
+            $post = DB::transaction(function () use ($data, $categoryIds, $thumbnailFile, $request, &$storedPath): CourseContentPost {
+                if ($thumbnailFile instanceof UploadedFile) {
+                    $media = $this->createThumbnailMedia($request, $thumbnailFile, $data['title'], $storedPath);
+                    $data['thumbnail_media_id'] = $media->id;
+                }
 
-            return $post;
-        });
+                $post = CourseContentPost::create($data);
+                $post->categories()->sync($categoryIds);
+
+                return $post;
+            });
+        } catch (Throwable $exception) {
+            if ($storedPath) {
+                Storage::disk('public')->delete($storedPath);
+            }
+            throw $exception;
+        }
 
         return redirect()->route('admin.course-content-posts.index')->with('success', __('Course content post created.'));
     }
@@ -78,15 +95,28 @@ class AdminCourseContentPostController extends Controller
     {
         $data = $this->validated($request);
         $categoryIds = $data['category_ids'] ?? [];
-        unset($data['category_ids']);
+        $thumbnailFile = $data['thumbnail_file'] ?? null;
+        unset($data['category_ids'], $data['thumbnail_file']);
         $data['slug'] = $this->uniqueSlug(($data['slug'] ?? '') ?: $data['title'], $courseContentPost->id);
         $data['published_at'] = $data['status'] === 'published' ? ($data['published_at'] ?? $courseContentPost->published_at ?? now()) : null;
 
-        DB::transaction(function () use ($courseContentPost, $data, $categoryIds): void {
-            $post = CourseContentPost::query()->lockForUpdate()->findOrFail($courseContentPost->id);
-            $post->update($data);
-            $post->categories()->sync($categoryIds);
-        });
+        $storedPath = null;
+        try {
+            DB::transaction(function () use ($courseContentPost, $data, $categoryIds, $thumbnailFile, $request, &$storedPath): void {
+                $post = CourseContentPost::query()->lockForUpdate()->findOrFail($courseContentPost->id);
+                if ($thumbnailFile instanceof UploadedFile) {
+                    $media = $this->createThumbnailMedia($request, $thumbnailFile, $data['title'], $storedPath);
+                    $data['thumbnail_media_id'] = $media->id;
+                }
+                $post->update($data);
+                $post->categories()->sync($categoryIds);
+            });
+        } catch (Throwable $exception) {
+            if ($storedPath) {
+                Storage::disk('public')->delete($storedPath);
+            }
+            throw $exception;
+        }
 
         return redirect()->route('admin.course-content-posts.index')->with('success', __('Course content post updated.'));
     }
@@ -132,6 +162,24 @@ class AdminCourseContentPostController extends Controller
         return back()->with('success', __('Course content post deleted.'));
     }
 
+    private function createThumbnailMedia(Request $request, UploadedFile $file, string $title, ?string &$storedPath): MediaAsset
+    {
+        $storedPath = $file->store('media/course-posts/'.now()->format('Y/m'), 'public');
+        if (!$storedPath) {
+            throw new \RuntimeException('The uploaded thumbnail could not be stored.');
+        }
+
+        return MediaAsset::create([
+            'uploaded_by' => $request->user()->id,
+            'disk' => 'public',
+            'path' => $storedPath,
+            'original_name' => mb_substr($file->getClientOriginalName(), 0, 255),
+            'mime_type' => $file->getMimeType() ?: 'application/octet-stream',
+            'size' => $file->getSize(),
+            'alt_text' => mb_substr($title, 0, 255),
+        ]);
+    }
+
     private function validated(Request $request): array
     {
         $data = $request->validate([
@@ -145,6 +193,7 @@ class AdminCourseContentPostController extends Controller
                 }
             }],
             'thumbnail_media_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
+            'thumbnail_file' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:5120'],
             'seo_title' => ['nullable', 'string', 'max:180'],
             'seo_description' => ['nullable', 'string', 'max:320'],
             'tags' => ['nullable', 'string', 'max:1000'],
