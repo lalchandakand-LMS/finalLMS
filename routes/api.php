@@ -27,7 +27,7 @@ Route::prefix('v1')->group(function (): void {
     Route::get('/courses/{course:slug}/reviews', [StudentEngagementController::class, 'courseReviews'])->middleware('throttle:60,1');
 
     Route::middleware(['api.token', 'throttle:120,1'])->group(function (): void {
-        Route::get('/auth/me', [AuthController::class, 'me']);\n        Route::post('/instructor/attendance/sync', [AttendanceSyncController::class, 'sync'])->middleware('throttle:10,1');
+        Route::get('/auth/me', [AuthController::class, 'me']);\n        Route::post('/instructor/attendance/sync', [AttendanceSyncController::class, 'sync'])->middleware('throttle:10,1');\n        Route::post('/instructor/attendance/{attendance}/resolve-conflict', [AttendanceSyncController::class, 'resolveConflict'])->middleware('throttle:10,1');
         Route::post('/instructor/batches/{batch}/attendance/qr', [AttendanceSyncController::class, 'createQrSession'])->middleware('throttle:10,1');
         Route::post('/attendance/qr/{session}/check-in', [AttendanceSyncController::class, 'checkInQr'])
             ->middleware(['signed', 'throttle:10,1'])
