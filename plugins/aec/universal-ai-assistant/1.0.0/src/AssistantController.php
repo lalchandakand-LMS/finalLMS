@@ -193,8 +193,8 @@ final class AssistantController
                             $pending .= $delta;
                             if (strlen($pending) > 256) {
                                 $safeLength = strlen($pending) - 256;
-                                $safe = substr($pending, 0, $safeLength);
-                                $pending = substr($pending, $safeLength);
+                                $safe = mb_strcut($pending, 0, $safeLength, 'UTF-8');
+                                $pending = substr($pending, strlen($safe));
                                 $emit(['type' => 'delta', 'content' => self::redactSensitiveText($safe)]);
                             }
                         }
