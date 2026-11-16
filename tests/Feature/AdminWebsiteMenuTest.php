@@ -60,6 +60,32 @@ class AdminWebsiteMenuTest extends TestCase
         }
     }
 
+    public function test_public_navigation_renders_active_menu_items_and_submenus_only(): void
+    {
+        $parent = WebsiteMenuItem::query()->create([
+            'label' => 'Learning resources',
+            'url' => '/resources',
+            'is_active' => true,
+        ]);
+        WebsiteMenuItem::query()->create([
+            'label' => 'Study guide',
+            'url' => '/study-guide',
+            'parent_id' => $parent->id,
+            'is_active' => true,
+        ]);
+        WebsiteMenuItem::query()->create([
+            'label' => 'Hidden link',
+            'url' => '/hidden-link',
+            'is_active' => false,
+        ]);
+
+        $this->get(route('landing'))
+            ->assertOk()
+            ->assertSee('Learning resources')
+            ->assertSee('Study guide')
+            ->assertDontSee('Hidden link');
+    }
+
     public function test_admin_can_reorder_menu_items(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
