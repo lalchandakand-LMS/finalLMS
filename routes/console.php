@@ -23,7 +23,7 @@ Artisan::command('system:heartbeat', function (): int {
 
     $this->info('Scheduler heartbeat recorded.');
 
-    return self::SUCCESS;
+    return 0;
 })->purpose('Record the LMS scheduler heartbeat');
 
 Artisan::command('system:health-check', function (): int {
@@ -152,7 +152,7 @@ Artisan::command('system:health-check', function (): int {
 
         $this->warn('Health check detected a degraded component.');
 
-        return self::FAILURE;
+        return 1;
     }
 
     try {
