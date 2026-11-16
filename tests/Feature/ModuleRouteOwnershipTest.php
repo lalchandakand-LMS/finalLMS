@@ -22,6 +22,22 @@ class ModuleRouteOwnershipTest extends TestCase
         $this->get('/_test/owned-slider')->assertNotFound();
     }
 
+    public function test_disabling_page_slider_and_carousel_builders_blocks_their_routes(): void
+    {
+        $routes = [
+            'page_builder' => ['admin.website-builder.owned-test', '/_test/owned-page-builder'],
+            'slider_builder' => ['admin.sliders.owned-test', '/_test/owned-slider-builder'],
+            'carousel_builder' => ['admin.carousels.owned-test', '/_test/owned-carousel-builder'],
+        ];
+
+        foreach ($routes as $module => [$routeName, $uri]) {
+            Route::middleware('web')->get($uri, fn () => response($module))->name($routeName);
+            Setting::setValue('module_registry', json_encode([$module => false], JSON_THROW_ON_ERROR));
+
+            $this->get($uri)->assertNotFound();
+        }
+    }
+
     public function test_enabled_named_route_remains_available(): void
     {
         Route::middleware('web')->get('/_test/owned-slider-enabled', fn () => response('slider'))
