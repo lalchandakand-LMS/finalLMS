@@ -38,6 +38,24 @@ class ModuleRouteOwnershipTest extends TestCase
         }
     }
 
+
+    public function test_disabling_attendance_blocks_online_and_offline_attendance_routes(): void
+    {
+        Route::middleware('web')->get('/_test/attendance-web', fn () => response('attendance'))
+            ->name('teacher.batches.attendance.owned-test');
+        Route::middleware('api')->post('/api/v1/instructor/attendance/_test-sync', fn () => response()->json(['ok' => true]))
+            ->name('test.attendance-sync-api');
+
+        Setting::setValue('module_registry', json_encode([
+            'attendance' => false,
+            'mobile_api' => true,
+            'instructor_mobile_app' => true,
+        ], JSON_THROW_ON_ERROR));
+
+        $this->get('/_test/attendance-web')->assertNotFound();
+        $this->postJson('/api/v1/instructor/attendance/_test-sync')->assertNotFound();
+    }
+
     public function test_enabled_named_route_remains_available(): void
     {
         Route::middleware('web')->get('/_test/owned-slider-enabled', fn () => response('slider'))
