@@ -59,10 +59,17 @@ loaded directly by the core runtime; registered plugin routes remain subject to
 plugin-active, permission and resource-scope middleware.
 
 Deactivation blocks plugin routes immediately and retains package files and LMS
-data. Uninstall removes the executable package only after the plugin is inactive;
-database records and migration history are retained. Admins can run health checks
-to revalidate signatures, dependencies and installed-file integrity. Package
-updates retain immutable version directories and a signed registry snapshot.
+data. Uninstall requires an explicit server-validated confirmation and removes
+only the executable package after the plugin is inactive; database records,
+encrypted settings, customer/LMS data and migration history are retained. The
+uninstalled registry state is written before filesystem cleanup. If cleanup is
+interrupted, the Admin Manager exposes an idempotent "Retry package cleanup"
+action; it never reactivates the plugin or deletes retained data. This is a
+non-destructive package removal policy, not an automated database snapshot:
+take and verify the normal database/files backup before any production
+uninstall. Admins can run health checks to revalidate signatures, dependencies
+and installed-file integrity. Package updates retain immutable version
+directories and a signed registry snapshot.
 Package-version rollback is available for installed/inactive plugins only; it
 verifies both package signatures and installed-file hashes, reverses the current
 version's recorded migrations, restores the retained package, and leaves the
