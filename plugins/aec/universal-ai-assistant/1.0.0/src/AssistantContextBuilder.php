@@ -125,15 +125,15 @@ final class AssistantContextBuilder
         $progressSummary = [];
         foreach ($studentIds === [] ? [] : $studentCourseIds as $studentId => $enrolledCourseIds) {
             $totalLessons = \App\Models\Lesson::query()->whereIn('course_id', $enrolledCourseIds)->count();
-            $progressRows = LessonProgress::query()
+            $completedLessons = LessonProgress::query()
                 ->where('user_id', (int) $studentId)
+                ->whereNotNull('completed_at')
                 ->whereHas('lesson', fn ($query) => $query->whereIn('course_id', $enrolledCourseIds))
-                ->limit(500)
-                ->get(['completed_at']);
+                ->count();
             $progressSummary[] = [
                 'student_id' => (int) $studentId,
                 'total_lessons' => $totalLessons,
-                'completed_lessons' => $progressRows->whereNotNull('completed_at')->count(),
+                'completed_lessons' => $completedLessons,
             ];
         }
 
@@ -176,9 +176,9 @@ final class AssistantContextBuilder
                 'ends_at' => $batch->ends_at,
                 'status' => $batch->status,
             ])->all(),
-            'enrollments' => $enrollments->map(static fn (Enrollment $enrollment): array => [
+            'enrollments' => $enrollments->map(fn (Enrollment $enrollment): array => [
                 'source' => 'enrollment:'.$enrollment->id,
-                'student_id' => (int) $enrollment->user_id,
+                'student_id' => in_array($role, ['student', 'guardian'], true) ? (int) $enrollment->user_id : null,
                 'course' => $enrollment->course?->title,
                 'batch' => $enrollment->batch?->title,
                 'status' => $enrollment->status,
