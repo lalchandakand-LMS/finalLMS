@@ -22,6 +22,7 @@ final class PluginRuntime
         private readonly Router $router,
         private readonly PluginManifestValidator $manifestValidator,
         private readonly PluginIntegrityVerifier $integrityVerifier,
+        private readonly PluginSignatureVerifier $signatureVerifier,
         private readonly PluginLifecycle $lifecycle,
     ) {}
 
@@ -92,10 +93,7 @@ final class PluginRuntime
             throw new RuntimeException('The active plugin is missing verified release metadata.');
         }
 
-        $trustedKeys = config('plugins.trusted_public_keys', []);
-        if (! is_array($trustedKeys) || ! array_key_exists($plugin->signature_key_id, $trustedKeys)) {
-            throw new RuntimeException('The active plugin release key is no longer trusted.');
-        }
+        $this->signatureVerifier->verifyInstalledSignature($plugin);
 
         $errors = $this->manifestValidator->errors($plugin->manifest ?? []);
         if ($errors !== []) {

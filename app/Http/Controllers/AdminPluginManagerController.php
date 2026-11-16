@@ -94,6 +94,7 @@ class AdminPluginManagerController extends Controller
         string $key,
         PluginManifestValidator $manifestValidator,
         PluginIntegrityVerifier $integrityVerifier,
+        PluginSignatureVerifier $signatureVerifier,
         PluginMigrationRunner $migrationRunner,
         PluginLifecycle $lifecycle,
         PluginVersionHistoryRecorder $history,
@@ -108,12 +109,7 @@ class AdminPluginManagerController extends Controller
                 throw new LogicException('Only an installed or inactive plugin can be activated.');
             }
 
-            $trustedKeys = config('plugins.trusted_public_keys', []);
-            if (! is_array($trustedKeys) || ! is_string($plugin->signature_key_id)
-                || ! array_key_exists($plugin->signature_key_id, $trustedKeys)
-                || $plugin->signature_verified_at === null) {
-                throw new RuntimeException('The plugin release signature is not currently trusted.');
-            }
+            $signatureVerifier->verifyInstalledSignature($plugin);
 
             $errors = $manifestValidator->errors($plugin->manifest ?? []);
             if ($errors !== []) {
@@ -219,6 +215,7 @@ class AdminPluginManagerController extends Controller
         string $key,
         PluginManifestValidator $manifestValidator,
         PluginIntegrityVerifier $integrityVerifier,
+        PluginSignatureVerifier $signatureVerifier,
         PluginLifecycle $lifecycle,
         PluginVersionHistoryRecorder $history,
     ): RedirectResponse {
@@ -228,12 +225,7 @@ class AdminPluginManagerController extends Controller
         }
 
         try {
-            $trustedKeys = config('plugins.trusted_public_keys', []);
-            if (! is_array($trustedKeys) || ! is_string($plugin->signature_key_id)
-                || ! array_key_exists($plugin->signature_key_id, $trustedKeys)
-                || $plugin->signature_verified_at === null) {
-                throw new RuntimeException('The plugin release signature is not currently trusted.');
-            }
+            $signatureReverified = $signatureVerifier->verifyInstalledSignature($plugin);
 
             $errors = $manifestValidator->errors($plugin->manifest ?? []);
             if ($errors !== []) {
@@ -251,7 +243,9 @@ class AdminPluginManagerController extends Controller
             $integrityVerifier->verify($plugin);
             $plugin->forceFill([
                 'health_status' => 'healthy',
-                'health_message' => 'Trusted signature, manifest and installed files verified.',
+                'health_message' => $signatureReverified
+                    ? 'Detached release signature, manifest and installed files verified.'
+                    : 'Legacy release signature was verified at install; manifest and installed files verified.',
                 'last_health_check_at' => now(),
             ])->save();
             $plugin->refresh();

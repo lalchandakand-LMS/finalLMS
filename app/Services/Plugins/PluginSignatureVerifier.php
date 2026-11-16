@@ -82,7 +82,7 @@ final class PluginSignatureVerifier
             throw new RuntimeException('The plugin package signature is invalid.');
         }
 
-        return DB::transaction(function () use ($plugin, $manifest, $checksum, $keyId, $finalRelativePath): PluginInstallation {
+        return DB::transaction(function () use ($plugin, $manifest, $checksum, $keyId, $finalRelativePath, $signatureBase64): PluginInstallation {
             $locked = PluginInstallation::query()->lockForUpdate()->findOrFail($plugin->getKey());
 
             if (! in_array($locked->status, ['validated', 'staged'], true)) {
@@ -94,16 +94,90 @@ final class PluginSignatureVerifier
                 throw new RuntimeException('The plugin registry identity changed during signature verification.');
             }
 
+            $metadata = is_array($locked->metadata) ? $locked->metadata : [];
+            $metadata['release_signature'] = $signatureBase64;
+            $metadata['signature_record_version'] = 1;
+
             $locked->forceFill([
                 'manifest' => $manifest,
                 'package_sha256' => $checksum,
                 'signature_key_id' => $keyId,
                 'signature_verified_at' => now(),
                 'package_path' => $finalRelativePath,
+                'metadata' => $metadata,
             ])->save();
 
             return $locked->refresh();
         });
+    }
+
+    /**
+     * Re-verify the original detached release signature against the currently
+     * trusted key. Returns false only for legacy installations created before
+     * the detached signature was persisted; those still require a prior
+     * verification timestamp and an intact installed-file hash manifest.
+     */
+    public function verifyInstalledSignature(PluginInstallation $plugin): bool
+    {
+        if (! function_exists('sodium_crypto_sign_verify_detached')
+            || $plugin->signature_verified_at === null
+            || ! is_string($plugin->package_sha256)
+            || preg_match('/^[a-f0-9]{64}$/D', $plugin->package_sha256) !== 1
+            || ! is_string($plugin->signature_key_id)
+            || trim($plugin->signature_key_id) === '') {
+            throw new RuntimeException('The installed plugin is missing verified release metadata.');
+        }
+
+        $manifest = $plugin->manifest ?? [];
+        $errors = $this->manifestValidator->errors($manifest);
+        if ($errors !== []) {
+            throw new RuntimeException('The installed plugin manifest is invalid: '.implode(' ', $errors));
+        }
+
+        if (! hash_equals((string) $plugin->plugin_key, (string) $manifest['key'])
+            || (string) $plugin->version !== (string) $manifest['version']
+            || (string) $plugin->name !== (string) $manifest['name']
+            || (string) $plugin->type !== (string) $manifest['type']) {
+            throw new RuntimeException('The installed plugin manifest does not match its registry identity.');
+        }
+
+        $keys = config('plugins.trusted_public_keys', []);
+        $encodedPublicKey = is_array($keys) ? ($keys[$plugin->signature_key_id] ?? null) : null;
+        if (! is_string($encodedPublicKey) || $encodedPublicKey === '') {
+            throw new RuntimeException('The installed plugin release key is no longer trusted.');
+        }
+
+        $publicKey = base64_decode($encodedPublicKey, true);
+        if (! is_string($publicKey) || strlen($publicKey) !== SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES) {
+            throw new RuntimeException('The configured trusted public key is invalid.');
+        }
+
+        $metadata = is_array($plugin->metadata) ? $plugin->metadata : [];
+        $signatureBase64 = $metadata['release_signature'] ?? null;
+        if (! is_string($signatureBase64) || $signatureBase64 === '') {
+            return false;
+        }
+
+        $signature = base64_decode($signatureBase64, true);
+        if (! is_string($signature) || strlen($signature) !== SODIUM_CRYPTO_SIGN_BYTES) {
+            throw new RuntimeException('The persisted plugin release signature is malformed.');
+        }
+
+        try {
+            $valid = sodium_crypto_sign_verify_detached(
+                $signature,
+                self::payloadForSignature($manifest, $plugin->package_sha256),
+                $publicKey,
+            );
+        } catch (SodiumException $exception) {
+            throw new RuntimeException('The installed plugin release signature could not be verified.', previous: $exception);
+        }
+
+        if (! $valid) {
+            throw new RuntimeException('The installed plugin release signature is invalid or no longer trusted.');
+        }
+
+        return true;
     }
 
     public static function payloadForSignature(array $manifest, string $sha256): string
