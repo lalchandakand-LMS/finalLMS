@@ -171,6 +171,34 @@ class AdminPluginManagerController extends Controller
             __('Signed plugin package updated. The previous version was retained; review health and permissions before activation.'));
     }
 
+    public function rollbackMigrations(
+        Request $request,
+        string $key,
+        PluginMigrationRunner $migrationRunner,
+        PluginVersionHistoryRecorder $history,
+    ): RedirectResponse {
+        $request->validate(['confirm_rollback' => ['required', 'accepted']]);
+
+        $plugin = PluginInstallation::query()->where('plugin_key', $key)->firstOrFail();
+        if (! in_array($plugin->status, ['installed', 'inactive'], true)) {
+            return back()->with('error', __('Only an installed or inactive plugin can roll back its recorded migrations.'));
+        }
+
+        try {
+            $migrationRunner->rollback($plugin);
+            $history->record($plugin, 'migrations_rolled_back', $request->user());
+            $this->audit($request, 'admin.plugins.migrations_rolled_back',
+                'Rolled back recorded migrations for plugin '.$plugin->plugin_key.' version '.$plugin->version);
+        } catch (Throwable $exception) {
+            report($exception);
+            $this->recordFailure($request, 'admin.plugins.migration_rollback_failed');
+            return back()->with('error', __('Plugin migrations could not be rolled back. The plugin was not activated; inspect migration logs.'));
+        }
+
+        return redirect()->route('admin.plugins.index')->with('success',
+            __('Recorded plugin migrations were rolled back. The plugin remains inactive until explicitly activated.'));
+    }
+
     public function rollbackPackage(
         Request $request,
         string $key,
