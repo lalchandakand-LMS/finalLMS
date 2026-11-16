@@ -79,7 +79,7 @@ class ModuleRouteOwnershipTest extends TestCase
             array_keys(config('module_routes', [])),
             array_keys(config('module_route_uris', [])),
         ));
-        $serviceOnly = ['core', 'communications', 'ai_builder', 'otp_verification', 'sms_otp', 'email_otp', 'gmail'];
+        $serviceOnly = ['core', 'communications', 'otp_verification', 'sms_otp', 'email_otp', 'gmail'];
         $unmapped = array_values(array_diff(array_keys(config('modules', [])), $owners));
 
         sort($serviceOnly);
