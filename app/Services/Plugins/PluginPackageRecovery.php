@@ -207,6 +207,13 @@ final class PluginPackageRecovery
             if (! hash_equals((string) $plugin->plugin_key, (string) ($metadata['plugin_key'] ?? ''))
                 || ! hash_equals((string) $plugin->version, (string) ($metadata['version'] ?? ''))
                 || ! hash_equals($this->canonicalPackagePath($plugin), (string) ($metadata['package_path'] ?? ''))
+                || ! hash_equals((string) $plugin->package_sha256, (string) ($metadata['package_sha256'] ?? ''))
+                || ! hash_equals((string) $plugin->signature_key_id, (string) ($metadata['signature_key_id'] ?? ''))
+                || ! is_array($metadata['manifest'] ?? null)
+                || ! hash_equals(
+                    hash('sha256', json_encode($plugin->manifest, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES)),
+                    hash('sha256', json_encode($metadata['manifest'], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES))
+                )
                 || ! is_string($metadata['release_signature'] ?? null)
                 || ! hash_equals((string) ($plugin->metadata['release_signature'] ?? ''), $metadata['release_signature'])
                 || ! is_array($metadata['files'] ?? null) || $metadata['files'] === []) {
@@ -231,7 +238,7 @@ final class PluginPackageRecovery
                 if (is_link($cursor)) throw new RuntimeException('Plugin restore stopped because a destination path segment is a symbolic link.');
             }
             $staging = $parent.DIRECTORY_SEPARATOR.'.restore-'.Str::lower(Str::random(16));
-            if (! mkdir($staging, 0700)) throw new RuntimeException('Plugin restore staging directory could not be created.');
+            if (! mkdir($staging, 0750)) throw new RuntimeException('Plugin restore staging directory could not be created.');
             try {
                 foreach ($metadata['files'] as $relative => $expectedHash) {
                     if (! is_string($relative) || $relative === '' || str_starts_with($relative, '/')
@@ -264,6 +271,7 @@ final class PluginPackageRecovery
                         fclose($input);
                         fclose($output);
                     }
+                    @chmod($destination, 0640);
                     $restoredHash = hash_file('sha256', $destination);
                     if (! is_string($restoredHash) || ! hash_equals($expectedHash, $restoredHash)) {
                         throw new RuntimeException('A restored package file failed checksum verification.');
