@@ -12,7 +12,12 @@
     "storage"
   ],
   "permissions": [],
-  "routes": [],
+  "routes": [
+    "courses.lessons.*",
+    "courses.content.*",
+    "admin.lessons.*",
+    "admin.courses.lessons.*"
+  ],
   "settings": [],
   "events": [],
   "directory": "plugins/lesson_management",
