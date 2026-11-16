@@ -2,6 +2,7 @@
 
 namespace Aloms\UniversalAiAssistant;
 
+use App\Contracts\Ai\AiProvider;
 use App\Contracts\Plugins\PluginContract;
 use App\Services\Plugins\PluginContext;
 use Illuminate\Support\Facades\Route;
