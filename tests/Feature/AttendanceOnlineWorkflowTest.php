@@ -71,6 +71,53 @@ class AttendanceOnlineWorkflowTest extends TestCase
         $this->assertDatabaseCount('attendances', 0);
     }
 
+
+    public function test_branch_manager_attendance_permission_is_limited_to_own_branch(): void
+    {
+        $managerBranch = Branch::query()->create([
+            'name' => 'Manager Branch',
+            'slug' => 'manager-branch-'.Str::lower(Str::random(6)),
+            'is_active' => true,
+        ]);
+        $otherBranch = Branch::query()->create([
+            'name' => 'Other Branch',
+            'slug' => 'other-branch-'.Str::lower(Str::random(6)),
+            'is_active' => true,
+        ]);
+        $manager = User::factory()->create([
+            'role' => 'branch_manager',
+            'branch_id' => $managerBranch->id,
+            'admin_permissions' => ['branch.attendance'],
+            'email_verified_at' => now(),
+        ]);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $course = Course::factory()->create(['teacher_id' => $teacher->id]);
+        $ownBatch = Batch::query()->create([
+            'branch_id' => $managerBranch->id, 'course_id' => $course->id, 'teacher_id' => $teacher->id,
+            'title' => 'Manager own batch', 'capacity' => 20, 'starts_at' => now()->subMonth(),
+            'ends_at' => now()->addMonth(), 'fee' => 0, 'status' => 'open',
+        ]);
+        $otherBatch = Batch::query()->create([
+            'branch_id' => $otherBranch->id, 'course_id' => $course->id, 'teacher_id' => $teacher->id,
+            'title' => 'Other branch batch', 'capacity' => 20, 'starts_at' => now()->subMonth(),
+            'ends_at' => now()->addMonth(), 'fee' => 0, 'status' => 'open',
+        ]);
+
+        $this->actingAs($manager)
+            ->get(route('admin.branch-workspace.attendance.batches.index'))
+            ->assertOk()
+            ->assertSee('Manager own batch')
+            ->assertDontSee('Other branch batch');
+
+        $this->actingAs($manager)
+            ->get(route('admin.branch-workspace.batches.attendance.index', $ownBatch))
+            ->assertOk();
+
+        $this->actingAs($manager)
+            ->get(route('admin.branch-workspace.batches.attendance.index', $otherBatch))
+            ->assertForbidden();
+    }
+
     private function context(): array
     {
         $teacher = User::factory()->create(['role' => 'teacher', 'email_verified_at' => now()]);
