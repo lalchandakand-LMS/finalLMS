@@ -132,6 +132,30 @@ class UniversalAiAssistantPluginTest extends TestCase
             'ends_at' => now()->addMonth(), 'fee' => 1000, 'status' => 'open',
         ]);
         Enrollment::query()->create(['user_id' => $studentA->id, 'course_id' => $courseA->id, 'batch_id' => $batchA->id, 'status' => 'active']);
+        $lesson = Lesson::query()->create([
+            'course_id' => $courseA->id, 'title' => 'Scoped lesson', 'content' => 'Lesson body must not be shared.',
+            'duration_minutes' => 20, 'order' => 1, 'is_preview' => false,
+        ]);
+        LessonProgress::query()->create(['lesson_id' => $lesson->id, 'user_id' => $studentA->id, 'completed_at' => now(), 'last_viewed_at' => now()]);
+        $assignment = Assignment::query()->create([
+            'batch_id' => $batchA->id, 'teacher_id' => $teacher->id, 'title' => 'Scoped assignment',
+            'instructions' => 'Private submission instructions.', 'due_at' => now()->addDays(2),
+            'allow_late' => false, 'max_marks' => 50, 'status' => 'published',
+        ]);
+        AssignmentSubmission::query()->create([
+            'assignment_id' => $assignment->id, 'student_id' => $studentA->id, 'answer' => 'private answer',
+            'submitted_at' => now(), 'status' => 'submitted',
+        ]);
+        $exam = Exam::query()->create([
+            'batch_id' => $batchA->id, 'teacher_id' => $teacher->id, 'title' => 'Scoped exam',
+            'instructions' => 'Private exam instructions.', 'starts_at' => now()->addDays(2),
+            'ends_at' => now()->addDays(2)->addHour(), 'duration_minutes' => 60, 'pass_marks' => 20,
+            'questions_per_attempt' => 10, 'status' => 'published',
+        ]);
+        ExamAttempt::query()->create([
+            'exam_id' => $exam->id, 'student_id' => $studentA->id, 'started_at' => now()->subHour(),
+            'submitted_at' => now(), 'score' => 10, 'status' => 'submitted',
+        ]);
         Enrollment::query()->create(['user_id' => $studentB->id, 'course_id' => $courseB->id, 'batch_id' => $batchB->id, 'status' => 'active']);
 
         $builder = new AssistantContextBuilder(app(PluginResourceAccess::class));
@@ -144,6 +168,12 @@ class UniversalAiAssistantPluginTest extends TestCase
         $this->assertSame(['Scoped Batch A'], array_column($studentContext['batches'], 'title'));
         $this->assertStringNotContainsString('Private Course B', json_encode($branchContext));
         $this->assertStringNotContainsString('Private Batch B', json_encode($studentContext));
+        $this->assertSame('submitted', $studentContext['assignments'][0]['student_status'][0]['status']);
+        $this->assertSame('submitted', $studentContext['exams'][0]['student_status'][0]['status']);
+        $this->assertSame(1, $studentContext['learning_progress'][0]['completed_lessons']);
+        $this->assertStringNotContainsString('private answer', json_encode($studentContext));
+        $this->assertStringNotContainsString('Private exam instructions', json_encode($studentContext));
+        $this->assertStringNotContainsString('Lesson body must not be shared', json_encode($studentContext));
 
         $guardian = User::factory()->create(['role' => 'guardian', 'branch_id' => $branchA->id]);
         GuardianStudentLink::query()->create([
