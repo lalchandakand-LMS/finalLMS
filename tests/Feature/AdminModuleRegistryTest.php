@@ -109,22 +109,22 @@ class AdminModuleRegistryTest extends TestCase
             ->assertSee('Payment Services')
             ->assertSee('Website Slider & Banners')
             ->assertSee('Popup Ads & Campaigns')
-            ->assertSee('Existing routes are not all gated yet');
+            ->assertSee('unmapped route families remain active until the ownership audit is complete');
     }
 
     public function test_admin_can_disable_leaf_module_and_change_is_audited(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
 
-        $this->actingAs($admin)->patch(route('admin.modules.update', 'slider'), ['enabled' => false])
+        $this->actingAs($admin)->patch(route('admin.modules.update', 'support_center'), ['enabled' => false])
             ->assertRedirect(route('admin.modules.index'));
 
         $saved = json_decode((string) Setting::value('module_registry'), true);
-        $this->assertFalse($saved['slider']);
+        $this->assertFalse($saved['support_center']);
         $this->assertDatabaseHas('activity_logs', [
             'user_id' => $admin->id,
             'event' => 'admin.modules.updated',
-            'description' => 'Disabled LMS module: slider',
+            'description' => 'Disabled LMS module: support_center',
         ]);
     }
 
