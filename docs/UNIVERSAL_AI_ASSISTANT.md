@@ -45,7 +45,7 @@ The context is bounded and read-only. User-authored course and lesson titles are
 untrusted data. Retrieval events record the role, scope and source identifiers; completed
 responses and provider failures are recorded without storing prompt text or provider secrets.
 
-This first context slice intentionally does **not** expose grades, attendance, payments,
+The provider adapter retries transient connection/5xx/429 failures before any stream bytes are emitted; it does not retry after a stream has begun. Successful model discovery is the Admin's provider availability check.\n\nThis first context slice intentionally does **not** expose grades, attendance, payments,
 private staff records, full lesson bodies, assignment submissions, exam answers, or mutation
 tools. Those sources require separate policy review, minimized DTOs, audit and isolation tests
 before they can be added. There is no autonomous action execution.
