@@ -245,13 +245,13 @@ class CourseController extends Controller
         return view('admin.courses.index', compact('courses', 'teachers', 'filters', 'academicLevels'));
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
         $teachers = User::query()->where('role', 'teacher')->orderBy('name')->get();
         $categories = CourseCategory::query()->orderBy('sort_order')->orderBy('name')->get();
         $academicLevels = AcademicLevel::query()->where('is_active', true)->orderBy('sort_order')->orderBy('name')->get();
 
-        return view('admin.courses.form', ['course' => null, 'teachers' => $teachers, 'categories' => $categories, 'academicLevels' => $academicLevels]);
+        return view('admin.courses.form', ['course' => new Course(['academic_level_id' => $request->integer('academic_level_id') ?: null]), 'teachers' => $teachers, 'categories' => $categories, 'academicLevels' => $academicLevels]);
     }
 
     public function edit(Course $course): View
