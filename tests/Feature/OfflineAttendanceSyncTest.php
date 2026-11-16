@@ -118,9 +118,10 @@ class OfflineAttendanceSyncTest extends TestCase
         $session = $this->withToken($teacherToken)->postJson(
             '/api/v1/instructor/batches/'.$batch->id.'/attendance/qr',
             ['attendance_date' => '2026-11-16']
-        )->assertCreated()
-            ->assertJsonPath('data.expires_in_seconds', fn ($value) => $value <= 120 && $value > 0);
+        )->assertCreated();
 
+        $this->assertGreaterThan(0, $session->json('data.expires_in_seconds'));
+        $this->assertLessThanOrEqual(120, $session->json('data.expires_in_seconds'));
         $url = $session->json('data.check_in_url');
         $path = parse_url($url, PHP_URL_PATH).'?'.parse_url($url, PHP_URL_QUERY);
         $payload = [
