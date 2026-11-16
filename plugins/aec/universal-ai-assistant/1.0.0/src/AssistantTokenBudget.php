@@ -134,8 +134,9 @@ final class AssistantTokenBudget
                 ->lockForUpdate()
                 ->first();
 
-            if (! $reservation || $reservation->status !== 'pending') {
-                throw new RuntimeException('The AI token reservation is no longer active.');
+            if (! $reservation || $reservation->status !== 'pending'
+                || now()->greaterThanOrEqualTo($reservation->expires_at)) {
+                throw new RuntimeException('The AI token reservation is no longer active or has expired.');
             }
 
             $persistPrompt();
@@ -160,8 +161,9 @@ final class AssistantTokenBudget
                 ->lockForUpdate()
                 ->first();
 
-            if (! $reservation || $reservation->status !== 'pending') {
-                throw new RuntimeException('The AI token reservation is no longer active.');
+            if (! $reservation || $reservation->status !== 'pending'
+                || now()->greaterThanOrEqualTo($reservation->expires_at)) {
+                throw new RuntimeException('The AI token reservation is no longer active or has expired.');
             }
 
             DB::table('ai_assistant_budget_days')
