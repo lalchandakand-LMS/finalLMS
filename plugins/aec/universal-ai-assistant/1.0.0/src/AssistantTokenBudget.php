@@ -65,6 +65,7 @@ final class AssistantTokenBudget
             $pendingTokens = (int) DB::table('ai_assistant_token_reservations')
                 ->where('budget_date', $date)
                 ->where('status', 'pending')
+                ->where('expires_at', '>', now())
                 ->sum(DB::raw('prompt_tokens + completion_limit'));
 
             $remaining = self::remaining($dailyBudget, $usedTokens + $pendingTokens);
@@ -86,6 +87,7 @@ final class AssistantTokenBudget
                 'completion_limit' => $completionLimit,
                 'status' => 'pending',
                 'actual_tokens' => null,
+                'expires_at' => now()->addMinutes(5),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
