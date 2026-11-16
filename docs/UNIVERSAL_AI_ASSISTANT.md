@@ -35,7 +35,7 @@ before fetching records:
 
 - Admin: aggregate student, course, batch and enrollment counts only.
 - Branch Manager: courses, batches, enrollments, and published assignment/exam counts scoped to the assigned active branch.
-- Teacher: assigned courses, batches, enrollment summaries, and published assignment/exam submission/attempt counts.
+- Teacher: assigned courses/batches and their scoped students' published assignment/exam status and lesson completion summaries.
 - Student: own active/completed enrollments, lesson titles, published assignments/exams, own submission/attempt status, and lesson completion counts.
 - Guardian: only students connected by an approved, active, reviewed guardian-student link, with those linked students' courses, batches, published assignments/exams, submission/attempt status and lesson completion counts.
 - Support Staff: no private LMS context.
@@ -47,7 +47,7 @@ responses and provider failures are recorded without storing prompt text or prov
 The provider adapter retries transient connection/5xx/429 failures before any stream bytes are emitted; it does not retry after a stream has begun. Successful model discovery is the Admin's provider availability check.
 
 The context exposes no grades, marks, answer content or feedback. It intentionally does **not** expose attendance, payments,
-private staff records, full lesson bodies, assignment submission answers/attachments, exam questions/answers, or mutation
+private staff records, full lesson bodies, assignment submission answers/attachments, exam questions/answers, grades/scores, or mutation
 tools. Those sources require separate policy review, minimized DTOs, audit and isolation tests
 before they can be added. There is no autonomous action execution.
 
