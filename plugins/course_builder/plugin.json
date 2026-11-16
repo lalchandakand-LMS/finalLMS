@@ -12,7 +12,9 @@
     "lesson_management"
   ],
   "permissions": [],
-  "routes": [],
+  "routes": [
+    "admin.course-builder.*"
+  ],
   "settings": [],
   "events": [],
   "directory": "plugins/course_builder",
