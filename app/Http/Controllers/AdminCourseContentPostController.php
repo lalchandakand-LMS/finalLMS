@@ -109,6 +109,7 @@ class AdminCourseContentPostController extends Controller
         $oldThumbnail = $courseContentPost->thumbnail_path;
         $oldFile = $courseContentPost->content_file_path;
         $removeThumbnail = $request->boolean('remove_thumbnail') && ! $newThumbnail;
+        $switchToLibrary = ! $newThumbnail && filled($request->input('thumbnail_media_id'));
         $removeFile = $request->boolean('remove_content_file') && ! $newFile;
 
         try {
@@ -151,7 +152,7 @@ class AdminCourseContentPostController extends Controller
             throw $exception;
         }
 
-        if (($newThumbnail || $removeThumbnail) && $oldThumbnail) Storage::disk('public')->delete($oldThumbnail);
+        if (($newThumbnail || $removeThumbnail || $switchToLibrary) && $oldThumbnail) Storage::disk('public')->delete($oldThumbnail);
         if (($newFile || $removeFile) && $oldFile && ! ($courseContentPost->product?->orderItems()->exists())) {
             Storage::disk('local')->delete($oldFile);
         }
