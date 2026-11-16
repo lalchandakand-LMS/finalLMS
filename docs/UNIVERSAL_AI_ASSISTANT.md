@@ -34,18 +34,17 @@ and its read-only context grant. Retrieval uses the existing `PluginResourceAcce
 before fetching records:
 
 - Admin: aggregate student, course, batch and enrollment counts only.
-- Branch Manager: courses, batches and enrollments scoped to the assigned active branch.
-- Teacher: assigned courses, batches and their enrollment summaries.
-- Student: own enrolled courses, batches and lesson titles.
-- Guardian: only students connected by an approved, active, reviewed guardian-student link,
-  and those linked students' courses, batches and lesson titles.
+- Branch Manager: courses, batches, enrollments, and published assignment/exam counts scoped to the assigned active branch.
+- Teacher: assigned courses, batches, enrollment summaries, and published assignment/exam submission/attempt counts.
+- Student: own active/completed enrollments, lesson titles, published assignments/exams, own submission/attempt status, and lesson completion counts.
+- Guardian: only students connected by an approved, active, reviewed guardian-student link, with those linked students' courses, batches, published assignments/exams, submission/attempt status and lesson completion counts.
 - Support Staff: no private LMS context.
 
 The context is bounded and read-only. User-authored course and lesson titles are treated as
 untrusted data. Retrieval events record the role, scope and source identifiers; completed
 responses and provider failures are recorded without storing prompt text or provider secrets.
 
-The provider adapter retries transient connection/5xx/429 failures before any stream bytes are emitted; it does not retry after a stream has begun. Successful model discovery is the Admin's provider availability check.\n\nThis first context slice intentionally does **not** expose grades, attendance, payments,
+The provider adapter retries transient connection/5xx/429 failures before any stream bytes are emitted; it does not retry after a stream has begun. Successful model discovery is the Admin's provider availability check.\n\nThe context exposes no grades, marks, answer content or feedback. It intentionally does **not** expose attendance, payments,
 private staff records, full lesson bodies, assignment submissions, exam answers, or mutation
 tools. Those sources require separate policy review, minimized DTOs, audit and isolation tests
 before they can be added. There is no autonomous action execution.
