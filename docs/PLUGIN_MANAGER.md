@@ -17,11 +17,11 @@ Admin workspace.
 5. The secure archive installer rechecks the checksum and safely extracts the
    package into plugins/vendor/plugin/version.
 6. The registry is marked installed only after the atomic filesystem move.
-7. The staged ZIP is deleted. The action is written to the admin activity log. No plugin entrypoint or migration is executed during installation.
+7. The staged ZIP is deleted. The action is written to the admin activity log. No plugin entrypoint is executed. After extraction and installed-file integrity metadata are recorded, signed migrations are run while the plugin remains inactive.
 
 A failed, not-yet-installed registry entry can be retried after correcting the
 package or signature. An existing installed version cannot be overwritten.
-In-place updates are not enabled yet. Signed plugin migrations are executed only during explicit activation preflight, after installed-file integrity verification; installing a package alone does not mutate application data.
+In-place updates are not enabled yet. Signed migrations run after package extraction and installed-file integrity verification, before installation reports success; the plugin remains inactive until explicit Admin activation. If a migration fails, the verified package and failed migration record are retained because MySQL DDL may have partially committed and deleting the source would prevent safe recovery.
 
 ## Example manifest
 
@@ -53,8 +53,8 @@ canonical signing rules.
 
 The Admin Manager currently supports signed-package install, permission grants,
 activate, deactivate and uninstall. Activation rechecks the trusted key,
-manifest identity, dependencies and installed-file hashes, runs the verified
-plugin migrations, and transitions the registry to active. The runtime loads
+manifest identity, dependencies and installed-file hashes, verifies that any
+previously completed migrations remain idempotently recorded, and transitions the registry to active. The runtime loads
 only active verified packages. Deactivation blocks plugin routes and preserves
 installed files and application data. Uninstall removes executable package files
 while retaining application data and migration history.
