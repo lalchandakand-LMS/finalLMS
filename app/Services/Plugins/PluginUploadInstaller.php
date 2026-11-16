@@ -4,6 +4,7 @@ namespace App\Services\Plugins;
 
 use App\Models\PluginInstallation;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\File;
 use InvalidArgumentException;
 use RuntimeException;
 use Throwable;
@@ -15,6 +16,7 @@ final class PluginUploadInstaller
         private readonly PluginLifecycle $lifecycle,
         private readonly PluginSignatureVerifier $signatureVerifier,
         private readonly PluginArchiveInstaller $archiveInstaller,
+        private readonly PluginMigrationRunner $migrationRunner,
     ) {
     }
 
@@ -100,7 +102,27 @@ final class PluginUploadInstaller
                 $finalPath,
             );
 
-            return $this->archiveInstaller->installVerifiedPackage($verified, $archivePath);
+            $installed = $this->archiveInstaller->installVerifiedPackage($verified, $archivePath);
+
+            // Run signed migrations only after signature verification, safe extraction,
+            // canonical installation and installed-file integrity metadata are complete.
+            try {
+                $this->migrationRunner->migrate($installed);
+            } catch (Throwable $migrationException) {
+                $failed = $installed->fresh();
+                if ($failed && $failed->status === 'installed') {
+                    $this->lifecycle->transition($pluginKey, 'failed', [
+                        'health_status' => 'failed',
+                        'health_message' => 'A signed plugin migration failed during installation. Review server logs.',
+                    ]);
+                }
+
+                $this->removeFailedPackage($installed);
+
+                throw $migrationException;
+            }
+
+            return $installed->fresh();
         } catch (Throwable $exception) {
             if ($plugin instanceof PluginInstallation && $plugin->exists) {
                 $current = $plugin->fresh();
@@ -121,6 +143,57 @@ final class PluginUploadInstaller
             if (is_string($archivePath) && is_file($archivePath) && ! is_link($archivePath)) {
                 @unlink($archivePath);
             }
+        }
+    }
+
+
+    /**
+     * Remove only the canonical package created by this verified installation.
+     * Refuse symlinks and paths that resolve outside the private plugin root.
+     */
+    private function removeFailedPackage(PluginInstallation $plugin): void
+    {
+        $parts = explode('.', (string) $plugin->plugin_key, 2);
+        if (count($parts) !== 2) {
+            throw new RuntimeException('Cannot safely remove a failed plugin package with an invalid identity.');
+        }
+
+        $expected = 'plugins/'.$parts[0].'/'.str_replace('.', '-', $parts[1]).'/'.$plugin->version;
+        if (! is_string($plugin->package_path) || ! hash_equals($expected, $plugin->package_path)) {
+            throw new RuntimeException('Cannot safely remove a failed plugin package with a non-canonical path.');
+        }
+
+        $rootPath = base_path('plugins');
+        if (is_link($rootPath)) {
+            throw new RuntimeException('The private plugin root is a symbolic link; failed package cleanup was stopped.');
+        }
+
+        $root = realpath($rootPath);
+        if ($root === false) {
+            throw new RuntimeException('The private plugin root is unavailable; failed package cleanup was stopped.');
+        }
+
+        $current = $rootPath;
+        foreach (explode('/', substr($expected, strlen('plugins/'))) as $segment) {
+            $current .= DIRECTORY_SEPARATOR.$segment;
+            if (is_link($current)) {
+                throw new RuntimeException('A symbolic link was found in the failed plugin package path.');
+            }
+        }
+
+        $target = base_path($expected);
+        if (! is_dir($target)) {
+            return;
+        }
+
+        $real = realpath($target);
+        if ($real === false || ! str_starts_with($real, rtrim($root, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR)) {
+            throw new RuntimeException('The failed plugin package resolves outside the private plugin root.');
+        }
+
+        File::deleteDirectory($real);
+        if (is_dir($real) || file_exists($real)) {
+            throw new RuntimeException('The failed plugin package could not be completely removed.');
         }
     }
 
