@@ -178,6 +178,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
             Route::get('/batches/{batch}/attendance', [AttendanceController::class, 'index'])->middleware('admin.permission:branch.attendance')->name('batches.attendance.index');
             Route::post('/batches/{batch}/attendance', [AttendanceController::class, 'store'])->middleware(['admin.permission:branch.attendance', 'throttle:30,1'])->name('batches.attendance.store');
             Route::get('/attendance/reports', [AttendanceController::class, 'report'])->middleware('admin.permission:branch.attendance')->name('attendance.reports');
+            Route::get('/attendance/batches', [AttendanceController::class, 'branchBatches'])->middleware('admin.permission:branch.attendance')->name('attendance.batches.index');
         });
 
     Route::middleware('role:accountant')
