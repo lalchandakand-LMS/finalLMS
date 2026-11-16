@@ -129,7 +129,7 @@ PHP);
 
         $this->assertTrue(Schema::hasTable('plugin_migration_attempts'));
         $this->assertDatabaseHas('plugin_migrations', [
-            'plugin_key' => 'test.migration-recovery',
+            'plugin_key' => 'test.migration-check',
             'plugin_version' => '1.0.0',
             'migration' => $name,
             'status' => 'failed',
@@ -145,7 +145,7 @@ PHP);
 
         $this->assertSame(1, \DB::table('plugin_migration_attempts')->count());
         $this->assertDatabaseHas('plugin_migrations', [
-            'plugin_key' => 'test.migration-recovery',
+            'plugin_key' => 'test.migration-check',
             'plugin_version' => '1.0.0',
             'migration' => $name,
             'status' => 'failed',
