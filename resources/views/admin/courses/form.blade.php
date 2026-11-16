@@ -104,14 +104,17 @@
             </label>
 
             <label>
-                {{ __('Teacher') }}
-                <label class="form-label">Academic level</label>
+                {{ __('Academic level') }}
                 <select name="academic_level_id">
                     <option value="">No academic level</option>
                     @foreach($academicLevels as $academicLevel)
-                        <option value="{{ $academicLevel->id }}" {{ (string) old('academic_level_id', $course?->academic_level_id ?? '') === (string) $academicLevel->id ? 'selected' : '' }}>{{ $academicLevel->name }}</option>
+                        <option value="{{ $academicLevel->id }}" @selected((string) old('academic_level_id', $course?->academic_level_id ?? '') === (string) $academicLevel->id)>{{ $academicLevel->name }}</option>
                     @endforeach
                 </select>
+            </label>
+
+            <label>
+                {{ __('Teacher') }}
                 <select name="teacher_id" required>
                     <option value="">{{ __('Select a teacher') }}</option>
                     @foreach($teachers as $teacher)
