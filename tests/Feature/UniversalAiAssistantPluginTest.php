@@ -25,6 +25,7 @@ class UniversalAiAssistantPluginTest extends TestCase
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantSettings.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/OpenAiCompatibleProvider.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantTokenBudget.php');
+        require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantContextBuilder.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantController.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AdminSettingsController.php');
         if (! Schema::hasTable('ai_assistant_settings')) {
@@ -35,10 +36,60 @@ class UniversalAiAssistantPluginTest extends TestCase
             $retentionMigration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_15_190000_add_ai_assistant_conversation_retention.php');
             $retentionMigration->up();
         }
+        if (Schema::hasTable('ai_assistant_settings') && ! Schema::hasColumn('ai_assistant_settings', 'role_data_access')) {
+            $contextMigration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_16_140000_add_ai_assistant_role_data_access.php');
+            $contextMigration->up();
+        }
         if (! Schema::hasTable('ai_assistant_token_reservations')) {
             $budgetMigration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_16_120000_create_ai_assistant_token_reservations.php');
             $budgetMigration->up();
         }
+    }
+
+    public function test_context_builder_scopes_branch_student_and_guardian_data_before_retrieval(): void
+    {
+        $branchA = Branch::query()->create(['name' => 'Context Branch A', 'slug' => 'context-branch-a', 'is_active' => true]);
+        $branchB = Branch::query()->create(['name' => 'Context Branch B', 'slug' => 'context-branch-b', 'is_active' => true]);
+        $manager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $branchA->id]);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $studentA = User::factory()->create(['role' => 'student', 'branch_id' => $branchA->id]);
+        $studentB = User::factory()->create(['role' => 'student', 'branch_id' => $branchB->id]);
+        $courseA = Course::factory()->create(['teacher_id' => $teacher->id, 'title' => 'Scoped Course A']);
+        $courseB = Course::factory()->create(['teacher_id' => $teacher->id, 'title' => 'Private Course B']);
+        $batchA = Batch::query()->create([
+            'branch_id' => $branchA->id, 'course_id' => $courseA->id, 'teacher_id' => $teacher->id,
+            'title' => 'Scoped Batch A', 'capacity' => 20, 'starts_at' => now()->addDay(),
+            'ends_at' => now()->addMonth(), 'fee' => 1000, 'status' => 'open',
+        ]);
+        $batchB = Batch::query()->create([
+            'branch_id' => $branchB->id, 'course_id' => $courseB->id, 'teacher_id' => $teacher->id,
+            'title' => 'Private Batch B', 'capacity' => 20, 'starts_at' => now()->addDay(),
+            'ends_at' => now()->addMonth(), 'fee' => 1000, 'status' => 'open',
+        ]);
+        Enrollment::query()->create(['user_id' => $studentA->id, 'course_id' => $courseA->id, 'batch_id' => $batchA->id, 'status' => 'active']);
+        Enrollment::query()->create(['user_id' => $studentB->id, 'course_id' => $courseB->id, 'batch_id' => $batchB->id, 'status' => 'active']);
+
+        $builder = new AssistantContextBuilder(app(\\App\\Services\\Plugins\\PluginResourceAccess::class));
+        $branchContext = $builder->build($manager, 'branch_manager');
+        $studentContext = $builder->build($studentA, 'student');
+
+        $this->assertSame(['Scoped Course A'], array_column($branchContext['courses'], 'title'));
+        $this->assertSame(['Scoped Batch A'], array_column($branchContext['batches'], 'title'));
+        $this->assertSame(['Scoped Course A'], array_column($studentContext['courses'], 'title'));
+        $this->assertSame(['Scoped Batch A'], array_column($studentContext['batches'], 'title'));
+        $this->assertStringNotContainsString('Private Course B', json_encode($branchContext));
+        $this->assertStringNotContainsString('Private Batch B', json_encode($studentContext));
+
+        $guardian = User::factory()->create(['role' => 'guardian', 'branch_id' => $branchA->id]);
+        GuardianStudentLink::query()->create([
+            'guardian_id' => $guardian->id, 'student_id' => $studentA->id, 'relationship' => 'parent',
+            'status' => 'active', 'requested_by' => $guardian->id, 'reviewed_by' => $studentA->id,
+            'requested_at' => now()->subMinute(), 'reviewed_at' => now(),
+        ]);
+        $guardianContext = $builder->build($guardian, 'guardian');
+        $this->assertSame([$studentA->id], array_column($guardianContext['linked_students'], 'id'));
+        $this->assertSame(['Scoped Course A'], array_column($guardianContext['courses'], 'title'));
+        $this->assertStringNotContainsString('Private Course B', json_encode($guardianContext));
     }
 
     public function test_provider_streams_deltas_and_uses_model_specific_parameters(): void
@@ -102,6 +153,7 @@ class UniversalAiAssistantPluginTest extends TestCase
         $this->assertFalse($settings['global_enabled']);
         $this->assertSame('general_only', $settings['data_access_mode']);
         $this->assertSame(365, $settings['retention_days']);
+        foreach (AssistantSettings::ROLES as $role) $this->assertFalse($settings['role_data_access'][$role]);
         foreach (AssistantSettings::ROLES as $role) $this->assertFalse($settings['role_enabled'][$role]);
         $this->assertNull(AssistantSettings::apiKey());
     }
