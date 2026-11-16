@@ -596,9 +596,9 @@ PHP;
         ])->save();
 
         try {
-            app(\\App\\Services\\Plugins\\PluginLifecycle::class)->transition('test.dependent', 'active');
+            app(\App\Services\Plugins\PluginLifecycle::class)->transition('test.dependent', 'active');
             $this->fail('A plugin with an inactive dependency must not activate.');
-        } catch (\\LogicException $exception) {
+        } catch (\LogicException $exception) {
             $this->assertStringContainsString('dependency is not active', $exception->getMessage());
         }
 
@@ -635,9 +635,9 @@ PHP;
         }
 
         try {
-            app(\\App\\Services\\Plugins\\PluginLifecycle::class)->transition('test.core', 'inactive');
+            app(\App\Services\Plugins\PluginLifecycle::class)->transition('test.core', 'inactive');
             $this->fail('A dependency of an active plugin must not be deactivated.');
-        } catch (\\LogicException $exception) {
+        } catch (\LogicException $exception) {
             $this->assertStringContainsString('active plugin depends on this plugin', $exception->getMessage());
         }
 
