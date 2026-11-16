@@ -239,10 +239,23 @@ PHP;
         ]);
         $this->assertFileExists($this->finalPath.'/src/Plugin.php');
         $this->assertDirectoryDoesNotExist(base_path('plugins/aec/course-management/1.1.0'));
+        $restored = PluginInstallation::query()->where('plugin_key', 'aec.course-management')->firstOrFail();
+        $this->assertNotNull($restored->signature_verified_at);
+        $this->assertNotEmpty($restored->metadata['release_signature'] ?? null);
         $this->assertDatabaseHas('plugin_version_history', [
             'plugin_key' => 'aec.course-management',
             'version' => '1.0.0',
             'action' => 'package_update_snapshot',
+        ]);
+
+        // The restored release must still pass trusted-signature checks and activate.
+        $this->actingAs($admin)->post(route('admin.plugins.activate', 'aec.course-management'))
+            ->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'version' => '1.0.0',
+            'status' => 'active',
         ]);
     }
 
