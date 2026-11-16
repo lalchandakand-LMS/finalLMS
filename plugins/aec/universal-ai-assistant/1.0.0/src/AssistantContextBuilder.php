@@ -123,7 +123,7 @@ final class AssistantContextBuilder
             static fn ($rows): array => $rows->pluck('course_id')->unique()->map(static fn ($id): int => (int) $id)->all()
         );
         $progressSummary = [];
-        foreach ($studentIds === [] ? [] : $studentCourseIds as $studentId => $enrolledCourseIds) {
+        foreach (($studentIds === [] ? [] : $studentCourseIds) as $studentId => $enrolledCourseIds) {
             $totalLessons = \App\Models\Lesson::query()->whereIn('course_id', $enrolledCourseIds)->count();
             $completedLessons = LessonProgress::query()
                 ->where('user_id', (int) $studentId)
