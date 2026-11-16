@@ -28,7 +28,7 @@ final class PluginVersionRestorer
             || $snapshotRecord->action !== 'version_snapshot') {
             throw new RuntimeException('The selected restore point does not belong to this plugin.');
         }
-        if (! in_array($plugin->status, ['installed', 'inactive'], true)) {
+        if (! in_array($plugin->status, ['installed', 'inactive', 'failed'], true)) {
             throw new RuntimeException('Deactivate the plugin and resolve any failed lifecycle state before restoring a version.');
         }
 
