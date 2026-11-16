@@ -151,6 +151,7 @@ class UniversalAiAssistantPluginTest extends TestCase
 
     public function test_every_role_switch_is_independently_enforced_before_provider_access(): void
     {
+        Http::fake();
         AssistantSettings::save([
             'model' => 'gpt-4o-mini',
             'base_url' => 'https://api.openai.com/v1',
