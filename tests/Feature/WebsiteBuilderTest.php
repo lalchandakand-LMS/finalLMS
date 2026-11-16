@@ -110,6 +110,7 @@ class WebsiteBuilderTest extends TestCase
             ->assertSee('Homepage Builder')
             ->assertSee('Pages')
             ->assertSee('Posts')
+            ->assertSee('Slider / Carousel')
             ->assertSee('Homepage slider')
             ->assertSee('Header navigation menu')
             ->assertSee('Footer content & links', false);
