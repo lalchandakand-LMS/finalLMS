@@ -42,6 +42,7 @@ return [
     'course_content_studio' => ['admin.course-content-posts.*'],
     'blog_post_builder' => ['news.*', 'admin.blog.*', 'admin.news.*'],
     'popup_ads' => ['admin.visitor-popups.*', 'popups.*'],
+    'ai_builder' => ['admin.ai-builder.*'],
     'ai_developer' => ['admin.ai-developer.*'],
     'universal_ai_assistant' => ['admin.ai-assistant.*', 'branch.ai-assistant.*', 'teacher.ai-assistant.*', 'student.ai-assistant.*', 'guardian.ai-assistant.*', 'support.ai-assistant.*'],
     'slider' => ['sliders.*'],
