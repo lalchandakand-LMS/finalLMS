@@ -15,6 +15,7 @@ final class PluginRuntimeServiceProvider extends ServiceProvider
 
     public function register(): void
     {
+        $this->app->singleton(PluginHookRegistry::class);
         $this->app->singleton(PluginRuntime::class);
 
         // Runtime code is loaded only for web requests, never during install/build CLI commands.
