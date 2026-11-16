@@ -48,24 +48,29 @@ class PluginResourceAccessTest extends TestCase
         $manager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $branchA->id]);
         $teacher = User::factory()->create(['role' => 'teacher']);
         $studentA = User::factory()->create(['role' => 'student', 'branch_id' => $branchA->id]);
+        $studentA2 = User::factory()->create(['role' => 'student', 'branch_id' => $branchA->id]);
         $studentB = User::factory()->create(['role' => 'student', 'branch_id' => $branchB->id]);
         $courseA = Course::factory()->create(['teacher_id' => $teacher->id]);
         $courseB = Course::factory()->create(['teacher_id' => $teacher->id]);
         $batchA = $this->batch($courseA, $teacher, $branchA, 'Branch A Batch');
         $batchB = $this->batch($courseB, $teacher, $branchB, 'Branch B Batch');
         $enrollmentA = Enrollment::query()->create(['user_id' => $studentA->id, 'course_id' => $courseA->id, 'batch_id' => $batchA->id, 'status' => 'active']);
-        $directEnrollmentA = Enrollment::query()->create(['user_id' => $studentA->id, 'course_id' => $courseA->id, 'status' => 'active']);
+        $directEnrollmentA = Enrollment::query()->create(['user_id' => $studentA2->id, 'course_id' => $courseA->id, 'status' => 'active']);
         Enrollment::query()->create(['user_id' => $studentB->id, 'course_id' => $courseB->id, 'batch_id' => $batchB->id, 'status' => 'active']);
 
         $access = app(PluginResourceAccess::class);
 
         $this->assertTrue($access->allows($manager, $studentA));
+        $this->assertTrue($access->allows($manager, $studentA2));
         $this->assertFalse($access->allows($manager, $studentB));
         $this->assertTrue($access->allows($manager, $batchA));
         $this->assertFalse($access->allows($manager, $batchB));
         $this->assertTrue($access->allows($manager, $courseA));
         $this->assertFalse($access->allows($manager, $courseB));
-        $this->assertSame([$studentA->id], $access->scopeQuery(User::query(), $manager)->pluck('id')->all());
+        $this->assertEqualsCanonicalizing(
+            [$studentA->id, $studentA2->id],
+            $access->scopeQuery(User::query(), $manager)->pluck('id')->all()
+        );
         $this->assertSame([$courseA->id], $access->scopeQuery(Course::query(), $manager)->pluck('id')->all());
         $this->assertSame([$batchA->id], $access->scopeQuery(Batch::query(), $manager)->pluck('id')->all());
         $this->assertEqualsCanonicalizing(
