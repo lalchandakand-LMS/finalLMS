@@ -81,6 +81,9 @@ class UniversalAiAssistantPluginTest extends TestCase
             'retention_days' => 365,
         ], 'test-secret-provider-key', false);
 
+        app()->instance(AiDeveloperProviderEndpoint::class, new class extends AiDeveloperProviderEndpoint {
+            public function curlOptionsFor(string $url): array { return []; }
+        });
         Http::fake([
             'api.openai.com/v1/chat/completions' => Http::response(
                 "data: {\"choices\":[{\"delta\":{\"content\":\"Course context received.\"}}],\"usage\":{\"total_tokens\":14}}\n\n".
