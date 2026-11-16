@@ -7,7 +7,9 @@ use App\Models\Branch;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use InvalidArgumentException;
 
 final class PluginResourceAccess
 {
@@ -33,6 +35,126 @@ final class PluginResourceAccess
             $resource instanceof Enrollment => $this->allowsEnrollment($actor, $resource),
             default => false,
         };
+    }
+
+    public function scopeQuery(Builder $query, User $actor): Builder
+    {
+        $model = $query->getModel();
+
+        if (! ($model instanceof User || $model instanceof Course || $model instanceof Batch || $model instanceof Enrollment)) {
+            throw new InvalidArgumentException('Plugin data scopes support only User, Course, Batch and Enrollment queries.');
+        }
+
+        if ($actor->isAdmin()) {
+            return $query;
+        }
+
+        if ($model instanceof User) {
+            $query->where('role', 'student');
+
+            if ($actor->isStudent()) {
+                return $query->whereKey($actor->id);
+            }
+
+            if ($actor->isGuardian()) {
+                return $query->whereIn('id', $actor->linkedStudents()->select('users.id'));
+            }
+
+            if ($actor->isBranchManager()) {
+                $branchId = $this->activeBranchId($actor);
+
+                return $branchId === null ? $this->denyQuery($query) : $query->where('branch_id', $branchId);
+            }
+
+            if ($actor->isTeacher()) {
+                return $query->whereHas('enrollments', function ($enrollments) use ($actor): void {
+                    $enrollments->where(function ($assigned) use ($actor): void {
+                        $assigned->whereHas('course', fn ($course) => $course->where('teacher_id', $actor->id))
+                            ->orWhereHas('batch', fn ($batch) => $batch->where('teacher_id', $actor->id));
+                    });
+                });
+            }
+
+            return $this->denyQuery($query);
+        }
+
+        if ($model instanceof Course) {
+            if ($actor->isTeacher()) {
+                return $query->where(function ($courses) use ($actor): void {
+                    $courses->where('teacher_id', $actor->id)
+                        ->orWhereHas('batches', fn ($batches) => $batches->where('teacher_id', $actor->id));
+                });
+            }
+
+            if ($actor->isBranchManager()) {
+                $branchId = $this->activeBranchId($actor);
+
+                return $branchId === null
+                    ? $this->denyQuery($query)
+                    : $query->whereHas('batches', fn ($batches) => $batches->where('branch_id', $branchId));
+            }
+
+            if ($actor->isStudent()) {
+                return $query->whereHas('enrollments', fn ($enrollments) => $enrollments->where('user_id', $actor->id));
+            }
+
+            if ($actor->isGuardian()) {
+                return $query->whereHas('enrollments', fn ($enrollments) =>
+                    $enrollments->whereIn('user_id', $actor->linkedStudents()->select('users.id'))
+                );
+            }
+
+            return $this->denyQuery($query);
+        }
+
+        if ($model instanceof Batch) {
+            if ($actor->isTeacher()) {
+                return $query->where('teacher_id', $actor->id);
+            }
+
+            if ($actor->isBranchManager()) {
+                $branchId = $this->activeBranchId($actor);
+
+                return $branchId === null ? $this->denyQuery($query) : $query->where('branch_id', $branchId);
+            }
+
+            if ($actor->isStudent()) {
+                return $query->whereHas('enrollments', fn ($enrollments) => $enrollments->where('user_id', $actor->id));
+            }
+
+            if ($actor->isGuardian()) {
+                return $query->whereHas('enrollments', fn ($enrollments) =>
+                    $enrollments->whereIn('user_id', $actor->linkedStudents()->select('users.id'))
+                );
+            }
+
+            return $this->denyQuery($query);
+        }
+
+        if ($actor->isStudent()) {
+            return $query->where('user_id', $actor->id);
+        }
+
+        if ($actor->isGuardian()) {
+            return $query->whereIn('user_id', $actor->linkedStudents()->select('users.id'));
+        }
+
+        if ($actor->isBranchManager()) {
+            $branchId = $this->activeBranchId($actor);
+
+            return $branchId === null
+                ? $this->denyQuery($query)
+                : $query->whereHas('batch', fn ($batches) => $batches->where('branch_id', $branchId));
+        }
+
+        if ($actor->isTeacher()) {
+            return $query->where(function ($enrollments) use ($actor): void {
+                $enrollments->whereHas('course', fn ($courses) => $courses->where('teacher_id', $actor->id))
+                    ->orWhereHas('batch', fn ($batches) => $batches->where('teacher_id', $actor->id));
+            });
+        }
+
+        return $this->denyQuery($query);
     }
 
     public function authorize(User $actor, Model $resource): void
@@ -154,6 +276,21 @@ final class PluginResourceAccess
         }
 
         return false;
+    }
+
+    private function activeBranchId(User $actor): ?int
+    {
+        if ($actor->branch_id === null
+            || ! Branch::query()->whereKey($actor->branch_id)->where('is_active', true)->exists()) {
+            return null;
+        }
+
+        return (int) $actor->branch_id;
+    }
+
+    private function denyQuery(Builder $query): Builder
+    {
+        return $query->whereRaw('1 = 0');
     }
 
     private function hasActiveBranch(User $actor): bool
