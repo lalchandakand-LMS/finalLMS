@@ -48,26 +48,24 @@ class VisitorPopupManagementTest extends TestCase
 
         config(['plugins.trusted_public_keys' => ['aec-release-2026' => 'dGVzdC1wdWJsaWMta2V5']]);
 
-        $plugin = PluginInstallation::query()->updateOrCreate(
-            ['plugin_key' => 'aec.popup-ads'],
-            [
-                'name' => $manifest['name'],
-                'version' => $manifest['version'],
-                'type' => $manifest['type'],
-                'status' => 'active',
-                'manifest' => $manifest,
-                'package_sha256' => hash('sha256', 'signed-popup-ads-1.0.0'),
-                'signature_key_id' => 'aec-release-2026',
-                'signature_verified_at' => now(),
-                'package_path' => $packageRelative,
-                'installed_at' => now(),
-                'activated_at' => now(),
-                'metadata' => [
-                    'integrity_version' => 1,
-                    'installed_file_hashes' => $hashes,
-                ],
-            ]
-        );
+        $plugin = PluginInstallation::query()->firstOrNew(['plugin_key' => 'aec.popup-ads']);
+        $plugin->forceFill([
+            'name' => $manifest['name'],
+            'version' => $manifest['version'],
+            'type' => $manifest['type'],
+            'status' => 'active',
+            'manifest' => $manifest,
+            'package_sha256' => hash('sha256', 'signed-popup-ads-1.0.0'),
+            'signature_key_id' => 'aec-release-2026',
+            'signature_verified_at' => now(),
+            'package_path' => $packageRelative,
+            'installed_at' => now(),
+            'activated_at' => now(),
+            'metadata' => [
+                'integrity_version' => 1,
+                'installed_file_hashes' => $hashes,
+            ],
+        ])->save();
 
         $migration = require $packageRoot.'/migrations/2026_11_15_200000_upgrade_popup_ads_plugin_tables.php';
         $migration->up();
