@@ -68,13 +68,16 @@ final class PluginContext
                 if (! is_string($permission) || ! in_array($permission, $declaredPermissions, true)) {
                     throw new InvalidArgumentException('Authenticated plugin routes must declare one of the permissions in the signed manifest.');
                 }
-                $middleware[] = 'plugin.permission:'.$this->plugin->plugin_key.','.$permission;
+                $permissionMiddleware = 'plugin.permission:'.$this->plugin->plugin_key.','.$permission;
             } elseif ($permission !== null) {
                 throw new InvalidArgumentException('A plugin route cannot request a permission absent from its signed manifest.');
             }
             $middleware[] = 'auth';
             $middleware[] = 'verified';
             $middleware[] = 'role:'.$role;
+            if (isset($permissionMiddleware)) {
+                $middleware[] = $permissionMiddleware;
+            }
         } elseif ($permission !== null) {
             throw new InvalidArgumentException('Public plugin routes cannot use authenticated permission grants.');
         }

@@ -23,7 +23,7 @@ return new class implements PluginContract
             Route::put('/settings', [AdminSettingsController::class, 'update'])->middleware('throttle:10,1')->name('settings.update');
             Route::get('/', [AssistantController::class, 'index'])->name('index');
             Route::post('/messages', [AssistantController::class, 'send'])->middleware('throttle:10,1')->name('messages.store');
-        });
+        }, 'ai-assistant.configure');
 
         foreach ([
             'branch' => ['branch/ai-assistant', 'branch.ai-assistant.'],
@@ -35,7 +35,7 @@ return new class implements PluginContract
             $context->routesForPortal($portal, $prefix, $namePrefix, function (): void {
                 Route::get('/', [AssistantController::class, 'index'])->name('index');
                 Route::post('/messages', [AssistantController::class, 'send'])->middleware('throttle:10,1')->name('messages.store');
-            });
+            }, 'ai-assistant.use');
         }
     }
 
