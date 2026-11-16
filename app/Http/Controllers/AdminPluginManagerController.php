@@ -492,12 +492,15 @@ class AdminPluginManagerController extends Controller
         Request $request,
         string $key,
         PluginPackageRecovery $recovery,
+        PluginPackageRemover $remover,
         PluginSignatureVerifier $signatureVerifier,
         PluginIntegrityVerifier $integrityVerifier,
         PluginLifecycle $lifecycle,
         PluginVersionHistoryRecorder $history,
     ): RedirectResponse {
         $request->validate(['confirm_restore' => ['required', 'accepted']]);
+        $plugin = null;
+        $packageRestored = false;
 
         try {
             $plugin = PluginInstallation::query()->where('plugin_key', $key)->firstOrFail();
@@ -516,7 +519,10 @@ class AdminPluginManagerController extends Controller
             }
 
             $recovery->restoreSnapshot($plugin, $details['recovery_path'], $details['recovery_sha256']);
-            $signatureVerifier->verifyInstalledSignature($plugin);
+            $packageRestored = true;
+            if (! $signatureVerifier->verifyInstalledSignature($plugin)) {
+                throw new RuntimeException('The restored package does not contain a verifiable detached release signature.');
+            }
             $integrityVerifier->verify($plugin);
             $plugin = $lifecycle->transition($plugin->plugin_key, 'installed', [
                 'health_status' => 'healthy',
@@ -530,6 +536,9 @@ class AdminPluginManagerController extends Controller
             $this->audit($request, 'admin.plugins.package_restored',
                 'Restored verified package '.$plugin->plugin_key.' version '.$plugin->version.'; plugin remains inactive.');
         } catch (Throwable $exception) {
+            if ($packageRestored && $plugin instanceof PluginInstallation && $plugin->status === 'uninstalled') {
+                try { $remover->remove($plugin); } catch (Throwable $cleanupException) { report($cleanupException); }
+            }
             report($exception);
             $this->recordFailure($request, 'admin.plugins.package_restore_failed');
             return back()->with('error', __('Plugin package restore failed verification. The plugin remains disabled; inspect the activity log.'));
