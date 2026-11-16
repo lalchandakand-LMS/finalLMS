@@ -2,7 +2,7 @@
   "schema_version": 1,
   "key": "attendance",
   "name": "Attendance",
-  "description": "Online and offline-first student attendance, session check-in, reconciliation and authorized attendance reporting.",
+  "description": "Online and offline-first student attendance. Planned capabilities include manual roster marking, authenticated offline sync, idempotency, conflict resolution and optional short-lived QR check-in.",
   "type": "first_party",
   "status": "metadata_only",
   "provider": null,
@@ -13,22 +13,7 @@
     "student_management",
     "academic_levels"
   ],
-  "permissions": [
-    "attendance.view",
-    "attendance.mark",
-    "attendance.edit",
-    "attendance.sync",
-    "attendance.resolve_conflicts",
-    "attendance.export",
-    "attendance.manage_settings"
-  ],
-  "portals": [
-    "admin",
-    "branch",
-    "teacher",
-    "student",
-    "guardian"
-  ],
+  "permissions": [],
   "routes": [
     "teacher.batches.attendance.*",
     "student.attendance.*",
@@ -36,25 +21,10 @@
     "admin.batches.attendance.*",
     "branch.attendance.*"
   ],
-  "api_routes": [
-    "api.v1.plugins.aec.attendance.*"
-  ],
-  "settings": [
-    "offline_sync_enabled",
-    "offline_record_retention_hours",
-    "attendance_edit_window_hours",
-    "qr_checkin_enabled",
-    "geofence_enabled"
-  ],
-  "events": [
-    "attendance.session.created",
-    "attendance.recorded",
-    "attendance.record.updated",
-    "attendance.offline_sync.accepted",
-    "attendance.offline_sync.conflict"
-  ],
+  "settings": [],
+  "events": [],
   "directory": "plugins/attendance",
-  "capabilities": [
+  "planned_capabilities": [
     "online_manual_roster",
     "offline_first_roster",
     "idempotent_sync",
