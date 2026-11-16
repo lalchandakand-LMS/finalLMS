@@ -220,7 +220,8 @@ class AttendanceController extends Controller
         ]);
 
         if ($actor->isTeacher()) {
-            $query->whereHas('batch', fn ($batches) => $batches->where('teacher_id', $actor->id));
+            $query->whereHas('batch', fn ($batches) => $batches->where('teacher_id', $actor->id)
+                ->when($actor->branch_id !== null, fn ($batches) => $batches->where('branch_id', $actor->branch_id)));
         } elseif ($actor->isBranchManager()) {
             abort_unless($actor->branch_id, 403);
             $query->whereHas('batch', fn ($batches) => $batches->where('branch_id', $actor->branch_id));
@@ -252,12 +253,14 @@ class AttendanceController extends Controller
             ? Branch::query()->orderBy('name')->get(['id', 'name'])
             : Branch::query()->whereKey($actor->branch_id)->get(['id', 'name']);
         $courses = Course::query()
-            ->when($actor->isTeacher(), fn ($courses) => $courses->where('teacher_id', $actor->id))
+            ->when($actor->isTeacher(), fn ($courses) => $courses->where('teacher_id', $actor->id)
+                ->when($actor->branch_id !== null, fn ($courses) => $courses->whereHas('batches', fn ($batches) => $batches->where('branch_id', $actor->branch_id))))
             ->when($actor->isBranchManager(), fn ($courses) => $courses->whereHas('batches', fn ($batches) => $batches->where('branch_id', $actor->branch_id)))
             ->orderBy('title')
             ->get(['id', 'title']);
         $batches = Batch::query()
-            ->when($actor->isTeacher(), fn ($batches) => $batches->where('teacher_id', $actor->id))
+            ->when($actor->isTeacher(), fn ($batches) => $batches->where('teacher_id', $actor->id)
+                ->when($actor->branch_id !== null, fn ($batches) => $batches->where('branch_id', $actor->branch_id)))
             ->when($actor->isBranchManager(), fn ($batches) => $batches->where('branch_id', $actor->branch_id))
             ->orderBy('title')
             ->get(['id', 'title']);
