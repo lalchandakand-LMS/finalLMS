@@ -134,7 +134,7 @@
             submit.disabled = false;
             history.scrollTop = history.scrollHeight;
         }
-    });;
+    });
 })();
 </script>
 @endsection
