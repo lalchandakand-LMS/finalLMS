@@ -75,6 +75,7 @@
                 <a class="aec-link" href="{{ route('admin.payments.index') }}"><span class="aec-link-icon">💳</span><strong>{{ __('Payments') }}</strong><span>{{ __('Review submitted course payments') }}</span></a>
                 <a class="aec-link" href="{{ route('live-classes.index') }}"><span class="aec-link-icon">🎥</span><strong>{{ __('Live classes') }}</strong><span>{{ __('View scheduled online classes') }}</span></a>
                 <a class="aec-link" href="{{ route('admin.website-builder.index') }}"><span class="aec-link-icon">🖥️</span><strong>{{ __('Website builder') }}</strong><span>{{ __('Manage public website content') }}</span></a>
+                <a class="aec-link" href="{{ route('admin.website-menu.index') }}"><span class="aec-link-icon">☷</span><strong>{{ __('Main menu builder') }}</strong><span>{{ __('Manage public navigation and submenu links') }}</span></a>
                 <a class="aec-link" href="{{ route('admin.media.index') }}"><span class="aec-link-icon">🖼️</span><strong>{{ __('Media library') }}</strong><span>{{ __('Upload and organize media files') }}</span></a>
                 <a class="aec-link" href="{{ route('admin.news.index') }}"><span class="aec-link-icon">📰</span><strong>{{ __('Blog & news') }}</strong><span>{{ __('Publish academy news and articles') }}</span></a>
                 <a class="aec-link" href="{{ route('admin.backups.index') }}"><span class="aec-link-icon">💾</span><strong>{{ __('Backup & restore') }}</strong><span>{{ __('Create and manage system backups') }}</span></a>
