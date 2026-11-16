@@ -1,6 +1,6 @@
 <?php
 
-namespace App\\Contracts\\Ai;
+namespace App\Contracts\Ai;
 
 interface AiProvider
 {
@@ -11,6 +11,9 @@ interface AiProvider
 
     /** @return array<int, array{id: string, capabilities: array}> */
     public function discoverModels(string $apiKey, string $baseUrl): array;
+
+    /** @return array{content: string, total_tokens: int|null} */
+    public function complete(string $apiKey, string $baseUrl, string $model, array $messages, float $temperature, int $maxOutputTokens): array;
 
     /** @param callable(string): void $onDelta @return array{content: string, total_tokens: int|null} */
     public function stream(string $apiKey, string $baseUrl, string $model, array $messages, float $temperature, int $maxOutputTokens, callable $onDelta): array;
