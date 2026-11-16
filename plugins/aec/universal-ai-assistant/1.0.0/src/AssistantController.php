@@ -77,7 +77,7 @@ final class AssistantController
             'conversation_id' => ['nullable', 'integer', 'min:1'],
         ]);
 
-        $message = $this->redactSensitiveText(trim($validated['message']));
+        $message = self::redactSensitiveText(trim($validated['message']));
         $settings = AssistantSettings::record();
         if (! empty($validated['conversation_id'])) {
             $conversation = DB::table('ai_assistant_conversations')
@@ -165,13 +165,13 @@ final class AssistantController
                                 $safeLength = strlen($pending) - 256;
                                 $safe = substr($pending, 0, $safeLength);
                                 $pending = substr($pending, $safeLength);
-                                $emit(['type' => 'delta', 'content' => $this->redactSensitiveText($safe)]);
+                                $emit(['type' => 'delta', 'content' => self::redactSensitiveText($safe)]);
                             }
                         }
                     );
 
-                    if ($pending !== '') $emit(['type' => 'delta', 'content' => $this->redactSensitiveText($pending)]);
-                    $answer = $this->redactSensitiveText(trim($result['content']));
+                    if ($pending !== '') $emit(['type' => 'delta', 'content' => self::redactSensitiveText($pending)]);
+                    $answer = self::redactSensitiveText(trim($result['content']));
                     $tokens = is_int($result['total_tokens']) && $result['total_tokens'] > 0
                         ? $result['total_tokens']
                         : AssistantTokenBudget::estimatePromptTokens(array_merge($messages, [
@@ -217,7 +217,7 @@ final class AssistantController
             && $settings['data_access_mode'] === 'general_only';
     }
 
-    private function redactSensitiveText(string $value): string
+    private static function redactSensitiveText(string $value): string
     {
         $value = preg_replace('/(Bearer\s+)[A-Za-z0-9._-]+/i', '$1[REDACTED]', $value) ?? $value;
         return preg_replace('/\b(sk-[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|AKIA[0-9A-Z]{16})\b/', '[REDACTED_SECRET]', $value) ?? $value;
