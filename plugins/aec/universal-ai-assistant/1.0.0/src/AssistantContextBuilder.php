@@ -92,6 +92,9 @@ final class AssistantContextBuilder
             'teacher' => $enrollments->pluck('user_id')->unique()->map(static fn ($id): int => (int) $id)->all(),
             default => [],
         };
+        $studentIdsByBatch = $enrollments->groupBy('batch_id')->map(
+            static fn ($rows): array => $rows->pluck('user_id')->unique()->map(static fn ($id): int => (int) $id)->all()
+        );
 
         $assignments = Assignment::query()
             ->whereIn('batch_id', $batchIds)
@@ -193,7 +196,7 @@ final class AssistantContextBuilder
                 'batch' => $enrollment->batch?->title,
                 'status' => $enrollment->status,
             ])->all(),
-            'assignments' => $assignments->map(function ($assignment) use ($role, $studentIds, $submissionsByKey): array {
+            'assignments' => $assignments->map(function ($assignment) use ($studentIds, $studentIdsByBatch, $submissionsByKey): array {
                 $item = [
                     'source' => 'assignment:'.$assignment->id,
                     'title' => $assignment->title,
@@ -206,11 +209,11 @@ final class AssistantContextBuilder
                     $item['student_status'] = array_map(function (int $studentId) use ($assignment, $submissionsByKey): array {
                         $submission = $submissionsByKey->get($studentId.':'.$assignment->id);
                         return ['student_id' => $studentId, 'status' => $submission?->status ?? 'not_submitted', 'submitted_at' => $submission?->submitted_at];
-                    }, $studentIds);
+                    }, $studentIdsByBatch->get($assignment->batch_id, []));
                 }
                 return $item;
             })->all(),
-            'exams' => $exams->map(function ($exam) use ($studentIds, $attemptsByKey): array {
+            'exams' => $exams->map(function ($exam) use ($studentIds, $studentIdsByBatch, $attemptsByKey): array {
                 $item = [
                     'source' => 'exam:'.$exam->id,
                     'title' => $exam->title,
@@ -224,7 +227,7 @@ final class AssistantContextBuilder
                     $item['student_status'] = array_map(function (int $studentId) use ($exam, $attemptsByKey): array {
                         $attempt = $attemptsByKey->get($studentId.':'.$exam->id);
                         return ['student_id' => $studentId, 'status' => $attempt?->status ?? 'not_started', 'started_at' => $attempt?->started_at, 'submitted_at' => $attempt?->submitted_at];
-                    }, $studentIds);
+                    }, $studentIdsByBatch->get($exam->batch_id, []));
                 }
                 return $item;
             })->all(),
