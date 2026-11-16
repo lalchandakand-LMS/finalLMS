@@ -30,8 +30,8 @@
     "website.navigation.manage"
   ],
   "routes": [
-    "admin.website-builder.*",
-    "admin.website-pages.*"
+    "admin.website-pages.*",
+    "admin.website-builder.*"
   ],
   "settings": [],
   "events": [],
