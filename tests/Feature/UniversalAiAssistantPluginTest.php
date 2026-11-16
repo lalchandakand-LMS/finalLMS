@@ -69,10 +69,32 @@ class UniversalAiAssistantPluginTest extends TestCase
 
     public function test_enabled_role_context_is_audited_and_sent_only_with_scoped_course_data(): void
     {
-        $student = User::factory()->create(['role' => 'student']);
+        $branch = Branch::query()->create(['name' => 'AI Context Branch', 'slug' => 'ai-context-branch', 'is_active' => true]);
+        $student = User::factory()->create(['role' => 'student', 'branch_id' => $branch->id]);
         $teacher = User::factory()->create(['role' => 'teacher']);
         $course = Course::factory()->create(['teacher_id' => $teacher->id, 'title' => 'Only My Enrolled Course']);
-        Enrollment::query()->create(['user_id' => $student->id, 'course_id' => $course->id, 'status' => 'active']);
+        $batch = Batch::query()->create([
+            'branch_id' => $branch->id, 'course_id' => $course->id, 'teacher_id' => $teacher->id,
+            'title' => 'Only My Enrolled Batch', 'capacity' => 20, 'starts_at' => now()->addDay(),
+            'ends_at' => now()->addMonth(), 'fee' => 1000, 'status' => 'open',
+        ]);
+        Enrollment::query()->create(['user_id' => $student->id, 'course_id' => $course->id, 'batch_id' => $batch->id, 'status' => 'active']);
+        $lesson = Lesson::query()->create([
+            'course_id' => $course->id, 'title' => 'Only My Lesson', 'content' => 'Lesson body is private.',
+            'duration_minutes' => 20, 'order' => 1, 'is_preview' => false,
+        ]);
+        LessonProgress::query()->create(['lesson_id' => $lesson->id, 'user_id' => $student->id, 'completed_at' => now(), 'last_viewed_at' => now()]);
+        $assignment = Assignment::query()->create([
+            'batch_id' => $batch->id, 'teacher_id' => $teacher->id, 'title' => 'Only My Assignment',
+            'instructions' => 'Private assignment instructions.', 'due_at' => now()->addDays(2),
+            'allow_late' => false, 'max_marks' => 50, 'status' => 'published',
+        ]);
+        $exam = Exam::query()->create([
+            'batch_id' => $batch->id, 'teacher_id' => $teacher->id, 'title' => 'Only My Exam',
+            'instructions' => 'Private exam instructions.', 'starts_at' => now()->addDays(2),
+            'ends_at' => now()->addDays(2)->addHour(), 'duration_minutes' => 60, 'pass_marks' => 20,
+            'questions_per_attempt' => 10, 'status' => 'published',
+        ]);
 
         AssistantSettings::save([
             'model' => 'gpt-4o-mini',
@@ -108,8 +130,17 @@ class UniversalAiAssistantPluginTest extends TestCase
         $this->assertNotNull($audit);
         $metadata = json_decode($audit->metadata, true);
         $this->assertContains('course:'.$course->id, $metadata['source_ids']);
+        $this->assertContains('batch:'.$batch->id, $metadata['source_ids']);
+        $this->assertContains('lesson:'.$lesson->id, $metadata['source_ids']);
+        $this->assertContains('assignment:'.$assignment->id, $metadata['source_ids']);
+        $this->assertContains('exam:'.$exam->id, $metadata['source_ids']);
+        $this->assertContains('learning_progress:user:'.$student->id, $metadata['source_ids']);
         Http::assertSent(function ($request): bool {
-            return str_contains($request->data()['messages'][0]['content'] ?? '', 'Only My Enrolled Course');
+            return str_contains($request->data()['messages'][0]['content'] ?? '', 'Only My Enrolled Course')
+                && str_contains($request->data()['messages'][0]['content'] ?? '', 'Only My Assignment')
+                && str_contains($request->data()['messages'][0]['content'] ?? '', 'Only My Exam')
+                && ! str_contains($request->data()['messages'][0]['content'] ?? '', 'Private assignment instructions')
+                && ! str_contains($request->data()['messages'][0]['content'] ?? '', 'Private exam instructions');
         });
         $this->assertDatabaseHas('ai_assistant_audit_events', [
             'event' => 'response_completed',
