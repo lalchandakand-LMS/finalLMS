@@ -97,7 +97,7 @@ final class AssistantTokenBudget
     /**
      * Persist the assistant response and consume its reservation atomically.
      */
-    public static function settle(int $reservationId, callable $persistResponse): void
+    public static function settle(int $reservationId, int $actualTokens, callable $persistResponse): void
     {
         DB::transaction(function () use ($reservationId, $persistResponse): void {
             $reservation = DB::table('ai_assistant_token_reservations')
@@ -120,6 +120,7 @@ final class AssistantTokenBudget
                 ->where('id', $reservationId)
                 ->update([
                     'status' => 'completed',
+                    'actual_tokens' => max(0, $actualTokens),
                     'updated_at' => now(),
                 ]);
         }, 3);
