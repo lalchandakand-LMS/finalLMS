@@ -73,7 +73,7 @@ class AdminHomeSettingsTest extends TestCase
             ->assertSee('Cookie preferences')
             ->assertDontSee('G-ABC12345');
 
-        $this->withCookie('marketing_consent', 'accepted')
+        $this->withUnencryptedCookie('marketing_consent', 'accepted')
             ->get('/')
             ->assertSee('G-ABC12345')
             ->assertSee('GTM-ABC1234')

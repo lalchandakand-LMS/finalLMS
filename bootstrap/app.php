@@ -12,6 +12,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->encryptCookies(except: ['marketing_consent']);
         $middleware->appendToGroup('web', \App\Http\Middleware\SetLocale::class);
         $middleware->appendToGroup('web', \App\Http\Middleware\EnsureInstalled::class);
         $middleware->appendToGroup('web', \App\Http\Middleware\TrackWebsiteVisit::class);
