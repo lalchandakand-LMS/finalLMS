@@ -105,10 +105,13 @@ final class PluginContext
             throw new InvalidArgumentException('Plugin API routes are supported only for declared student and teacher mobile portals.');
         }
 
-        if (preg_match('/^api\/v1\/[a-z0-9][a-z0-9\/-]{0,99}$/D', $prefix) !== 1
+        [$vendor, $slug] = explode('.', (string) $this->plugin->plugin_key, 2);
+        $expectedPrefix = 'api/v1/plugins/'.$vendor.'/'.str_replace('.', '-', $slug);
+        if (! hash_equals($expectedPrefix, $prefix)
+            || preg_match('/^api\/v1\/plugins\/[a-z0-9][a-z0-9\/-]{0,99}$/D', $prefix) !== 1
             || str_contains($prefix, '..')
             || preg_match('/^[a-z][a-z0-9_.-]{0,119}\.$/D', $namePrefix) !== 1) {
-            throw new InvalidArgumentException('The plugin API route prefix or route-name prefix is invalid.');
+            throw new InvalidArgumentException('The plugin API route prefix must use its canonical vendor/plugin namespace and a valid route-name prefix.');
         }
 
         $declaredPermissions = $this->plugin->manifest['permissions'] ?? [];
