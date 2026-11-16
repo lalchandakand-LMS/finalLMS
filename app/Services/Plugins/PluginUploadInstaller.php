@@ -274,7 +274,13 @@ final class PluginUploadInstaller
             // partially changed DDL. The failed new package and old restore point
             // remain available for an explicit, verified recovery operation.
             $fresh = PluginInstallation::query()->where('plugin_key', $plugin->plugin_key)->first();
-            if ($registrySwitched && $fresh && ! $newPackageInstalled) {
+            if (! $registrySwitched && $fresh && $fresh->status === 'update_staged') {
+                try {
+                    $this->lifecycle->transition((string) $fresh->plugin_key, $originalStatus);
+                } catch (Throwable) {
+                    // Preserve the original failure; the registry remains inactive for safety.
+                }
+            } elseif ($registrySwitched && $fresh && ! $newPackageInstalled) {
                 // No new package was committed and old migrations were not
                 // touched; safely restore the exact old registry snapshot.
                 $fresh->forceFill([
