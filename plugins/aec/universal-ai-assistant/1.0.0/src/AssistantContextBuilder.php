@@ -35,19 +35,31 @@ final class AssistantContextBuilder
             return [];
         }
 
-        $courses = $this->access->scopeQuery(Course::query(), $actor)
+        $courseQuery = $this->access->scopeQuery(Course::query(), $actor);
+        $batchQuery = $this->access->scopeQuery(Batch::query(), $actor);
+        $enrollmentQuery = $this->access->scopeQuery(Enrollment::query(), $actor)
+            ->whereIn('status', ['active', 'completed'])
+            ->whereHas('course', fn ($query) => $query->where('status', 'published'));
+
+        if (in_array($role, ['student', 'guardian'], true)) {
+            $courseQuery->where('status', 'published')
+                ->whereHas('enrollments', fn ($query) => $query->whereIn('status', ['active', 'completed']));
+            $batchQuery->whereHas('enrollments', fn ($query) => $query->whereIn('status', ['active', 'completed']));
+        }
+
+        $courses = $courseQuery
             ->select(['id', 'title', 'slug', 'teacher_id'])
             ->orderBy('title')
             ->limit(25)
             ->get();
 
-        $batches = $this->access->scopeQuery(Batch::query(), $actor)
+        $batches = $batchQuery
             ->select(['id', 'title', 'course_id', 'branch_id', 'teacher_id', 'starts_at', 'ends_at', 'status'])
             ->orderBy('starts_at')
             ->limit(25)
             ->get();
 
-        $enrollments = $this->access->scopeQuery(Enrollment::query(), $actor)
+        $enrollments = $enrollmentQuery
             ->with(['course:id,title', 'batch:id,title'])
             ->latest('id')
             ->limit(40)
