@@ -8,17 +8,23 @@
             <span class="badge info">{{ $batch->course->title }}</span>
             <h1 style="margin:12px 0 0;">{{ $batch->title }} attendance</h1>
         </div>
-        <a href="{{ route('teacher.batches.index') }}" class="btn secondary">My batches</a>
+        <a href="{{ $attendanceBackUrl }}" class="btn secondary">{{ __('Back to batches') }}</a>
     </div>
 
     <div class="panel">
         @if($students->isEmpty())
             <p class="muted" style="margin:0;">{{ __('No students are enrolled in this batch.') }}</p>
         @else
-            <form method="POST" action="{{ route('teacher.batches.attendance.store', $batch) }}">
+            <form id="attendance-form" method="POST" action="{{ $attendanceStoreRoute }}">
                 @csrf
                 <label for="attendance-date">{{ __('Class date') }}</label>
                 <input id="attendance-date" type="date" name="attendance_date" value="{{ request('date', now()->toDateString()) }}" required>
+
+                <input type="hidden" name="latitude" id="attendance-latitude" required>
+                <input type="hidden" name="longitude" id="attendance-longitude" required>
+                <input type="hidden" name="location_accuracy_m" id="attendance-location-accuracy" required>
+                <input type="hidden" name="location_captured_at" id="attendance-location-captured-at" required>
+                <p class="muted" role="note">{{ __('Location permission is required when saving attendance. Location is captured only for this action; background tracking is not used.') }}</p>
 
                 <div class="course-list" style="margin-top:18px;">
                     @foreach($students as $index => $enrollment)
@@ -27,16 +33,61 @@
                             <div class="meta-row" style="margin-top:0; align-items:center;">
                                 <div><strong>{{ $enrollment->user->name }}</strong><div class="muted">{{ $enrollment->user->email }}</div></div>
                                 <select name="records[{{ $index }}][status]" required>
-                                    @foreach(['present' => __('Present'), 'absent' => __('Absent'), 'late' => __('Late')] as $value => $label)
+                                    @php($options = ['present' => __('Present'), 'absent' => __('Absent'), 'late' => __('Late')])
+                                    @if(config('attendance.allow_excused', false))
+                                        @php($options['excused'] = __('Excused'))
+                                    @endif
+                                    @foreach($options as $value => $label)
                                         <option value="{{ $value }}" @selected(($attendance[$enrollment->user_id] ?? 'present') === $value)>{{ $label }}</option>
                                     @endforeach
                                 </select>
                             </div>
+                            @if(isset($attendance[$enrollment->user_id]))
+                                <label for="attendance-reason-{{ $index }}">{{ __('Correction reason (required if changing status)') }}</label>
+                                <input id="attendance-reason-{{ $index }}" type="text" name="records[{{ $index }}][reason]" maxlength="500" placeholder="{{ __('Explain why this attendance is being corrected') }}">
+                            @endif
                         </div>
                     @endforeach
                 </div>
-                <button type="submit" class="btn primary" style="margin-top:18px;">{{ __('Save attendance') }}</button>
+                <button id="attendance-submit" type="submit" class="btn primary" style="margin-top:18px;">{{ __('Save attendance') }}</button>
             </form>
         @endif
     </div>
 @endsection
+
+@push('scripts')
+<script>
+(() => {
+    const form = document.getElementById('attendance-form');
+    if (!form) return;
+
+    let locationReady = false;
+    form.addEventListener('submit', (event) => {
+        if (locationReady) return;
+        event.preventDefault();
+
+        if (!navigator.geolocation) {
+            window.alert(@json(__('This device/browser does not support location. Attendance cannot be saved.')));
+            return;
+        }
+
+        const button = document.getElementById('attendance-submit');
+        button.disabled = true;
+        button.textContent = @json(__('Getting location…'));
+
+        navigator.geolocation.getCurrentPosition((position) => {
+            document.getElementById('attendance-latitude').value = position.coords.latitude;
+            document.getElementById('attendance-longitude').value = position.coords.longitude;
+            document.getElementById('attendance-location-accuracy').value = position.coords.accuracy;
+            document.getElementById('attendance-location-captured-at').value = new Date().toISOString();
+            locationReady = true;
+            form.requestSubmit();
+        }, () => {
+            button.disabled = false;
+            button.textContent = @json(__('Save attendance'));
+            window.alert(@json(__('Location permission is required to save attendance. Please allow location access and try again.')));
+        }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+    });
+})();
+</script>
+@endpush
