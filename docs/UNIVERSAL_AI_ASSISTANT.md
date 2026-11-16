@@ -16,9 +16,11 @@ provider hosts; this is not yet a multi-vendor catalogue.
 
 ## Streaming and usage controls
 
-Chat uses server-sent events. Provider deltas are forwarded as text events, UTF-8 chunk
-boundaries are preserved, output size is bounded, and the browser appends text nodes rather
-than rendering provider HTML. A token reservation is acquired before the provider request;
+Chat uses server-sent events. Provider output is fully buffered within a strict size limit,
+then sensitive credentials are redacted from the complete response before any assistant text
+is emitted to the browser. This avoids forwarding partial chunks that could split an arbitrarily
+long Bearer token across a redaction boundary. The browser appends text nodes rather than
+rendering provider HTML. A token reservation is acquired before the provider request;
 prompt persistence and reservation state are transactional; response persistence and
 settlement are atomic. Provider failures release the reservation. Provider-reported usage is
 preferred, with a conservative estimate when usage metadata is absent.
