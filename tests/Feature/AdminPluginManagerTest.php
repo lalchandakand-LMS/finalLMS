@@ -751,6 +751,48 @@ PHP;
         ]);
     }
 
+    public function test_uninstall_creates_verified_package_snapshot_and_admin_can_restore_it(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+
+        $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData())
+            ->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+
+        $this->actingAs($admin)->post(route('admin.plugins.uninstall', 'aec.course-management'), [
+            'confirm_uninstall' => '1',
+        ])->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'status' => 'uninstalled',
+        ]);
+        $this->assertDirectoryDoesNotExist($this->finalPath);
+        $snapshot = \App\Models\PluginVersionHistory::query()
+            ->where('plugin_key', 'aec.course-management')
+            ->where('action', 'pre_uninstall_snapshot')
+            ->latest('created_at')->firstOrFail();
+        $this->assertMatchesRegularExpression('/^[a-f0-9]{40}\.zip$/D', $snapshot->details['recovery_path']);
+        $this->assertMatchesRegularExpression('/^[a-f0-9]{64}$/D', $snapshot->details['recovery_sha256']);
+        $this->assertFileExists(storage_path('app/private/plugin-recovery/'.$snapshot->details['recovery_path']));
+
+        $this->actingAs($admin)->post(route('admin.plugins.restore-package', 'aec.course-management'), [
+            'confirm_restore' => '1',
+        ])->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'status' => 'installed',
+        ]);
+        $this->assertFileExists($this->finalPath.'/src/Plugin.php');
+        $this->assertDatabaseHas('plugin_version_history', [
+            'plugin_key' => 'aec.course-management',
+            'action' => 'package_restored',
+        ]);
+    }
+
     public function test_admin_can_uninstall_inactive_plugin_without_deleting_application_data(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
