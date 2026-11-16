@@ -193,9 +193,7 @@ final class PluginUploadInstaller
             'metadata' => $plugin->metadata,
             'installed_at' => $plugin->installed_at?->toISOString(),
         ];
-        app(PluginVersionHistoryRecorder::class)->record($plugin, 'version_snapshot', auth()->user(), [
-            'snapshot' => $snapshot,
-        ]);
+        app(PluginVersionHistoryRecorder::class)->recordSnapshot($plugin, auth()->user(), $snapshot);
 
         [$vendor, $slug] = explode('.', (string) $plugin->plugin_key, 2);
         $finalPath = 'plugins/'.$vendor.'/'.str_replace('.', '-', $slug).'/'.$manifest['version'];
