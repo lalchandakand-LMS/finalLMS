@@ -48,8 +48,10 @@ class VisitorPopupManagementTest extends TestCase
 
         config(['plugins.trusted_public_keys' => ['aec-release-2026' => 'dGVzdC1wdWJsaWMta2V5']]);
 
-        $plugin = PluginInstallation::query()->firstOrNew(['plugin_key' => 'aec.popup-ads']);
+        $plugin = PluginInstallation::query()->where('plugin_key', 'aec.popup-ads')->first()
+            ?? new PluginInstallation();
         $plugin->forceFill([
+            'plugin_key' => 'aec.popup-ads',
             'name' => $manifest['name'],
             'version' => $manifest['version'],
             'type' => $manifest['type'],
