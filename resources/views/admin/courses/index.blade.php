@@ -19,6 +19,14 @@
                 @endforeach
             </select>
         </label>
+        <label>Academic level
+            <select name="academic_level_id">
+                <option value="">All levels</option>
+                @foreach($academicLevels as $academicLevel)
+                    <option value="{{ $academicLevel->id }}" @selected((string) ($filters['academic_level_id'] ?? '') === (string) $academicLevel->id)>{{ $academicLevel->name }}</option>
+                @endforeach
+            </select>
+        </label>
         <label>{{ __('Teacher') }}
             <select name="teacher_id">
                 <option value="">{{ __('All teachers') }}</option>
