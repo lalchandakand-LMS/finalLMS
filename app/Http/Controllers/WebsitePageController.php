@@ -47,7 +47,7 @@ class WebsitePageController extends Controller
         return view('admin.website-pages.form', [
             'page' => $websitePage,
             'media' => MediaAsset::query()->where('mime_type', 'like', 'image/%')->latest()->limit(200)->get(),
-            'academicLevels' => AcademicLevel::query()->where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(),
+            'academicLevels' => AcademicLevel::query()->where('is_active', true)->orWhere('id', $websitePage->academic_level_id)->orderBy('sort_order')->orderBy('name')->get(),
         ]);
     }
 
@@ -102,7 +102,12 @@ class WebsitePageController extends Controller
     {
         $data = $request->validate([
             'title' => ['required', 'string', 'max:180'],
-            'academic_level_id' => ['nullable', 'integer', Rule::exists('academic_levels', 'id')->where(fn ($query) => $query->where('is_active', true))],
+            'academic_level_id' => ['nullable', 'integer', Rule::exists('academic_levels', 'id')->where(fn ($query) => $query->where(function ($levels) use ($page): void {
+                $levels->where('is_active', true);
+                if ($page?->academic_level_id) {
+                    $levels->orWhere('id', $page->academic_level_id);
+                }
+            }))],
             'slug' => ['nullable', 'string', 'max:180', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', Rule::unique('website_pages', 'slug')->ignore($page?->id)],
             'menu_label' => ['nullable', 'string', 'max:80'],
             'template' => ['required', Rule::in(['standard', 'wide', 'centered', 'split'])],
