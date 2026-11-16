@@ -126,7 +126,7 @@
             <p class="muted" style="margin:12px 0 0;">{{ __('Keep momentum going with a clear set of next actions, from enrollment to course completion.') }}</p>
         </div>
 
-        @if($user->isBranchManager() && ($user->hasAdminPermission('branch.batches') || $user->hasAdminPermission('branch.students')))
+        @if($user->isBranchManager() && ($user->hasAdminPermission('branch.batches') || $user->hasAdminPermission('branch.students') || $user->hasAdminPermission('branch.attendance')))
             <section class="panel" style="margin-bottom:20px;">
                 <div class="page-header" style="margin-bottom:10px;">
                     <div>
@@ -140,6 +140,9 @@
                 </div>
                 @if($user->hasAdminPermission('branch.students'))
                     <a href="{{ route('admin.branch-workspace.students.index') }}" class="btn secondary">{{ __('View branch students') }}</a>
+                @endif
+                @if($user->hasAdminPermission('branch.attendance'))
+                    <a href="{{ route('admin.branch-workspace.attendance.reports') }}" class="btn secondary">{{ __('View branch attendance reports') }}</a>
                 @endif
             </section>
         @endif
