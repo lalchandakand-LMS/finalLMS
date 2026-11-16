@@ -330,7 +330,7 @@ class AttendanceSyncController extends Controller
         abort_unless($nonce !== '' && hash_equals($qrSession->nonce_hash, hash('sha256', $nonce)), 403);
 
         $capturedAt = Carbon::parse($data['location_captured_at']);
-        abort_if($capturedAt->greaterThan(now()->addMinutes(5)), 422, 'Invalid location capture time.');
+        abort_if($capturedAt->greaterThan(now()->addMinutes(5)) || $capturedAt->lessThan(now()->subMinutes((int) config('attendance.online_location_max_age_minutes', 10))), 422, 'Invalid or stale location capture time.');
 
         return DB::transaction(function () use ($student, $qrSession, $data, $capturedAt): JsonResponse {
             $batch = Batch::query()->findOrFail($qrSession->batch_id);
