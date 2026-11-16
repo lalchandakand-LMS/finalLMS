@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "key": "page_builder",
+  "name": "Page Builder",
+  "description": "Admin drag-and-drop page design, reusable sections, preview, publishing and navigation menus.",
+  "type": "first_party",
+  "status": "metadata_only",
+  "provider": null,
+  "dependencies": [
+    "core",
+    "website_cms",
+    "media_library",
+    "academic_levels"
+  ],
+  "capabilities": [
+    "page.create",
+    "page.edit",
+    "page.preview",
+    "page.publish",
+    "page.navigation.manage",
+    "homepage.design.manage",
+    "homepage.sections.manage",
+    "navigation.menus.manage"
+  ],
+  "permissions": [
+    "website.pages.view",
+    "website.pages.create",
+    "website.pages.update",
+    "website.pages.publish",
+    "website.navigation.manage"
+  ],
+  "routes": [
+    "admin.website-builder.*",
+    "admin.website-pages.*"
+  ],
+  "settings": [],
+  "events": [],
+  "directory": "plugins/page_builder",
+  "safety": {
+    "trusted_code_only": true,
+    "execute_uploaded_code": false,
+    "disable_preserves_data": true
+  }
+}
