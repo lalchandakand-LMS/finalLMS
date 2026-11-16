@@ -12,7 +12,9 @@
     "lesson_management"
   ],
   "permissions": [],
-  "routes": [],
+  "routes": [
+    "admin.course-content-posts.*"
+  ],
   "settings": [],
   "events": [],
   "directory": "plugins/course_content_studio",
