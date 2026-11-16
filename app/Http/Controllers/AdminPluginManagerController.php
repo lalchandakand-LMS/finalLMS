@@ -221,7 +221,7 @@ class AdminPluginManagerController extends Controller
         PluginVersionHistoryRecorder $history,
     ): RedirectResponse {
         $plugin = PluginInstallation::query()->where('plugin_key', $key)->firstOrFail();
-        if (! in_array($plugin->status, ['installed', 'inactive', 'active'], true)) {
+        if (! in_array($plugin->status, ['installed', 'inactive', 'active', 'failed'], true)) {
             return back()->with('error', __('Health checks are available only for installed plugins.'));
         }
 
@@ -242,14 +242,19 @@ class AdminPluginManagerController extends Controller
 
             $this->assertDependenciesAvailable($plugin);
             $integrityVerifier->verify($plugin);
-            $plugin->forceFill([
+            $healthAttributes = [
                 'health_status' => 'healthy',
                 'health_message' => $signatureReverified
                     ? 'Detached release signature, manifest and installed files verified.'
                     : 'Legacy release signature was verified at install; manifest and installed files verified.',
                 'last_health_check_at' => now(),
-            ])->save();
-            $plugin->refresh();
+            ];
+            if ($plugin->status === 'failed') {
+                $plugin = $lifecycle->transition($plugin->plugin_key, 'inactive', $healthAttributes);
+            } else {
+                $plugin->forceFill($healthAttributes)->save();
+                $plugin->refresh();
+            }
             $history->record($plugin, 'health_check_passed', $request->user());
             $this->audit($request, 'admin.plugins.health_check_passed',
                 'Verified plugin health for '.$plugin->plugin_key.' version '.$plugin->version);

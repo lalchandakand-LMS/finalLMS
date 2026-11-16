@@ -120,7 +120,7 @@
                         </td>
                         <td>{{ $plugin->installed_at?->format('Y-m-d H:i') ?? '—' }}</td>
                         <td>
-                            @if(in_array($plugin->status, ['installed', 'inactive', 'active'], true))
+                            @if(in_array($plugin->status, ['installed', 'inactive', 'active', 'failed'], true))
                                 <form method="POST" action="{{ route('admin.plugins.health-check', $plugin->plugin_key) }}" style="display:inline;">
                                     @csrf
                                     <button class="btn secondary" type="submit">{{ __('Run health check') }}</button>

@@ -299,6 +299,29 @@ PHP;
             ->assertSee('Healthy');
     }
 
+
+    public function test_successful_health_check_recovers_a_failed_plugin_to_inactive(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData())
+            ->assertRedirect(route('admin.plugins.index'));
+
+        app(\App\Services\Plugins\PluginLifecycle::class)->transition('aec.course-management', 'failed', [
+            'health_status' => 'failed',
+            'health_message' => 'A prior runtime check failed.',
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.plugins.health-check', 'aec.course-management'))
+            ->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'status' => 'inactive',
+            'health_status' => 'healthy',
+        ]);
+    }
+
     public function test_health_check_failure_marks_inactive_plugin_unhealthy_when_signature_is_tampered(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
