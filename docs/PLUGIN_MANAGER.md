@@ -53,8 +53,7 @@ canonical signing rules.
 
 The Admin Manager currently supports signed-package install, permission grants,
 activate, deactivate and uninstall. Activation rechecks the trusted key,
-manifest identity, dependencies and installed-file hashes, verifies that any
-previously completed migrations remain idempotently recorded, and transitions the registry to active. The runtime loads
+manifest identity, dependencies and installed-file hashes, skips previously completed migrations and transitions the registry to active. The runtime loads
 only active verified packages. Deactivation blocks plugin routes and preserves
 installed files and application data. Uninstall removes executable package files
 while retaining application data and migration history.
