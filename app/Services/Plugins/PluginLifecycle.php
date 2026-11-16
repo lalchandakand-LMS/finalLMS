@@ -51,7 +51,7 @@ final class PluginLifecycle
                 }
             }
 
-            if ($target === 'inactive') {
+            if (in_array($target, ['inactive', 'uninstalled'], true)) {
                 foreach ($plugins->where('status', 'active') as $candidate) {
                     if ($candidate->plugin_key !== $pluginKey
                         && in_array($pluginKey, $candidate->manifest['dependencies'] ?? [], true)) {
