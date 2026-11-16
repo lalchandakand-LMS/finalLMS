@@ -53,6 +53,42 @@
             </form>
         @endif
     </div>
+
+    <div class="panel" style="margin-top:20px;">
+        <h2>{{ __('Attendance audit history') }}</h2>
+        @if($auditHistory->isEmpty())
+            <p class="muted">{{ __('No changes have been recorded for this class date.') }}</p>
+        @else
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>{{ __('Time') }}</th>
+                            <th>{{ __('Student') }}</th>
+                            <th>{{ __('Action') }}</th>
+                            <th>{{ __('Previous') }}</th>
+                            <th>{{ __('New') }}</th>
+                            <th>{{ __('Reason') }}</th>
+                            <th>{{ __('Changed by') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($auditHistory as $audit)
+                            <tr>
+                                <td>{{ \Illuminate\Support\Carbon::parse($audit->created_at)->format('Y-m-d H:i') }}</td>
+                                <td>{{ $audit->student_name }}</td>
+                                <td>{{ __(ucwords(str_replace('_', ' ', $audit->action))) }}</td>
+                                <td>{{ $audit->old_status ? __(ucfirst($audit->old_status)) : '—' }}</td>
+                                <td>{{ $audit->new_status ? __(ucfirst($audit->new_status)) : '—' }}</td>
+                                <td>{{ $audit->reason ?: '—' }}</td>
+                                <td>{{ $audit->actor_name ?: __('Deleted user') }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+    </div>
 @endsection
 
 @push('scripts')
