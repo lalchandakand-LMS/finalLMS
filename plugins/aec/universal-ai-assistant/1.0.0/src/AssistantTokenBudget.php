@@ -101,7 +101,7 @@ final class AssistantTokenBudget
      */
     public static function settle(int $reservationId, int $actualTokens, callable $persistResponse): void
     {
-        DB::transaction(function () use ($reservationId, $persistResponse): void {
+        DB::transaction(function () use ($reservationId, $actualTokens, $persistResponse): void {
             $reservation = DB::table('ai_assistant_token_reservations')
                 ->where('id', $reservationId)
                 ->lockForUpdate()
