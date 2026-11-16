@@ -30,6 +30,13 @@ class AdminSystemHealthTest extends TestCase
             ->assertSee('Recent health checks');
     }
 
+    public function test_scheduled_health_check_records_dependency_results(): void
+    {
+        $this->artisan('system:health-check')->assertExitCode(0);
+
+        $this->assertDatabaseHas('system_health_checks', ['status' => 'healthy']);
+    }
+
     public function test_scheduler_heartbeat_command_records_execution_time(): void
     {
         $this->artisan('system:heartbeat')->assertExitCode(0);
