@@ -92,7 +92,9 @@ class _InstructorLoginState extends State<InstructorLogin> {
     setState(() { busy = true; error = null; statusMessage = null; });
     try {
       final outcome = await widget.api.verifyDevice(code.text.trim());
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       if (outcome.state == LoginState.authenticated) {
         widget.onLogin();
       } else {
@@ -396,7 +398,9 @@ class _InstructorNoticesPageState extends State<InstructorNoticesPage> {
   }
 
   Future<void> load() async {
-    if (mounted) setState(() { loading = true; error = null; });
+    if (mounted) {
+      setState(() { loading = true; error = null; });
+    }
     try {
       final response = await widget.api.get('/instructor/notices');
       if (!mounted) return;
@@ -408,15 +412,21 @@ class _InstructorNoticesPageState extends State<InstructorNoticesPage> {
             notices.where((item) => item['is_read'] != true).length;
       });
     } catch (exception) {
-      if (mounted) setState(() => error = exception.toString());
+      if (mounted) {
+        setState(() => error = exception.toString());
+      }
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) {
+        setState(() => loading = false);
+      }
     }
   }
 
   Future<void> markRead(Map<String, dynamic> notice) async {
     final id = (notice['id'] as num?)?.toInt();
-    if (id == null || notice['is_read'] == true || markingRead.contains(id)) return;
+    if (id == null || notice['is_read'] == true || markingRead.contains(id)) {
+      return;
+    }
     setState(() => markingRead.add(id));
     try {
       await widget.api.postJson('/instructor/notices/$id/read', const {});
@@ -434,7 +444,9 @@ class _InstructorNoticesPageState extends State<InstructorNoticesPage> {
         );
       }
     } finally {
-      if (mounted) setState(() => markingRead.remove(id));
+      if (mounted) {
+        setState(() => markingRead.remove(id));
+      }
     }
   }
 
