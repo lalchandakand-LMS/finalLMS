@@ -62,6 +62,10 @@ class UniversalAiAssistantPluginTest extends TestCase
         $limit = AssistantTokenBudget::completionLimit(8192, $remaining, $estimatedPrompt);
 
         $this->assertGreaterThan(0, $estimatedPrompt);
+        $this->assertGreaterThan(
+            AssistantTokenBudget::estimatePromptTokens([['role' => 'user', 'content' => 'aaaaa']]),
+            AssistantTokenBudget::estimatePromptTokens([['role' => 'user', 'content' => 'বাংলা']])
+        );
         $this->assertGreaterThan(0, $limit);
         $this->assertLessThanOrEqual($remaining - $estimatedPrompt, $limit);
         $this->assertLessThanOrEqual(8192, $limit);
