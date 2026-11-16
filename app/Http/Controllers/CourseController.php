@@ -233,6 +233,9 @@ class CourseController extends Controller
         if (! empty($filters['teacher_id'])) {
             $query->where('teacher_id', $filters['teacher_id']);
         }
+        if (! empty($filters['academic_level_id'])) {
+            $query->where('academic_level_id', $filters['academic_level_id']);
+        }
 
         $courses = $query->paginate(20)->withQueryString();
         $teachers = User::query()->where('role', 'teacher')->orderBy('name')->get(['id', 'name']);
