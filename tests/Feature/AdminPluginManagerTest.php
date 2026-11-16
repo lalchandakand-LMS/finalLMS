@@ -237,7 +237,6 @@ PHP;
             ->assertRedirect(route('admin.plugins.index'))
             ->assertSessionHas('success');
 
-        // Installation executes only signed, integrity-checked migrations; the plugin remains inactive.
         $this->assertDatabaseHas('settings', ['key' => 'plugin_activation_probe', 'value' => 'ran']);
         $this->assertDatabaseHas('plugin_migrations', [
             'plugin_key' => 'aec.course-management',
@@ -264,7 +263,7 @@ PHP;
             ->count());
     }
 
-    public function test_failed_signed_plugin_migration_marks_install_failed_and_retains_package(): void
+    public function test_failed_signed_plugin_migration_fails_installation_and_records_failure(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
         $this->manifest['migrations'] = 'migrations';
@@ -296,9 +295,7 @@ PHP;
             'plugin_key' => 'aec.course-management',
             'status' => 'failed',
         ]);
-        // Retain the signed package: a failed MySQL migration may have partially applied DDL,
-        // and its source must remain available for health checks and recovery.
-        $this->assertDirectoryExists($this->finalPath);
+        $this->assertDirectoryDoesNotExist($this->finalPath);
     }
 
     public function test_activation_rejects_an_untrusted_release_key(): void
