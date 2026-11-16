@@ -49,7 +49,7 @@ class UserController extends Controller
             'phone_number' => ['nullable', 'string', 'regex:/^\+[1-9][0-9]{7,14}$/', Rule::unique('users', 'phone_number')->ignore($user->id)],
             'admin_permissions_present' => ['sometimes', 'accepted'],
             'admin_permissions' => ['sometimes', 'array'],
-            'admin_permissions.*' => ['string', Rule::in(['branch.batches', 'branch.students', 'finance.invoices', 'finance.refunds', 'finance.reports', 'finance.expenses'])],
+            'admin_permissions.*' => ['string', Rule::in(['branch.batches', 'branch.students', 'branch.attendance', 'finance.invoices', 'finance.refunds', 'finance.reports', 'finance.expenses'])],
         ]);
 
         if ($user->id === Auth::id() && $validated['role'] !== 'admin') {
@@ -81,7 +81,7 @@ class UserController extends Controller
 
         if ($request->boolean('admin_permissions_present') || $roleChanged) {
             $allowedByRole = [
-                'branch_manager' => ['branch.batches', 'branch.students'],
+                'branch_manager' => ['branch.batches', 'branch.students', 'branch.attendance'],
                 'accountant' => ['finance.invoices', 'finance.refunds', 'finance.reports', 'finance.expenses'],
             ];
             $requestedPermissions = $request->boolean('admin_permissions_present')
