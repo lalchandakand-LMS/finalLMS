@@ -63,6 +63,15 @@ class PluginMigrationRunner
         $root = $this->migrationRoot($plugin);
         if ($root === null) return;
 
+        $unsettled = DB::table('plugin_migrations')->where([
+            'plugin_key' => $plugin->plugin_key,
+            'plugin_version' => $plugin->version,
+        ])->whereIn('status', ['failed', 'running'])->exists();
+
+        if ($unsettled) {
+            throw new RuntimeException('A failed or interrupted migration requires manual database recovery before package rollback.');
+        }
+
         $records = DB::table('plugin_migrations')->where([
             'plugin_key' => $plugin->plugin_key,
             'plugin_version' => $plugin->version,
