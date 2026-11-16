@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AcademicLevel;
 use App\Models\Attendance;
+use App\Models\Branch;
+use App\Models\Course;
 use App\Models\Batch;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
