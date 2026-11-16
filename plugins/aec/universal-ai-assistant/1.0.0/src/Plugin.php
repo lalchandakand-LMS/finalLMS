@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
 
 require_once __DIR__.'/AssistantSettings.php';
+require_once __DIR__.'/AssistantTokenBudget.php';
 require_once __DIR__.'/AdminSettingsController.php';
 require_once __DIR__.'/AssistantController.php';
 
