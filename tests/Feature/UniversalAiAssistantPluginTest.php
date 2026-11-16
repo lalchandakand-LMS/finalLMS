@@ -34,6 +34,10 @@ class UniversalAiAssistantPluginTest extends TestCase
             $retentionMigration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_15_190000_add_ai_assistant_conversation_retention.php');
             $retentionMigration->up();
         }
+        if (! Schema::hasTable('ai_assistant_token_reservations')) {
+            $budgetMigration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_16_120000_create_ai_assistant_token_reservations.php');
+            $budgetMigration->up();
+        }
     }
 
     public function test_assistant_settings_are_disabled_by_default_and_private_data_access_is_denied(): void
@@ -63,6 +67,53 @@ class UniversalAiAssistantPluginTest extends TestCase
         $this->assertLessThanOrEqual(8192, $limit);
         $this->assertSame(0, AssistantTokenBudget::completionLimit(1200, 100, 100));
         $this->assertSame(0, AssistantTokenBudget::remaining(1000, 1200));
+    }
+
+    public function test_daily_token_budget_reservations_are_atomic_and_released_or_settled(): void
+    {
+        $user = User::factory()->create(['role' => 'student']);
+        $conversationId = \\DB::table('ai_assistant_conversations')->insertGetId([
+            'user_id' => $user->id,
+            'assistant_role' => 'student',
+            'title' => 'Budget reservation test',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $first = AssistantTokenBudget::reserve(2500, 500, 1000, $user->id, $conversationId);
+        $this->assertNotNull($first);
+        $this->assertSame(1000, $first['completion_limit']);
+
+        // Pending reservations consume budget, preventing concurrent requests
+        // from both receiving the same completion allowance.
+        $second = AssistantTokenBudget::reserve(2500, 500, 1000, $user->id, $conversationId);
+        $this->assertNull($second);
+
+        AssistantTokenBudget::release($first['id']);
+        $retry = AssistantTokenBudget::reserve(2500, 500, 1000, $user->id, $conversationId);
+        $this->assertNotNull($retry);
+
+        AssistantTokenBudget::settle($retry['id'], 900, function () use ($conversationId): void {
+            \\DB::table('ai_assistant_messages')->insert([
+                'conversation_id' => $conversationId,
+                'message_role' => 'assistant',
+                'content' => 'A response',
+                'token_count' => 900,
+                'model' => 'test-model',
+                'created_at' => now(),
+            ]);
+        });
+
+        $this->assertDatabaseHas('ai_assistant_token_reservations', [
+            'id' => $retry['id'],
+            'status' => 'completed',
+            'actual_tokens' => 900,
+        ]);
+        $this->assertDatabaseHas('ai_assistant_messages', [
+            'conversation_id' => $conversationId,
+            'message_role' => 'assistant',
+            'token_count' => 900,
+        ]);
     }
 
     public function test_provider_key_is_encrypted_and_never_in_public_settings(): void
