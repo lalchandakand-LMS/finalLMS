@@ -68,7 +68,7 @@ class AdminPluginManagerTest extends TestCase
         }
 
         if (isset($this->finalPath) && is_dir($this->finalPath) && ! is_link($this->finalPath)) {
-            \Illuminate\Support\Facades\\File::deleteDirectory($this->finalPath);
+            \Illuminate\Support\Facades\File::deleteDirectory($this->finalPath);
         }
 
         $pluginRoot = base_path('plugins/aec/course-management');
