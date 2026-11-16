@@ -1,13 +1,13 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use App\\Models\\Setting;
-use App\\Services\\Modules\\ModuleRegistry;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Illuminate\\Support\\Facades\\Route;
+use App\Models\Setting;
+use App\Services\Modules\ModuleRegistry;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Route;
 use InvalidArgumentException;
-use Tests\\TestCase;
+use Tests\TestCase;
 
 class ModuleRouteOwnershipTest extends TestCase
 {
