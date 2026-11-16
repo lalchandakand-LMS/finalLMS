@@ -8,6 +8,8 @@ use App\Services\Plugins\PluginSignatureVerifier;
 use App\Services\Plugins\PluginMigrationRunner;
 use App\Services\Plugins\PluginLifecycle;
 use LogicException;
+use App\Services\Plugins\PluginLifecycle;
+use LogicException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -439,7 +441,7 @@ PHP;
         $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData())
             ->assertRedirect(route('admin.plugins.index'));
 
-        app(\App\Services\Plugins\PluginLifecycle::class)->transition('aec.course-management', 'failed', [
+        app(PluginLifecycle::class)->transition('aec.course-management', 'failed', [
             'health_status' => 'failed',
             'health_message' => 'A prior runtime check failed.',
         ]);
@@ -598,9 +600,9 @@ PHP;
         ])->save();
 
         try {
-            app(\App\Services\Plugins\PluginLifecycle::class)->transition('test.dependent', 'active');
+            app(PluginLifecycle::class)->transition('test.dependent', 'active');
             $this->fail('A plugin with an inactive dependency must not activate.');
-        } catch (\LogicException $exception) {
+        } catch (LogicException $exception) {
             $this->assertStringContainsString('dependency is not active', $exception->getMessage());
         }
 
@@ -637,9 +639,9 @@ PHP;
         }
 
         try {
-            app(\App\Services\Plugins\PluginLifecycle::class)->transition('test.core', 'inactive');
+            app(PluginLifecycle::class)->transition('test.core', 'inactive');
             $this->fail('A dependency of an active plugin must not be deactivated.');
-        } catch (\LogicException $exception) {
+        } catch (LogicException $exception) {
             $this->assertStringContainsString('active plugin depends on this plugin', $exception->getMessage());
         }
 
