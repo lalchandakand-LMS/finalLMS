@@ -13,15 +13,15 @@ class PluginSettingsManagerTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function plugin(string $status = 'inactive'): PluginInstallation
+    private function plugin(string $status = 'inactive', string $key = 'aec.test-settings'): PluginInstallation
     {
         $id = DB::table('plugin_registry')->insertGetId([
-            'plugin_key' => 'aec.test-settings',
+            'plugin_key' => $key,
             'name' => 'Test Settings',
             'version' => '1.0.0',
             'type' => 'module',
             'status' => $status,
-            'manifest' => json_encode(['key' => 'aec.test-settings', 'permissions' => []]),
+            'manifest' => json_encode(['key' => $key, 'permissions' => []]),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -62,7 +62,7 @@ class PluginSettingsManagerTest extends TestCase
 
         foreach (['failed', 'uninstalled'] as $status) {
             try {
-                $manager->set($this->plugin($status), 'api.secret', 'value');
+                $manager->set($this->plugin($status, 'aec.test-settings-'.$status), 'api.secret', 'value');
                 $this->fail('Expected a failed or uninstalled plugin to reject configuration.');
             } catch (\RuntimeException $exception) {
                 $this->assertStringContainsString('cannot be changed', $exception->getMessage());
