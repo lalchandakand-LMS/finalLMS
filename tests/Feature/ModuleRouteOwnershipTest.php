@@ -52,6 +52,18 @@ class ModuleRouteOwnershipTest extends TestCase
         $this->get('/api/v1/_test/owned-api')->assertNotFound();
     }
 
+    public function test_api_course_routes_are_gated_by_course_management_owner(): void
+    {
+        Route::middleware('api')->get('/api/v1/courses/_test-owned-course', fn () => response()->json(['ok' => true]))
+            ->name('test.owned-course-api');
+        Setting::setValue('module_registry', json_encode([
+            'mobile_api' => true,
+            'course_management' => false,
+        ]));
+
+        $this->get('/api/v1/courses/_test-owned-course')->assertNotFound();
+    }
+
     public function test_academic_levels_are_required_by_course_batch_exam_and_page_builders(): void
     {
         $modules = config('modules');
