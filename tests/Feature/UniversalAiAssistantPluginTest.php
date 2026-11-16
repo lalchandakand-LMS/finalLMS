@@ -116,6 +116,40 @@ class UniversalAiAssistantPluginTest extends TestCase
         ]);
     }
 
+    public function test_per_user_daily_request_limit_is_checked_inside_the_budget_lock(): void
+    {
+        $user = User::factory()->create(['role' => 'student']);
+        $conversationId = \DB::table('ai_assistant_conversations')->insertGetId([
+            'user_id' => $user->id,
+            'assistant_role' => 'student',
+            'title' => 'Request quota test',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        \DB::table('ai_assistant_messages')->insert([
+            'conversation_id' => $conversationId,
+            'message_role' => 'user',
+            'content' => 'First request',
+            'token_count' => null,
+            'model' => null,
+            'created_at' => now(),
+        ]);
+
+        $first = AssistantTokenBudget::reserve(5000, 100, 1000, 1, $user->id, $conversationId);
+        $this->assertNotNull($first);
+
+        \DB::table('ai_assistant_messages')->insert([
+            'conversation_id' => $conversationId,
+            'message_role' => 'user',
+            'content' => 'Second request',
+            'token_count' => null,
+            'model' => null,
+            'created_at' => now(),
+        ]);
+        $second = AssistantTokenBudget::reserve(5000, 100, 1000, 1, $user->id, $conversationId);
+        $this->assertNull($second);
+    }
+
     public function test_provider_key_is_encrypted_and_never_in_public_settings(): void
     {
         AssistantSettings::save([
