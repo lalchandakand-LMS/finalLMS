@@ -1,8 +1,8 @@
 # Universal AI Assistant — Issue #257 implementation notes
 
 The Universal AI Assistant is an optional first-party plugin. Its canonical source is
-`plugins/aec/universal-ai-assistant/1.0.0`; it is not a Core dependency. No Google AI Studio
-branding, generated dashboard, or `.aistudio` directory belongs in the LMS repository.
+`plugins/aec/universal-ai-assistant/1.0.0`; it is not a Core dependency. The LMS interface,
+assets and documentation use Alom’s English Center branding only.
 
 ## Provider boundary
 
