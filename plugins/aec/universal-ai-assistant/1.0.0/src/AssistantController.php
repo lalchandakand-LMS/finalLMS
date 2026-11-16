@@ -219,6 +219,7 @@ final class AssistantController
                         AssistantAudit::record('response_completed', $userId, (int) $conversation->id, (int) $reservationId, $role, (string) $settings['provider'], (string) $settings['model'], ['total_tokens' => $tokens]);
                     });
                     DB::table('ai_assistant_conversations')->where('id', $conversation->id)->update(['updated_at' => now()]);
+                    $emit(['type' => 'delta', 'content' => $answer]);
                     $emit(['type' => 'done', 'conversation_id' => $conversation->id]);
                 } catch (Throwable) {
                     try { AssistantTokenBudget::release($reservationId); } catch (Throwable) {}
