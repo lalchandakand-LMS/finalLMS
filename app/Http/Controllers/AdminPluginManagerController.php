@@ -287,6 +287,17 @@ class AdminPluginManagerController extends Controller
                 'Rolled back plugin '.$plugin->plugin_key.' to retained version '.$plugin->version);
         } catch (Throwable $exception) {
             report($exception);
+            $current = PluginInstallation::query()->where('plugin_key', $key)->first();
+            if ($current?->status === 'update_staged') {
+                try {
+                    $lifecycle->transition($key, 'failed', [
+                        'health_status' => 'failed',
+                        'health_message' => 'Package rollback was interrupted. Verify the database and retained package before recovery.',
+                    ]);
+                } catch (Throwable $transitionException) {
+                    report($transitionException);
+                }
+            }
             $this->recordFailure($request, 'admin.plugins.package_rollback_failed');
             return back()->with('error', __('Package rollback failed. The plugin was not reactivated; inspect migration and integrity logs before retrying.'));
         }
