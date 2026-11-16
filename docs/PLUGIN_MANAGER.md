@@ -109,3 +109,40 @@ Plugin Manager provides an explicit health check for installed, active, inactive
 If an active plugin fails runtime signature or integrity verification, the runtime transitions it to `failed` so its routes are blocked. A failed package can return to `inactive` only after an administrator runs a successful health check. A health check does not execute plugin entrypoints or migrations.
 
 Lifecycle history records the plugin key/version, package checksum, signing key ID, action, resulting status, actor and safe details for install, activate, deactivate, migration rollback, uninstall and health-check events. It does not yet implement package upgrades, multiple installed versions or package-version rollback.
+
+
+## Migration failure and manual recovery
+
+Plugin migrations are recorded by the unique identity (plugin key, package version,
+migration filename). A migration is atomically claimed before execution. A
+`completed` record is skipped; a `failed` record or a stale `running` record
+blocks automatic re-execution. This is intentional: MySQL DDL may commit even when
+a later statement in the same migration fails, so retrying blindly can duplicate
+or corrupt schema/data.
+
+When installation reports a migration failure:
+
+1. Keep the plugin inactive. Do not delete its retained, signature-verified package
+   or edit its files; the installed-file integrity check must remain valid.
+2. Take a database backup and preserve the relevant application/server logs.
+3. Inspect the exact migration file from the verified package and compare every
+   intended table, index, column and data change with the live database.
+4. Determine whether the migration made no changes, made a partial change, or
+   completed its effects before the process failed. Review dependent migrations
+   and application data before deciding on a recovery.
+5. Have a qualified database operator reconcile the schema/data using a reviewed,
+   reversible SQL plan. Do not simply delete the migration ledger row or change
+   `failed`/`running` to `rolled_back`.
+6. Only after the database is confirmed to match the migration's fully rolled-back
+   state may an authorized, audited recovery procedure mark the attempt
+   `rolled_back`, allowing the normal runner to claim it again. If the migration
+   was actually completed, recovery must instead reconcile the ledger as
+   completed through a separately reviewed procedure; never re-run it.
+7. Re-run the migration only after backup, integrity verification and recovery
+   review, then run plugin health checks and relevant application tests before
+   activation.
+
+There is currently no self-service Admin button to clear or retry a failed/stale
+migration. This is deliberate until an audited recovery workflow can inspect
+database state and require explicit operator approval. Contact the deployment
+maintainer rather than editing migration ledger rows directly.
