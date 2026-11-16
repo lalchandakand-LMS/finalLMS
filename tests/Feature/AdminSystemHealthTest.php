@@ -42,6 +42,12 @@ class AdminSystemHealthTest extends TestCase
         $this->artisan('system:health-check')->assertExitCode(0);
 
         $this->assertDatabaseHas('system_health_checks', ['status' => 'healthy']);
+        $record = DB::table('system_health_checks')->latest('checked_at')->first();
+        $results = json_decode($record->results, true);
+        $this->assertArrayHasKey('database', $results);
+        $this->assertArrayHasKey('cache', $results);
+        $this->assertArrayHasKey('storage', $results);
+        $this->assertArrayHasKey('queue', $results);
     }
 
     public function test_scheduler_heartbeat_command_records_execution_time(): void
