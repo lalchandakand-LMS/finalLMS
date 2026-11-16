@@ -295,7 +295,8 @@ PHP;
             'plugin_key' => 'aec.course-management',
             'status' => 'failed',
         ]);
-        $this->assertDirectoryDoesNotExist($this->finalPath);
+        // Retain the signed package because a failed MySQL migration may have partially committed DDL.
+        $this->assertDirectoryExists($this->finalPath);
     }
 
     public function test_activation_rejects_an_untrusted_release_key(): void
