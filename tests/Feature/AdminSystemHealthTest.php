@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 use Tests\TestCase;
 
 class AdminSystemHealthTest extends TestCase
@@ -28,5 +29,13 @@ class AdminSystemHealthTest extends TestCase
         $this->actingAs($admin)->get(route('admin.system-health.index'))
             ->assertOk()
             ->assertSee('Recent health checks');
+    }
+
+    public function test_scheduler_heartbeat_command_records_execution_time(): void
+    {
+        $this->artisan('system:heartbeat')->assertExitCode(0);
+
+        $this->assertDatabaseHas('system_health_heartbeats', ['name' => 'scheduler']);
+        $this->assertNotNull(Artisan::output());
     }
 }
