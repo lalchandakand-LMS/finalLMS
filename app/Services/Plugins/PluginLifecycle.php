@@ -28,7 +28,37 @@ final class PluginLifecycle
         if (array_diff(array_keys($attributes), $allowedAttributes) !== []) throw new InvalidArgumentException('Unsupported plugin registry attribute.');
 
         return DB::transaction(function () use ($pluginKey, $target, $attributes): PluginInstallation {
-            $plugin = PluginInstallation::query()->where('plugin_key', $pluginKey)->lockForUpdate()->firstOrFail();
+            // Lock every registry row in a deterministic order. Dependency checks and
+            // lifecycle transitions then share one serialized view of active plugins.
+            $plugins = PluginInstallation::query()->orderBy('plugin_key')->lockForUpdate()->get();
+            $plugin = $plugins->firstWhere('plugin_key', $pluginKey);
+            if (! $plugin) {
+                throw (new ModelNotFoundException())->setModel(PluginInstallation::class, [$pluginKey]);
+            }
+
+            $activeKeys = $plugins->where('status', 'active')->pluck('plugin_key')->all();
+            if ($target === 'active') {
+                foreach (($plugin->manifest['dependencies'] ?? []) as $dependency) {
+                    if (! in_array($dependency, $activeKeys, true)) {
+                        throw new LogicException('A required plugin dependency is not active: '.$dependency);
+                    }
+                }
+                foreach (($plugin->manifest['conflicts'] ?? []) as $conflict) {
+                    if (in_array($conflict, $activeKeys, true)) {
+                        throw new LogicException('A conflicting plugin is active: '.$conflict);
+                    }
+                }
+            }
+
+            if ($target === 'inactive') {
+                foreach ($plugins->where('status', 'active') as $candidate) {
+                    if ($candidate->plugin_key !== $pluginKey
+                        && in_array($pluginKey, $candidate->manifest['dependencies'] ?? [], true)) {
+                        throw new LogicException('An active plugin depends on this plugin: '.$candidate->plugin_key);
+                    }
+                }
+            }
+
             $current = $plugin->status;
             if (! in_array($target, self::TRANSITIONS[$current] ?? [], true)) {
                 throw new LogicException("Invalid plugin lifecycle transition: {$current} -> {$target}.");
