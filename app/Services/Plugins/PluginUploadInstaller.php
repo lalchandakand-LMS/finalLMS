@@ -209,6 +209,7 @@ final class PluginUploadInstaller
             $archivePath = $stored->getPathname();
 
             $this->lifecycle->transition((string) $plugin->plugin_key, 'update_staged');
+            $plugin = $plugin->fresh();
             $metadata = $plugin->metadata ?? [];
             unset($metadata['integrity_version'], $metadata['installed_file_hashes'], $metadata['release_signature'], $metadata['signature_record_version']);
             $plugin->forceFill([
