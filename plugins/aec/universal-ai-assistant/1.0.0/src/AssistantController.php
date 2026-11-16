@@ -92,7 +92,8 @@ final class AssistantController
 
         $usedTokens = (int) DB::table('ai_assistant_messages')->where('message_role', 'assistant')
             ->whereDate('created_at', today())->sum('token_count');
-        if ($usedTokens >= $settings['daily_token_budget']) {
+        $remainingDailyTokens = AssistantTokenBudget::remaining((int) $settings['daily_token_budget'], $usedTokens);
+        if ($remainingDailyTokens < 1) {
             return response()->json(['message' => __('The institution daily AI token budget has been reached.')], 429);
         }
 
@@ -135,13 +136,25 @@ final class AssistantController
             $messages = [['role' => 'system', 'content' => AssistantSettings::rolePrompt($role)]];
             foreach ($history as $item) $messages[] = ['role' => $item->message_role, 'content' => $item->content];
 
+            // Reserve a conservative prompt estimate from the remaining budget before
+            // choosing the completion allowance. Actual provider usage is recorded below.
+            $estimatedPromptTokens = AssistantTokenBudget::estimatePromptTokens($messages);
+            $responseTokenLimit = AssistantTokenBudget::completionLimit(
+                (int) $settings['max_tokens'],
+                $remainingDailyTokens,
+                $estimatedPromptTokens
+            );
+            if ($responseTokenLimit < 1) {
+                return response()->json(['message' => __('The remaining daily AI token budget is insufficient for this prompt.')], 429);
+            }
+
             $response = Http::withToken($apiKey)->acceptJson()->timeout(40)->withOptions(array_merge([
                 'allow_redirects' => false,
                 'stream' => true,
             ], $curlOptions))->post($baseUrl.'/chat/completions', [
                 'model' => $settings['model'],
                 'temperature' => $settings['temperature'],
-                'max_tokens' => $settings['max_tokens'],
+                'max_tokens' => $responseTokenLimit,
                 'messages' => $messages,
             ]);
 
