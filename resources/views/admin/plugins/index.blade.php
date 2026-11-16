@@ -166,6 +166,29 @@
                                     <button class="btn secondary" type="submit">{{ __('Deactivate') }}</button>
                                 </form>
                             @endif
+                            @if(in_array($plugin->status, ['installed', 'inactive'], true))
+                                <details style="margin-top:8px;">
+                                    <summary>{{ __('Update signed package') }}</summary>
+                                    <p class="muted">{{ __('Only a newer signed version can be installed. Deactivate first; the previous package and its version metadata are retained.') }}</p>
+                                    <form method="POST" action="{{ route('admin.plugins.update-package', $plugin->plugin_key) }}" enctype="multipart/form-data" style="display:grid;gap:8px;max-width:520px;" onsubmit="return confirm('{{ __('Update this plugin? The plugin must be inactive. Review the signed release and take a database backup first.') }}')">
+                                        @csrf
+                                        <input type="hidden" name="confirm_update" value="1">
+                                        <label>{{ __('New plugin ZIP') }}
+                                            <input type="file" name="package" accept=".zip,application/zip" required>
+                                        </label>
+                                        <label>{{ __('Trusted release key ID') }}
+                                            <input type="text" name="key_id" maxlength="120" value="{{ $plugin->signature_key_id }}" required>
+                                        </label>
+                                        <label>{{ __('New signed manifest JSON') }}
+                                            <textarea name="manifest" rows="8" spellcheck="false" required>{{ json_encode($plugin->manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) }}</textarea>
+                                        </label>
+                                        <label>{{ __('New detached signature (Base64)') }}
+                                            <textarea name="signature" rows="3" maxlength="512" spellcheck="false" required></textarea>
+                                        </label>
+                                        <button class="btn primary" type="submit">{{ __('Verify and update package') }}</button>
+                                    </form>
+                                </details>
+                            @endif
                             @if(in_array($plugin->status, ['installed', 'inactive', 'failed'], true))
                                 <form method="POST" action="{{ route('admin.plugins.uninstall', $plugin->plugin_key) }}" style="display:inline;" onsubmit="return confirm('{{ __('Uninstall this plugin package? Conversation history, LMS data and migration records will be retained.') }}')">
                                     @csrf
