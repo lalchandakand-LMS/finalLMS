@@ -12,7 +12,11 @@
     "branch_management"
   ],
   "permissions": [],
-  "routes": [],
+  "routes": [
+    "admin.users.*",
+    "admin.staff.*",
+    "admin.hr.*"
+  ],
   "settings": [],
   "events": [],
   "directory": "plugins/staff_management",
