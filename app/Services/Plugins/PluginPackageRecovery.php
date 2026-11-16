@@ -78,7 +78,7 @@ final class PluginPackageRecovery
         }
         if (is_link($directory)) throw new RuntimeException('Plugin recovery storage must not be a symbolic link.');
 
-        $filename = Str::lower(Str::random(20)).'.zip';
+        $filename = bin2hex(random_bytes(20)).'.zip';
         $archivePath = $directory.DIRECTORY_SEPARATOR.$filename;
         $temporaryPath = $archivePath.'.tmp';
         $metadata = [
