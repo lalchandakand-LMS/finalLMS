@@ -1,38 +1,93 @@
-# LMS-wide Module Plugin Architecture
+# LMS-wide Module and Plugin Architecture
 
 ## Goal
-Move every LMS capability behind independently managed first-party modules with stable identifiers, dependencies, permissions, routes, navigation, settings, service contracts and extension points. The Core Platform is the protected foundation, not a monolithic home for every business feature.
 
-## Platform principles
+Keep the Core Platform stable and move business capabilities behind independently
+managed first-party modules. Every module has a stable key, dependencies, route
+ownership, permissions and a migration plan. The signed Plugin Manager is a
+separate package lifecycle for reviewed, signed plugin archives.
+
+## Current architecture
+
+- `config/modules.php` is the allow-listed first-party module catalogue.
+- `ModuleRegistry` persists Admin enable/disable choices and enforces dependency
+  rules. Protected foundations cannot be disabled while enabled modules depend
+  on them.
+- `config/module_routes.php` maps named web routes to every owning module.
+- `config/module_route_uris.php` maps URI-based API routes to owning modules.
+- `EnsureRouteModuleEnabled` is appended to the web and API middleware groups.
+  If any mapped owner is disabled, the route returns 404. Authentication,
+  role/permission checks and resource scoping still run independently.
+- `plugins/<module>/plugin.json` contains declarative metadata for the
+  first-party migration tranche. These manifests are currently
+  `metadata_only`; they do not load PHP code or make the implementation
+  independently installable.
+- `plugins/aec/*` contains versioned, signed-package source for actual plugin
+  packages such as Universal AI Assistant. Signed third-party package install
+  and integrity checks are governed by the Plugin Manager, not by the
+  first-party Module Registry.
+
+## Route ownership boundary
+
+Route ownership is deliberately fail-closed for mapped routes: if a route has
+multiple owners, every owner must be enabled. This supports shared endpoints
+such as batch assignment and exam workflows. Routes not yet represented in
+either ownership map remain available; they must be audited and mapped before
+the corresponding module can be described as fully isolated.
+
+The maps are not authorization. A route still requires the appropriate
+authentication, role, permission and resource-scope middleware.
+
+## Academic Level relationships
+
+Academic Levels are an independently switchable foundation module. Courses and
+website pages may be assigned to a level; batches inherit their level through
+their course, and exams inherit it through their batch. The Admin can create,
+edit, deactivate and filter levels, and navigate from a level to its courses,
+pages, batches and exams. Existing course/page assignments remain editable if a
+level is deactivated; new assignments are restricted to active levels.
+
+## First-party manifest boundary
+
+The first-party manifests added in this tranche are metadata only. They declare
+module identity, dependencies, capabilities, routes and safety expectations.
+The business code remains in the existing Laravel application and is gated by
+the Module Registry. Do not claim a module is independently installable,
+uninstallable or physically extracted until its services, controllers, views,
+migrations, jobs, events, policies and data ownership have been migrated behind
+a tested module contract.
+
+## Plugin settings and secrets
+
+Plugin-specific settings are persisted in `plugin_settings` and encrypted using
+Laravel's application encryption key. The Admin Manager displays setting keys
+and timestamps only. It does not render or audit decrypted values. Backups must
+protect `APP_KEY`; changing it without re-encrypting stored settings makes those
+values unreadable.
+
+## Migration roadmap
+
+1. Complete the route ownership inventory and add regression tests for every
+   mapped web/API route family.
+2. Extract one business capability at a time into its own first-party plugin
+   package under `plugins/`, beginning with low-coupling modules.
+3. Define stable service contracts and permission/resource scopes before
+   moving controllers, jobs, events or data writes.
+4. Move module-owned settings, jobs, notifications, provider adapters and
+   migrations into the module package with compatibility and rollback tests.
+5. Keep Core limited to identity, authorization, module/plugin registry,
+   shared contracts, audit, storage abstractions and platform services.
+6. Require signed releases, compatibility checks, integrity verification,
+   health checks and a disposable staging rehearsal before enabling packages.
+
+## Safety principles
+
 - Core Platform and Identity & Access are protected foundations.
-- Each business capability is represented by a separate module manifest.
-- Modules may be enabled only when all declared dependencies are enabled.
-- A module cannot be disabled while an enabled module depends on it.
-- Disabling never uninstalls code, deletes customer data or runs destructive migrations.
-- Third-party extensions must be explicitly allow-listed, versioned, signed and permission-scoped. Never execute uploaded PHP packages.
-- Secrets remain in server-side environment/configuration or an encrypted secret store.
-- Existing modules remain enabled by default during migration to avoid breaking current production workflows.
-
-## First-party module catalog
-The manifest separates organization and people (branches, students, teachers, guardians, staff), academic delivery (courses, lessons, batches, attendance, assignments, exams, live classes, certificates, student and guardian portals), finance (fees, expenses, refunds, payments, coupons and digital store), communications (SMS, email, push, notice board and mobile verification), website and growth (CMS, slider, media, storage, SEO, analytics, marketing, Meta Pixel, Meta Ads and support), reporting, mobile APIs/apps and external integrations.
-
-## Lifecycle foundation
-- config/modules.php contains the allow-listed first-party manifests.
-- ModuleRegistry persists administrator lifecycle choices in the existing settings store.
-- module.enabled:<module-key> middleware is registered for route-by-route runtime gating.
-- The admin Module Manager exposes lifecycle state and records changes in the activity log.
-
-## Important implementation boundary
-This is the foundation stage. Existing application routes and navigation are not all runtime-gated by module state yet. Each existing route group must be mapped to its owning module and protected by module.enabled:<module-key> as part of staged migration. A module shown as enabled is not proof that an external provider is configured or live.
-
-## Migration sequence
-1. Registry, manifests, dependency validation, admin lifecycle UI and runtime middleware.
-2. Map existing routes and navigation to module ownership; fail closed when a module is disabled without bypassing authorization.
-3. Extract module-owned services, events, policies and settings behind contracts.
-4. Payment provider adapters and payment orchestration.
-5. Communications, Storage, Marketing/SEO, Notice Board, Slider and Website modules.
-6. Academic, Finance, Student/Guardian, Teacher, Branch and Mobile modules.
-7. Signed package metadata, compatibility checks, permission scopes, install/upgrade/rollback and automated contract tests.
-
-## Security boundary
-The registry accepts only known first-party keys. It does not accept package paths, class names, arbitrary service providers, shell commands or executable uploads. An enabled catalog entry is not proof of external provider activation. Route gating supplements, and never replaces, authentication, role authorization or permission checks.
+- Dependencies must be enabled before dependent modules can be enabled.
+- Disabling a module blocks mapped routes but never uninstalls code or deletes
+  customer data.
+- Uploaded PHP is never executed merely because a file or manifest exists.
+- Third-party packages must be allow-listed, signed, integrity-verified and
+  explicitly activated.
+- External provider features are not live until credentials and provider-side
+  acceptance tests are configured.
