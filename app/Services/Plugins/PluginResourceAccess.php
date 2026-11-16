@@ -13,6 +13,15 @@ final class PluginResourceAccess
 {
     public function allows(User $actor, Model $resource): bool
     {
+        $supportedResource = $resource instanceof User
+            || $resource instanceof Course
+            || $resource instanceof Batch
+            || $resource instanceof Enrollment;
+
+        if (! $supportedResource) {
+            return false;
+        }
+
         if ($actor->isAdmin()) {
             return true;
         }
@@ -33,12 +42,16 @@ final class PluginResourceAccess
 
     private function allowsStudent(User $actor, User $student): bool
     {
+        if ((int) $actor->id === (int) $student->id) {
+            return true;
+        }
+
         if (! $student->isStudent()) {
             return false;
         }
 
         if ($actor->isStudent()) {
-            return (int) $actor->id === (int) $student->id;
+            return false;
         }
 
         if ($actor->isGuardian()) {
