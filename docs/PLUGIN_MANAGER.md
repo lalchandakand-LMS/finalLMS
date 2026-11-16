@@ -20,8 +20,7 @@ Admin workspace.
 7. The staged ZIP is deleted. The action is written to the admin activity log. No plugin entrypoint or migration is executed during installation.
 
 A failed, not-yet-installed registry entry can be retried after correcting the
-package or signature. An existing installed version cannot be overwritten.
-In-place updates are not enabled yet. Signed plugin migrations are executed only during explicit activation preflight, after installed-file integrity verification; installing a package alone does not mutate application data.
+package or signature. An existing installed version cannot be overwritten. Package updates are available only for an installed or inactive plugin; active plugins must be deactivated first. The update must retain the plugin key and type and use a strictly newer version. The current package signature and installed-file hashes are verified before update. The new ZIP is signature-verified and extracted to a new version directory; neither the previous version directory nor customer/plugin data is overwritten or deleted. Existing permission grants are intersected with the new manifest permissions so an update cannot silently grant new capabilities. A snapshot of the previous signed manifest, package path, checksum, signing key, and integrity metadata is recorded in version history before the registry switches to the new version. A migration failure leaves the new package failed/inactive and retains the previous package for recovery; database migrations may partially apply on MySQL/MariaDB and must be reviewed before retry or rollback. Signed plugin migrations are executed only during explicit activation preflight, after installed-file integrity verification; installing a package alone does not mutate application data.
 
 ## Example manifest
 
