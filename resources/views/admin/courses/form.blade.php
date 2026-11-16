@@ -1,9 +1,10 @@
 @extends('layouts.app')
 
+@php($isEditing = $course?->exists ?? false)
+
 @section('title', $isEditing ? __('Edit course') . ' | ' . config('app.name') : __('Create course') . ' | ' . config('app.name'))
 
 @section('content')
-    @php($isEditing = $course?->exists ?? false)
     @php($selectedCategoryIds = collect(old('category_ids', $course?->categories?->pluck('id')->all() ?? []))->map(fn ($id) => (int) $id)->all())
     <div class="page-header">
         <div>
