@@ -1,9 +1,9 @@
 <?php
 
-namespace App\\Services\\Plugins;
+namespace App\Services\Plugins;
 
-use App\\Models\\PluginInstallation;
-use App\\Models\\PluginSetting;
+use App\Models\PluginInstallation;
+use App\Models\PluginSetting;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -33,10 +33,12 @@ final class PluginSettingsManager
     {
         $this->assertKey($key);
 
-        return PluginSetting::query()
+        $setting = PluginSetting::query()
             ->where('plugin_key', $plugin->plugin_key)
             ->where('setting_key', $key)
-            ->value('encrypted_value');
+            ->first();
+
+        return $setting?->encrypted_value;
     }
 
     /** @return list<array{key: string, updated_at: mixed}> */
