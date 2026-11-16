@@ -70,6 +70,23 @@ class PluginSettingsManagerTest extends TestCase
         }
     }
 
+    public function test_secret_setting_values_are_not_flashed_after_validation_failure(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $plugin = $this->plugin();
+
+        $this->actingAs($admin)
+            ->from(route('admin.plugins.index'))
+            ->post(route('admin.plugins.settings.store', $plugin->plugin_key), [
+                'setting_key' => 'Invalid key',
+                'setting_value' => 'do-not-flash-this-secret',
+            ])
+            ->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHasErrors('setting_key');
+
+        $this->assertArrayNotHasKey('setting_value', session()->get('_old_input', []));
+    }
+
     public function test_admin_can_save_encrypted_settings_but_manager_never_renders_the_secret(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
