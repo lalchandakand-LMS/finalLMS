@@ -155,7 +155,6 @@ final class PluginUploadInstaller
         string $keyId,
         string $pluginKey,
         PluginIntegrityVerifier $integrityVerifier,
-        PluginVersionHistoryRecorder $history,
     ): PluginInstallation {
         try {
             $manifest = json_decode($manifestJson, true, 64, JSON_THROW_ON_ERROR);
