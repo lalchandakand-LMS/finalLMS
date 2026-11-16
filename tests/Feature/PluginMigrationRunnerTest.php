@@ -152,4 +152,73 @@ PHP);
         ]);
     }
 
+
+    public function test_failed_migration_rollback_is_not_automatically_retried_after_partial_ddl(): void
+    {
+        $name = '2026_11_15_000003_create_partial_rollback_probe.php';
+        $file = $this->root.'/migrations/'.$name;
+        file_put_contents($file, <<<'PHP'
+<?php
+return new class extends \Illuminate\Database\Migrations\Migration {
+    public function up(): void {
+        \Illuminate\Support\Facades\Schema::create('plugin_rollback_attempts', function (\Illuminate\Database\Schema\Blueprint $table): void {
+            $table->id();
+        });
+    }
+    public function down(): void {
+        \Illuminate\Support\Facades\Schema::dropIfExists('plugin_rollback_attempts');
+        throw new \RuntimeException('Simulated failure after rollback DDL committed.');
+    }
+};
+PHP);
+
+        $plugin = new PluginInstallation();
+        $plugin->forceFill([
+            'plugin_key' => 'test.migration-check',
+            'name' => 'Migration Check',
+            'version' => '1.0.0',
+            'type' => 'module',
+            'status' => 'installed',
+            'manifest' => ['migrations' => 'migrations'],
+            'package_path' => $this->relative,
+            'metadata' => [
+                'integrity_version' => 1,
+                'installed_file_hashes' => ['migrations/'.$name => hash_file('sha256', $file)],
+            ],
+        ])->save();
+
+        $runner = app(PluginMigrationRunner::class);
+        $runner->migrate($plugin);
+        $this->assertTrue(Schema::hasTable('plugin_rollback_attempts'));
+
+        try {
+            $runner->rollback($plugin);
+            $this->fail('The simulated partial rollback failure should be reported.');
+        } catch (\RuntimeException $exception) {
+            $this->assertStringContainsString('manual database recovery is required', strtolower($exception->getMessage()));
+        }
+
+        $this->assertFalse(Schema::hasTable('plugin_rollback_attempts'));
+        $this->assertDatabaseHas('plugin_migrations', [
+            'plugin_key' => 'test.migration-check',
+            'plugin_version' => '1.0.0',
+            'migration' => $name,
+            'status' => 'rollback_failed',
+        ]);
+
+        try {
+            $runner->rollback($plugin);
+            $this->fail('A failed rollback must require manual recovery, not automatic retry.');
+        } catch (\RuntimeException $exception) {
+            $this->assertStringContainsString('manual database recovery is required', strtolower($exception->getMessage()));
+        }
+
+        $this->assertDatabaseHas('plugin_migrations', [
+            'plugin_key' => 'test.migration-check',
+            'plugin_version' => '1.0.0',
+            'migration' => $name,
+            'status' => 'rollback_failed',
+        ]);
+    }
+
 }
