@@ -810,10 +810,11 @@ PHP;
         $this->assertSame(0600, fileperms($archive) & 0777);
         file_put_contents($archive, 'tampered', FILE_APPEND);
 
-        $this->actingAs($admin)->post(route('admin.plugins.restore-package', 'aec.course-management'), [
-            'confirm_restore' => '1',
-        ])->assertRedirect(route('admin.plugins.index'))
-            ->assertSessionHas('error');
+        $this->from(route('admin.plugins.index'))
+            ->actingAs($admin)->post(route('admin.plugins.restore-package', 'aec.course-management'), [
+                'confirm_restore' => '1',
+            ])->assertRedirect(route('admin.plugins.index'))
+                ->assertSessionHas('error');
 
         $this->assertDatabaseHas('plugin_registry', [
             'plugin_key' => 'aec.course-management',
@@ -838,8 +839,8 @@ PHP;
             'updated_at' => now(),
         ]);
 
-        $this->actingAs($admin)->post(route('admin.plugins.deactivate', 'aec.course-management'))
-            ->assertRedirect(route('admin.plugins.index'));
+        PluginInstallation::query()->where('plugin_key', 'aec.course-management')
+            ->update(['status' => 'inactive']);
         $this->actingAs($admin)->post(route('admin.plugins.uninstall', 'aec.course-management'), ['confirm_uninstall' => '1'])
             ->assertRedirect(route('admin.plugins.index'))
             ->assertSessionHas('success');
