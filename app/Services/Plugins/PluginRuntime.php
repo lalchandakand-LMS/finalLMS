@@ -23,6 +23,7 @@ final class PluginRuntime
         private readonly PluginManifestValidator $manifestValidator,
         private readonly PluginIntegrityVerifier $integrityVerifier,
         private readonly PluginLifecycle $lifecycle,
+        private readonly ?PluginHookRegistry $hookRegistry = null,
     ) {}
 
     /**
@@ -35,11 +36,12 @@ final class PluginRuntime
             return;
         }
         $this->registered = true;
+        $hooks = $this->hookRegistry ?? $this->app->make(PluginHookRegistry::class);
 
         foreach (PluginInstallation::query()->where('status', 'active')->orderBy('plugin_key')->get() as $plugin) {
             try {
                 $instance = $this->loadVerifiedEntrypoint($plugin);
-                $context = new PluginContext($this->app, $this->router, $plugin);
+                $context = new PluginContext($this->app, $this->router, $plugin, $hooks);
 
                 $this->loaded[$plugin->plugin_key] = [
                     'plugin' => $plugin,
@@ -47,6 +49,10 @@ final class PluginRuntime
                     'context' => $context,
                 ];
 
+                $hooks->registerCapabilities(
+                    (string) $plugin->plugin_key,
+                    is_array($plugin->manifest['capabilities'] ?? null) ? $plugin->manifest['capabilities'] : [],
+                );
                 $instance->register($context);
             } catch (Throwable $exception) {
                 unset($this->loaded[$plugin->plugin_key]);

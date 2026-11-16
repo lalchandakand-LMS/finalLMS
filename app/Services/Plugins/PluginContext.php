@@ -25,6 +25,7 @@ final class PluginContext
         private readonly Application $app,
         private readonly Router $router,
         private readonly PluginInstallation $plugin,
+        private readonly ?PluginHookRegistry $hookRegistry = null,
     ) {}
 
     public function plugin(): PluginInstallation
@@ -82,4 +83,53 @@ final class PluginContext
 
         Route::middleware($middleware)->prefix($prefix)->name($namePrefix)->group($routes);
     }
+    public function registerHook(string $hook, callable $callback, int $priority = 10): void
+    {
+        $this->hooks()->registerHook((string) $this->plugin->plugin_key, $hook, $callback, $priority);
+    }
+
+    /**
+     * @param array{icon?: string, permission?: ?string} $options
+     */
+    public function registerPortalNavigation(string $portal, string $label, string $routeName, array $options = []): void
+    {
+        if (! array_key_exists($portal, self::PORTAL_ROLES)
+            || ! in_array($portal, $this->plugin->manifest['portals'] ?? [], true)) {
+            throw new InvalidArgumentException('The plugin did not declare this portal in its signed manifest.');
+        }
+
+        $permission = $options['permission'] ?? null;
+        if ($portal === 'public') {
+            if ($permission !== null) {
+                throw new InvalidArgumentException('Public plugin navigation cannot use authenticated permission grants.');
+            }
+        } elseif (! is_string($permission)
+            || ! in_array($permission, $this->plugin->manifest['permissions'] ?? [], true)) {
+            throw new InvalidArgumentException('Authenticated plugin navigation must use a permission declared in the signed manifest.');
+        }
+
+        $this->hooks()->registerPortalNavigation(
+            (string) $this->plugin->plugin_key,
+            $portal,
+            $label,
+            $routeName,
+            $options,
+        );
+    }
+
+    public function hasPermission(string $permission): bool
+    {
+        return in_array($permission, $this->plugin->manifest['permissions'] ?? [], true);
+    }
+
+    public function hasCapability(string $capability): bool
+    {
+        return in_array($capability, $this->plugin->manifest['capabilities'] ?? [], true);
+    }
+
+    private function hooks(): PluginHookRegistry
+    {
+        return $this->hookRegistry ?? $this->app->make(PluginHookRegistry::class);
+    }
+
 }
