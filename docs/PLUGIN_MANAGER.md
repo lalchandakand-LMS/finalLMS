@@ -67,6 +67,14 @@ or alter plugin data: take and verify a database backup first, and use the contr
 only after reviewing every migration's down() implementation. It does not restore
 a previous plugin package or reverse arbitrary external side effects.
 
+A migration row in `rolling_back` or `rollback_failed` is deliberately not retried.
+MySQL DDL may have committed before PHP reported an error or the process stopped.
+An operator must compare the actual schema/data with the migration's `down()`
+implementation and the verified backup, reconcile any partial changes, and only
+then use a separately reviewed recovery procedure. The current Manager does not
+provide a button to clear or reset failed migration states; do not edit migration
+rows merely to force a retry.
+
 In-place package update and package-version rollback controls are not implemented
 yet. Do not overwrite an installed version or manually replace plugin files.
 Prepare a new signed version and complete a reviewed staging migration/rollback
