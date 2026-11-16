@@ -85,7 +85,9 @@ final class PluginVersionRestorer
         // Reverse only the current version's signed migrations. Any partial or
         // interrupted down() operation is blocked by PluginMigrationRunner and
         // requires manual database reconciliation; no registry switch occurs.
-        $this->signatureVerifier->verifyInstalledSignature($plugin);
+        if (! $this->signatureVerifier->verifyInstalledSignature($plugin)) {
+            throw new RuntimeException('The current release signature cannot be re-verified; a safe restore point cannot be created.');
+        }
         $this->integrityVerifier->verify($plugin);
         $this->history->recordSnapshot($plugin, $actor, [
             'name' => $plugin->name,
