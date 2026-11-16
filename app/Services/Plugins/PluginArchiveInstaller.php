@@ -13,7 +13,6 @@ final class PluginArchiveInstaller
     public function __construct(
         private readonly PluginManifestValidator $manifestValidator,
         private readonly PluginLifecycle $lifecycle,
-        private readonly PluginMigrationRunner $migrationRunner,
     ) {
     }
 
@@ -21,8 +20,9 @@ final class PluginArchiveInstaller
      * Extract a previously signature-verified ZIP into the canonical private
      * plugins/vendor/plugin/version directory and mark it installed.
      *
-     * Plugin entrypoints are not loaded here. Signed migrations may execute only after
-     * the extracted package has been installed and its file integrity verified.
+     * Plugin entrypoints and migrations are not executed during installation.
+     * Migrations run only during explicit activation preflight, after installed-file
+     * integrity and trusted-signature checks have passed.
      */
     public function installVerifiedPackage(PluginInstallation $plugin, string $stagedArchivePath): PluginInstallation
     {
@@ -108,15 +108,6 @@ final class PluginArchiveInstaller
                     'metadata' => $metadata,
                 ]);
 
-                try {
-                    $this->migrationRunner->migrate($installed);
-                } catch (\Throwable $migrationException) {
-                    $this->lifecycle->transition((string) $plugin->plugin_key, 'failed', [
-                        'health_status' => 'failed',
-                        'health_message' => 'A signed plugin migration or integrity check failed. Review server logs before retrying.',
-                    ]);
-                    throw $migrationException;
-                }
 
                 return $installed->fresh();
             } catch (\Throwable $exception) {

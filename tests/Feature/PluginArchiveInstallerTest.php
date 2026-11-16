@@ -4,8 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\PluginInstallation;
 use App\Services\Plugins\PluginArchiveInstaller;
+use App\Services\Plugins\PluginMigrationRunner;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schema;
 use RuntimeException;
 use Tests\TestCase;
 use ZipArchive;
@@ -128,6 +130,51 @@ class PluginArchiveInstallerTest extends TestCase
             hash_file('sha256', $this->finalPath.'/resources/course.json'),
             $installed->metadata['installed_file_hashes']['resources/course.json'],
         );
+    }
+
+
+    public function test_signed_package_migrations_wait_until_explicit_activation_preflight(): void
+    {
+        $this->manifest['migrations'] = 'migrations';
+        $migration = <<<'PHP'
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('plugin_install_deferred_migration_probe', function (Blueprint $table): void {
+            $table->id();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('plugin_install_deferred_migration_probe');
+    }
+};
+PHP;
+
+        $this->createArchive([
+            'src/Plugin.php' => '<?php return new class {};',
+            'migrations/2026_11_16_000000_create_deferred_probe.php' => $migration,
+        ]);
+
+        $installed = app(PluginArchiveInstaller::class)->installVerifiedPackage(
+            $this->registeredPlugin(),
+            $this->archivePath,
+        );
+
+        $this->assertSame('installed', $installed->status);
+        $this->assertFalse(Schema::hasTable('plugin_install_deferred_migration_probe'));
+
+        app(PluginMigrationRunner::class)->migrate($installed);
+
+        $this->assertTrue(Schema::hasTable('plugin_install_deferred_migration_probe'));
     }
 
     public function test_rejects_zip_slip_and_does_not_write_outside_plugin_directory(): void

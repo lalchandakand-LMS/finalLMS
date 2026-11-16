@@ -17,11 +17,11 @@ Admin workspace.
 5. The secure archive installer rechecks the checksum and safely extracts the
    package into plugins/vendor/plugin/version.
 6. The registry is marked installed only after the atomic filesystem move.
-7. The staged ZIP is deleted. The action is written to the admin activity log.
+7. The staged ZIP is deleted. The action is written to the admin activity log. No plugin entrypoint or migration is executed during installation.
 
 A failed, not-yet-installed registry entry can be retried after correcting the
 package or signature. An existing installed version cannot be overwritten.
-In-place updates are not enabled yet.
+In-place updates are not enabled yet. Signed plugin migrations are executed only during explicit activation preflight, after installed-file integrity verification; installing a package alone does not mutate application data.
 
 ## Example manifest
 
