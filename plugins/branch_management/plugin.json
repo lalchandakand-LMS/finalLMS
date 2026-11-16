@@ -11,7 +11,12 @@
     "identity"
   ],
   "permissions": [],
-  "routes": [],
+  "routes": [
+    "admin.branches.*",
+    "admin.branch-workspace.*",
+    "branch-manager.*",
+    "admin.branch-managers.*"
+  ],
   "settings": [],
   "events": [],
   "directory": "plugins/branch_management",
