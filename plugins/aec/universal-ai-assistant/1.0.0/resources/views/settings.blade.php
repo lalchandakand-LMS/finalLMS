@@ -62,8 +62,8 @@
     const syncCapabilities = () => {
         const capability = modelCapabilities.get(input.value);
         if (temperature) {
-            temperature.disabled = Boolean(capability && capability.temperature === false);
-            temperature.title = temperature.disabled ? 'This model does not support temperature; the parameter will be omitted.' : '';
+            temperature.readOnly = Boolean(capability && capability.temperature === false);
+            temperature.title = temperature.readOnly ? 'This model does not support temperature; the parameter will be omitted.' : '';
         }
     };
     input.addEventListener('change', syncCapabilities);
@@ -88,7 +88,7 @@
                 list.appendChild(option);
             });
             syncCapabilities();
-            status.textContent = list.options.length ? 'Loaded ' + list.options.length + ' models with verified capability profiles. Unsupported models are hidden.' : 'No verified compatible models were returned.');
+            status.textContent = list.options.length ? 'Loaded ' + list.options.length + ' models with verified capability profiles. Unsupported models are hidden.' : 'No verified compatible models were returned.';
         } catch (error) {
             status.textContent = error.message || 'Unable to load models.';
         } finally {
