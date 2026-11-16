@@ -2,12 +2,19 @@
 
 namespace Tests\Feature;
 
+use Aloms\UniversalAiAssistant\AssistantContextBuilder;
 use Aloms\UniversalAiAssistant\AssistantSettings;
 use Aloms\UniversalAiAssistant\AssistantTokenBudget;
+use App\Models\Batch;
+use App\Models\Branch;
+use App\Models\Course;
+use App\Models\Enrollment;
+use App\Models\GuardianStudentLink;
 use App\Models\PluginInstallation;
 use App\Models\User;
 use App\Services\AiDeveloperProviderEndpoint;
 use App\Services\Modules\ModuleRegistry;
+use App\Services\Plugins\PluginResourceAccess;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
@@ -69,7 +76,7 @@ class UniversalAiAssistantPluginTest extends TestCase
         Enrollment::query()->create(['user_id' => $studentA->id, 'course_id' => $courseA->id, 'batch_id' => $batchA->id, 'status' => 'active']);
         Enrollment::query()->create(['user_id' => $studentB->id, 'course_id' => $courseB->id, 'batch_id' => $batchB->id, 'status' => 'active']);
 
-        $builder = new AssistantContextBuilder(app(\\App\\Services\\Plugins\\PluginResourceAccess::class));
+        $builder = new AssistantContextBuilder(app(PluginResourceAccess::class));
         $branchContext = $builder->build($manager, 'branch_manager');
         $studentContext = $builder->build($studentA, 'student');
 
