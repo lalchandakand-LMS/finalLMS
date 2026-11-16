@@ -19,7 +19,11 @@
     "student.attendance.*",
     "admin.attendance.*",
     "admin.batches.attendance.*",
-    "branch.attendance.*",
+    "api.v1.instructor.attendance.*",
+    "api.v1.attendance.qr.*",
+    "admin.branch-workspace.batches.attendance.*",
+    "admin.branch-workspace.attendance.reports",
+    "teacher.attendance.reports",
     "api.v1.instructor.attendance.*",
     "api.v1.attendance.qr.*"
   ],
