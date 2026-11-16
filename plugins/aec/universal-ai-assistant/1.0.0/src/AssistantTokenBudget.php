@@ -39,13 +39,16 @@ final class AssistantTokenBudget
         int $estimatedPromptTokens,
         int $configuredCompletionLimit,
         int $dailyRequestLimit,
+        string $assistantRole,
+        string $provider,
+        string $model,
         int $userId,
         int $conversationId
     ): ?array {
         $date = today()->toDateString();
 
         return DB::transaction(function () use (
-            $date, $dailyBudget, $estimatedPromptTokens, $configuredCompletionLimit, $dailyRequestLimit, $userId, $conversationId
+            $date, $dailyBudget, $estimatedPromptTokens, $configuredCompletionLimit, $dailyRequestLimit, $assistantRole, $provider, $model, $userId, $conversationId
         ): ?array {
             DB::table('ai_assistant_budget_days')->insertOrIgnore([
                 'budget_date' => $date,
@@ -103,6 +106,9 @@ final class AssistantTokenBudget
                 'budget_date' => $date,
                 'user_id' => $userId,
                 'conversation_id' => $conversationId,
+                'assistant_role' => $assistantRole,
+                'provider' => $provider,
+                'model' => $model,
                 'prompt_tokens' => max(1, $estimatedPromptTokens),
                 'completion_limit' => $completionLimit,
                 'status' => 'pending',
