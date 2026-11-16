@@ -187,8 +187,10 @@ final class AssistantController
                     flush();
                 };
 
-                $pending = '';
                 try {
+                    // Do not forward partial provider chunks: credentials such as Bearer tokens
+                    // can be arbitrarily long and cross chunk boundaries. Redact the complete,
+                    // size-bounded response before emitting any assistant text to the browser.
                     $result = $provider->stream(
                         $apiKey,
                         rtrim((string) $settings['base_url'], '/'),
@@ -196,18 +198,9 @@ final class AssistantController
                         $messages,
                         (float) $settings['temperature'],
                         (int) $responseTokenLimit,
-                        function (string $delta) use (&$pending, $emit): void {
-                            $pending .= $delta;
-                            if (strlen($pending) > 256) {
-                                $safeLength = strlen($pending) - 256;
-                                $safe = mb_strcut($pending, 0, $safeLength, 'UTF-8');
-                                $pending = substr($pending, strlen($safe));
-                                $emit(['type' => 'delta', 'content' => self::redactSensitiveText($safe)]);
-                            }
-                        }
+                        static function (string $delta): void {}
                     );
 
-                    if ($pending !== '') $emit(['type' => 'delta', 'content' => self::redactSensitiveText($pending)]);
                     $answer = self::redactSensitiveText(trim($result['content']));
                     $tokens = is_int($result['total_tokens']) && $result['total_tokens'] > 0
                         ? $result['total_tokens']
