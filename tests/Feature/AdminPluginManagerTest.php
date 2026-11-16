@@ -197,6 +197,24 @@ PHP;
             'version' => '1.0.0',
             'action' => 'package_rolled_back',
         ]);
+
+        $this->actingAs($admin)->post(route('admin.plugins.rollback-package', 'aec.course-management'), [
+            'confirm_rollback' => '1',
+        ])->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'version' => '1.0.0',
+            'status' => 'inactive',
+        ]);
+        $this->assertFileExists($this->finalPath.'/src/Plugin.php');
+        $this->assertFileExists(base_path('plugins/aec/course-management/1.1.0/src/Plugin.php'));
+        $this->assertDatabaseHas('plugin_version_history', [
+            'plugin_key' => 'aec.course-management',
+            'version' => '1.0.0',
+            'action' => 'package_rolled_back',
+        ]);
     }
 
     public function test_active_plugin_cannot_be_updated_until_it_is_deactivated(): void
