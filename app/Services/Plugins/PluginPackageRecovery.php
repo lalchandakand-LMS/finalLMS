@@ -186,11 +186,28 @@ final class PluginPackageRecovery
         }
 
         $hash = hash_file('sha256', $temporaryPath);
-        if (! is_string($hash) || ! rename($temporaryPath, $archivePath)) {
+        if (! is_string($hash) || ! chmod($temporaryPath, 0600) || ! rename($temporaryPath, $archivePath)) {
             @unlink($temporaryPath);
-            throw new RuntimeException('Verified plugin recovery archive could not be published.');
+            throw new RuntimeException('Verified plugin recovery archive could not be published securely.');
         }
-        return ['path' => $filename, 'sha256' => $hash, 'bytes' => filesize($archivePath)];
+        $bytes = filesize($archivePath);
+        if ($bytes === false || ! chmod($archivePath, 0600)) {
+            @unlink($archivePath);
+            throw new RuntimeException('Published plugin recovery archive permissions could not be secured.');
+        }
+        return ['path' => $filename, 'sha256' => $hash, 'bytes' => $bytes];
+    }
+
+    public function deleteSnapshot(string $filename): void
+    {
+        if (preg_match('/^[a-f0-9]{40}\\.zip$/D', $filename) !== 1) {
+            throw new RuntimeException('Plugin recovery reference is invalid.');
+        }
+        $path = $this->assertRecoveryDirectory().DIRECTORY_SEPARATOR.$filename;
+        if (is_link($path)) throw new RuntimeException('Plugin recovery archive must not be a symbolic link.');
+        if (is_file($path) && ! unlink($path)) {
+            throw new RuntimeException('An unpublished plugin recovery archive could not be removed.');
+        }
     }
 
     public function restoreSnapshot(PluginInstallation $plugin, string $filename, string $expectedArchiveHash): void
