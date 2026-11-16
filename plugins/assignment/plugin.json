@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "key": "assignment",
+  "name": "Assignments",
+  "description": "Assignment publishing, submissions and grading.",
+  "type": "first_party",
+  "status": "metadata_only",
+  "provider": null,
+  "dependencies": [
+    "core",
+    "course_management",
+    "student_management"
+  ],
+  "permissions": [],
+  "routes": [],
+  "settings": [],
+  "events": [],
+  "directory": "plugins/assignment",
+  "safety": {
+    "trusted_code_only": true,
+    "execute_uploaded_code": false,
+    "disable_preserves_data": true
+  }
+}
