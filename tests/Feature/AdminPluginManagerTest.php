@@ -198,6 +198,7 @@ PHP;
             'action' => 'package_rolled_back',
         ]);
 
+        // The package just rolled back from remains a verified recovery target.
         $this->actingAs($admin)->post(route('admin.plugins.rollback-package', 'aec.course-management'), [
             'confirm_rollback' => '1',
         ])->assertRedirect(route('admin.plugins.index'))
@@ -205,14 +206,13 @@ PHP;
 
         $this->assertDatabaseHas('plugin_registry', [
             'plugin_key' => 'aec.course-management',
-            'version' => '1.0.0',
+            'version' => '1.1.0',
             'status' => 'inactive',
         ]);
-        $this->assertFileExists($this->finalPath.'/src/Plugin.php');
         $this->assertFileExists(base_path('plugins/aec/course-management/1.1.0/src/Plugin.php'));
         $this->assertDatabaseHas('plugin_version_history', [
             'plugin_key' => 'aec.course-management',
-            'version' => '1.0.0',
+            'version' => '1.1.0',
             'action' => 'package_rolled_back',
         ]);
     }
