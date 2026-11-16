@@ -109,6 +109,79 @@ class OfflineAttendanceSyncTest extends TestCase
         $this->assertDatabaseCount('attendances', 1);
     }
 
+
+    public function test_teacher_can_create_short_lived_signed_qr_and_student_checkin_is_replay_safe(): void
+    {
+        [$teacher, $batch, $student, $teacherToken] = $this->attendanceContext();
+        $studentToken = $this->tokenFor($student);
+
+        $session = $this->withToken($teacherToken)->postJson(
+            '/api/v1/instructor/batches/'.$batch->id.'/attendance/qr',
+            ['attendance_date' => '2026-11-16']
+        )->assertCreated()
+            ->assertJsonPath('data.expires_in_seconds', fn ($value) => $value <= 120 && $value > 0);
+
+        $url = $session->json('data.check_in_url');
+        $path = parse_url($url, PHP_URL_PATH).'?'.parse_url($url, PHP_URL_QUERY);
+        $payload = [
+            'latitude' => 23.8103,
+            'longitude' => 90.4125,
+            'location_accuracy_m' => 12,
+            'location_captured_at' => now()->toISOString(),
+        ];
+
+        $this->withToken($studentToken)->postJson($path, $payload)
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'synced');
+
+        $this->withToken($studentToken)->postJson($path, $payload)
+            ->assertOk()
+            ->assertJsonPath('data.status', 'duplicate');
+
+        $this->assertDatabaseCount('attendances', 1);
+        $this->assertDatabaseCount('attendance_qr_checkins', 1);
+        $this->assertDatabaseHas('attendances', [
+            'batch_id' => $batch->id,
+            'student_id' => $student->id,
+            'status' => 'present',
+            'source' => 'qr',
+        ]);
+    }
+
+    public function test_teacher_can_resolve_an_offline_conflict_with_reason_and_audit(): void
+    {
+        [$teacher, $batch, $student, $token] = $this->attendanceContext();
+        $attendance = \App\Models\Attendance::query()->create([
+            'batch_id' => $batch->id,
+            'student_id' => $student->id,
+            'marked_by' => $teacher->id,
+            'attendance_date' => '2026-11-16',
+            'status' => 'absent',
+        ]);
+
+        $this->withToken($token)->postJson('/api/v1/instructor/attendance/'.$attendance->id.'/resolve-conflict', [
+            'status' => 'present',
+            'reason' => 'Verified against class register.',
+            'latitude' => 23.8103,
+            'longitude' => 90.4125,
+            'location_accuracy_m' => 16,
+            'location_captured_at' => now()->toISOString(),
+        ])->assertOk()
+            ->assertJsonPath('data.status', 'resolved')
+            ->assertJsonPath('data.previous_status', 'absent')
+            ->assertJsonPath('data.current_status', 'present');
+
+        $this->assertDatabaseHas('attendances', ['id' => $attendance->id, 'status' => 'present']);
+        $this->assertDatabaseHas('attendance_audits', [
+            'attendance_id' => $attendance->id,
+            'actor_id' => $teacher->id,
+            'action' => 'conflict_resolved',
+            'old_status' => 'absent',
+            'new_status' => 'present',
+            'reason' => 'Verified against class register.',
+        ]);
+    }
+
     private function attendanceContext(): array
     {
         $teacher = User::factory()->create(['role' => 'teacher']);
