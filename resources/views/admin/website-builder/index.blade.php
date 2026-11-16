@@ -7,6 +7,7 @@
 </div>
 <nav class="cta-row" aria-label="Website content builder" style="margin:0 0 20px;flex-wrap:wrap;">
     <a class="btn primary" href="{{ route('admin.website-builder.index') }}" aria-current="page">Homepage Builder</a>
+    <a class="btn secondary" href="#homepage-slider">Slider / Carousel</a>
     <a class="btn secondary" href="{{ route('admin.website-pages.index') }}">Pages</a>
     <a class="btn secondary" href="{{ route('admin.news.index') }}">Posts</a>
     <a class="btn secondary" href="{{ route('admin.media.index') }}">Media Library</a>
@@ -78,8 +79,8 @@
         <div><label for="home-reviews-title">Student reviews section title</label><input id="home-reviews-title" name="home_reviews_title" maxlength="255" value="{{ old('home_reviews_title', $settings['home_reviews_title'] ?? 'What Our Students Say') }}"></div>
     </div>
 </section>
-<section class="panel" style="margin-bottom:20px;">
-    <h2>Homepage slider</h2>
+<section class="panel" id="homepage-slider" style="margin-bottom:20px;scroll-margin-top:24px;">
+    <h2>Homepage slider / carousel</h2>
     <p class="muted">Build an accessible, responsive hero carousel with up to eight slides. Choose autoplay, timing, controls and image overlay. Upload images in Media Library before selecting them.</p>
     <div class="grid grid-2">
         <label>Autoplay<select name="home_slider_autoplay"><option value="1" @selected(old('home_slider_autoplay', $settings['home_slider_autoplay'] ?? '1') == '1')>Enabled</option><option value="0" @selected(old('home_slider_autoplay', $settings['home_slider_autoplay'] ?? '1') == '0')>Disabled</option></select></label>
