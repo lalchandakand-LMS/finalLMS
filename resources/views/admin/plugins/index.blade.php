@@ -196,6 +196,13 @@
                                     <button class="btn secondary" type="submit">{{ __('Rollback package version') }}</button>
                                 </form>
                             @endif
+                            @if($plugin->status === 'uninstalled' && $plugin->versionHistory->contains(fn ($history) => $history->action === 'pre_uninstall_snapshot' && $history->version === $plugin->version))
+                                <form method="POST" action="{{ route('admin.plugins.restore-package', $plugin->plugin_key) }}" style="display:inline;" onsubmit="return confirm('{{ __('Restore this exact signed plugin package from its verified pre-uninstall snapshot? It will remain inactive.') }}')">
+                                    @csrf
+                                    <input type="hidden" name="confirm_restore" value="1">
+                                    <button class="btn secondary" type="submit">{{ __('Restore package') }}</button>
+                                </form>
+                            @endif
                             @if(in_array($plugin->status, ['installed', 'inactive', 'failed', 'uninstalled'], true))
                                 <form method="POST" action="{{ route('admin.plugins.uninstall', $plugin->plugin_key) }}" style="display:inline;" onsubmit="return confirm('{{ $plugin->status === 'uninstalled' ? __('Retry removal of remaining plugin package files? LMS data and migration records will be retained.') : __('Uninstall this plugin package? LMS data and migration records will be retained.') }}')">
                                     @csrf
