@@ -125,6 +125,7 @@ class VisitorPopupManagementTest extends TestCase
 
         $this->actingAs($admin)->get('/admin/visitor-popups')->assertNotFound();
         $this->get('/popups/active')->assertNotFound();
+        auth()->logout();
         $this->get(route('landing'))->assertOk()->assertDontSee('Retained campaign');
         $this->assertDatabaseHas('visitor_popups', ['id' => $id, 'title' => 'Retained campaign']);
     }
