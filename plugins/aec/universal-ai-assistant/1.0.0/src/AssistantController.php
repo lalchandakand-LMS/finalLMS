@@ -2,11 +2,10 @@
 
 namespace Aloms\UniversalAiAssistant;
 
-use App\Services\AiDeveloperProviderEndpoint;
+use App\Contracts\Ai\AiProvider;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Http;
 use Illuminate\View\View;
 use Throwable;
 
