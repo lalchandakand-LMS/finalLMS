@@ -84,10 +84,10 @@ class CourseContentController extends Controller
         ));
     }
 
-    public function file(Request $request, Course $course, CourseContentPost $post): BinaryFileResponse
+    public function file(Request $request, Course $course, CourseContentPost $post)
     {
         abort_unless($post->status === 'published' && $post->published_at && $post->published_at->lte(now()), 404);
-        abort_unless($course->curriculumItems()->where('course_content_post_id', $post->id)->exists(), 404);
+        $curriculumItem = $course->curriculumItems()->where('course_content_post_id', $post->id)->firstOrFail();
         abort_unless($post->content_file_path && Storage::disk('local')->exists($post->content_file_path), 404);
 
         $user = $request->user();
@@ -101,7 +101,18 @@ class CourseContentController extends Controller
                 ->where(fn ($query) => $query->whereNull('downloads_remaining')->orWhere('downloads_remaining', '>', 0))
                 ->whereHas('orderItem.order', fn ($query) => $query->where('status', 'completed'))->exists()
             : false;
-        abort_unless($canManage || $isEnrolled || $hasPurchased || $post->access_type === 'free', 403);
+        abort_unless($canManage || $isEnrolled || $hasPurchased || $post->access_type === 'free' || $curriculumItem->is_preview, 403);
+
+        if ($post->access_type === 'paid' && ! $canManage && ! $isEnrolled) {
+            $permission = DownloadPermission::query()->where('user_id', $user->id)
+                ->where('product_id', $post->product_id)->whereNull('revoked_at')
+                ->where(fn ($query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+                ->where(fn ($query) => $query->whereNull('downloads_remaining')->orWhere('downloads_remaining', '>', 0))
+                ->whereHas('orderItem.order', fn ($query) => $query->where('status', 'completed'))
+                ->firstOrFail();
+
+            return app(EbookStoreController::class)->download($permission, $request);
+        }
 
         $absolutePath = Storage::disk('local')->path($post->content_file_path);
         $mime = $post->content_file_mime ?: 'application/octet-stream';
