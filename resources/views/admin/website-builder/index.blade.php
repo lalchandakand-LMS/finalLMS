@@ -5,10 +5,16 @@
     <div><span class="badge info">{{ __('Admin CMS') }}</span><h1>{{ __('Website Builder') }}</h1><p class="muted">Control your public website identity, homepage slider and content sections from one place.</p></div>
     <div class="cta-row"><a href="{{ route('admin.media.index') }}" class="btn secondary">{{ __('Media Library') }}</a><a href="{{ route('landing') }}" class="btn secondary" target="_blank" rel="noopener">{{ __('Live website') }}</a>@if($draft)<a href="{{ route('admin.website-builder.preview') }}" class="btn primary" target="_blank" rel="noopener">Preview saved draft</a>@endif</div>
 </div>
+<nav class="cta-row" aria-label="Website content builder" style="margin:0 0 20px;flex-wrap:wrap;">
+    <a class="btn primary" href="{{ route('admin.website-builder.index') }}" aria-current="page">Homepage Builder</a>
+    <a class="btn secondary" href="{{ route('admin.website-pages.index') }}">Pages</a>
+    <a class="btn secondary" href="{{ route('admin.news.index') }}">Posts</a>
+    <a class="btn secondary" href="{{ route('admin.media.index') }}">Media Library</a>
+</nav>
 <form method="POST" action="{{ route('admin.website-builder.update') }}">
 @csrf
 <section class="panel" style="margin-bottom:20px;">
-    <div class="page-header"><div><h2>Choose a homepage design</h2><p class="muted">Select one of 15 responsive visual presets. Your courses, users, media, homepage copy and saved sections remain unchanged when you switch designs.</p></div><span class="badge info">15 designs</span></div>
+    <div class="page-header"><div><h2>Choose a homepage design</h2><p class="muted">Select one of 16 responsive visual presets. Your courses, users, media, homepage copy and saved sections remain unchanged when you switch designs.</p></div><span class="badge info">16 designs</span></div>
     <div class="grid grid-3">
         @foreach($templates as $templateKey => $template)
             <label class="card" style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;border:2px solid {{ old('homepage_template', $activeTemplate) === $templateKey ? 'var(--primary)' : 'var(--border)' }};">
@@ -64,6 +70,13 @@
         <div><label for="home-featured-title">Featured courses heading</label><input id="home-featured-title" name="home_featured_title" maxlength="255" value="{{ old('home_featured_title', $settings['home_featured_title'] ?? '') }}"></div>
     </div>
     <label for="home-subtitle">Subtitle</label><textarea id="home-subtitle" name="home_subtitle" rows="3" maxlength="500">{{ old('home_subtitle', $settings['home_subtitle'] ?? '') }}</textarea>
+    <h3 style="margin-top:18px;">Reference layout section headings</h3>
+    <div class="grid grid-2">
+        <div><label for="home-batches-title">Online batches panel title</label><input id="home-batches-title" name="home_batches_title" maxlength="255" value="{{ old('home_batches_title', $settings['home_batches_title'] ?? 'Online Batches are ongoing!') }}"></div>
+        <div><label for="home-stats-title">Statistics panel title</label><input id="home-stats-title" name="home_stats_title" maxlength="255" value="{{ old('home_stats_title', $settings['home_stats_title'] ?? 'See the stats!') }}"></div>
+        <div><label for="home-paths-title">Learning path section title</label><input id="home-paths-title" name="home_paths_title" maxlength="255" value="{{ old('home_paths_title', $settings['home_paths_title'] ?? 'Choose Your Learning Path') }}"></div>
+        <div><label for="home-reviews-title">Student reviews section title</label><input id="home-reviews-title" name="home_reviews_title" maxlength="255" value="{{ old('home_reviews_title', $settings['home_reviews_title'] ?? 'What Our Students Say') }}"></div>
+    </div>
 </section>
 <section class="panel" style="margin-bottom:20px;">
     <h2>Homepage slider</h2>
