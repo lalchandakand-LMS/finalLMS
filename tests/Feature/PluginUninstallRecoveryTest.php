@@ -41,7 +41,14 @@ class PluginUninstallRecoveryTest extends TestCase
         $this->assertSame('failed', $failed->health_status);
         $this->assertSame('Package cleanup failed; retry uninstall.', $failed->health_message);
 
-        $this->expectException(LogicException::class);
-        $lifecycle->transition('test.cleanup-recovery', 'active');
+        try {
+            $lifecycle->transition('test.cleanup-recovery', 'active');
+            $this->fail('A cleanup-failed plugin must never become active.');
+        } catch (LogicException) {
+            $this->assertTrue(true);
+        }
+
+        $retry = $lifecycle->transition('test.cleanup-recovery', 'uninstalled');
+        $this->assertSame('uninstalled', $retry->status);
     }
 }
