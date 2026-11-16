@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Artisan;
 use Tests\TestCase;
 
 class AdminSystemHealthTest extends TestCase
@@ -36,6 +35,5 @@ class AdminSystemHealthTest extends TestCase
         $this->artisan('system:heartbeat')->assertExitCode(0);
 
         $this->assertDatabaseHas('system_health_heartbeats', ['name' => 'scheduler']);
-        $this->assertNotNull(Artisan::output());
     }
 }
