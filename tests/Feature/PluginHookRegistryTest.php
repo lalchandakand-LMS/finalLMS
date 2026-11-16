@@ -39,6 +39,7 @@ class PluginHookRegistryTest extends TestCase
             'signature_key_id' => 'test-release-key',
             'signature_verified_at' => now(),
             'package_path' => 'plugins/aec/course-studio/1.0.0',
+            'metadata' => ['granted_permissions' => ['courses.view']],
         ])->save();
 
         return $plugin;
@@ -66,6 +67,10 @@ class PluginHookRegistryTest extends TestCase
         $this->assertSame(['widget-teacher'], $registry->dispatch('lms.dashboard.widgets', ['role' => 'teacher']));
         $this->assertCount(1, $registry->portalNavigation('student'));
 
+        $plugin->forceFill(['metadata' => ['granted_permissions' => []]])->save();
+        $this->assertSame([], $registry->portalNavigation('student'));
+        $plugin->forceFill(['metadata' => ['granted_permissions' => ['courses.view']]])->save();
+
         $plugin->forceFill(['status' => 'inactive'])->save();
 
         $this->assertFalse($registry->hasCapability('course-studio'));
@@ -82,6 +87,15 @@ class PluginHookRegistryTest extends TestCase
         $context->registerPortalNavigation('student', 'Course Studio', 'dashboard', [
             'permission' => 'admin.users.delete',
         ]);
+    }
+
+    public function test_authenticated_plugin_navigation_requires_a_declared_permission(): void
+    {
+        $plugin = $this->activePlugin();
+        $context = new PluginContext(app(), app('router'), $plugin, app(PluginHookRegistry::class));
+
+        $this->expectException(InvalidArgumentException::class);
+        $context->registerPortalNavigation('student', 'Course Studio', 'dashboard');
     }
 
     public function test_authenticated_plugin_routes_still_require_declared_permissions(): void

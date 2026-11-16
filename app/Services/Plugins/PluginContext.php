@@ -99,10 +99,13 @@ final class PluginContext
         }
 
         $permission = $options['permission'] ?? null;
-        if ($permission !== null
-            && (! is_string($permission)
-                || ! in_array($permission, $this->plugin->manifest['permissions'] ?? [], true))) {
-            throw new InvalidArgumentException('Plugin navigation permissions must be declared in the signed manifest.');
+        if ($portal === 'public') {
+            if ($permission !== null) {
+                throw new InvalidArgumentException('Public plugin navigation cannot use authenticated permission grants.');
+            }
+        } elseif (! is_string($permission)
+            || ! in_array($permission, $this->plugin->manifest['permissions'] ?? [], true)) {
+            throw new InvalidArgumentException('Authenticated plugin navigation must use a permission declared in the signed manifest.');
         }
 
         $this->hooks()->registerPortalNavigation(

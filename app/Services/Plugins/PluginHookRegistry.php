@@ -138,6 +138,19 @@ final class PluginHookRegistry
                 continue;
             }
 
+            $grantedPermissions = is_array($plugin->metadata)
+                && is_array($plugin->metadata['granted_permissions'] ?? null)
+                ? $plugin->metadata['granted_permissions']
+                : [];
+            $permission = $item['permission'];
+            if ($portal !== 'public'
+                && (! is_string($permission) || ! in_array($permission, $grantedPermissions, true))) {
+                continue;
+            }
+            if ($permission !== null && ! in_array($permission, $grantedPermissions, true)) {
+                continue;
+            }
+
             $visible[] = $item;
         }
 
