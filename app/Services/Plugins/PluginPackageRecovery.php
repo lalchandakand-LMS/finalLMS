@@ -136,6 +136,36 @@ final class PluginPackageRecovery
             @unlink($temporaryPath);
             throw new RuntimeException('Plugin recovery metadata signature verification failed.');
         }
+
+        // Verify every archived file by streaming it from the ZIP; do not load
+        // package contents into PHP memory, even for large plugin assets.
+        $verifyZip = new ZipArchive();
+        if ($verifyZip->open($temporaryPath) !== true) {
+            @unlink($temporaryPath);
+            throw new RuntimeException('Plugin recovery archive could not be reopened for file verification.');
+        }
+        try {
+            foreach ($files as $relative => $expectedHash) {
+                $stream = $verifyZip->getStream('files/'.$relative);
+                if (! is_resource($stream)) {
+                    throw new RuntimeException('A package file is missing from the recovery archive.');
+                }
+                $context = hash_init('sha256');
+                try {
+                    if (hash_update_stream($context, $stream) === false) {
+                        throw new RuntimeException('A package file could not be read during recovery verification.');
+                    }
+                } finally {
+                    fclose($stream);
+                }
+                if (! hash_equals($expectedHash, hash_final($context))) {
+                    throw new RuntimeException('A package file failed recovery archive checksum verification.');
+                }
+            }
+        } finally {
+            $verifyZip->close();
+        }
+
         $hash = hash_file('sha256', $temporaryPath);
         if (! is_string($hash) || ! rename($temporaryPath, $archivePath)) {
             @unlink($temporaryPath);
