@@ -129,7 +129,7 @@ class PluginResourceAccessTest extends TestCase
         $otherTeacher = User::factory()->create(['role' => 'teacher']);
         $course = Course::factory()->create(['teacher_id' => $otherTeacher->id]);
 
-        \Illuminate\Support\Facades\Route::middleware(['auth', 'plugin.resource:course'])
+        \Illuminate\Support\Facades\Route::middleware(['web', 'auth', 'plugin.resource:course'])
             ->get('/__plugin-scope/courses/{course}', fn (Course $course) => response()->json(['id' => $course->id]));
 
         $this->actingAs($teacher)->get('/__plugin-scope/courses/'.$course->slug)->assertNotFound();
