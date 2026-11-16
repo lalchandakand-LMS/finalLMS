@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\URL;
 
 class PopupCampaign extends Model
 {
@@ -366,7 +367,9 @@ class PopupCampaign extends Model
             'delay_seconds' => (int) $this->delay_seconds,
             'scroll_trigger_percent' => (int) ($this->scroll_trigger_percent ?? 0),
             'cooldown_hours' => (int) ($this->cooldown_hours ?? 0),
-            'track_url' => $analyticsActive ? route('popups.events', $this->id) : null,
+            'track_url' => $analyticsActive
+                ? URL::temporarySignedRoute('popups.events', now()->addMinutes(30), ['popup' => $this->id])
+                : null,
         ];
     }
 }

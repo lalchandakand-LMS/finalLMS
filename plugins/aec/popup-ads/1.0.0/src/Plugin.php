@@ -41,7 +41,7 @@ return new class implements PluginContract
 
         $context->routesForPortal('public', 'popups', 'popups.', function (): void {
             Route::get('/active', [PublicPopupController::class, 'active'])->middleware('throttle:60,1')->name('active');
-            Route::post('/{popup}/events', [PublicPopupController::class, 'track'])->whereNumber('popup')->middleware('throttle:30,1')->name('events');
+            Route::post('/{popup}/events', [PublicPopupController::class, 'track'])->whereNumber('popup')->middleware(['signed', 'throttle:30,1'])->name('events');
         });
 
         $context->bind('popup_ads.render', fn () => function (Request $request): string {
