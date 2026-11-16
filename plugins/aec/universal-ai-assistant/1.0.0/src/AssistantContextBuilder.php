@@ -48,10 +48,19 @@ final class AssistantContextBuilder
             ->whereIn('status', ['active', 'completed'])
             ->whereHas('course', fn ($query) => $query->where('status', 'published'));
 
+        $enrollments = $enrollmentQuery
+            ->with(['course:id,title', 'batch:id,title'])
+            ->latest('id')
+            ->limit(40)
+            ->get();
+
         if (in_array($role, ['student', 'guardian'], true)) {
+            // Derive learner-visible course and batch IDs from the already scoped,
+            // active/completed enrollment rows. Do not let another learner's active
+            // enrollment make an inactive learner's record visible.
             $courseQuery->where('status', 'published')
-                ->whereHas('enrollments', fn ($query) => $query->whereIn('status', ['active', 'completed']));
-            $batchQuery->whereHas('enrollments', fn ($query) => $query->whereIn('status', ['active', 'completed']));
+                ->whereIn('id', $enrollments->pluck('course_id')->unique()->all());
+            $batchQuery->whereIn('id', $enrollments->pluck('batch_id')->filter()->unique()->all());
         }
 
         $courses = $courseQuery
@@ -64,12 +73,6 @@ final class AssistantContextBuilder
             ->select(['id', 'title', 'course_id', 'branch_id', 'teacher_id', 'starts_at', 'ends_at', 'status'])
             ->orderBy('starts_at')
             ->limit(25)
-            ->get();
-
-        $enrollments = $enrollmentQuery
-            ->with(['course:id,title', 'batch:id,title'])
-            ->latest('id')
-            ->limit(40)
             ->get();
 
         $linkedStudents = $role === 'guardian'
