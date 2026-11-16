@@ -266,7 +266,7 @@ PHP);
         try {
             $runner->rollback($plugin);
             $this->fail('An interrupted rollback must require manual database recovery.');
-        } catch (\\RuntimeException $exception) {
+        } catch (\RuntimeException $exception) {
             $this->assertStringContainsString('manual database recovery is required', strtolower($exception->getMessage()));
         }
 
