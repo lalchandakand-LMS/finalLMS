@@ -57,6 +57,7 @@ class AdminCourseContentPostController extends Controller
 
     private function form(CourseContentPost $post): View
     {
+        $post->loadMissing('product.previewPages');
         $categories = CourseCategory::orderBy('sort_order')->orderBy('name')->get();
         $media = MediaAsset::where('mime_type', 'like', 'image/%')->latest()->limit(300)->get();
         $levels = AcademicLevel::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get();
