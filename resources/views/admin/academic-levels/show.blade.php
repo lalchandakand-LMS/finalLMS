@@ -3,7 +3,33 @@
 @section('content')
 <div class="container-fluid">
     <div class="mb-4"><a href="{{ route('admin.academic-levels.index') }}">← Academic Levels</a><h1 class="h3 mt-2">{{ $academicLevel->name }}</h1><p class="text-muted">{{ $academicLevel->description }}</p></div>
-    <div class="card card-body mb-4"><div class="d-flex justify-content-between align-items-center"><h2 class="h5 mb-0">Batches & Exams</h2><a href="{{ route('admin.batches.index', ['academic_level_id' => $academicLevel->id]) }}">Manage batches</a></div>
+    <div class="card card-body mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h2 class="h5 mb-0">Exams for {{ $academicLevel->name }}</h2>
+            <a href="{{ route('admin.batches.index', ['academic_level_id' => $academicLevel->id]) }}">Manage batches</a>
+        </div>
+        <form method="GET" action="{{ route('admin.academic-levels.show', $academicLevel) }}" class="d-flex gap-2 flex-wrap my-3">
+            <label class="flex-grow-1">Search exam title
+                <input class="form-control" type="search" name="exam_search" value="{{ $filters['exam_search'] ?? '' }}" maxlength="120" placeholder="Enter exam title">
+            </label>
+            <button class="btn btn-primary align-self-end" type="submit">Search exams</button>
+            <a class="btn btn-outline-secondary align-self-end" href="{{ route('admin.academic-levels.show', $academicLevel) }}">Reset</a>
+        </form>
+        <div class="list-group list-group-flush">
+            @forelse($exams as $exam)
+                <div class="list-group-item px-0">
+                    <div class="d-flex justify-content-between flex-wrap gap-2">
+                        <div><strong>{{ $exam->title }}</strong><div class="small text-muted">{{ $exam->batch->title }} · {{ $exam->batch->course->title }} · {{ $exam->starts_at->format('M j, Y H:i') }}</div></div>
+                        <a class="btn btn-sm btn-outline-primary" href="{{ route('admin.batches.exams.index', $exam->batch) }}">Manage exam</a>
+                    </div>
+                </div>
+            @empty
+                <p class="text-muted mb-0">No exams match this academic level and search.</p>
+            @endforelse
+        </div>
+        <div class="mt-3">{{ $exams->links() }}</div>
+    </div>
+    <div class="card card-body mb-4"><div class="d-flex justify-content-between align-items-center"><h2 class="h5 mb-0">Batches</h2><a href="{{ route('admin.batches.index', ['academic_level_id' => $academicLevel->id]) }}">Manage batches</a></div>
         @php($batches = $academicLevel->courses->flatMap(fn ($course) => $course->batches))
         @forelse($batches as $batch)
             <div class="border-top py-2 mt-2"><strong>{{ $batch->title }}</strong> <span class="text-muted">· {{ $batch->course?->title }} · {{ $batch->branch?->name }}</span>
