@@ -65,7 +65,7 @@ final class PluginUploadInstaller
                 && ! is_link($finalAbsolutePath);
 
             if (! $retryableState) {
-                throw new RuntimeException('This plugin is already registered or installed. In-place plugin updates are not enabled yet.');
+                throw new RuntimeException('This plugin is already registered or installed. Use the signed package update action for an existing inactive plugin.');
             }
 
             $existing->delete();
