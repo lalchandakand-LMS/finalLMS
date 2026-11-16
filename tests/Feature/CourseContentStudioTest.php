@@ -9,6 +9,7 @@ use App\Models\CourseContentPost;
 use App\Models\CourseCurriculumItem;
 use App\Models\DownloadPermission;
 use App\Models\Enrollment;
+use App\Models\MediaAsset;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
