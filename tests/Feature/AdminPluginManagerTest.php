@@ -246,6 +246,43 @@ PHP;
         ]);
     }
 
+    public function test_package_rollback_is_blocked_when_current_version_has_failed_migrations(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData())
+            ->assertRedirect(route('admin.plugins.index'));
+
+        $this->manifest['version'] = '1.1.0';
+        $data = $this->uploadData();
+        $data['confirm_update'] = '1';
+        $this->actingAs($admin)->post(route('admin.plugins.update-package', 'aec.course-management'), $data)
+            ->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+
+        DB::table('plugin_migrations')->insert([
+            'plugin_key' => 'aec.course-management',
+            'plugin_version' => '1.1.0',
+            'migration' => '2026_11_16_000001_partial.php',
+            'status' => 'failed',
+            'started_at' => now(),
+            'completed_at' => null,
+            'error_message' => 'Migration failed; inspect server logs.',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.plugins.rollback-package', 'aec.course-management'), [
+            'confirm_rollback' => '1',
+        ])->assertRedirect()
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'version' => '1.1.0',
+            'status' => 'installed',
+        ]);
+    }
+
     public function test_active_plugin_cannot_be_updated_until_it_is_deactivated(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
