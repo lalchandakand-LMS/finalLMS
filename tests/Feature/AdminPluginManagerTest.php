@@ -205,7 +205,7 @@ PHP;
         ]);
     }
 
-    public function test_signed_plugin_migrations_run_during_activation_after_install(): void
+    public function test_signed_plugin_migrations_complete_during_install_before_activation(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
         $this->manifest['migrations'] = 'migrations';
@@ -237,10 +237,13 @@ PHP;
             ->assertRedirect(route('admin.plugins.index'))
             ->assertSessionHas('success');
 
-        $this->assertDatabaseMissing('settings', ['key' => 'plugin_activation_probe']);
-        $this->assertDatabaseMissing('plugin_migrations', [
+        // Installation executes only signed, integrity-checked migrations; the plugin remains inactive.
+        $this->assertDatabaseHas('settings', ['key' => 'plugin_activation_probe', 'value' => 'ran']);
+        $this->assertDatabaseHas('plugin_migrations', [
             'plugin_key' => 'aec.course-management',
+            'plugin_version' => '1.0.0',
             'migration' => '2026_11_15_000001_probe.php',
+            'status' => 'completed',
         ]);
         $this->assertDatabaseHas('plugin_registry', [
             'plugin_key' => 'aec.course-management',
@@ -251,20 +254,17 @@ PHP;
             ->assertRedirect(route('admin.plugins.index'))
             ->assertSessionHas('success');
 
-        $this->assertDatabaseHas('settings', ['key' => 'plugin_activation_probe', 'value' => 'ran']);
-        $this->assertDatabaseHas('plugin_migrations', [
-            'plugin_key' => 'aec.course-management',
-            'plugin_version' => '1.0.0',
-            'migration' => '2026_11_15_000001_probe.php',
-            'status' => 'completed',
-        ]);
         $this->assertDatabaseHas('plugin_registry', [
             'plugin_key' => 'aec.course-management',
             'status' => 'active',
         ]);
+        $this->assertSame(1, DB::table('plugin_migrations')
+            ->where('plugin_key', 'aec.course-management')
+            ->where('migration', '2026_11_15_000001_probe.php')
+            ->count());
     }
 
-    public function test_failed_signed_plugin_migration_blocks_activation_and_retains_inactive_package(): void
+    public function test_failed_signed_plugin_migration_marks_install_failed_and_retains_package(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
         $this->manifest['migrations'] = 'migrations';
@@ -284,16 +284,6 @@ return new class extends Migration {
 PHP;
 
         $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData(migrationSource: $migration))
-            ->assertRedirect(route('admin.plugins.index'))
-            ->assertSessionHas('success');
-
-        $this->assertDatabaseHas('plugin_registry', [
-            'plugin_key' => 'aec.course-management',
-            'status' => 'installed',
-        ]);
-        $this->assertDirectoryExists($this->finalPath);
-
-        $this->actingAs($admin)->post(route('admin.plugins.activate', 'aec.course-management'))
             ->assertRedirect()
             ->assertSessionHas('error');
 
@@ -304,8 +294,10 @@ PHP;
         ]);
         $this->assertDatabaseHas('plugin_registry', [
             'plugin_key' => 'aec.course-management',
-            'status' => 'installed',
+            'status' => 'failed',
         ]);
+        // Retain the signed package: a failed MySQL migration may have partially applied DDL,
+        // and its source must remain available for health checks and recovery.
         $this->assertDirectoryExists($this->finalPath);
     }
 
