@@ -283,6 +283,60 @@ PHP;
         ]);
     }
 
+    public function test_partial_package_migration_rollback_marks_plugin_failed_and_non_activatable(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData())
+            ->assertRedirect(route('admin.plugins.index'));
+
+        $this->manifest['version'] = '1.1.0';
+        $this->manifest['migrations'] = 'migrations';
+        $migration = <<<'PHP'
+<?php
+
+return new class extends \Illuminate\Database\Migrations\Migration {
+    public function up(): void {}
+    public function down(): void {
+        throw new \RuntimeException('Simulated non-reversible migration.');
+    }
+};
+PHP;
+        $data = $this->uploadData(migrationSource: $migration);
+        $data['confirm_update'] = '1';
+
+        $this->actingAs($admin)->post(route('admin.plugins.update-package', 'aec.course-management'), $data)
+            ->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('plugin_migrations', [
+            'plugin_key' => 'aec.course-management',
+            'plugin_version' => '1.1.0',
+            'migration' => '2026_11_15_000001_probe.php',
+            'status' => 'completed',
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.plugins.rollback-package', 'aec.course-management'), [
+            'confirm_rollback' => '1',
+        ])->assertRedirect()
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'version' => '1.1.0',
+            'status' => 'failed',
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.plugins.activate', 'aec.course-management'))
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'version' => '1.1.0',
+            'status' => 'failed',
+        ]);
+    }
+
     public function test_active_plugin_cannot_be_updated_until_it_is_deactivated(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
