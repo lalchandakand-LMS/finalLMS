@@ -41,7 +41,7 @@ Artisan::command('system:health-check', function (): int {
             ];
         } catch (Throwable $exception) {
             report($exception);
-            $results[] = [
+            $results[$name] = [
                 'status' => 'failed',
                 'duration_ms' => (int) round((microtime(true) - $started) * 1000),
                 'message' => 'Component check failed. Review protected application logs.',
@@ -162,7 +162,7 @@ Artisan::command('system:health-check', function (): int {
 
     $this->info('All scheduled health checks passed.');
 
-    return self::SUCCESS;
+    return 0;
 })->purpose('Check application dependencies and send rate-limited email alerts');
 
 Schedule::command('system:heartbeat')->everyFiveMinutes()->withoutOverlapping();
