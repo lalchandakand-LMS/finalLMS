@@ -188,7 +188,11 @@ class AttendanceController extends Controller
             'date_to' => ['nullable', 'date_format:Y-m-d'],
         ]);
 
-        if (! empty($filters['date_from']) && ! empty($filters['date_to']) && $filters['date_to'] < $filters['date_from']) {\n            throw ValidationException::withMessages(['date_to' => 'The end date must be on or after the start date.']);\n        }\n\n        $query = Attendance::query()->with([
+        if (! empty($filters['date_from']) && ! empty($filters['date_to']) && $filters['date_to'] < $filters['date_from']) {
+            throw ValidationException::withMessages(['date_to' => 'The end date must be on or after the start date.']);
+        }
+
+        $query = Attendance::query()->with([
             'student:id,name,email',
             'batch.course.academicLevel',
             'batch.branch',
@@ -253,7 +257,8 @@ class AttendanceController extends Controller
         $user = Auth::user();
 
         $authorized = $user?->isAdmin()
-            || ($user?->isTeacher() && (int) $batch->teacher_id === (int) $user->id\n                && ($user->branch_id === null || (int) $user->branch_id === (int) $batch->branch_id))
+            || ($user?->isTeacher() && (int) $batch->teacher_id === (int) $user->id
+                && ($user->branch_id === null || (int) $user->branch_id === (int) $batch->branch_id))
             || ($user?->isBranchManager()
                 && (int) $user->branch_id === (int) $batch->branch_id
                 && $user->hasAdminPermission('branch.attendance'));
