@@ -19,18 +19,24 @@ final class PluginPackageRecovery
 
     private function assertRecoveryDirectory(bool $create = false): string
     {
-        $privateRoot = storage_path('app/private');
+        $storageRoot = base_path('storage');
+        $appStorage = $storageRoot.DIRECTORY_SEPARATOR.'app';
+        $privateRoot = $appStorage.DIRECTORY_SEPARATOR.'private';
         $directory = $this->recoveryDirectory();
-        if (is_link($privateRoot) || is_link($directory)) {
-            throw new RuntimeException('Plugin recovery storage must not contain symbolic links.');
+        foreach ([$storageRoot, $appStorage, $privateRoot, $directory] as $path) {
+            if (is_link($path)) {
+                throw new RuntimeException('Plugin recovery storage and all parent directories must not contain symbolic links.');
+            }
         }
         if ($create && ! is_dir($directory)
             && ! mkdir($directory, 0700, true) && ! is_dir($directory)) {
             throw new RuntimeException('Plugin recovery storage could not be created.');
         }
+        $realStorageRoot = realpath($storageRoot);
         $realPrivateRoot = realpath($privateRoot);
         $realDirectory = realpath($directory);
-        if ($realPrivateRoot === false || $realDirectory === false
+        if ($realStorageRoot === false || $realPrivateRoot === false || $realDirectory === false
+            || ! str_starts_with($realPrivateRoot, rtrim($realStorageRoot, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR)
             || ! str_starts_with($realDirectory, rtrim($realPrivateRoot, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR)) {
             throw new RuntimeException('Plugin recovery storage must remain inside private application storage.');
         }
