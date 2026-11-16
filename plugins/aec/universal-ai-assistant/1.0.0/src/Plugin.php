@@ -2,12 +2,17 @@
 
 namespace Aloms\UniversalAiAssistant;
 
+use App\Contracts\Ai\AiProvider;
 use App\Contracts\Plugins\PluginContract;
 use App\Services\Plugins\PluginContext;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
 
 require_once __DIR__.'/AssistantSettings.php';
+require_once __DIR__.'/OpenAiCompatibleProvider.php';
+require_once __DIR__.'/AssistantTokenBudget.php';
+require_once __DIR__.'/AssistantContextBuilder.php';
+require_once __DIR__.'/AssistantAudit.php';
 require_once __DIR__.'/AdminSettingsController.php';
 require_once __DIR__.'/AssistantController.php';
 
@@ -15,6 +20,7 @@ return new class implements PluginContract
 {
     public function register(PluginContext $context): void
     {
+        $context->singleton(AiProvider::class, OpenAiCompatibleProvider::class);
         View::addNamespace('universal-ai-assistant', dirname(__DIR__).'/resources/views');
 
         $context->routesForPortal('admin', 'admin/ai-assistant', 'admin.ai-assistant.', function (): void {
