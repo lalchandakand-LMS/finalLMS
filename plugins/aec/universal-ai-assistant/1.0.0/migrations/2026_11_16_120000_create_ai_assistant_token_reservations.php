@@ -23,6 +23,9 @@ return new class extends Migration
                 $table->foreignId('conversation_id')
                     ->constrained('ai_assistant_conversations')
                     ->cascadeOnDelete();
+                $table->string('assistant_role', 32);
+                $table->string('provider', 40);
+                $table->string('model', 120);
                 $table->unsignedInteger('prompt_tokens');
                 $table->unsignedInteger('completion_limit');
                 $table->string('status', 16)->default('pending');
