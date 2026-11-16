@@ -257,7 +257,7 @@ PHP);
 
         $runner = app(PluginMigrationRunner::class);
         $runner->migrate($plugin);
-        \\DB::table('plugin_migrations')->where([
+        \DB::table('plugin_migrations')->where([
             'plugin_key' => 'test.migration-check',
             'plugin_version' => '1.0.0',
             'migration' => $name,
