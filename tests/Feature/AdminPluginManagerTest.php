@@ -581,6 +581,46 @@ PHP;
         $this->assertDatabaseCount('plugin_registry', 0);
     }
 
+    public function test_lifecycle_rejects_activation_when_a_conflicting_plugin_is_active(): void
+    {
+        foreach ([
+            [
+                'plugin_key' => 'test.conflict',
+                'name' => 'Conflicting Plugin',
+                'manifest' => ['dependencies' => [], 'conflicts' => []],
+                'status' => 'active',
+            ],
+            [
+                'plugin_key' => 'test.candidate',
+                'name' => 'Candidate Plugin',
+                'manifest' => ['dependencies' => [], 'conflicts' => ['test.conflict']],
+                'status' => 'installed',
+            ],
+        ] as $record) {
+            $plugin = new PluginInstallation();
+            $plugin->forceFill(array_merge($record, [
+                'version' => '1.0.0',
+                'type' => 'module',
+                'package_path' => 'plugins/test/'.str_replace('test.', '', $record['plugin_key']).'/1.0.0',
+                'signature_verified_at' => now(),
+                'package_sha256' => str_repeat('d', 64),
+                'signature_key_id' => 'test-release-key',
+            ]))->save();
+        }
+
+        try {
+            app(PluginLifecycle::class)->transition('test.candidate', 'active');
+            $this->fail('A plugin must not activate while a declared conflict is active.');
+        } catch (LogicException $exception) {
+            $this->assertStringContainsString('conflicting plugin is active', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'test.candidate',
+            'status' => 'installed',
+        ]);
+    }
+
     public function test_lifecycle_rejects_activation_when_a_required_dependency_is_not_active(): void
     {
         $plugin = new PluginInstallation();
