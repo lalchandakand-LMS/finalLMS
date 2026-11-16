@@ -1,13 +1,13 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use App\\Models\\PluginInstallation;
-use App\\Models\\User;
-use App\\Services\\Plugins\\PluginSettingsManager;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Illuminate\\Support\\Facades\\DB;
-use Tests\\TestCase;
+use App\Models\PluginInstallation;
+use App\Models\User;
+use App\Services\Plugins\PluginSettingsManager;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Tests\TestCase;
 
 class PluginSettingsManagerTest extends TestCase
 {
@@ -64,7 +64,7 @@ class PluginSettingsManagerTest extends TestCase
             try {
                 $manager->set($this->plugin($status), 'api.secret', 'value');
                 $this->fail('Expected a failed or uninstalled plugin to reject configuration.');
-            } catch (\\RuntimeException $exception) {
+            } catch (\RuntimeException $exception) {
                 $this->assertStringContainsString('cannot be changed', $exception->getMessage());
             }
         }
