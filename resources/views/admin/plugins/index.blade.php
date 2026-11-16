@@ -104,7 +104,7 @@
                                                 @if($history->actor)
                                                     <span class="muted">· {{ $history->actor->name }}</span>
                                                 @endif
-                                                @if($history->action === 'version_snapshot' && in_array($plugin->status, ['installed', 'inactive'], true) && version_compare((string) ($history->details['snapshot']['version'] ?? ''), (string) $plugin->version, '<'))
+                                                @if($history->action === 'version_snapshot' && in_array($plugin->status, ['installed', 'inactive'], true) && (string) ($history->details['snapshot']['version'] ?? '') !== (string) $plugin->version)
                                                     <form method="POST" action="{{ route('admin.plugins.restore', [$plugin->plugin_key, $history->id]) }}" style="display:inline;margin-top:5px;" onsubmit="return confirm('{{ __('Restore this verified version? The current version migrations will be rolled back first. Back up the database before continuing.') }}')">
                                                         @csrf
                                                         <input type="hidden" name="confirm_restore" value="1">
