@@ -59,17 +59,38 @@ loaded directly by the core runtime; registered plugin routes remain subject to
 plugin-active, permission and resource-scope middleware.
 
 Deactivation blocks plugin routes immediately and retains package files and LMS
-data. Uninstall requires an explicit server-validated confirmation and removes
-only the executable package after the plugin is inactive; database records,
-encrypted settings, customer/LMS data and migration history are retained. The
-uninstalled registry state is written before filesystem cleanup. If cleanup is
+data. Uninstall requires an explicit server-validated confirmation. Before the
+registry is marked uninstalled or any package file is removed, the manager
+re-verifies the detached release signature and every installed-file hash, then
+creates a ZIP recovery snapshot in the private
+`storage/app/private/plugin-recovery` directory. Package files are added and
+verified using streaming I/O so their contents are not loaded into PHP memory.
+The archive contains the exact package manifest, detached release signature,
+signing-key ID, package checksum, per-file SHA-256 hashes and plugin/version
+identity. Its metadata is authenticated with HMAC-SHA-256 using `APP_KEY`, and
+the archive is hashed before it is recorded in plugin version history. If
+signature, integrity, archive verification or history persistence fails,
+uninstall is blocked and the executable package remains in place.
+
+After a successful snapshot, the plugin is marked uninstalled and only its
+executable package directory is removed. Database records, encrypted settings,
+customer/LMS data and migration history are retained in the live database; the
+package archive is not a database backup. Keep normal database/files backups
+and protect `APP_KEY` as part of production recovery. If filesystem cleanup is
 interrupted, the Admin Manager exposes an idempotent "Retry package cleanup"
-action; it never reactivates the plugin or deletes retained data. This is a
-non-destructive package removal policy, not an automated database snapshot:
-take and verify the normal database/files backup before any production
-uninstall. Admins can run health checks to revalidate signatures, dependencies
-and installed-file integrity. Package updates retain immutable version
-directories and a signed registry snapshot.
+action.
+
+For a package-only recovery, an Admin can use "Restore package" on the
+uninstalled plugin. The manager checks the recorded archive SHA-256, verifies
+the archive HMAC and plugin/version identity, streams each file into a private
+staging directory, checks every file hash, and atomically moves the verified
+package into its canonical directory. The detached release signature and
+installed-file integrity are then verified again. The plugin returns to the
+installed but inactive state; it is never automatically activated and its
+migrations are not rerun because the LMS data and migration history were
+retained. A missing, altered, untrusted or incomplete archive fails closed.
+Package updates retain immutable version directories and a signed registry
+snapshot.
 Package-version rollback is available for installed/inactive plugins only; it
 verifies both package signatures and installed-file hashes, reverses the current
 version's recorded migrations, restores the retained package, and leaves the
