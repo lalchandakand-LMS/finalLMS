@@ -6,6 +6,8 @@ use App\Models\PluginInstallation;
 use App\Models\User;
 use App\Services\Plugins\PluginSignatureVerifier;
 use App\Services\Plugins\PluginMigrationRunner;
+use App\Services\Plugins\PluginLifecycle;
+use LogicException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -186,6 +188,31 @@ PHP;
         $this->assertFileExists($this->finalPath.'/src/Plugin.php');
     }
 
+    public function test_admin_can_request_signed_plugin_migration_rollback_only_while_inactive(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData())
+            ->assertRedirect(route('admin.plugins.index'));
+
+        $runner = $this->mock(PluginMigrationRunner::class);
+        $runner->shouldReceive('rollback')->once()->with(\Mockery::type(PluginInstallation::class));
+
+        $this->actingAs($admin)->post(route('admin.plugins.rollback-migrations', 'aec.course-management'), [
+            'confirm_rollback' => '1',
+        ])->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'status' => 'installed',
+        ]);
+        $this->assertDatabaseHas('plugin_version_history', [
+            'plugin_key' => 'aec.course-management',
+            'action' => 'migrations_rolled_back',
+            'version' => '1.0.0',
+        ]);
+    }
+
     public function test_plugin_migrations_run_before_activation_and_failure_keeps_plugin_inactive(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
@@ -295,7 +322,8 @@ PHP;
             'plugin_key' => 'aec.course-management',
             'status' => 'failed',
         ]);
-        $this->assertDirectoryDoesNotExist($this->finalPath);
+        // Retain the signed package because a failed MySQL migration may have partially committed DDL.
+        $this->assertDirectoryExists($this->finalPath);
     }
 
     public function test_activation_rejects_an_untrusted_release_key(): void
@@ -411,7 +439,7 @@ PHP;
         $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData())
             ->assertRedirect(route('admin.plugins.index'));
 
-        app(\App\Services\Plugins\PluginLifecycle::class)->transition('aec.course-management', 'failed', [
+        app(PluginLifecycle::class)->transition('aec.course-management', 'failed', [
             'health_status' => 'failed',
             'health_message' => 'A prior runtime check failed.',
         ]);
@@ -552,4 +580,114 @@ PHP;
 
         $this->assertDatabaseCount('plugin_registry', 0);
     }
+
+    public function test_lifecycle_rejects_activation_when_a_required_dependency_is_not_active(): void
+    {
+        $plugin = new PluginInstallation();
+        $plugin->forceFill([
+            'plugin_key' => 'test.dependent',
+            'name' => 'Dependent Plugin',
+            'version' => '1.0.0',
+            'type' => 'module',
+            'status' => 'installed',
+            'manifest' => ['dependencies' => ['test.core'], 'conflicts' => []],
+            'package_path' => 'plugins/test/dependent/1.0.0',
+            'signature_verified_at' => now(),
+            'package_sha256' => str_repeat('a', 64),
+            'signature_key_id' => 'test-release-key',
+        ])->save();
+
+        try {
+            app(PluginLifecycle::class)->transition('test.dependent', 'active');
+            $this->fail('A plugin with an inactive dependency must not activate.');
+        } catch (LogicException $exception) {
+            $this->assertStringContainsString('dependency is not active', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'test.dependent',
+            'status' => 'installed',
+        ]);
+    }
+
+    public function test_lifecycle_prevents_uninstall_of_a_required_active_dependency(): void
+    {
+        foreach ([
+            [
+                'plugin_key' => 'test.core',
+                'name' => 'Core Plugin',
+                'manifest' => ['dependencies' => [], 'conflicts' => []],
+                'status' => 'inactive',
+            ],
+            [
+                'plugin_key' => 'test.dependent',
+                'name' => 'Dependent Plugin',
+                'manifest' => ['dependencies' => ['test.core'], 'conflicts' => []],
+                'status' => 'active',
+            ],
+        ] as $record) {
+            $plugin = new PluginInstallation();
+            $plugin->forceFill(array_merge($record, [
+                'version' => '1.0.0',
+                'type' => 'module',
+                'package_path' => 'plugins/test/'.str_replace('test.', '', $record['plugin_key']).'/1.0.0',
+                'signature_verified_at' => now(),
+                'package_sha256' => str_repeat('c', 64),
+                'signature_key_id' => 'test-release-key',
+            ]))->save();
+        }
+
+        try {
+            app(PluginLifecycle::class)->transition('test.core', 'uninstalled');
+            $this->fail('A plugin required by an active plugin must not be uninstalled.');
+        } catch (LogicException $exception) {
+            $this->assertStringContainsString('active plugin depends on this plugin', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'test.core',
+            'status' => 'inactive',
+        ]);
+    }
+
+    public function test_lifecycle_prevents_deactivation_of_a_required_active_dependency(): void
+    {
+        foreach ([
+            [
+                'plugin_key' => 'test.core',
+                'name' => 'Core Plugin',
+                'manifest' => ['dependencies' => [], 'conflicts' => []],
+            ],
+            [
+                'plugin_key' => 'test.dependent',
+                'name' => 'Dependent Plugin',
+                'manifest' => ['dependencies' => ['test.core'], 'conflicts' => []],
+            ],
+        ] as $record) {
+            $plugin = new PluginInstallation();
+            $plugin->forceFill(array_merge($record, [
+                'version' => '1.0.0',
+                'type' => 'module',
+                'status' => 'active',
+                'package_path' => 'plugins/test/'.str_replace('test.', '', $record['plugin_key']).'/1.0.0',
+                'signature_verified_at' => now(),
+                'package_sha256' => str_repeat('b', 64),
+                'signature_key_id' => 'test-release-key',
+            ]))->save();
+        }
+
+        try {
+            app(PluginLifecycle::class)->transition('test.core', 'inactive');
+            $this->fail('A dependency of an active plugin must not be deactivated.');
+        } catch (LogicException $exception) {
+            $this->assertStringContainsString('active plugin depends on this plugin', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'test.core',
+            'status' => 'active',
+        ]);
+    }
+
+
 }
