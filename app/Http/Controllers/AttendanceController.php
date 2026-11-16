@@ -66,6 +66,7 @@ class AttendanceController extends Controller
             'batch',
             'students',
             'attendance',
+            'auditHistory',
             'attendanceStoreRoute',
             'attendanceBackUrl'
         ));
