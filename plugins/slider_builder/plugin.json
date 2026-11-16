@@ -9,7 +9,8 @@
   "dependencies": [
     "core",
     "website_cms",
-    "media_library"
+    "media_library",
+    "slider"
   ],
   "capabilities": [
     "sliders.create",
