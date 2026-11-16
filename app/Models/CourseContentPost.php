@@ -10,14 +10,19 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class CourseContentPost extends Model
 {
     protected $fillable = [
-        'author_id', 'thumbnail_media_id', 'title', 'slug', 'short_description',
-        'long_description', 'video_url', 'seo_title', 'seo_description',
-        'tags', 'status', 'published_at',
+        'author_id', 'thumbnail_media_id', 'thumbnail_path', 'title', 'slug',
+        'short_description', 'long_description', 'video_url', 'content_file_path',
+        'content_file_name', 'content_file_mime', 'content_file_size', 'access_type',
+        'regular_price', 'sale_price', 'academic_level_id', 'product_id',
+        'seo_title', 'seo_description', 'tags', 'status', 'published_at',
     ];
 
     protected $casts = [
         'tags' => 'array',
         'published_at' => 'datetime',
+        'content_file_size' => 'integer',
+        'regular_price' => 'decimal:2',
+        'sale_price' => 'decimal:2',
     ];
 
     public function author(): BelongsTo
@@ -28,6 +33,16 @@ class CourseContentPost extends Model
     public function thumbnail(): BelongsTo
     {
         return $this->belongsTo(MediaAsset::class, 'thumbnail_media_id');
+    }
+
+    public function academicLevel(): BelongsTo
+    {
+        return $this->belongsTo(AcademicLevel::class);
+    }
+
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
     }
 
     public function categories(): BelongsToMany
@@ -50,6 +65,14 @@ class CourseContentPost extends Model
         return $query->where('status', 'published')
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now());
+    }
+
+    public function currentPrice(): float
+    {
+        $regular = (float) ($this->regular_price ?? 0);
+        $sale = $this->sale_price === null ? null : (float) $this->sale_price;
+
+        return $sale !== null && $sale >= 0 && $sale < $regular ? $sale : $regular;
     }
 
     public function getRouteKeyName(): string
