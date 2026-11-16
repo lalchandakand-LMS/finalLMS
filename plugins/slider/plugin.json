@@ -12,7 +12,9 @@
     "storage"
   ],
   "permissions": [],
-  "routes": [],
+  "routes": [
+    "sliders.*"
+  ],
   "settings": [],
   "events": [],
   "directory": "plugins/slider",
