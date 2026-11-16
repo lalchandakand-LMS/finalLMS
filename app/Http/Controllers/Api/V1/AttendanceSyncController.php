@@ -22,7 +22,7 @@ class AttendanceSyncController extends Controller
 
         $data = $request->validate([
             'records' => ['required', 'array', 'min:1', 'max:100'],
-            'records.*.idempotency_key' => ['required', 'uuid'],
+            'records.*.idempotency_key' => ['required', 'uuid', 'distinct'],
             'records.*.batch_id' => ['required', 'integer', 'min:1'],
             'records.*.student_id' => ['required', 'integer', 'min:1'],
             'records.*.attendance_date' => ['required', 'date_format:Y-m-d'],
@@ -81,6 +81,15 @@ class AttendanceSyncController extends Controller
                         'status' => 'failed',
                         'code' => 'enrollment_inactive',
                         'message' => 'The student is not actively enrolled in this batch.',
+                    ]);
+                }
+
+                if ($record['status'] === 'excused' && ! config('attendance.allow_excused', false)) {
+                    return $this->rememberResult($actor->id, $record, $payloadHash, [
+                        'idempotency_key' => $record['idempotency_key'],
+                        'status' => 'failed',
+                        'code' => 'excused_status_disabled',
+                        'message' => 'Excused attendance is disabled by institutional policy.',
                     ]);
                 }
 
