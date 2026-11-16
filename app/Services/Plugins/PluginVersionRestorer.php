@@ -16,6 +16,7 @@ final class PluginVersionRestorer
         private readonly PluginIntegrityVerifier $integrityVerifier,
         private readonly PluginMigrationRunner $migrationRunner,
         private readonly PluginVersionHistoryRecorder $history,
+        private readonly PluginLifecycle $lifecycle,
     ) {
     }
 
@@ -33,9 +34,7 @@ final class PluginVersionRestorer
         }
 
         $snapshot = $snapshotRecord->details['snapshot'] ?? null;
-        if (! is_array($snapshot)) {
-            throw new RuntimeException('The selected version snapshot is incomplete.');
-        }
+        if (! is_array($snapshot)) throw new RuntimeException('The selected version snapshot is incomplete.');
 
         $required = ['name', 'version', 'type', 'manifest', 'package_sha256', 'signature_key_id',
             'signature_verified_at', 'package_path', 'metadata'];
@@ -60,8 +59,8 @@ final class PluginVersionRestorer
             throw new RuntimeException('The restore package path does not match the plugin identity and version.');
         }
 
-        // Verify the retained historical package and its detached signature before
-        // changing the current database schema or registry pointer.
+        // Verify the target release and all its files before changing the current
+        // schema or registry pointer.
         $candidate = clone $plugin;
         $candidate->forceFill([
             'name' => $snapshot['name'],
@@ -80,15 +79,12 @@ final class PluginVersionRestorer
         }
         $this->integrityVerifier->verify($candidate);
 
-        $fromVersion = (string) $plugin->version;
-
-        // Reverse only the current version's signed migrations. Any partial or
-        // interrupted down() operation is blocked by PluginMigrationRunner and
-        // requires manual database reconciliation; no registry switch occurs.
         if (! $this->signatureVerifier->verifyInstalledSignature($plugin)) {
             throw new RuntimeException('The current release signature cannot be re-verified; a safe restore point cannot be created.');
         }
         $this->integrityVerifier->verify($plugin);
+
+        $fromVersion = (string) $plugin->version;
         $this->history->recordSnapshot($plugin, $actor, [
             'name' => $plugin->name,
             'version' => $plugin->version,
@@ -101,46 +97,67 @@ final class PluginVersionRestorer
             'metadata' => $plugin->metadata,
             'installed_at' => $plugin->installed_at?->toISOString(),
         ]);
-        $this->migrationRunner->rollback($plugin);
 
-        DB::transaction(function () use ($plugin, $snapshot): void {
-            $locked = PluginInstallation::query()->lockForUpdate()->findOrFail($plugin->getKey());
-            if (! in_array($locked->status, ['installed', 'inactive', 'failed'], true)
-                || (string) $locked->version !== (string) $plugin->version) {
-                throw new RuntimeException('The plugin changed during restore; no version switch was applied.');
-            }
-            $locked->forceFill([
-                'name' => $snapshot['name'],
-                'version' => $snapshot['version'],
-                'type' => $snapshot['type'],
-                'manifest' => $snapshot['manifest'],
-                'package_sha256' => $snapshot['package_sha256'],
-                'signature_key_id' => $snapshot['signature_key_id'],
-                'signature_verified_at' => $snapshot['signature_verified_at'],
-                'package_path' => $snapshot['package_path'],
-                'metadata' => $snapshot['metadata'],
-                'installed_at' => $snapshot['installed_at'] ?? $locked->installed_at,
-                'status' => 'inactive',
+        // Serialize update/restore operations. Keep the registry in a non-runnable
+        // state while migrations are reversed and the selected release is applied.
+        $this->lifecycle->transition((string) $plugin->plugin_key, 'update_staged');
+
+        try {
+            $currentMigrationPackage = clone $plugin;
+            $currentMigrationPackage->status = 'inactive';
+            $this->migrationRunner->rollback($currentMigrationPackage);
+
+            DB::transaction(function () use ($plugin, $snapshot): void {
+                $locked = PluginInstallation::query()->lockForUpdate()->findOrFail($plugin->getKey());
+                if ($locked->status !== 'update_staged'
+                    || (string) $locked->version !== (string) $plugin->version) {
+                    throw new RuntimeException('The plugin changed during restore; no version switch was applied.');
+                }
+                $locked->forceFill([
+                    'name' => $snapshot['name'],
+                    'version' => $snapshot['version'],
+                    'type' => $snapshot['type'],
+                    'manifest' => $snapshot['manifest'],
+                    'package_sha256' => $snapshot['package_sha256'],
+                    'signature_key_id' => $snapshot['signature_key_id'],
+                    'signature_verified_at' => $snapshot['signature_verified_at'],
+                    'package_path' => $snapshot['package_path'],
+                    'metadata' => $snapshot['metadata'],
+                    'installed_at' => $snapshot['installed_at'] ?? $locked->installed_at,
+                    'status' => 'update_staged',
+                    'health_status' => 'unknown',
+                    'health_message' => 'A signed version restore is in progress.',
+                ])->save();
+            });
+
+            $restored = $plugin->fresh();
+            $migrationPackage = clone $restored;
+            $migrationPackage->status = 'inactive';
+            $this->migrationRunner->migrate($migrationPackage);
+
+            $this->lifecycle->transition((string) $plugin->plugin_key, 'inactive', [
                 'health_status' => 'unknown',
                 'health_message' => 'A previous signed version was restored; run a health check before activation.',
-            ])->save();
-        });
-
-        $restored = $plugin->fresh();
-        try {
-            // Re-apply only missing/previously rolled-back migrations for the
-            // selected version. Completed migrations are idempotently skipped.
-            $this->migrationRunner->migrate($restored);
+            ]);
         } catch (Throwable $exception) {
-            $restored->forceFill([
-                'status' => 'failed',
-                'health_status' => 'failed',
-                'health_message' => 'Version restore migration failed; manual database recovery is required.',
-            ])->save();
-            throw new RuntimeException('The previous package was selected but its migrations did not complete. Manual database recovery is required.', previous: $exception);
+            $fresh = PluginInstallation::query()->find($plugin->getKey());
+            if ($fresh && $fresh->status === 'update_staged') {
+                try {
+                    $this->lifecycle->transition((string) $plugin->plugin_key, 'failed', [
+                        'health_status' => 'failed',
+                        'health_message' => 'Version restore did not complete; inspect migration state and perform manual database recovery if required.',
+                    ]);
+                } catch (Throwable $stateException) {
+                    report($stateException);
+                }
+            }
+            throw new RuntimeException(
+                'Version restore did not complete. The plugin was left inactive or failed; inspect server logs and database state.',
+                previous: $exception,
+            );
         }
 
-        $restored->refresh();
+        $restored = $plugin->fresh();
         $this->history->record($restored, 'version_restored', $actor, [
             'from_version' => $fromVersion,
             'restored_snapshot_id' => $snapshotRecord->getKey(),
