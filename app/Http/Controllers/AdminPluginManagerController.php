@@ -7,6 +7,7 @@ use App\Models\PluginInstallation;
 use App\Models\PluginVersionHistory;
 use App\Services\Plugins\PluginIntegrityVerifier;
 use App\Services\Plugins\PluginLifecycle;
+use App\Services\Plugins\PluginSettingsManager;
 use App\Services\Plugins\PluginManifestValidator;
 use App\Services\Plugins\PluginMigrationRunner;
 use App\Services\Plugins\PluginPackageRemover;
