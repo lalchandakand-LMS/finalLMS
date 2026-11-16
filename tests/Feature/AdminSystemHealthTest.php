@@ -25,6 +25,12 @@ class AdminSystemHealthTest extends TestCase
             ->assertRedirect(route('admin.system-health.index'));
 
         $this->assertDatabaseHas('system_health_checks', ['status' => 'healthy']);
+        $record = DB::table('system_health_checks')->latest('checked_at')->first();
+        $results = json_decode($record->results, true);
+        $this->assertArrayHasKey('database', $results);
+        $this->assertArrayHasKey('cache', $results);
+        $this->assertArrayHasKey('storage', $results);
+        $this->assertArrayHasKey('queue', $results);
         $this->actingAs($admin)->get(route('admin.system-health.index'))
             ->assertOk()
             ->assertSee('Recent health checks');
