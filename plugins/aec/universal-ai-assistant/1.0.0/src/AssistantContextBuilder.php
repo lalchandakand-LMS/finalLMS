@@ -2,9 +2,14 @@
 
 namespace Aloms\UniversalAiAssistant;
 
+use App\Models\Assignment;
+use App\Models\AssignmentSubmission;
 use App\Models\Batch;
 use App\Models\Course;
 use App\Models\Enrollment;
+use App\Models\Exam;
+use App\Models\ExamAttempt;
+use App\Models\LessonProgress;
 use App\Models\User;
 use App\Services\Plugins\PluginResourceAccess;
 
@@ -73,7 +78,6 @@ final class AssistantContextBuilder
             : [];
 
         $batchIds = $batches->pluck('id')->map(static fn ($id): int => (int) $id)->all();
-        $courseIds = $courses->pluck('id')->map(static fn ($id): int => (int) $id)->all();
         $studentIds = match ($role) {
             'student' => [(int) $actor->id],
             'guardian' => array_map('intval', array_column($linkedStudents, 'id')),
@@ -83,18 +87,20 @@ final class AssistantContextBuilder
         $assignments = Assignment::query()
             ->whereIn('batch_id', $batchIds)
             ->where('status', 'published')
+            ->select(['id', 'batch_id', 'title', 'due_at', 'max_marks'])
             ->withCount('submissions')
             ->orderBy('due_at')
             ->limit(30)
-            ->get(['id', 'batch_id', 'title', 'due_at', 'max_marks']);
+            ->get();
 
         $exams = Exam::query()
             ->whereIn('batch_id', $batchIds)
             ->where('status', 'published')
+            ->select(['id', 'batch_id', 'title', 'starts_at', 'ends_at', 'duration_minutes'])
             ->withCount('attempts')
             ->orderBy('starts_at')
             ->limit(30)
-            ->get(['id', 'batch_id', 'title', 'starts_at', 'ends_at', 'duration_minutes']);
+            ->get();
 
         $submissionsByKey = collect();
         $attemptsByKey = collect();
@@ -117,8 +123,8 @@ final class AssistantContextBuilder
             static fn ($rows): array => $rows->pluck('course_id')->unique()->map(static fn ($id): int => (int) $id)->all()
         );
         $progressSummary = [];
-        foreach ($studentCourseIds as $studentId => $enrolledCourseIds) {
-            $totalLessons = \\App\\Models\\Lesson::query()->whereIn('course_id', $enrolledCourseIds)->count();
+        foreach ($studentIds === [] ? [] : $studentCourseIds as $studentId => $enrolledCourseIds) {
+            $totalLessons = \App\Models\Lesson::query()->whereIn('course_id', $enrolledCourseIds)->count();
             $progressRows = LessonProgress::query()
                 ->where('user_id', (int) $studentId)
                 ->whereHas('lesson', fn ($query) => $query->whereIn('course_id', $enrolledCourseIds))
@@ -172,7 +178,7 @@ final class AssistantContextBuilder
             ])->all(),
             'enrollments' => $enrollments->map(static fn (Enrollment $enrollment): array => [
                 'source' => 'enrollment:'.$enrollment->id,
-                'student_id' => in_array($role, ['guardian', 'student'], true) ? (int) $enrollment->user_id : null,
+                'student_id' => (int) $enrollment->user_id,
                 'course' => $enrollment->course?->title,
                 'batch' => $enrollment->batch?->title,
                 'status' => $enrollment->status,
