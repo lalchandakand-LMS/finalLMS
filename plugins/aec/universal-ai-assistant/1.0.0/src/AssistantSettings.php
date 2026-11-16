@@ -22,6 +22,7 @@ final class AssistantSettings
             'max_tokens' => 1200,
             'global_enabled' => false,
             'role_enabled' => array_fill_keys(self::ROLES, false),
+            'role_data_access' => array_fill_keys(self::ROLES, false),
             'data_access_mode' => 'general_only',
             'daily_request_limit' => 20,
             'daily_token_budget' => 50000,
@@ -37,6 +38,8 @@ final class AssistantSettings
         $data = (array) $row;
         $roles = json_decode((string) ($data['role_enabled'] ?? '{}'), true);
         $data['role_enabled'] = is_array($roles) ? array_replace(array_fill_keys(self::ROLES, false), $roles) : array_fill_keys(self::ROLES, false);
+        $dataAccess = json_decode((string) ($data['role_data_access'] ?? '{}'), true);
+        $data['role_data_access'] = is_array($dataAccess) ? array_replace(array_fill_keys(self::ROLES, false), $dataAccess) : array_fill_keys(self::ROLES, false);
         $data['temperature'] = (float) ($data['temperature'] ?? 0.7);
         $data['max_tokens'] = (int) ($data['max_tokens'] ?? 1200);
         $data['global_enabled'] = (bool) ($data['global_enabled'] ?? false);
@@ -60,6 +63,7 @@ final class AssistantSettings
             'max_tokens' => $settings['max_tokens'],
             'global_enabled' => $settings['global_enabled'],
             'role_enabled' => $settings['role_enabled'],
+            'role_data_access' => $settings['role_data_access'],
             'data_access_mode' => $settings['data_access_mode'],
             'daily_request_limit' => $settings['daily_request_limit'],
             'daily_token_budget' => $settings['daily_token_budget'],
@@ -100,6 +104,7 @@ final class AssistantSettings
                 'max_tokens' => $values['max_tokens'],
                 'global_enabled' => $values['global_enabled'],
                 'role_enabled' => json_encode($values['role_enabled'], JSON_THROW_ON_ERROR),
+                'role_data_access' => json_encode($values['role_data_access'] ?? array_fill_keys(self::ROLES, false), JSON_THROW_ON_ERROR),
                 'data_access_mode' => 'general_only',
                 'daily_request_limit' => $values['daily_request_limit'],
                 'daily_token_budget' => $values['daily_token_budget'],
