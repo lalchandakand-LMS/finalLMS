@@ -69,6 +69,7 @@
 
             <div class="aec-heading"><div><h2>{{ __('Administration') }}</h2><p>{{ __('Open a module to manage that part of your academy') }}</p></div></div>
             <section class="aec-grid">
+                <a class="aec-link" href="{{ route('admin.system-health.index') }}"><span class="aec-link-icon">🩺</span><strong>{{ __('Website health') }}</strong><span>{{ __('Check database, cache, storage and queue health') }}</span></a>
                 <a class="aec-link" href="{{ route('admin.courses.index') }}"><span class="aec-link-icon">📚</span><strong>{{ __('Courses & lessons') }}</strong><span>{{ __('Create courses and manage learning content') }}</span></a>
                 <a class="aec-link" href="{{ route('admin.users.index') }}"><span class="aec-link-icon">👥</span><strong>{{ __('Users & roles') }}</strong><span>{{ __('Manage student, teacher and staff accounts') }}</span></a>
                 <a class="aec-link" href="{{ route('admin.batches.index') }}"><span class="aec-link-icon">🗓️</span><strong>{{ __('Batches & branches') }}</strong><span>{{ __('Organize classes, batches and branches') }}</span></a>
