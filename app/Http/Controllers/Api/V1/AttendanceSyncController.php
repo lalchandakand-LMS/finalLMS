@@ -38,9 +38,10 @@ class AttendanceSyncController extends Controller
             'records.*.location_captured_at' => ['required', 'date'],
         ]);
 
+        $deviceId = $request->attributes->get('api_token')?->student_device_id;
         $results = [];
         foreach ($data['records'] as $record) {
-            $results[] = DB::transaction(function () use ($actor, $record): array {
+            $results[] = DB::transaction(function () use ($actor, $record, $deviceId): array {
                 $payloadHash = hash('sha256', json_encode($record, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
 
                 $previousOperation = DB::table('attendance_sync_operations')
@@ -170,6 +171,7 @@ class AttendanceSyncController extends Controller
                     'metadata' => json_encode([
                         'idempotency_key' => $record['idempotency_key'],
                         'location_accuracy_m' => $record['location_accuracy_m'],
+                        'device_id' => $deviceId,
                     ], JSON_THROW_ON_ERROR),
                     'created_at' => now(),
                     'updated_at' => now(),
