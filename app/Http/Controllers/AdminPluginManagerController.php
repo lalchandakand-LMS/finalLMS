@@ -22,12 +22,45 @@ use Throwable;
 
 class AdminPluginManagerController extends Controller
 {
-    public function index(): View
+    public function index(PluginSettingsManager $settings): View
     {
+        $plugins = PluginInstallation::query()->with(['versionHistory.actor'])->orderBy('plugin_key')->get();
+
         return view('admin.plugins.index', [
-            'plugins' => PluginInstallation::query()->with(['versionHistory.actor'])->orderBy('plugin_key')->get(),
+            'plugins' => $plugins,
+            'pluginSettings' => $plugins->mapWithKeys(fn (PluginInstallation $plugin): array => [
+                $plugin->plugin_key => $settings->keys($plugin),
+            ]),
             'maxPackageBytes' => (int) config('plugins.max_package_bytes', 52428800),
         ]);
+    }
+
+    public function storeSetting(Request $request, string $key, PluginSettingsManager $settings): RedirectResponse
+    {
+        $plugin = PluginInstallation::query()->where('plugin_key', $key)->firstOrFail();
+        abort_unless(in_array($plugin->status, ['installed', 'active', 'inactive'], true), 404);
+
+        $validated = $request->validate([
+            'setting_key' => ['required', 'string', 'max:120', 'regex:/^[a-z][a-z0-9_.-]{0,119}$/D'],
+            'setting_value' => ['required', 'string', 'min:1', 'max:4096'],
+        ]);
+
+        $settings->set($plugin, $validated['setting_key'], $validated['setting_value']);
+        $this->audit($request, 'admin.plugins.setting_saved', 'Saved encrypted setting '.$validated['setting_key'].' for '.$plugin->plugin_key);
+
+        return back()->with('success', __('Plugin setting saved encrypted. Its value is never displayed in the manager.'));
+    }
+
+    public function deleteSetting(Request $request, string $key, string $settingKey, PluginSettingsManager $settings): RedirectResponse
+    {
+        $plugin = PluginInstallation::query()->where('plugin_key', $key)->firstOrFail();
+        abort_unless($plugin->status !== 'uninstalled', 404);
+        abort_unless(preg_match('/^[a-z][a-z0-9_.-]{0,119}$/D', $settingKey) === 1, 404);
+
+        $settings->forget($plugin, $settingKey);
+        $this->audit($request, 'admin.plugins.setting_deleted', 'Deleted encrypted setting '.$settingKey.' for '.$plugin->plugin_key);
+
+        return back()->with('success', __('Plugin setting deleted.'));
     }
 
     public function updatePermissions(Request $request, string $key): RedirectResponse
