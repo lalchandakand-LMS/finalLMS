@@ -90,6 +90,76 @@ class AdminPluginManagerController extends Controller
             __('Plugin package verified and installed. Review its permissions before activation.'));
     }
 
+
+    public function updateVersion(
+        Request $request,
+        string $key,
+        PluginUploadInstaller $installer,
+        PluginVersionHistoryRecorder $history,
+    ): RedirectResponse {
+        $validated = $request->validate([
+            'package' => ['required', 'file', 'max:51200'],
+            'manifest' => ['required', 'string', 'max:32768'],
+            'signature' => ['required', 'string', 'max:512'],
+            'key_id' => ['required', 'string', 'max:120'],
+        ]);
+
+        try {
+            $current = PluginInstallation::query()->where('plugin_key', $key)->firstOrFail();
+            $manifest = json_decode($validated['manifest'], true, 64, JSON_THROW_ON_ERROR);
+            if (! is_array($manifest) || ($manifest['key'] ?? null) !== $key) {
+                throw new RuntimeException('The update manifest plugin key does not match the selected plugin.');
+            }
+            $updated = $installer->update(
+                $request->file('package'),
+                $validated['manifest'],
+                $validated['signature'],
+                $validated['key_id'],
+            );
+            $history->record($updated, 'version_updated', $request->user(), [
+                'from_version' => $current->version,
+                'to_version' => $updated->version,
+            ]);
+            $this->audit($request, 'admin.plugins.version_updated',
+                'Updated plugin '.$key.' from '.$current->version.' to '.$updated->version);
+        } catch (Throwable $exception) {
+            report($exception);
+            $this->recordFailure($request, 'admin.plugins.version_update_failed');
+            return back()->with('error', __('Plugin update failed or was blocked. The previous signed package was retained; inspect the activity log and database state before retrying.'));
+        }
+
+        return redirect()->route('admin.plugins.index')->with('success',
+            __('The new signed plugin version was installed. It remains inactive until health checks and explicit activation.'));
+    }
+
+    public function restoreVersion(
+        Request $request,
+        string $key,
+        int $snapshotId,
+        PluginVersionRestorer $restorer,
+    ): RedirectResponse {
+        $request->validate(['confirm_restore' => ['required', 'accepted']]);
+
+        try {
+            $plugin = PluginInstallation::query()->where('plugin_key', $key)->firstOrFail();
+            $snapshot = PluginVersionHistory::query()
+                ->whereKey($snapshotId)
+                ->where('plugin_key', $key)
+                ->where('action', 'version_snapshot')
+                ->firstOrFail();
+            $restored = $restorer->restore($plugin, $snapshot, $request->user());
+            $this->audit($request, 'admin.plugins.version_restored',
+                'Restored plugin '.$key.' to version '.$restored->version);
+        } catch (Throwable $exception) {
+            report($exception);
+            $this->recordFailure($request, 'admin.plugins.version_restore_failed');
+            return back()->with('error', __('Version restore was blocked or failed. The current version was not switched unless the verified migration rollback completed; inspect server logs and database state.'));
+        }
+
+        return redirect()->route('admin.plugins.index')->with('success',
+            __('The previous signed version was restored and left inactive. Run a health check before activation.'));
+    }
+
     public function activate(
         Request $request,
         string $key,
