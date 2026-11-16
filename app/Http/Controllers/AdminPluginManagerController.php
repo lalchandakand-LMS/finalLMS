@@ -461,21 +461,26 @@ class AdminPluginManagerController extends Controller
                 }
                 $integrityVerifier->verify($plugin);
                 $snapshot = $recovery->createSnapshot($plugin);
-                PluginVersionHistory::query()->create([
-                    'plugin_key' => $plugin->plugin_key,
-                    'version' => $plugin->version,
-                    'package_sha256' => $plugin->package_sha256,
-                    'signature_key_id' => $plugin->signature_key_id,
-                    'action' => 'pre_uninstall_snapshot',
-                    'status' => $plugin->status,
-                    'actor_id' => $request->user()->id,
-                    'details' => [
-                        'recovery_path' => $snapshot['path'],
-                        'recovery_sha256' => $snapshot['sha256'],
-                        'recovery_bytes' => $snapshot['bytes'],
-                    ],
-                    'created_at' => now(),
-                ]);
+                try {
+                    PluginVersionHistory::query()->create([
+                        'plugin_key' => $plugin->plugin_key,
+                        'version' => $plugin->version,
+                        'package_sha256' => $plugin->package_sha256,
+                        'signature_key_id' => $plugin->signature_key_id,
+                        'action' => 'pre_uninstall_snapshot',
+                        'status' => $plugin->status,
+                        'actor_id' => $request->user()->id,
+                        'details' => [
+                            'recovery_path' => $snapshot['path'],
+                            'recovery_sha256' => $snapshot['sha256'],
+                            'recovery_bytes' => $snapshot['bytes'],
+                        ],
+                        'created_at' => now(),
+                    ]);
+                } catch (Throwable $historyException) {
+                    $recovery->deleteSnapshot($snapshot['path']);
+                    throw $historyException;
+                }
                 $plugin = $lifecycle->transition($plugin->plugin_key, 'uninstalled');
             }
 
