@@ -196,11 +196,14 @@ class UniversalAiAssistantPluginTest extends TestCase
             'submitted_at' => now(), 'score' => 10, 'status' => 'submitted',
         ]);
         Enrollment::query()->create(['user_id' => $studentB->id, 'course_id' => $courseB->id, 'batch_id' => $batchB->id, 'status' => 'active']);
+        $inactiveStudent = User::factory()->create(['role' => 'student', 'branch_id' => $branchA->id]);
+        Enrollment::query()->create(['user_id' => $inactiveStudent->id, 'course_id' => $courseA->id, 'batch_id' => $batchA->id, 'status' => 'cancelled']);
 
         $builder = new AssistantContextBuilder(app(PluginResourceAccess::class));
         $branchContext = $builder->build($manager, 'branch_manager');
         $teacherContext = $builder->build($teacher, 'teacher');
         $studentContext = $builder->build($studentA, 'student');
+        $inactiveContext = $builder->build($inactiveStudent, 'student');
 
         $this->assertSame(['Scoped Course A'], array_column($branchContext['courses'], 'title'));
         $this->assertSame(['Scoped Course A'], array_column($teacherContext['courses'], 'title'));
@@ -213,6 +216,10 @@ class UniversalAiAssistantPluginTest extends TestCase
         $this->assertSame(['Scoped Batch A'], array_column($studentContext['batches'], 'title'));
         $this->assertStringNotContainsString('Private Course B', json_encode($branchContext));
         $this->assertStringNotContainsString('Private Batch B', json_encode($studentContext));
+        $this->assertSame([], $inactiveContext['courses']);
+        $this->assertSame([], $inactiveContext['batches']);
+        $this->assertSame([], $inactiveContext['assignments']);
+        $this->assertSame([], $inactiveContext['exams']);
         $this->assertSame(1, $branchContext['assignments'][0]['submission_count']);
         $this->assertSame(1, $branchContext['exams'][0]['attempt_count']);
         $this->assertStringNotContainsString('private answer', json_encode($branchContext));
