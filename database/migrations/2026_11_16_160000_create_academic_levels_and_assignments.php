@@ -32,6 +32,18 @@ return new class extends Migration
 
     public function down(): void
     {
+        $hasLevelRecords = Schema::hasTable('academic_levels') && DB::table('academic_levels')->exists();
+        $hasCourseAssignments = Schema::hasTable('courses')
+            && Schema::hasColumn('courses', 'academic_level_id')
+            && DB::table('courses')->whereNotNull('academic_level_id')->exists();
+        $hasPageAssignments = Schema::hasTable('website_pages')
+            && Schema::hasColumn('website_pages', 'academic_level_id')
+            && DB::table('website_pages')->whereNotNull('academic_level_id')->exists();
+
+        if ($hasLevelRecords || $hasCourseAssignments || $hasPageAssignments) {
+            throw new RuntimeException('Academic levels contain records or assignments; export or explicitly clear them before rolling back this migration.');
+        }
+
         Schema::table('website_pages', function (Blueprint $table): void {
             $table->dropIndex(['academic_level_id', 'status']);
             $table->dropConstrainedForeignId('academic_level_id');
