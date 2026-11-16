@@ -52,19 +52,27 @@ canonical signing rules.
 ## Available lifecycle controls and remaining gaps
 
 The Admin Manager supports signed-package install, permission grants, activate,
-deactivate, health checks and uninstall. Activation rechecks the trusted key,
-manifest identity, dependencies and installed-file hashes, skips previously
-completed migrations and transitions the registry to active. The runtime loads
-only active verified packages. Deactivation blocks plugin routes and preserves
-installed files and application data. Uninstall removes executable package files
-while retaining application data and migration history.
+deactivate, health checks, migration rollback and uninstall. Activation rechecks
+the trusted key, manifest identity, dependencies and installed-file hashes, skips
+previously completed migrations and transitions the registry to active. The
+runtime loads only active verified packages. Deactivation blocks plugin routes
+and preserves installed files and application data. Uninstall removes executable
+package files while retaining application data and migration history.
 
-In-place package update and rollback controls are not implemented yet. Do not
-overwrite an installed version or manually replace plugin files. Prepare a new
-signed version and complete a reviewed staging migration/rollback process before
-enabling update support. A plugin being installed does not mean its PHP entrypoint
-is loaded or executed. Manifest permissions are stored for review and are not
-automatically granted.
+An Admin can request rollback of all completed migrations for one installed,
+inactive plugin version. The action re-verifies the installed signature, manifest
+identity and package file hashes, requires an explicit confirmation, and records
+the result in version history and the activity log. Migration rollback may remove
+or alter plugin data: take and verify a database backup first, and use the control
+only after reviewing every migration's down() implementation. It does not restore
+a previous plugin package or reverse arbitrary external side effects.
+
+In-place package update and package-version rollback controls are not implemented
+yet. Do not overwrite an installed version or manually replace plugin files.
+Prepare a new signed version and complete a reviewed staging migration/rollback
+process before enabling update support. A plugin being installed does not mean
+its PHP entrypoint is loaded or executed. Manifest permissions are stored for
+review and are not automatically granted.
 
 ## Portal resource authorization
 
@@ -100,4 +108,4 @@ Plugin Manager provides an explicit health check for installed, active, inactive
 
 If an active plugin fails runtime signature or integrity verification, the runtime transitions it to `failed` so its routes are blocked. A failed package can return to `inactive` only after an administrator runs a successful health check. A health check does not execute plugin entrypoints or migrations.
 
-Lifecycle history records the plugin key/version, package checksum, signing key ID, action, resulting status, actor and safe details for install, activate, deactivate, uninstall and health-check events. It does not yet implement package upgrades, multiple installed versions or rollback.
+Lifecycle history records the plugin key/version, package checksum, signing key ID, action, resulting status, actor and safe details for install, activate, deactivate, migration rollback, uninstall and health-check events. It does not yet implement package upgrades, multiple installed versions or package-version rollback.
