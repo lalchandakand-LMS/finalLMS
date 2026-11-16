@@ -1,6 +1,6 @@
 # Issue #241 — implementation and compatibility audit
 
-**Repository baseline:** `main` at `348d9a7e5e868632a671e55a226170ad86c8f2bc`  
+**Repository baseline:** `main` at `b4a8ec3baec3ff25e9468b6d574c8735fc62eb49`  
 **Audit scope:** existing plugin runtime, manager, package installer, lifecycle, portal routing and first-party packages.  
 **Status:** foundation exists; the universal platform acceptance criteria are not yet complete.
 
@@ -19,7 +19,7 @@
 | Admin lifecycle UI | `AdminPluginManagerController`, Plugin Manager view | Signed ZIP install, activate, deactivate and uninstall; uninstall retains application data and migration records |
 | Plugin migrations | `PluginMigrationRunner` | Tracks plugin migrations and checks installed-file integrity |
 
-The current repository includes a first-party Universal AI Assistant package. Popup Ads is being handled separately in PR #267. Existing module registry entries and builders are not yet all independently installable packages.
+The current repository includes a first-party Universal AI Assistant package. Popup Ads and Announcements was merged into `main` in PR #267. Existing module registry entries and builders are not yet all independently installable packages.
 
 ## Gaps against Issue #241
 
@@ -28,7 +28,9 @@ The current repository includes a first-party Universal AI Assistant package. Po
 - **Implemented in this branch:** authenticated plugin route groups must name a permission present in the signed manifest. Runtime middleware checks that permission against the manifest and the administrator-approved `metadata.granted_permissions` list. Missing grants are denied by default.
 - **Implemented in this branch:** the Admin Plugin Manager can grant/revoke only manifest-declared permissions. Changes are audited and take effect on the next request; a package cannot grant itself permission.
 - **Applied to Universal AI Assistant:** Admin routes require `ai-assistant.configure`; Branch Manager, Teacher, Student, Guardian and Support Staff routes require `ai-assistant.use`.
-- **Still required:** portal roles are mapped, but this permission gate does not automatically enforce branch ownership, assigned course/batch ownership, student enrollment, or guardian-child relationships for plugin data operations. Those resource-level checks must be added and tested before sensitive first-party modules are exposed.
+- **Implemented in this branch:** `PluginResourceAccess` plus `plugin.resource:{route-parameter}` middleware protects bound Student, Course, Batch and Enrollment records. Branch Managers are restricted to their active branch; Teachers to assigned courses/batches and enrolled students; Students to their own records; Guardians to approved active linked students. Unknown resource models are denied.
+- **Implemented in this branch:** `PluginResourceAccess::scopeQuery()` applies actor-scoped query constraints for User, Course, Batch and Enrollment collections, with deny-by-default behavior for unsupported roles.
+- **Still required:** report/export pipelines and nested relation queries must scope every underlying query as well; plugin developers must use the helper before pagination, aggregation or serialization and must not fetch unrestricted collections then filter them afterward.
 
 ### P1 — lifecycle completeness
 

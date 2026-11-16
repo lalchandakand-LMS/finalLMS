@@ -56,3 +56,31 @@ controls yet. The isolated runtime must first enforce plugin boundaries for web
 routes, API routes, queued jobs, schedules, events and portal navigation. A
 plugin being installed does not mean its PHP entrypoint is loaded or executed.
 Manifest permissions are stored for review and are not automatically granted.
+
+## Portal resource authorization
+
+Plugin controllers must protect every route that loads an individual LMS resource through route model binding. Add the resource middleware to the route after declaring the route parameter:
+
+```php
+$context->routesForPortal('teacher', 'teacher/plugin-courses', 'teacher.plugin-courses.', function (): void {
+    Route::get('/{course:slug}', [CourseController::class, 'show'])
+        ->middleware('plugin.resource:course')
+        ->name('show');
+}, 'course.read');
+```
+
+The plugin manifest must declare `course.read` in its `permissions` list, and a root Admin must grant it in Plugin Manager. The portal group still applies the plugin-active, authenticated, verified and role checks; the resource middleware adds the per-record scope.
+
+The middleware accepts only bound Eloquent models and currently supports `User` (student records), `Course`, `Batch` and `Enrollment`. Unknown model types and unauthorized records return 404. Root Admin can access supported resources; Branch Managers are restricted to their active branch; Teachers to assigned courses/batches and their enrolled students; Students to their own enrollments; Guardians to students connected by an approved active guardian link.
+
+For collection endpoints, apply the same policy before pagination or aggregation:
+
+```php
+$courses = app(PluginResourceAccess::class)
+    ->scopeQuery(Course::query(), $request->user())
+    ->paginate();
+```
+
+`scopeQuery()` supports User (student records), Course, Batch and Enrollment queries. It returns only records visible to the current actor and denies unsupported roles by returning an empty result. Branch Managers see direct course enrollments only when the learner belongs to their active branch; batch enrollments must also belong to that branch. Admin access is unrestricted for these supported models.
+
+The middleware protects individual bound resources; the query helper protects the collection query itself. Reports, exports and nested relations must scope every underlying query as well. Never fetch an unrestricted collection and filter it in the view or after serialization.
