@@ -92,6 +92,78 @@ final class OpenAiCompatibleProvider implements AiProvider
         return ['content' => trim($answer), 'total_tokens' => $reported > 0 ? $reported : null];
     }
 
+    public function stream(string $apiKey, string $baseUrl, string $model, array $messages, float $temperature, int $maxOutputTokens, callable $onDelta): array
+    {
+        $capabilities = $this->capabilities($model);
+        if ($capabilities === null || $maxOutputTokens < 1 || $maxOutputTokens > $capabilities['max_output_tokens']) {
+            throw new RuntimeException('The selected model has no verified capability profile or the output limit is invalid.');
+        }
+
+        $payload = [
+            'model' => $model,
+            $capabilities['output_token_parameter'] => $maxOutputTokens,
+            'messages' => $messages,
+            'stream' => true,
+            'stream_options' => ['include_usage' => true],
+        ];
+        if ($capabilities['temperature']) {
+            if ($temperature < 0 || $temperature > 2) throw new RuntimeException('Temperature is outside the supported range.');
+            $payload['temperature'] = $temperature;
+        }
+
+        $response = Http::withToken($apiKey)->accept('text/event-stream')->timeout(120)
+            ->withOptions(array_merge(['allow_redirects' => false, 'stream' => true], $this->endpoint->curlOptionsFor($baseUrl)))
+            ->post(rtrim($baseUrl, '/').'/chat/completions', $payload);
+        if (! $response->successful()) throw new RuntimeException('The AI provider request failed.');
+
+        $body = $response->toPsrResponse()->getBody();
+        $buffer = '';
+        $answer = '';
+        $totalTokens = null;
+        $maxBytes = 524288;
+        while (! $body->eof()) {
+            $buffer .= $body->read(4096);
+            if (strlen($buffer) + strlen($answer) > $maxBytes) {
+                throw new RuntimeException('The AI provider response exceeded the configured size limit.');
+            }
+
+            while (($newline = strpos($buffer, "\n")) !== false) {
+                $line = trim(substr($buffer, 0, $newline));
+                $buffer = substr($buffer, $newline + 1);
+                if (! str_starts_with($line, 'data:')) continue;
+                $data = trim(substr($line, 5));
+                if ($data === '[DONE]' || $data === '') continue;
+                $event = json_decode($data, true);
+                if (! is_array($event)) throw new RuntimeException('The AI provider returned an invalid stream event.');
+
+                $delta = data_get($event, 'choices.0.delta.content');
+                if (is_string($delta) && $delta !== '') {
+                    $answer .= $delta;
+                    $onDelta($delta);
+                }
+                $reported = (int) data_get($event, 'usage.total_tokens', 0);
+                if ($reported > 0) $totalTokens = $reported;
+            }
+        }
+
+        if (trim($buffer) !== '' && str_starts_with(trim($buffer), 'data:')) {
+            $data = trim(substr(trim($buffer), 5));
+            if ($data !== '' && $data !== '[DONE]') {
+                $event = json_decode($data, true);
+                $delta = is_array($event) ? data_get($event, 'choices.0.delta.content') : null;
+                if (is_string($delta) && $delta !== '') {
+                    $answer .= $delta;
+                    $onDelta($delta);
+                }
+                $reported = is_array($event) ? (int) data_get($event, 'usage.total_tokens', 0) : 0;
+                if ($reported > 0) $totalTokens = $reported;
+            }
+        }
+
+        if (trim($answer) === '') throw new RuntimeException('The AI provider returned an empty stream.');
+        return ['content' => trim($answer), 'total_tokens' => $totalTokens];
+    }
+
     private function boundedJson($response): array
     {
         $maxBytes = 524288;
