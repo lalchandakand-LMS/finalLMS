@@ -97,7 +97,7 @@
                                 <details style="margin-top:8px;">
                                     <summary>{{ __('Version history') }}</summary>
                                     <ol style="margin:8px 0 0;padding-left:20px;">
-                                        @foreach($plugin->versionHistory->take(10) as $history)
+                                        @foreach($plugin->versionHistory as $history)
                                             <li style="margin:4px 0;">
                                                 <strong>{{ ucfirst(str_replace('_', ' ', $history->action)) }}</strong>
                                                 <span class="muted">v{{ $history->version }} · {{ $history->created_at?->format('Y-m-d H:i') }}</span>
