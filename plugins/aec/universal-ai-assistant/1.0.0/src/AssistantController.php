@@ -113,7 +113,7 @@ final class AssistantController
                         $authorizedContext['sources'] ?? [],
                         static fn ($source): bool => is_string($source) && $source !== ''
                     ));
-                    foreach (['courses', 'batches', 'enrollments', 'linked_students', 'assignments', 'exams'] as $sourceGroup) {
+                    foreach (['courses', 'batches', 'enrollments', 'linked_students', 'assigned_students', 'assignments', 'exams'] as $sourceGroup) {
                         foreach ($authorizedContext[$sourceGroup] ?? [] as $source) {
                             if (isset($source['source'])) $sourceIds[] = $source['source'];
                             foreach ($source['lesson_titles'] ?? [] as $lesson) {
