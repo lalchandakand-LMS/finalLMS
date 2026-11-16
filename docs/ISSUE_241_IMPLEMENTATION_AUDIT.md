@@ -69,3 +69,9 @@ The current repository includes a first-party Universal AI Assistant package. Po
 - No arbitrary uploaded PHP/JavaScript execution.
 - No automatic permission grant from a package manifest.
 - No deletion of LMS/customer data during package uninstall.
+
+## Health checks and version history
+
+- **Implemented:** explicit Admin health checks validate manifest/registry identity, current trusted-key configuration, persisted release signature (for new installs), dependencies/conflicts and installed-file hashes. An active plugin failing runtime verification is moved to `failed`; a failed package can be returned to `inactive` only after a successful health check.
+- **Implemented:** plugin version/lifecycle history records install, activation, deactivation, uninstall and health-check events with package version/checksum, signing key ID, actor and safe metadata.
+- **Still required:** staged version upgrades, immutable side-by-side package versions, dependency-aware update preflight, backup/atomic switch and tested rollback. Legacy packages installed before persisted detached signatures were added rely on their original verification timestamp plus installed-file integrity; new packages re-verify the stored detached signature against the current trusted key.
