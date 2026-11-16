@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\AcademicLevel;
+use App\Models\Batch;
+use App\Models\Branch;
+use App\Models\Exam;
 use App\Models\Course;
 use App\Models\User;
 use App\Models\WebsitePage;
@@ -114,4 +117,80 @@ class AcademicLevelManagementTest extends TestCase
             ->assertSessionHas('error');
         $this->assertDatabaseHas('academic_levels', ['id' => $level->id]);
     }
+    public function test_academic_level_exam_list_is_scoped_and_searchable(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $primary = AcademicLevel::create(['name' => 'Primary', 'slug' => 'primary', 'is_active' => true]);
+        $secondary = AcademicLevel::create(['name' => 'Secondary', 'slug' => 'secondary', 'is_active' => true]);
+        $branch = Branch::create([
+            'name' => 'Main Branch',
+            'slug' => 'main-branch',
+            'address' => 'Dhaka',
+            'phone' => '000',
+            'is_active' => true,
+        ]);
+
+        $createExam = function (AcademicLevel $level, string $courseTitle, string $examTitle) use ($teacher, $branch): Exam {
+            $course = Course::create([
+                'teacher_id' => $teacher->id,
+                'academic_level_id' => $level->id,
+                'title' => $courseTitle,
+                'slug' => strtolower(str_replace(' ', '-', $courseTitle)),
+                'description' => $courseTitle,
+                'price' => 0,
+                'status' => 'published',
+            ]);
+            $batch = Batch::create([
+                'branch_id' => $branch->id,
+                'course_id' => $course->id,
+                'teacher_id' => $teacher->id,
+                'title' => $courseTitle.' Batch',
+                'capacity' => 30,
+                'starts_at' => now()->addDay(),
+                'ends_at' => now()->addDays(30),
+                'fee' => 0,
+                'status' => 'open',
+            ]);
+
+            return Exam::create([
+                'batch_id' => $batch->id,
+                'teacher_id' => $teacher->id,
+                'title' => $examTitle,
+                'starts_at' => now()->addDays(2),
+                'ends_at' => now()->addDays(2)->addHour(),
+                'duration_minutes' => 60,
+                'pass_marks' => 5,
+                'status' => 'published',
+            ]);
+        };
+
+        $createExam($primary, 'Primary Mathematics', 'Primary Mathematics Final');
+        $createExam($secondary, 'Secondary Physics', 'Secondary Physics Final');
+
+        $this->actingAs($admin)->get(route('admin.academic-levels.show', $primary))
+            ->assertOk()
+            ->assertSee('Primary Mathematics Final')
+            ->assertDontSee('Secondary Physics Final');
+
+        $this->get(route('admin.academic-levels.show', ['academicLevel' => $primary->id, 'exam_search' => 'Mathematics']))
+            ->assertOk()
+            ->assertSee('Primary Mathematics Final')
+            ->assertDontSee('Secondary Physics Final');
+
+        $this->get(route('admin.academic-levels.show', ['academicLevel' => $primary->id, 'exam_search' => 'No matching exam']))
+            ->assertOk()
+            ->assertSee('No exams match this academic level and search.');
+    }
+
+    public function test_academic_level_exam_search_rejects_oversized_terms(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $level = AcademicLevel::create(['name' => 'Primary', 'slug' => 'primary-search', 'is_active' => true]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.academic-levels.show', ['academicLevel' => $level->id, 'exam_search' => str_repeat('x', 121)]))
+            ->assertSessionHasErrors('exam_search');
+    }
+
 }
