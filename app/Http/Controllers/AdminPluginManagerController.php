@@ -147,7 +147,6 @@ class AdminPluginManagerController extends Controller
                 $validated['key_id'],
                 $key,
                 $integrityVerifier,
-                $history,
             );
         } catch (InvalidArgumentException $exception) {
             $this->recordFailure($request, 'admin.plugins.update_failed');
