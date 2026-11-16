@@ -439,6 +439,19 @@ PHP;
         $this->assertDirectoryExists($oldPath);
         $this->assertTrue(Schema::hasTable('plugin_version_v1_probe'));
 
+        // A bad signature must be rejected before the registry or schema moves.
+        $this->manifest['version'] = '1.0.1';
+        $invalidSignature = base64_encode(random_bytes(SODIUM_CRYPTO_SIGN_BYTES));
+        $this->actingAs($admin)->post(route('admin.plugins.update', 'aec.course-management'), $this->uploadData($invalidSignature))
+            ->assertRedirect()
+            ->assertSessionHas('error');
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'version' => '1.0.0',
+            'status' => 'installed',
+        ]);
+        $this->assertTrue(Schema::hasTable('plugin_version_v1_probe'));
+
         $migrationV2 = <<<'PHP'
 <?php
 
