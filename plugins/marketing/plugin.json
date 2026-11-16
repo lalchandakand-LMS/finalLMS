@@ -13,7 +13,6 @@
   "routes": [
     "admin.marketing.*",
     "marketing.*",
-    "admin.visitor-popups.*",
     "contests.*",
     "admin.contests.*"
   ],
