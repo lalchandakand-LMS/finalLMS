@@ -146,6 +146,43 @@ class UniversalAiAssistantPluginTest extends TestCase
         $this->assertNull($second);
     }
 
+    public function test_every_role_switch_is_independently_enforced_before_provider_access(): void
+    {
+        AssistantSettings::save([
+            'model' => 'gpt-4o-mini',
+            'base_url' => 'https://api.openai.com/v1',
+            'temperature' => 0.4,
+            'max_tokens' => 800,
+            'global_enabled' => true,
+            'role_enabled' => array_fill_keys(AssistantSettings::ROLES, false),
+            'daily_request_limit' => 20,
+            'daily_token_budget' => 50000,
+            'retention_days' => 365,
+        ], 'test-secret-provider-key', false);
+
+        Route::post('/__test-ai-assistant/role-switch', [
+            \\Aloms\\UniversalAiAssistant\\AssistantController::class,
+            'send',
+        ]);
+
+        foreach ([
+            'admin',
+            'branch_manager',
+            'teacher',
+            'student',
+            'guardian',
+            'accountant',
+        ] as $role) {
+            $user = User::factory()->create(['role' => $role]);
+            $this->actingAs($user)
+                ->postJson('/__test-ai-assistant/role-switch', ['message' => 'Hello'])
+                ->assertNotFound();
+        }
+
+        Http::assertNothingSent();
+        $this->assertSame('support_staff', AssistantSettings::roleForUser('accountant'));
+    }
+
     public function test_provider_key_is_encrypted_and_never_in_public_settings(): void
     {
         AssistantSettings::save([
