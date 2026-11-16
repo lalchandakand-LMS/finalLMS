@@ -321,7 +321,7 @@
                         <a class="{{ request()->routeIs('admin.branch-workspace.students.*') ? 'active' : '' }}" href="{{ route('admin.branch-workspace.students.index') }}"><span>👥</span><span class="nav-text">Branch students</span></a>
                     @endif
                     @if(auth()->user()->hasAdminPermission('branch.attendance'))
-                        <a class="{{ request()->routeIs('admin.branch-workspace.attendance.*') || request()->routeIs('admin.branch-workspace.batches.attendance.*') ? 'active' : '' }}" href="{{ route('admin.branch-workspace.attendance.reports') }}"><span>📋</span><span class="nav-text">Branch attendance</span></a>
+                        <a class="{{ request()->routeIs('admin.branch-workspace.attendance.*') || request()->routeIs('admin.branch-workspace.batches.attendance.*') ? 'active' : '' }}" href="{{ route('admin.branch-workspace.attendance.batches.index') }}"><span>📋</span><span class="nav-text">Branch attendance</span></a>
                     @endif
                 @endif
             @elseif(auth()->user()->isAccountant())
