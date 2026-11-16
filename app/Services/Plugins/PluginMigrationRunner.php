@@ -99,11 +99,14 @@ class PluginMigrationRunner
         }
         $this->integrityVerifier->verify($plugin);
 
+        $identity = [
+            'plugin_key' => $plugin->plugin_key,
+            'plugin_version' => $plugin->version,
+        ];
+
         // A failed migration may have partially committed DDL. Never roll
         // back other completed migrations around an unresolved failed/running row.
-        $unresolvedMigration = DB::table('plugin_migrations')
-            ->where('plugin_key', $plugin->plugin_key)
-            ->where('plugin_version', $plugin->version)
+        $unresolvedMigration = DB::table('plugin_migrations')->where($identity)
             ->whereIn('status', ['failed', 'running'])
             ->exists();
         if ($unresolvedMigration) {
@@ -112,16 +115,8 @@ class PluginMigrationRunner
             );
         }
 
-        $root = $this->migrationRoot($plugin);
-        if ($root === null) return;
-
-        $identity = [
-            'plugin_key' => $plugin->plugin_key,
-            'plugin_version' => $plugin->version,
-        ];
-
-        // A prior rollback may have partially committed DDL. Do not replay it
-        // automatically after a process crash or a failed down() method.
+        // Interrupted rollback markers must be checked even when the manifest
+        // migration directory has since gone missing.
         $interrupted = DB::table('plugin_migrations')->where($identity)
             ->whereIn('status', ['rolling_back', 'rollback_failed'])->exists();
         if ($interrupted) {
@@ -132,6 +127,12 @@ class PluginMigrationRunner
 
         $records = DB::table('plugin_migrations')->where($identity)
             ->where('status', 'completed')->orderByDesc('id')->get();
+        if ($records->isEmpty()) return;
+
+        $root = $this->migrationRoot($plugin);
+        if ($root === null) {
+            throw new RuntimeException('Completed plugin migrations exist but the signed manifest has no migration directory.');
+        }
 
         foreach ($records as $record) {
             if (! is_string($record->migration)
