@@ -114,6 +114,7 @@ class VisitorPopupManagementTest extends TestCase
 
         $this->get('/admin/visitor-popups')->assertNotFound();
         $this->get('/popups/active')->assertNotFound();
+        auth()->logout();
         $this->get(route('landing'))->assertOk()->assertDontSee('Retained campaign');
 
         $this->activatePopupAdsPlugin();
@@ -246,6 +247,7 @@ class VisitorPopupManagementTest extends TestCase
         $this->assertStringContainsString('https://example.com/offer', (string) $popup->rich_html);
         $this->assertStringContainsString('noopener noreferrer', (string) $popup->rich_html);
 
+        auth()->logout();
         $this->get(route('landing'))
             ->assertOk()
             ->assertSee('Sanitized Announcement')
