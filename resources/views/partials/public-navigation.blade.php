@@ -4,6 +4,11 @@
         <span>{{ __('Explore') }}</span>
     </button>
     <div id="public-nav-backdrop" class="public-nav-backdrop" aria-hidden="true"></div>
+    @php
+        $mainMenuItems = \Illuminate\Support\Facades\Schema::hasTable('website_menu_items')
+            ? \App\Models\WebsiteMenuItem::query()->whereNull('parent_id')->where('is_active', true)->with('activeChildren')->orderBy('sort_order')->orderBy('id')->get()
+            : collect();
+    @endphp
     <aside id="public-navigation-drawer" class="public-drawer" role="dialog" aria-modal="true" aria-label="{{ __('Main navigation') }}" aria-hidden="true">
         <div class="public-drawer-head">
             <a class="public-drawer-brand" href="{{ route('landing') }}">
@@ -24,6 +29,12 @@
                     <a href="{{ route('website-pages.show', $customPage->slug) }}"><span class="menu-icon">▤</span>{{ $customPage->menu_label ?: $customPage->title }}</a>
                 @endforeach
             @endif
+            @foreach($mainMenuItems as $menuItem)
+                <a href="{{ $menuItem->url }}" @if($menuItem->target_blank) target="_blank" rel="noopener noreferrer" @endif><span class="menu-icon">↗</span>{{ $menuItem->label }}</a>
+                @foreach($menuItem->activeChildren as $childMenuItem)
+                    <a class="public-submenu-link" style="padding-left:34px;font-size:.94em;" href="{{ $childMenuItem->url }}" @if($childMenuItem->target_blank) target="_blank" rel="noopener noreferrer" @endif><span class="menu-icon">↳</span>{{ $childMenuItem->label }}</a>
+                @endforeach
+            @endforeach
             @foreach(is_array($websiteHeaderLinks ?? null) ? $websiteHeaderLinks : [] as $websiteLink)
                 @if(is_array($websiteLink) && !empty($websiteLink['label']) && !empty($websiteLink['url']))
                     <a href="{{ $websiteLink['url'] }}"><span class="menu-icon">↗</span>{{ $websiteLink['label'] }}</a>
@@ -46,6 +57,7 @@
                     <div class="public-drawer-section">{{ __('Administration') }}</div>
                     <a href="{{ route('admin.website-builder.index') }}"><span class="menu-icon">▧</span>{{ __('Website builder') }}</a>
                     <a href="{{ route('admin.website-pages.index') }}"><span class="menu-icon">📄</span>{{ __('Custom pages') }}</a>
+                    <a href="{{ route('admin.website-menu.index') }}"><span class="menu-icon">☷</span>{{ __('Main menu builder') }}</a>
                     <a href="{{ route('admin.settings.index') }}"><span class="menu-icon">⚙</span>{{ __('Settings') }}</a>
                 @endif
             @endauth
