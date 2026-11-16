@@ -14,6 +14,69 @@ final class PluginSignatureVerifier
     {
     }
 
+    /**
+     * Verify an update archive before mutating the installed registry row.
+     * This lets a bad signature be rejected while the current release remains
+     * the active restore target and its schema is untouched.
+     */
+    public function verifyDetachedPackage(
+        PluginInstallation $currentPlugin,
+        array $manifest,
+        string $stagedArchivePath,
+        string $signatureBase64,
+        string $keyId,
+        string $finalRelativePath,
+    ): string {
+        if (! function_exists('sodium_crypto_sign_verify_detached')) {
+            throw new RuntimeException('The PHP sodium extension is required for plugin signature verification.');
+        }
+        $errors = $this->manifestValidator->errors($manifest);
+        if ($errors !== []) throw new InvalidArgumentException('Invalid plugin manifest: '.implode(' ', $errors));
+        if (! hash_equals((string) $currentPlugin->plugin_key, (string) ($manifest['key'] ?? ''))
+            || (string) $currentPlugin->name !== (string) ($manifest['name'] ?? '')
+            || (string) $currentPlugin->type !== (string) ($manifest['type'] ?? '')) {
+            throw new InvalidArgumentException('The signed update manifest does not match the installed plugin identity.');
+        }
+        if (preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/D', $keyId) !== 1) {
+            throw new InvalidArgumentException('Invalid trusted release key ID.');
+        }
+        $keys = config('plugins.trusted_public_keys', []);
+        $encodedPublicKey = is_array($keys) ? ($keys[$keyId] ?? null) : null;
+        if (! is_string($encodedPublicKey) || $encodedPublicKey === '') {
+            throw new RuntimeException('The plugin signing key is not trusted.');
+        }
+        $publicKey = base64_decode($encodedPublicKey, true);
+        if (! is_string($publicKey) || strlen($publicKey) !== SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES) {
+            throw new RuntimeException('The configured trusted public key is invalid.');
+        }
+        $signature = base64_decode($signatureBase64, true);
+        if (! is_string($signature) || strlen($signature) !== SODIUM_CRYPTO_SIGN_BYTES) {
+            throw new InvalidArgumentException('The detached plugin signature is malformed.');
+        }
+        $archive = $this->resolveStagedArchive($stagedArchivePath);
+        $size = filesize($archive);
+        $maxBytes = max(1, (int) config('plugins.max_package_bytes', 52428800));
+        if ($size === false || $size < 1 || $size > $maxBytes) {
+            throw new RuntimeException('The staged plugin package is empty or exceeds the configured size limit.');
+        }
+        $checksum = hash_file('sha256', $archive);
+        if (! is_string($checksum)) throw new RuntimeException('Unable to calculate the staged plugin package checksum.');
+        $this->assertFinalPackagePath($finalRelativePath);
+        [$vendor, $slug] = explode('.', (string) $manifest['key'], 2);
+        $expectedPath = 'plugins/'.$vendor.'/'.str_replace('.', '-', $slug).'/'.$manifest['version'];
+        if (! hash_equals($expectedPath, $finalRelativePath)) {
+            throw new InvalidArgumentException('Plugin destination path does not match its signed identity.');
+        }
+        try {
+            $valid = sodium_crypto_sign_verify_detached($signature, self::payloadForSignature($manifest, $checksum), $publicKey);
+        } catch (SodiumException $exception) {
+            throw new RuntimeException('Plugin signature verification failed.', previous: $exception);
+        }
+        if (! $valid) throw new RuntimeException('The plugin package signature is invalid.');
+
+        return $checksum;
+    }
+
     public function verifyAndRecord(PluginInstallation $plugin, array $manifest, string $stagedArchivePath, string $signatureBase64, string $keyId, string $finalRelativePath): PluginInstallation
     {
         if (! function_exists('sodium_crypto_sign_verify_detached')) {
