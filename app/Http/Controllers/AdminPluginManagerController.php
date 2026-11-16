@@ -179,6 +179,7 @@ class AdminPluginManagerController extends Controller
 
     public function uninstall(Request $request, string $key, PluginLifecycle $lifecycle, PluginPackageRemover $remover, PluginVersionHistoryRecorder $history): RedirectResponse
     {
+        $plugin = null;
         try {
             $plugin = PluginInstallation::query()->where('plugin_key', $key)->firstOrFail();
             if (! in_array($plugin->status, ['installed', 'inactive', 'failed'], true)) {
@@ -200,6 +201,18 @@ class AdminPluginManagerController extends Controller
             $history->record($plugin, 'uninstalled', $request->user());
         } catch (Throwable $exception) {
             report($exception);
+            // If the registry was marked uninstalled but filesystem cleanup failed,
+            // retain a retryable failed state. The runtime loads active plugins only.
+            if ($plugin instanceof PluginInstallation && $plugin->status === 'uninstalled') {
+                try {
+                    $lifecycle->transition($plugin->plugin_key, 'failed', [
+                        'health_status' => 'failed',
+                        'health_message' => 'Plugin package cleanup failed; retry uninstall after reviewing server logs.',
+                    ]);
+                } catch (Throwable $stateException) {
+                    report($stateException);
+                }
+            }
             $this->recordFailure($request, 'admin.plugins.uninstall_failed');
             return back()->with('error', __('Plugin uninstall was blocked or package cleanup failed. Plugin data and migration records were retained.'));
         }
