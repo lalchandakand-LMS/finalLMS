@@ -24,8 +24,7 @@
     "admin.branch-workspace.batches.attendance.*",
     "admin.branch-workspace.attendance.reports",
     "teacher.attendance.reports",
-    "api.v1.instructor.attendance.*",
-    "api.v1.attendance.qr.*"
+    "admin.branch-workspace.attendance.batches.index"
   ],
   "settings": [],
   "events": [],
