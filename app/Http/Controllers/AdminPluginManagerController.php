@@ -171,6 +171,102 @@ class AdminPluginManagerController extends Controller
             __('Signed plugin package updated. The previous version was retained; review health and permissions before activation.'));
     }
 
+    public function rollbackPackage(
+        Request $request,
+        string $key,
+        PluginIntegrityVerifier $integrityVerifier,
+        PluginSignatureVerifier $signatureVerifier,
+        PluginMigrationRunner $migrationRunner,
+        PluginLifecycle $lifecycle,
+        PluginVersionHistoryRecorder $history,
+    ): RedirectResponse {
+        $request->validate([
+            'confirm_rollback' => ['required', 'accepted'],
+        ]);
+
+        $plugin = PluginInstallation::query()->where('plugin_key', $key)->firstOrFail();
+        if (! in_array($plugin->status, ['installed', 'inactive'], true)) {
+            return back()->with('error', __('Deactivate the plugin and resolve failed states before rolling back its package version.'));
+        }
+
+        $snapshotRecord = PluginVersionHistory::query()
+            ->where('plugin_key', $plugin->plugin_key)
+            ->where('action', 'package_update_snapshot')
+            ->where('version', '!=', $plugin->version)
+            ->latest('created_at')
+            ->first();
+
+        $details = $snapshotRecord?->details;
+        $snapshot = is_array($details) && ($details['snapshot_schema'] ?? null) === 1
+            ? ($details['snapshot'] ?? null)
+            : null;
+
+        if (! is_array($snapshot)
+            || ! is_string($snapshot['version'] ?? null)
+            || version_compare($snapshot['version'], (string) $plugin->version, '>=')) {
+            return back()->with('error', __('No verified previous package version is available for rollback.'));
+        }
+
+        try {
+            $candidate = clone $plugin;
+            $candidate->forceFill([
+                'name' => $snapshot['name'],
+                'version' => $snapshot['version'],
+                'type' => $snapshot['type'],
+                'manifest' => $snapshot['manifest'],
+                'package_path' => $snapshot['package_path'],
+                'package_sha256' => $snapshot['package_sha256'],
+                'signature_key_id' => $snapshot['signature_key_id'],
+                'signature_verified_at' => $snapshot['signature_verified_at'],
+                'metadata' => $snapshot['metadata'],
+                'status' => 'inactive',
+            ]);
+
+            // Verify both the retained old package and the currently installed package
+            // before reversing only the current version's recorded migrations.
+            $signatureVerifier->verifyInstalledSignature($candidate);
+            $integrityVerifier->verify($candidate);
+            $signatureVerifier->verifyInstalledSignature($plugin);
+            $integrityVerifier->verify($plugin);
+            $migrationRunner->rollback($plugin);
+
+            $lifecycle->transition($plugin->plugin_key, 'update_staged');
+            $plugin->forceFill([
+                'name' => $snapshot['name'],
+                'version' => $snapshot['version'],
+                'type' => $snapshot['type'],
+                'manifest' => $snapshot['manifest'],
+                'package_path' => $snapshot['package_path'],
+                'package_sha256' => $snapshot['package_sha256'],
+                'signature_key_id' => $snapshot['signature_key_id'],
+                'signature_verified_at' => $snapshot['signature_verified_at'],
+                'metadata' => $snapshot['metadata'],
+                'installed_at' => $snapshot['installed_at'],
+                'activated_at' => null,
+            ])->save();
+
+            $plugin = $lifecycle->transition($plugin->plugin_key, 'inactive', [
+                'health_status' => 'healthy',
+                'health_message' => 'Previous signed package restored after signature and installed-file verification.',
+                'last_health_check_at' => now(),
+            ]);
+
+            $history->record($plugin, 'package_rolled_back', $request->user(), [
+                'from_version' => $snapshotRecord->version,
+                'to_version' => $plugin->version,
+            ]);
+            $this->audit($request, 'admin.plugins.package_rolled_back',
+                'Rolled back plugin '.$plugin->plugin_key.' to retained version '.$plugin->version);
+        } catch (Throwable $exception) {
+            report($exception);
+            $this->recordFailure($request, 'admin.plugins.package_rollback_failed');
+            return back()->with('error', __('Package rollback failed. The plugin was not reactivated; inspect migration and integrity logs before retrying.'));
+        }
+
+        return redirect()->route('admin.plugins.index')->with('success',
+            __('Previous signed package restored. The plugin remains inactive until an administrator activates it.'));
+    }
+
     public function activate(
         Request $request,
         string $key,
