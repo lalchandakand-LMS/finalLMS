@@ -425,7 +425,7 @@ class _InstructorNoticesPageState extends State<InstructorNoticesPage> {
         notices = notices.map((item) => item['id'] == id
             ? {...item, 'is_read': true}
             : item).toList();
-        unreadCount = (unreadCount - 1).clamp(0, 1 << 30);
+        unreadCount = (unreadCount - 1).clamp(0, 1 << 30).toInt();
       });
     } catch (exception) {
       if (mounted) {
