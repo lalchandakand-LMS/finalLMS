@@ -11,6 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class AttendanceController extends Controller
@@ -95,7 +96,7 @@ class AttendanceController extends Controller
             ])->withInput();
         }
 
-        $capturedAt = now()->parse($validated['location_captured_at']);
+        $capturedAt = \Illuminate\Support\Carbon::parse($validated['location_captured_at']);
         if ($capturedAt->greaterThan(now()->addMinutes(5))) {
             return back()->withErrors(['location_captured_at' => 'Invalid location capture time.'])->withInput();
         }
@@ -184,10 +185,10 @@ class AttendanceController extends Controller
             'course_id' => ['nullable', 'integer', 'exists:courses,id'],
             'batch_id' => ['nullable', 'integer', 'exists:batches,id'],
             'date_from' => ['nullable', 'date_format:Y-m-d'],
-            'date_to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:date_from'],
+            'date_to' => ['nullable', 'date_format:Y-m-d'],
         ]);
 
-        $query = Attendance::query()->with([
+        if (! empty($filters['date_from']) && ! empty($filters['date_to']) && $filters['date_to'] < $filters['date_from']) {\n            throw ValidationException::withMessages(['date_to' => 'The end date must be on or after the start date.']);\n        }\n\n        $query = Attendance::query()->with([
             'student:id,name,email',
             'batch.course.academicLevel',
             'batch.branch',
@@ -252,7 +253,7 @@ class AttendanceController extends Controller
         $user = Auth::user();
 
         $authorized = $user?->isAdmin()
-            || ($user?->isTeacher() && (int) $batch->teacher_id === (int) $user->id)
+            || ($user?->isTeacher() && (int) $batch->teacher_id === (int) $user->id\n                && ($user->branch_id === null || (int) $user->branch_id === (int) $batch->branch_id))
             || ($user?->isBranchManager()
                 && (int) $user->branch_id === (int) $batch->branch_id
                 && $user->hasAdminPermission('branch.attendance'));
