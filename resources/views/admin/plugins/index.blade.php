@@ -196,10 +196,11 @@
                                     <button class="btn secondary" type="submit">{{ __('Rollback package version') }}</button>
                                 </form>
                             @endif
-                            @if(in_array($plugin->status, ['installed', 'inactive', 'failed'], true))
-                                <form method="POST" action="{{ route('admin.plugins.uninstall', $plugin->plugin_key) }}" style="display:inline;" onsubmit="return confirm('{{ __('Uninstall this plugin package? Conversation history, LMS data and migration records will be retained.') }}')">
+                            @if(in_array($plugin->status, ['installed', 'inactive', 'failed', 'uninstalled'], true))
+                                <form method="POST" action="{{ route('admin.plugins.uninstall', $plugin->plugin_key) }}" style="display:inline;" onsubmit="return confirm('{{ $plugin->status === 'uninstalled' ? __('Retry removal of remaining plugin package files? LMS data and migration records will be retained.') : __('Uninstall this plugin package? LMS data and migration records will be retained.') }}')">
                                     @csrf
-                                    <button class="btn danger" type="submit">{{ __('Uninstall') }}</button>
+                                    <input type="hidden" name="confirm_uninstall" value="1">
+                                    <button class="btn danger" type="submit">{{ $plugin->status === 'uninstalled' ? __('Retry package cleanup') : __('Uninstall') }}</button>
                                 </form>
                             @endif
                         </td>
