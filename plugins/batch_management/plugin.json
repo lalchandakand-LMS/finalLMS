@@ -13,7 +13,12 @@
     "academic_levels"
   ],
   "permissions": [],
-  "routes": [],
+  "routes": [
+    "teacher.batches.*",
+    "admin.batches.*",
+    "batches.*",
+    "branch-manager.batches.*"
+  ],
   "settings": [],
   "events": [],
   "directory": "plugins/batch_management",
