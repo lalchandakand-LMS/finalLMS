@@ -45,7 +45,7 @@ return [
     'ai_developer' => ['admin.ai-developer.*'],
     'universal_ai_assistant' => ['admin.ai-assistant.*', 'branch.ai-assistant.*', 'teacher.ai-assistant.*', 'student.ai-assistant.*', 'guardian.ai-assistant.*', 'support.ai-assistant.*'],
     'slider' => ['sliders.*'],
-    'slider_builder' => ['admin.sliders.*'],,
+    'slider_builder' => ['admin.sliders.*'],
     'carousel_builder' => ['admin.carousels.*', 'carousels.*'],
     'media_library' => ['admin.media.*', 'media.*'],
     'storage' => ['admin.backups.*', 'admin.storage.*'],
