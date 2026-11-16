@@ -832,6 +832,10 @@ PHP;
             'plugin_key' => 'aec.course-management',
             'action' => 'uninstalled',
         ]);
+        $snapshot = \App\Models\PluginVersionHistory::query()
+            ->where('plugin_key', 'aec.course-management')
+            ->where('action', 'pre_uninstall_snapshot')->latest('created_at')->firstOrFail();
+        @unlink(storage_path('app/private/plugin-recovery/'.$snapshot->details['recovery_path']));
     }
 
     public function test_admin_can_retry_package_cleanup_for_an_already_uninstalled_plugin(): void
