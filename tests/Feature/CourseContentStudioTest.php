@@ -392,6 +392,41 @@ class CourseContentStudioTest extends TestCase
         $this->actingAs($student)->get(route('courses.content.file', [$course, $post]))->assertGone();
     }
 
+    public function test_course_builder_filters_new_content_to_the_courses_academic_level(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $classNine = AcademicLevel::create(['name' => 'Class 9', 'slug' => 'class-9', 'sort_order' => 1, 'is_active' => true]);
+        $classTen = AcademicLevel::create(['name' => 'Class 10', 'slug' => 'class-10', 'sort_order' => 2, 'is_active' => true]);
+        $course = Course::factory()->create([
+            'teacher_id' => $teacher->id,
+            'academic_level_id' => $classNine->id,
+            'status' => 'published',
+        ]);
+        $matching = $this->makePost($admin, null, 'Class 9 Algebra');
+        $matching->update(['academic_level_id' => $classNine->id]);
+        $unassigned = $this->makePost($admin, null, 'General Study Skills');
+        $otherLevel = $this->makePost($admin, null, 'Class 10 Chemistry');
+        $otherLevel->update(['academic_level_id' => $classTen->id]);
+
+        $this->actingAs($admin)->get(route('admin.course-builder.edit', $course))
+            ->assertOk()->assertSee('Class 9 Algebra')->assertSee('General Study Skills')
+            ->assertDontSee('Class 10 Chemistry');
+
+        $this->actingAs($admin)->from(route('admin.course-builder.edit', $course))
+            ->put(route('admin.course-builder.update', $course), [
+                'post_ids' => [$otherLevel->id],
+                'positions' => [$otherLevel->id => 10],
+            ])
+            ->assertRedirect(route('admin.course-builder.edit', $course))
+            ->assertSessionHasErrors('post_ids.0');
+
+        $this->assertDatabaseMissing('course_curriculum_items', [
+            'course_id' => $course->id,
+            'course_content_post_id' => $otherLevel->id,
+        ]);
+    }
+
     private function makePost(User $author, ?CourseCategory $category, string $title): CourseContentPost
     {
         $post = CourseContentPost::create([
