@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\PluginInstallation;
+use App\Models\PluginVersionHistory;
 use App\Services\Plugins\PluginIntegrityVerifier;
 use App\Services\Plugins\PluginLifecycle;
 use App\Services\Plugins\PluginManifestValidator;
@@ -12,6 +13,7 @@ use App\Services\Plugins\PluginPackageRemover;
 use App\Services\Plugins\PluginUploadInstaller;
 use App\Services\Plugins\PluginSignatureVerifier;
 use App\Services\Plugins\PluginVersionHistoryRecorder;
+use App\Services\Plugins\PluginVersionRestorer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
