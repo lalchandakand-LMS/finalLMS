@@ -19,7 +19,7 @@ return new class implements PluginContract
 {
     public function register(PluginContext $context): void
     {
-        $context->singleton(\\App\\Contracts\\Ai\\AiProvider::class, OpenAiCompatibleProvider::class);
+        $context->singleton(AiProvider::class, OpenAiCompatibleProvider::class);
         View::addNamespace('universal-ai-assistant', dirname(__DIR__).'/resources/views');
 
         $context->routesForPortal('admin', 'admin/ai-assistant', 'admin.ai-assistant.', function (): void {
