@@ -41,6 +41,43 @@ class UniversalAiAssistantPluginTest extends TestCase
         }
     }
 
+    public function test_provider_streams_deltas_and_uses_model_specific_parameters(): void
+    {
+        Http::fake([
+            'https://api.openai.com/v1/chat/completions' => Http::response(
+                "data: {\"choices\":[{\"delta\":{\"content\":\"Hello \"}}]}\n\n".
+                "data: {\"choices\":[{\"delta\":{\"content\":\"world\"}}],\"usage\":{\"total_tokens\":12}}\n\n".
+                "data: [DONE]\n\n",
+                200,
+                ['Content-Type' => 'text/event-stream']
+            ),
+        ]);
+
+        $provider = new OpenAiCompatibleProvider(new AiDeveloperProviderEndpoint(
+            static fn (string $host): array => [['type' => 'A', 'ip' => '1.1.1.1']]
+        ));
+        $deltas = [];
+        $result = $provider->stream(
+            'test-key',
+            'https://api.openai.com/v1',
+            'o3-mini',
+            [['role' => 'user', 'content' => 'Hello']],
+            0.7,
+            500,
+            static function (string $delta) use (&$deltas): void { $deltas[] = $delta; }
+        );
+
+        $this->assertSame('Hello world', $result['content']);
+        $this->assertSame(12, $result['total_tokens']);
+        $this->assertSame(['Hello ', 'world'], $deltas);
+        Http::assertSent(static function ($request): bool {
+            $payload = $request->data();
+            return ($payload['stream'] ?? false) === true
+                && ($payload['max_completion_tokens'] ?? null) === 500
+                && ! array_key_exists('temperature', $payload);
+        });
+    }
+
     public function test_provider_model_capabilities_fail_closed_and_omit_unsupported_parameters(): void
     {
         $provider = new OpenAiCompatibleProvider(new AiDeveloperProviderEndpoint(
