@@ -105,7 +105,7 @@ final class PluginVersionRestorer
 
         DB::transaction(function () use ($plugin, $snapshot): void {
             $locked = PluginInstallation::query()->lockForUpdate()->findOrFail($plugin->getKey());
-            if (! in_array($locked->status, ['installed', 'inactive'], true)
+            if (! in_array($locked->status, ['installed', 'inactive', 'failed'], true)
                 || (string) $locked->version !== (string) $plugin->version) {
                 throw new RuntimeException('The plugin changed during restore; no version switch was applied.');
             }
