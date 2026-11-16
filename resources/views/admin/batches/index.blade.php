@@ -3,6 +3,10 @@
 @section('title', 'Branches and batches | ' . config('app.name'))
 
 @section('content')
+<div class="panel" style="margin-bottom:16px;"><form method="GET" action="{{ route('admin.batches.index') }}" style="display:flex;gap:12px;align-items:end;flex-wrap:wrap;">
+    <label>Academic level<select name="academic_level_id"><option value="">All levels</option>@foreach($academicLevels as $academicLevel)<option value="{{ $academicLevel->id }}" @selected((string) ($filters['academic_level_id'] ?? '') === (string) $academicLevel->id)>{{ $academicLevel->name }}</option>@endforeach</select></label>
+    <button class="btn primary" type="submit">Filter</button><a class="btn secondary" href="{{ route('admin.batches.index') }}">Reset</a>
+</form></div>
     <div class="page-header">
         <div>
             <span class="badge info">Admin</span>
