@@ -1,0 +1,3504 @@
+diff --git a/app/Http/Controllers/AdminVisitorPopupController.php b/app/Http/Controllers/AdminVisitorPopupController.php
+deleted file mode 100644
+index 5479c0c..0000000
+--- a/app/Http/Controllers/AdminVisitorPopupController.php
++++ /dev/null
+@@ -1,96 +0,0 @@
+-<?php
+-
+-namespace App\Http\Controllers;
+-
+-use App\Models\MediaAsset;
+-use App\Models\VisitorPopup;
+-use Illuminate\Http\RedirectResponse;
+-use Illuminate\Http\Request;
+-use Illuminate\Support\Str;
+-use Illuminate\Validation\Rule;
+-use Illuminate\View\View;
+-
+-class AdminVisitorPopupController extends Controller
+-{
+-    public function index(): View
+-    {
+-        $popups = VisitorPopup::with('image')->orderByDesc('priority')->latest()->paginate(20);
+-        return view('admin.visitor-popups.index', compact('popups'));
+-    }
+-
+-    public function create(): View
+-    {
+-        $popup = new VisitorPopup(['popup_type' => 'offer', 'audience' => 'all', 'frequency' => 'once_per_session', 'delay_seconds' => 1]);
+-        $media = MediaAsset::where('mime_type', 'like', 'image/%')->latest()->limit(200)->get();
+-        return view('admin.visitor-popups.form', compact('popup', 'media'));
+-    }
+-
+-    public function store(Request $request): RedirectResponse
+-    {
+-        $data = $this->validated($request);
+-        $data['created_by'] = $request->user()->id;
+-        VisitorPopup::create($data);
+-        return redirect()->route('admin.visitor-popups.index')->with('success', __('Popup campaign created.'));
+-    }
+-
+-    public function edit(VisitorPopup $visitorPopup): View
+-    {
+-        $popup = $visitorPopup;
+-        $media = MediaAsset::where('mime_type', 'like', 'image/%')->latest()->limit(200)->get();
+-        return view('admin.visitor-popups.form', compact('popup', 'media'));
+-    }
+-
+-    public function update(Request $request, VisitorPopup $visitorPopup): RedirectResponse
+-    {
+-        $visitorPopup->update($this->validated($request));
+-        return redirect()->route('admin.visitor-popups.index')->with('success', __('Popup campaign updated.'));
+-    }
+-
+-    public function destroy(VisitorPopup $visitorPopup): RedirectResponse
+-    {
+-        $visitorPopup->delete();
+-        return back()->with('success', __('Popup campaign deleted.'));
+-    }
+-
+-    public function toggle(VisitorPopup $visitorPopup): RedirectResponse
+-    {
+-        $visitorPopup->update(['is_active' => !$visitorPopup->is_active]);
+-        return back()->with('success', __('Popup status updated.'));
+-    }
+-
+-    private function validated(Request $request): array
+-    {
+-        $data = $request->validate([
+-            'title' => ['required', 'string', 'max:180'],
+-            'body' => ['nullable', 'string', 'max:3000'],
+-            'popup_type' => ['required', Rule::in(['offer', 'banner', 'post', 'ad', 'registration'])],
+-            'image_media_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
+-            'button_label' => ['nullable', 'string', 'max:60'],
+-            'button_url' => ['nullable', 'string', 'max:500'],
+-            'audience' => ['required', Rule::in(['all', 'guests', 'members'])],
+-            'frequency' => ['required', Rule::in(['every_page', 'once_per_session', 'once_per_day', 'once_per_browser'])],
+-            'delay_seconds' => ['required', 'integer', 'min:0', 'max:60'],
+-            'is_active' => ['nullable', 'boolean'],
+-            'starts_at' => ['nullable', 'date'],
+-            'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
+-            'priority' => ['nullable', 'integer', 'min:0', 'max:10000'],
+-        ]);
+-
+-        $url = trim((string) ($data['button_url'] ?? ''));
+-        if ($url !== '' && !Str::startsWith($url, '/') && !preg_match('/^https:\/\//i', $url)) {
+-            throw \Illuminate\Validation\ValidationException::withMessages([
+-                'button_url' => __('Use a site-relative path or a secure HTTPS URL.'),
+-            ]);
+-        }
+-        if (Str::startsWith($url, '//')) {
+-            throw \Illuminate\Validation\ValidationException::withMessages([
+-                'button_url' => __('Protocol-relative URLs are not allowed.'),
+-            ]);
+-        }
+-
+-        $data['button_url'] = $url !== '' ? $url : null;
+-        $data['is_active'] = (bool) ($data['is_active'] ?? false);
+-        $data['priority'] = (int) ($data['priority'] ?? 0);
+-        return $data;
+-    }
+-}
+diff --git a/app/Models/VisitorPopup.php b/app/Models/VisitorPopup.php
+deleted file mode 100644
+index f15ea2d..0000000
+--- a/app/Models/VisitorPopup.php
++++ /dev/null
+@@ -1,33 +0,0 @@
+-<?php
+-
+-namespace App\Models;
+-
+-use Illuminate\Database\Eloquent\Model;
+-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+-
+-class VisitorPopup extends Model
+-{
+-    protected $fillable = [
+-        'title', 'body', 'popup_type', 'image_media_id', 'button_label', 'button_url',
+-        'audience', 'frequency', 'delay_seconds', 'is_active', 'starts_at', 'ends_at',
+-        'priority', 'created_by',
+-    ];
+-
+-    protected $casts = [
+-        'is_active' => 'boolean',
+-        'starts_at' => 'datetime',
+-        'ends_at' => 'datetime',
+-    ];
+-
+-    public function image(): BelongsTo
+-    {
+-        return $this->belongsTo(MediaAsset::class, 'image_media_id');
+-    }
+-
+-    public function scopeCurrentlyActive($query)
+-    {
+-        return $query->where('is_active', true)
+-            ->where(fn ($q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
+-            ->where(fn ($q) => $q->whereNull('ends_at')->orWhere('ends_at', '>=', now()));
+-    }
+-}
+diff --git a/config/modules.php b/config/modules.php
+index 84a41a7..39d2267 100644
+--- a/config/modules.php
++++ b/config/modules.php
+@@ -38,7 +38,7 @@ return [
+     'seo' => ['name' => 'SEO', 'description' => 'Metadata, sitemap and search optimization.', 'type' => 'module', 'dependencies' => ['core', 'website_cms']],
+     'analytics' => ['name' => 'Analytics & Search Console', 'description' => 'Analytics and reporting.', 'type' => 'module', 'dependencies' => ['core', 'website_cms']],
+     'marketing' => ['name' => 'Marketing Center', 'description' => 'Campaign planning and growth tools.', 'type' => 'module', 'dependencies' => ['core']],
+-    'popup_ads' => ['name' => 'Popup Ads & Campaigns', 'description' => 'Admin-managed popup ads, targeting and campaign analytics.', 'type' => 'module', 'dependencies' => ['core', 'identity', 'storage']],
++    'popup_ads' => ['name' => 'Popup Ads & Campaigns', 'description' => 'Optional popup ads and announcement plugin. Install and activate its signed package from Plugin Manager.', 'type' => 'module', 'plugin_key' => 'aec.popup-ads', 'dependencies' => ['core', 'identity', 'storage']],
+     'meta_pixel' => ['name' => 'Meta Pixel', 'description' => 'Facebook/Instagram Pixel events and consent controls.', 'type' => 'module', 'dependencies' => ['core', 'marketing', 'website_cms']],
+     'meta_ads' => ['name' => 'Meta Ads & Boost', 'description' => 'Meta campaign planning and authorized ad management.', 'type' => 'module', 'dependencies' => ['core', 'marketing', 'meta_pixel']],
+     'support_center' => ['name' => 'Support Center', 'description' => 'Support tickets and customer assistance.', 'type' => 'module', 'dependencies' => ['core', 'identity']],
+diff --git a/lang/bn.json b/lang/bn.json
+index 6fac1f1..e6d61df 100644
+--- a/lang/bn.json
++++ b/lang/bn.json
+@@ -1119,5 +1119,102 @@
+     "S3-compatible endpoint must be a valid HTTPS URL without embedded credentials": "S3-compatible endpoint অবশ্যই বৈধ HTTPS URL হতে হবে এবং URL-এর মধ্যে কোনো username বা password থাকা যাবে না",
+     "Lesson completed": "পাঠ সম্পন্ন",
+     "Lesson marked complete.": "পাঠটি সম্পন্ন হিসেবে সংরক্ষণ করা হয়েছে।",
+-    "Complete every course lesson before completing this course.": "কোর্স সম্পন্ন করতে প্রতিটি পাঠ শেষ করুন।"
++    "Complete every course lesson before completing this course.": "কোর্স সম্পন্ন করতে প্রতিটি পাঠ শেষ করুন।",
++    "Total campaigns": "মোট ক্যাম্পেইন",
++    "Active / Scheduled": "সক্রিয় / সময়সূচিভুক্ত",
++    "Total impressions": "মোট ইম্প্রেশন",
++    "Total clicks": "মোট ক্লিক",
++    "Export JSON": "JSON এক্সপোর্ট",
++    "Scheduled": "সময়সূচিভুক্ত",
++    "Paused": "বিরতিতে",
++    "Search campaigns...": "ক্যাম্পেইন খুঁজুন...",
++    "Announcement": "ঘোষণা",
++    "Scroll": "স্ক্রল",
++    "Max impressions": "সর্বোচ্চ ইম্প্রেশন",
++    "Impressions": "ইম্প্রেশন",
++    "Clicks": "ক্লিক",
++    "Dismissals": "বাতিল সংখ্যা",
++    "CTR": "CTR",
++    "Duplicate": "ডুপ্লিকেট",
++    "Pause": "বিরতি দিন",
++    "Resume": "পুনরায় চালু",
++    "Archive": "আর্কাইভ করুন",
++    "Data retention, export & destructive purge": "ডেটা সংরক্ষণ, এক্সপোর্ট ও স্থায়ী মুছে ফেলা",
++    "Deactivating or uninstalling Popup Ads retains all campaign configurations and aggregate daily analytics. Export a backup before performing a permanent purge.": "Popup Ads নিষ্ক্রিয় বা আনইনস্টল করলে ক্যাম্পেইন কনফিগারেশন ও দৈনিক পরিসংখ্যান সংরক্ষিত থাকে। স্থায়ীভাবে মুছে ফেলার আগে ব্যাকআপ এক্সপোর্ট করুন।",
++    "Export campaigns & analytics (JSON)": "ক্যাম্পেইন ও বিশ্লেষণ এক্সপোর্ট (JSON)",
++    "Permanently delete all popup campaigns and analytics?": "সব পপআপ ক্যাম্পেইন ও বিশ্লেষণ স্থায়ীভাবে মুছে ফেলবেন?",
++    "I understand this permanently deletes all stored popup campaigns and event metrics.": "আমি বুঝতে পারছি এটি সংরক্ষিত সব পপআপ ক্যাম্পেইন ও ইভেন্ট মেট্রিক্স স্থায়ীভাবে মুছে ফেলবে।",
++    "Erase all popup data": "সব পপআপ ডেটা মুছে ফেলুন",
++    "Configure campaign content, layout, responsive media, targeting rules, schedule windows and consent-aware analytics.": "ক্যাম্পেইনের বিষয়বস্তু, লেআউট, রেসপন্সিভ ছবি, টার্গেটিং নিয়ম, সময়সূচি ও সম্মতি-ভিত্তিক বিশ্লেষণ কনফিগার করুন।",
++    "1. Content & Call-to-Action": "১. বিষয়বস্তু ও কল-টু-অ্যাকশন",
++    "Content mode": "কনটেন্ট মোড",
++    "Image + plain text": "ছবি + সাধারণ লেখা",
++    "Image only": "শুধু ছবি",
++    "Text only": "শুধু লেখা",
++    "Sanitized rich HTML": "স্যানিটাইজড রিচ HTML",
++    "Sanitized rich HTML (used only in Sanitized rich HTML mode)": "স্যানিটাইজড রিচ HTML (শুধু Sanitized rich HTML মোডে ব্যবহৃত হবে)",
++    "Allowed tags: p, br, strong, b, em, i, u, ul, ol, li, h3, h4, blockquote, span, a (HTTPS or relative paths only). Scripts, styles and event handlers are stripped.": "অনুমোদিত ট্যাগ: p, br, strong, b, em, i, u, ul, ol, li, h3, h4, blockquote, span, a (শুধু HTTPS বা relative path)। স্ক্রিপ্ট, স্টাইল ও ইভেন্ট হ্যান্ডলার বাদ দেওয়া হয়।",
++    "2. Artwork & Responsive Display": "২. ছবি ও রেসপন্সিভ প্রদর্শন",
++    "Desktop image (Media Library)": "ডেস্কটপ ছবি (মিডিয়া লাইব্রেরি)",
++    "Or upload new desktop image (JPG/PNG/WebP/GIF, max 5MB)": "অথবা নতুন ডেস্কটপ ছবি আপলোড করুন (JPG/PNG/WebP/GIF, সর্বোচ্চ ৫MB)",
++    "Mobile image override (Media Library)": "মোবাইল ছবি (ঐচ্ছিক)",
++    "Reuse desktop image": "ডেস্কটপ ছবি ব্যবহার করুন",
++    "Or upload new mobile image (JPG/PNG/WebP/GIF, max 5MB)": "অথবা নতুন মোবাইল ছবি আপলোড করুন (JPG/PNG/WebP/GIF, সর্বোচ্চ ৫MB)",
++    "Hide on mobile screens": "মোবাইল স্ক্রিনে লুকান",
++    "Hide on desktop screens": "ডেস্কটপ স্ক্রিনে লুকান",
++    "3. Layout, Appearance & Behavior": "৩. লেআউট, ডিজাইন ও আচরণ",
++    "Popup layout": "পপআপ লেআউট",
++    "Centered modal dialog": "মাঝখানে মোডাল ডায়ালগ",
++    "Floating corner card": "কোণায় ভাসমান কার্ড",
++    "Full-width banner": "পূর্ণ প্রস্থের ব্যানার",
++    "Top/bottom announcement strip": "উপর/নিচের ঘোষণা স্ট্রিপ",
++    "Placement": "অবস্থান",
++    "Center": "মাঝখানে",
++    "Bottom right": "নিচে ডানে",
++    "Bottom left": "নিচে বামে",
++    "Top edge": "উপরের প্রান্ত",
++    "Bottom edge": "নিচের প্রান্ত",
++    "Max width (px)": "সর্বোচ্চ প্রস্থ (px)",
++    "Typography scale": "ফন্টের আকার",
++    "Compact": "ছোট",
++    "Normal": "স্বাভাবিক",
++    "Large": "বড়",
++    "Background color": "ব্যাকগ্রাউন্ড রঙ",
++    "Text color": "লেখার রঙ",
++    "Accent / button color": "অ্যাকসেন্ট / বাটনের রঙ",
++    "Overlay opacity (%)": "ওভারলে স্বচ্ছতা (%)",
++    "Animation style": "অ্যানিমেশন স্টাইল",
++    "Fade": "ফেড",
++    "Show close (X) button": "বন্ধ করার (X) বাটন দেখান",
++    "Allow backdrop / Escape dismissal": "ব্যাকড্রপ বা Escape দিয়ে বন্ধের অনুমতি দিন",
++    "Respect prefers-reduced-motion": "prefers-reduced-motion অনুসরণ করুন",
++    "4. Targeting Rules": "৪. টার্গেটিং নিয়ম",
++    "Target URL path patterns (one per line, prefix ! to exclude)": "টার্গেট URL পাথ প্যাটার্ন (প্রতি লাইনে একটি, বাদ দিতে ! দিন)",
++    "Target specific roles (leave unchecked for any)": "নির্দিষ্ট রোল টার্গেট করুন (সবাইয়ের জন্য খালি রাখুন)",
++    "Guest": "অতিথি",
++    "Target branch (optional)": "টার্গেট শাখা (ঐচ্ছিক)",
++    "Target course (optional)": "টার্গেট কোর্স (ঐচ্ছিক)",
++    "Target batch (optional)": "টার্গেট ব্যাচ (ঐচ্ছিক)",
++    "All batches": "সব ব্যাচ",
++    "5. Frequency, Schedule & Analytics": "৫. ফ্রিকোয়েন্সি, সময়সূচি ও বিশ্লেষণ",
++    "Scroll trigger (%)": "স্ক্রল ট্রিগার (%)",
++    "Cooldown after dismiss (hours)": "বন্ধ করার পর বিরতি (ঘণ্টা)",
++    "Max total impressions (optional)": "সর্বোচ্চ মোট ইম্প্রেশন (ঐচ্ছিক)",
++    "Campaign status": "ক্যাম্পেইনের অবস্থা",
++    "Schedule timezone": "সময়সূচির টাইমজোন",
++    "Record aggregate impressions & clicks": "সামগ্রিক ইম্প্রেশন ও ক্লিক সংরক্ষণ করুন",
++    "Require marketing cookie consent before recording analytics": "বিশ্লেষণ সংরক্ষণের আগে মার্কেটিং কুকি সম্মতি প্রয়োজন",
++    "Admin popup preview": "অ্যাডমিন পপআপ প্রিভিউ",
++    "Admin-only preview": "শুধু অ্যাডমিনের প্রিভিউ",
++    "Previewing layout, sanitized content and appearance. Public analytics are paused during admin preview.": "লেআউট, স্যানিটাইজড বিষয়বস্তু ও নকশা প্রিভিউ করা হচ্ছে। প্রিভিউয়ের সময় পাবলিক বিশ্লেষণ বন্ধ থাকে।",
++    "Show popup preview": "পপআপ প্রিভিউ দেখান",
++    "Edit campaign": "ক্যাম্পেইন সম্পাদনা",
++    "Popup campaign duplicated as draft.": "পপআপ ক্যাম্পেইন খসড়া হিসেবে ডুপ্লিকেট হয়েছে।",
++    "Popup campaign paused.": "পপআপ ক্যাম্পেইন বিরতিতে রাখা হয়েছে।",
++    "Popup campaign resumed.": "পপআপ ক্যাম্পেইন পুনরায় চালু হয়েছে।",
++    "Popup campaign archived.": "পপআপ ক্যাম্পেইন আর্কাইভ করা হয়েছে।",
++    "All retained popup campaigns and analytics were erased.": "সংরক্ষিত সব পপআপ ক্যাম্পেইন ও বিশ্লেষণ মুছে ফেলা হয়েছে।",
++    "Type ERASE POPUP DATA exactly to confirm purging retained popup campaigns and analytics.": "সব পপআপ ডেটা ও বিশ্লেষণ মুছে ফেলতে হুবহু ERASE POPUP DATA লিখুন।",
++    "Sanitized HTML content cannot be empty when using sanitized HTML mode.": "Sanitized rich HTML মোডে স্যানিটাইজড HTML কনটেন্ট খালি রাখা যাবে না।",
++    "The end date/time must be after or equal to the start date/time.": "শেষের তারিখ/সময় অবশ্যই শুরুর তারিখ/সময়ের সমান বা পরে হতে হবে।"
+ }
+diff --git a/lang/en.json b/lang/en.json
+index 778ab5c..69d28cb 100644
+--- a/lang/en.json
++++ b/lang/en.json
+@@ -747,5 +747,106 @@
+     "FILESYSTEM_DISK=s3, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION and AWS_BUCKET; optional HTTPS AWS_ENDPOINT": "FILESYSTEM_DISK=s3, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION and AWS_BUCKET; optional HTTPS AWS_ENDPOINT",
+     "Lesson completed": "Lesson completed",
+     "Lesson marked complete.": "Lesson marked complete.",
+-    "Complete every course lesson before completing this course.": "Complete every course lesson before completing this course."
++    "Complete every course lesson before completing this course.": "Complete every course lesson before completing this course.",
++    "Total campaigns": "Total campaigns",
++    "Active / Scheduled": "Active / Scheduled",
++    "Total impressions": "Total impressions",
++    "Total clicks": "Total clicks",
++    "Export JSON": "Export JSON",
++    "Scheduled": "Scheduled",
++    "Paused": "Paused",
++    "Search campaigns...": "Search campaigns...",
++    "Filter": "Filter",
++    "Announcement": "Announcement",
++    "Scroll": "Scroll",
++    "Max impressions": "Max impressions",
++    "Impressions": "Impressions",
++    "Clicks": "Clicks",
++    "Dismissals": "Dismissals",
++    "CTR": "CTR",
++    "Duplicate": "Duplicate",
++    "Pause": "Pause",
++    "Resume": "Resume",
++    "Archive": "Archive",
++    "Data retention, export & destructive purge": "Data retention, export & destructive purge",
++    "Deactivating or uninstalling Popup Ads retains all campaign configurations and aggregate daily analytics. Export a backup before performing a permanent purge.": "Deactivating or uninstalling Popup Ads retains all campaign configurations and aggregate daily analytics. Export a backup before performing a permanent purge.",
++    "Export campaigns & analytics (JSON)": "Export campaigns & analytics (JSON)",
++    "Permanently delete all popup campaigns and analytics?": "Permanently delete all popup campaigns and analytics?",
++    "I understand this permanently deletes all stored popup campaigns and event metrics.": "I understand this permanently deletes all stored popup campaigns and event metrics.",
++    "Erase all popup data": "Erase all popup data",
++    "Configure campaign content, layout, responsive media, targeting rules, schedule windows and consent-aware analytics.": "Configure campaign content, layout, responsive media, targeting rules, schedule windows and consent-aware analytics.",
++    "1. Content & Call-to-Action": "1. Content & Call-to-Action",
++    "Content mode": "Content mode",
++    "Image + plain text": "Image + plain text",
++    "Image only": "Image only",
++    "Text only": "Text only",
++    "Sanitized rich HTML": "Sanitized rich HTML",
++    "Sanitized rich HTML (used only in Sanitized rich HTML mode)": "Sanitized rich HTML (used only in Sanitized rich HTML mode)",
++    "Allowed tags: p, br, strong, b, em, i, u, ul, ol, li, h3, h4, blockquote, span, a (HTTPS or relative paths only). Scripts, styles and event handlers are stripped.": "Allowed tags: p, br, strong, b, em, i, u, ul, ol, li, h3, h4, blockquote, span, a (HTTPS or relative paths only). Scripts, styles and event handlers are stripped.",
++    "2. Artwork & Responsive Display": "2. Artwork & Responsive Display",
++    "Desktop image (Media Library)": "Desktop image (Media Library)",
++    "Or upload new desktop image (JPG/PNG/WebP/GIF, max 5MB)": "Or upload new desktop image (JPG/PNG/WebP/GIF, max 5MB)",
++    "Mobile image override (Media Library)": "Mobile image override (Media Library)",
++    "Reuse desktop image": "Reuse desktop image",
++    "Or upload new mobile image (JPG/PNG/WebP/GIF, max 5MB)": "Or upload new mobile image (JPG/PNG/WebP/GIF, max 5MB)",
++    "Hide on mobile screens": "Hide on mobile screens",
++    "Hide on desktop screens": "Hide on desktop screens",
++    "3. Layout, Appearance & Behavior": "3. Layout, Appearance & Behavior",
++    "Popup layout": "Popup layout",
++    "Centered modal dialog": "Centered modal dialog",
++    "Floating corner card": "Floating corner card",
++    "Full-width banner": "Full-width banner",
++    "Top/bottom announcement strip": "Top/bottom announcement strip",
++    "Placement": "Placement",
++    "Center": "Center",
++    "Bottom right": "Bottom right",
++    "Bottom left": "Bottom left",
++    "Top edge": "Top edge",
++    "Bottom edge": "Bottom edge",
++    "Max width (px)": "Max width (px)",
++    "Typography scale": "Typography scale",
++    "Compact": "Compact",
++    "Normal": "Normal",
++    "Large": "Large",
++    "Background color": "Background color",
++    "Text color": "Text color",
++    "Accent / button color": "Accent / button color",
++    "Overlay opacity (%)": "Overlay opacity (%)",
++    "Animation style": "Animation style",
++    "Fade": "Fade",
++    "Slide": "Slide",
++    "Show close (X) button": "Show close (X) button",
++    "Allow backdrop / Escape dismissal": "Allow backdrop / Escape dismissal",
++    "Respect prefers-reduced-motion": "Respect prefers-reduced-motion",
++    "4. Targeting Rules": "4. Targeting Rules",
++    "Target URL path patterns (one per line, prefix ! to exclude)": "Target URL path patterns (one per line, prefix ! to exclude)",
++    "Target specific roles (leave unchecked for any)": "Target specific roles (leave unchecked for any)",
++    "Guest": "Guest",
++    "Branch Manager": "Branch Manager",
++    "Accountant": "Accountant",
++    "Target branch (optional)": "Target branch (optional)",
++    "Target course (optional)": "Target course (optional)",
++    "Target batch (optional)": "Target batch (optional)",
++    "All batches": "All batches",
++    "5. Frequency, Schedule & Analytics": "5. Frequency, Schedule & Analytics",
++    "Scroll trigger (%)": "Scroll trigger (%)",
++    "Cooldown after dismiss (hours)": "Cooldown after dismiss (hours)",
++    "Max total impressions (optional)": "Max total impressions (optional)",
++    "Campaign status": "Campaign status",
++    "Schedule timezone": "Schedule timezone",
++    "Record aggregate impressions & clicks": "Record aggregate impressions & clicks",
++    "Require marketing cookie consent before recording analytics": "Require marketing cookie consent before recording analytics",
++    "Admin popup preview": "Admin popup preview",
++    "Admin-only preview": "Admin-only preview",
++    "Previewing layout, sanitized content and appearance. Public analytics are paused during admin preview.": "Previewing layout, sanitized content and appearance. Public analytics are paused during admin preview.",
++    "Show popup preview": "Show popup preview",
++    "Edit campaign": "Edit campaign",
++    "Popup campaign duplicated as draft.": "Popup campaign duplicated as draft.",
++    "Popup campaign paused.": "Popup campaign paused.",
++    "Popup campaign resumed.": "Popup campaign resumed.",
++    "Popup campaign archived.": "Popup campaign archived.",
++    "All retained popup campaigns and analytics were erased.": "All retained popup campaigns and analytics were erased.",
++    "Type ERASE POPUP DATA exactly to confirm purging retained popup campaigns and analytics.": "Type ERASE POPUP DATA exactly to confirm purging retained popup campaigns and analytics.",
++    "Sanitized HTML content cannot be empty when using sanitized HTML mode.": "Sanitized HTML content cannot be empty when using sanitized HTML mode.",
++    "The end date/time must be after or equal to the start date/time.": "The end date/time must be after or equal to the start date/time."
+ }
+diff --git a/plugins/aec/popup-ads/1.0.0/migrations/2026_11_15_200000_upgrade_popup_ads_plugin_tables.php b/plugins/aec/popup-ads/1.0.0/migrations/2026_11_15_200000_upgrade_popup_ads_plugin_tables.php
+new file mode 100644
+index 0000000..3086eb5
+--- /dev/null
++++ b/plugins/aec/popup-ads/1.0.0/migrations/2026_11_15_200000_upgrade_popup_ads_plugin_tables.php
+@@ -0,0 +1,156 @@
++<?php
++
++use Illuminate\Database\Migrations\Migration;
++use Illuminate\Database\Schema\Blueprint;
++use Illuminate\Support\Facades\DB;
++use Illuminate\Support\Facades\Schema;
++
++return new class extends Migration
++{
++    public function up(): void
++    {
++        if (! Schema::hasTable('visitor_popups')) {
++            Schema::create('visitor_popups', function (Blueprint $table): void {
++                $table->id();
++                $table->string('title', 180);
++                $table->text('body')->nullable();
++                $table->string('popup_type', 30)->default('offer')->index();
++                $table->foreignId('image_media_id')->nullable()->constrained('media_assets')->nullOnDelete();
++                $table->string('button_label', 60)->nullable();
++                $table->string('button_url', 500)->nullable();
++                $table->string('audience', 20)->default('all')->index();
++                $table->string('frequency', 24)->default('once_per_session');
++                $table->unsignedSmallInteger('delay_seconds')->default(1);
++                $table->boolean('is_active')->default(false)->index();
++                $table->timestamp('starts_at')->nullable()->index();
++                $table->timestamp('ends_at')->nullable()->index();
++                $table->unsignedInteger('priority')->default(0);
++                $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
++                $table->timestamps();
++            });
++        }
++
++        Schema::table('visitor_popups', function (Blueprint $table): void {
++            if (! Schema::hasColumn('visitor_popups', 'status')) {
++                $table->string('status', 24)->default('draft')->index()->after('is_active');
++            }
++            if (! Schema::hasColumn('visitor_popups', 'content_mode')) {
++                $table->string('content_mode', 24)->default('mixed')->after('popup_type');
++            }
++            if (! Schema::hasColumn('visitor_popups', 'rich_html')) {
++                $table->text('rich_html')->nullable()->after('body');
++            }
++            if (! Schema::hasColumn('visitor_popups', 'layout')) {
++                $table->string('layout', 32)->default('modal')->after('content_mode');
++            }
++            if (! Schema::hasColumn('visitor_popups', 'placement')) {
++                $table->string('placement', 24)->default('center')->after('layout');
++            }
++            if (! Schema::hasColumn('visitor_popups', 'max_width_px')) {
++                $table->unsignedSmallInteger('max_width_px')->default(620)->after('placement');
++            }
++            if (! Schema::hasColumn('visitor_popups', 'background_color')) {
++                $table->string('background_color', 16)->default('#ffffff')->after('max_width_px');
++            }
++            if (! Schema::hasColumn('visitor_popups', 'text_color')) {
++                $table->string('text_color', 16)->default('#14213d')->after('background_color');
++            }
++            if (! Schema::hasColumn('visitor_popups', 'accent_color')) {
++                $table->string('accent_color', 16)->default('#1546a8')->after('text_color');
++            }
++            if (! Schema::hasColumn('visitor_popups', 'font_scale')) {
++                $table->string('font_scale', 16)->default('normal')->after('accent_color');
++            }
++            if (! Schema::hasColumn('visitor_popups', 'overlay_opacity')) {
++                $table->unsignedTinyInteger('overlay_opacity')->default(70)->after('font_scale');
++            }
++            if (! Schema::hasColumn('visitor_popups', 'show_close_button')) {
++                $table->boolean('show_close_button')->default(true)->after('overlay_opacity');
++            }
++            if (! Schema::hasColumn('visitor_popups', 'dismissible')) {
++                $table->boolean('dismissible')->default(true)->after('show_close_button');
++            }
++            if (! Schema::hasColumn('visitor_popups', 'animation_style')) {
++                $table->string('animation_style', 16)->default('fade')->after('dismissible');
++            }
++            if (! Schema::hasColumn('visitor_popups', 'respect_reduced_motion')) {
++                $table->boolean('respect_reduced_motion')->default(true)->after('animation_style');
++            }
++            if (! Schema::hasColumn('visitor_popups', 'mobile_image_media_id')) {
++                $table->foreignId('mobile_image_media_id')->nullable()->after('image_media_id')->constrained('media_assets')->nullOnDelete();
++            }
++            if (! Schema::hasColumn('visitor_popups', 'hide_on_mobile')) {
++                $table->boolean('hide_on_mobile')->default(false)->after('mobile_image_media_id');
++            }
++            if (! Schema::hasColumn('visitor_popups', 'hide_on_desktop')) {
++                $table->boolean('hide_on_desktop')->default(false)->after('hide_on_mobile');
++            }
++            if (! Schema::hasColumn('visitor_popups', 'target_paths')) {
++                $table->text('target_paths')->nullable()->after('audience');
++            }
++            if (! Schema::hasColumn('visitor_popups', 'target_roles')) {
++                $table->json('target_roles')->nullable()->after('target_paths');
++            }
++            if (! Schema::hasColumn('visitor_popups', 'target_branch_id')) {
++                $table->foreignId('target_branch_id')->nullable()->after('target_roles')->constrained('branches')->nullOnDelete();
++            }
++            if (! Schema::hasColumn('visitor_popups', 'target_course_id')) {
++                $table->foreignId('target_course_id')->nullable()->after('target_branch_id')->constrained('courses')->nullOnDelete();
++            }
++            if (! Schema::hasColumn('visitor_popups', 'target_batch_id')) {
++                $table->foreignId('target_batch_id')->nullable()->after('target_course_id')->constrained('batches')->nullOnDelete();
++            }
++            if (! Schema::hasColumn('visitor_popups', 'timezone')) {
++                $table->string('timezone', 64)->default('UTC')->after('ends_at');
++            }
++            if (! Schema::hasColumn('visitor_popups', 'scroll_trigger_percent')) {
++                $table->unsignedTinyInteger('scroll_trigger_percent')->default(0)->after('delay_seconds');
++            }
++            if (! Schema::hasColumn('visitor_popups', 'cooldown_hours')) {
++                $table->unsignedSmallInteger('cooldown_hours')->default(0)->after('scroll_trigger_percent');
++            }
++            if (! Schema::hasColumn('visitor_popups', 'max_impressions')) {
++                $table->unsignedInteger('max_impressions')->nullable()->after('cooldown_hours');
++            }
++            if (! Schema::hasColumn('visitor_popups', 'analytics_enabled')) {
++                $table->boolean('analytics_enabled')->default(true)->after('max_impressions');
++            }
++            if (! Schema::hasColumn('visitor_popups', 'require_consent_for_analytics')) {
++                $table->boolean('require_consent_for_analytics')->default(true)->after('analytics_enabled');
++            }
++        });
++
++        if (Schema::hasColumn('visitor_popups', 'status')) {
++            DB::table('visitor_popups')
++                ->where('is_active', true)
++                ->where('status', 'draft')
++                ->update(['status' => 'active']);
++        }
++
++        if (! Schema::hasTable('popup_ad_events')) {
++            Schema::create('popup_ad_events', function (Blueprint $table): void {
++                $table->id();
++                $table->foreignId('popup_id')->constrained('visitor_popups')->cascadeOnDelete();
++                $table->date('event_date');
++                $table->unsignedInteger('impressions')->default(0);
++                $table->unsignedInteger('clicks')->default(0);
++                $table->unsignedInteger('dismissals')->default(0);
++                $table->timestamps();
++
++                $table->unique(['popup_id', 'event_date'], 'popup_ad_events_popup_date_unique');
++            });
++        }
++    }
++
++    public function down(): void
++    {
++        $hasCampaigns = Schema::hasTable('visitor_popups') && DB::table('visitor_popups')->exists();
++        $hasEvents = Schema::hasTable('popup_ad_events') && DB::table('popup_ad_events')->exists();
++
++        if ($hasCampaigns || $hasEvents) {
++            throw new \RuntimeException('Popup campaign or analytics data exists. Export or explicitly purge retained popup data before rolling back this migration.');
++        }
++
++        Schema::dropIfExists('popup_ad_events');
++    }
++};
+diff --git a/plugins/aec/popup-ads/1.0.0/migrations/README.md b/plugins/aec/popup-ads/1.0.0/migrations/README.md
+new file mode 100644
+index 0000000..d940931
+--- /dev/null
++++ b/plugins/aec/popup-ads/1.0.0/migrations/README.md
+@@ -0,0 +1,15 @@
++# Popup Ads & Announcements Data Schema
++
++This plugin owns the configurable popup campaigns (`visitor_popups`) and
++privacy-conscious daily aggregate event counters (`popup_ad_events`).
++
++The signed package migration runs through the LMS Plugin Migration Runner only
++after signature verification, private-path installation and installed-file
++integrity checks. When upgrading an existing installation that already ran the
++earlier `create_visitor_popups_table` migration, new layout, targeting,
++schedule, frequency and analytics columns are added non-destructively.
++
++Deactivation and package uninstall do not drop tables or delete campaign data so
++administrators keep campaigns and analytics across updates. Rolling back the
++migration refuses to drop tables while campaigns or analytics exist; use the
++admin JSON Export and confirmed Purge tools before removing retained data.
+diff --git a/plugins/aec/popup-ads/1.0.0/plugin.json b/plugins/aec/popup-ads/1.0.0/plugin.json
+new file mode 100644
+index 0000000..c54a44d
+--- /dev/null
++++ b/plugins/aec/popup-ads/1.0.0/plugin.json
+@@ -0,0 +1,32 @@
++{
++  "schema_version": 1,
++  "key": "aec.popup-ads",
++  "name": "Popup Ads & Announcements",
++  "version": "1.0.0",
++  "type": "module",
++  "entrypoint": "src/Plugin.php",
++  "requires": {
++    "php": "^8.3",
++    "laravel": "^12.0",
++    "lms": "^1.0"
++  },
++  "dependencies": [],
++  "conflicts": [],
++  "portals": [
++    "admin",
++    "public"
++  ],
++  "permissions": [
++    "popup-ads.manage",
++    "popup-ads.view"
++  ],
++  "capabilities": [
++    "campaign-scheduling",
++    "sanitized-rich-content",
++    "audience-and-path-targeting",
++    "frequency-capping",
++    "consent-aware-analytics",
++    "export-and-safe-retention"
++  ],
++  "migrations": "migrations"
++}
+diff --git a/plugins/aec/popup-ads/1.0.0/resources/views/admin/form.blade.php b/plugins/aec/popup-ads/1.0.0/resources/views/admin/form.blade.php
+new file mode 100644
+index 0000000..8a856d0
+--- /dev/null
++++ b/plugins/aec/popup-ads/1.0.0/resources/views/admin/form.blade.php
+@@ -0,0 +1,319 @@
++@extends('layouts.app')
++
++@section('title', $popup->exists ? __('Edit popup') : __('Create popup'))
++
++@section('content')
++<div class="page-header">
++    <div>
++        <h1>{{ $popup->exists ? __('Edit popup') : __('Create popup') }}</h1>
++        <p class="muted">{{ __('Configure campaign content, layout, responsive media, targeting rules, schedule windows and consent-aware analytics.') }}</p>
++    </div>
++    <div style="display:flex;gap:8px;flex-wrap:wrap;">
++        @if($popup->exists)
++            <a class="btn secondary" href="{{ route('admin.visitor-popups.preview', $popup->id) }}">{{ __('Preview') }}</a>
++        @endif
++        <a class="btn secondary" href="{{ route('admin.visitor-popups.index') }}">{{ __('Back') }}</a>
++    </div>
++</div>
++
++@if($errors->any())
++    <div class="flash error" role="alert">
++        <strong>{{ __('Please correct the following:') }}</strong>
++        <ul style="margin:8px 0 0;">
++            @foreach($errors->all() as $error)
++                <li>{{ $error }}</li>
++            @endforeach
++        </ul>
++    </div>
++@endif
++
++<div class="panel">
++    <form method="POST"
++          action="{{ $popup->exists ? route('admin.visitor-popups.update', $popup->id) : route('admin.visitor-popups.store') }}"
++          enctype="multipart/form-data">
++        @csrf
++        @if($popup->exists) @method('PUT') @endif
++
++        <h3>{{ __('1. Content & Call-to-Action') }}</h3>
++        <label>{{ __('Internal campaign title / visitor heading') }}
++            <input name="title" maxlength="180" value="{{ old('title', $popup->title) }}" required>
++        </label>
++
++        <div class="grid grid-2">
++            <label>{{ __('Popup purpose') }}
++                <select name="popup_type">
++                    @foreach(['offer' => 'Offer', 'banner' => 'Banner', 'announcement' => 'Announcement', 'post' => 'Post promotion', 'ad' => 'Advertisement', 'registration' => 'Registration prompt'] as $value => $label)
++                        <option value="{{ $value }}" @selected(old('popup_type', $popup->popup_type) === $value)>{{ __($label) }}</option>
++                    @endforeach
++                </select>
++            </label>
++            <label>{{ __('Content mode') }}
++                <select name="content_mode">
++                    @foreach(['mixed' => 'Image + plain text', 'image_only' => 'Image only', 'text_only' => 'Text only', 'sanitized_html' => 'Sanitized rich HTML'] as $value => $label)
++                        <option value="{{ $value }}" @selected(old('content_mode', $popup->content_mode ?: 'mixed') === $value)>{{ __($label) }}</option>
++                    @endforeach
++                </select>
++            </label>
++        </div>
++
++        <label>{{ __('Message / offer details') }}
++            <textarea name="body" rows="4" maxlength="3000">{{ old('body', $popup->body) }}</textarea>
++        </label>
++
++        <label>{{ __('Sanitized rich HTML (used only in Sanitized rich HTML mode)') }}
++            <textarea name="rich_html" rows="4" maxlength="8000" placeholder="<p><strong>Save 20%</strong> on Spoken English batches.</p>">{{ old('rich_html', $popup->rich_html) }}</textarea>
++            <small class="muted">{{ __('Allowed tags: p, br, strong, b, em, i, u, ul, ol, li, h3, h4, blockquote, span, a (HTTPS or relative paths only). Scripts, styles and event handlers are stripped.') }}</small>
++        </label>
++
++        <div class="grid grid-2">
++            <label>{{ __('Button text') }}
++                <input name="button_label" maxlength="60" value="{{ old('button_label', $popup->button_label) }}" placeholder="{{ __('e.g. View offer / Register now') }}">
++            </label>
++            <label>{{ __('Button destination') }}
++                <input name="button_url" maxlength="500" value="{{ old('button_url', $popup->button_url) }}" placeholder="/register or https://example.com">
++            </label>
++        </div>
++
++        <hr style="margin:24px 0;border:0;border-top:1px solid var(--border);">
++        <h3>{{ __('2. Artwork & Responsive Display') }}</h3>
++        <div class="grid grid-2">
++            <label>{{ __('Desktop image (Media Library)') }}
++                <select name="image_media_id">
++                    <option value="">{{ __('No image') }}</option>
++                    @foreach($media as $asset)
++                        <option value="{{ $asset->id }}" @selected(old('image_media_id', $popup->image_media_id) == $asset->id)>{{ $asset->original_name }}</option>
++                    @endforeach
++                </select>
++            </label>
++            <label>{{ __('Or upload new desktop image (JPG/PNG/WebP/GIF, max 5MB)') }}
++                <input type="file" name="desktop_image" accept="image/jpeg,image/png,image/webp,image/gif">
++            </label>
++        </div>
++
++        <div class="grid grid-2">
++            <label>{{ __('Mobile image override (Media Library)') }}
++                <select name="mobile_image_media_id">
++                    <option value="">{{ __('Reuse desktop image') }}</option>
++                    @foreach($media as $asset)
++                        <option value="{{ $asset->id }}" @selected(old('mobile_image_media_id', $popup->mobile_image_media_id) == $asset->id)>{{ $asset->original_name }}</option>
++                    @endforeach
++                </select>
++            </label>
++            <label>{{ __('Or upload new mobile image (JPG/PNG/WebP/GIF, max 5MB)') }}
++                <input type="file" name="mobile_image" accept="image/jpeg,image/png,image/webp,image/gif">
++            </label>
++        </div>
++
++        <div style="display:flex;gap:20px;flex-wrap:wrap;margin:10px 0;">
++            <label style="display:flex;align-items:center;gap:8px;">
++                <input type="checkbox" name="hide_on_mobile" value="1" style="width:auto;" @checked(old('hide_on_mobile', $popup->hide_on_mobile))>
++                {{ __('Hide on mobile screens') }}
++            </label>
++            <label style="display:flex;align-items:center;gap:8px;">
++                <input type="checkbox" name="hide_on_desktop" value="1" style="width:auto;" @checked(old('hide_on_desktop', $popup->hide_on_desktop))>
++                {{ __('Hide on desktop screens') }}
++            </label>
++        </div>
++
++        <hr style="margin:24px 0;border:0;border-top:1px solid var(--border);">
++        <h3>{{ __('3. Layout, Appearance & Behavior') }}</h3>
++        <div class="grid grid-2">
++            <label>{{ __('Popup layout') }}
++                <select name="layout">
++                    @foreach(['modal' => 'Centered modal dialog', 'corner_card' => 'Floating corner card', 'full_banner' => 'Full-width banner', 'announcement_strip' => 'Top/bottom announcement strip'] as $value => $label)
++                        <option value="{{ $value }}" @selected(old('layout', $popup->layout ?: 'modal') === $value)>{{ __($label) }}</option>
++                    @endforeach
++                </select>
++            </label>
++            <label>{{ __('Placement') }}
++                <select name="placement">
++                    @foreach(['center' => 'Center', 'bottom_right' => 'Bottom right', 'bottom_left' => 'Bottom left', 'top' => 'Top edge', 'bottom' => 'Bottom edge'] as $value => $label)
++                        <option value="{{ $value }}" @selected(old('placement', $popup->placement ?: 'center') === $value)>{{ __($label) }}</option>
++                    @endforeach
++                </select>
++            </label>
++        </div>
++
++        <div class="grid grid-2">
++            <label>{{ __('Max width (px)') }}
++                <input type="number" name="max_width_px" min="280" max="1200" value="{{ old('max_width_px', $popup->max_width_px ?? 620) }}">
++            </label>
++            <label>{{ __('Typography scale') }}
++                <select name="font_scale">
++                    @foreach(['compact' => 'Compact', 'normal' => 'Normal', 'large' => 'Large'] as $value => $label)
++                        <option value="{{ $value }}" @selected(old('font_scale', $popup->font_scale ?: 'normal') === $value)>{{ __($label) }}</option>
++                    @endforeach
++                </select>
++            </label>
++        </div>
++
++        <div class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;">
++            <label>{{ __('Background color') }}
++                <input type="text" name="background_color" maxlength="7" value="{{ old('background_color', $popup->background_color ?: '#ffffff') }}">
++            </label>
++            <label>{{ __('Text color') }}
++                <input type="text" name="text_color" maxlength="7" value="{{ old('text_color', $popup->text_color ?: '#14213d') }}">
++            </label>
++            <label>{{ __('Accent / button color') }}
++                <input type="text" name="accent_color" maxlength="7" value="{{ old('accent_color', $popup->accent_color ?: '#1546a8') }}">
++            </label>
++            <label>{{ __('Overlay opacity (%)') }}
++                <input type="number" name="overlay_opacity" min="0" max="95" value="{{ old('overlay_opacity', $popup->overlay_opacity ?? 70) }}">
++            </label>
++            <label>{{ __('Animation style') }}
++                <select name="animation_style">
++                    @foreach(['fade' => 'Fade', 'slide' => 'Slide', 'none' => 'None'] as $value => $label)
++                        <option value="{{ $value }}" @selected(old('animation_style', $popup->animation_style ?: 'fade') === $value)>{{ __($label) }}</option>
++                    @endforeach
++                </select>
++            </label>
++        </div>
++
++        <div style="display:flex;gap:20px;flex-wrap:wrap;margin:10px 0;">
++            <label style="display:flex;align-items:center;gap:8px;">
++                <input type="checkbox" name="show_close_button" value="1" style="width:auto;" @checked(old('show_close_button', $popup->show_close_button ?? true))>
++                {{ __('Show close (X) button') }}
++            </label>
++            <label style="display:flex;align-items:center;gap:8px;">
++                <input type="checkbox" name="dismissible" value="1" style="width:auto;" @checked(old('dismissible', $popup->dismissible ?? true))>
++                {{ __('Allow backdrop / Escape dismissal') }}
++            </label>
++            <label style="display:flex;align-items:center;gap:8px;">
++                <input type="checkbox" name="respect_reduced_motion" value="1" style="width:auto;" @checked(old('respect_reduced_motion', $popup->respect_reduced_motion ?? true))>
++                {{ __('Respect prefers-reduced-motion') }}
++            </label>
++        </div>
++
++        <hr style="margin:24px 0;border:0;border-top:1px solid var(--border);">
++        <h3>{{ __('4. Targeting Rules') }}</h3>
++        <div class="grid grid-2">
++            <label>{{ __('Visitor audience') }}
++                <select name="audience">
++                    @foreach(['all' => 'All visitors', 'guests' => 'Guests only', 'members' => 'Logged-in members'] as $value => $label)
++                        <option value="{{ $value }}" @selected(old('audience', $popup->audience) === $value)>{{ __($label) }}</option>
++                    @endforeach
++                </select>
++            </label>
++            <label>{{ __('Target URL path patterns (one per line, prefix ! to exclude)') }}
++                <textarea name="target_paths" rows="3" placeholder="/&#10;/courses*&#10;!/register">{{ old('target_paths', $popup->target_paths) }}</textarea>
++            </label>
++        </div>
++
++        @php
++            $selectedRoles = old('target_roles', $popup->target_roles ?? []);
++            $selectedRoles = is_array($selectedRoles) ? $selectedRoles : [];
++        @endphp
++        <div style="margin:10px 0;">
++            <span style="display:block;font-weight:600;margin-bottom:6px;">{{ __('Target specific roles (leave unchecked for any)') }}</span>
++            <div style="display:flex;gap:14px;flex-wrap:wrap;">
++                @foreach(['guest' => 'Guest', 'student' => 'Student', 'teacher' => 'Teacher', 'guardian' => 'Guardian', 'branch_manager' => 'Branch Manager', 'accountant' => 'Accountant'] as $roleValue => $roleLabel)
++                    <label style="display:flex;align-items:center;gap:6px;font-weight:400;">
++                        <input type="checkbox" name="target_roles[]" value="{{ $roleValue }}" style="width:auto;" @checked(in_array($roleValue, $selectedRoles, true))>
++                        {{ __($roleLabel) }}
++                    </label>
++                @endforeach
++            </div>
++        </div>
++
++        <div class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:10px;">
++            <label>{{ __('Target branch (optional)') }}
++                <select name="target_branch_id">
++                    <option value="">{{ __('All branches') }}</option>
++                    @foreach($branches as $branch)
++                        <option value="{{ $branch->id }}" @selected(old('target_branch_id', $popup->target_branch_id) == $branch->id)>{{ $branch->name }}</option>
++                    @endforeach
++                </select>
++            </label>
++            <label>{{ __('Target course (optional)') }}
++                <select name="target_course_id">
++                    <option value="">{{ __('All courses') }}</option>
++                    @foreach($courses as $course)
++                        <option value="{{ $course->id }}" @selected(old('target_course_id', $popup->target_course_id) == $course->id)>{{ $course->title }}</option>
++                    @endforeach
++                </select>
++            </label>
++            <label>{{ __('Target batch (optional)') }}
++                <select name="target_batch_id">
++                    <option value="">{{ __('All batches') }}</option>
++                    @foreach($batches as $batch)
++                        <option value="{{ $batch->id }}" @selected(old('target_batch_id', $popup->target_batch_id) == $batch->id)>{{ $batch->title }}</option>
++                    @endforeach
++                </select>
++            </label>
++        </div>
++
++        <hr style="margin:24px 0;border:0;border-top:1px solid var(--border);">
++        <h3>{{ __('5. Frequency, Schedule & Analytics') }}</h3>
++        <div class="grid grid-2">
++            <label>{{ __('Display frequency') }}
++                <select name="frequency">
++                    @foreach(['every_page' => 'Every page view', 'once_per_session' => 'Once per browser session', 'once_per_day' => 'Once per day', 'once_per_browser' => 'Once per browser (until cleared)'] as $value => $label)
++                        <option value="{{ $value }}" @selected(old('frequency', $popup->frequency) === $value)>{{ __($label) }}</option>
++                    @endforeach
++                </select>
++            </label>
++            <label>{{ __('Popup delay (seconds)') }}
++                <input type="number" name="delay_seconds" min="0" max="60" value="{{ old('delay_seconds', $popup->delay_seconds ?? 1) }}" required>
++            </label>
++        </div>
++
++        <div class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
++            <label>{{ __('Scroll trigger (%)') }}
++                <input type="number" name="scroll_trigger_percent" min="0" max="100" value="{{ old('scroll_trigger_percent', $popup->scroll_trigger_percent ?? 0) }}">
++            </label>
++            <label>{{ __('Cooldown after dismiss (hours)') }}
++                <input type="number" name="cooldown_hours" min="0" max="8760" value="{{ old('cooldown_hours', $popup->cooldown_hours ?? 0) }}">
++            </label>
++            <label>{{ __('Max total impressions (optional)') }}
++                <input type="number" name="max_impressions" min="1" max="10000000" value="{{ old('max_impressions', $popup->max_impressions) }}">
++            </label>
++            <label>{{ __('Priority (higher appears first)') }}
++                <input type="number" name="priority" min="0" max="10000" value="{{ old('priority', $popup->priority ?? 0) }}">
++            </label>
++        </div>
++
++        @php
++            $tz = old('timezone', $popup->timezone ?: config('app.timezone', 'UTC'));
++        @endphp
++        <div class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:10px;">
++            <label>{{ __('Campaign status') }}
++                <select name="status">
++                    @foreach(['draft' => 'Draft', 'scheduled' => 'Scheduled', 'active' => 'Active', 'paused' => 'Paused', 'archived' => 'Archived'] as $value => $label)
++                        <option value="{{ $value }}" @selected(old('status', $popup->status ?: ($popup->is_active ? 'active' : 'draft')) === $value)>{{ __($label) }}</option>
++                    @endforeach
++                </select>
++            </label>
++            <label>{{ __('Schedule timezone') }}
++                <select name="timezone">
++                    @foreach($timezones as $timezoneOption)
++                        <option value="{{ $timezoneOption }}" @selected($tz === $timezoneOption)>{{ $timezoneOption }}</option>
++                    @endforeach
++                </select>
++            </label>
++            <label>{{ __('Start date/time') }}
++                <input type="datetime-local" name="starts_at" value="{{ old('starts_at', $popup->starts_at?->copy()->timezone($tz)->format('Y-m-d\TH:i')) }}">
++            </label>
++            <label>{{ __('End date/time') }}
++                <input type="datetime-local" name="ends_at" value="{{ old('ends_at', $popup->ends_at?->copy()->timezone($tz)->format('Y-m-d\TH:i')) }}">
++            </label>
++        </div>
++
++        <div style="display:flex;gap:20px;flex-wrap:wrap;margin:14px 0;">
++            <label style="display:flex;align-items:center;gap:8px;">
++                <input type="checkbox" name="analytics_enabled" value="1" style="width:auto;" @checked(old('analytics_enabled', $popup->analytics_enabled ?? true))>
++                {{ __('Record aggregate impressions & clicks') }}
++            </label>
++            <label style="display:flex;align-items:center;gap:8px;">
++                <input type="checkbox" name="require_consent_for_analytics" value="1" style="width:auto;" @checked(old('require_consent_for_analytics', $popup->require_consent_for_analytics ?? true))>
++                {{ __('Require marketing cookie consent before recording analytics') }}
++            </label>
++            <label style="display:flex;align-items:center;gap:8px;">
++                <input type="checkbox" name="is_active" value="1" style="width:auto;" @checked(old('is_active', $popup->is_active))>
++                {{ __('Activate this popup') }}
++            </label>
++        </div>
++
++        <button class="btn primary" type="submit">{{ __('Save popup') }}</button>
++    </form>
++</div>
++@endsection
+diff --git a/plugins/aec/popup-ads/1.0.0/resources/views/admin/index.blade.php b/plugins/aec/popup-ads/1.0.0/resources/views/admin/index.blade.php
+new file mode 100644
+index 0000000..76d6a04
+--- /dev/null
++++ b/plugins/aec/popup-ads/1.0.0/resources/views/admin/index.blade.php
+@@ -0,0 +1,167 @@
++@extends('layouts.app')
++
++@section('title', __('Visitor popups'))
++
++@section('content')
++<div class="page-header">
++    <div>
++        <span class="badge info">{{ __('Website marketing') }}</span>
++        <h1>{{ __('Visitor popups') }}</h1>
++        <p class="muted">{{ __('Create timed offers, banners, announcements, post promotions, ads or registration prompts with targeting and consent-aware analytics.') }}</p>
++    </div>
++    <div style="display:flex;gap:8px;flex-wrap:wrap;">
++        <a class="btn secondary" href="{{ route('admin.visitor-popups.export') }}">{{ __('Export JSON') }}</a>
++        <a class="btn primary" href="{{ route('admin.visitor-popups.create') }}">{{ __('Create popup') }}</a>
++    </div>
++</div>
++
++<div class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px;">
++    <div class="panel" style="margin:0;">
++        <small class="muted">{{ __('Total campaigns') }}</small>
++        <div style="font-size:1.6rem;font-weight:800;margin-top:4px;">{{ $summary['total'] }}</div>
++    </div>
++    <div class="panel" style="margin:0;">
++        <small class="muted">{{ __('Active / Scheduled') }}</small>
++        <div style="font-size:1.6rem;font-weight:800;margin-top:4px;">{{ $summary['active'] }}</div>
++    </div>
++    <div class="panel" style="margin:0;">
++        <small class="muted">{{ __('Total impressions') }}</small>
++        <div style="font-size:1.6rem;font-weight:800;margin-top:4px;">{{ number_format($summary['impressions']) }}</div>
++    </div>
++    <div class="panel" style="margin:0;">
++        <small class="muted">{{ __('Total clicks') }}</small>
++        <div style="font-size:1.6rem;font-weight:800;margin-top:4px;">{{ number_format($summary['clicks']) }}</div>
++    </div>
++</div>
++
++<div class="panel" style="margin-bottom:20px;">
++    <form method="GET" action="{{ route('admin.visitor-popups.index') }}" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;">
++        <div style="display:flex;gap:6px;flex-wrap:wrap;">
++            @foreach(['all' => 'All', 'active' => 'Active', 'scheduled' => 'Scheduled', 'paused' => 'Paused', 'draft' => 'Draft', 'archived' => 'Archived'] as $key => $label)
++                <a class="btn {{ $statusFilter === $key ? 'primary' : 'secondary' }}" href="{{ route('admin.visitor-popups.index', ['status' => $key, 'q' => $search ?: null]) }}">{{ __($label) }}</a>
++            @endforeach
++        </div>
++        <div style="display:flex;gap:8px;align-items:center;">
++            <input type="search" name="q" value="{{ $search }}" placeholder="{{ __('Search campaigns...') }}" style="min-width:220px;">
++            <input type="hidden" name="status" value="{{ $statusFilter }}">
++            <button class="btn secondary" type="submit">{{ __('Filter') }}</button>
++        </div>
++    </form>
++</div>
++
++<div class="panel">
++    <div class="course-list">
++        @forelse($popups as $popup)
++            @php
++                $impressions = (int) ($popup->impressions_count ?? 0);
++                $clicks = (int) ($popup->clicks_count ?? 0);
++                $dismissals = (int) ($popup->dismissals_count ?? 0);
++                $ctr = $impressions > 0 ? number_format(($clicks / $impressions) * 100, 1) : '0.0';
++                $statusKey = $popup->status ?: ($popup->is_active ? 'active' : 'draft');
++                $statusBadge = match ($statusKey) {
++                    'active' => 'success',
++                    'scheduled' => 'info',
++                    'archived' => 'secondary',
++                    default => 'warning',
++                };
++            @endphp
++            <div class="course-item">
++                <div class="page-header" style="margin:0 0 10px;">
++                    <div>
++                        <h3 style="margin:0 0 6px;">{{ $popup->title }}</h3>
++                        <span class="badge info">{{ ucfirst($popup->popup_type) }}</span>
++                        <span class="badge {{ $statusBadge }}">{{ __(ucfirst($statusKey)) }}</span>
++                        <span class="badge secondary">{{ str_replace('_', ' ', ucfirst($popup->layout ?: 'modal')) }}</span>
++                    </div>
++                    <strong>{{ __('Priority') }}: {{ $popup->priority }}</strong>
++                </div>
++
++                @if($popup->image)
++                    <img src="{{ $popup->image->url }}" alt="{{ $popup->title }}" loading="lazy" style="width:100%;max-width:360px;max-height:140px;object-fit:cover;border-radius:10px;">
++                @endif
++
++                <p class="muted">{{ \Illuminate\Support\Str::limit($popup->body ?: strip_tags((string) $popup->rich_html), 180) }}</p>
++
++                <div class="meta-row" style="flex-wrap:wrap;gap:10px;">
++                    <small>
++                        {{ __('Audience') }}: {{ ucfirst($popup->audience) }}
++                        · {{ __('Frequency') }}: {{ str_replace('_', ' ', $popup->frequency) }}
++                        · {{ __('Delay') }}: {{ $popup->delay_seconds }}s
++                        @if($popup->scroll_trigger_percent > 0) · {{ __('Scroll') }}: {{ $popup->scroll_trigger_percent }}% @endif
++                        @if($popup->max_impressions) · {{ __('Max impressions') }}: {{ number_format($popup->max_impressions) }} @endif
++                    </small>
++                    <small>
++                        {{ $popup->starts_at?->copy()->timezone($popup->timezone ?: 'UTC')->format('d M Y H:i') ?? __('Immediately') }}
++                        –
++                        {{ $popup->ends_at?->copy()->timezone($popup->timezone ?: 'UTC')->format('d M Y H:i') ?? __('No end date') }}
++                        ({{ $popup->timezone ?: 'UTC' }})
++                    </small>
++                </div>
++
++                <div class="meta-row" style="margin-top:8px;">
++                    <small>
++                        {{ __('Impressions') }}: <strong>{{ number_format($impressions) }}</strong>
++                        · {{ __('Clicks') }}: <strong>{{ number_format($clicks) }}</strong>
++                        · {{ __('Dismissals') }}: <strong>{{ number_format($dismissals) }}</strong>
++                        · {{ __('CTR') }}: <strong>{{ $ctr }}%</strong>
++                    </small>
++                </div>
++
++                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;">
++                    <a class="btn secondary" href="{{ route('admin.visitor-popups.preview', $popup->id) }}">{{ __('Preview') }}</a>
++                    <a class="btn secondary" href="{{ route('admin.visitor-popups.edit', $popup->id) }}">{{ __('Edit') }}</a>
++                    <form method="POST" action="{{ route('admin.visitor-popups.duplicate', $popup->id) }}">
++                        @csrf
++                        <button class="btn secondary" type="submit">{{ __('Duplicate') }}</button>
++                    </form>
++                    @if($popup->is_active)
++                        <form method="POST" action="{{ route('admin.visitor-popups.pause', $popup->id) }}">
++                            @csrf @method('PATCH')
++                            <button class="btn secondary" type="submit">{{ __('Pause') }}</button>
++                        </form>
++                    @else
++                        <form method="POST" action="{{ route('admin.visitor-popups.resume', $popup->id) }}">
++                            @csrf @method('PATCH')
++                            <button class="btn secondary" type="submit">{{ __('Resume') }}</button>
++                        </form>
++                    @endif
++                    @if($statusKey !== 'archived')
++                        <form method="POST" action="{{ route('admin.visitor-popups.archive', $popup->id) }}">
++                            @csrf @method('PATCH')
++                            <button class="btn secondary" type="submit">{{ __('Archive') }}</button>
++                        </form>
++                    @endif
++                    <form method="POST" action="{{ route('admin.visitor-popups.destroy', $popup->id) }}" onsubmit="return confirm('{{ __('Delete this popup?') }}')">
++                        @csrf @method('DELETE')
++                        <button class="btn secondary" type="submit">{{ __('Delete') }}</button>
++                    </form>
++                </div>
++            </div>
++        @empty
++            <p class="muted">{{ __('No popup campaigns created yet.') }}</p>
++        @endforelse
++    </div>
++
++    {{ $popups->links() }}
++</div>
++
++<section class="panel" style="margin-top:24px;">
++    <h2>{{ __('Data retention, export & destructive purge') }}</h2>
++    <p class="muted">{{ __('Deactivating or uninstalling Popup Ads retains all campaign configurations and aggregate daily analytics. Export a backup before performing a permanent purge.') }}</p>
++    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
++        <a class="btn secondary" href="{{ route('admin.visitor-popups.export') }}">{{ __('Export campaigns & analytics (JSON)') }}</a>
++    </div>
++
++    <form method="POST" action="{{ route('admin.visitor-popups.purge') }}" style="margin-top:18px;padding-top:16px;border-top:1px solid var(--border);" onsubmit="return confirm('{{ __('Permanently delete all popup campaigns and analytics?') }}')">
++        @csrf
++        <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
++            <input type="checkbox" name="confirm_purge" value="1" style="width:auto;" required>
++            <span>{{ __('I understand this permanently deletes all stored popup campaigns and event metrics.') }}</span>
++        </label>
++        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
++            <input type="text" name="confirmation_phrase" placeholder="ERASE POPUP DATA" required style="max-width:260px;">
++            <button class="btn danger" type="submit">{{ __('Erase all popup data') }}</button>
++        </div>
++    </form>
++</section>
++@endsection
+diff --git a/plugins/aec/popup-ads/1.0.0/resources/views/admin/preview.blade.php b/plugins/aec/popup-ads/1.0.0/resources/views/admin/preview.blade.php
+new file mode 100644
+index 0000000..e0f0a74
+--- /dev/null
++++ b/plugins/aec/popup-ads/1.0.0/resources/views/admin/preview.blade.php
+@@ -0,0 +1,30 @@
++@extends('layouts.app')
++
++@section('title', __('Admin popup preview') . ' — ' . $popup->title)
++
++@section('content')
++<div class="page-header">
++    <div>
++        <span class="badge warning">{{ __('Admin-only preview') }}</span>
++        <h1>{{ $popup->title }}</h1>
++        <p class="muted">{{ __('Previewing layout, sanitized content and appearance. Public analytics are paused during admin preview.') }}</p>
++    </div>
++    <div style="display:flex;gap:8px;flex-wrap:wrap;">
++        <button type="button" class="btn primary" onclick="window.reopenPopupPreview && window.reopenPopupPreview()">{{ __('Show popup preview') }}</button>
++        <a class="btn secondary" href="{{ route('admin.visitor-popups.edit', $popup->id) }}">{{ __('Edit campaign') }}</a>
++        <a class="btn secondary" href="{{ route('admin.visitor-popups.index') }}">{{ __('Back') }}</a>
++    </div>
++</div>
++
++<div class="panel">
++    <div class="meta-row" style="flex-wrap:wrap;gap:12px;">
++        <span><strong>{{ __('Status') }}:</strong> {{ __(ucfirst($popup->status ?: ($popup->is_active ? 'active' : 'draft'))) }}</span>
++        <span><strong>{{ __('Layout') }}:</strong> {{ str_replace('_', ' ', ucfirst($popup->layout ?: 'modal')) }}</span>
++        <span><strong>{{ __('Content mode') }}:</strong> {{ str_replace('_', ' ', ucfirst($popup->content_mode ?: 'mixed')) }}</span>
++        <span><strong>{{ __('Audience') }}:</strong> {{ ucfirst($popup->audience) }}</span>
++        <span><strong>{{ __('Timezone') }}:</strong> {{ $popup->timezone ?: 'UTC' }}</span>
++    </div>
++</div>
++
++@include('popup-ads::visitor-popup', ['payload' => $payload, 'previewMode' => true])
++@endsection
+diff --git a/plugins/aec/popup-ads/1.0.0/resources/views/visitor-popup.blade.php b/plugins/aec/popup-ads/1.0.0/resources/views/visitor-popup.blade.php
+new file mode 100644
+index 0000000..8594f92
+--- /dev/null
++++ b/plugins/aec/popup-ads/1.0.0/resources/views/visitor-popup.blade.php
+@@ -0,0 +1,313 @@
++@php
++    $p = $payload ?? [];
++    $isPreview = (bool) ($previewMode ?? false);
++    $layout = $p['layout'] ?? 'modal';
++    $placement = $p['placement'] ?? 'center';
++    $maxWidth = max(280, min(1200, (int) ($p['max_width_px'] ?? 620)));
++    $bgColor = $p['background_color'] ?? '#ffffff';
++    $textColor = $p['text_color'] ?? '#14213d';
++    $accentColor = $p['accent_color'] ?? '#1546a8';
++    $fontScale = match ($p['font_scale'] ?? 'normal') {
++        'compact' => '0.92rem',
++        'large' => '1.12rem',
++        default => '1rem',
++    };
++    $overlayAlpha = number_format(max(0, min(95, (int) ($p['overlay_opacity'] ?? 70))) / 100, 2, '.', '');
++    $animation = $p['animation_style'] ?? 'fade';
++    $respectReducedMotion = (bool) ($p['respect_reduced_motion'] ?? true);
++    $hideOnMobile = (bool) ($p['hide_on_mobile'] ?? false);
++    $hideOnDesktop = (bool) ($p['hide_on_desktop'] ?? false);
++    $dismissible = (bool) ($p['dismissible'] ?? true);
++    $showClose = (bool) ($p['show_close_button'] ?? true);
++    $badgeClass = ($p['popup_type'] ?? 'offer') === 'ad'
++        ? 'warning'
++        : (($p['popup_type'] ?? 'offer') === 'registration' ? 'success' : 'info');
++    $badgeLabel = match ($p['popup_type'] ?? 'offer') {
++        'ad' => __('Advertisement'),
++        'registration' => __('Join us'),
++        'announcement' => __('Announcement'),
++        'post' => __('Post promotion'),
++        'banner' => __('Banner'),
++        default => __('Offer'),
++    };
++    $isModal = $layout === 'modal';
++    $isFloating = $layout === 'corner_card';
++    $isBanner = in_array($layout, ['full_banner', 'announcement_strip'], true);
++    $isTop = $placement === 'top';
++    $isLeft = $placement === 'bottom_left';
++@endphp
++
++<style>
++    .aec-popup-root[hidden] { display: none !important; }
++    .aec-popup-root {
++        position: fixed;
++        z-index: 1000;
++        font-size: {{ $fontScale }};
++        @if($isModal)
++            inset: 0;
++            background: rgba(8, 18, 40, {{ $overlayAlpha }});
++            backdrop-filter: blur(4px);
++            display: flex;
++            align-items: center;
++            justify-content: center;
++            padding: 18px;
++        @elseif($isFloating)
++            {{ $isTop ? 'top: 20px;' : 'bottom: 20px;' }}
++            {{ $isLeft ? 'left: 20px;' : 'right: 20px;' }}
++            max-width: min({{ min($maxWidth, 440) }}px, calc(100vw - 28px));
++        @else
++            left: 0;
++            right: 0;
++            {{ $isTop ? 'top: 0;' : 'bottom: 0;' }}
++            padding: {{ $layout === 'announcement_strip' ? '0' : '12px 18px' }};
++            display: flex;
++            justify-content: center;
++        @endif
++    }
++    .aec-popup-card {
++        position: relative;
++        width: {{ $isModal ? "min({$maxWidth}px, 100%)" : ($isBanner ? ($layout === 'announcement_strip' ? '100%' : "min({$maxWidth}px, 100%)") : '100%') }};
++        max-height: {{ $layout === 'announcement_strip' ? 'auto' : '90vh' }};
++        overflow: auto;
++        background: {{ $bgColor }};
++        color: {{ $textColor }};
++        border-radius: {{ $layout === 'announcement_strip' ? '0' : '18px' }};
++        box-shadow: 0 24px 72px rgba(15, 23, 42, 0.28);
++        border: 1px solid rgba(15, 23, 42, 0.08);
++    }
++    .aec-popup-cta {
++        display: inline-flex;
++        align-items: center;
++        justify-content: center;
++        padding: 10px 18px;
++        border-radius: 10px;
++        background: {{ $accentColor }};
++        color: #ffffff;
++        font-weight: 700;
++        text-decoration: none;
++        border: 0;
++        cursor: pointer;
++    }
++    .aec-popup-dismiss {
++        display: inline-flex;
++        align-items: center;
++        justify-content: center;
++        padding: 10px 16px;
++        border-radius: 10px;
++        background: rgba(15, 23, 42, 0.08);
++        color: {{ $textColor }};
++        font-weight: 600;
++        border: 0;
++        cursor: pointer;
++    }
++    .aec-popup-close {
++        position: absolute;
++        right: 12px;
++        top: 12px;
++        z-index: 2;
++        border: 0;
++        border-radius: 50%;
++        width: 36px;
++        height: 36px;
++        background: rgba(15, 23, 42, 0.82);
++        color: #ffffff;
++        font-size: 22px;
++        line-height: 1;
++        cursor: pointer;
++    }
++    @if($animation === 'fade')
++        .aec-popup-card { animation: aecPopupFade .24s ease-out; }
++        @keyframes aecPopupFade { from { opacity: 0; transform: scale(.98); } to { opacity: 1; transform: scale(1); } }
++    @elseif($animation === 'slide')
++        .aec-popup-card { animation: aecPopupSlide .28s ease-out; }
++        @keyframes aecPopupSlide { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
++    @endif
++    @if($respectReducedMotion)
++        @media (prefers-reduced-motion: reduce) {
++            .aec-popup-card { animation: none !important; transition: none !important; }
++        }
++    @endif
++    @if($hideOnMobile)
++        @media (max-width: 767px) { #visitor-promo-overlay { display: none !important; } }
++    @endif
++    @if($hideOnDesktop)
++        @media (min-width: 768px) { #visitor-promo-overlay { display: none !important; } }
++    @endif
++</style>
++
++<div id="visitor-promo-overlay"
++     class="aec-popup-root"
++     role="{{ $isModal ? 'dialog' : 'region' }}"
++     @if($isModal) aria-modal="true" @endif
++     aria-labelledby="visitor-promo-title"
++     aria-describedby="visitor-promo-description"
++     data-popup-id="{{ $p['id'] ?? '' }}"
++     data-frequency="{{ $p['frequency'] ?? 'once_per_session' }}"
++     data-delay="{{ (int) ($p['delay_seconds'] ?? 0) }}"
++     data-scroll-percent="{{ (int) ($p['scroll_trigger_percent'] ?? 0) }}"
++     data-cooldown-hours="{{ (int) ($p['cooldown_hours'] ?? 0) }}"
++     data-dismissible="{{ $dismissible ? '1' : '0' }}"
++     data-layout="{{ $layout }}"
++     data-track-url="{{ $isPreview ? '' : ($p['track_url'] ?? '') }}"
++     data-preview="{{ $isPreview ? '1' : '0' }}"
++     hidden>
++    <section class="aec-popup-card">
++        @if($showClose)
++            <button id="visitor-promo-close" class="aec-popup-close" type="button" aria-label="{{ __('Close popup') }}">&times;</button>
++        @endif
++
++        @if(! empty($p['desktop_image_url']) || ! empty($p['mobile_image_url']))
++            <picture>
++                @if(! empty($p['mobile_image_url']))
++                    <source media="(max-width: 767px)" srcset="{{ $p['mobile_image_url'] }}">
++                @endif
++                <img src="{{ $p['desktop_image_url'] ?: $p['mobile_image_url'] }}"
++                     alt="{{ $p['title'] ?? '' }}"
++                     style="display:block;width:100%;max-height:{{ $layout === 'announcement_strip' ? '120px' : '290px' }};object-fit:cover;">
++            </picture>
++        @endif
++
++        <div style="padding:{{ $layout === 'announcement_strip' ? '14px 48px 14px 20px' : '24px' }};{{ $layout === 'announcement_strip' ? 'display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;' : '' }}">
++            <div style="{{ $layout === 'announcement_strip' ? 'flex:1;min-width:220px;' : '' }}">
++                <span class="badge {{ $badgeClass }}">{{ $badgeLabel }}</span>
++                <h2 id="visitor-promo-title" style="margin:10px 0 8px;color:{{ $textColor }};">{{ $p['title'] ?? '' }}</h2>
++                @if(! empty($p['rich_html']))
++                    <div id="visitor-promo-description" style="line-height:1.65;color:{{ $textColor }};">{!! $p['rich_html'] !!}</div>
++                @elseif(! empty($p['body']))
++                    <p id="visitor-promo-description" style="margin:0;white-space:pre-line;line-height:1.65;color:{{ $textColor }};">{{ $p['body'] }}</p>
++                @else
++                    <p id="visitor-promo-description" class="sr-only">{{ $p['title'] ?? '' }}</p>
++                @endif
++            </div>
++
++            <div style="display:flex;gap:10px;flex-wrap:wrap;{{ $layout === 'announcement_strip' ? '' : 'margin-top:18px;' }}">
++                @if(! empty($p['button_url']))
++                    <a id="visitor-promo-cta"
++                       class="aec-popup-cta"
++                       href="{{ $p['button_url'] }}"
++                       target="{{ ! empty($p['button_external']) ? '_blank' : '_self' }}"
++                       rel="{{ ! empty($p['button_external']) || ($p['popup_type'] ?? '') === 'ad' ? 'sponsored noopener noreferrer' : 'noopener noreferrer' }}">
++                        {{ $p['button_label'] }}
++                    </a>
++                @endif
++                @if($dismissible)
++                    <button id="visitor-promo-dismiss" type="button" class="aec-popup-dismiss">{{ __('Maybe later') }}</button>
++                @endif
++            </div>
++        </div>
++    </section>
++</div>
++
++<script>
++    (function () {
++        const overlay = document.getElementById('visitor-promo-overlay');
++        if (!overlay) return;
++
++        const isPreview = overlay.dataset.preview === '1';
++        const id = overlay.dataset.popupId;
++        const frequency = overlay.dataset.frequency || 'once_per_session';
++        const delayMs = Math.max(0, Math.min(60, Number(overlay.dataset.delay || 0))) * 1000;
++        const scrollPct = Math.max(0, Math.min(100, Number(overlay.dataset.scrollPercent || 0)));
++        const cooldownHours = Math.max(0, Number(overlay.dataset.cooldownHours || 0));
++        const dismissible = overlay.dataset.dismissible !== '0';
++        const isModal = (overlay.dataset.layout || 'modal') === 'modal';
++        const trackUrl = overlay.dataset.trackUrl || '';
++        const key = 'aec-popup-' + id;
++        const cooldownKey = 'aec-popup-cooldown-' + id;
++        const now = Date.now();
++
++        const sendEvent = (eventName) => {
++            if (isPreview || !trackUrl) return;
++            const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
++            try {
++                fetch(trackUrl, {
++                    method: 'POST',
++                    credentials: 'same-origin',
++                    headers: {
++                        'Content-Type': 'application/json',
++                        'Accept': 'application/json',
++                        ...(csrf ? {'X-CSRF-TOKEN': csrf} : {}),
++                    },
++                    body: JSON.stringify({ event: eventName }),
++                    keepalive: true,
++                }).catch(() => {});
++            } catch (e) {}
++        };
++
++        if (!isPreview) {
++            let shouldShow = true;
++            try {
++                if (cooldownHours > 0 && Number(localStorage.getItem(cooldownKey) || 0) > now) shouldShow = false;
++                if (frequency === 'once_per_session' && sessionStorage.getItem(key)) shouldShow = false;
++                if (frequency === 'once_per_day' && Number(localStorage.getItem(key) || 0) > now) shouldShow = false;
++                if (frequency === 'once_per_browser' && localStorage.getItem(key)) shouldShow = false;
++            } catch (e) {}
++            if (!shouldShow) return;
++        }
++
++        let shown = false;
++        const markShown = () => {
++            if (isPreview) return;
++            try {
++                if (frequency === 'once_per_session') sessionStorage.setItem(key, '1');
++                if (frequency === 'once_per_day') localStorage.setItem(key, String(now + 86400000));
++                if (frequency === 'once_per_browser') localStorage.setItem(key, '1');
++            } catch (e) {}
++        };
++
++        const close = (trackDismissal) => {
++            overlay.hidden = true;
++            overlay.style.display = 'none';
++            if (isModal) document.body.style.overflow = '';
++            if (!isPreview && cooldownHours > 0) {
++                try { localStorage.setItem(cooldownKey, String(Date.now() + cooldownHours * 3600000)); } catch (e) {}
++            }
++            if (trackDismissal) sendEvent('dismissal');
++        };
++
++        const open = () => {
++            if (shown) return;
++            shown = true;
++            overlay.hidden = false;
++            overlay.style.display = isModal ? 'flex' : (overlay.dataset.layout === 'corner_card' ? 'block' : 'flex');
++            if (isModal) document.body.style.overflow = 'hidden';
++            markShown();
++            sendEvent('impression');
++        };
++
++        document.getElementById('visitor-promo-close')?.addEventListener('click', () => close(true));
++        document.getElementById('visitor-promo-dismiss')?.addEventListener('click', () => close(true));
++        document.getElementById('visitor-promo-cta')?.addEventListener('click', () => sendEvent('click'));
++
++        if (dismissible) {
++            overlay.addEventListener('click', (event) => { if (event.target === overlay) close(true); });
++            document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !overlay.hidden) close(true); });
++        }
++
++        if (isPreview) {
++            open();
++            window.reopenPopupPreview = () => { shown = false; open(); };
++            return;
++        }
++
++        const checkScrollAndOpen = () => {
++            if (shown) return;
++            if (scrollPct <= 0) { open(); return; }
++            const docHeight = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
++            const currentPct = (window.scrollY / docHeight) * 100;
++            if (currentPct >= scrollPct) {
++                window.removeEventListener('scroll', checkScrollAndOpen);
++                open();
++            }
++        };
++
++        window.setTimeout(() => {
++            if (scrollPct > 0) {
++                window.addEventListener('scroll', checkScrollAndOpen, { passive: true });
++                checkScrollAndOpen();
++            } else {
++                open();
++            }
++        }, delayMs);
++    })();
++</script>
+diff --git a/plugins/aec/popup-ads/1.0.0/src/AdminPopupController.php b/plugins/aec/popup-ads/1.0.0/src/AdminPopupController.php
+new file mode 100644
+index 0000000..c69dc41
+--- /dev/null
++++ b/plugins/aec/popup-ads/1.0.0/src/AdminPopupController.php
+@@ -0,0 +1,499 @@
++<?php
++
++namespace Aloms\PopupAds;
++
++use App\Http\Controllers\Controller;
++use App\Models\ActivityLog;
++use App\Models\Batch;
++use App\Models\Branch;
++use App\Models\Course;
++use App\Models\MediaAsset;
++use Carbon\Carbon;
++use DateTimeZone;
++use Illuminate\Http\RedirectResponse;
++use Illuminate\Http\Request;
++use Illuminate\Http\Response;
++use Illuminate\Support\Facades\DB;
++use Illuminate\Support\Facades\Schema;
++use Illuminate\Validation\Rule;
++use Illuminate\Validation\ValidationException;
++use Illuminate\View\View;
++use Throwable;
++
++class AdminPopupController extends Controller
++{
++    public function index(Request $request): View
++    {
++        $statusFilter = (string) $request->query('status', 'all');
++        $search = trim((string) $request->query('q', ''));
++
++        $query = PopupCampaign::query()
++            ->with(['image', 'mobileImage', 'branch', 'course', 'batch'])
++            ->withSum('events as impressions_count', 'impressions')
++            ->withSum('events as clicks_count', 'clicks')
++            ->withSum('events as dismissals_count', 'dismissals');
++
++        if ($statusFilter !== 'all' && in_array($statusFilter, PopupCampaign::STATUSES, true)) {
++            $query->where('status', $statusFilter);
++        }
++
++        if ($search !== '') {
++            $query->where(function ($q) use ($search): void {
++                $q->where('title', 'like', '%'.$search.'%')
++                    ->orWhere('body', 'like', '%'.$search.'%');
++            });
++        }
++
++        $popups = $query->orderByDesc('priority')->latest()->paginate(20)->withQueryString();
++
++        $summary = [
++            'total' => PopupCampaign::query()->count(),
++            'active' => PopupCampaign::query()->where('is_active', true)->whereIn('status', ['active', 'scheduled'])->count(),
++            'impressions' => Schema::hasTable('popup_ad_events') ? (int) PopupAdEvent::query()->sum('impressions') : 0,
++            'clicks' => Schema::hasTable('popup_ad_events') ? (int) PopupAdEvent::query()->sum('clicks') : 0,
++        ];
++
++        return view('popup-ads::admin.index', compact('popups', 'statusFilter', 'search', 'summary'));
++    }
++
++    public function create(): View
++    {
++        $popup = new PopupCampaign([
++            'popup_type' => 'offer',
++            'content_mode' => 'mixed',
++            'layout' => 'modal',
++            'placement' => 'center',
++            'max_width_px' => 620,
++            'background_color' => '#ffffff',
++            'text_color' => '#14213d',
++            'accent_color' => '#1546a8',
++            'font_scale' => 'normal',
++            'overlay_opacity' => 70,
++            'show_close_button' => true,
++            'dismissible' => true,
++            'animation_style' => 'fade',
++            'respect_reduced_motion' => true,
++            'audience' => 'all',
++            'frequency' => 'once_per_session',
++            'delay_seconds' => 1,
++            'scroll_trigger_percent' => 0,
++            'cooldown_hours' => 0,
++            'timezone' => config('app.timezone', 'UTC'),
++            'status' => 'draft',
++            'analytics_enabled' => true,
++            'require_consent_for_analytics' => true,
++        ]);
++
++        return view('popup-ads::admin.form', array_merge(
++            ['popup' => $popup],
++            $this->formReferenceData()
++        ));
++    }
++
++    public function store(Request $request): RedirectResponse
++    {
++        $data = $this->validated($request);
++        $data['created_by'] = $request->user()->id;
++
++        $popup = PopupCampaign::create($data);
++        $this->audit($request, 'admin.popup-ads.created', 'Created popup campaign #'.$popup->id.': '.$popup->title);
++
++        return redirect()->route('admin.visitor-popups.index')
++            ->with('success', __('Popup campaign created.'));
++    }
++
++    public function edit(int $visitorPopup): View
++    {
++        $popup = PopupCampaign::query()->findOrFail($visitorPopup);
++
++        return view('popup-ads::admin.form', array_merge(
++            ['popup' => $popup],
++            $this->formReferenceData()
++        ));
++    }
++
++    public function update(Request $request, int $visitorPopup): RedirectResponse
++    {
++        $popup = PopupCampaign::query()->findOrFail($visitorPopup);
++        $data = $this->validated($request, $popup);
++        $popup->update($data);
++
++        $this->audit($request, 'admin.popup-ads.updated', 'Updated popup campaign #'.$popup->id.': '.$popup->title);
++
++        return redirect()->route('admin.visitor-popups.index')
++            ->with('success', __('Popup campaign updated.'));
++    }
++
++    public function preview(int $visitorPopup): View
++    {
++        $popup = PopupCampaign::query()
++            ->with(['image', 'mobileImage', 'branch', 'course', 'batch'])
++            ->findOrFail($visitorPopup);
++
++        return view('popup-ads::admin.preview', [
++            'popup' => $popup,
++            'payload' => $popup->toPublicPayload(null, false),
++        ]);
++    }
++
++    public function duplicate(Request $request, int $visitorPopup): RedirectResponse
++    {
++        $source = PopupCampaign::query()->findOrFail($visitorPopup);
++
++        $copy = $source->replicate(['created_at', 'updated_at']);
++        $copy->title = mb_substr($source->title.' (Copy)', 0, 180);
++        $copy->is_active = false;
++        $copy->status = 'draft';
++        $copy->created_by = $request->user()->id;
++        $copy->save();
++
++        $this->audit($request, 'admin.popup-ads.duplicated', 'Duplicated popup campaign #'.$source->id.' to #'.$copy->id);
++
++        return redirect()->route('admin.visitor-popups.edit', $copy->id)
++            ->with('success', __('Popup campaign duplicated as draft.'));
++    }
++
++    public function toggle(Request $request, int $visitorPopup): RedirectResponse
++    {
++        $popup = PopupCampaign::query()->findOrFail($visitorPopup);
++        $activate = ! $popup->is_active;
++        $newStatus = $activate
++            ? ($popup->starts_at !== null && $popup->starts_at->isFuture() ? 'scheduled' : 'active')
++            : 'paused';
++
++        $popup->update([
++            'is_active' => $activate,
++            'status' => $newStatus,
++        ]);
++
++        $this->audit($request, 'admin.popup-ads.toggled', 'Set popup campaign #'.$popup->id.' status to '.$newStatus);
++
++        return back()->with('success', __('Popup status updated.'));
++    }
++
++    public function pause(Request $request, int $visitorPopup): RedirectResponse
++    {
++        $popup = PopupCampaign::query()->findOrFail($visitorPopup);
++        $popup->update(['is_active' => false, 'status' => 'paused']);
++        $this->audit($request, 'admin.popup-ads.paused', 'Paused popup campaign #'.$popup->id);
++
++        return back()->with('success', __('Popup campaign paused.'));
++    }
++
++    public function resume(Request $request, int $visitorPopup): RedirectResponse
++    {
++        $popup = PopupCampaign::query()->findOrFail($visitorPopup);
++        $status = $popup->starts_at !== null && $popup->starts_at->isFuture() ? 'scheduled' : 'active';
++        $popup->update(['is_active' => true, 'status' => $status]);
++        $this->audit($request, 'admin.popup-ads.resumed', 'Resumed popup campaign #'.$popup->id.' ('.$status.')');
++
++        return back()->with('success', __('Popup campaign resumed.'));
++    }
++
++    public function archive(Request $request, int $visitorPopup): RedirectResponse
++    {
++        $popup = PopupCampaign::query()->findOrFail($visitorPopup);
++        $popup->update(['is_active' => false, 'status' => 'archived']);
++        $this->audit($request, 'admin.popup-ads.archived', 'Archived popup campaign #'.$popup->id);
++
++        return back()->with('success', __('Popup campaign archived.'));
++    }
++
++    public function destroy(Request $request, int $visitorPopup): RedirectResponse
++    {
++        $popup = PopupCampaign::query()->findOrFail($visitorPopup);
++        $title = $popup->title;
++        $id = $popup->id;
++        $popup->delete();
++
++        $this->audit($request, 'admin.popup-ads.deleted', 'Deleted popup campaign #'.$id.': '.$title);
++
++        return back()->with('success', __('Popup campaign deleted.'));
++    }
++
++    public function export(Request $request): Response
++    {
++        $campaigns = PopupCampaign::query()
++            ->with('events')
++            ->orderByDesc('priority')
++            ->orderBy('id')
++            ->get()
++            ->map(function (PopupCampaign $campaign): array {
++                return [
++                    'id' => $campaign->id,
++                    'title' => $campaign->title,
++                    'popup_type' => $campaign->popup_type,
++                    'content_mode' => $campaign->content_mode,
++                    'status' => $campaign->status,
++                    'is_active' => $campaign->is_active,
++                    'layout' => $campaign->layout,
++                    'placement' => $campaign->placement,
++                    'audience' => $campaign->audience,
++                    'target_paths' => $campaign->target_paths,
++                    'target_roles' => $campaign->target_roles,
++                    'target_branch_id' => $campaign->target_branch_id,
++                    'target_course_id' => $campaign->target_course_id,
++                    'target_batch_id' => $campaign->target_batch_id,
++                    'frequency' => $campaign->frequency,
++                    'delay_seconds' => $campaign->delay_seconds,
++                    'scroll_trigger_percent' => $campaign->scroll_trigger_percent,
++                    'cooldown_hours' => $campaign->cooldown_hours,
++                    'max_impressions' => $campaign->max_impressions,
++                    'timezone' => $campaign->timezone,
++                    'starts_at' => $campaign->starts_at?->toIso8601String(),
++                    'ends_at' => $campaign->ends_at?->toIso8601String(),
++                    'priority' => $campaign->priority,
++                    'daily_analytics' => $campaign->events->map(fn (PopupAdEvent $event): array => [
++                        'date' => $event->event_date?->toDateString(),
++                        'impressions' => $event->impressions,
++                        'clicks' => $event->clicks,
++                        'dismissals' => $event->dismissals,
++                    ])->values()->all(),
++                ];
++            })->values()->all();
++
++        $payload = json_encode([
++            'plugin' => 'aec.popup-ads',
++            'exported_at' => now()->toIso8601String(),
++            'campaigns_count' => count($campaigns),
++            'campaigns' => $campaigns,
++        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
++
++        $this->audit($request, 'admin.popup-ads.exported', 'Exported '.count($campaigns).' popup campaign records');
++
++        return response($payload, 200, [
++            'Content-Type' => 'application/json; charset=UTF-8',
++            'Content-Disposition' => 'attachment; filename="popup-ads-export-'.now()->format('Y-m-d').'.json"',
++            'X-Content-Type-Options' => 'nosniff',
++        ]);
++    }
++
++    public function purge(Request $request): RedirectResponse
++    {
++        $request->validate([
++            'confirm_purge' => ['accepted'],
++            'confirmation_phrase' => ['required', 'string', Rule::in(['ERASE POPUP DATA'])],
++        ], [
++            'confirmation_phrase.in' => __('Type ERASE POPUP DATA exactly to confirm purging retained popup campaigns and analytics.'),
++        ]);
++
++        $deletedCampaigns = 0;
++        DB::transaction(function () use (&$deletedCampaigns): void {
++            if (Schema::hasTable('popup_ad_events')) {
++                PopupAdEvent::query()->delete();
++            }
++            $deletedCampaigns = PopupCampaign::query()->count();
++            PopupCampaign::query()->delete();
++        });
++
++        $this->audit($request, 'admin.popup-ads.purged', 'Purged '.$deletedCampaigns.' popup campaigns and all aggregate analytics.');
++
++        return redirect()->route('admin.visitor-popups.index')
++            ->with('success', __('All retained popup campaigns and analytics were erased.'));
++    }
++
++    private function validated(Request $request, ?PopupCampaign $existing = null): array
++    {
++        $imageExistsRule = Rule::exists('media_assets', 'id')
++            ->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'));
++
++        $data = $request->validate([
++            'title' => ['required', 'string', 'max:180'],
++            'body' => ['nullable', 'string', 'max:3000'],
++            'rich_html' => ['nullable', 'string', 'max:8000'],
++            'popup_type' => ['required', Rule::in(PopupCampaign::TYPES)],
++            'content_mode' => ['nullable', Rule::in(PopupCampaign::CONTENT_MODES)],
++            'layout' => ['nullable', Rule::in(PopupCampaign::LAYOUTS)],
++            'placement' => ['nullable', Rule::in(PopupCampaign::PLACEMENTS)],
++            'max_width_px' => ['nullable', 'integer', 'min:280', 'max:1200'],
++            'background_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
++            'text_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
++            'accent_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
++            'font_scale' => ['nullable', Rule::in(PopupCampaign::FONT_SCALES)],
++            'overlay_opacity' => ['nullable', 'integer', 'min:0', 'max:95'],
++            'show_close_button' => ['nullable', 'boolean'],
++            'dismissible' => ['nullable', 'boolean'],
++            'animation_style' => ['nullable', Rule::in(PopupCampaign::ANIMATIONS)],
++            'respect_reduced_motion' => ['nullable', 'boolean'],
++            'image_media_id' => ['nullable', 'integer', $imageExistsRule],
++            'mobile_image_media_id' => ['nullable', 'integer', $imageExistsRule],
++            'desktop_image' => ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'dimensions:min_width=1,min_height=1,max_width=4096,max_height=4096', 'max:5120'],
++            'mobile_image' => ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'dimensions:min_width=1,min_height=1,max_width=4096,max_height=4096', 'max:5120'],
++            'hide_on_mobile' => ['nullable', 'boolean'],
++            'hide_on_desktop' => ['nullable', 'boolean'],
++            'button_label' => ['nullable', 'string', 'max:60'],
++            'button_url' => ['nullable', 'string', 'max:500'],
++            'audience' => ['required', Rule::in(['all', 'guests', 'members'])],
++            'target_paths' => ['nullable', 'string', 'max:2000'],
++            'target_roles' => ['nullable', 'array'],
++            'target_roles.*' => ['string', Rule::in(PopupCampaign::TARGET_ROLES)],
++            'target_branch_id' => ['nullable', 'integer', Rule::exists('branches', 'id')],
++            'target_course_id' => ['nullable', 'integer', Rule::exists('courses', 'id')],
++            'target_batch_id' => ['nullable', 'integer', Rule::exists('batches', 'id')],
++            'frequency' => ['required', Rule::in(PopupCampaign::FREQUENCIES)],
++            'delay_seconds' => ['required', 'integer', 'min:0', 'max:60'],
++            'scroll_trigger_percent' => ['nullable', 'integer', 'min:0', 'max:100'],
++            'cooldown_hours' => ['nullable', 'integer', 'min:0', 'max:8760'],
++            'max_impressions' => ['nullable', 'integer', 'min:1', 'max:10000000'],
++            'analytics_enabled' => ['nullable', 'boolean'],
++            'require_consent_for_analytics' => ['nullable', 'boolean'],
++            'status' => ['nullable', Rule::in(PopupCampaign::STATUSES)],
++            'is_active' => ['nullable', 'boolean'],
++            'timezone' => ['nullable', 'string', Rule::in(DateTimeZone::listIdentifiers())],
++            'starts_at' => ['nullable', 'date'],
++            'ends_at' => ['nullable', 'date'],
++            'priority' => ['nullable', 'integer', 'min:0', 'max:10000'],
++        ]);
++
++        $rawUrl = trim((string) ($data['button_url'] ?? ''));
++        if ($rawUrl !== '') {
++            if (str_starts_with($rawUrl, '//')) {
++                throw ValidationException::withMessages([
++                    'button_url' => __('Protocol-relative URLs are not allowed.'),
++                ]);
++            }
++            $normalizedUrl = PopupContentSanitizer::normalizeSafeUrl($rawUrl);
++            if ($normalizedUrl === null) {
++                throw ValidationException::withMessages([
++                    'button_url' => __('Use a site-relative path or a secure HTTPS URL.'),
++                ]);
++            }
++            $data['button_url'] = $normalizedUrl;
++        } else {
++            $data['button_url'] = null;
++        }
++
++        $timezone = (string) ($data['timezone'] ?? $existing?->timezone ?? config('app.timezone', 'UTC'));
++        $startsAt = ! empty($data['starts_at']) ? Carbon::parse((string) $data['starts_at'], $timezone)->utc() : null;
++        $endsAt = ! empty($data['ends_at']) ? Carbon::parse((string) $data['ends_at'], $timezone)->utc() : null;
++
++        if ($startsAt !== null && $endsAt !== null && $endsAt->lt($startsAt)) {
++            throw ValidationException::withMessages([
++                'ends_at' => __('The end date/time must be after or equal to the start date/time.'),
++            ]);
++        }
++
++        if ($request->hasFile('desktop_image')) {
++            $data['image_media_id'] = $this->storeUploadedImage($request, 'desktop_image', $data['title']);
++        }
++        if ($request->hasFile('mobile_image')) {
++            $data['mobile_image_media_id'] = $this->storeUploadedImage($request, 'mobile_image', $data['title'].' (Mobile)');
++        }
++        unset($data['desktop_image'], $data['mobile_image']);
++
++        $contentMode = (string) ($data['content_mode'] ?? $existing?->content_mode ?? 'mixed');
++        $sanitizedHtml = PopupContentSanitizer::sanitizeHtml($data['rich_html'] ?? null);
++        if ($contentMode === 'sanitized_html' && ($sanitizedHtml === null || trim(strip_tags($sanitizedHtml)) === '')) {
++            throw ValidationException::withMessages([
++                'rich_html' => __('Sanitized HTML content cannot be empty when using sanitized HTML mode.'),
++            ]);
++        }
++
++        $requestedStatus = $data['status'] ?? null;
++        $isActiveChecked = (bool) ($data['is_active'] ?? false);
++
++        if ($requestedStatus === null) {
++            $status = $isActiveChecked
++                ? ($startsAt !== null && $startsAt->isFuture() ? 'scheduled' : 'active')
++                : 'draft';
++        } else {
++            $status = $requestedStatus;
++            if ($isActiveChecked && $status === 'draft') {
++                $status = $startsAt !== null && $startsAt->isFuture() ? 'scheduled' : 'active';
++            }
++        }
++
++        $isActive = in_array($status, ['active', 'scheduled'], true);
++
++        return [
++            'title' => $data['title'],
++            'body' => $data['body'] ?? null,
++            'rich_html' => $sanitizedHtml,
++            'popup_type' => $data['popup_type'],
++            'content_mode' => $contentMode,
++            'layout' => (string) ($data['layout'] ?? $existing?->layout ?? 'modal'),
++            'placement' => (string) ($data['placement'] ?? $existing?->placement ?? 'center'),
++            'max_width_px' => (int) ($data['max_width_px'] ?? $existing?->max_width_px ?? 620),
++            'background_color' => PopupContentSanitizer::sanitizeHexColor($data['background_color'] ?? null, $existing?->background_color ?? '#ffffff'),
++            'text_color' => PopupContentSanitizer::sanitizeHexColor($data['text_color'] ?? null, $existing?->text_color ?? '#14213d'),
++            'accent_color' => PopupContentSanitizer::sanitizeHexColor($data['accent_color'] ?? null, $existing?->accent_color ?? '#1546a8'),
++            'font_scale' => (string) ($data['font_scale'] ?? $existing?->font_scale ?? 'normal'),
++            'overlay_opacity' => (int) ($data['overlay_opacity'] ?? $existing?->overlay_opacity ?? 70),
++            'show_close_button' => $request->has('show_close_button') ? $request->boolean('show_close_button') : ($existing?->show_close_button ?? true),
++            'dismissible' => $request->has('dismissible') ? $request->boolean('dismissible') : ($existing?->dismissible ?? true),
++            'animation_style' => (string) ($data['animation_style'] ?? $existing?->animation_style ?? 'fade'),
++            'respect_reduced_motion' => $request->has('respect_reduced_motion') ? $request->boolean('respect_reduced_motion') : ($existing?->respect_reduced_motion ?? true),
++            'image_media_id' => $data['image_media_id'] ?? null,
++            'mobile_image_media_id' => $data['mobile_image_media_id'] ?? null,
++            'hide_on_mobile' => $request->boolean('hide_on_mobile'),
++            'hide_on_desktop' => $request->boolean('hide_on_desktop'),
++            'button_label' => $data['button_label'] ?? null,
++            'button_url' => $data['button_url'],
++            'audience' => $data['audience'],
++            'target_paths' => PopupContentSanitizer::normalizePathPatterns($data['target_paths'] ?? null),
++            'target_roles' => array_values(array_unique($data['target_roles'] ?? [])),
++            'target_branch_id' => $data['target_branch_id'] ?? null,
++            'target_course_id' => $data['target_course_id'] ?? null,
++            'target_batch_id' => $data['target_batch_id'] ?? null,
++            'frequency' => $data['frequency'],
++            'delay_seconds' => (int) $data['delay_seconds'],
++            'scroll_trigger_percent' => (int) ($data['scroll_trigger_percent'] ?? 0),
++            'cooldown_hours' => (int) ($data['cooldown_hours'] ?? 0),
++            'max_impressions' => isset($data['max_impressions']) ? (int) $data['max_impressions'] : null,
++            'analytics_enabled' => $request->has('analytics_enabled') ? $request->boolean('analytics_enabled') : ($existing?->analytics_enabled ?? true),
++            'require_consent_for_analytics' => $request->has('require_consent_for_analytics') ? $request->boolean('require_consent_for_analytics') : ($existing?->require_consent_for_analytics ?? true),
++            'status' => $status,
++            'is_active' => $isActive,
++            'timezone' => $timezone,
++            'starts_at' => $startsAt,
++            'ends_at' => $endsAt,
++            'priority' => (int) ($data['priority'] ?? 0),
++        ];
++    }
++
++    private function storeUploadedImage(Request $request, string $field, string $altText): int
++    {
++        $file = $request->file($field);
++        $path = $file->store('media/'.now()->format('Y/m'), 'public');
++
++        $asset = MediaAsset::create([
++            'uploaded_by' => $request->user()->id,
++            'disk' => 'public',
++            'path' => $path,
++            'original_name' => mb_substr($file->getClientOriginalName(), 0, 255),
++            'mime_type' => $file->getMimeType() ?: 'image/png',
++            'size' => $file->getSize(),
++            'alt_text' => mb_substr($altText, 0, 255),
++        ]);
++
++        return (int) $asset->id;
++    }
++
++    private function formReferenceData(): array
++    {
++        return [
++            'media' => MediaAsset::query()->where('mime_type', 'like', 'image/%')->latest()->limit(200)->get(),
++            'branches' => Branch::query()->orderBy('name')->get(['id', 'name']),
++            'courses' => Course::query()->orderBy('title')->limit(200)->get(['id', 'title']),
++            'batches' => Batch::query()->orderBy('title')->limit(200)->get(['id', 'title']),
++            'timezones' => ['UTC', 'Asia/Dhaka', 'Asia/Kolkata', 'Europe/London', 'America/New_York'],
++        ];
++    }
++
++    private function audit(Request $request, string $event, string $description): void
++    {
++        try {
++            ActivityLog::create([
++                'user_id' => $request->user()?->id,
++                'event' => $event,
++                'description' => mb_substr($description, 0, 255),
++                'method' => $request->method(),
++                'route' => $request->route()?->getName(),
++                'ip_address' => $request->ip(),
++                'user_agent' => substr((string) $request->userAgent(), 0, 1000),
++            ]);
++        } catch (Throwable $exception) {
++            report($exception);
++        }
++    }
++}
+diff --git a/plugins/aec/popup-ads/1.0.0/src/Plugin.php b/plugins/aec/popup-ads/1.0.0/src/Plugin.php
+new file mode 100644
+index 0000000..43ea9b3
+--- /dev/null
++++ b/plugins/aec/popup-ads/1.0.0/src/Plugin.php
+@@ -0,0 +1,89 @@
++<?php
++
++namespace Aloms\PopupAds;
++
++use App\Contracts\Plugins\PluginContract;
++use App\Models\PluginInstallation;
++use App\Services\Plugins\PluginContext;
++use Illuminate\Http\Request;
++use Illuminate\Support\Facades\Route;
++use Illuminate\Support\Facades\Schema;
++use Illuminate\Support\Facades\View;
++
++require_once __DIR__.'/PopupContentSanitizer.php';
++require_once __DIR__.'/PopupAdEvent.php';
++require_once __DIR__.'/PopupCampaign.php';
++require_once __DIR__.'/AdminPopupController.php';
++require_once __DIR__.'/PublicPopupController.php';
++
++return new class implements PluginContract
++{
++    public function register(PluginContext $context): void
++    {
++        View::addNamespace('popup-ads', dirname(__DIR__).'/resources/views');
++
++        $context->routesForPortal('admin', 'admin/visitor-popups', 'admin.visitor-popups.', function (): void {
++            Route::get('/', [AdminPopupController::class, 'index'])->name('index');
++            Route::get('/create', [AdminPopupController::class, 'create'])->name('create');
++            Route::post('/', [AdminPopupController::class, 'store'])->name('store');
++            Route::get('/export', [AdminPopupController::class, 'export'])->name('export');
++            Route::post('/purge', [AdminPopupController::class, 'purge'])->name('purge');
++            Route::get('/{visitorPopup}/edit', [AdminPopupController::class, 'edit'])->whereNumber('visitorPopup')->name('edit');
++            Route::get('/{visitorPopup}/preview', [AdminPopupController::class, 'preview'])->whereNumber('visitorPopup')->name('preview');
++            Route::put('/{visitorPopup}', [AdminPopupController::class, 'update'])->whereNumber('visitorPopup')->name('update');
++            Route::patch('/{visitorPopup}/toggle', [AdminPopupController::class, 'toggle'])->whereNumber('visitorPopup')->name('toggle');
++            Route::post('/{visitorPopup}/duplicate', [AdminPopupController::class, 'duplicate'])->whereNumber('visitorPopup')->name('duplicate');
++            Route::patch('/{visitorPopup}/pause', [AdminPopupController::class, 'pause'])->whereNumber('visitorPopup')->name('pause');
++            Route::patch('/{visitorPopup}/resume', [AdminPopupController::class, 'resume'])->whereNumber('visitorPopup')->name('resume');
++            Route::patch('/{visitorPopup}/archive', [AdminPopupController::class, 'archive'])->whereNumber('visitorPopup')->name('archive');
++            Route::delete('/{visitorPopup}', [AdminPopupController::class, 'destroy'])->whereNumber('visitorPopup')->name('destroy');
++        });
++
++        $context->routesForPortal('public', 'popups', 'popups.', function (): void {
++            Route::get('/active', [PublicPopupController::class, 'active'])->middleware('throttle:60,1')->name('active');
++            Route::post('/{popup}/events', [PublicPopupController::class, 'track'])->whereNumber('popup')->middleware('throttle:30,1')->name('events');
++        });
++
++        $context->bind('popup_ads.render', fn () => function (Request $request): string {
++            if (! Schema::hasTable('plugin_registry') || ! Schema::hasTable('visitor_popups')) {
++                return '';
++            }
++
++            $active = PluginInstallation::query()
++                ->where('plugin_key', 'aec.popup-ads')
++                ->where('status', 'active')
++                ->exists();
++            if (! $active) {
++                return '';
++            }
++
++            $candidates = PopupCampaign::query()
++                ->currentlyEligible()
++                ->with(['image', 'mobileImage', 'events'])
++                ->orderByDesc('priority')
++                ->latest('id')
++                ->limit(25)
++                ->get();
++
++            $matched = $candidates->first(fn (PopupCampaign $campaign): bool =>
++                $campaign->matchesRequestContext($request)
++            );
++
++            if (! $matched) {
++                return '';
++            }
++
++            $consentGranted = $request->cookie('marketing_consent') === 'accepted';
++
++            return view('popup-ads::visitor-popup', [
++                'payload' => $matched->toPublicPayload($request->user(), $consentGranted),
++                'previewMode' => false,
++            ])->render();
++        });
++    }
++
++    public function boot(PluginContext $context): void
++    {
++        // Runtime routes and view namespace are registered on active verified plugins only.
++    }
++};
+diff --git a/plugins/aec/popup-ads/1.0.0/src/PopupAdEvent.php b/plugins/aec/popup-ads/1.0.0/src/PopupAdEvent.php
+new file mode 100644
+index 0000000..bc58386
+--- /dev/null
++++ b/plugins/aec/popup-ads/1.0.0/src/PopupAdEvent.php
+@@ -0,0 +1,31 @@
++<?php
++
++namespace Aloms\PopupAds;
++
++use Illuminate\Database\Eloquent\Model;
++use Illuminate\Database\Eloquent\Relations\BelongsTo;
++
++class PopupAdEvent extends Model
++{
++    protected $table = 'popup_ad_events';
++
++    protected $fillable = [
++        'popup_id',
++        'event_date',
++        'impressions',
++        'clicks',
++        'dismissals',
++    ];
++
++    protected $casts = [
++        'event_date' => 'date',
++        'impressions' => 'integer',
++        'clicks' => 'integer',
++        'dismissals' => 'integer',
++    ];
++
++    public function campaign(): BelongsTo
++    {
++        return $this->belongsTo(PopupCampaign::class, 'popup_id');
++    }
++}
+diff --git a/plugins/aec/popup-ads/1.0.0/src/PopupCampaign.php b/plugins/aec/popup-ads/1.0.0/src/PopupCampaign.php
+new file mode 100644
+index 0000000..913163b
+--- /dev/null
++++ b/plugins/aec/popup-ads/1.0.0/src/PopupCampaign.php
+@@ -0,0 +1,372 @@
++<?php
++
++namespace Aloms\PopupAds;
++
++use App\Models\Batch;
++use App\Models\Branch;
++use App\Models\Course;
++use App\Models\MediaAsset;
++use App\Models\User;
++use Carbon\CarbonInterface;
++use Illuminate\Database\Eloquent\Builder;
++use Illuminate\Database\Eloquent\Model;
++use Illuminate\Database\Eloquent\Relations\BelongsTo;
++use Illuminate\Database\Eloquent\Relations\HasMany;
++use Illuminate\Http\Request;
++
++class PopupCampaign extends Model
++{
++    public const STATUSES = ['draft', 'scheduled', 'active', 'paused', 'archived'];
++
++    public const TYPES = ['offer', 'banner', 'post', 'ad', 'registration', 'announcement'];
++
++    public const CONTENT_MODES = ['mixed', 'image_only', 'text_only', 'sanitized_html'];
++
++    public const LAYOUTS = ['modal', 'corner_card', 'full_banner', 'announcement_strip'];
++
++    public const PLACEMENTS = ['center', 'bottom_right', 'bottom_left', 'top', 'bottom'];
++
++    public const FREQUENCIES = ['every_page', 'once_per_session', 'once_per_day', 'once_per_browser'];
++
++    public const FONT_SCALES = ['compact', 'normal', 'large'];
++
++    public const ANIMATIONS = ['none', 'fade', 'slide'];
++
++    public const TARGET_ROLES = ['guest', 'student', 'teacher', 'guardian', 'branch_manager', 'accountant', 'admin'];
++
++    protected $table = 'visitor_popups';
++
++    protected $fillable = [
++        'title',
++        'body',
++        'rich_html',
++        'popup_type',
++        'content_mode',
++        'layout',
++        'placement',
++        'max_width_px',
++        'background_color',
++        'text_color',
++        'accent_color',
++        'font_scale',
++        'overlay_opacity',
++        'show_close_button',
++        'dismissible',
++        'animation_style',
++        'respect_reduced_motion',
++        'image_media_id',
++        'mobile_image_media_id',
++        'hide_on_mobile',
++        'hide_on_desktop',
++        'button_label',
++        'button_url',
++        'audience',
++        'target_paths',
++        'target_roles',
++        'target_branch_id',
++        'target_course_id',
++        'target_batch_id',
++        'frequency',
++        'delay_seconds',
++        'scroll_trigger_percent',
++        'cooldown_hours',
++        'max_impressions',
++        'analytics_enabled',
++        'require_consent_for_analytics',
++        'is_active',
++        'status',
++        'starts_at',
++        'ends_at',
++        'timezone',
++        'priority',
++        'created_by',
++    ];
++
++    protected $casts = [
++        'is_active' => 'boolean',
++        'show_close_button' => 'boolean',
++        'dismissible' => 'boolean',
++        'respect_reduced_motion' => 'boolean',
++        'hide_on_mobile' => 'boolean',
++        'hide_on_desktop' => 'boolean',
++        'analytics_enabled' => 'boolean',
++        'require_consent_for_analytics' => 'boolean',
++        'target_roles' => 'array',
++        'max_width_px' => 'integer',
++        'overlay_opacity' => 'integer',
++        'delay_seconds' => 'integer',
++        'scroll_trigger_percent' => 'integer',
++        'cooldown_hours' => 'integer',
++        'max_impressions' => 'integer',
++        'priority' => 'integer',
++        'starts_at' => 'datetime',
++        'ends_at' => 'datetime',
++    ];
++
++    public function image(): BelongsTo
++    {
++        return $this->belongsTo(MediaAsset::class, 'image_media_id');
++    }
++
++    public function mobileImage(): BelongsTo
++    {
++        return $this->belongsTo(MediaAsset::class, 'mobile_image_media_id');
++    }
++
++    public function branch(): BelongsTo
++    {
++        return $this->belongsTo(Branch::class, 'target_branch_id');
++    }
++
++    public function course(): BelongsTo
++    {
++        return $this->belongsTo(Course::class, 'target_course_id');
++    }
++
++    public function batch(): BelongsTo
++    {
++        return $this->belongsTo(Batch::class, 'target_batch_id');
++    }
++
++    public function creator(): BelongsTo
++    {
++        return $this->belongsTo(User::class, 'created_by');
++    }
++
++    public function events(): HasMany
++    {
++        return $this->hasMany(PopupAdEvent::class, 'popup_id');
++    }
++
++    public function scopeCurrentlyEligible(Builder $query, ?CarbonInterface $now = null): Builder
++    {
++        $moment = ($now ?? now())->copy()->utc();
++
++        return $query->where('is_active', true)
++            ->where(function (Builder $q): void {
++                $q->whereIn('status', ['active', 'scheduled'])
++                    ->orWhereNull('status');
++            })
++            ->where(fn (Builder $q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', $moment))
++            ->where(fn (Builder $q) => $q->whereNull('ends_at')->orWhere('ends_at', '>=', $moment));
++    }
++
++    public function isCurrentlyPublished(?CarbonInterface $now = null): bool
++    {
++        if (! $this->is_active || ! in_array($this->status ?? 'active', ['active', 'scheduled'], true)) {
++            return false;
++        }
++
++        $moment = ($now ?? now())->copy()->utc();
++        if ($this->starts_at !== null && $this->starts_at->copy()->utc()->gt($moment)) {
++            return false;
++        }
++
++        if ($this->ends_at !== null && $this->ends_at->copy()->utc()->lt($moment)) {
++            return false;
++        }
++
++        return true;
++    }
++
++    public function hasReachedImpressionCap(): bool
++    {
++        if ($this->max_impressions === null || $this->max_impressions <= 0) {
++            return false;
++        }
++
++        $total = $this->relationLoaded('events')
++            ? (int) $this->events->sum('impressions')
++            : (int) $this->events()->sum('impressions');
++
++        return $total >= $this->max_impressions;
++    }
++
++    public function matchesRequestContext(
++        Request $request,
++        ?string $overridePath = null,
++        ?int $courseId = null,
++        ?int $batchId = null,
++    ): bool {
++        if (! $this->isCurrentlyPublished()) {
++            return false;
++        }
++
++        if ($this->hasReachedImpressionCap()) {
++            return false;
++        }
++
++        $user = $request->user();
++
++        if ($this->audience === 'guests' && $user !== null) {
++            return false;
++        }
++        if ($this->audience === 'members' && $user === null) {
++            return false;
++        }
++
++        $roles = is_array($this->target_roles) ? array_values(array_filter($this->target_roles, 'is_string')) : [];
++        if ($roles !== []) {
++            $currentRole = $user ? (string) $user->role : 'guest';
++            if (! in_array($currentRole, $roles, true)) {
++                return false;
++            }
++        }
++
++        if ($this->target_branch_id !== null) {
++            if (! $user || (int) $user->branch_id !== (int) $this->target_branch_id) {
++                return false;
++            }
++        }
++
++        if ($this->target_course_id !== null) {
++            $routeCourse = $request->route('course');
++            $currentCourseId = $courseId ?? (is_object($routeCourse) ? (int) $routeCourse->getKey() : (is_numeric($routeCourse) ? (int) $routeCourse : null));
++            $matchesRouteCourse = $currentCourseId !== null && $currentCourseId === (int) $this->target_course_id;
++            $matchesEnrollment = $user !== null && $user->enrollments()->where('course_id', $this->target_course_id)->exists();
++
++            if (! $matchesRouteCourse && ! $matchesEnrollment) {
++                return false;
++            }
++        }
++
++        if ($this->target_batch_id !== null) {
++            $routeBatch = $request->route('batch');
++            $currentBatchId = $batchId ?? (is_object($routeBatch) ? (int) $routeBatch->getKey() : (is_numeric($routeBatch) ? (int) $routeBatch : null));
++            $matchesRouteBatch = $currentBatchId !== null && $currentBatchId === (int) $this->target_batch_id;
++            $matchesEnrollment = $user !== null && $user->enrollments()->where('batch_id', $this->target_batch_id)->exists();
++
++            if (! $matchesRouteBatch && ! $matchesEnrollment) {
++                return false;
++            }
++        }
++
++        if (is_string($this->target_paths) && trim($this->target_paths) !== '') {
++            $path = $overridePath ?? ('/'.ltrim($request->path(), '/'));
++            if ($path === '//' || $path === '') {
++                $path = '/';
++            }
++
++            if (! self::pathMatchesPatterns($path, $this->target_paths)) {
++                return false;
++            }
++        }
++
++        return true;
++    }
++
++    public static function pathMatchesPatterns(string $path, string $patternsRaw): bool
++    {
++        $normalizedPath = '/'.ltrim(trim($path), '/');
++        if ($normalizedPath === '//') {
++            $normalizedPath = '/';
++        }
++
++        $lines = preg_split('/[\r\n,]+/', $patternsRaw) ?: [];
++        $includes = [];
++        $excludes = [];
++
++        foreach ($lines as $line) {
++            $pattern = trim($line);
++            if ($pattern === '') {
++                continue;
++            }
++            if (str_starts_with($pattern, '!')) {
++                $excludes[] = substr($pattern, 1);
++            } else {
++                $includes[] = $pattern;
++            }
++        }
++
++        foreach ($excludes as $exclude) {
++            if (self::wildcardMatch($exclude, $normalizedPath)) {
++                return false;
++            }
++        }
++
++        if ($includes === []) {
++            return true;
++        }
++
++        foreach ($includes as $include) {
++            if (self::wildcardMatch($include, $normalizedPath)) {
++                return true;
++            }
++        }
++
++        return false;
++    }
++
++    private static function wildcardMatch(string $pattern, string $subject): bool
++    {
++        $clean = '/'.ltrim(trim($pattern), '/');
++        $quoted = preg_quote($clean, '#');
++        $regex = '#^'.str_replace('\*', '.*', $quoted).'$#i';
++
++        return preg_match($regex, $subject) === 1;
++    }
++
++    public function resolvedButtonUrl(?User $user = null): ?string
++    {
++        if ($this->popup_type === 'registration') {
++            return $user !== null ? route('dashboard') : route('register');
++        }
++
++        $safe = PopupContentSanitizer::normalizeSafeUrl($this->button_url);
++        if ($safe === null) {
++            return null;
++        }
++
++        return str_starts_with($safe, '/') ? url($safe) : $safe;
++    }
++
++    public function sanitizedRichHtml(): ?string
++    {
++        if ($this->content_mode !== 'sanitized_html') {
++            return null;
++        }
++
++        return PopupContentSanitizer::sanitizeHtml($this->rich_html);
++    }
++
++    public function toPublicPayload(?User $user, bool $consentGranted): array
++    {
++        $buttonUrl = $this->resolvedButtonUrl($user);
++        $buttonLabel = $this->button_label ?: ($this->popup_type === 'registration' ? __('Register now') : __('Learn more'));
++        $isExternal = $buttonUrl !== null && str_starts_with($buttonUrl, 'https://') && ! str_starts_with($buttonUrl, url('/'));
++        $analyticsActive = (bool) $this->analytics_enabled && (! $this->require_consent_for_analytics || $consentGranted);
++
++        return [
++            'id' => $this->id,
++            'title' => $this->title,
++            'body' => $this->content_mode === 'image_only' ? null : $this->body,
++            'rich_html' => $this->sanitizedRichHtml(),
++            'content_mode' => $this->content_mode ?: 'mixed',
++            'popup_type' => $this->popup_type,
++            'layout' => $this->layout ?: 'modal',
++            'placement' => $this->placement ?: 'center',
++            'max_width_px' => (int) ($this->max_width_px ?: 620),
++            'background_color' => PopupContentSanitizer::sanitizeHexColor($this->background_color, '#ffffff'),
++            'text_color' => PopupContentSanitizer::sanitizeHexColor($this->text_color, '#14213d'),
++            'accent_color' => PopupContentSanitizer::sanitizeHexColor($this->accent_color, '#1546a8'),
++            'font_scale' => $this->font_scale ?: 'normal',
++            'overlay_opacity' => (int) ($this->overlay_opacity ?? 70),
++            'show_close_button' => (bool) ($this->show_close_button ?? true),
++            'dismissible' => (bool) ($this->dismissible ?? true),
++            'animation_style' => $this->animation_style ?: 'fade',
++            'respect_reduced_motion' => (bool) ($this->respect_reduced_motion ?? true),
++            'hide_on_mobile' => (bool) $this->hide_on_mobile,
++            'hide_on_desktop' => (bool) $this->hide_on_desktop,
++            'desktop_image_url' => $this->content_mode === 'text_only' ? null : $this->image?->url,
++            'mobile_image_url' => $this->content_mode === 'text_only' ? null : ($this->mobileImage?->url ?? $this->image?->url),
++            'button_label' => $buttonUrl ? $buttonLabel : null,
++            'button_url' => $buttonUrl,
++            'button_external' => $isExternal,
++            'frequency' => $this->frequency,
++            'delay_seconds' => (int) $this->delay_seconds,
++            'scroll_trigger_percent' => (int) ($this->scroll_trigger_percent ?? 0),
++            'cooldown_hours' => (int) ($this->cooldown_hours ?? 0),
++            'track_url' => $analyticsActive ? route('popups.events', $this->id) : null,
++        ];
++    }
++}
+diff --git a/plugins/aec/popup-ads/1.0.0/src/PopupContentSanitizer.php b/plugins/aec/popup-ads/1.0.0/src/PopupContentSanitizer.php
+new file mode 100644
+index 0000000..1fcb10e
+--- /dev/null
++++ b/plugins/aec/popup-ads/1.0.0/src/PopupContentSanitizer.php
+@@ -0,0 +1,213 @@
++<?php
++
++namespace Aloms\PopupAds;
++
++use DOMDocument;
++use DOMElement;
++use DOMNode;
++
++final class PopupContentSanitizer
++{
++    private const ALLOWED_TAGS = [
++        'p', 'br', 'strong', 'b', 'em', 'i', 'u',
++        'ul', 'ol', 'li', 'h3', 'h4', 'blockquote', 'a', 'span',
++    ];
++
++    private const DROP_WITH_CONTENT_TAGS = [
++        'script', 'style', 'iframe', 'object', 'embed', 'applet',
++        'svg', 'math', 'form', 'input', 'button', 'textarea',
++        'select', 'option', 'link', 'meta', 'base', 'template',
++        'noscript', 'canvas', 'video', 'audio', 'source',
++    ];
++
++    public static function sanitizeHtml(?string $html): ?string
++    {
++        if (! is_string($html)) {
++            return null;
++        }
++
++        $cleaned = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $html) ?? '';
++        $cleaned = trim($cleaned);
++        if ($cleaned === '') {
++            return null;
++        }
++
++        if (! class_exists(DOMDocument::class)) {
++            return e(strip_tags($cleaned));
++        }
++
++        $previousErrorSetting = libxml_use_internal_errors(true);
++        $dom = new DOMDocument('1.0', 'UTF-8');
++        $wrapped = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body><div id="__popup_root">'.$cleaned.'</div></body></html>';
++        $dom->loadHTML($wrapped, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD | LIBXML_NONET);
++        libxml_clear_errors();
++        libxml_use_internal_errors($previousErrorSetting);
++
++        $root = $dom->getElementById('__popup_root');
++        if (! $root instanceof DOMElement) {
++            return null;
++        }
++
++        self::sanitizeChildren($root, $dom);
++
++        $output = '';
++        foreach ($root->childNodes as $child) {
++            $output .= $dom->saveHTML($child);
++        }
++
++        $output = trim($output);
++
++        return $output !== '' ? $output : null;
++    }
++
++    private static function sanitizeChildren(DOMNode $parent, DOMDocument $dom): void
++    {
++        $children = [];
++        foreach ($parent->childNodes as $child) {
++            $children[] = $child;
++        }
++
++        foreach ($children as $child) {
++            if ($child->nodeType === XML_COMMENT_NODE) {
++                $parent->removeChild($child);
++                continue;
++            }
++
++            if (! $child instanceof DOMElement) {
++                continue;
++            }
++
++            $tag = strtolower($child->tagName);
++
++            if (in_array($tag, self::DROP_WITH_CONTENT_TAGS, true)) {
++                $parent->removeChild($child);
++                continue;
++            }
++
++            self::sanitizeChildren($child, $dom);
++
++            if (! in_array($tag, self::ALLOWED_TAGS, true)) {
++                while ($child->firstChild !== null) {
++                    $parent->insertBefore($child->firstChild, $child);
++                }
++                $parent->removeChild($child);
++                continue;
++            }
++
++            $href = $tag === 'a' ? $child->getAttribute('href') : '';
++            $target = $tag === 'a' ? $child->getAttribute('target') : '';
++
++            $attributeNames = [];
++            foreach ($child->attributes as $attribute) {
++                $attributeNames[] = $attribute->name;
++            }
++            foreach ($attributeNames as $attributeName) {
++                $child->removeAttribute($attributeName);
++            }
++
++            if ($tag === 'a') {
++                $safeHref = self::normalizeSafeUrl($href);
++                if ($safeHref === null) {
++                    $span = $dom->createElement('span');
++                    while ($child->firstChild !== null) {
++                        $span->appendChild($child->firstChild);
++                    }
++                    $parent->replaceChild($span, $child);
++                    continue;
++                }
++
++                $child->setAttribute('href', $safeHref);
++                $child->setAttribute('rel', 'noopener noreferrer');
++                if ($target === '_blank' || str_starts_with(strtolower($safeHref), 'https://')) {
++                    $child->setAttribute('target', '_blank');
++                }
++            }
++        }
++    }
++
++    public static function normalizeSafeUrl(?string $url): ?string
++    {
++        if (! is_string($url)) {
++            return null;
++        }
++
++        $cleaned = preg_replace('/[\x00-\x20\x7F]+/u', '', trim($url)) ?? '';
++        if ($cleaned === '' || mb_strlen($cleaned) > 500) {
++            return null;
++        }
++
++        if (str_starts_with($cleaned, '//') || str_contains($cleaned, '\\')) {
++            return null;
++        }
++
++        if (str_starts_with($cleaned, '/')) {
++            return preg_match('/^\/[A-Za-z0-9\-._~:\/?#\[\]@!$&\'()*+,;=%]*$/', $cleaned) === 1
++                ? $cleaned
++                : null;
++        }
++
++        if (! preg_match('/^https:\/\//i', $cleaned)) {
++            return null;
++        }
++
++        $parts = parse_url($cleaned);
++        if (! is_array($parts) || strtolower((string) ($parts['scheme'] ?? '')) !== 'https') {
++            return null;
++        }
++
++        if (empty($parts['host']) || isset($parts['user']) || isset($parts['pass'])) {
++            return null;
++        }
++
++        return filter_var($cleaned, FILTER_VALIDATE_URL) !== false ? $cleaned : null;
++    }
++
++    public static function sanitizeHexColor(?string $color, string $default): string
++    {
++        $candidate = is_string($color) ? trim($color) : '';
++
++        return preg_match('/^#[0-9A-Fa-f]{6}$/', $candidate) === 1
++            ? strtolower($candidate)
++            : strtolower($default);
++    }
++
++    public static function normalizePathPatterns(?string $raw): ?string
++    {
++        if (! is_string($raw)) {
++            return null;
++        }
++
++        $tokens = preg_split('/[\r\n,]+/', $raw) ?: [];
++        $normalized = [];
++
++        foreach ($tokens as $token) {
++            $item = preg_replace('/[\x00-\x1F\x7F]/', '', trim($token)) ?? '';
++            if ($item === '') {
++                continue;
++            }
++
++            $negated = str_starts_with($item, '!');
++            $path = $negated ? substr($item, 1) : $item;
++            $path = trim($path);
++
++            if ($path === '' || str_contains($path, ' ') || str_contains($path, '\\') || str_contains($path, '..')) {
++                continue;
++            }
++
++            if (! str_starts_with($path, '/')) {
++                $path = '/'.$path;
++            }
++
++            if (str_starts_with($path, '//')) {
++                continue;
++            }
++
++            $entry = ($negated ? '!' : '').$path;
++            if (! in_array($entry, $normalized, true)) {
++                $normalized[] = $entry;
++            }
++        }
++
++        return $normalized !== [] ? implode("\n", array_slice($normalized, 0, 40)) : null;
++    }
++}
+diff --git a/plugins/aec/popup-ads/1.0.0/src/PublicPopupController.php b/plugins/aec/popup-ads/1.0.0/src/PublicPopupController.php
+new file mode 100644
+index 0000000..0dcaa07
+--- /dev/null
++++ b/plugins/aec/popup-ads/1.0.0/src/PublicPopupController.php
+@@ -0,0 +1,111 @@
++<?php
++
++namespace Aloms\PopupAds;
++
++use App\Http\Controllers\Controller;
++use Illuminate\Http\JsonResponse;
++use Illuminate\Http\Request;
++use Illuminate\Support\Facades\DB;
++use Illuminate\Support\Facades\Schema;
++use Illuminate\Validation\Rule;
++
++class PublicPopupController extends Controller
++{
++    public function active(Request $request): JsonResponse
++    {
++        if (! Schema::hasTable('visitor_popups')) {
++            return response()->json(['popup' => null]);
++        }
++
++        $validated = $request->validate([
++            'path' => ['nullable', 'string', 'max:255'],
++            'course_id' => ['nullable', 'integer', 'min:1'],
++            'batch_id' => ['nullable', 'integer', 'min:1'],
++        ]);
++
++        $rawPath = isset($validated['path']) ? trim((string) $validated['path']) : null;
++        $overridePath = null;
++        if ($rawPath !== null && $rawPath !== '') {
++            $overridePath = '/'.ltrim(str_replace(['..', '\\'], '', $rawPath), '/');
++        }
++
++        $consentGranted = $request->cookie('marketing_consent') === 'accepted';
++        $courseId = isset($validated['course_id']) ? (int) $validated['course_id'] : null;
++        $batchId = isset($validated['batch_id']) ? (int) $validated['batch_id'] : null;
++
++        $candidates = PopupCampaign::query()
++            ->currentlyEligible()
++            ->with(['image', 'mobileImage', 'events'])
++            ->orderByDesc('priority')
++            ->latest('id')
++            ->limit(25)
++            ->get();
++
++        $matched = $candidates->first(fn (PopupCampaign $campaign): bool =>
++            $campaign->matchesRequestContext($request, $overridePath, $courseId, $batchId)
++        );
++
++        return response()->json([
++            'popup' => $matched?->toPublicPayload($request->user(), $consentGranted),
++        ]);
++    }
++
++    public function track(Request $request, int $popup): JsonResponse
++    {
++        $validated = $request->validate([
++            'event' => ['required', 'string', Rule::in(['impression', 'click', 'dismissal'])],
++        ]);
++
++        $campaign = PopupCampaign::query()->currentlyEligible()->find($popup);
++        if (! $campaign) {
++            return response()->json(['recorded' => false], 404);
++        }
++
++        if (! $campaign->analytics_enabled) {
++            return response()->json(['recorded' => false, 'reason' => 'analytics_disabled'], 202);
++        }
++
++        if ($campaign->require_consent_for_analytics && $request->cookie('marketing_consent') !== 'accepted') {
++            return response()->json(['recorded' => false, 'reason' => 'consent_required'], 202);
++        }
++
++        if ($validated['event'] === 'impression' && $campaign->hasReachedImpressionCap()) {
++            return response()->json(['recorded' => false, 'reason' => 'impression_cap_reached'], 202);
++        }
++
++        $column = match ($validated['event']) {
++            'impression' => 'impressions',
++            'click' => 'clicks',
++            'dismissal' => 'dismissals',
++        };
++
++        $timezone = $campaign->timezone ?: config('app.timezone', 'UTC');
++        $eventDate = now($timezone)->toDateString();
++
++        DB::transaction(function () use ($campaign, $eventDate, $column): void {
++            $existing = DB::table('popup_ad_events')
++                ->where('popup_id', $campaign->id)
++                ->where('event_date', $eventDate)
++                ->lockForUpdate()
++                ->first();
++
++            if ($existing) {
++                DB::table('popup_ad_events')
++                    ->where('id', $existing->id)
++                    ->increment($column, 1, ['updated_at' => now()]);
++            } else {
++                DB::table('popup_ad_events')->insert([
++                    'popup_id' => $campaign->id,
++                    'event_date' => $eventDate,
++                    'impressions' => $column === 'impressions' ? 1 : 0,
++                    'clicks' => $column === 'clicks' ? 1 : 0,
++                    'dismissals' => $column === 'dismissals' ? 1 : 0,
++                    'created_at' => now(),
++                    'updated_at' => now(),
++                ]);
++            }
++        });
++
++        return response()->json(['recorded' => true]);
++    }
++}
+diff --git a/resources/views/admin/plugins/index.blade.php b/resources/views/admin/plugins/index.blade.php
+index 682dcb5..d88caff 100644
+--- a/resources/views/admin/plugins/index.blade.php
++++ b/resources/views/admin/plugins/index.blade.php
+@@ -88,6 +88,9 @@
+                                     <button class="btn primary" type="submit">{{ __('Activate') }}</button>
+                                 </form>
+                             @elseif($plugin->status === 'active')
++                                @if($plugin->plugin_key === 'aec.popup-ads' && \Illuminate\Support\Facades\Route::has('admin.visitor-popups.index'))
++                                    <a class="btn secondary" href="{{ route('admin.visitor-popups.index') }}">{{ __('Configure') }}</a>
++                                @endif
+                                 <form method="POST" action="{{ route('admin.plugins.deactivate', $plugin->plugin_key) }}" style="display:inline;" onsubmit="return confirm('{{ __('Deactivate this plugin? Its data and installed files will be retained.') }}')">
+                                     @csrf
+                                     <button class="btn secondary" type="submit">{{ __('Deactivate') }}</button>
+diff --git a/resources/views/admin/visitor-popups/form.blade.php b/resources/views/admin/visitor-popups/form.blade.php
+deleted file mode 100644
+index e65656f..0000000
+--- a/resources/views/admin/visitor-popups/form.blade.php
++++ /dev/null
+@@ -1,29 +0,0 @@
+-@extends('layouts.app')
+-@section('title', $popup->exists ? __('Edit popup') : __('Create popup'))
+-@section('content')
+-<div class="page-header"><div><h1>{{ $popup->exists ? __('Edit popup') : __('Create popup') }}</h1><p class="muted">{{ __('Only plain text and selected media are shown; HTML and scripts cannot be entered.') }}</p></div><a class="btn secondary" href="{{ route('admin.visitor-popups.index') }}">{{ __('Back') }}</a></div>
+-<div class="panel"><form method="POST" action="{{ $popup->exists ? route('admin.visitor-popups.update', $popup) : route('admin.visitor-popups.store') }}">@csrf @if($popup->exists)@method('PUT')@endif
+-<label>{{ __('Internal campaign title / visitor heading') }}<input name="title" maxlength="180" value="{{ old('title', $popup->title) }}" required></label>
+-<label>{{ __('Message / offer details') }}<textarea name="body" rows="5" maxlength="3000">{{ old('body', $popup->body) }}</textarea></label>
+-<div class="grid grid-2">
+-<label>{{ __('Popup purpose') }}<select name="popup_type">@foreach(['offer' => 'Offer', 'banner' => 'Banner', 'post' => 'Post promotion', 'ad' => 'Advertisement', 'registration' => 'Registration prompt'] as $value => $label)<option value="{{ $value }}" @selected(old('popup_type', $popup->popup_type) === $value)>{{ __($label) }}</option>@endforeach</select></label>
+-<label>{{ __('Visitor audience') }}<select name="audience">@foreach(['all' => 'All visitors', 'guests' => 'Guests only', 'members' => 'Logged-in members'] as $value => $label)<option value="{{ $value }}" @selected(old('audience', $popup->audience) === $value)>{{ __($label) }}</option>@endforeach</select></label>
+-</div>
+-<label>{{ __('Banner / post / ad image (Media Library)') }}<select name="image_media_id"><option value="">{{ __('No image') }}</option>@foreach($media as $asset)<option value="{{ $asset->id }}" @selected(old('image_media_id', $popup->image_media_id) == $asset->id)>{{ $asset->original_name }}</option>@endforeach</select></label>
+-<div class="grid grid-2">
+-<label>{{ __('Button text') }}<input name="button_label" maxlength="60" value="{{ old('button_label', $popup->button_label) }}" placeholder="{{ __('e.g. View offer / Register now') }}"></label>
+-<label>{{ __('Button destination') }}<input name="button_url" maxlength="500" value="{{ old('button_url', $popup->button_url) }}" placeholder="/register or https://example.com"></label>
+-</div>
+-<div class="grid grid-2">
+-<label>{{ __('Display frequency') }}<select name="frequency">@foreach(['every_page' => 'Every page view', 'once_per_session' => 'Once per browser session', 'once_per_day' => 'Once per day', 'once_per_browser' => 'Once per browser (until cleared)'] as $value => $label)<option value="{{ $value }}" @selected(old('frequency', $popup->frequency) === $value)>{{ __($label) }}</option>@endforeach</select></label>
+-<label>{{ __('Popup delay (seconds)') }}<input type="number" name="delay_seconds" min="0" max="60" value="{{ old('delay_seconds', $popup->delay_seconds ?? 1) }}" required></label>
+-</div>
+-<div class="grid grid-2">
+-<label>{{ __('Start date/time') }}<input type="datetime-local" name="starts_at" value="{{ old('starts_at', $popup->starts_at?->format('Y-m-d\TH:i')) }}"></label>
+-<label>{{ __('End date/time') }}<input type="datetime-local" name="ends_at" value="{{ old('ends_at', $popup->ends_at?->format('Y-m-d\TH:i')) }}"></label>
+-</div>
+-<label>{{ __('Priority (higher appears first)') }}<input type="number" name="priority" min="0" max="10000" value="{{ old('priority', $popup->priority ?? 0) }}"></label>
+-<label style="display:flex;align-items:center;gap:10px;"><input type="checkbox" name="is_active" value="1" style="width:auto;" @checked(old('is_active', $popup->is_active))> {{ __('Activate this popup') }}</label>
+-<button class="btn primary" type="submit">{{ __('Save popup') }}</button>
+-</form></div>
+-@endsection
+diff --git a/resources/views/admin/visitor-popups/index.blade.php b/resources/views/admin/visitor-popups/index.blade.php
+deleted file mode 100644
+index 2fa4e06..0000000
+--- a/resources/views/admin/visitor-popups/index.blade.php
++++ /dev/null
+@@ -1,20 +0,0 @@
+-@extends('layouts.app')
+-@section('title', __('Visitor popups'))
+-@section('content')
+-<div class="page-header"><div><span class="badge info">{{ __('Website marketing') }}</span><h1>{{ __('Visitor popups') }}</h1><p class="muted">{{ __('Create timed offers, banners, post promotions, ads or registration prompts for website visitors.') }}</p></div><a class="btn primary" href="{{ route('admin.visitor-popups.create') }}">{{ __('Create popup') }}</a></div>
+-<div class="panel"><div class="course-list">
+-@forelse($popups as $popup)
+-<div class="course-item">
+-    <div class="page-header" style="margin:0 0 10px;"><div><h3 style="margin:0 0 6px;">{{ $popup->title }}</h3><span class="badge info">{{ ucfirst($popup->popup_type) }}</span> <span class="badge {{ $popup->is_active ? 'success' : 'warning' }}">{{ $popup->is_active ? __('Active') : __('Inactive') }}</span></div><strong>{{ __('Priority') }}: {{ $popup->priority }}</strong></div>
+-    @if($popup->image)<img src="{{ $popup->image->url }}" alt="{{ $popup->title }}" loading="lazy" style="width:100%;max-width:360px;max-height:140px;object-fit:cover;border-radius:10px;">@endif
+-    <p class="muted">{{ \Illuminate\Support\Str::limit($popup->body, 180) }}</p>
+-    <div class="meta-row"><small>{{ __('Audience') }}: {{ ucfirst($popup->audience) }} · {{ __('Frequency') }}: {{ str_replace('_', ' ', $popup->frequency) }} · {{ __('Delay') }}: {{ $popup->delay_seconds }}s</small><small>{{ $popup->starts_at?->format('d M Y H:i') ?? __('Immediately') }} – {{ $popup->ends_at?->format('d M Y H:i') ?? __('No end date') }}</small></div>
+-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;">
+-        <a class="btn secondary" href="{{ route('admin.visitor-popups.edit', $popup) }}">{{ __('Edit') }}</a>
+-        <form method="POST" action="{{ route('admin.visitor-popups.toggle', $popup) }}">@csrf @method('PATCH')<button class="btn secondary">{{ $popup->is_active ? __('Deactivate') : __('Activate') }}</button></form>
+-        <form method="POST" action="{{ route('admin.visitor-popups.destroy', $popup) }}" onsubmit="return confirm('{{ __('Delete this popup?') }}')">@csrf @method('DELETE')<button class="btn secondary">{{ __('Delete') }}</button></form>
+-    </div>
+-</div>
+-@empty<p class="muted">{{ __('No popup campaigns created yet.') }}</p>@endforelse
+-</div>{{ $popups->links() }}</div>
+-@endsection
+diff --git a/resources/views/components/visitor-promo-popup.blade.php b/resources/views/components/visitor-promo-popup.blade.php
+deleted file mode 100644
+index e88a3b8..0000000
+--- a/resources/views/components/visitor-promo-popup.blade.php
++++ /dev/null
+@@ -1,67 +0,0 @@
+-        @php
+-            $popupButtonUrl = $visitorPopup->popup_type === 'registration'
+-                ? (auth()->check() ? route('dashboard') : route('register'))
+-                : ($visitorPopup->button_url ? (str_starts_with($visitorPopup->button_url, '/') ? url($visitorPopup->button_url) : $visitorPopup->button_url) : null);
+-            $popupButtonLabel = $visitorPopup->button_label ?: ($visitorPopup->popup_type === 'registration' ? __('Register now') : __('Learn more'));
+-            $popupIsExternal = $popupButtonUrl && str_starts_with($popupButtonUrl, 'https://') && !str_starts_with($popupButtonUrl, url('/'));
+-            $popupBadgeClass = $visitorPopup->popup_type === 'ad' ? 'warning' : ($visitorPopup->popup_type === 'registration' ? 'success' : 'info');
+-            $popupBadgeLabel = $visitorPopup->popup_type === 'ad' ? __('Advertisement') : ($visitorPopup->popup_type === 'registration' ? __('Join us') : ucfirst($visitorPopup->popup_type));
+-        @endphp
+-        <div id="visitor-promo-overlay" role="dialog" aria-modal="true" aria-labelledby="visitor-promo-title" aria-describedby="visitor-promo-description" data-popup-id="{{ $visitorPopup->id }}" data-frequency="{{ $visitorPopup->frequency }}" data-delay="{{ $visitorPopup->delay_seconds }}" hidden style="position:fixed;inset:0;z-index:1000;background:rgba(8,18,40,.72);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:18px;">
+-            <section style="position:relative;width:min(620px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:20px;box-shadow:0 28px 90px rgba(0,0,0,.35);">
+-                <button id="visitor-promo-close" type="button" aria-label="{{ __('Close popup') }}" style="position:absolute;right:12px;top:12px;z-index:2;border:0;border-radius:50%;width:40px;height:40px;background:rgba(15,23,42,.82);color:#fff;font-size:25px;cursor:pointer;">&times;</button>
+-                @if($visitorPopup->image)
+-                    <img src="{{ $visitorPopup->image->url }}" alt="{{ $visitorPopup->title }}" style="display:block;width:100%;max-height:290px;object-fit:cover;">
+-                @endif
+-                <div style="padding:26px;">
+-                    <span class="badge {{ $popupBadgeClass }}">{{ $popupBadgeLabel }}</span>
+-                    <h2 id="visitor-promo-title" style="margin:12px 0;color:#14213d;">{{ $visitorPopup->title }}</h2>
+-                    <p id="visitor-promo-description" style="white-space:pre-line;line-height:1.7;color:#4b5563;">{{ $visitorPopup->body }}</p>
+-                    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;">
+-                        @if($popupButtonUrl)
+-                            <a class="btn primary" href="{{ $popupButtonUrl }}" target="{{ $popupIsExternal ? '_blank' : '_self' }}" rel="{{ $popupIsExternal || $visitorPopup->popup_type === 'ad' ? 'sponsored noopener noreferrer' : 'noopener noreferrer' }}">{{ $popupButtonLabel }}</a>
+-                        @endif
+-                        <button id="visitor-promo-dismiss" type="button" class="btn secondary">{{ __('Maybe later') }}</button>
+-                    </div>
+-                </div>
+-            </section>
+-        </div>
+-        <script>
+-            (function () {
+-                const overlay = document.getElementById('visitor-promo-overlay');
+-                if (!overlay) return;
+-                const id = overlay.dataset.popupId;
+-                const frequency = overlay.dataset.frequency;
+-                const key = 'aec-popup-' + id;
+-                const now = Date.now();
+-                let shouldShow = true;
+-                try {
+-                    if (frequency === 'once_per_session') shouldShow = !sessionStorage.getItem(key);
+-                    if (frequency === 'once_per_day') shouldShow = !(Number(localStorage.getItem(key) || 0) > now);
+-                    if (frequency === 'once_per_browser') shouldShow = !localStorage.getItem(key);
+-                } catch (e) {}
+-                if (!shouldShow) return;
+-                const close = () => {
+-                    overlay.style.display = 'none';
+-                    overlay.hidden = true;
+-                    document.body.style.overflow = '';
+-                };
+-                const markShown = () => {
+-                    try {
+-                        if (frequency === 'once_per_session') sessionStorage.setItem(key, '1');
+-                        if (frequency === 'once_per_day') localStorage.setItem(key, String(now + 86400000));
+-                        if (frequency === 'once_per_browser') localStorage.setItem(key, '1');
+-                    } catch (e) {}
+-                };
+-                document.getElementById('visitor-promo-close')?.addEventListener('click', close);
+-                document.getElementById('visitor-promo-dismiss')?.addEventListener('click', close);
+-                overlay.addEventListener('click', event => { if (event.target === overlay) close(); });
+-                document.addEventListener('keydown', event => { if (event.key === 'Escape' && !overlay.hidden) close(); });
+-                window.setTimeout(() => {
+-                    overlay.hidden = false;
+-                    overlay.style.display = 'flex';
+-                    document.body.style.overflow = 'hidden';
+-                    markShown();
+-                }, Math.max(0, Math.min(60, Number(overlay.dataset.delay || 0))) * 1000);
+-            })();
+-        </script>
+diff --git a/resources/views/layouts/app.blade.php b/resources/views/layouts/app.blade.php
+index 759b85f..e11a1a4 100644
+--- a/resources/views/layouts/app.blade.php
++++ b/resources/views/layouts/app.blade.php
+@@ -14,13 +14,6 @@
+         $googleSearchConsoleVerification = $hasSettingsTable ? \App\Models\Setting::value('google_search_console_verification') : null;
+         $marketingConsent = request()->cookie('marketing_consent') === 'accepted';
+         $isAdminLayout = auth()->check() && (auth()->user()->isAdmin() || auth()->user()->isBranchManager() || auth()->user()->isAccountant());
+-        $visitorPopup = null;
+-        $popupAdsEnabled = $hasSettingsTable && app(\App\Services\Modules\ModuleRegistry::class)->isEnabled('popup_ads');
+-        if ($popupAdsEnabled && \Illuminate\Support\Facades\Schema::hasTable('visitor_popups') && ! $isAdminLayout) {
+-            $visitorPopup = \App\Models\VisitorPopup::currentlyActive()->with('image')
+-                ->where(function ($query) { $query->where('audience', 'all')->orWhere('audience', auth()->check() ? 'members' : 'guests'); })
+-                ->orderByDesc('priority')->latest()->first();
+-        }
+         $isPublicLayout = ! $isAdminLayout;
+         $websiteHeaderLinks = $isPublicLayout && $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('header_links', '[]'), true) : [];
+         $websiteFooterTitle = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('footer_title', config('app.name')) : config('app.name');
+@@ -304,7 +297,7 @@
+             <a class="{{ request()->routeIs('admin.marketing.meta-ads.*') ? 'active' : '' }}" href="{{ route('admin.marketing.meta-ads.index') }}"><span>🔗</span><span class="nav-text">Meta Ads integration</span></a>
+             <a class="{{ request()->routeIs('admin.comments.*') ? 'active' : '' }}" href="{{ route('admin.comments.index') }}"><span>💬</span><span class="nav-text">Comment moderation</span></a>
+             <a class="{{ request()->routeIs('admin.support-tickets.*') ? 'active' : '' }}" href="{{ route('admin.support-tickets.index') }}"><span>🎧</span><span class="nav-text">Support tickets</span></a>
+-            @if(app(\App\Services\Modules\ModuleRegistry::class)->isEnabled('popup_ads'))
++            @if(\Illuminate\Support\Facades\Route::has('admin.visitor-popups.index'))
+                 <a class="{{ request()->routeIs('admin.visitor-popups.*') ? 'active' : '' }}" href="{{ route('admin.visitor-popups.index') }}"><span>📣</span><span class="nav-text">Popup Ads</span></a>
+             @endif
+             <a class="{{ request()->routeIs('admin.dashboard-announcements.*') ? 'active' : '' }}" href="{{ route('admin.dashboard-announcements.index') }}"><span>🔔</span><span class="nav-text">Dashboard announcements</span></a>
+@@ -525,7 +518,9 @@
+             });
+         })();
+     </script>
+-    @includeWhen($visitorPopup, 'components.visitor-promo-popup', ['visitorPopup' => $visitorPopup])
++    @if(! $isAdminLayout && app()->bound('popup_ads.render'))
++        {!! app('popup_ads.render')(request()) !!}
++    @endif
+     @stack('scripts')
+ </body>
+ </html>
+diff --git a/routes/web.php b/routes/web.php
+index ae6278e..14fde49 100644
+--- a/routes/web.php
++++ b/routes/web.php
+@@ -65,7 +65,6 @@ use App\Http\Controllers\AdminSupportTicketController;
+ use App\Http\Controllers\AdminDashboardAnnouncementController;
+ use App\Http\Controllers\NoticeBoardController;
+ use App\Http\Controllers\AdminDeviceSessionController;
+-use App\Http\Controllers\AdminVisitorPopupController;
+ use App\Http\Controllers\AdminCourseCategoryController;
+ use App\Http\Controllers\AdminCourseContentPostController;
+ use App\Http\Controllers\AdminCourseBuilderController;
+@@ -323,15 +322,6 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
+         Route::put('/dashboard-announcements/{dashboardAnnouncement}', [AdminDashboardAnnouncementController::class, 'update'])->name('admin.dashboard-announcements.update');
+         Route::patch('/dashboard-announcements/{dashboardAnnouncement}/toggle', [AdminDashboardAnnouncementController::class, 'toggle'])->name('admin.dashboard-announcements.toggle');
+         Route::delete('/dashboard-announcements/{dashboardAnnouncement}', [AdminDashboardAnnouncementController::class, 'destroy'])->name('admin.dashboard-announcements.destroy');
+-        Route::middleware('module.enabled:popup_ads')->group(function () {
+-            Route::get('/visitor-popups', [AdminVisitorPopupController::class, 'index'])->name('admin.visitor-popups.index');
+-            Route::get('/visitor-popups/create', [AdminVisitorPopupController::class, 'create'])->name('admin.visitor-popups.create');
+-            Route::post('/visitor-popups', [AdminVisitorPopupController::class, 'store'])->name('admin.visitor-popups.store');
+-            Route::get('/visitor-popups/{visitorPopup}/edit', [AdminVisitorPopupController::class, 'edit'])->name('admin.visitor-popups.edit');
+-            Route::put('/visitor-popups/{visitorPopup}', [AdminVisitorPopupController::class, 'update'])->name('admin.visitor-popups.update');
+-            Route::patch('/visitor-popups/{visitorPopup}/toggle', [AdminVisitorPopupController::class, 'toggle'])->name('admin.visitor-popups.toggle');
+-            Route::delete('/visitor-popups/{visitorPopup}', [AdminVisitorPopupController::class, 'destroy'])->name('admin.visitor-popups.destroy');
+-        });
+         Route::get('/comments', [AdminCommentController::class, 'index'])->name('admin.comments.index');
+         Route::put('/comments/{comment}', [AdminCommentController::class, 'update'])->name('admin.comments.update');
+         Route::delete('/comments/{comment}', [AdminCommentController::class, 'destroy'])->name('admin.comments.destroy');
+diff --git a/tests/Feature/VisitorPopupManagementTest.php b/tests/Feature/VisitorPopupManagementTest.php
+index 3f22877..362731a 100644
+--- a/tests/Feature/VisitorPopupManagementTest.php
++++ b/tests/Feature/VisitorPopupManagementTest.php
+@@ -2,90 +2,214 @@
+ 
+ namespace Tests\Feature;
+ 
+-use App\Models\VisitorPopup;
++use Aloms\PopupAds\PopupAdEvent;
++use Aloms\PopupAds\PopupCampaign;
++use App\Models\Branch;
++use App\Models\Course;
++use App\Models\Enrollment;
++use App\Models\MediaAsset;
++use App\Models\PluginInstallation;
+ use App\Models\User;
+-use App\Models\Setting;
++use App\Services\Modules\ModuleRegistry;
++use App\Services\Plugins\PluginRuntime;
++use FilesystemIterator;
+ use Illuminate\Foundation\Testing\RefreshDatabase;
++use Illuminate\Http\UploadedFile;
++use Illuminate\Support\Facades\DB;
++use Illuminate\Support\Facades\Schema;
++use Illuminate\Support\Facades\Storage;
++use RecursiveDirectoryIterator;
++use RecursiveIteratorIterator;
+ use Tests\TestCase;
+ 
+ class VisitorPopupManagementTest extends TestCase
+ {
+     use RefreshDatabase;
+ 
+-    public function test_active_guest_popup_is_rendered_for_visitors(): void
++    private function activatePopupAdsPlugin(bool $bootRuntime = true): PluginInstallation
+     {
+-        VisitorPopup::create([
+-            'title' => 'Welcome offer',
+-            'body' => 'Register today for a special offer.',
+-            'popup_type' => 'registration',
+-            'audience' => 'guests',
+-            'frequency' => 'once_per_session',
+-            'delay_seconds' => 0,
+-            'is_active' => true,
+-        ]);
++        $packageRelative = 'plugins/aec/popup-ads/1.0.0';
++        $packageRoot = base_path($packageRelative);
++        $manifest = json_decode((string) file_get_contents($packageRoot.'/plugin.json'), true, 512, JSON_THROW_ON_ERROR);
+ 
+-        $this->get(route('landing'))
+-            ->assertOk()
+-            ->assertSee('visitor-promo-overlay', false)
+-            ->assertSee('Welcome offer')
+-            ->assertSee(route('register'));
++        $hashes = [];
++        $iterator = new RecursiveIteratorIterator(
++            new RecursiveDirectoryIterator(realpath($packageRoot), FilesystemIterator::SKIP_DOTS),
++            RecursiveIteratorIterator::SELF_FIRST
++        );
++        $realRoot = rtrim((string) realpath($packageRoot), DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR;
++        foreach ($iterator as $item) {
++            if (! $item->isFile()) {
++                continue;
++            }
++            $relative = str_replace(DIRECTORY_SEPARATOR, '/', substr($item->getPathname(), strlen($realRoot)));
++            $hashes[$relative] = hash_file('sha256', $item->getRealPath());
++        }
++
++        config(['plugins.trusted_public_keys' => ['aec-release-2026' => 'dGVzdC1wdWJsaWMta2V5']]);
++
++        $plugin = PluginInstallation::query()->updateOrCreate(
++            ['plugin_key' => 'aec.popup-ads'],
++            [
++                'name' => $manifest['name'],
++                'version' => $manifest['version'],
++                'type' => $manifest['type'],
++                'status' => 'active',
++                'manifest' => $manifest,
++                'package_sha256' => hash('sha256', 'signed-popup-ads-1.0.0'),
++                'signature_key_id' => 'aec-release-2026',
++                'signature_verified_at' => now(),
++                'package_path' => $packageRelative,
++                'installed_at' => now(),
++                'activated_at' => now(),
++                'metadata' => [
++                    'integrity_version' => 1,
++                    'installed_file_hashes' => $hashes,
++                ],
++            ]
++        );
++
++        $migration = require $packageRoot.'/migrations/2026_11_15_200000_upgrade_popup_ads_plugin_tables.php';
++        $migration->up();
++
++        if ($bootRuntime) {
++            $runtime = app(PluginRuntime::class);
++            $runtime->registerActivePlugins();
++            $runtime->bootActivePlugins();
++            app('router')->getRoutes()->refreshNameLookups();
++            app('router')->getRoutes()->refreshActionLookups();
++        }
++
++        return $plugin;
+     }
+ 
+-    public function test_inactive_or_wrong_audience_popup_is_not_rendered(): void
++    public function test_popup_ads_module_is_managed_by_plugin_manager_and_inactive_by_default(): void
+     {
+-        VisitorPopup::create([
+-            'title' => 'Members only offer',
+-            'popup_type' => 'offer',
+-            'audience' => 'members',
+-            'frequency' => 'once_per_day',
+-            'is_active' => true,
+-        ]);
++        $catalog = app(ModuleRegistry::class)->catalog();
+ 
+-        $this->get(route('landing'))->assertOk()->assertDontSee('Members only offer');
++        $this->assertArrayHasKey('popup_ads', $catalog);
++        $this->assertTrue($catalog['popup_ads']['managed_by_plugin_manager']);
++        $this->assertFalse($catalog['popup_ads']['installed']);
++        $this->assertFalse($catalog['popup_ads']['enabled']);
++        $this->assertSame('not_installed', $catalog['popup_ads']['status']);
++
++        $this->expectException(\InvalidArgumentException::class);
++        app(ModuleRegistry::class)->setEnabled('popup_ads', true);
++    }
+ 
+-        VisitorPopup::create([
+-            'title' => 'Disabled offer',
++    public function test_absent_or_inactive_plugin_stops_serving_popup_routes_and_preserves_data(): void
++    {
++        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
++        $id = DB::table('visitor_popups')->insertGetId([
++            'title' => 'Retained campaign',
++            'body' => 'Should stay stored when plugin is inactive.',
+             'popup_type' => 'offer',
+             'audience' => 'all',
+-            'is_active' => false,
++            'frequency' => 'once_per_session',
++            'delay_seconds' => 0,
++            'is_active' => true,
++            'created_at' => now(),
++            'updated_at' => now(),
+         ]);
+ 
+-        $this->get(route('landing'))->assertDontSee('Disabled offer');
++        $this->get('/admin/visitor-popups')->assertNotFound();
++        $this->get('/popups/active')->assertNotFound();
++        $this->get(route('landing'))->assertOk()->assertDontSee('Retained campaign');
++
++        $this->activatePopupAdsPlugin();
++        $this->actingAs($admin)->get('/admin/visitor-popups')->assertOk()->assertSee('Retained campaign');
++
++        PluginInstallation::query()->where('plugin_key', 'aec.popup-ads')->update(['status' => 'inactive']);
++
++        $this->actingAs($admin)->get('/admin/visitor-popups')->assertNotFound();
++        $this->get('/popups/active')->assertNotFound();
++        $this->get(route('landing'))->assertOk()->assertDontSee('Retained campaign');
++        $this->assertDatabaseHas('visitor_popups', ['id' => $id, 'title' => 'Retained campaign']);
+     }
+ 
+-    public function test_admin_can_create_and_manage_popup_campaigns(): void
++    public function test_admin_can_crud_duplicate_pause_resume_archive_and_audit_campaigns(): void
+     {
+-        $admin = User::factory()->create(['role' => 'admin']);
++        $this->activatePopupAdsPlugin();
++        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+ 
+         $this->actingAs($admin)->post(route('admin.visitor-popups.store'), [
+-            'title' => 'Course launch banner',
+-            'body' => 'New course now available.',
+-            'popup_type' => 'banner',
+-            'audience' => 'all',
++            'title' => 'Eid Grammar Offer',
++            'body' => 'Enroll before Friday.',
++            'popup_type' => 'offer',
++            'content_mode' => 'mixed',
++            'layout' => 'corner_card',
++            'placement' => 'bottom_right',
++            'max_width_px' => 420,
++            'background_color' => '#ffffff',
++            'text_color' => '#14213d',
++            'accent_color' => '#1546a8',
++            'button_label' => 'Enroll Now',
++            'button_url' => '/register',
++            'audience' => 'guests',
+             'frequency' => 'once_per_day',
+             'delay_seconds' => 2,
+-            'button_label' => 'View course',
+-            'button_url' => '/courses',
+-            'is_active' => '1',
+-            'priority' => 10,
++            'scroll_trigger_percent' => 25,
++            'cooldown_hours' => 12,
++            'status' => 'active',
++            'priority' => 90,
+         ])->assertRedirect(route('admin.visitor-popups.index'));
+ 
+-        $popup = VisitorPopup::firstOrFail();
++        $popup = PopupCampaign::query()->firstOrFail();
+         $this->assertTrue($popup->is_active);
+-        $this->assertSame('/courses', $popup->button_url);
++        $this->assertSame('corner_card', $popup->layout);
++        $this->assertDatabaseHas('activity_logs', [
++            'user_id' => $admin->id,
++            'event' => 'admin.popup-ads.created',
++        ]);
++
++        $this->actingAs($admin)->get(route('admin.visitor-popups.edit', $popup->id))
++            ->assertOk()
++            ->assertSee('Eid Grammar Offer');
+ 
+-        $this->actingAs($admin)->patch(route('admin.visitor-popups.toggle', $popup))
+-            ->assertRedirect();
++        $this->actingAs($admin)->put(route('admin.visitor-popups.update', $popup->id), [
++            'title' => 'Eid Grammar Offer Updated',
++            'body' => 'Enroll before Sunday.',
++            'popup_type' => 'offer',
++            'content_mode' => 'mixed',
++            'layout' => 'full_banner',
++            'placement' => 'bottom',
++            'audience' => 'guests',
++            'frequency' => 'once_per_day',
++            'delay_seconds' => 3,
++            'status' => 'active',
++            'priority' => 95,
++        ])->assertRedirect(route('admin.visitor-popups.index'));
++
++        $this->assertSame('Eid Grammar Offer Updated', $popup->fresh()->title);
++        $this->assertSame('full_banner', $popup->fresh()->layout);
++
++        $this->actingAs($admin)->post(route('admin.visitor-popups.duplicate', $popup->id))->assertRedirect();
++        $this->assertDatabaseCount('visitor_popups', 2);
++
++        $this->actingAs($admin)->patch(route('admin.visitor-popups.pause', $popup->id))->assertRedirect();
+         $this->assertFalse($popup->fresh()->is_active);
++        $this->assertSame('paused', $popup->fresh()->status);
++
++        $this->actingAs($admin)->patch(route('admin.visitor-popups.resume', $popup->id))->assertRedirect();
++        $this->assertTrue($popup->fresh()->is_active);
++        $this->assertSame('active', $popup->fresh()->status);
++
++        $this->actingAs($admin)->patch(route('admin.visitor-popups.archive', $popup->id))->assertRedirect();
++        $this->assertFalse($popup->fresh()->is_active);
++        $this->assertSame('archived', $popup->fresh()->status);
++
++        $this->actingAs($admin)->delete(route('admin.visitor-popups.destroy', $popup->id))->assertRedirect();
++        $this->assertDatabaseMissing('visitor_popups', ['id' => $popup->id]);
+     }
+ 
+-    public function test_unsafe_popup_destinations_are_rejected(): void
++    public function test_rich_html_sanitization_and_unsafe_url_rejection_prevent_xss(): void
+     {
+-        $admin = User::factory()->create(['role' => 'admin']);
++        $this->activatePopupAdsPlugin();
++        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+ 
+         $this->actingAs($admin)->from(route('admin.visitor-popups.create'))
+             ->post(route('admin.visitor-popups.store'), [
+-                'title' => 'Unsafe link',
++                'title' => 'Unsafe CTA',
+                 'popup_type' => 'ad',
+                 'audience' => 'all',
+                 'frequency' => 'every_page',
+@@ -93,35 +217,210 @@ class VisitorPopupManagementTest extends TestCase
+                 'button_url' => 'javascript:alert(1)',
+             ])->assertSessionHasErrors('button_url');
+ 
+-        $this->assertDatabaseCount('visitor_popups', 0);
+-    }
++        $this->actingAs($admin)->from(route('admin.visitor-popups.create'))
++            ->post(route('admin.visitor-popups.store'), [
++                'title' => 'Protocol relative',
++                'popup_type' => 'ad',
++                'audience' => 'all',
++                'frequency' => 'every_page',
++                'delay_seconds' => 0,
++                'button_url' => '//evil.example/phish',
++            ])->assertSessionHasErrors('button_url');
+ 
++        $this->actingAs($admin)->post(route('admin.visitor-popups.store'), [
++            'title' => 'Sanitized Announcement',
++            'popup_type' => 'announcement',
++            'content_mode' => 'sanitized_html',
++            'rich_html' => '<p onclick="alert(1)"><strong>Big Update</strong> <script>alert("xss")</script><a href="javascript:alert(2)">Bad</a> <a href="https://example.com/offer">Good</a></p>',
++            'audience' => 'all',
++            'frequency' => 'once_per_session',
++            'delay_seconds' => 0,
++            'status' => 'active',
++        ])->assertRedirect(route('admin.visitor-popups.index'));
+ 
+-    public function test_disabling_popup_ads_hides_campaigns_and_blocks_admin_routes_without_deleting_data(): void
++        $popup = PopupCampaign::query()->firstOrFail();
++        $this->assertStringNotContainsString('<script>', (string) $popup->rich_html);
++        $this->assertStringNotContainsString('onclick', (string) $popup->rich_html);
++        $this->assertStringNotContainsString('javascript:', (string) $popup->rich_html);
++        $this->assertStringContainsString('<strong>Big Update</strong>', (string) $popup->rich_html);
++        $this->assertStringContainsString('https://example.com/offer', (string) $popup->rich_html);
++        $this->assertStringContainsString('noopener noreferrer', (string) $popup->rich_html);
++
++        $this->get(route('landing'))
++            ->assertOk()
++            ->assertSee('Sanitized Announcement')
++            ->assertDontSee('<script>alert("xss")</script>', false);
++    }
++
++    public function test_image_uploads_validate_mime_and_store_through_media_assets(): void
+     {
++        Storage::fake('public');
++        $this->activatePopupAdsPlugin();
+         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+-        $popup = VisitorPopup::create([
+-            'title' => 'Keep my campaign data',
+-            'body' => 'This campaign must remain stored.',
+-            'popup_type' => 'offer',
++
++        $this->actingAs($admin)->from(route('admin.visitor-popups.create'))
++            ->post(route('admin.visitor-popups.store'), [
++                'title' => 'Reject SVG script',
++                'popup_type' => 'banner',
++                'audience' => 'all',
++                'frequency' => 'once_per_session',
++                'delay_seconds' => 0,
++                'desktop_image' => UploadedFile::fake()->create('evil.svg', 10, 'image/svg+xml'),
++            ])->assertSessionHasErrors('desktop_image');
++
++        $this->actingAs($admin)->post(route('admin.visitor-popups.store'), [
++            'title' => 'Responsive Banner',
++            'popup_type' => 'banner',
++            'content_mode' => 'image_only',
+             'audience' => 'all',
+             'frequency' => 'once_per_session',
+             'delay_seconds' => 0,
+-            'is_active' => true,
++            'status' => 'active',
++            'desktop_image' => UploadedFile::fake()->image('desktop.png', 1200, 500),
++            'mobile_image' => UploadedFile::fake()->image('mobile.jpg', 600, 600),
++        ])->assertRedirect(route('admin.visitor-popups.index'));
++
++        $popup = PopupCampaign::query()->with(['image', 'mobileImage'])->firstOrFail();
++        $this->assertNotNull($popup->image_media_id);
++        $this->assertNotNull($popup->mobile_image_media_id);
++        $this->assertSame(2, MediaAsset::query()->count());
++        Storage::disk('public')->assertExists($popup->image->path);
++        Storage::disk('public')->assertExists($popup->mobileImage->path);
++    }
++
++    public function test_targeting_scheduling_priority_and_admin_preview_behave_accurately(): void
++    {
++        $this->activatePopupAdsPlugin();
++        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
++        $branch = Branch::create(['name' => 'Dhaka Main', 'slug' => 'dhaka-main', 'is_active' => true]);
++        $teacher = User::factory()->create(['role' => 'teacher', 'email_verified_at' => now()]);
++        $studentInBranch = User::factory()->create(['role' => 'student', 'branch_id' => $branch->id, 'email_verified_at' => now()]);
++        $otherStudent = User::factory()->create(['role' => 'student', 'email_verified_at' => now()]);
++        $course = Course::factory()->create(['teacher_id' => $teacher->id, 'status' => 'published']);
++        Enrollment::create(['user_id' => $studentInBranch->id, 'course_id' => $course->id, 'status' => 'active']);
++
++        $draftPopup = PopupCampaign::create([
++            'title' => 'Secret Admin Draft',
++            'body' => 'Should never leak publicly.',
++            'popup_type' => 'announcement',
++            'audience' => 'all',
++            'frequency' => 'every_page',
++            'delay_seconds' => 0,
++            'is_active' => false,
++            'status' => 'draft',
++            'priority' => 999,
+         ]);
+ 
+-        Setting::setValue('module_registry', json_encode(['popup_ads' => false]));
++        $targetedPopup = PopupCampaign::create([
++            'title' => 'Branch Course Offer',
++            'body' => 'Special workshop for enrolled Dhaka branch students.',
++            'popup_type' => 'offer',
++            'audience' => 'members',
++            'target_paths' => "/courses*\n!/courses/excluded",
++            'target_roles' => ['student'],
++            'target_branch_id' => $branch->id,
++            'target_course_id' => $course->id,
++            'frequency' => 'once_per_day',
++            'delay_seconds' => 0,
++            'is_active' => true,
++            'status' => 'active',
++            'starts_at' => now()->subHour(),
++            'ends_at' => now()->addDay(),
++            'priority' => 50,
++        ]);
+ 
+-        $this->get(route('landing'))->assertOk()->assertDontSee('Keep my campaign data');
+-        $this->actingAs($admin)->get(route('admin.visitor-popups.index'))->assertNotFound();
++        // Draft must never appear publicly, but admin preview works and non-admin is forbidden.
++        $this->getJson('/popups/active')->assertOk()->assertJson(['popup' => null]);
++        $this->actingAs($admin)->get(route('admin.visitor-popups.preview', $draftPopup->id))
++            ->assertOk()
++            ->assertSee('Secret Admin Draft')
++            ->assertSee('Admin-only preview');
++        $this->actingAs($studentInBranch)->get(route('admin.visitor-popups.preview', $draftPopup->id))->assertForbidden();
+ 
+-        $this->assertDatabaseHas('visitor_popups', ['id' => $popup->id, 'title' => 'Keep my campaign data']);
++        // Wrong user or excluded path -> no match; matching student on /courses -> returns targeted campaign.
++        $this->actingAs($otherStudent)->getJson('/popups/active?path=/courses')->assertOk()->assertJson(['popup' => null]);
++        $this->actingAs($studentInBranch)->getJson('/popups/active?path=/courses/excluded')->assertOk()->assertJson(['popup' => null]);
++        $this->actingAs($studentInBranch)->getJson('/popups/active?path=/courses')
++            ->assertOk()
++            ->assertJsonPath('popup.id', $targetedPopup->id)
++            ->assertJsonPath('popup.title', 'Branch Course Offer');
+     }
+ 
+-    public function test_non_admin_cannot_manage_popup_campaigns(): void
++    public function test_consent_aware_analytics_impression_caps_export_purge_and_access_control(): void
+     {
+-        $student = User::factory()->create(['role' => 'student']);
++        $this->activatePopupAdsPlugin();
++        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
++        $student = User::factory()->create(['role' => 'student', 'email_verified_at' => now()]);
++
++        $popup = PopupCampaign::create([
++            'title' => 'Analytics Cap Campaign',
++            'body' => 'Limited impressions offer.',
++            'popup_type' => 'ad',
++            'audience' => 'all',
++            'frequency' => 'every_page',
++            'delay_seconds' => 0,
++            'max_impressions' => 1,
++            'analytics_enabled' => true,
++            'require_consent_for_analytics' => true,
++            'is_active' => true,
++            'status' => 'active',
++            'priority' => 10,
++        ]);
+ 
++        // Without marketing_consent cookie, event endpoint declines recording.
++        $this->postJson(route('popups.events', $popup->id), ['event' => 'impression'])
++            ->assertStatus(202)
++            ->assertJson(['recorded' => false, 'reason' => 'consent_required']);
++        $this->assertSame(0, PopupAdEvent::query()->count());
++
++        // With marketing_consent cookie, impression and click are recorded cleanly without PII columns.
++        $this->withCookie('marketing_consent', 'accepted')
++            ->postJson(route('popups.events', $popup->id), ['event' => 'impression'])
++            ->assertOk()
++            ->assertJson(['recorded' => true]);
++
++        $this->withCookie('marketing_consent', 'accepted')
++            ->postJson(route('popups.events', $popup->id), ['event' => 'click'])
++            ->assertOk()
++            ->assertJson(['recorded' => true]);
++
++        $this->assertFalse(Schema::hasColumn('popup_ad_events', 'ip_address'));
++        $this->assertFalse(Schema::hasColumn('popup_ad_events', 'user_id'));
++        $this->assertDatabaseHas('popup_ad_events', [
++            'popup_id' => $popup->id,
++            'impressions' => 1,
++            'clicks' => 1,
++        ]);
++
++        // Max impressions (1) reached -> popup no longer eligible on public feed.
++        $this->getJson('/popups/active')->assertOk()->assertJson(['popup' => null]);
++
++        // Non-admin access control checks.
+         $this->actingAs($student)->get(route('admin.visitor-popups.index'))->assertForbidden();
++        $this->actingAs($student)->get(route('admin.visitor-popups.export'))->assertForbidden();
++        $this->actingAs($student)->post(route('admin.visitor-popups.purge'), [
++            'confirm_purge' => '1',
++            'confirmation_phrase' => 'ERASE POPUP DATA',
++        ])->assertForbidden();
++
++        // Admin export & confirmed purge.
++        $exportResponse = $this->actingAs($admin)->get(route('admin.visitor-popups.export'))->assertOk();
++        $exported = json_decode((string) $exportResponse->getContent(), true);
++        $this->assertSame('aec.popup-ads', $exported['plugin']);
++        $this->assertSame(1, $exported['campaigns_count']);
++
++        $this->actingAs($admin)->post(route('admin.visitor-popups.purge'), [
++            'confirm_purge' => '1',
++            'confirmation_phrase' => 'WRONG PHRASE',
++        ])->assertSessionHasErrors('confirmation_phrase');
++        $this->assertDatabaseCount('visitor_popups', 1);
++
++        $this->actingAs($admin)->post(route('admin.visitor-popups.purge'), [
++            'confirm_purge' => '1',
++            'confirmation_phrase' => 'ERASE POPUP DATA',
++        ])->assertRedirect(route('admin.visitor-popups.index'));
++
++        $this->assertDatabaseCount('visitor_popups', 0);
++        $this->assertDatabaseCount('popup_ad_events', 0);
+     }
+ }
