@@ -390,7 +390,8 @@ class VisitorPopupManagementTest extends TestCase
         // Signatures bind the campaign path and query string and expire.
         $this->postJson($eventUrl.'&tampered=1', ['event' => 'impression'])->assertForbidden();
         $this->postJson($expiredEventUrl, ['event' => 'impression'])->assertForbidden();
-        $this->postJson(URL::temporarySignedRoute('popups.events', now()->addMinutes(5), ['popup' => $popup->id + 1]), ['event' => 'impression'])->assertForbidden();
+        $tamperedPathUrl = str_replace('/'.$popup->id.'/events', '/'.($popup->id + 1).'/events', $eventUrl);
+        $this->postJson($tamperedPathUrl, ['event' => 'impression'])->assertForbidden();
         $this->assertSame(0, PopupAdEvent::query()->count());
 
         // Without marketing_consent cookie, a valid event URL still declines recording.
