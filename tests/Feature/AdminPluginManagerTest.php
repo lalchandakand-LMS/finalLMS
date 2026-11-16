@@ -794,6 +794,35 @@ PHP;
         @unlink(storage_path('app/private/plugin-recovery/'.$snapshot->details['recovery_path']));
     }
 
+    public function test_tampered_recovery_archive_cannot_restore_an_uninstalled_plugin(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData())
+            ->assertRedirect(route('admin.plugins.index'));
+        $this->actingAs($admin)->post(route('admin.plugins.uninstall', 'aec.course-management'), [
+            'confirm_uninstall' => '1',
+        ])->assertRedirect(route('admin.plugins.index'))->assertSessionHas('success');
+
+        $snapshot = \App\Models\PluginVersionHistory::query()
+            ->where('plugin_key', 'aec.course-management')
+            ->where('action', 'pre_uninstall_snapshot')->latest('created_at')->firstOrFail();
+        $archive = storage_path('app/private/plugin-recovery/'.$snapshot->details['recovery_path']);
+        $this->assertSame(0600, fileperms($archive) & 0777);
+        file_put_contents($archive, 'tampered', FILE_APPEND);
+
+        $this->actingAs($admin)->post(route('admin.plugins.restore-package', 'aec.course-management'), [
+            'confirm_restore' => '1',
+        ])->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'status' => 'uninstalled',
+        ]);
+        $this->assertDirectoryDoesNotExist($this->finalPath);
+        @unlink($archive);
+    }
+
     public function test_admin_can_uninstall_inactive_plugin_without_deleting_application_data(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
