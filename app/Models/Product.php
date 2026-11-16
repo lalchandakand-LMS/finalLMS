@@ -30,6 +30,11 @@ class Product extends Model
         return $this->belongsToMany(ProductCategory::class, 'product_category_product')->withTimestamps();
     }
 
+    public function courseContentPost(): HasOne
+    {
+        return $this->hasOne(CourseContentPost::class);
+    }
+
     public function orderItems(): HasMany
     {
         return $this->hasMany(OrderItem::class);
