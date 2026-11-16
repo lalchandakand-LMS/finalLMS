@@ -432,6 +432,8 @@ class AdminPluginManagerController extends Controller
         PluginLifecycle $lifecycle,
         PluginPackageRemover $remover,
         PluginPackageRecovery $recovery,
+        PluginSignatureVerifier $signatureVerifier,
+        PluginIntegrityVerifier $integrityVerifier,
         PluginVersionHistoryRecorder $history,
     ): RedirectResponse {
         $request->validate(['confirm_uninstall' => ['required', 'accepted']]);
@@ -454,6 +456,10 @@ class AdminPluginManagerController extends Controller
             }
 
             if (! $retryingCleanup) {
+                if (! $signatureVerifier->verifyInstalledSignature($plugin)) {
+                    throw new RuntimeException('The plugin has no verifiable detached release signature; uninstall is blocked.');
+                }
+                $integrityVerifier->verify($plugin);
                 $snapshot = $recovery->createSnapshot($plugin);
                 PluginVersionHistory::query()->create([
                     'plugin_key' => $plugin->plugin_key,
