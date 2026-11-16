@@ -128,6 +128,26 @@ PHP;
         ]);
     }
 
+    public function test_admin_can_grant_only_permissions_declared_by_the_signed_manifest(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData())
+            ->assertRedirect(route('admin.plugins.index'));
+
+        $this->actingAs($admin)->put(route('admin.plugins.permissions', 'aec.course-management'), [
+            'permissions' => ['courses.manage'],
+        ])->assertRedirect(route('admin.plugins.index'))->assertSessionHas('success');
+
+        $plugin = PluginInstallation::query()->where('plugin_key', 'aec.course-management')->firstOrFail();
+        $this->assertSame(['courses.manage'], $plugin->metadata['granted_permissions']);
+
+        $this->actingAs($admin)->put(route('admin.plugins.permissions', 'aec.course-management'), [
+            'permissions' => ['system.superuser'],
+        ])->assertRedirect()->assertSessionHas('error');
+
+        $this->assertSame(['courses.manage'], $plugin->fresh()->metadata['granted_permissions']);
+    }
+
     public function test_admin_can_activate_and_deactivate_an_intact_signed_plugin(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);

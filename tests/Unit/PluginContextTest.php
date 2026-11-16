@@ -14,18 +14,19 @@ class PluginContextTest extends TestCase
         $plugin = new PluginInstallation();
         $plugin->forceFill([
             'plugin_key' => 'aec.support-staff-test',
-            'manifest' => ['portals' => ['support_staff']],
+            'manifest' => ['portals' => ['support_staff'], 'permissions' => ['support.test']],
         ]);
 
         $context = new PluginContext(app(), app('router'), $plugin);
         $context->routesForPortal('support_staff', 'test/support-ai', 'test.support_ai.', function (): void {
             Route::get('/health', fn () => response('ok'))->name('health');
-        });
+        }, 'support.test');
 
         $route = collect(app('router')->getRoutes()->getRoutes())->first(fn ($candidate) => $candidate->uri() === 'test/support-ai/health');
         $this->assertNotNull($route);
         $this->assertContains('plugin.active:aec.support-staff-test', $route->middleware());
         $this->assertContains('role:accountant', $route->middleware());
+        $this->assertContains('plugin.permission:aec.support-staff-test,support.test', $route->middleware());
         $this->assertContains('auth', $route->middleware());
         $this->assertContains('verified', $route->middleware());
     }
