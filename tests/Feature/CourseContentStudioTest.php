@@ -350,6 +350,7 @@ class CourseContentStudioTest extends TestCase
             'is_preview' => false,
         ]);
 
+        $this->app['auth']->logout();
         $this->get(route('courses.content.show', [$course, $post]))
             ->assertRedirect(route('login', ['continue' => route('ebooks.show', $post->product->slug, false)]));
 
