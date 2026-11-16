@@ -267,7 +267,7 @@ class AdminCourseContentPostController extends Controller
             'content_file' => ['nullable', 'file', 'mimes:pdf,mp4,mp3,jpg,jpeg,png,webp,zip', 'max:102400'],
             'remove_thumbnail' => ['nullable', 'boolean'],
             'remove_content_file' => ['nullable', 'boolean'],
-            'access_type' => ['required', Rule::in(['free', 'paid', 'course_enrollment'])],
+            'access_type' => ['nullable', Rule::in(['free', 'paid', 'course_enrollment'])],
             'regular_price' => ['nullable', 'numeric', 'min:0', 'max:999999999'],
             'sale_price' => ['nullable', 'numeric', 'gte:0', 'lt:regular_price'],
             'academic_level_id' => ['nullable', 'integer', Rule::exists('academic_levels', 'id')],
@@ -279,6 +279,8 @@ class AdminCourseContentPostController extends Controller
             'category_ids' => ['nullable', 'array', 'max:30'],
             'category_ids.*' => ['integer', 'distinct', Rule::exists('course_categories', 'id')],
         ]);
+
+        $data['access_type'] ??= $post?->access_type ?? 'course_enrollment';
 
         if (($data['access_type'] ?? null) !== 'paid') {
             $data['regular_price'] = null;
