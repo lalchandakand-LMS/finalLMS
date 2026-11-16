@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "key": "notice_board",
+  "name": "Notice Board",
+  "description": "Announcements, audience targeting and read receipts.",
+  "type": "first_party",
+  "status": "metadata_only",
+  "provider": null,
+  "dependencies": [
+    "core",
+    "identity",
+    "communications"
+  ],
+  "permissions": [],
+  "routes": [
+    "notices.*",
+    "admin.notices.*",
+    "admin.dashboard-announcements.*"
+  ],
+  "settings": [],
+  "events": [],
+  "directory": "plugins/notice_board",
+  "safety": {
+    "trusted_code_only": true,
+    "execute_uploaded_code": false,
+    "disable_preserves_data": true
+  }
+}
