@@ -107,7 +107,6 @@
         .homepage-template .badge.info { background: color-mix(in srgb, var(--template-accent) 12%, white); color: var(--template-accent); }
         .homepage-template .stat { border-radius: calc(var(--template-radius) * .7); }
         .homepage-template--redwans-method { --template-accent:#08a9c7; --template-radius:16px; padding:18px 24px 0; color:#e7f6fb; background:#062f43; }
-        .homepage-template--redwans-method .home-welcome { display:none; }
         .homepage-template--redwans-method .home-carousel { max-width:1120px; margin:0 auto 24px !important; }
         .homepage-template--redwans-method .home-carousel__viewport { border-radius:18px; box-shadow:0 18px 44px #001b2b66; }
         .homepage-template--redwans-method .home-overview { max-width:1120px; margin:0 auto 22px; padding:0 0 22px; background:transparent; }
