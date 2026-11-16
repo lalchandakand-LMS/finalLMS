@@ -451,6 +451,15 @@ class AttendanceSyncController extends Controller
             return json_decode($stored->result_payload, true, 512, JSON_THROW_ON_ERROR);
         }
 
+        if ($stored) {
+            return [
+                'idempotency_key' => $record['idempotency_key'],
+                'status' => 'failed',
+                'code' => 'idempotency_key_reused',
+                'message' => 'This idempotency key was already used for a different payload.',
+            ];
+        }
+
         return $result;
     }
 }
