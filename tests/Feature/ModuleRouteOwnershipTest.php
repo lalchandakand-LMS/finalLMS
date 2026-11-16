@@ -61,6 +61,20 @@ class ModuleRouteOwnershipTest extends TestCase
         }
     }
 
+    public function test_only_service_foundations_without_http_endpoints_are_unmapped(): void
+    {
+        $owners = array_unique(array_merge(
+            array_keys(config('module_routes', [])),
+            array_keys(config('module_route_uris', [])),
+        ));
+        $serviceOnly = ['core', 'communications', 'ai_builder', 'otp_verification', 'sms_otp', 'email_otp', 'gmail'];
+        $unmapped = array_values(array_diff(array_keys(config('modules', [])), $owners));
+
+        sort($serviceOnly);
+        sort($unmapped);
+        $this->assertSame($serviceOnly, $unmapped);
+    }
+
     public function test_all_module_dependencies_exist(): void
     {
         foreach (config('modules', []) as $module => $definition) {
