@@ -28,6 +28,33 @@ class AdminPluginManagerController extends Controller
         ]);
     }
 
+    public function updatePermissions(Request $request, string $key): RedirectResponse
+    {
+        $plugin = PluginInstallation::query()->where('plugin_key', $key)->firstOrFail();
+        abort_unless($plugin->status !== 'uninstalled', 404);
+
+        $validated = $request->validate([
+            'permissions' => ['sometimes', 'array', 'max:100'],
+            'permissions.*' => ['required', 'string', 'max:160', 'distinct'],
+        ]);
+
+        $declared = $plugin->manifest['permissions'] ?? [];
+        $requested = array_values(array_unique($validated['permissions'] ?? []));
+        if (array_diff($requested, $declared) !== []) {
+            return back()->with('error', __('Only permissions declared in the signed plugin manifest can be granted.'));
+        }
+
+        $metadata = $plugin->metadata ?? [];
+        $metadata['granted_permissions'] = $requested;
+        $plugin->forceFill(['metadata' => $metadata])->save();
+
+        $this->audit($request, 'admin.plugins.permissions_updated',
+            'Updated granted permissions for '.$plugin->plugin_key.': '.implode(', ', $requested));
+
+        return redirect()->route('admin.plugins.index')->with('success',
+            __('Plugin permissions saved. Unchecked permissions are denied immediately.'));
+    }
+
     public function install(Request $request, PluginUploadInstaller $installer): RedirectResponse
     {
         $validated = $request->validate([
