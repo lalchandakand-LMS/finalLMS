@@ -17,7 +17,7 @@ final class AssistantTokenBudget
         $payload = json_encode($messages, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
 
         // Deliberately conservative estimate; provider tokenizers may differ.
-        return max(1, (int) ceil(mb_strlen($payload, 'UTF-8') / 3));
+        return max(1, (int) ceil(mb_strlen($payload, 'UTF-8') / 2));
     }
 
     public static function completionLimit(int $configuredLimit, int $remainingTokens, int $estimatedPromptTokens): int
