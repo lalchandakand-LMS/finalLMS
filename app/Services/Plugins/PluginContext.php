@@ -83,6 +83,49 @@ final class PluginContext
 
         Route::middleware($middleware)->prefix($prefix)->name($namePrefix)->group($routes);
     }
+    /**
+     * Register mobile API routes for the roles supported by the LMS device-token
+     * authentication boundary. Guardian, branch and admin APIs must not bypass
+     * their own authentication model through this mobile-token route helper.
+     */
+    public function apiRoutesForPortal(
+        string $portal,
+        string $prefix,
+        string $namePrefix,
+        Closure $routes,
+        string $permission,
+    ): void {
+        $roles = [
+            'student' => 'student',
+            'teacher' => 'teacher',
+        ];
+
+        if (! isset($roles[$portal])
+            || ! in_array($portal, $this->plugin->manifest['portals'] ?? [], true)) {
+            throw new InvalidArgumentException('Plugin API routes are supported only for declared student and teacher mobile portals.');
+        }
+
+        if (preg_match('/^api\/v1\/[a-z0-9][a-z0-9\/-]{0,99}$/D', $prefix) !== 1
+            || str_contains($prefix, '..')
+            || preg_match('/^[a-z][a-z0-9_.-]{0,119}\.$/D', $namePrefix) !== 1) {
+            throw new InvalidArgumentException('The plugin API route prefix or route-name prefix is invalid.');
+        }
+
+        $declaredPermissions = $this->plugin->manifest['permissions'] ?? [];
+        if (! is_array($declaredPermissions) || ! in_array($permission, $declaredPermissions, true)) {
+            throw new InvalidArgumentException('Every plugin API route group must require a permission declared in the signed manifest.');
+        }
+
+        Route::middleware([
+            'api',
+            'plugin.active:'.$this->plugin->plugin_key,
+            'api.token',
+            'role:'.$roles[$portal],
+            'plugin.permission:'.$this->plugin->plugin_key.','.$permission,
+            'throttle:60,1',
+        ])->prefix($prefix)->name($namePrefix)->group($routes);
+    }
+
     public function registerHook(string $hook, callable $callback, int $priority = 10): void
     {
         $this->hooks()->registerHook((string) $this->plugin->plugin_key, $hook, $callback, $priority);
