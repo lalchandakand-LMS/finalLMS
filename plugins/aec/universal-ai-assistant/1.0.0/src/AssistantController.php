@@ -119,6 +119,9 @@ final class AssistantController
                 $estimatedPromptTokens,
                 (int) $settings['max_tokens'],
                 (int) $settings['daily_request_limit'],
+                $role,
+                (string) $settings['provider'],
+                (string) $settings['model'],
                 (int) $request->user()->id,
                 (int) $conversation->id
             );
