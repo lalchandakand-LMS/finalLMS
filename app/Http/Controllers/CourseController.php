@@ -258,7 +258,10 @@ class CourseController extends Controller
     {
         $teachers = User::query()->where('role', 'teacher')->orderBy('name')->get();
         $categories = CourseCategory::query()->orderBy('sort_order')->orderBy('name')->get();
-        $academicLevels = AcademicLevel::query()->where('is_active', true)->orderBy('sort_order')->orderBy('name')->get();
+        $academicLevels = AcademicLevel::query()
+            ->where('is_active', true)
+            ->orWhere('id', $course->academic_level_id)
+            ->orderBy('sort_order')->orderBy('name')->get();
 
         return view('admin.courses.form', [
             'course' => $course->load('categories'),
@@ -805,7 +808,12 @@ class CourseController extends Controller
             'short_description' => ['nullable', 'string', 'max:500'],
             'description' => ['required', 'string', 'max:100000'],
             'teacher_id' => ['required', Rule::exists('users', 'id')->where(fn ($query) => $query->where('role', 'teacher'))],
-            'academic_level_id' => ['nullable', 'integer', Rule::exists('academic_levels', 'id')->where(fn ($query) => $query->where('is_active', true))],
+            'academic_level_id' => ['nullable', 'integer', Rule::exists('academic_levels', 'id')->where(fn ($query) => $query->where(function ($levels) use ($course): void {
+                $levels->where('is_active', true);
+                if ($course?->academic_level_id) {
+                    $levels->orWhere('id', $course->academic_level_id);
+                }
+            }))],
             'price' => ['required', 'numeric', 'min:0', 'max:999999999'],
             'status' => ['required', Rule::in(['published', 'draft', 'archived'])],
             'category_ids' => ['nullable', 'array', 'max:30'],
