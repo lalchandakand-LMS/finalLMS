@@ -105,8 +105,8 @@ PHP);
 
         $plugin = new PluginInstallation();
         $plugin->forceFill([
-            'plugin_key' => 'test.migration-recovery',
-            'name' => 'Migration Recovery',
+            'plugin_key' => 'test.migration-check',
+            'name' => 'Migration Check',
             'version' => '1.0.0',
             'type' => 'module',
             'status' => 'installed',
