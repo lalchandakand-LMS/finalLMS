@@ -368,6 +368,9 @@
                             <a href="{{ $websiteLink['url'] }}">{{ $websiteLink['label'] }}</a>
                         @endif
                     @endforeach
+                    @foreach($websitePageLinks as $websitePageLink)
+                        <a href="{{ route('website-pages.show', $websitePageLink->slug) }}">{{ $websitePageLink->menu_label ?: $websitePageLink->title }}</a>
+                    @endforeach
                 @auth
                     <a href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a>
                     <a href="{{ route('notices.index') }}">{{ __('Notice Board') }}</a>
