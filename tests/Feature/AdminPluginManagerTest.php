@@ -610,6 +610,46 @@ PHP;
         ]);
     }
 
+    public function test_lifecycle_prevents_uninstall_of_a_required_active_dependency(): void
+    {
+        foreach ([
+            [
+                'plugin_key' => 'test.core',
+                'name' => 'Core Plugin',
+                'manifest' => ['dependencies' => [], 'conflicts' => []],
+                'status' => 'inactive',
+            ],
+            [
+                'plugin_key' => 'test.dependent',
+                'name' => 'Dependent Plugin',
+                'manifest' => ['dependencies' => ['test.core'], 'conflicts' => []],
+                'status' => 'active',
+            ],
+        ] as $record) {
+            $plugin = new PluginInstallation();
+            $plugin->forceFill(array_merge($record, [
+                'version' => '1.0.0',
+                'type' => 'module',
+                'package_path' => 'plugins/test/'.str_replace('test.', '', $record['plugin_key']).'/1.0.0',
+                'signature_verified_at' => now(),
+                'package_sha256' => str_repeat('c', 64),
+                'signature_key_id' => 'test-release-key',
+            ]))->save();
+        }
+
+        try {
+            app(PluginLifecycle::class)->transition('test.core', 'uninstalled');
+            $this->fail('A plugin required by an active plugin must not be uninstalled.');
+        } catch (LogicException $exception) {
+            $this->assertStringContainsString('active plugin depends on this plugin', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'test.core',
+            'status' => 'inactive',
+        ]);
+    }
+
     public function test_lifecycle_prevents_deactivation_of_a_required_active_dependency(): void
     {
         foreach ([
