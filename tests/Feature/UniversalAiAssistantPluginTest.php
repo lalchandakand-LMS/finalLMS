@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use Aloms\UniversalAiAssistant\AssistantContextBuilder;
 use Aloms\UniversalAiAssistant\AssistantSettings;
 use Aloms\UniversalAiAssistant\AssistantTokenBudget;
+use Aloms\UniversalAiAssistant\OpenAiCompatibleProvider;
 use App\Models\Batch;
 use App\Models\Branch;
 use App\Models\Course;
@@ -33,7 +34,7 @@ class UniversalAiAssistantPluginTest extends TestCase
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/OpenAiCompatibleProvider.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantTokenBudget.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantContextBuilder.php');
-        app()->bind(\\App\\Contracts\\Ai\\AiProvider::class, fn () => new OpenAiCompatibleProvider(app(AiDeveloperProviderEndpoint::class)));
+        app()->bind(\App\Contracts\Ai\AiProvider::class, fn () => new OpenAiCompatibleProvider(app(AiDeveloperProviderEndpoint::class)));
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantController.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AdminSettingsController.php');
         if (! Schema::hasTable('ai_assistant_settings')) {
