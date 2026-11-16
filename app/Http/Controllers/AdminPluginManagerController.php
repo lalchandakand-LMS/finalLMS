@@ -201,11 +201,40 @@ class AdminPluginManagerController extends Controller
             ? ($details['snapshot'] ?? null)
             : null;
 
-        if (! is_array($snapshot)
-            || ! is_string($snapshot['version'] ?? null)
-            || version_compare($snapshot['version'], (string) $plugin->version, '>=')) {
+        if (! is_array($snapshot) || ! is_string($snapshot['version'] ?? null)
+            || hash_equals($snapshot['version'], (string) $plugin->version)) {
             return back()->with('error', __('No verified previous package version is available for rollback.'));
         }
+
+        // Preserve the package being rolled back so a later recovery can move forward again.
+        PluginVersionHistory::query()->create([
+            'plugin_key' => $plugin->plugin_key,
+            'version' => $plugin->version,
+            'package_sha256' => $plugin->package_sha256,
+            'signature_key_id' => $plugin->signature_key_id,
+            'action' => 'package_update_snapshot',
+            'status' => $plugin->status,
+            'actor_id' => $request->user()->id,
+            'details' => [
+                'snapshot_schema' => 1,
+                'snapshot' => [
+                    'name' => $plugin->name,
+                    'version' => $plugin->version,
+                    'type' => $plugin->type,
+                    'manifest' => $plugin->manifest,
+                    'package_path' => $plugin->package_path,
+                    'package_sha256' => $plugin->package_sha256,
+                    'signature_key_id' => $plugin->signature_key_id,
+                    'signature_verified_at' => $plugin->signature_verified_at?->toISOString(),
+                    'metadata' => $plugin->metadata,
+                    'installed_at' => $plugin->installed_at?->toISOString(),
+                    'health_status' => $plugin->health_status,
+                    'health_message' => $plugin->health_message,
+                    'last_health_check_at' => $plugin->last_health_check_at?->toISOString(),
+                ],
+            ],
+            'created_at' => now(),
+        ]);
 
         try {
             $candidate = clone $plugin;
