@@ -37,7 +37,7 @@ return new class implements PluginContract
             Route::patch('/{visitorPopup}/resume', [AdminPopupController::class, 'resume'])->whereNumber('visitorPopup')->name('resume');
             Route::patch('/{visitorPopup}/archive', [AdminPopupController::class, 'archive'])->whereNumber('visitorPopup')->name('archive');
             Route::delete('/{visitorPopup}', [AdminPopupController::class, 'destroy'])->whereNumber('visitorPopup')->name('destroy');
-        });
+        }, 'popup-ads.manage');
 
         $context->routesForPortal('public', 'popups', 'popups.', function (): void {
             Route::get('/active', [PublicPopupController::class, 'active'])->middleware('throttle:60,1')->name('active');
