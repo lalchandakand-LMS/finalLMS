@@ -797,26 +797,11 @@ PHP;
     public function test_admin_can_uninstall_inactive_plugin_without_deleting_application_data(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
-        $this->finalPath = base_path('plugins/test/universal-ai-assistant/1.0.0');
-        if (! is_dir($this->finalPath)) mkdir($this->finalPath, 0750, true);
-        file_put_contents($this->finalPath.'/src.php', '<?php // signed test package');
-
-        $plugin = new PluginInstallation();
-        $plugin->forceFill([
-            'plugin_key' => 'test.universal-ai-assistant',
-            'name' => 'Universal AI Assistant',
-            'version' => '1.0.0',
-            'type' => 'module',
-            'status' => 'inactive',
-            'manifest' => $this->manifest,
-            'package_path' => 'plugins/test/universal-ai-assistant/1.0.0',
-            'signature_verified_at' => now(),
-            'package_sha256' => str_repeat('a', 64),
-            'signature_key_id' => 'test-release-key',
-        ])->save();
+        $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData())
+            ->assertRedirect(route('admin.plugins.index'));
 
         \DB::table('plugin_migrations')->insert([
-            'plugin_key' => 'test.universal-ai-assistant',
+            'plugin_key' => 'aec.course-management',
             'plugin_version' => '1.0.0',
             'migration' => '2026_11_15_000001_example.php',
             'status' => 'completed',
@@ -824,21 +809,27 @@ PHP;
             'updated_at' => now(),
         ]);
 
-        $this->actingAs($admin)->post(route('admin.plugins.uninstall', 'test.universal-ai-assistant'), ['confirm_uninstall' => '1'])
+        $this->actingAs($admin)->post(route('admin.plugins.deactivate', 'aec.course-management'))
+            ->assertRedirect(route('admin.plugins.index'));
+        $this->actingAs($admin)->post(route('admin.plugins.uninstall', 'aec.course-management'), ['confirm_uninstall' => '1'])
             ->assertRedirect(route('admin.plugins.index'))
             ->assertSessionHas('success');
 
         $this->assertDatabaseHas('plugin_registry', [
-            'plugin_key' => 'test.universal-ai-assistant',
+            'plugin_key' => 'aec.course-management',
             'status' => 'uninstalled',
         ]);
         $this->assertDatabaseHas('plugin_migrations', [
-            'plugin_key' => 'test.universal-ai-assistant',
+            'plugin_key' => 'aec.course-management',
             'status' => 'completed',
         ]);
         $this->assertDirectoryDoesNotExist($this->finalPath);
         $this->assertDatabaseHas('plugin_version_history', [
-            'plugin_key' => 'test.universal-ai-assistant',
+            'plugin_key' => 'aec.course-management',
+            'action' => 'pre_uninstall_snapshot',
+        ]);
+        $this->assertDatabaseHas('plugin_version_history', [
+            'plugin_key' => 'aec.course-management',
             'action' => 'uninstalled',
         ]);
     }
