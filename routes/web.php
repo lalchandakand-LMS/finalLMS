@@ -3,6 +3,7 @@
 use App\Http\Controllers\AddonRegistryController;
 use App\Http\Controllers\AdminModuleRegistryController;
 use App\Http\Controllers\AdminPluginManagerController;
+use App\Http\Controllers\AcademicLevelController;
 use App\Http\Controllers\AdminPaymentGatewayController;
 use App\Http\Controllers\AiDeveloperController;
 use App\Http\Controllers\AdminSettingsController;
