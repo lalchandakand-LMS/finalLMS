@@ -55,7 +55,7 @@
             </label>
         @endforeach
     </div>
-    <p class="muted">{{ __('Current scope: Admin receives aggregate counts; Branch Manager receives assigned active-branch courses and batches; Teacher receives assigned courses and batches; Student receives own active/completed courses, lessons, published assignments/exams, submission/attempt status and lesson completion counts; Guardian receives the same summaries only for approved active linked students. Teacher/Branch Manager receive scoped course/batch summaries and aggregate assignment/exam counts. Scores, grades, answer content, attendance, payments, staff records and write tools are not exposed.') }}</p>
+    <p class="muted">{{ __('Current scope: Admin receives aggregate counts; Branch Manager receives assigned active-branch courses and batches; Teacher receives assigned courses and batches; Student receives own active/completed courses, lessons, published assignments/exams, submission/attempt status and lesson completion counts; Guardian receives the same summaries only for approved active linked students. Teacher receives assigned learners' permitted submission/attempt status and lesson completion summaries; Branch Manager receives assigned-branch course/batch and aggregate assignment/exam summaries. Scores, grades, answer content, attendance, payments, staff records and write tools are not exposed.') }}</p>
     <button class="btn primary" type="submit">{{ __('Save AI settings') }}</button>
 </form>
 <script>
