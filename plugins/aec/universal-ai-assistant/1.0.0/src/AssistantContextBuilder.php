@@ -1,12 +1,12 @@
 <?php
 
-namespace Aloms\\UniversalAiAssistant;
+namespace Aloms\UniversalAiAssistant;
 
-use App\\Models\\Batch;
-use App\\Models\\Course;
-use App\\Models\\Enrollment;
-use App\\Models\\User;
-use App\\Services\\Plugins\\PluginResourceAccess;
+use App\Models\Batch;
+use App\Models\Course;
+use App\Models\Enrollment;
+use App\Models\User;
+use App\Services\Plugins\PluginResourceAccess;
 
 final class AssistantContextBuilder
 {
