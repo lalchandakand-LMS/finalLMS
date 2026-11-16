@@ -102,7 +102,7 @@ class ModuleRouteOwnershipTest extends TestCase
     {
         $modules = config('modules');
         $this->assertSame(['core', 'identity'], $modules['academic_levels']['dependencies']);
-        foreach (['course_management', 'batch_management', 'exam_management', 'page_builder'] as $consumer) {
+        foreach (['course_management', 'batch_management', 'exam_management', 'page_builder', 'attendance'] as $consumer) {
             $this->assertContains('academic_levels', $modules[$consumer]['dependencies']);
         }
     }
