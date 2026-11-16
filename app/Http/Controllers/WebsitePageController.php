@@ -12,17 +12,22 @@ use Illuminate\View\View;
 
 class WebsitePageController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $pages = WebsitePage::with('creator')->latest()->paginate(25);
-        return view('admin.website-pages.index', compact('pages'));
+        $filters = $request->validate(['academic_level_id' => ['nullable', 'integer', 'exists:academic_levels,id']]);
+        $pages = WebsitePage::with(['creator', 'academicLevel'])
+            ->when($filters['academic_level_id'] ?? null, fn ($query, $levelId) => $query->where('academic_level_id', $levelId))
+            ->latest()->paginate(25)->withQueryString();
+        $academicLevels = AcademicLevel::query()->orderBy('sort_order')->orderBy('name')->get();
+        return view('admin.website-pages.index', compact('pages', 'academicLevels', 'filters'));
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
         return view('admin.website-pages.form', [
-            'page' => new WebsitePage(['template' => 'standard', 'sections' => []]),
+            'page' => new WebsitePage(['template' => 'standard', 'sections' => [], 'academic_level_id' => $request->integer('academic_level_id') ?: null]),
             'media' => MediaAsset::query()->where('mime_type', 'like', 'image/%')->latest()->limit(200)->get(),
+            'academicLevels' => AcademicLevel::query()->where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(),
         ]);
     }
 
@@ -41,6 +46,7 @@ class WebsitePageController extends Controller
         return view('admin.website-pages.form', [
             'page' => $websitePage,
             'media' => MediaAsset::query()->where('mime_type', 'like', 'image/%')->latest()->limit(200)->get(),
+            'academicLevels' => AcademicLevel::query()->where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(),
         ]);
     }
 
@@ -95,6 +101,7 @@ class WebsitePageController extends Controller
     {
         $data = $request->validate([
             'title' => ['required', 'string', 'max:180'],
+            'academic_level_id' => ['nullable', 'integer', Rule::exists('academic_levels', 'id')->where(fn ($query) => $query->where('is_active', true))],
             'slug' => ['nullable', 'string', 'max:180', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', Rule::unique('website_pages', 'slug')->ignore($page?->id)],
             'menu_label' => ['nullable', 'string', 'max:80'],
             'template' => ['required', Rule::in(['standard', 'wide', 'centered', 'split'])],
