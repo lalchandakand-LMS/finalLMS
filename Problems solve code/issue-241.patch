@@ -1,0 +1,2887 @@
+diff --git a/app/Http/Controllers/AdminPluginManagerController.php b/app/Http/Controllers/AdminPluginManagerController.php
+index 6233e7f..7e2ac80 100644
+--- a/app/Http/Controllers/AdminPluginManagerController.php
++++ b/app/Http/Controllers/AdminPluginManagerController.php
+@@ -4,12 +4,18 @@ namespace App\Http\Controllers;
+ 
+ use App\Models\ActivityLog;
+ use App\Models\PluginInstallation;
++use App\Services\Plugins\PluginCompatibilityChecker;
++use App\Services\Plugins\PluginDiscoveryService;
++use App\Services\Plugins\PluginHealthChecker;
+ use App\Services\Plugins\PluginIntegrityVerifier;
+ use App\Services\Plugins\PluginLifecycle;
+ use App\Services\Plugins\PluginManifestValidator;
+ use App\Services\Plugins\PluginMigrationRunner;
+ use App\Services\Plugins\PluginPackageRemover;
++use App\Services\Plugins\PluginUninstallInspector;
++use App\Services\Plugins\PluginUpdater;
+ use App\Services\Plugins\PluginUploadInstaller;
++use Illuminate\Http\JsonResponse;
+ use Illuminate\Http\RedirectResponse;
+ use Illuminate\Http\Request;
+ use Illuminate\View\View;
+@@ -20,14 +26,93 @@ use Throwable;
+ 
+ class AdminPluginManagerController extends Controller
+ {
+-    public function index(): View
+-    {
++    public function index(
++        Request $request,
++        PluginCompatibilityChecker $compatibilityChecker,
++        PluginUninstallInspector $uninstallInspector,
++    ): View {
++        $statusFilter = $request->string('status')->trim()->toString();
++        $portalFilter = $request->string('portal')->trim()->toString();
++        $typeFilter = $request->string('type')->trim()->toString();
++
++        $allPlugins = PluginInstallation::query()->orderBy('plugin_key')->get();
++
++        $plugins = $allPlugins->filter(function (PluginInstallation $plugin) use ($statusFilter, $portalFilter, $typeFilter): bool {
++            if ($statusFilter !== '' && $plugin->status !== $statusFilter) {
++                return false;
++            }
++            if ($typeFilter !== '' && $plugin->type !== $typeFilter) {
++                return false;
++            }
++            if ($portalFilter !== '' && ! in_array($portalFilter, $plugin->manifest['portals'] ?? [], true)) {
++                return false;
++            }
++
++            return true;
++        })->values();
++
++        $preflights = [];
++        $compatibility = [];
++        foreach ($plugins as $plugin) {
++            $preflights[$plugin->plugin_key] = $uninstallInspector->preflight($plugin);
++            $compatibility[$plugin->plugin_key] = $compatibilityChecker->check(is_array($plugin->manifest) ? $plugin->manifest : []);
++        }
++
++        $auditLogs = ActivityLog::query()
++            ->where('event', 'like', 'admin.plugins.%')
++            ->latest('id')
++            ->limit(15)
++            ->get();
++
+         return view('admin.plugins.index', [
+-            'plugins' => PluginInstallation::query()->orderBy('plugin_key')->get(),
++            'plugins' => $plugins,
++            'totalRegistered' => $allPlugins->count(),
++            'statusFilter' => $statusFilter,
++            'portalFilter' => $portalFilter,
++            'typeFilter' => $typeFilter,
++            'preflights' => $preflights,
++            'compatibility' => $compatibility,
++            'auditLogs' => $auditLogs,
+             'maxPackageBytes' => (int) config('plugins.max_package_bytes', 52428800),
++            'environmentVersions' => [
++                'php' => PHP_VERSION,
++                'laravel' => app()->version(),
++                'lms' => $compatibilityChecker->resolveCurrentLmsVersion(),
++            ],
+         ]);
+     }
+ 
++    public function discover(Request $request, PluginDiscoveryService $discovery): RedirectResponse
++    {
++        try {
++            $summary = $discovery->discover();
++        } catch (Throwable $exception) {
++            report($exception);
++            $this->recordFailure($request, 'admin.plugins.discovery_failed');
++
++            return back()->with('error', __('Plugin directory scan failed. Check private plugins directory permissions and server logs.'));
++        }
++
++        $this->audit(
++            $request,
++            'admin.plugins.discovered',
++            sprintf(
++                'Scanned private plugins directory: %d package(s) checked, %d newly discovered, %d skipped.',
++                $summary['scanned'],
++                $summary['discovered'],
++                count($summary['skipped']),
++            ),
++        );
++
++        return redirect()->route('admin.plugins.index')->with(
++            'success',
++            __('Scanned private plugins directory: :discovered newly discovered package(s), :skipped skipped.', [
++                'discovered' => $summary['discovered'],
++                'skipped' => count($summary['skipped']),
++            ]),
++        );
++    }
++
+     public function install(Request $request, PluginUploadInstaller $installer): RedirectResponse
+     {
+         $validated = $request->validate([
+@@ -46,24 +131,111 @@ class AdminPluginManagerController extends Controller
+             );
+         } catch (InvalidArgumentException $exception) {
+             $this->recordFailure($request);
++
+             return back()->withInput($request->except('package'))->with('error', $exception->getMessage());
+         } catch (Throwable $exception) {
+             report($exception);
+             $this->recordFailure($request);
+-            return back()->withInput($request->except('package'))->with('error',
+-                __('Plugin installation failed. The package was not activated; check the manifest, signature, trusted key and server logs.'));
++
++            return back()->withInput($request->except('package'))->with(
++                'error',
++                __('Plugin installation failed. The package was not activated; check the manifest, signature, trusted key and server logs.'),
++            );
+         }
+ 
+         $this->audit($request, 'admin.plugins.installed', 'Installed signed plugin '.$plugin->plugin_key.' version '.$plugin->version);
+ 
+-        return redirect()->route('admin.plugins.index')->with('success',
+-            __('Plugin package verified and installed. Review its permissions before activation.'));
++        return redirect()->route('admin.plugins.index')->with(
++            'success',
++            __('Plugin package verified and installed. Review its permissions before activation.'),
++        );
++    }
++
++    public function update(Request $request, string $key, PluginUpdater $updater): RedirectResponse
++    {
++        if (app()->routesAreCached()) {
++            return back()->with('error', __('Clear the Laravel route cache before updating plugins.'));
++        }
++
++        $validated = $request->validate([
++            'package' => ['required', 'file', 'max:51200'],
++            'manifest' => ['required', 'string', 'max:32768'],
++            'signature' => ['required', 'string', 'max:512'],
++            'key_id' => ['required', 'string', 'max:120'],
++        ]);
++
++        try {
++            $plugin = $updater->update(
++                $key,
++                $request->file('package'),
++                $validated['manifest'],
++                $validated['signature'],
++                $validated['key_id'],
++            );
++        } catch (InvalidArgumentException $exception) {
++            $this->recordFailure($request, 'admin.plugins.update_failed');
++
++            return back()->withInput($request->except('package'))->with('error', $exception->getMessage());
++        } catch (Throwable $exception) {
++            report($exception);
++            $this->recordFailure($request, 'admin.plugins.update_failed');
++
++            return back()->withInput($request->except('package'))->with(
++                'error',
++                __('Plugin update failed and was rolled back safely. Check the manifest version, compatibility, signature and server logs.'),
++            );
++        }
++
++        $this->audit($request, 'admin.plugins.updated', 'Upgraded signed plugin '.$plugin->plugin_key.' to version '.$plugin->version);
++
++        return redirect()->route('admin.plugins.index')->with(
++            'success',
++            __('Plugin upgraded cleanly to version :version.', ['version' => $plugin->version]),
++        );
++    }
++
++    public function health(Request $request, string $key, PluginHealthChecker $checker): RedirectResponse
++    {
++        $plugin = PluginInstallation::query()->where('plugin_key', $key)->firstOrFail();
++        $result = $checker->checkAndRecord($plugin);
++
++        $this->audit(
++            $request,
++            'admin.plugins.health_checked',
++            'Health check for '.$plugin->plugin_key.': '.$result['status'].' — '.$result['message'],
++        );
++
++        $flashKey = $result['status'] === 'healthy' ? 'success' : 'error';
++
++        return redirect()->route('admin.plugins.index')->with(
++            $flashKey,
++            __('Plugin health check (:status): :message', [
++                'status' => ucfirst($result['status']),
++                'message' => $result['message'],
++            ]),
++        );
++    }
++
++    public function export(Request $request, string $key, PluginUninstallInspector $inspector): JsonResponse
++    {
++        $plugin = PluginInstallation::query()->where('plugin_key', $key)->firstOrFail();
++        $payload = $inspector->exportPayload($plugin);
++
++        $this->audit($request, 'admin.plugins.exported', 'Exported sanitized metadata & migration report for '.$plugin->plugin_key);
++
++        $safeFilename = preg_replace('/[^A-Za-z0-9._-]/', '-', (string) $plugin->plugin_key).'-report.json';
++
++        return response()
++            ->json($payload, 200, [
++                'Content-Disposition' => 'attachment; filename="'.$safeFilename.'"',
++            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+     }
+ 
+     public function activate(
+         Request $request,
+         string $key,
+         PluginManifestValidator $manifestValidator,
++        PluginCompatibilityChecker $compatibilityChecker,
+         PluginIntegrityVerifier $integrityVerifier,
+         PluginMigrationRunner $migrationRunner,
+         PluginLifecycle $lifecycle,
+@@ -90,6 +262,8 @@ class AdminPluginManagerController extends Controller
+                 throw new RuntimeException('The plugin manifest is invalid: '.implode(' ', $errors));
+             }
+ 
++            $compatibilityChecker->assertCompatible($plugin->manifest ?? []);
++
+             if (! hash_equals((string) $plugin->plugin_key, (string) $plugin->manifest['key'])
+                 || (string) $plugin->name !== (string) $plugin->manifest['name']
+                 || (string) $plugin->version !== (string) $plugin->manifest['version']
+@@ -99,20 +273,28 @@ class AdminPluginManagerController extends Controller
+ 
+             $this->assertDependenciesAvailable($plugin);
+             $integrityVerifier->verify($plugin);
++
+             // Run only migrations from the already signature-verified, integrity-checked package.
+             // A migration failure leaves the plugin installed but inactive.
+             $migrationRunner->migrate($plugin);
+-            $lifecycle->transition($plugin->plugin_key, 'active');
++            $lifecycle->transition($plugin->plugin_key, 'active', [
++                'health_status' => 'healthy',
++                'health_message' => 'Activated cleanly after integrity and compatibility verification.',
++                'last_health_check_at' => now(),
++            ]);
+         } catch (Throwable $exception) {
+             report($exception);
+             $this->recordFailure($request, 'admin.plugins.activation_failed');
++
+             return back()->with('error', __('Plugin activation was blocked by a security or dependency check. Review the plugin manifest, dependencies, trusted release key and server logs.'));
+         }
+ 
+         $this->audit($request, 'admin.plugins.activated', 'Activated signed plugin '.$plugin->plugin_key.' version '.$plugin->version);
+ 
+-        return redirect()->route('admin.plugins.index')->with('success',
+-            __('Plugin activated. Its verified runtime will register on the next request.'));
++        return redirect()->route('admin.plugins.index')->with(
++            'success',
++            __('Plugin activated. Its verified runtime will register on the next request.'),
++        );
+     }
+ 
+     public function deactivate(Request $request, string $key, PluginLifecycle $lifecycle): RedirectResponse
+@@ -129,7 +311,6 @@ class AdminPluginManagerController extends Controller
+                 ->first(fn (PluginInstallation $candidate): bool =>
+                     in_array($plugin->plugin_key, $candidate->manifest['dependencies'] ?? [], true)
+                 );
+-
+             if ($dependent) {
+                 throw new LogicException('An active plugin depends on this plugin: '.$dependent->plugin_key);
+             }
+@@ -137,17 +318,22 @@ class AdminPluginManagerController extends Controller
+             $lifecycle->transition($plugin->plugin_key, 'inactive');
+         } catch (Throwable $exception) {
+             report($exception);
++
+             return back()->with('error', __('Plugin could not be deactivated. It may have active dependants; no registry state was changed.'));
+         }
+ 
+-        $this->audit($request, 'admin.plugins.deactivated',
+-            'Deactivated plugin '.$plugin->plugin_key.'; installed files and data were retained.');
++        $this->audit(
++            $request,
++            'admin.plugins.deactivated',
++            'Deactivated plugin '.$plugin->plugin_key.'; installed files and data were retained.',
++        );
+ 
+-        return redirect()->route('admin.plugins.index')->with('success',
+-            __('Plugin deactivated. Its installed files and data were retained.'));
++        return redirect()->route('admin.plugins.index')->with(
++            'success',
++            __('Plugin deactivated. Its installed files and data were retained.'),
++        );
+     }
+ 
+-
+     public function uninstall(Request $request, string $key, PluginLifecycle $lifecycle, PluginPackageRemover $remover): RedirectResponse
+     {
+         try {
+@@ -171,14 +357,20 @@ class AdminPluginManagerController extends Controller
+         } catch (Throwable $exception) {
+             report($exception);
+             $this->recordFailure($request, 'admin.plugins.uninstall_failed');
++
+             return back()->with('error', __('Plugin uninstall was blocked or package cleanup failed. Plugin data and migration records were retained.'));
+         }
+ 
+-        $this->audit($request, 'admin.plugins.uninstalled',
+-            'Uninstalled plugin '.$plugin->plugin_key.'; application data and migration history were retained.');
++        $this->audit(
++            $request,
++            'admin.plugins.uninstalled',
++            'Uninstalled plugin '.$plugin->plugin_key.'; application data and migration history were retained.',
++        );
+ 
+-        return redirect()->route('admin.plugins.index')->with('success',
+-            __('Plugin uninstalled. Its executable package was removed; plugin data and migration records were retained.'));
++        return redirect()->route('admin.plugins.index')->with(
++            'success',
++            __('Plugin uninstalled. Its executable package was removed; plugin data and migration records were retained.'),
++        );
+     }
+ 
+     private function assertDependenciesAvailable(PluginInstallation $plugin): void
+@@ -188,7 +380,6 @@ class AdminPluginManagerController extends Controller
+                 throw new RuntimeException('A required plugin dependency is not active: '.$dependency);
+             }
+         }
+-
+         foreach (($plugin->manifest['conflicts'] ?? []) as $conflict) {
+             if (PluginInstallation::query()->where('plugin_key', $conflict)->where('status', 'active')->exists()) {
+                 throw new RuntimeException('A conflicting plugin is active: '.$conflict);
+diff --git a/app/Providers/PluginRuntimeServiceProvider.php b/app/Providers/PluginRuntimeServiceProvider.php
+index 6d3fa89..4cb9abf 100644
+--- a/app/Providers/PluginRuntimeServiceProvider.php
++++ b/app/Providers/PluginRuntimeServiceProvider.php
+@@ -3,6 +3,8 @@
+ namespace App\Providers;
+ 
+ use App\Models\PluginInstallation;
++use App\Services\Plugins\PluginCompatibilityChecker;
++use App\Services\Plugins\PluginHookRegistry;
+ use App\Services\Plugins\PluginRuntime;
+ use Illuminate\Support\Facades\Schema;
+ use Illuminate\Support\ServiceProvider;
+@@ -15,6 +17,8 @@ final class PluginRuntimeServiceProvider extends ServiceProvider
+ 
+     public function register(): void
+     {
++        $this->app->singleton(PluginCompatibilityChecker::class);
++        $this->app->singleton(PluginHookRegistry::class);
+         $this->app->singleton(PluginRuntime::class);
+ 
+         // Runtime code is loaded only for web requests, never during install/build CLI commands.
+diff --git a/app/Services/Plugins/PluginArchiveInstaller.php b/app/Services/Plugins/PluginArchiveInstaller.php
+index 180fe6c..28a302e 100644
+--- a/app/Services/Plugins/PluginArchiveInstaller.php
++++ b/app/Services/Plugins/PluginArchiveInstaller.php
+@@ -138,6 +138,103 @@ final class PluginArchiveInstaller
+         }
+     }
+ 
++    /**
++     * Extract a signature-verified update package into its canonical versioned directory.
++     *
++     * @param  array<string, mixed>  $manifest
++     * @return array<string, string>
++     */
++    public function extractVerifiedUpdatePackage(
++        string $pluginKey,
++        array $manifest,
++        string $expectedChecksum,
++        string $finalRelativePath,
++        string $stagedArchivePath,
++    ): array {
++        if (! class_exists(ZipArchive::class)) {
++            throw new RuntimeException('The PHP zip extension is required for plugin installation.');
++        }
++
++        $archive = $this->resolveStagedArchive($stagedArchivePath);
++        $maxPackageBytes = max(1, (int) config('plugins.max_package_bytes', 52428800));
++        $archiveSize = filesize($archive);
++        if ($archiveSize === false || $archiveSize < 1 || $archiveSize > $maxPackageBytes) {
++            throw new RuntimeException('The staged plugin archive is empty or exceeds the configured package limit.');
++        }
++
++        $checksum = hash_file('sha256', $archive);
++        if (! is_string($checksum) || ! hash_equals($expectedChecksum, $checksum)) {
++            throw new RuntimeException('The staged plugin archive checksum does not match its verified signature.');
++        }
++
++        $parts = explode('.', $pluginKey, 2);
++        if (count($parts) !== 2) {
++            throw new RuntimeException('Invalid plugin identity.');
++        }
++        $expectedPath = 'plugins/'.$parts[0].'/'.str_replace('.', '-', $parts[1]).'/'.$manifest['version'];
++        if (! hash_equals($expectedPath, $finalRelativePath)) {
++            throw new RuntimeException('The plugin update destination does not match its signed identity.');
++        }
++
++        $pluginsRoot = realpath(base_path('plugins'));
++        if ($pluginsRoot === false || is_link(base_path('plugins'))) {
++            throw new RuntimeException('The private plugins directory is unavailable or unsafe.');
++        }
++
++        $finalAbsolutePath = $pluginsRoot.DIRECTORY_SEPARATOR.$parts[0].DIRECTORY_SEPARATOR.str_replace('.', '-', $parts[1]).DIRECTORY_SEPARATOR.$manifest['version'];
++        if (file_exists($finalAbsolutePath) || is_link($finalAbsolutePath)) {
++            throw new RuntimeException('The target plugin version already exists on disk; update aborted.');
++        }
++
++        $stagingRoot = realpath((string) config('plugins.staging_directory'));
++        if ($stagingRoot === false) {
++            throw new RuntimeException('The private plugin staging directory is unavailable.');
++        }
++
++        $extractDirectory = $stagingRoot.DIRECTORY_SEPARATOR.'extract-update-'.bin2hex(random_bytes(16));
++        if (! mkdir($extractDirectory, 0700)) {
++            throw new RuntimeException('Unable to create a private plugin update extraction directory.');
++        }
++
++        $zip = new ZipArchive();
++        if ($zip->open($archive, ZipArchive::RDONLY) !== true) {
++            File::deleteDirectory($extractDirectory);
++            throw new RuntimeException('The staged plugin archive is not a readable ZIP file.');
++        }
++
++        try {
++            $entries = $this->inspectArchive($zip);
++            $fileHashes = $this->extractEntries($zip, $entries, $extractDirectory);
++            $postExtractionChecksum = hash_file('sha256', $archive);
++            if (! is_string($postExtractionChecksum) || ! hash_equals($checksum, $postExtractionChecksum)) {
++                throw new RuntimeException('The staged plugin archive changed during extraction.');
++            }
++
++            $entrypoint = $extractDirectory.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, (string) $manifest['entrypoint']);
++            if (! is_file($entrypoint) || is_link($entrypoint)) {
++                throw new RuntimeException('The signed plugin entrypoint is missing from the update package.');
++            }
++
++            $this->ensurePrivateParentDirectory(dirname($finalAbsolutePath));
++            if (file_exists($finalAbsolutePath) || is_link($finalAbsolutePath)) {
++                throw new RuntimeException('The target plugin version appeared during extraction.');
++            }
++
++            if (! rename($extractDirectory, $finalAbsolutePath)) {
++                throw new RuntimeException('Unable to atomically move the verified plugin update into its private directory.');
++            }
++
++            return $fileHashes;
++        } catch (\Throwable $exception) {
++            if (is_dir($extractDirectory)) {
++                File::deleteDirectory($extractDirectory);
++            }
++            throw $exception;
++        } finally {
++            $zip->close();
++        }
++    }
++
+     /**
+      * @return list<array{index:int,name:string,path:string,directory:bool,size:int}>
+      */
+diff --git a/app/Services/Plugins/PluginCompatibilityChecker.php b/app/Services/Plugins/PluginCompatibilityChecker.php
+new file mode 100644
+index 0000000..2101a6b
+--- /dev/null
++++ b/app/Services/Plugins/PluginCompatibilityChecker.php
+@@ -0,0 +1,247 @@
++<?php
++
++namespace App\Services\Plugins;
++
++use RuntimeException;
++
++final class PluginCompatibilityChecker
++{
++    /**
++     * Evaluate manifest runtime requirements against the current PHP, Laravel, and LMS environment.
++     *
++     * @param  array<string, mixed>  $manifest
++     * @return array{
++     *     compatible: bool,
++     *     errors: list<string>,
++     *     versions: array{php: string, laravel: string, lms: string},
++     *     checks: array<string, array{required: string, current: string, satisfied: bool}>
++     * }
++     */
++    public function check(array $manifest): array
++    {
++        $requires = is_array($manifest['requires'] ?? null) ? $manifest['requires'] : [];
++        $currentPhp = PHP_VERSION;
++        $currentLaravel = app()->version();
++        $currentLms = $this->resolveCurrentLmsVersion();
++
++        $targets = [
++            'php' => ['label' => 'PHP', 'current' => $currentPhp],
++            'laravel' => ['label' => 'Laravel', 'current' => $currentLaravel],
++            'lms' => ['label' => 'LMS', 'current' => $currentLms],
++        ];
++
++        $checks = [];
++        $errors = [];
++
++        foreach ($targets as $key => $info) {
++            $constraint = $requires[$key] ?? null;
++            if (! is_string($constraint) || trim($constraint) === '') {
++                $checks[$key] = [
++                    'required' => 'missing',
++                    'current' => $info['current'],
++                    'satisfied' => false,
++                ];
++                $errors[] = sprintf('Missing compatibility constraint for %s.', $info['label']);
++                continue;
++            }
++
++            $satisfied = $this->satisfies($info['current'], $constraint);
++            $checks[$key] = [
++                'required' => trim($constraint),
++                'current' => $info['current'],
++                'satisfied' => $satisfied,
++            ];
++
++            if (! $satisfied) {
++                $errors[] = sprintf(
++                    'Requires %s %s, but running %s.',
++                    $info['label'],
++                    trim($constraint),
++                    $info['current']
++                );
++            }
++        }
++
++        $manifestExtensions = $manifest['requires']['extensions'] ?? [];
++        if (is_array($manifestExtensions)) {
++            foreach ($manifestExtensions as $extension) {
++                if (! is_string($extension) || trim($extension) === '' || ! extension_loaded($extension)) {
++                    $errors[] = sprintf('Required PHP extension is not loaded: %s.', is_string($extension) ? $extension : 'invalid');
++                }
++            }
++        }
++
++        return [
++            'compatible' => $errors === [],
++            'errors' => $errors,
++            'versions' => [
++                'php' => $currentPhp,
++                'laravel' => $currentLaravel,
++                'lms' => $currentLms,
++            ],
++            'checks' => $checks,
++        ];
++    }
++
++    /**
++     * @param  array<string, mixed>  $manifest
++     */
++    public function assertCompatible(array $manifest): void
++    {
++        $result = $this->check($manifest);
++        if (! $result['compatible']) {
++            throw new RuntimeException('Plugin compatibility check failed: '.implode(' ', $result['errors']));
++        }
++    }
++
++    public function resolveCurrentLmsVersion(): string
++    {
++        $configured = config('plugins.lms_version');
++        if (is_string($configured) && trim($configured) !== '') {
++            return trim($configured);
++        }
++
++        $versionFile = base_path('VERSION');
++        if (is_file($versionFile)) {
++            $raw = trim((string) file_get_contents($versionFile));
++            if ($raw !== '' && $raw !== '0.0.0') {
++                return $raw;
++            }
++        }
++
++        return '1.0.0';
++    }
++
++    public function satisfies(string $currentVersion, string $constraintExpression): bool
++    {
++        $current = $this->normalizeVersion($currentVersion);
++        if ($current === null) {
++            return false;
++        }
++
++        $branches = preg_split('/\s*\|\|\s*/', trim($constraintExpression)) ?: [];
++        foreach ($branches as $branch) {
++            $branch = trim($branch);
++            if ($branch === '') {
++                continue;
++            }
++
++            if ($this->satisfiesAndGroup($current, $branch)) {
++                return true;
++            }
++        }
++
++        return false;
++    }
++
++    private function satisfiesAndGroup(string $current, string $group): bool
++    {
++        $tokens = preg_split('/[\s,]+/', trim($group)) ?: [];
++        foreach ($tokens as $token) {
++            $token = trim($token);
++            if ($token === '') {
++                continue;
++            }
++
++            if (! $this->satisfiesSingleConstraint($current, $token)) {
++                return false;
++            }
++        }
++
++        return $tokens !== [];
++    }
++
++    private function satisfiesSingleConstraint(string $current, string $constraint): bool
++    {
++        if ($constraint === '*' || $constraint === 'x') {
++            return true;
++        }
++
++        if (str_starts_with($constraint, '^')) {
++            $base = $this->parseParts(substr($constraint, 1));
++            if ($base === null) {
++                return false;
++            }
++
++            $lower = sprintf('%d.%d.%d', $base[0], $base[1], $base[2]);
++            if ($base[0] > 0) {
++                $upper = sprintf('%d.0.0', $base[0] + 1);
++            } elseif ($base[1] > 0) {
++                $upper = sprintf('0.%d.0', $base[1] + 1);
++            } else {
++                $upper = sprintf('0.0.%d', $base[2] + 1);
++            }
++
++            return version_compare($current, $lower, '>=') && version_compare($current, $upper, '<');
++        }
++
++        if (str_starts_with($constraint, '~')) {
++            $raw = ltrim(substr($constraint, 1), 'vV');
++            $segments = explode('.', $raw);
++            $base = $this->parseParts($raw);
++            if ($base === null) {
++                return false;
++            }
++
++            $lower = sprintf('%d.%d.%d', $base[0], $base[1], $base[2]);
++            $upper = count($segments) <= 2
++                ? sprintf('%d.0.0', $base[0] + 1)
++                : sprintf('%d.%d.0', $base[0], $base[1] + 1);
++
++            return version_compare($current, $lower, '>=') && version_compare($current, $upper, '<');
++        }
++
++        if (preg_match('/^(\d+)(?:\.(\d+|[*x]))?(?:\.(\d+|[*x]))?$/', ltrim($constraint, 'vV'), $matches) === 1
++            && (str_contains($constraint, '*') || str_contains($constraint, 'x'))) {
++            $major = (int) $matches[1];
++            $minorPart = $matches[2] ?? '*';
++            if ($minorPart === '*' || $minorPart === 'x') {
++                return version_compare($current, "{$major}.0.0", '>=')
++                    && version_compare($current, ($major + 1).'.0.0', '<');
++            }
++            $minor = (int) $minorPart;
++
++            return version_compare($current, "{$major}.{$minor}.0", '>=')
++                && version_compare($current, "{$major}.".($minor + 1).'.0', '<');
++        }
++
++        if (preg_match('/^(>=|<=|!=|==|=|>|<)?\s*(.+)$/', $constraint, $matches) === 1) {
++            $operator = $matches[1] !== '' ? $matches[1] : '==';
++            if ($operator === '=') {
++                $operator = '==';
++            }
++            $target = $this->normalizeVersion($matches[2]);
++            if ($target === null) {
++                return false;
++            }
++
++            return version_compare($current, $target, $operator);
++        }
++
++        return false;
++    }
++
++    private function normalizeVersion(string $version): ?string
++    {
++        $parts = $this->parseParts($version);
++
++        return $parts === null ? null : sprintf('%d.%d.%d', $parts[0], $parts[1], $parts[2]);
++    }
++
++    /**
++     * @return array{0:int,1:int,2:int}|null
++     */
++    private function parseParts(string $version): ?array
++    {
++        $clean = ltrim(trim($version), 'vV');
++        if (preg_match('/^(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:[-+].*)?$/', $clean, $matches) !== 1) {
++            return null;
++        }
++
++        return [
++            (int) $matches[1],
++            isset($matches[2]) && $matches[2] !== '' ? (int) $matches[2] : 0,
++            isset($matches[3]) && $matches[3] !== '' ? (int) $matches[3] : 0,
++        ];
++    }
++}
+diff --git a/app/Services/Plugins/PluginContext.php b/app/Services/Plugins/PluginContext.php
+index 70decc2..e74581e 100644
+--- a/app/Services/Plugins/PluginContext.php
++++ b/app/Services/Plugins/PluginContext.php
+@@ -25,6 +25,7 @@ final class PluginContext
+         private readonly Application $app,
+         private readonly Router $router,
+         private readonly PluginInstallation $plugin,
++        private readonly ?PluginHookRegistry $hookRegistry = null,
+     ) {}
+ 
+     public function plugin(): PluginInstallation
+@@ -70,4 +71,45 @@ final class PluginContext
+ 
+         Route::middleware($middleware)->prefix($prefix)->name($namePrefix)->group($routes);
+     }
++
++    public function registerHook(string $hook, callable $callback, int $priority = 10): void
++    {
++        $this->hooks()->registerHook((string) $this->plugin->plugin_key, $hook, $callback, $priority);
++    }
++
++    /**
++     * Register a portal navigation link only for portals declared in the signed manifest.
++     *
++     * @param  array{icon?: string, permission?: ?string}  $options
++     */
++    public function registerPortalNavigation(string $portal, string $label, string $routeName, array $options = []): void
++    {
++        if (! array_key_exists($portal, self::PORTAL_ROLES)
++            || ! in_array($portal, $this->plugin->manifest['portals'] ?? [], true)) {
++            throw new InvalidArgumentException('The plugin did not declare this portal in its signed manifest.');
++        }
++
++        $this->hooks()->registerPortalNavigation(
++            (string) $this->plugin->plugin_key,
++            $portal,
++            $label,
++            $routeName,
++            $options,
++        );
++    }
++
++    public function hasPermission(string $permission): bool
++    {
++        return in_array($permission, $this->plugin->manifest['permissions'] ?? [], true);
++    }
++
++    public function hasCapability(string $capability): bool
++    {
++        return in_array($capability, $this->plugin->manifest['capabilities'] ?? [], true);
++    }
++
++    private function hooks(): PluginHookRegistry
++    {
++        return $this->hookRegistry ?? $this->app->make(PluginHookRegistry::class);
++    }
+ }
+diff --git a/app/Services/Plugins/PluginDiscoveryService.php b/app/Services/Plugins/PluginDiscoveryService.php
+new file mode 100644
+index 0000000..b83da6f
+--- /dev/null
++++ b/app/Services/Plugins/PluginDiscoveryService.php
+@@ -0,0 +1,148 @@
++<?php
++
++namespace App\Services\Plugins;
++
++use App\Models\PluginInstallation;
++use RuntimeException;
++
++final class PluginDiscoveryService
++{
++    public function __construct(private readonly PluginManifestValidator $manifestValidator)
++    {
++    }
++
++    /**
++     * Safely inspect private plugins/<vendor>/<slug>/<version>/plugin.json manifests without
++     * executing any plugin PHP code or auto-activating discovered packages.
++     *
++     * @return array{scanned: int, discovered: int, already_registered: int, skipped: list<array{path: string, reason: string}>}
++     */
++    public function discover(): array
++    {
++        $pluginsRootPath = base_path('plugins');
++        if (is_link($pluginsRootPath)) {
++            throw new RuntimeException('The private plugins directory must not be a symbolic link.');
++        }
++
++        $pluginsRoot = realpath($pluginsRootPath);
++        if ($pluginsRoot === false || ! is_dir($pluginsRoot)) {
++            return ['scanned' => 0, 'discovered' => 0, 'already_registered' => 0, 'skipped' => []];
++        }
++
++        $scanned = 0;
++        $discovered = 0;
++        $alreadyRegistered = 0;
++        $skipped = [];
++
++        foreach ($this->childDirectories($pluginsRoot) as $vendorDir) {
++            $vendor = basename($vendorDir);
++            if (str_starts_with($vendor, '.')) {
++                continue;
++            }
++
++            foreach ($this->childDirectories($vendorDir) as $slugDir) {
++                $slug = basename($slugDir);
++                if (str_starts_with($slug, '.')) {
++                    continue;
++                }
++
++                foreach ($this->childDirectories($slugDir) as $versionDir) {
++                    $version = basename($versionDir);
++                    $manifestPath = $versionDir.DIRECTORY_SEPARATOR.'plugin.json';
++                    $relativePackagePath = 'plugins/'.$vendor.'/'.$slug.'/'.$version;
++
++                    if (is_link($manifestPath) || ! is_file($manifestPath)) {
++                        continue;
++                    }
++
++                    $scanned++;
++                    $realManifest = realpath($manifestPath);
++                    if ($realManifest === false
++                        || ! str_starts_with($realManifest, rtrim($pluginsRoot, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR)) {
++                        $skipped[] = ['path' => $relativePackagePath, 'reason' => 'Manifest resolves outside private plugins directory.'];
++                        continue;
++                    }
++
++                    try {
++                        $manifest = json_decode((string) file_get_contents($realManifest), true, 64, JSON_THROW_ON_ERROR);
++                    } catch (\JsonException) {
++                        $skipped[] = ['path' => $relativePackagePath, 'reason' => 'Malformed plugin.json.'];
++                        continue;
++                    }
++
++                    if (! is_array($manifest) || array_is_list($manifest)) {
++                        $skipped[] = ['path' => $relativePackagePath, 'reason' => 'Manifest must be a JSON object.'];
++                        continue;
++                    }
++
++                    $errors = $this->manifestValidator->errors($manifest);
++                    if ($errors !== []) {
++                        $skipped[] = ['path' => $relativePackagePath, 'reason' => implode(' ', $errors)];
++                        continue;
++                    }
++
++                    [$manifestVendor, $manifestSlug] = explode('.', (string) $manifest['key'], 2);
++                    $expectedRelative = 'plugins/'.$manifestVendor.'/'.str_replace('.', '-', $manifestSlug).'/'.$manifest['version'];
++                    if (! hash_equals($expectedRelative, $relativePackagePath)) {
++                        $skipped[] = ['path' => $relativePackagePath, 'reason' => 'Directory path does not match canonical manifest key/version.'];
++                        continue;
++                    }
++
++                    $existing = PluginInstallation::query()->where('plugin_key', (string) $manifest['key'])->first();
++                    if ($existing) {
++                        $alreadyRegistered++;
++                        continue;
++                    }
++
++                    $plugin = new PluginInstallation();
++                    $plugin->forceFill([
++                        'plugin_key' => (string) $manifest['key'],
++                        'name' => (string) $manifest['name'],
++                        'version' => (string) $manifest['version'],
++                        'type' => (string) $manifest['type'],
++                        'status' => 'discovered',
++                        'manifest' => $manifest,
++                        'package_path' => $expectedRelative,
++                        'health_status' => 'unknown',
++                        'health_message' => 'Discovered in private plugins directory. Upload a signed package archive before activation.',
++                    ])->save();
++
++                    $discovered++;
++                }
++            }
++        }
++
++        return [
++            'scanned' => $scanned,
++            'discovered' => $discovered,
++            'already_registered' => $alreadyRegistered,
++            'skipped' => $skipped,
++        ];
++    }
++
++    /**
++     * @return list<string>
++     */
++    private function childDirectories(string $parent): array
++    {
++        $entries = @scandir($parent);
++        if (! is_array($entries)) {
++            return [];
++        }
++
++        $dirs = [];
++        foreach ($entries as $entry) {
++            if ($entry === '.' || $entry === '..') {
++                continue;
++            }
++            $full = $parent.DIRECTORY_SEPARATOR.$entry;
++            if (! is_link($full) && is_dir($full)) {
++                $dirs[] = $full;
++            }
++        }
++
++        sort($dirs, SORT_STRING);
++
++        return $dirs;
++    }
++}
+diff --git a/app/Services/Plugins/PluginHealthChecker.php b/app/Services/Plugins/PluginHealthChecker.php
+new file mode 100644
+index 0000000..1a12816
+--- /dev/null
++++ b/app/Services/Plugins/PluginHealthChecker.php
+@@ -0,0 +1,115 @@
++<?php
++
++namespace App\Services\Plugins;
++
++use App\Models\PluginInstallation;
++use Illuminate\Support\Facades\DB;
++use Throwable;
++
++final class PluginHealthChecker
++{
++    public function __construct(
++        private readonly PluginManifestValidator $manifestValidator,
++        private readonly PluginCompatibilityChecker $compatibilityChecker,
++        private readonly PluginIntegrityVerifier $integrityVerifier,
++    ) {
++    }
++
++    /**
++     * Evaluate signature trust, compatibility, dependencies, integrity, and migration status,
++     * persisting health_status, health_message, and last_health_check_at.
++     *
++     * @return array{status: string, message: string, issues: list<string>, warnings: list<string>}
++     */
++    public function checkAndRecord(PluginInstallation $plugin): array
++    {
++        $issues = [];
++        $warnings = [];
++
++        if ($plugin->status === 'uninstalled') {
++            $status = 'unknown';
++            $message = 'Plugin package is uninstalled; historical data and migration logs are preserved.';
++            $plugin->forceFill([
++                'health_status' => $status,
++                'health_message' => $message,
++                'last_health_check_at' => now(),
++            ])->save();
++
++            return ['status' => $status, 'message' => $message, 'issues' => [], 'warnings' => []];
++        }
++
++        if ($plugin->status === 'discovered') {
++            $warnings[] = 'Package discovered on disk; upload a signed ZIP archive before activation.';
++        } else {
++            $trustedKeys = config('plugins.trusted_public_keys', []);
++            if ($plugin->signature_verified_at === null
++                || ! is_string($plugin->signature_key_id)
++                || ! is_array($trustedKeys)
++                || ! array_key_exists($plugin->signature_key_id, $trustedKeys)) {
++                $issues[] = 'Release signing key is missing or no longer trusted.';
++            }
++        }
++
++        $manifestErrors = $this->manifestValidator->errors($plugin->manifest ?? []);
++        if ($manifestErrors !== []) {
++            $issues[] = 'Invalid manifest: '.implode(' ', $manifestErrors);
++        } else {
++            $compat = $this->compatibilityChecker->check($plugin->manifest ?? []);
++            if (! $compat['compatible']) {
++                $issues[] = 'Compatibility failed: '.implode(' ', $compat['errors']);
++            }
++        }
++
++        foreach (($plugin->manifest['dependencies'] ?? []) as $dependency) {
++            if (! PluginInstallation::query()->where('plugin_key', $dependency)->where('status', 'active')->exists()) {
++                $warnings[] = 'Required dependency is not active: '.$dependency;
++            }
++        }
++
++        foreach (($plugin->manifest['conflicts'] ?? []) as $conflict) {
++            if (PluginInstallation::query()->where('plugin_key', $conflict)->where('status', 'active')->exists()) {
++                $issues[] = 'Conflicting plugin is active: '.$conflict;
++            }
++        }
++
++        if (in_array($plugin->status, ['installed', 'active', 'inactive'], true)) {
++            try {
++                $this->integrityVerifier->verify($plugin);
++            } catch (Throwable $exception) {
++                $issues[] = $exception->getMessage();
++            }
++        }
++
++        $failedMigrations = DB::table('plugin_migrations')
++            ->where('plugin_key', $plugin->plugin_key)
++            ->where('status', 'failed')
++            ->count();
++        if ($failedMigrations > 0) {
++            $warnings[] = sprintf('%d plugin migration(s) previously failed.', $failedMigrations);
++        }
++
++        if ($issues !== []) {
++            $status = 'failed';
++            $message = implode(' ', $issues);
++        } elseif ($warnings !== []) {
++            $status = 'degraded';
++            $message = implode(' ', $warnings);
++        } else {
++            $status = 'healthy';
++            $message = 'All signature, compatibility, dependency, integrity, and migration checks passed.';
++        }
++
++        $plugin->forceFill([
++            'health_status' => $status,
++            'health_message' => mb_substr($message, 0, 1000),
++            'last_health_check_at' => now(),
++        ])->save();
++
++        return [
++            'status' => $status,
++            'message' => $message,
++            'issues' => $issues,
++            'warnings' => $warnings,
++        ];
++    }
++}
+diff --git a/app/Services/Plugins/PluginHookRegistry.php b/app/Services/Plugins/PluginHookRegistry.php
+new file mode 100644
+index 0000000..2fc17b7
+--- /dev/null
++++ b/app/Services/Plugins/PluginHookRegistry.php
+@@ -0,0 +1,203 @@
++<?php
++
++namespace App\Services\Plugins;
++
++use App\Models\PluginInstallation;
++use Illuminate\Support\Facades\Route;
++use Illuminate\Support\Facades\Schema;
++use InvalidArgumentException;
++use Throwable;
++
++final class PluginHookRegistry
++{
++    /** @var array<string, list<array{plugin_key: string, priority: int, callback: callable}>> */
++    private array $hooks = [];
++
++    /** @var array<string, list<array{plugin_key: string, label: string, route: string, icon: string, permission: ?string}>> */
++    private array $portalNav = [];
++
++    /** @var array<string, list<string>> */
++    private array $capabilities = [];
++
++    public function registerHook(string $pluginKey, string $hook, callable $callback, int $priority = 10): void
++    {
++        if (preg_match('/^[a-z0-9][a-z0-9_.-]{1,120}$/D', $hook) !== 1) {
++            throw new InvalidArgumentException('Invalid plugin hook identifier.');
++        }
++
++        $this->hooks[$hook][] = [
++            'plugin_key' => $pluginKey,
++            'priority' => $priority,
++            'callback' => $callback,
++        ];
++    }
++
++    /**
++     * @param  array{icon?: string, permission?: ?string}  $options
++     */
++    public function registerPortalNavigation(
++        string $pluginKey,
++        string $portal,
++        string $label,
++        string $routeName,
++        array $options = [],
++    ): void {
++        if (trim($label) === '' || preg_match('/^[a-z][a-z0-9_.-]{1,120}$/D', $routeName) !== 1) {
++            throw new InvalidArgumentException('Invalid plugin navigation registration.');
++        }
++
++        $this->portalNav[$portal][] = [
++            'plugin_key' => $pluginKey,
++            'label' => mb_substr(trim($label), 0, 80),
++            'route' => $routeName,
++            'icon' => mb_substr((string) ($options['icon'] ?? '🧩'), 0, 16),
++            'permission' => isset($options['permission']) && is_string($options['permission'])
++                ? $options['permission']
++                : null,
++        ];
++    }
++
++    /**
++     * @param  list<string>  $capabilities
++     */
++    public function registerCapabilities(string $pluginKey, array $capabilities): void
++    {
++        $clean = [];
++        foreach ($capabilities as $capability) {
++            if (is_string($capability) && trim($capability) !== '') {
++                $clean[] = trim($capability);
++            }
++        }
++        $this->capabilities[$pluginKey] = array_values(array_unique($clean));
++    }
++
++    /**
++     * Execute hooks registered by currently active, signature-verified plugins.
++     *
++     * @param  array<string, mixed>  $payload
++     * @return list<mixed>
++     */
++    public function dispatch(string $hook, array $payload = []): array
++    {
++        $entries = $this->hooks[$hook] ?? [];
++        if ($entries === []) {
++            return [];
++        }
++
++        usort($entries, static fn (array $a, array $b): int => $a['priority'] <=> $b['priority']);
++
++        $activeKeys = $this->activeVerifiedPlugins();
++        $results = [];
++
++        foreach ($entries as $entry) {
++            if (! isset($activeKeys[$entry['plugin_key']])) {
++                continue;
++            }
++
++            try {
++                $value = ($entry['callback'])($payload);
++                if ($value !== null) {
++                    $results[] = $value;
++                }
++            } catch (Throwable $exception) {
++                report($exception);
++            }
++        }
++
++        return $results;
++    }
++
++    /**
++     * Return navigation links for a given portal belonging strictly to currently active plugins.
++     *
++     * @return list<array{plugin_key: string, label: string, route: string, icon: string, permission: ?string}>
++     */
++    public function portalNavigation(string $portal): array
++    {
++        $items = $this->portalNav[$portal] ?? [];
++        if ($items === []) {
++            return [];
++        }
++
++        $activePlugins = $this->activeVerifiedPlugins();
++        $visible = [];
++
++        foreach ($items as $item) {
++            $plugin = $activePlugins[$item['plugin_key']] ?? null;
++            if (! $plugin instanceof PluginInstallation) {
++                continue;
++            }
++
++            if (! in_array($portal, $plugin->manifest['portals'] ?? [], true)) {
++                continue;
++            }
++
++            if (! Route::has($item['route'])) {
++                continue;
++            }
++
++            $visible[] = $item;
++        }
++
++        return $visible;
++    }
++
++    public function hasCapability(string $capability): bool
++    {
++        return $this->pluginsWithCapability($capability) !== [];
++    }
++
++    /**
++     * @return list<string>
++     */
++    public function pluginsWithCapability(string $capability): array
++    {
++        $activeKeys = $this->activeVerifiedPlugins();
++        $matched = [];
++
++        foreach ($this->capabilities as $pluginKey => $caps) {
++            if (isset($activeKeys[$pluginKey]) && in_array($capability, $caps, true)) {
++                $matched[] = $pluginKey;
++            }
++        }
++
++        return $matched;
++    }
++
++    public function reset(): void
++    {
++        $this->hooks = [];
++        $this->portalNav = [];
++        $this->capabilities = [];
++    }
++
++    /**
++     * @return array<string, PluginInstallation>
++     */
++    private function activeVerifiedPlugins(): array
++    {
++        try {
++            if (! Schema::hasTable('plugin_registry')) {
++                return [];
++            }
++        } catch (Throwable) {
++            return [];
++        }
++
++        $trustedKeys = config('plugins.trusted_public_keys', []);
++        if (! is_array($trustedKeys)) {
++            return [];
++        }
++
++        $active = [];
++        foreach (PluginInstallation::query()->where('status', 'active')->get() as $plugin) {
++            if ($plugin->signature_verified_at !== null
++                && is_string($plugin->signature_key_id)
++                && array_key_exists($plugin->signature_key_id, $trustedKeys)) {
++                $active[$plugin->plugin_key] = $plugin;
++            }
++        }
++
++        return $active;
++    }
++}
+diff --git a/app/Services/Plugins/PluginRuntime.php b/app/Services/Plugins/PluginRuntime.php
+index e76abde..c62aba4 100644
+--- a/app/Services/Plugins/PluginRuntime.php
++++ b/app/Services/Plugins/PluginRuntime.php
+@@ -6,14 +6,13 @@ use App\Contracts\Plugins\PluginContract;
+ use App\Models\PluginInstallation;
+ use Illuminate\Contracts\Foundation\Application;
+ use Illuminate\Routing\Router;
+-use Throwable;
+ use RuntimeException;
++use Throwable;
+ 
+ final class PluginRuntime
+ {
+     /** @var array<string, array{plugin:PluginInstallation,instance:PluginContract,context:PluginContext}> */
+     private array $loaded = [];
+-
+     private bool $registered = false;
+     private bool $booted = false;
+ 
+@@ -23,6 +22,8 @@ final class PluginRuntime
+         private readonly PluginManifestValidator $manifestValidator,
+         private readonly PluginIntegrityVerifier $integrityVerifier,
+         private readonly PluginLifecycle $lifecycle,
++        private readonly ?PluginCompatibilityChecker $compatibilityChecker = null,
++        private readonly ?PluginHookRegistry $hookRegistry = null,
+     ) {}
+ 
+     /**
+@@ -36,17 +37,21 @@ final class PluginRuntime
+         }
+         $this->registered = true;
+ 
++        $hooks = $this->hookRegistry ?? $this->app->make(PluginHookRegistry::class);
++
+         foreach (PluginInstallation::query()->where('status', 'active')->orderBy('plugin_key')->get() as $plugin) {
+             try {
+                 $instance = $this->loadVerifiedEntrypoint($plugin);
+-                $context = new PluginContext($this->app, $this->router, $plugin);
+-
++                $context = new PluginContext($this->app, $this->router, $plugin, $hooks);
+                 $this->loaded[$plugin->plugin_key] = [
+                     'plugin' => $plugin,
+                     'instance' => $instance,
+                     'context' => $context,
+                 ];
+-
++                $hooks->registerCapabilities(
++                    (string) $plugin->plugin_key,
++                    is_array($plugin->manifest['capabilities'] ?? null) ? $plugin->manifest['capabilities'] : [],
++                );
+                 $instance->register($context);
+             } catch (Throwable $exception) {
+                 unset($this->loaded[$plugin->plugin_key]);
+@@ -61,7 +66,6 @@ final class PluginRuntime
+         if ($this->booted) {
+             return;
+         }
+-
+         $this->registerActivePlugins();
+         $this->booted = true;
+ 
+@@ -72,7 +76,6 @@ final class PluginRuntime
+                     unset($this->loaded[$key]);
+                     continue;
+                 }
+-
+                 $loaded['instance']->boot($loaded['context']);
+             } catch (Throwable $exception) {
+                 report($exception);
+@@ -102,6 +105,9 @@ final class PluginRuntime
+             throw new RuntimeException('The active plugin manifest is invalid: '.implode(' ', $errors));
+         }
+ 
++        $compat = $this->compatibilityChecker ?? $this->app->make(PluginCompatibilityChecker::class);
++        $compat->assertCompatible($plugin->manifest ?? []);
++
+         if (! hash_equals((string) $plugin->plugin_key, (string) $plugin->manifest['key'])
+             || (string) $plugin->name !== (string) $plugin->manifest['name']
+             || (string) $plugin->version !== (string) $plugin->manifest['version']
+diff --git a/app/Services/Plugins/PluginSignatureVerifier.php b/app/Services/Plugins/PluginSignatureVerifier.php
+index e915abb..cc79e29 100644
+--- a/app/Services/Plugins/PluginSignatureVerifier.php
++++ b/app/Services/Plugins/PluginSignatureVerifier.php
+@@ -106,6 +106,92 @@ final class PluginSignatureVerifier
+         });
+     }
+ 
++    /**
++     * Verify a detached Ed25519 signature for an in-place plugin upgrade without
++     * mutating lifecycle state directly. Returns verified package metadata.
++     *
++     * @param  array<string, mixed>  $manifest
++     * @return array{package_sha256: string, signature_key_id: string, package_path: string}
++     */
++    public function verifyUpdateArchive(
++        PluginInstallation $plugin,
++        array $manifest,
++        string $stagedArchivePath,
++        string $signatureBase64,
++        string $keyId,
++        string $finalRelativePath,
++    ): array {
++        if (! function_exists('sodium_crypto_sign_verify_detached')) {
++            throw new RuntimeException('The PHP sodium extension is required for plugin signature verification.');
++        }
++
++        $errors = $this->manifestValidator->errors($manifest);
++        if ($errors !== []) {
++            throw new InvalidArgumentException('Invalid plugin manifest: '.implode(' ', $errors));
++        }
++
++        if (! hash_equals((string) $plugin->plugin_key, (string) $manifest['key'])
++            || (string) $plugin->type !== (string) $manifest['type']) {
++            throw new InvalidArgumentException('The signed manifest does not match the installed plugin identity.');
++        }
++
++        if (preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/D', $keyId) !== 1) {
++            throw new InvalidArgumentException('Invalid trusted release key ID.');
++        }
++
++        $keys = config('plugins.trusted_public_keys', []);
++        $encodedPublicKey = is_array($keys) ? ($keys[$keyId] ?? null) : null;
++        if (! is_string($encodedPublicKey) || $encodedPublicKey === '') {
++            throw new RuntimeException('The plugin signing key is not trusted.');
++        }
++
++        $publicKey = base64_decode($encodedPublicKey, true);
++        if (! is_string($publicKey) || strlen($publicKey) !== SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES) {
++            throw new RuntimeException('The configured trusted public key is invalid.');
++        }
++
++        $signature = base64_decode($signatureBase64, true);
++        if (! is_string($signature) || strlen($signature) !== SODIUM_CRYPTO_SIGN_BYTES) {
++            throw new InvalidArgumentException('The detached plugin signature is malformed.');
++        }
++
++        $archive = $this->resolveStagedArchive($stagedArchivePath);
++        $size = filesize($archive);
++        $maxBytes = max(1, (int) config('plugins.max_package_bytes', 52428800));
++        if ($size === false || $size < 1 || $size > $maxBytes) {
++            throw new RuntimeException('The staged plugin package is empty or exceeds the configured size limit.');
++        }
++
++        $checksum = hash_file('sha256', $archive);
++        if (! is_string($checksum)) {
++            throw new RuntimeException('Unable to calculate the staged plugin package checksum.');
++        }
++
++        $this->assertFinalPackagePath($finalRelativePath);
++        [$vendor, $slug] = explode('.', (string) $manifest['key'], 2);
++        $expectedPath = 'plugins/'.$vendor.'/'.str_replace('.', '-', $slug).'/'.$manifest['version'];
++        if (! hash_equals($expectedPath, $finalRelativePath)) {
++            throw new InvalidArgumentException('Plugin destination path does not match its signed identity.');
++        }
++
++        $payload = self::payloadForSignature($manifest, $checksum);
++        try {
++            $valid = sodium_crypto_sign_verify_detached($signature, $payload, $publicKey);
++        } catch (SodiumException $exception) {
++            throw new RuntimeException('Plugin signature verification failed.', previous: $exception);
++        }
++
++        if (! $valid) {
++            throw new RuntimeException('The plugin package signature is invalid.');
++        }
++
++        return [
++            'package_sha256' => $checksum,
++            'signature_key_id' => $keyId,
++            'package_path' => $finalRelativePath,
++        ];
++    }
++
+     public static function payloadForSignature(array $manifest, string $sha256): string
+     {
+         if (preg_match('/^[a-f0-9]{64}$/D', $sha256) !== 1) {
+diff --git a/app/Services/Plugins/PluginUninstallInspector.php b/app/Services/Plugins/PluginUninstallInspector.php
+new file mode 100644
+index 0000000..a476781
+--- /dev/null
++++ b/app/Services/Plugins/PluginUninstallInspector.php
+@@ -0,0 +1,144 @@
++<?php
++
++namespace App\Services\Plugins;
++
++use App\Models\PluginInstallation;
++use Illuminate\Support\Facades\DB;
++
++final class PluginUninstallInspector
++{
++    /**
++     * Build preflight retention & dependency inspection data for safe uninstall decisions.
++     *
++     * @return array{
++     *     can_uninstall: bool,
++     *     active_dependants: list<string>,
++     *     completed_migrations: int,
++     *     total_migrations: int,
++     *     version_history_count: int,
++     *     retention_summary: string
++     * }
++     */
++    public function preflight(PluginInstallation $plugin): array
++    {
++        $dependants = PluginInstallation::query()
++            ->where('status', 'active')
++            ->where('plugin_key', '!=', $plugin->plugin_key)
++            ->get()
++            ->filter(fn (PluginInstallation $candidate): bool => in_array($plugin->plugin_key, $candidate->manifest['dependencies'] ?? [], true))
++            ->pluck('plugin_key')
++            ->values()
++            ->all();
++
++        $completedMigrations = DB::table('plugin_migrations')
++            ->where('plugin_key', $plugin->plugin_key)
++            ->where('status', 'completed')
++            ->count();
++
++        $totalMigrations = DB::table('plugin_migrations')
++            ->where('plugin_key', $plugin->plugin_key)
++            ->count();
++
++        $history = is_array($plugin->metadata['version_history'] ?? null)
++            ? $plugin->metadata['version_history']
++            : [];
++
++        $canUninstall = in_array($plugin->status, ['installed', 'inactive', 'failed'], true) && $dependants === [];
++
++        $retentionSummary = $dependants !== []
++            ? 'Blocked by active dependants: '.implode(', ', $dependants)
++            : ($completedMigrations > 0
++                ? sprintf('%d completed migration(s) & LMS tables retained on uninstall.', $completedMigrations)
++                : 'Application data and registry history retained on uninstall.');
++
++        return [
++            'can_uninstall' => $canUninstall,
++            'active_dependants' => $dependants,
++            'completed_migrations' => $completedMigrations,
++            'total_migrations' => $totalMigrations,
++            'version_history_count' => count($history),
++            'retention_summary' => $retentionSummary,
++        ];
++    }
++
++    /**
++     * Produce a sanitized, secret-free JSON metadata and migration export for a plugin.
++     *
++     * @return array<string, mixed>
++     */
++    public function exportPayload(PluginInstallation $plugin): array
++    {
++        $manifest = is_array($plugin->manifest) ? $plugin->manifest : [];
++        $safeManifest = array_intersect_key($manifest, array_flip([
++            'schema_version',
++            'key',
++            'name',
++            'version',
++            'type',
++            'entrypoint',
++            'requires',
++            'dependencies',
++            'conflicts',
++            'portals',
++            'permissions',
++            'capabilities',
++            'migrations',
++        ]));
++
++        $rawHistory = is_array($plugin->metadata['version_history'] ?? null)
++            ? $plugin->metadata['version_history']
++            : [];
++        $safeHistory = array_values(array_map(static function (mixed $entry): array {
++            if (! is_array($entry)) {
++                return [];
++            }
++
++            return [
++                'version' => $entry['version'] ?? null,
++                'package_sha256' => $entry['package_sha256'] ?? null,
++                'signature_key_id' => $entry['signature_key_id'] ?? null,
++                'replaced_at' => $entry['replaced_at'] ?? null,
++                'replaced_by_version' => $entry['replaced_by_version'] ?? null,
++            ];
++        }, $rawHistory));
++
++        $migrations = DB::table('plugin_migrations')
++            ->where('plugin_key', $plugin->plugin_key)
++            ->orderBy('id')
++            ->get(['plugin_version', 'migration', 'status', 'started_at', 'completed_at'])
++            ->map(static fn ($row): array => [
++                'plugin_version' => $row->plugin_version,
++                'migration' => $row->migration,
++                'status' => $row->status,
++                'started_at' => $row->started_at,
++                'completed_at' => $row->completed_at,
++            ])
++            ->values()
++            ->all();
++
++        $preflight = $this->preflight($plugin);
++
++        return [
++            'exported_at' => now()->toIso8601String(),
++            'plugin' => [
++                'key' => $plugin->plugin_key,
++                'name' => $plugin->name,
++                'version' => $plugin->version,
++                'type' => $plugin->type,
++                'status' => $plugin->status,
++                'signature_key_id' => $plugin->signature_key_id,
++                'signature_verified_at' => $plugin->signature_verified_at?->toIso8601String(),
++                'package_sha256' => $plugin->package_sha256,
++                'health_status' => $plugin->health_status,
++                'health_message' => $plugin->health_message,
++                'last_health_check_at' => $plugin->last_health_check_at?->toIso8601String(),
++                'installed_at' => $plugin->installed_at?->toIso8601String(),
++                'activated_at' => $plugin->activated_at?->toIso8601String(),
++            ],
++            'manifest' => $safeManifest,
++            'preflight' => $preflight,
++            'version_history' => $safeHistory,
++            'migrations' => $migrations,
++        ];
++    }
++}
+diff --git a/app/Services/Plugins/PluginUpdater.php b/app/Services/Plugins/PluginUpdater.php
+new file mode 100644
+index 0000000..68725cb
+--- /dev/null
++++ b/app/Services/Plugins/PluginUpdater.php
+@@ -0,0 +1,253 @@
++<?php
++
++namespace App\Services\Plugins;
++
++use App\Models\PluginInstallation;
++use Illuminate\Http\UploadedFile;
++use Illuminate\Support\Facades\DB;
++use Illuminate\Support\Facades\File;
++use InvalidArgumentException;
++use LogicException;
++use RuntimeException;
++use Throwable;
++
++final class PluginUpdater
++{
++    public function __construct(
++        private readonly PluginManifestValidator $manifestValidator,
++        private readonly PluginCompatibilityChecker $compatibilityChecker,
++        private readonly PluginLifecycle $lifecycle,
++        private readonly PluginSignatureVerifier $signatureVerifier,
++        private readonly PluginArchiveInstaller $archiveInstaller,
++        private readonly PluginIntegrityVerifier $integrityVerifier,
++        private readonly PluginMigrationRunner $migrationRunner,
++    ) {
++    }
++
++    public function update(
++        string $pluginKey,
++        UploadedFile $upload,
++        string $manifestJson,
++        string $signatureBase64,
++        string $keyId,
++    ): PluginInstallation {
++        try {
++            $manifest = json_decode($manifestJson, true, 64, JSON_THROW_ON_ERROR);
++        } catch (\JsonException $exception) {
++            throw new InvalidArgumentException('The plugin update manifest must be valid JSON.', previous: $exception);
++        }
++
++        if (! is_array($manifest) || array_is_list($manifest)) {
++            throw new InvalidArgumentException('The plugin update manifest must be a JSON object.');
++        }
++
++        $errors = $this->manifestValidator->errors($manifest);
++        if ($errors !== []) {
++            throw new InvalidArgumentException('The plugin update manifest is invalid: '.implode(' ', $errors));
++        }
++
++        $plugin = PluginInstallation::query()->where('plugin_key', $pluginKey)->firstOrFail();
++        if (! in_array($plugin->status, ['installed', 'active', 'inactive'], true)) {
++            throw new LogicException('Only an installed, active, or inactive plugin can be upgraded.');
++        }
++
++        if (! hash_equals((string) $plugin->plugin_key, (string) $manifest['key'])
++            || (string) $plugin->type !== (string) $manifest['type']) {
++            throw new InvalidArgumentException('The upgrade package key or type does not match the installed plugin.');
++        }
++
++        if (! version_compare((string) $manifest['version'], (string) $plugin->version, '>')) {
++            throw new InvalidArgumentException(sprintf(
++                'Upgrade version (%s) must be newer than the currently installed version (%s).',
++                (string) $manifest['version'],
++                (string) $plugin->version
++            ));
++        }
++
++        $this->compatibilityChecker->assertCompatible($manifest);
++
++        if (strtolower($upload->getClientOriginalExtension()) !== 'zip') {
++            throw new InvalidArgumentException('Upload a ZIP plugin update package.');
++        }
++
++        $maxPackageBytes = max(1, (int) config('plugins.max_package_bytes', 52428800));
++        $uploadSize = $upload->getSize();
++        if ($uploadSize === false || $uploadSize < 1 || $uploadSize > $maxPackageBytes) {
++            throw new InvalidArgumentException('The plugin update ZIP is empty or exceeds the configured package size limit.');
++        }
++
++        [$vendor, $slug] = explode('.', $pluginKey, 2);
++        $finalRelativePath = 'plugins/'.$vendor.'/'.str_replace('.', '-', $slug).'/'.$manifest['version'];
++
++        $stagingDirectory = $this->privateStagingDirectory();
++        $archivePath = null;
++        $previousStatus = $plugin->status;
++        $previousSnapshot = [
++            'version' => (string) $plugin->version,
++            'name' => (string) $plugin->name,
++            'manifest' => $plugin->manifest,
++            'package_sha256' => $plugin->package_sha256,
++            'signature_key_id' => $plugin->signature_key_id,
++            'signature_verified_at' => $plugin->signature_verified_at,
++            'package_path' => $plugin->package_path,
++            'metadata' => is_array($plugin->metadata) ? $plugin->metadata : [],
++        ];
++        $extractedPath = null;
++        $stagedStateEntered = false;
++
++        try {
++            $filename = 'update-'.bin2hex(random_bytes(24)).'.zip';
++            $stored = $upload->move($stagingDirectory, $filename);
++            $archivePath = $stored->getPathname();
++
++            $verified = $this->signatureVerifier->verifyUpdateArchive(
++                $plugin,
++                $manifest,
++                $archivePath,
++                $signatureBase64,
++                $keyId,
++                $finalRelativePath,
++            );
++
++            $this->lifecycle->transition($pluginKey, 'update_staged', [
++                'health_status' => 'healthy',
++                'health_message' => 'Staged signed update verification for version '.$manifest['version'].'.',
++                'last_health_check_at' => now(),
++            ]);
++            $stagedStateEntered = true;
++
++            $fileHashes = $this->archiveInstaller->extractVerifiedUpdatePackage(
++                $pluginKey,
++                $manifest,
++                $verified['package_sha256'],
++                $verified['package_path'],
++                $archivePath,
++            );
++            $extractedPath = base_path($verified['package_path']);
++
++            $history = $previousSnapshot['metadata']['version_history'] ?? [];
++            if (! is_array($history)) {
++                $history = [];
++            }
++            $history[] = [
++                'version' => $previousSnapshot['version'],
++                'package_sha256' => $previousSnapshot['package_sha256'],
++                'signature_key_id' => $previousSnapshot['signature_key_id'],
++                'replaced_at' => now()->toIso8601String(),
++                'replaced_by_version' => (string) $manifest['version'],
++            ];
++            $history = array_slice($history, -10);
++
++            $nextMetadata = $previousSnapshot['metadata'];
++            $nextMetadata['integrity_version'] = 1;
++            $nextMetadata['installed_file_hashes'] = $fileHashes;
++            $nextMetadata['version_history'] = $history;
++
++            $updated = DB::transaction(function () use ($pluginKey, $manifest, $verified, $nextMetadata): PluginInstallation {
++                $locked = PluginInstallation::query()->where('plugin_key', $pluginKey)->lockForUpdate()->firstOrFail();
++                $locked->forceFill([
++                    'name' => (string) $manifest['name'],
++                    'version' => (string) $manifest['version'],
++                    'manifest' => $manifest,
++                    'package_sha256' => $verified['package_sha256'],
++                    'signature_key_id' => $verified['signature_key_id'],
++                    'signature_verified_at' => now(),
++                    'package_path' => $verified['package_path'],
++                    'metadata' => $nextMetadata,
++                ])->save();
++
++                return $locked->refresh();
++            });
++
++            $this->integrityVerifier->verify($updated);
++            $this->migrationRunner->migrate($updated);
++
++            $targetStatus = $previousStatus === 'active' ? 'active' : 'inactive';
++            if ($targetStatus === 'active') {
++                $this->assertDependenciesSatisfied($updated);
++            }
++
++            return $this->lifecycle->transition($pluginKey, $targetStatus, [
++                'health_status' => 'healthy',
++                'health_message' => 'Upgraded cleanly to version '.$manifest['version'].'.',
++                'last_health_check_at' => now(),
++            ]);
++        } catch (Throwable $exception) {
++            if (is_string($extractedPath) && is_dir($extractedPath) && ! is_link($extractedPath)) {
++                File::deleteDirectory($extractedPath);
++            }
++
++            if ($stagedStateEntered) {
++                try {
++                    DB::transaction(function () use ($pluginKey, $previousSnapshot, $previousStatus): void {
++                        $locked = PluginInstallation::query()->where('plugin_key', $pluginKey)->lockForUpdate()->first();
++                        if (! $locked) {
++                            return;
++                        }
++                        $restoreStatus = $previousStatus === 'active' ? 'active' : 'inactive';
++                        $locked->forceFill([
++                            'name' => $previousSnapshot['name'],
++                            'version' => $previousSnapshot['version'],
++                            'manifest' => $previousSnapshot['manifest'],
++                            'package_sha256' => $previousSnapshot['package_sha256'],
++                            'signature_key_id' => $previousSnapshot['signature_key_id'],
++                            'signature_verified_at' => $previousSnapshot['signature_verified_at'],
++                            'package_path' => $previousSnapshot['package_path'],
++                            'metadata' => $previousSnapshot['metadata'],
++                            'status' => $restoreStatus,
++                            'health_status' => 'degraded',
++                            'health_message' => 'Plugin upgrade failed and was rolled back to version '.$previousSnapshot['version'].'.',
++                            'last_health_check_at' => now(),
++                        ])->save();
++                    });
++                } catch (Throwable) {
++                    // Preserve the original failure.
++                }
++            }
++
++            throw $exception;
++        } finally {
++            if (is_string($archivePath) && is_file($archivePath) && ! is_link($archivePath)) {
++                @unlink($archivePath);
++            }
++        }
++    }
++
++    private function assertDependenciesSatisfied(PluginInstallation $plugin): void
++    {
++        foreach (($plugin->manifest['dependencies'] ?? []) as $dependency) {
++            if (! PluginInstallation::query()->where('plugin_key', $dependency)->where('status', 'active')->exists()) {
++                throw new RuntimeException('A required plugin dependency is not active: '.$dependency);
++            }
++        }
++        foreach (($plugin->manifest['conflicts'] ?? []) as $conflict) {
++            if (PluginInstallation::query()->where('plugin_key', $conflict)->where('status', 'active')->exists()) {
++                throw new RuntimeException('A conflicting plugin is active: '.$conflict);
++            }
++        }
++    }
++
++    private function privateStagingDirectory(): string
++    {
++        $pluginsDirectory = base_path('plugins');
++        $configuredStaging = (string) config('plugins.staging_directory');
++        if (is_link($pluginsDirectory) || is_link($configuredStaging)) {
++            throw new RuntimeException('The private plugin directories must not be symbolic links.');
++        }
++        $pluginsRoot = realpath($pluginsDirectory);
++        if ($pluginsRoot === false) {
++            throw new RuntimeException('The private plugins directory is unavailable.');
++        }
++        if (! is_dir($configuredStaging) && ! mkdir($configuredStaging, 0700, true) && ! is_dir($configuredStaging)) {
++            throw new RuntimeException('Unable to create the private plugin staging directory.');
++        }
++        $stagingRoot = realpath($configuredStaging);
++        if ($stagingRoot === false
++            || ! str_starts_with($stagingRoot, rtrim($pluginsRoot, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR)
++            || ! is_writable($stagingRoot)) {
++            throw new RuntimeException('The plugin staging directory is outside the private plugins folder or is not writable.');
++        }
++
++        return $stagingRoot;
++    }
++}
+diff --git a/app/Services/Plugins/PluginUploadInstaller.php b/app/Services/Plugins/PluginUploadInstaller.php
+index b068af7..f5498f4 100644
+--- a/app/Services/Plugins/PluginUploadInstaller.php
++++ b/app/Services/Plugins/PluginUploadInstaller.php
+@@ -15,6 +15,7 @@ final class PluginUploadInstaller
+         private readonly PluginLifecycle $lifecycle,
+         private readonly PluginSignatureVerifier $signatureVerifier,
+         private readonly PluginArchiveInstaller $archiveInstaller,
++        private readonly ?PluginCompatibilityChecker $compatibilityChecker = null,
+     ) {
+     }
+ 
+@@ -35,6 +36,11 @@ final class PluginUploadInstaller
+             throw new InvalidArgumentException('The plugin manifest is invalid: '.implode(' ', $errors));
+         }
+ 
++        $compat = ($this->compatibilityChecker ?? new PluginCompatibilityChecker())->check($manifest);
++        if (! $compat['compatible']) {
++            throw new InvalidArgumentException('Plugin compatibility check failed: '.implode(' ', $compat['errors']));
++        }
++
+         if (strtolower($upload->getClientOriginalExtension()) !== 'zip') {
+             throw new InvalidArgumentException('Upload a ZIP plugin package.');
+         }
+@@ -49,23 +55,25 @@ final class PluginUploadInstaller
+         [$vendor, $slug] = explode('.', $pluginKey, 2);
+         $finalPath = 'plugins/'.$vendor.'/'.str_replace('.', '-', $slug).'/'.$manifest['version'];
+         $finalAbsolutePath = base_path($finalPath);
+-        $existing = PluginInstallation::query()->where('plugin_key', $pluginKey)->first();
+ 
++        $existing = PluginInstallation::query()->where('plugin_key', $pluginKey)->first();
+         if ($existing) {
+             $retryableState = (
+                 in_array($existing->status, ['discovered', 'validated', 'staged', 'failed'], true)
+                     && $existing->installed_at === null
+                     && $existing->activated_at === null
+                 ) || $existing->status === 'uninstalled';
++            $pathCompatible = $existing->status === 'discovered'
++                || $existing->package_path === null
++                || hash_equals($finalPath, (string) $existing->package_path);
+             $retryableState = $retryableState
+-                && ($existing->package_path === null || hash_equals($finalPath, (string) $existing->package_path))
++                && $pathCompatible
+                 && ! file_exists($finalAbsolutePath)
+                 && ! is_link($finalAbsolutePath);
+ 
+             if (! $retryableState) {
+-                throw new RuntimeException('This plugin is already registered or installed. In-place plugin updates are not enabled yet.');
++                throw new RuntimeException('This plugin is already registered or installed. Use the Upgrade action for signed version updates.');
+             }
+-
+             $existing->delete();
+         }
+ 
+@@ -86,6 +94,9 @@ final class PluginUploadInstaller
+                 'type' => $manifest['type'],
+                 'status' => 'discovered',
+                 'manifest' => $manifest,
++                'health_status' => 'healthy',
++                'health_message' => 'Manifest and runtime compatibility checks passed.',
++                'last_health_check_at' => now(),
+             ])->save();
+ 
+             $this->lifecycle->transition($pluginKey, 'validated');
+@@ -109,13 +120,13 @@ final class PluginUploadInstaller
+                         $this->lifecycle->transition((string) $current->plugin_key, 'failed', [
+                             'health_status' => 'failed',
+                             'health_message' => 'Plugin package installation failed. Review the administrator activity log.',
++                            'last_health_check_at' => now(),
+                         ]);
+                     } catch (Throwable) {
+                         // Preserve the original installation failure.
+                     }
+                 }
+             }
+-
+             throw $exception;
+         } finally {
+             if (is_string($archivePath) && is_file($archivePath) && ! is_link($archivePath)) {
+@@ -128,7 +139,6 @@ final class PluginUploadInstaller
+     {
+         $pluginsDirectory = base_path('plugins');
+         $configuredStaging = (string) config('plugins.staging_directory');
+-
+         if (is_link($pluginsDirectory) || is_link($configuredStaging)) {
+             throw new RuntimeException('The private plugin directories must not be symbolic links.');
+         }
+diff --git a/config/plugins.php b/config/plugins.php
+index f4d8e39..f4bd57f 100644
+--- a/config/plugins.php
++++ b/config/plugins.php
+@@ -6,6 +6,13 @@ return [
+     // Trusted Ed25519 public keys keyed by immutable release key ID.
+     // Values are base64-encoded public keys. Never configure private keys here.
+     'trusted_public_keys' => is_array($trustedKeys) ? $trustedKeys : [],
++
++    // Optional explicit LMS release override for compatibility checks.
++    // Defaults dynamically to VERSION (or 1.0.0 baseline when VERSION is 0.0.0 in local dev).
++    'lms_version' => env('LMS_VERSION') ?: null,
++
++    'required_php_extensions' => ['openssl', 'sodium', 'zip', 'json'],
++
+     'max_package_bytes' => (int) env('PLUGIN_MAX_PACKAGE_BYTES', 52428800),
+     'max_archive_entries' => (int) env('PLUGIN_MAX_ARCHIVE_ENTRIES', 1000),
+     'max_uncompressed_bytes' => (int) env('PLUGIN_MAX_UNCOMPRESSED_BYTES', 104857600),
+diff --git a/docs/PLUGIN_MANAGER.md b/docs/PLUGIN_MANAGER.md
+index fd2d524..d104295 100644
+--- a/docs/PLUGIN_MANAGER.md
++++ b/docs/PLUGIN_MANAGER.md
+@@ -1,58 +1,30 @@
+ # Admin Plugin Manager
+ 
+ The Admin Plugin Manager is the guarded web entry point for signed plugin
+-installation. It is available only to the root admin role under the authenticated
+-Admin workspace.
+-
+-## Install flow
+-
+-1. Admin uploads a ZIP archive (default maximum 50 MiB).
+-2. Admin supplies the exact manifest JSON, trusted release key ID and detached
+-   Base64 Ed25519 signature.
+-3. The server validates the manifest, checks the private staging directory,
+-   creates a registry record and advances it through discovered, validated and
+-   staged.
+-4. The signature verifier checks the configured trusted public key and binds the
+-   manifest to the SHA-256 checksum of the exact uploaded ZIP bytes.
+-5. The secure archive installer rechecks the checksum and safely extracts the
+-   package into plugins/vendor/plugin/version.
+-6. The registry is marked installed only after the atomic filesystem move.
+-7. The staged ZIP is deleted. The action is written to the admin activity log.
+-
+-A failed, not-yet-installed registry entry can be retried after correcting the
+-package or signature. An existing installed version cannot be overwritten.
+-In-place updates are not enabled yet.
+-
+-## Example manifest
+-
+-    {
+-      "schema_version": 1,
+-      "key": "aec.example-plugin",
+-      "name": "Example Plugin",
+-      "version": "1.0.0",
+-      "type": "module",
+-      "entrypoint": "src/Plugin.php",
+-      "requires": {
+-        "php": "^8.3",
+-        "laravel": "^12.0",
+-        "lms": "^1.0"
+-      },
+-      "dependencies": [],
+-      "conflicts": [],
+-      "portals": ["admin", "teacher", "student"],
+-      "permissions": ["example.manage"],
+-      "capabilities": ["example"]
+-    }
+-
+-The detached signature must be generated over the exact canonical payload from
+-PluginSignatureVerifier::payloadForSignature($manifest, $sha256). See
+-PLUGIN_SIGNATURE_VERIFICATION.md for the trusted public key configuration and
+-canonical signing rules.
+-
+-## Not yet enabled
+-
+-The Manager deliberately does not offer activate, deactivate, update or uninstall
+-controls yet. The isolated runtime must first enforce plugin boundaries for web
+-routes, API routes, queued jobs, schedules, events and portal navigation. A
+-plugin being installed does not mean its PHP entrypoint is loaded or executed.
+-Manifest permissions are stored for review and are not automatically granted.
++lifecycle operations across all LMS portals (`admin`, `branch`, `teacher`,
++`student`, `guardian`, `support_staff`, `public`). It is available only to the
++root `admin` role under the authenticated Admin workspace.
++
++## Capabilities
++
++1. **Private directory discovery (`POST /admin/plugins/discover`)**: Safely
++   scans `plugins/<vendor>/<slug>/<version>/plugin.json` without executing any
++   PHP code or activating packages. Discovered entries require a trusted signed
++   package before activation.
++2. **Signed upload & install (`POST /admin/plugins/install`)**: Verifies JSON
++   manifest, PHP/Laravel/LMS runtime compatibility, detached Ed25519 signature,
++   SHA-256 checksum, and safe ZIP contents inside private `plugins/.staging`.
++3. **Staged signed upgrades (`POST /admin/plugins/{key}/update`)**: Validates
++   monotonic semantic version (`>` current version), compatibility, and signed
++   archive; stages `update_staged`; records prior version metadata in
++   `metadata.version_history`; runs new migrations; and rolls back safely on error.
++4. **Activation & Deactivation (`activate` / `deactivate`)**: Enforces
++   dependencies, conflicts, trusted release keys, integrity hashes, and route-cache
++   checks. Deactivation immediately blocks plugin routes (`404`), hooks, and portal
++   navigation links while retaining installed files and database data.
++5. **Health checks (`POST /admin/plugins/{key}/health`)**: Checks release key trust,
++   manifest validity, runtime compatibility, dependencies/conflicts, installed-file
++   hashes, and migration status, persisting `health_status` and `health_message`.
++6. **Uninstall preflight & sanitized JSON export (`GET /admin/plugins/{key}/export`)**:
++   Shows active dependants and migration retention counts; exports secret-free
++   manifest, version history, and migration records.
+diff --git a/lang/bn.json b/lang/bn.json
+index 6fac1f1..79e9754 100644
+--- a/lang/bn.json
++++ b/lang/bn.json
+@@ -957,7 +957,7 @@
+     "All languages": "সব ভাষা",
+     "Search courses": "কোর্স খুঁজুন",
+     "Course title or slug": "কোর্সের নাম বা স্লাগ",
+-    "All statuses": "সব স্ট্যাটাস",
++    "All statuses": "সকল অবস্থা",
+     "Filter": "ফিল্টার",
+     "Course archived because learning, enrollment, quiz or payment history exists; records were preserved.": "শিক্ষার্থী, ভর্তি, পরীক্ষা বা পেমেন্টের ইতিহাস থাকায় কোর্সটি আর্কাইভ করা হয়েছে; পুরোনো রেকর্ড সংরক্ষিত আছে।",
+     "Course created successfully.": "কোর্স সফলভাবে তৈরি হয়েছে।",
+@@ -1119,5 +1119,40 @@
+     "S3-compatible endpoint must be a valid HTTPS URL without embedded credentials": "S3-compatible endpoint অবশ্যই বৈধ HTTPS URL হতে হবে এবং URL-এর মধ্যে কোনো username বা password থাকা যাবে না",
+     "Lesson completed": "পাঠ সম্পন্ন",
+     "Lesson marked complete.": "পাঠটি সম্পন্ন হিসেবে সংরক্ষণ করা হয়েছে।",
+-    "Complete every course lesson before completing this course.": "কোর্স সম্পন্ন করতে প্রতিটি পাঠ শেষ করুন।"
++    "Complete every course lesson before completing this course.": "কোর্স সম্পন্ন করতে প্রতিটি পাঠ শেষ করুন।",
++    "Runtime compatibility baseline:": "রানটাইম সামঞ্জস্য বেসলাইন:",
++    "Scan plugins directory": "প্লাগইন ডিরেক্টরি স্ক্যান করুন",
++    "Scanned private plugins directory: :discovered newly discovered package(s), :skipped skipped.": "প্রাইভেট প্লাগইন ডিরেক্টরি স্ক্যান সম্পন্ন: :discoveredটি নতুন প্যাকেজ পাওয়া গেছে, :skippedটি বাদ দেওয়া হয়েছে।",
++    "Plugin directory scan failed. Check private plugins directory permissions and server logs.": "প্লাগইন ডিরেক্টরি স্ক্যান ব্যর্থ হয়েছে। প্রাইভেট ডিরেক্টরির অনুমতি এবং সার্ভার লগ পরীক্ষা করুন।",
++    "Module Manager": "মডিউল ম্যানেজার",
++    "Filter by status": "অবস্থা অনুযায়ী ফিল্টার",
++    "Filter by portal": "পোর্টাল অনুযায়ী ফিল্টার",
++    "All portals": "সকল পোর্টাল",
++    "Filter by type": "ধরন অনুযায়ী ফিল্টার",
++    "All types": "সকল ধরন",
++    "Version & History": "ভার্সন ও ইতিহাস",
++    "Portals & Scope": "পোর্টাল ও পরিসর",
++    "Status & Compatibility": "অবস্থা ও সামঞ্জস্য",
++    "Health": "হেলথ",
++    "Retention & Actions": "ডেটা সংরক্ষণ ও কার্যক্রম",
++    "Depends on:": "নির্ভরতা:",
++    "Conflicts:": "দ্বন্দ্ব:",
++    "Signed": "স্বাক্ষরিত",
++    "prior version(s)": "আগের ভার্সন",
++    "Permissions:": "অনুমতি:",
++    "Compatible": "সামঞ্জস্যপূর্ণ",
++    "Never checked": "কখনো পরীক্ষা করা হয়নি",
++    "Health check": "হেলথ চেক",
++    "Export JSON": "JSON এক্সপোর্ট",
++    "Upgrade signed version": "স্বাক্ষরিত আপগ্রেড",
++    "New ZIP package": "নতুন ZIP প্যাকেজ",
++    "Verify and upgrade": "যাচাই ও আপগ্রেড করুন",
++    "Recent plugin audit log": "সাম্প্রতিক প্লাগইন অডিট লগ",
++    "No plugin lifecycle audit events recorded yet.": "এখনও কোনো প্লাগইন অডিট ইভেন্ট রেকর্ড হয়নি।",
++    "No plugins match the current filter, or none have been registered yet.": "বর্তমান ফিল্টারের সাথে কোনো প্লাগইন মেলেনি, অথবা এখনও কোনোটি নিবন্ধিত হয়নি।",
++    "Clear the Laravel route cache before updating plugins.": "প্লাগইন আপগ্রেড করার আগে Laravel রুট ক্যাশ পরিষ্কার করুন।",
++    "Plugin update failed and was rolled back safely. Check the manifest version, compatibility, signature and server logs.": "প্লাগইন আপগ্রেড ব্যর্থ হয়েছে এবং নিরাপদভাবে পূর্বাবস্থায় ফেরত আনা হয়েছে।",
++    "Plugin upgraded cleanly to version :version.": "প্লাগইন সফলভাবে ভার্সন :version-এ আপগ্রেড হয়েছে।",
++    "Plugin health check (:status): :message": "প্লাগইন হেলথ চেক (:status): :message",
++    "Inspect portals, compatibility, dependencies, health state, version history and retained migrations before activating, upgrading or uninstalling.": "সক্রিয়, আপগ্রেড বা আনইনস্টল করার আগে পোর্টাল, সামঞ্জস্য, নির্ভরতা, হেলথ এবং মাইগ্রেশন ইতিহাস যাচাই করুন।"
+ }
+diff --git a/lang/en.json b/lang/en.json
+index 778ab5c..299b233 100644
+--- a/lang/en.json
++++ b/lang/en.json
+@@ -747,5 +747,43 @@
+     "FILESYSTEM_DISK=s3, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION and AWS_BUCKET; optional HTTPS AWS_ENDPOINT": "FILESYSTEM_DISK=s3, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION and AWS_BUCKET; optional HTTPS AWS_ENDPOINT",
+     "Lesson completed": "Lesson completed",
+     "Lesson marked complete.": "Lesson marked complete.",
+-    "Complete every course lesson before completing this course.": "Complete every course lesson before completing this course."
++    "Complete every course lesson before completing this course.": "Complete every course lesson before completing this course.",
++    "Runtime compatibility baseline:": "Runtime compatibility baseline:",
++    "Scan plugins directory": "Scan plugins directory",
++    "Scanned private plugins directory: :discovered newly discovered package(s), :skipped skipped.": "Scanned private plugins directory: :discovered newly discovered package(s), :skipped skipped.",
++    "Plugin directory scan failed. Check private plugins directory permissions and server logs.": "Plugin directory scan failed. Check private plugins directory permissions and server logs.",
++    "Module Manager": "Module Manager",
++    "Filter by status": "Filter by status",
++    "All statuses": "All statuses",
++    "Filter by portal": "Filter by portal",
++    "All portals": "All portals",
++    "Filter by type": "Filter by type",
++    "All types": "All types",
++    "Filter": "Filter",
++    "Reset": "Reset",
++    "Version & History": "Version & History",
++    "Portals & Scope": "Portals & Scope",
++    "Status & Compatibility": "Status & Compatibility",
++    "Health": "Health",
++    "Retention & Actions": "Retention & Actions",
++    "Depends on:": "Depends on:",
++    "Conflicts:": "Conflicts:",
++    "Signed": "Signed",
++    "prior version(s)": "prior version(s)",
++    "Permissions:": "Permissions:",
++    "Compatible": "Compatible",
++    "Never checked": "Never checked",
++    "Health check": "Health check",
++    "Export JSON": "Export JSON",
++    "Upgrade signed version": "Upgrade signed version",
++    "New ZIP package": "New ZIP package",
++    "Verify and upgrade": "Verify and upgrade",
++    "Recent plugin audit log": "Recent plugin audit log",
++    "No plugin lifecycle audit events recorded yet.": "No plugin lifecycle audit events recorded yet.",
++    "No plugins match the current filter, or none have been registered yet.": "No plugins match the current filter, or none have been registered yet.",
++    "Clear the Laravel route cache before updating plugins.": "Clear the Laravel route cache before updating plugins.",
++    "Plugin update failed and was rolled back safely. Check the manifest version, compatibility, signature and server logs.": "Plugin update failed and was rolled back safely. Check the manifest version, compatibility, signature and server logs.",
++    "Plugin upgraded cleanly to version :version.": "Plugin upgraded cleanly to version :version.",
++    "Plugin health check (:status): :message": "Plugin health check (:status): :message",
++    "Inspect portals, compatibility, dependencies, health state, version history and retained migrations before activating, upgrading or uninstalling.": "Inspect portals, compatibility, dependencies, health state, version history and retained migrations before activating, upgrading or uninstalling."
+ }
+diff --git a/resources/views/admin/plugins/index.blade.php b/resources/views/admin/plugins/index.blade.php
+index 682dcb5..e8aa046 100644
+--- a/resources/views/admin/plugins/index.blade.php
++++ b/resources/views/admin/plugins/index.blade.php
+@@ -9,13 +9,29 @@
+         <ul style="margin:8px 0 0;">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
+     </div>
+ @endif
++
+ <div class="page-header">
+     <div>
+         <span class="badge info">{{ __('Secure extension platform') }}</span>
+         <h1 style="margin:12px 0 0;">{{ __('Plugin Manager') }}</h1>
+         <p class="muted">{{ __('Install signed, independently packaged LMS plugins into the private plugins directory.') }}</p>
++        <p class="muted" style="margin:6px 0 0;">
++            <small>
++                {{ __('Runtime compatibility baseline:') }}
++                <code>PHP {{ $environmentVersions['php'] }}</code> ·
++                <code>Laravel {{ $environmentVersions['laravel'] }}</code> ·
++                <code>LMS {{ $environmentVersions['lms'] }}</code>
++            </small>
++        </p>
++    </div>
++    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
++        <form method="POST" action="{{ route('admin.plugins.discover') }}" style="display:inline;">
++            @csrf
++            <button class="btn secondary" type="submit">{{ __('Scan plugins directory') }}</button>
++        </form>
++        <a class="btn secondary" href="{{ route('admin.modules.index') }}">{{ __('Module Manager') }}</a>
++        <a class="btn secondary" href="{{ route('dashboard') }}">{{ __('Back to dashboard') }}</a>
+     </div>
+-    <a class="btn secondary" href="{{ route('dashboard') }}">{{ __('Back to dashboard') }}</a>
+ </div>
+ 
+ <div class="panel" role="note" style="margin-bottom:20px;">
+@@ -26,6 +42,7 @@
+ <section class="panel" style="margin-bottom:24px;">
+     <h2>{{ __('Install a signed plugin') }}</h2>
+     <p class="muted">{{ __('Upload the ZIP, paste its exact signed manifest JSON, select the trusted release key ID and provide the detached Base64 signature.') }}</p>
++
+     <form method="POST" action="{{ route('admin.plugins.install') }}" enctype="multipart/form-data">
+         @csrf
+         <div class="form-grid">
+@@ -40,7 +57,7 @@
+             </div>
+             <div class="full-width">
+                 <label for="plugin-manifest">{{ __('Signed manifest JSON') }}</label>
+-                <textarea id="plugin-manifest" name="manifest" rows="12" spellcheck="false" required>{{ old('manifest') }}</textarea>
++                <textarea id="plugin-manifest" name="manifest" rows="10" spellcheck="false" required>{{ old('manifest') }}</textarea>
+             </div>
+             <div class="full-width">
+                 <label for="plugin-signature">{{ __('Detached signature (Base64)') }}</label>
+@@ -51,53 +68,164 @@
+     </form>
+ </section>
+ 
+-<section class="panel">
+-    <h2>{{ __('Registered plugins') }}</h2>
++<section class="panel" style="margin-bottom:24px;">
++    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
++        <div>
++            <h2 style="margin:0;">{{ __('Registered plugins') }} ({{ $plugins->count() }} / {{ $totalRegistered }})</h2>
++            <p class="muted" style="margin:4px 0 0;">{{ __('Inspect portals, compatibility, dependencies, health state, version history and retained migrations before activating, upgrading or uninstalling.') }}</p>
++        </div>
++        <form method="GET" action="{{ route('admin.plugins.index') }}" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
++            <select name="status" aria-label="{{ __('Filter by status') }}" style="width:auto;padding:8px 10px;">
++                <option value="">{{ __('All statuses') }}</option>
++                @foreach(['discovered', 'installed', 'active', 'inactive', 'update_staged', 'failed', 'uninstalled'] as $statusOption)
++                    <option value="{{ $statusOption }}" @selected($statusFilter === $statusOption)>{{ ucfirst(str_replace('_', ' ', $statusOption)) }}</option>
++                @endforeach
++            </select>
++            <select name="portal" aria-label="{{ __('Filter by portal') }}" style="width:auto;padding:8px 10px;">
++                <option value="">{{ __('All portals') }}</option>
++                @foreach(['admin', 'branch', 'teacher', 'student', 'guardian', 'support_staff', 'public'] as $portalOption)
++                    <option value="{{ $portalOption }}" @selected($portalFilter === $portalOption)>{{ ucfirst(str_replace('_', ' ', $portalOption)) }}</option>
++                @endforeach
++            </select>
++            <select name="type" aria-label="{{ __('Filter by type') }}" style="width:auto;padding:8px 10px;">
++                <option value="">{{ __('All types') }}</option>
++                @foreach(['module', 'integration', 'ai', 'theme'] as $typeOption)
++                    <option value="{{ $typeOption }}" @selected($typeFilter === $typeOption)>{{ ucfirst($typeOption) }}</option>
++                @endforeach
++            </select>
++            <button class="btn secondary" type="submit">{{ __('Filter') }}</button>
++            @if($statusFilter !== '' || $portalFilter !== '' || $typeFilter !== '')
++                <a class="btn secondary" href="{{ route('admin.plugins.index') }}">{{ __('Reset') }}</a>
++            @endif
++        </form>
++    </div>
++
+     @if($plugins->isEmpty())
+-        <p class="muted">{{ __('No third-party plugins have been installed yet.') }}</p>
++        <p class="muted">{{ __('No plugins match the current filter, or none have been registered yet.') }}</p>
+     @else
+         <div style="overflow-x:auto;">
+             <table>
+                 <thead>
+                     <tr>
+                         <th>{{ __('Plugin') }}</th>
+-                        <th>{{ __('Version') }}</th>
+-                        <th>{{ __('Type') }}</th>
+-                        <th>{{ __('Status') }}</th>
+-                        <th>{{ __('Signature') }}</th>
+-                        <th>{{ __('Installed') }}</th>
+-                        <th>{{ __('Actions') }}</th>
++                        <th>{{ __('Version & History') }}</th>
++                        <th>{{ __('Portals & Scope') }}</th>
++                        <th>{{ __('Status & Compatibility') }}</th>
++                        <th>{{ __('Health') }}</th>
++                        <th>{{ __('Retention & Actions') }}</th>
+                     </tr>
+                 </thead>
+                 <tbody>
+                 @foreach($plugins as $plugin)
++                    @php
++                        $manifest = is_array($plugin->manifest) ? $plugin->manifest : [];
++                        $compat = $compatibility[$plugin->plugin_key] ?? ['compatible' => true, 'errors' => []];
++                        $preflight = $preflights[$plugin->plugin_key] ?? ['can_uninstall' => false, 'retention_summary' => '', 'completed_migrations' => 0];
++                        $history = is_array($plugin->metadata['version_history'] ?? null) ? $plugin->metadata['version_history'] : [];
++                        $healthBadge = match($plugin->health_status) {
++                            'healthy' => 'success',
++                            'degraded' => 'warning',
++                            'failed' => 'warning',
++                            default => 'info',
++                        };
++                        $statusBadge = match($plugin->status) {
++                            'active', 'installed' => 'success',
++                            'failed' => 'warning',
++                            default => 'info',
++                        };
++                    @endphp
+                     <tr>
+                         <td>
+                             <strong>{{ $plugin->name }}</strong>
+-                            <div class="muted"><code>{{ $plugin->plugin_key }}</code></div>
++                            <div class="muted"><code>{{ $plugin->plugin_key }}</code> · {{ ucfirst($plugin->type) }}</div>
++                            @if(!empty($manifest['dependencies']))
++                                <div class="muted"><small><strong>{{ __('Depends on:') }}</strong> {{ implode(', ', $manifest['dependencies']) }}</small></div>
++                            @endif
++                            @if(!empty($manifest['conflicts']))
++                                <div class="muted"><small><strong>{{ __('Conflicts:') }}</strong> {{ implode(', ', $manifest['conflicts']) }}</small></div>
++                            @endif
+                         </td>
+-                        <td><code>{{ $plugin->version }}</code></td>
+-                        <td>{{ ucfirst($plugin->type) }}</td>
+-                        <td><span class="badge {{ $plugin->status === 'installed' ? 'success' : 'warning' }}">{{ ucfirst(str_replace('_', ' ', $plugin->status)) }}</span></td>
+-                        <td>{{ $plugin->signature_verified_at ? __('Verified') : __('Not verified') }}</td>
+-                        <td>{{ $plugin->installed_at?->format('Y-m-d H:i') ?? '—' }}</td>
+                         <td>
+-                            @if(in_array($plugin->status, ['installed', 'inactive'], true))
+-                                <form method="POST" action="{{ route('admin.plugins.activate', $plugin->plugin_key) }}" style="display:inline;" onsubmit="return confirm('{{ __('Activate this signed plugin? Its code will execute as trusted application code.') }}')">
+-                                    @csrf
+-                                    <button class="btn primary" type="submit">{{ __('Activate') }}</button>
+-                                </form>
+-                            @elseif($plugin->status === 'active')
+-                                <form method="POST" action="{{ route('admin.plugins.deactivate', $plugin->plugin_key) }}" style="display:inline;" onsubmit="return confirm('{{ __('Deactivate this plugin? Its data and installed files will be retained.') }}')">
+-                                    @csrf
+-                                    <button class="btn secondary" type="submit">{{ __('Deactivate') }}</button>
+-                                </form>
++                            <code>{{ $plugin->version }}</code>
++                            <div class="muted"><small>{{ $plugin->signature_verified_at ? __('Signed').' ('.$plugin->signature_key_id.')' : __('Not verified') }}</small></div>
++                            @if($history !== [])
++                                <div class="muted"><small>{{ count($history) }} {{ __('prior version(s)') }}</small></div>
++                            @endif
++                        </td>
++                        <td>
++                            <div><small>{{ !empty($manifest['portals']) ? implode(', ', $manifest['portals']) : '—' }}</small></div>
++                            @if(!empty($manifest['permissions']))
++                                <div class="muted"><small><strong>{{ __('Permissions:') }}</strong> {{ implode(', ', $manifest['permissions']) }}</small></div>
++                            @endif
++                        </td>
++                        <td>
++                            <span class="badge {{ $statusBadge }}">{{ ucfirst(str_replace('_', ' ', $plugin->status)) }}</span>
++                            <div style="margin-top:4px;">
++                                <span class="badge {{ $compat['compatible'] ? 'success' : 'warning' }}">
++                                    {{ $compat['compatible'] ? __('Compatible') : __('Incompatible') }}
++                                </span>
++                            </div>
++                            @if(!$compat['compatible'])
++                                <div class="muted"><small>{{ implode(' ', $compat['errors']) }}</small></div>
++                            @endif
++                        </td>
++                        <td>
++                            <span class="badge {{ $healthBadge }}">{{ ucfirst($plugin->health_status ?? 'unknown') }}</span>
++                            @if($plugin->health_message)
++                                <div class="muted" style="max-width:240px;"><small>{{ $plugin->health_message }}</small></div>
+                             @endif
+-                            @if(in_array($plugin->status, ['installed', 'inactive', 'failed'], true))
+-                                <form method="POST" action="{{ route('admin.plugins.uninstall', $plugin->plugin_key) }}" style="display:inline;" onsubmit="return confirm('{{ __('Uninstall this plugin package? Conversation history, LMS data and migration records will be retained.') }}')">
++                            <div class="muted"><small>{{ $plugin->last_health_check_at?->format('Y-m-d H:i') ?? __('Never checked') }}</small></div>
++                        </td>
++                        <td>
++                            <div class="muted" style="margin-bottom:8px;"><small>{{ $preflight['retention_summary'] }}</small></div>
++                            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
++                                @if(in_array($plugin->status, ['installed', 'inactive'], true))
++                                    <form method="POST" action="{{ route('admin.plugins.activate', $plugin->plugin_key) }}" style="display:inline;" onsubmit="return confirm('{{ __('Activate this signed plugin? Its code will execute as trusted application code.') }}')">
++                                        @csrf
++                                        <button class="btn primary" type="submit">{{ __('Activate') }}</button>
++                                    </form>
++                                @elseif($plugin->status === 'active')
++                                    <form method="POST" action="{{ route('admin.plugins.deactivate', $plugin->plugin_key) }}" style="display:inline;" onsubmit="return confirm('{{ __('Deactivate this plugin? Its data and installed files will be retained.') }}')">
++                                        @csrf
++                                        <button class="btn secondary" type="submit">{{ __('Deactivate') }}</button>
++                                    </form>
++                                @endif
++
++                                <form method="POST" action="{{ route('admin.plugins.health', $plugin->plugin_key) }}" style="display:inline;">
+                                     @csrf
+-                                    <button class="btn danger" type="submit">{{ __('Uninstall') }}</button>
++                                    <button class="btn secondary" type="submit">{{ __('Health check') }}</button>
+                                 </form>
++
++                                <a class="btn secondary" href="{{ route('admin.plugins.export', $plugin->plugin_key) }}">{{ __('Export JSON') }}</a>
++
++                                @if(in_array($plugin->status, ['installed', 'inactive', 'failed'], true))
++                                    <form method="POST" action="{{ route('admin.plugins.uninstall', $plugin->plugin_key) }}" style="display:inline;" onsubmit="return confirm('{{ __('Uninstall this plugin package? Conversation history, LMS data and migration records will be retained.') }}')">
++                                        @csrf
++                                        <button class="btn danger" type="submit" @disabled(!$preflight['can_uninstall'])>{{ __('Uninstall') }}</button>
++                                    </form>
++                                @endif
++                            </div>
++
++                            @if(in_array($plugin->status, ['installed', 'active', 'inactive'], true))
++                                <details style="margin-top:10px;">
++                                    <summary style="cursor:pointer;font-weight:600;">{{ __('Upgrade signed version') }}</summary>
++                                    <form method="POST" action="{{ route('admin.plugins.update', $plugin->plugin_key) }}" enctype="multipart/form-data" style="margin-top:8px;padding:10px;border:1px solid var(--border);border-radius:10px;">
++                                        @csrf
++                                        <label>{{ __('New ZIP package') }}
++                                            <input type="file" name="package" accept=".zip,application/zip" required>
++                                        </label>
++                                        <label>{{ __('Trusted release key ID') }}
++                                            <input type="text" name="key_id" value="{{ $plugin->signature_key_id }}" maxlength="120" required>
++                                        </label>
++                                        <label>{{ __('Signed manifest JSON') }}
++                                            <textarea name="manifest" rows="5" spellcheck="false" required></textarea>
++                                        </label>
++                                        <label>{{ __('Detached signature (Base64)') }}
++                                            <textarea name="signature" rows="2" spellcheck="false" required></textarea>
++                                        </label>
++                                        <button class="btn primary" type="submit">{{ __('Verify and upgrade') }}</button>
++                                    </form>
++                                </details>
+                             @endif
+                         </td>
+                     </tr>
+@@ -107,4 +235,32 @@
+         </div>
+     @endif
+ </section>
++
++<section class="panel">
++    <h2>{{ __('Recent plugin audit log') }}</h2>
++    @if($auditLogs->isEmpty())
++        <p class="muted">{{ __('No plugin lifecycle audit events recorded yet.') }}</p>
++    @else
++        <div style="overflow-x:auto;">
++            <table>
++                <thead>
++                    <tr>
++                        <th>{{ __('Time') }}</th>
++                        <th>{{ __('Event') }}</th>
++                        <th>{{ __('Description') }}</th>
++                    </tr>
++                </thead>
++                <tbody>
++                @foreach($auditLogs as $log)
++                    <tr>
++                        <td style="white-space:nowrap;">{{ $log->created_at?->format('Y-m-d H:i:s') }}</td>
++                        <td><code>{{ $log->event }}</code></td>
++                        <td>{{ $log->description }}</td>
++                    </tr>
++                @endforeach
++                </tbody>
++            </table>
++        </div>
++    @endif
++</section>
+ @endsection
+diff --git a/resources/views/layouts/app.blade.php b/resources/views/layouts/app.blade.php
+index 759b85f..4ba1c0c 100644
+--- a/resources/views/layouts/app.blade.php
++++ b/resources/views/layouts/app.blade.php
+@@ -312,6 +312,9 @@
+             <a href="{{ route('admin.activity-logs.index') }}"><span>📋</span><span class="nav-text">Activity logs</span></a>
+             <a href="{{ route('admin.settings.index') }}"><span>⚙️</span><span class="nav-text">Settings</span></a>
+             <a href="{{ route('admin.sms-campaigns.index') }}"><span>✉️</span><span class="nav-text">SMS campaigns</span></a>
++            @foreach(app(\App\Services\Plugins\PluginHookRegistry::class)->portalNavigation('admin') as $pluginNav)
++                <a class="{{ request()->routeIs($pluginNav['route']) ? 'active' : '' }}" href="{{ route($pluginNav['route']) }}"><span>{{ $pluginNav['icon'] }}</span><span class="nav-text">{{ __($pluginNav['label']) }}</span></a>
++            @endforeach
+             @elseif(auth()->user()->isBranchManager())
+                 <div class="admin-sidebar-label">Overview</div>
+                 <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><span>▦</span><span class="nav-text">Dashboard</span></a>
+@@ -324,6 +327,9 @@
+                         <a class="{{ request()->routeIs('admin.branch-workspace.students.*') ? 'active' : '' }}" href="{{ route('admin.branch-workspace.students.index') }}"><span>👥</span><span class="nav-text">Branch students</span></a>
+                     @endif
+                 @endif
++                @foreach(app(\App\Services\Plugins\PluginHookRegistry::class)->portalNavigation('branch') as $pluginNav)
++                    <a class="{{ request()->routeIs($pluginNav['route']) ? 'active' : '' }}" href="{{ route($pluginNav['route']) }}"><span>{{ $pluginNav['icon'] }}</span><span class="nav-text">{{ __($pluginNav['label']) }}</span></a>
++                @endforeach
+             @elseif(auth()->user()->isAccountant())
+                 <div class="admin-sidebar-label">Overview</div>
+                 <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><span>▦</span><span class="nav-text">Dashboard</span></a>
+@@ -342,6 +348,9 @@
+                         <a class="{{ request()->routeIs('admin.finance.reports.*') ? 'active' : '' }}" href="{{ route('admin.finance.reports.index') }}"><span>📊</span><span class="nav-text">Branch finance reports</span></a>
+                     @endif
+                 @endif
++                @foreach(app(\App\Services\Plugins\PluginHookRegistry::class)->portalNavigation('support_staff') as $pluginNav)
++                    <a class="{{ request()->routeIs($pluginNav['route']) ? 'active' : '' }}" href="{{ route($pluginNav['route']) }}"><span>{{ $pluginNav['icon'] }}</span><span class="nav-text">{{ __($pluginNav['label']) }}</span></a>
++                @endforeach
+             @endif
+             <div class="admin-sidebar-footer">Alom’s English Center<br>Learning Management System</div>
+         </aside>
+@@ -403,9 +412,15 @@
+                     @endif
+                     @if(auth()->user()->isTeacher())
+                         <a href="{{ route('teacher.batches.index') }}">My batches</a>
++                        @foreach(app(\App\Services\Plugins\PluginHookRegistry::class)->portalNavigation('teacher') as $pluginNav)
++                            <a href="{{ route($pluginNav['route']) }}">{{ __($pluginNav['label']) }}</a>
++                        @endforeach
+                     @endif
+                     @if(auth()->user()->isGuardian())
+                         <a href="{{ route('guardian.dashboard') }}">{{ __('Guardian portal') }}</a>
++                        @foreach(app(\App\Services\Plugins\PluginHookRegistry::class)->portalNavigation('guardian') as $pluginNav)
++                            <a href="{{ route($pluginNav['route']) }}">{{ __($pluginNav['label']) }}</a>
++                        @endforeach
+                     @endif
+                     @if(auth()->user()->isStudent())
+                         <a href="{{ route('student.guardian-requests.page') }}">{{ __('Guardian requests') }}</a>
+@@ -413,6 +428,9 @@
+                         <a href="{{ route('student.attendance.index') }}">Attendance</a>
+                     <a href="{{ route('student.exams.index') }}">Exams</a>
+                         <a href="{{ route('student.invoices.index') }}">My fees</a>
++                        @foreach(app(\App\Services\Plugins\PluginHookRegistry::class)->portalNavigation('student') as $pluginNav)
++                            <a href="{{ route($pluginNav['route']) }}">{{ __($pluginNav['label']) }}</a>
++                        @endforeach
+                     @endif
+                     <form method="POST" action="{{ route('logout') }}" class="inline-form">
+                         @csrf
+diff --git a/resources/views/partials/public-navigation.blade.php b/resources/views/partials/public-navigation.blade.php
+index aaea99f..ee7d602 100644
+--- a/resources/views/partials/public-navigation.blade.php
++++ b/resources/views/partials/public-navigation.blade.php
+@@ -38,9 +38,21 @@
+                     <a href="{{ route('student.exams.index') }}"><span class="menu-icon">✓</span>{{ __('Exams & results') }}</a>
+                     <a href="{{ route('student.invoices.index') }}"><span class="menu-icon">৳</span>{{ __('My fees') }}</a>
+                     <a href="{{ route('student.attendance.index') }}"><span class="menu-icon">◷</span>{{ __('Attendance') }}</a>
++                    @foreach(app(\App\Services\Plugins\PluginHookRegistry::class)->portalNavigation('student') as $pluginNav)
++                        <a href="{{ route($pluginNav['route']) }}"><span class="menu-icon">{{ $pluginNav['icon'] }}</span>{{ __($pluginNav['label']) }}</a>
++                    @endforeach
+                 @endif
+                 @if(auth()->user()->isTeacher())
+                     <a href="{{ route('teacher.batches.index') }}"><span class="menu-icon">▥</span>{{ __('My batches') }}</a>
++                    @foreach(app(\App\Services\Plugins\PluginHookRegistry::class)->portalNavigation('teacher') as $pluginNav)
++                        <a href="{{ route($pluginNav['route']) }}"><span class="menu-icon">{{ $pluginNav['icon'] }}</span>{{ __($pluginNav['label']) }}</a>
++                    @endforeach
++                @endif
++                @if(auth()->user()->isGuardian())
++                    <a href="{{ route('guardian.dashboard') }}"><span class="menu-icon">🛡</span>{{ __('Guardian portal') }}</a>
++                    @foreach(app(\App\Services\Plugins\PluginHookRegistry::class)->portalNavigation('guardian') as $pluginNav)
++                        <a href="{{ route($pluginNav['route']) }}"><span class="menu-icon">{{ $pluginNav['icon'] }}</span>{{ __($pluginNav['label']) }}</a>
++                    @endforeach
+                 @endif
+                 @if(auth()->user()->isAdmin())
+                     <div class="public-drawer-section">{{ __('Administration') }}</div>
+diff --git a/routes/web.php b/routes/web.php
+index ae6278e..20e4718 100644
+--- a/routes/web.php
++++ b/routes/web.php
+@@ -291,7 +291,11 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
+         Route::get('/modules', [AdminModuleRegistryController::class, 'index'])->name('admin.modules.index');
+         Route::patch('/modules/{key}', [AdminModuleRegistryController::class, 'update'])->where('key', '[a-z_]+')->middleware('throttle:20,1')->name('admin.modules.update');
+         Route::get('/plugins', [AdminPluginManagerController::class, 'index'])->name('admin.plugins.index');
++        Route::post('/plugins/discover', [AdminPluginManagerController::class, 'discover'])->middleware('throttle:10,1')->name('admin.plugins.discover');
+         Route::post('/plugins/install', [AdminPluginManagerController::class, 'install'])->middleware('throttle:3,10')->name('admin.plugins.install');
++        Route::post('/plugins/{key}/update', [AdminPluginManagerController::class, 'update'])->where('key', '[a-z0-9.-]+')->middleware('throttle:3,10')->name('admin.plugins.update');
++        Route::post('/plugins/{key}/health', [AdminPluginManagerController::class, 'health'])->where('key', '[a-z0-9.-]+')->middleware('throttle:20,1')->name('admin.plugins.health');
++        Route::get('/plugins/{key}/export', [AdminPluginManagerController::class, 'export'])->where('key', '[a-z0-9.-]+')->middleware('throttle:20,1')->name('admin.plugins.export');
+         Route::post('/plugins/{key}/activate', [AdminPluginManagerController::class, 'activate'])->where('key', '[a-z0-9.-]+')->middleware('throttle:5,1')->name('admin.plugins.activate');
+         Route::post('/plugins/{key}/deactivate', [AdminPluginManagerController::class, 'deactivate'])->where('key', '[a-z0-9.-]+')->middleware('throttle:5,1')->name('admin.plugins.deactivate');
+         Route::post('/plugins/{key}/uninstall', [AdminPluginManagerController::class, 'uninstall'])->where('key', '[a-z0-9.-]+')->middleware('throttle:3,10')->name('admin.plugins.uninstall');
+diff --git a/tests/Feature/PluginPlatformCompleteTest.php b/tests/Feature/PluginPlatformCompleteTest.php
+new file mode 100644
+index 0000000..cd47dc2
+--- /dev/null
++++ b/tests/Feature/PluginPlatformCompleteTest.php
+@@ -0,0 +1,345 @@
++<?php
++
++namespace Tests\Feature;
++
++use App\Models\PluginInstallation;
++use App\Models\User;
++use App\Services\Plugins\PluginCompatibilityChecker;
++use App\Services\Plugins\PluginContext;
++use App\Services\Plugins\PluginHookRegistry;
++use App\Services\Plugins\PluginRuntime;
++use App\Services\Plugins\PluginSignatureVerifier;
++use Illuminate\Foundation\Testing\RefreshDatabase;
++use Illuminate\Http\UploadedFile;
++use Illuminate\Support\Facades\File;
++use Illuminate\Support\Facades\Route;
++use Tests\TestCase;
++use ZipArchive;
++
++class PluginPlatformCompleteTest extends TestCase
++{
++    use RefreshDatabase;
++
++    private string $keyPair;
++    private array $cleanupDirs = [];
++    private array $cleanupFiles = [];
++
++    protected function setUp(): void
++    {
++        parent::setUp();
++
++        if (! class_exists(ZipArchive::class) || ! function_exists('sodium_crypto_sign_keypair')) {
++            $this->markTestSkipped('The PHP zip and sodium extensions are required.');
++        }
++
++        $this->keyPair = sodium_crypto_sign_keypair();
++        config([
++            'plugins.trusted_public_keys' => [
++                'platform-test-key' => base64_encode(sodium_crypto_sign_publickey($this->keyPair)),
++            ],
++        ]);
++    }
++
++    protected function tearDown(): void
++    {
++        foreach ($this->cleanupFiles as $file) {
++            if (is_file($file)) {
++                @unlink($file);
++            }
++        }
++        foreach ($this->cleanupDirs as $dir) {
++            if (is_dir($dir) && ! is_link($dir)) {
++                File::deleteDirectory($dir);
++            }
++        }
++        app(PluginHookRegistry::class)->reset();
++
++        parent::tearDown();
++    }
++
++    private function makeSignedPackage(array $manifest, string $entrypointCode): array
++    {
++        $tmpDir = storage_path('framework/testing');
++        if (! is_dir($tmpDir)) {
++            mkdir($tmpDir, 0700, true);
++        }
++        $archivePath = $tmpDir.'/plugin-platform-'.bin2hex(random_bytes(6)).'.zip';
++        $this->cleanupFiles[] = $archivePath;
++
++        $zip = new ZipArchive();
++        $this->assertTrue($zip->open($archivePath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === true);
++        $this->assertTrue($zip->addFromString('src/Plugin.php', $entrypointCode));
++        $this->assertTrue($zip->addFromString('plugin.json', json_encode($manifest, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR)));
++        $this->assertTrue($zip->close());
++
++        $bytes = file_get_contents($archivePath);
++        $checksum = hash('sha256', $bytes);
++        $payload = PluginSignatureVerifier::payloadForSignature($manifest, $checksum);
++        $signature = base64_encode(sodium_crypto_sign_detached(
++            $payload,
++            sodium_crypto_sign_secretkey($this->keyPair),
++        ));
++
++        return [
++            'package' => UploadedFile::fake()->createWithContent('plugin-package.zip', $bytes),
++            'manifest' => json_encode($manifest, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR),
++            'signature' => $signature,
++            'key_id' => 'platform-test-key',
++        ];
++    }
++
++    private function baseManifest(array $overrides = []): array
++    {
++        return array_merge([
++            'schema_version' => 1,
++            'key' => 'aec.course-studio-test',
++            'name' => 'Course Studio Test',
++            'version' => '1.0.0',
++            'type' => 'module',
++            'entrypoint' => 'src/Plugin.php',
++            'requires' => ['php' => '^8.3', 'laravel' => '^12.0', 'lms' => '^1.0'],
++            'dependencies' => [],
++            'conflicts' => [],
++            'portals' => ['admin', 'branch', 'teacher', 'student', 'guardian'],
++            'permissions' => ['studio.view', 'studio.manage'],
++            'capabilities' => ['course-studio', 'portal-widgets'],
++        ], $overrides);
++    }
++
++    public function test_admin_can_discover_private_packages_without_activating_or_executing_them(): void
++    {
++        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
++        $packageDir = base_path('plugins/test/discovered-sample/1.0.0');
++        $this->cleanupDirs[] = base_path('plugins/test/discovered-sample');
++
++        mkdir($packageDir.'/src', 0750, true);
++        file_put_contents($packageDir.'/src/Plugin.php', '<?php file_put_contents(storage_path("discovered-executed"), "yes");');
++        file_put_contents($packageDir.'/plugin.json', json_encode([
++            'schema_version' => 1,
++            'key' => 'test.discovered-sample',
++            'name' => 'Discovered Sample',
++            'version' => '1.0.0',
++            'type' => 'module',
++            'entrypoint' => 'src/Plugin.php',
++            'requires' => ['php' => '^8.3', 'laravel' => '^12.0', 'lms' => '^1.0'],
++            'dependencies' => [],
++            'conflicts' => [],
++            'portals' => ['admin'],
++            'permissions' => ['sample.use'],
++            'capabilities' => ['sample'],
++        ], JSON_THROW_ON_ERROR));
++
++        $this->actingAs($admin)->post(route('admin.plugins.discover'))
++            ->assertRedirect(route('admin.plugins.index'))
++            ->assertSessionHas('success');
++
++        $this->assertDatabaseHas('plugin_registry', [
++            'plugin_key' => 'test.discovered-sample',
++            'status' => 'discovered',
++            'activated_at' => null,
++        ]);
++        $this->assertFalse(file_exists(storage_path('discovered-executed')));
++        $this->assertDatabaseHas('activity_logs', [
++            'user_id' => $admin->id,
++            'event' => 'admin.plugins.discovered',
++        ]);
++    }
++
++    public function test_compatibility_checker_blocks_incompatible_php_laravel_and_lms_versions(): void
++    {
++        $checker = app(PluginCompatibilityChecker::class);
++
++        $ok = $checker->check($this->baseManifest());
++        $this->assertTrue($ok['compatible']);
++
++        $badPhp = $checker->check($this->baseManifest([
++            'requires' => ['php' => '^99.0', 'laravel' => '^12.0', 'lms' => '^1.0'],
++        ]));
++        $this->assertFalse($badPhp['compatible']);
++
++        config(['plugins.lms_version' => '1.0.0']);
++        $badLms = $checker->check($this->baseManifest([
++            'requires' => ['php' => '^8.3', 'laravel' => '^12.0', 'lms' => '>=2.0.0'],
++        ]));
++        $this->assertFalse($badLms['compatible']);
++
++        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
++        $manifest = $this->baseManifest([
++            'key' => 'test.incompatible-pkg',
++            'requires' => ['php' => '^99.0', 'laravel' => '^12.0', 'lms' => '^1.0'],
++        ]);
++        $upload = $this->makeSignedPackage($manifest, '<?php return new class implements \\App\\Contracts\\Plugins\\PluginContract { public function register(\\App\\Services\\Plugins\\PluginContext $c): void {} public function boot(\\App\\Services\\Plugins\\PluginContext $c): void {} };');
++
++        $this->actingAs($admin)->post(route('admin.plugins.install'), $upload)
++            ->assertRedirect()
++            ->assertSessionHas('error');
++
++        $this->assertDatabaseMissing('plugin_registry', [
++            'plugin_key' => 'test.incompatible-pkg',
++            'status' => 'installed',
++        ]);
++    }
++
++    public function test_signed_upgrade_tracks_version_history_and_rejects_downgrades(): void
++    {
++        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
++        $this->cleanupDirs[] = base_path('plugins/aec/course-studio-test');
++
++        $entrypoint = <<<'PHP'
++<?php
++return new class implements \App\Contracts\Plugins\PluginContract {
++    public function register(\App\Services\Plugins\PluginContext $context): void {}
++    public function boot(\App\Services\Plugins\PluginContext $context): void {}
++};
++PHP;
++
++        $v1Manifest = $this->baseManifest(['version' => '1.0.0']);
++        $this->actingAs($admin)->post(route('admin.plugins.install'), $this->makeSignedPackage($v1Manifest, $entrypoint))
++            ->assertRedirect(route('admin.plugins.index'))
++            ->assertSessionHas('success');
++
++        $this->actingAs($admin)->post(route('admin.plugins.activate', 'aec.course-studio-test'))
++            ->assertRedirect(route('admin.plugins.index'))
++            ->assertSessionHas('success');
++
++        // Downgrade / equal version must be rejected cleanly
++        $this->actingAs($admin)->post(
++            route('admin.plugins.update', 'aec.course-studio-test'),
++            $this->makeSignedPackage($v1Manifest, $entrypoint),
++        )->assertRedirect()->assertSessionHas('error');
++
++        // Valid signed upgrade 1.0.0 -> 1.1.0 succeeds via update_staged -> active
++        $v2Manifest = $this->baseManifest(['version' => '1.1.0']);
++        $this->actingAs($admin)->post(
++            route('admin.plugins.update', 'aec.course-studio-test'),
++            $this->makeSignedPackage($v2Manifest, $entrypoint),
++        )->assertRedirect(route('admin.plugins.index'))->assertSessionHas('success');
++
++        $plugin = PluginInstallation::query()->where('plugin_key', 'aec.course-studio-test')->firstOrFail();
++        $this->assertSame('1.1.0', $plugin->version);
++        $this->assertSame('active', $plugin->status);
++        $this->assertSame('healthy', $plugin->health_status);
++        $this->assertSame('plugins/aec/course-studio-test/1.1.0', $plugin->package_path);
++        $this->assertCount(1, $plugin->metadata['version_history'] ?? []);
++        $this->assertSame('1.0.0', $plugin->metadata['version_history'][0]['version']);
++        $this->assertFileExists(base_path('plugins/aec/course-studio-test/1.1.0/src/Plugin.php'));
++    }
++
++    public function test_health_check_and_sanitized_export_report_integrity_and_retention(): void
++    {
++        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
++        $this->cleanupDirs[] = base_path('plugins/aec/course-studio-test');
++
++        $entrypoint = '<?php return new class implements \\App\\Contracts\\Plugins\\PluginContract { public function register(\\App\\Services\\Plugins\\PluginContext $c): void {} public function boot(\\App\\Services\\Plugins\\PluginContext $c): void {} };';
++        $manifest = $this->baseManifest(['version' => '1.0.0']);
++
++        $this->actingAs($admin)->post(route('admin.plugins.install'), $this->makeSignedPackage($manifest, $entrypoint))
++            ->assertRedirect(route('admin.plugins.index'));
++
++        $this->actingAs($admin)->post(route('admin.plugins.health', 'aec.course-studio-test'))
++            ->assertRedirect(route('admin.plugins.index'))
++            ->assertSessionHas('success');
++
++        $plugin = PluginInstallation::query()->where('plugin_key', 'aec.course-studio-test')->firstOrFail();
++        $this->assertSame('healthy', $plugin->health_status);
++
++        $exportResponse = $this->actingAs($admin)->get(route('admin.plugins.export', 'aec.course-studio-test'));
++        $exportResponse->assertOk()
++            ->assertJsonPath('plugin.key', 'aec.course-studio-test')
++            ->assertJsonPath('plugin.version', '1.0.0')
++            ->assertJsonPath('manifest.key', 'aec.course-studio-test');
++        $this->assertStringNotContainsString(
++            base64_encode(sodium_crypto_sign_publickey($this->keyPair)),
++            $exportResponse->getContent(),
++        );
++
++        // Tamper installed file -> health check marks failed
++        file_put_contents(base_path('plugins/aec/course-studio-test/1.0.0/src/Plugin.php'), '<?php // tampered');
++        $this->actingAs($admin)->post(route('admin.plugins.health', 'aec.course-studio-test'))
++            ->assertRedirect(route('admin.plugins.index'))
++            ->assertSessionHas('error');
++
++        $this->assertSame('failed', $plugin->fresh()->health_status);
++    }
++
++    public function test_hook_registry_and_five_portal_navigation_stop_immediately_on_deactivation(): void
++    {
++        $packagePath = 'plugins/test/multiportal-hook/1.0.0';
++        $absolute = base_path($packagePath);
++        $this->cleanupDirs[] = base_path('plugins/test/multiportal-hook');
++        mkdir($absolute.'/src', 0750, true);
++
++        $code = <<<'PHP'
++<?php
++return new class implements \App\Contracts\Plugins\PluginContract {
++    public function register(\App\Services\Plugins\PluginContext $context): void
++    {
++        foreach (['admin', 'branch', 'teacher', 'student', 'guardian'] as $portal) {
++            $context->registerPortalNavigation($portal, 'Studio '.ucfirst($portal), 'dashboard', ['icon' => '★']);
++        }
++        $context->registerHook('lms.dashboard.widgets', fn (array $payload) => 'widget-for-'.($payload['role'] ?? 'guest'), 5);
++    }
++    public function boot(\App\Services\Plugins\PluginContext $context): void {}
++};
++PHP;
++        $entrypoint = $absolute.'/src/Plugin.php';
++        file_put_contents($entrypoint, $code);
++
++        $manifest = $this->baseManifest([
++            'key' => 'test.multiportal-hook',
++            'name' => 'Multiportal Hook',
++        ]);
++
++        $plugin = new PluginInstallation();
++        $plugin->forceFill([
++            'plugin_key' => 'test.multiportal-hook',
++            'name' => 'Multiportal Hook',
++            'version' => '1.0.0',
++            'type' => 'module',
++            'status' => 'active',
++            'manifest' => $manifest,
++            'package_sha256' => hash('sha256', 'signed-archive'),
++            'signature_key_id' => 'platform-test-key',
++            'signature_verified_at' => now(),
++            'package_path' => $packagePath,
++            'metadata' => [
++                'integrity_version' => 1,
++                'installed_file_hashes' => [
++                    'src/Plugin.php' => hash_file('sha256', $entrypoint),
++                ],
++            ],
++        ])->save();
++
++        $runtime = app(PluginRuntime::class);
++        $runtime->registerActivePlugins();
++        $runtime->bootActivePlugins();
++
++        $hooks = app(PluginHookRegistry::class);
++        $this->assertTrue($hooks->hasCapability('course-studio'));
++        $this->assertSame(['widget-for-teacher'], $hooks->dispatch('lms.dashboard.widgets', ['role' => 'teacher']));
++
++        foreach (['admin', 'branch', 'teacher', 'student', 'guardian'] as $portal) {
++            $items = $hooks->portalNavigation($portal);
++            $this->assertCount(1, $items, "Expected nav item for {$portal}");
++        }
++
++        // Deactivate -> hook dispatch and all 5 portal links drop immediately
++        PluginInstallation::query()->where('plugin_key', 'test.multiportal-hook')->update(['status' => 'inactive']);
++        $this->assertFalse($hooks->hasCapability('course-studio'));
++        $this->assertSame([], $hooks->dispatch('lms.dashboard.widgets', ['role' => 'teacher']));
++        foreach (['admin', 'branch', 'teacher', 'student', 'guardian'] as $portal) {
++            $this->assertSame([], $hooks->portalNavigation($portal));
++        }
++    }
++
++    public function test_non_admin_roles_cannot_trigger_discovery_updates_health_or_export(): void
++    {
++        foreach (['branch_manager', 'teacher', 'student', 'guardian'] as $role) {
++            $user = User::factory()->create(['role' => $role, 'email_verified_at' => now()]);
++            $this->actingAs($user)->post(route('admin.plugins.discover'))->assertForbidden();
++            $this->actingAs($user)->post(route('admin.plugins.update', 'aec.sample'))->assertForbidden();
++            $this->actingAs($user)->post(route('admin.plugins.health', 'aec.sample'))->assertForbidden();
++            $this->actingAs($user)->get(route('admin.plugins.export', 'aec.sample'))->assertForbidden();
++        }
++    }
++}
