@@ -11,6 +11,7 @@ use App\Services\Plugins\PluginSettingsManager;
 use App\Services\Plugins\PluginManifestValidator;
 use App\Services\Plugins\PluginMigrationRunner;
 use App\Services\Plugins\PluginPackageRemover;
+use App\Services\Plugins\PluginPackageRecovery;
 use App\Services\Plugins\PluginUploadInstaller;
 use App\Services\Plugins\PluginSignatureVerifier;
 use App\Services\Plugins\PluginVersionHistoryRecorder;
@@ -425,8 +426,14 @@ class AdminPluginManagerController extends Controller
     }
 
 
-    public function uninstall(Request $request, string $key, PluginLifecycle $lifecycle, PluginPackageRemover $remover, PluginVersionHistoryRecorder $history): RedirectResponse
-    {
+    public function uninstall(
+        Request $request,
+        string $key,
+        PluginLifecycle $lifecycle,
+        PluginPackageRemover $remover,
+        PluginPackageRecovery $recovery,
+        PluginVersionHistoryRecorder $history,
+    ): RedirectResponse {
         $request->validate(['confirm_uninstall' => ['required', 'accepted']]);
 
         try {
@@ -446,10 +453,23 @@ class AdminPluginManagerController extends Controller
                 throw new LogicException('An active plugin depends on this plugin: '.$dependent->plugin_key);
             }
 
-            // The registry is marked uninstalled before filesystem cleanup so the
-            // package cannot execute during removal. If cleanup is interrupted,
-            // allow an administrator to retry this idempotent cleanup operation.
             if (! $retryingCleanup) {
+                $snapshot = $recovery->createSnapshot($plugin);
+                PluginVersionHistory::query()->create([
+                    'plugin_key' => $plugin->plugin_key,
+                    'version' => $plugin->version,
+                    'package_sha256' => $plugin->package_sha256,
+                    'signature_key_id' => $plugin->signature_key_id,
+                    'action' => 'pre_uninstall_snapshot',
+                    'status' => $plugin->status,
+                    'actor_id' => $request->user()->id,
+                    'details' => [
+                        'recovery_path' => $snapshot['path'],
+                        'recovery_sha256' => $snapshot['sha256'],
+                        'recovery_bytes' => $snapshot['bytes'],
+                    ],
+                    'created_at' => now(),
+                ]);
                 $plugin = $lifecycle->transition($plugin->plugin_key, 'uninstalled');
             }
 
@@ -458,14 +478,65 @@ class AdminPluginManagerController extends Controller
         } catch (Throwable $exception) {
             report($exception);
             $this->recordFailure($request, 'admin.plugins.uninstall_failed');
-            return back()->with('error', __('Plugin uninstall was blocked or package cleanup failed. Plugin data and migration records were retained.'));
+            return back()->with('error', __('Plugin uninstall was blocked or package cleanup failed. A verified recovery snapshot is required before package removal.'));
         }
 
         $this->audit($request, 'admin.plugins.uninstalled',
-            'Uninstalled plugin '.$plugin->plugin_key.'; application data and migration history were retained.');
+            'Uninstalled plugin '.$plugin->plugin_key.'; LMS data and migration history were retained with a verified package recovery snapshot.');
 
         return redirect()->route('admin.plugins.index')->with('success',
-            __('Plugin uninstall cleanup completed. Its executable package was removed; plugin data and migration records were retained.'));
+            __('Plugin package removed. A verified recovery snapshot is retained; LMS data and migration records were preserved.'));
+    }
+
+    public function restorePackage(
+        Request $request,
+        string $key,
+        PluginPackageRecovery $recovery,
+        PluginSignatureVerifier $signatureVerifier,
+        PluginIntegrityVerifier $integrityVerifier,
+        PluginLifecycle $lifecycle,
+        PluginVersionHistoryRecorder $history,
+    ): RedirectResponse {
+        $request->validate(['confirm_restore' => ['required', 'accepted']]);
+
+        try {
+            $plugin = PluginInstallation::query()->where('plugin_key', $key)->firstOrFail();
+            if ($plugin->status !== 'uninstalled') {
+                throw new LogicException('Only an uninstalled plugin can be restored.');
+            }
+            $snapshotRecord = PluginVersionHistory::query()
+                ->where('plugin_key', $plugin->plugin_key)
+                ->where('version', $plugin->version)
+                ->where('action', 'pre_uninstall_snapshot')
+                ->latest('created_at')->first();
+            $details = $snapshotRecord?->details;
+            if (! is_array($details) || ! is_string($details['recovery_path'] ?? null)
+                || ! is_string($details['recovery_sha256'] ?? null)) {
+                throw new RuntimeException('No pre-uninstall recovery snapshot is recorded for this plugin version.');
+            }
+
+            $recovery->restoreSnapshot($plugin, $details['recovery_path'], $details['recovery_sha256']);
+            $signatureVerifier->verifyInstalledSignature($plugin);
+            $integrityVerifier->verify($plugin);
+            $plugin = $lifecycle->transition($plugin->plugin_key, 'installed', [
+                'health_status' => 'healthy',
+                'health_message' => 'Restored from a signed, checksum-verified pre-uninstall package snapshot.',
+                'last_health_check_at' => now(),
+            ]);
+            $history->record($plugin, 'package_restored', $request->user(), [
+                'recovery_path' => $details['recovery_path'],
+                'recovery_sha256' => $details['recovery_sha256'],
+            ]);
+            $this->audit($request, 'admin.plugins.package_restored',
+                'Restored verified package '.$plugin->plugin_key.' version '.$plugin->version.'; plugin remains inactive.');
+        } catch (Throwable $exception) {
+            report($exception);
+            $this->recordFailure($request, 'admin.plugins.package_restore_failed');
+            return back()->with('error', __('Plugin package restore failed verification. The plugin remains disabled; inspect the activity log.'));
+        }
+
+        return redirect()->route('admin.plugins.index')->with('success',
+            __('Verified plugin package restored. It remains installed and inactive until explicitly activated.'));
     }
 
     public function healthCheck(
