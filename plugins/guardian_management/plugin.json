@@ -12,7 +12,11 @@
     "student_management"
   ],
   "permissions": [],
-  "routes": [],
+  "routes": [
+    "admin.guardians.*",
+    "guardian.links.*",
+    "student.guardian-requests.*"
+  ],
   "settings": [],
   "events": [],
   "directory": "plugins/guardian_management",
