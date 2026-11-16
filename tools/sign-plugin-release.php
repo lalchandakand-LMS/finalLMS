@@ -11,12 +11,17 @@ if (! extension_loaded('sodium') || ! class_exists(ZipArchive::class)) {
     $fail('The sodium and zip PHP extensions are required.');
 }
 
-$pluginRoot = realpath($argv[1] ?? '');
-$outputDirectory = $argv[2] ?? '';
+$pluginInput = $argv[1] ?? '';
+$outputInput = $argv[2] ?? '';
+if ($pluginInput === '' || is_link($pluginInput)) {
+    $fail('The plugin source must be a regular directory, not a symlink.');
+}
+$pluginRoot = realpath($pluginInput);
+$repoRoot = realpath(__DIR__.'/..');
 $keyId = trim((string) getenv('PLUGIN_RELEASE_KEY_ID'));
 $encodedSecret = (string) getenv('PLUGIN_RELEASE_PRIVATE_KEY');
 
-if ($pluginRoot === false || ! is_dir($pluginRoot) || $outputDirectory === '') {
+if ($pluginRoot === false || ! is_dir($pluginRoot) || $repoRoot === false || $outputInput === '') {
     $fail('Usage: php tools/sign-plugin-release.php <plugin-directory> <private-output-directory>');
 }
 if (preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/D', $keyId) !== 1) {
@@ -36,16 +41,45 @@ if (! is_array($manifest) || ! isset($manifest['key'], $manifest['version'])) {
     $fail('The plugin manifest is invalid.');
 }
 
-if (! is_dir($outputDirectory) && ! mkdir($outputDirectory, 0700, true) && ! is_dir($outputDirectory)) {
+if (is_link($outputInput)) {
+    $fail('The private release output directory cannot be a symlink.');
+}
+if (! is_dir($outputInput) && ! mkdir($outputInput, 0700, true) && ! is_dir($outputInput)) {
     $fail('Unable to create the private release output directory.');
 }
-$outputDirectory = realpath($outputDirectory);
-if ($outputDirectory === false || $outputDirectory === $pluginRoot || str_starts_with($outputDirectory, $pluginRoot.DIRECTORY_SEPARATOR)) {
-    $fail('Release output must be outside the plugin source directory.');
+$outputDirectory = realpath($outputInput);
+if ($outputDirectory === false
+    || $outputDirectory === $pluginRoot
+    || str_starts_with($outputDirectory, $pluginRoot.DIRECTORY_SEPARATOR)
+    || $outputDirectory === $repoRoot
+    || str_starts_with($outputDirectory, $repoRoot.DIRECTORY_SEPARATOR)) {
+    $fail('Release output must be outside both the plugin source and repository directories.');
+}
+$directoryPermissions = fileperms($outputDirectory);
+if ($directoryPermissions === false || ($directoryPermissions & 0077) !== 0) {
+    $fail('The private release output directory must have mode 0700 (no group or world access).');
+}
+
+$publicRoot = realpath($repoRoot.DIRECTORY_SEPARATOR.'public');
+$publicStorageRoot = realpath($repoRoot.DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'public');
+foreach ([$publicRoot, $publicStorageRoot] as $publicPath) {
+    if ($publicPath !== false && ($outputDirectory === $publicPath || str_starts_with($outputDirectory, $publicPath.DIRECTORY_SEPARATOR))) {
+        $fail('Release output cannot be inside a public web or storage directory.');
+    }
 }
 
 $filename = preg_replace('/[^A-Za-z0-9_.-]+/', '-', (string) $manifest['key'].'-'.$manifest['version']).'.zip';
 $archivePath = $outputDirectory.DIRECTORY_SEPARATOR.$filename;
+$manifestOutput = $archivePath.'.manifest.json';
+$signatureOutput = $archivePath.'.signature.txt';
+$checksumOutput = $archivePath.'.sha256';
+
+foreach ([$archivePath, $manifestOutput, $signatureOutput, $checksumOutput] as $outputPath) {
+    if (is_link($outputPath) || (file_exists($outputPath) && ! is_file($outputPath))) {
+        $fail('Release output paths must be regular files and cannot be symlinks.');
+    }
+}
+
 $zip = new ZipArchive();
 if ($zip->open($archivePath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
     $fail('Unable to create the plugin release archive.');
@@ -57,30 +91,36 @@ $iterator = new RecursiveIteratorIterator(
 );
 $files = [];
 foreach ($iterator as $file) {
-    $path = $file->getPathname();
+    $sourcePath = $file->getPathname();
     if ($file->isLink() || ! $file->isFile()) {
         $zip->close();
         @unlink($archivePath);
         $fail('Symlinks and non-regular files are forbidden in plugin releases.');
     }
-    $relative = str_replace(DIRECTORY_SEPARATOR, '/', substr($path, strlen($pluginRoot) + 1));
+
+    $relative = str_replace(DIRECTORY_SEPARATOR, '/', substr($sourcePath, strlen($pluginRoot) + 1));
     $segments = explode('/', $relative);
-    if (in_array('.aistudio', $segments, true)
-        || in_array('.git', $segments, true)
-        || in_array('node_modules', $segments, true)
-        || in_array('vendor', $segments, true)
-        || in_array('storage', $segments, true)
-        || strtolower($relative) === '.env'
-        || str_contains(strtolower($relative), '/.env')) {
+    $forbidden = false;
+    foreach ($segments as $segment) {
+        $lower = strtolower($segment);
+        if (in_array($lower, ['.git', 'node_modules', 'vendor', 'storage'], true)
+            || $lower === '.env'
+            || str_starts_with($lower, '.env.')) {
+            $forbidden = true;
+            break;
+        }
+    }
+    if ($forbidden) {
         $zip->close();
         @unlink($archivePath);
         $fail('The release contains a forbidden development, environment or generated path: '.$relative);
     }
-    $files[$relative] = $path;
+
+    $files[$relative] = $sourcePath;
 }
 ksort($files, SORT_STRING);
-foreach ($files as $relative => $path) {
-    if (! $zip->addFile($path, $relative)) {
+foreach ($files as $relative => $sourcePath) {
+    if (! $zip->addFile($sourcePath, $relative)) {
         $zip->close();
         @unlink($archivePath);
         $fail('Unable to add plugin file to release: '.$relative);
@@ -89,6 +129,10 @@ foreach ($files as $relative => $path) {
 if (! $zip->close()) {
     @unlink($archivePath);
     $fail('Unable to finalize the plugin release archive.');
+}
+if (! chmod($archivePath, 0600)) {
+    @unlink($archivePath);
+    $fail('Unable to restrict release archive permissions.');
 }
 
 $checksum = hash_file('sha256', $archivePath);
@@ -103,8 +147,11 @@ $sortKeys = static function (array $value) use (&$sortKeys): array {
     }
     ksort($value, SORT_STRING);
     foreach ($value as $key => $item) {
-        if (is_array($item)) $value[$key] = $sortKeys($item);
+        if (is_array($item)) {
+            $value[$key] = $sortKeys($item);
+        }
     }
+
     return $value;
 };
 $payload = json_encode([
@@ -115,14 +162,24 @@ $payload = json_encode([
 
 $signature = base64_encode(sodium_crypto_sign_detached($payload, $secretKey));
 $publicKey = base64_encode(sodium_crypto_sign_publickey_from_secretkey($secretKey));
-$manifestOutput = $outputDirectory.DIRECTORY_SEPARATOR.$filename.'.manifest.json';
-$signatureOutput = $outputDirectory.DIRECTORY_SEPARATOR.$filename.'.signature.txt';
-$checksumOutput = $outputDirectory.DIRECTORY_SEPARATOR.$filename.'.sha256';
-
-file_put_contents($manifestOutput, json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), LOCK_EX);
-file_put_contents($signatureOutput, $signature.PHP_EOL, LOCK_EX);
-file_put_contents($checksumOutput, $checksum.'  '.$filename.PHP_EOL, LOCK_EX);
 sodium_memzero($secretKey);
+
+$manifestContents = json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+$writes = [
+    $manifestOutput => $manifestContents,
+    $signatureOutput => $signature.PHP_EOL,
+    $checksumOutput => $checksum.'  '.$filename.PHP_EOL,
+];
+foreach ($writes as $path => $contents) {
+    if (file_put_contents($path, $contents, LOCK_EX) === false || ! chmod($path, 0600)) {
+        foreach ([$archivePath, $manifestOutput, $signatureOutput, $checksumOutput] as $cleanupPath) {
+            if (is_file($cleanupPath) && ! is_link($cleanupPath)) {
+                @unlink($cleanupPath);
+            }
+        }
+        $fail('Unable to write private release metadata.');
+    }
+}
 
 echo json_encode([
     'key_id' => $keyId,
