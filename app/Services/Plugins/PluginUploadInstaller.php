@@ -3,6 +3,7 @@
 namespace App\Services\Plugins;
 
 use App\Models\PluginInstallation;
+use App\Models\PluginVersionHistory;
 use Illuminate\Http\UploadedFile;
 use InvalidArgumentException;
 use RuntimeException;
@@ -241,9 +242,19 @@ final class PluginUploadInstaller
         $this->lifecycle->transition($pluginKey, 'update_staged');
 
         try {
-            $history->record($plugin, 'package_update_snapshot', auth()->user(), [
-                'snapshot_schema' => 1,
-                'snapshot' => $snapshot,
+            PluginVersionHistory::query()->create([
+                'plugin_key' => $plugin->plugin_key,
+                'version' => $plugin->version,
+                'package_sha256' => $plugin->package_sha256,
+                'signature_key_id' => $plugin->signature_key_id,
+                'action' => 'package_update_snapshot',
+                'status' => $plugin->status,
+                'actor_id' => auth()->id(),
+                'details' => [
+                    'snapshot_schema' => 1,
+                    'snapshot' => $snapshot,
+                ],
+                'created_at' => now(),
             ]);
 
             $filename = 'update-'.bin2hex(random_bytes(24)).'.zip';
