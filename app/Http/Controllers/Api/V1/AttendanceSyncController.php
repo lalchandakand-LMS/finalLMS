@@ -107,6 +107,14 @@ class AttendanceSyncController extends Controller
                 }
 
                 $capturedAt = Carbon::parse($record['location_captured_at']);
+                if ($capturedAt->lessThan(now()->subDays(max(1, (int) config('attendance.offline_retention_days', 7))))) {
+                    return $this->rememberResult($actor->id, $record, $payloadHash, [
+                        'idempotency_key' => $record['idempotency_key'],
+                        'status' => 'failed',
+                        'code' => 'offline_record_expired',
+                        'message' => 'This offline attendance record is outside the permitted sync window and needs manual review.',
+                    ]);
+                }
                 if ($capturedAt->greaterThan(now()->addMinutes(5))) {
                     return $this->rememberResult($actor->id, $record, $payloadHash, [
                         'idempotency_key' => $record['idempotency_key'],
@@ -211,7 +219,7 @@ class AttendanceSyncController extends Controller
         }
 
         $capturedAt = Carbon::parse($data['location_captured_at']);
-        abort_if($capturedAt->greaterThan(now()->addMinutes(5)), 422, 'Invalid location capture time.');
+        abort_if($capturedAt->greaterThan(now()->addMinutes(5)) || $capturedAt->lessThan(now()->subMinutes((int) config('attendance.online_location_max_age_minutes', 10))), 422, 'Invalid or stale location capture time.');
 
         return DB::transaction(function () use ($attendance, $teacher, $data, $capturedAt): JsonResponse {
             $row = Attendance::query()->whereKey($attendance->id)->lockForUpdate()->firstOrFail();
