@@ -71,7 +71,8 @@ not enabled. Migration rollback is separate from package rollback.
 Plugin Manager lets an Admin save a plugin-specific key/value setting. Values are
 encrypted using Laravel's application encryption key before persistence. The
 manager displays setting names and update timestamps only; it never renders or
-returns decrypted values. Plugin code retrieves a value through
+returns decrypted values, writes them to audit descriptions, or flashes them
+back into the session after validation errors. Plugin code retrieves a value through
 PluginSettingsManager::get($plugin, $key). Settings remain stored when a plugin
 is deactivated or uninstalled so reinstall/recovery does not silently discard
 credentials. Protect APP_KEY and include it in encrypted-backup recovery
