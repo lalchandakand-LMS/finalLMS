@@ -184,13 +184,21 @@ class AdminCourseContentPostController extends Controller
             abort(422, __('The PDF cannot be replaced after a purchase has been made.'));
         }
 
+        $imagePath = $post->thumbnail_path;
+        if (! $imagePath && $post->thumbnail_media_id) {
+            $media = MediaAsset::find($post->thumbnail_media_id);
+            if ($media?->disk === 'public') {
+                $imagePath = $media->path;
+            }
+        }
+
         $product->fill([
             'type' => 'ebook',
             'name' => $post->title,
             'slug' => $this->uniqueProductSlug($post->slug, $product->id),
             'short_description' => $post->short_description,
             'description' => $post->long_description,
-            'image_path' => $post->thumbnail_path,
+            'image_path' => $imagePath,
             'regular_price' => $post->regular_price,
             'sale_price' => $post->sale_price,
             'currency' => 'BDT',
