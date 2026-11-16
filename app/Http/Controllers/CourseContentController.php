@@ -101,7 +101,8 @@ class CourseContentController extends Controller
                 ->where(fn ($query) => $query->whereNull('downloads_remaining')->orWhere('downloads_remaining', '>', 0))
                 ->whereHas('orderItem.order', fn ($query) => $query->where('status', 'completed'))->exists()
             : false;
-        abort_unless($canManage || $isEnrolled || $hasPurchased || $post->access_type === 'free' || $curriculumItem->is_preview, 403);
+        $previewFileAllowed = $post->access_type !== 'paid' && $curriculumItem->is_preview;
+        abort_unless($canManage || $isEnrolled || $hasPurchased || $post->access_type === 'free' || $previewFileAllowed, 403);
 
         if ($post->access_type === 'paid' && ! $canManage && ! $isEnrolled) {
             $permission = DownloadPermission::query()->where('user_id', $user->id)
