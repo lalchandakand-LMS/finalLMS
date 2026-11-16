@@ -67,8 +67,9 @@ class AdminPluginManagerTest extends TestCase
             unlink($this->archivePath);
         }
 
-        if (isset($this->finalPath) && is_dir($this->finalPath) && ! is_link($this->finalPath)) {
-            \Illuminate\Support\Facades\File::deleteDirectory($this->finalPath);
+        $pluginRoot = base_path('plugins/aec/course-management');
+        if (is_dir($pluginRoot) && ! is_link($pluginRoot)) {
+            \\Illuminate\\Support\\Facades\\File::deleteDirectory($pluginRoot);
         }
 
         parent::tearDown();
@@ -405,6 +406,55 @@ PHP;
         $this->assertDatabaseHas('plugin_version_history', ['plugin_key' => 'aec.course-management', 'action' => 'deactivated']);
     }
 
+
+    public function test_admin_can_update_and_restore_a_signed_plugin_version(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+
+        $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData())
+            ->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+        $oldPath = $this->finalPath;
+        $this->assertDirectoryExists($oldPath);
+
+        $this->manifest['version'] = '1.1.0';
+        $this->finalPath = base_path('plugins/aec/course-management/1.1.0');
+        $this->actingAs($admin)->post(route('admin.plugins.update', 'aec.course-management'), $this->uploadData())
+            ->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'version' => '1.1.0',
+            'status' => 'installed',
+        ]);
+        $this->assertDirectoryExists($oldPath);
+        $this->assertDirectoryExists($this->finalPath);
+
+        $snapshot = DB::table('plugin_version_history')
+            ->where('plugin_key', 'aec.course-management')
+            ->where('action', 'version_snapshot')
+            ->where('version', '1.0.0')
+            ->first();
+        $this->assertNotNull($snapshot);
+
+        $this->actingAs($admin)->post(route('admin.plugins.restore', ['aec.course-management', $snapshot->id]), [
+            'confirm_restore' => '1',
+        ])->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'version' => '1.0.0',
+            'status' => 'inactive',
+        ]);
+        $this->assertDirectoryExists($oldPath);
+        $this->assertDirectoryExists($this->finalPath);
+        $this->assertDatabaseHas('plugin_version_history', [
+            'plugin_key' => 'aec.course-management',
+            'action' => 'version_restored',
+        ]);
+    }
 
     public function test_admin_can_run_plugin_health_check_and_record_version_history(): void
     {
