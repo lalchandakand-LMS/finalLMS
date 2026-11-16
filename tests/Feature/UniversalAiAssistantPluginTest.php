@@ -84,17 +84,17 @@ class UniversalAiAssistantPluginTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $first = AssistantTokenBudget::reserve(2000, 500, 1000, 20, $user->id, $conversationId);
+        $first = AssistantTokenBudget::reserve(2000, 500, 1000, 20, 'student', 'openai-compatible', 'test-model', $user->id, $conversationId);
         $this->assertNotNull($first);
         $this->assertSame(1000, $first['completion_limit']);
 
         // Pending reservations consume budget, preventing concurrent requests
         // from both receiving the same completion allowance.
-        $second = AssistantTokenBudget::reserve(2000, 500, 1000, 20, $user->id, $conversationId);
+        $second = AssistantTokenBudget::reserve(2000, 500, 1000, 20, 'student', 'openai-compatible', 'test-model', $user->id, $conversationId);
         $this->assertNull($second);
 
         AssistantTokenBudget::release($first['id']);
-        $retry = AssistantTokenBudget::reserve(2000, 500, 1000, 20, $user->id, $conversationId);
+        $retry = AssistantTokenBudget::reserve(2000, 500, 1000, 20, 'student', 'openai-compatible', 'test-model', $user->id, $conversationId);
         $this->assertNotNull($retry);
 
         AssistantTokenBudget::settle($retry['id'], 900, function () use ($conversationId): void {
@@ -130,7 +130,7 @@ class UniversalAiAssistantPluginTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        $first = AssistantTokenBudget::reserve(5000, 100, 1000, 1, $user->id, $conversationId);
+        $first = AssistantTokenBudget::reserve(5000, 100, 1000, 1, 'student', 'openai-compatible', 'test-model', $user->id, $conversationId);
         $this->assertNotNull($first);
         AssistantTokenBudget::persistPrompt($first['id'], function () use ($conversationId): void {
             \DB::table('ai_assistant_messages')->insert([
@@ -142,7 +142,7 @@ class UniversalAiAssistantPluginTest extends TestCase
                 'created_at' => now(),
             ]);
         });
-        $second = AssistantTokenBudget::reserve(5000, 100, 1000, 1, $user->id, $conversationId);
+        $second = AssistantTokenBudget::reserve(5000, 100, 1000, 1, 'student', 'openai-compatible', 'test-model', $user->id, $conversationId);
         $this->assertNull($second);
     }
 
