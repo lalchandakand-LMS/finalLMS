@@ -109,7 +109,10 @@ final class AssistantController
             if (($settings['role_data_access'][$role] ?? false) === true) {
                 $authorizedContext = app(AssistantContextBuilder::class)->build($request->user(), $role);
                 if ($authorizedContext !== []) {
-                    $sourceIds = [];
+                    $sourceIds = array_values(array_filter(
+                        $authorizedContext['sources'] ?? [],
+                        static fn ($source): bool => is_string($source) && $source !== ''
+                    ));
                     foreach (['courses', 'batches', 'enrollments', 'linked_students', 'assignments', 'exams'] as $sourceGroup) {
                         foreach ($authorizedContext[$sourceGroup] ?? [] as $source) {
                             if (isset($source['source'])) $sourceIds[] = $source['source'];
@@ -118,6 +121,10 @@ final class AssistantController
                             }
                         }
                     }
+                    foreach ($authorizedContext['learning_progress'] ?? [] as $progress) {
+                        if (isset($progress['student_id'])) $sourceIds[] = 'learning_progress:user:'.(int) $progress['student_id'];
+                    }
+                    $sourceIds = array_values(array_unique($sourceIds));
                     AssistantAudit::record(
                         'role_context_retrieved',
                         (int) $request->user()->id,
