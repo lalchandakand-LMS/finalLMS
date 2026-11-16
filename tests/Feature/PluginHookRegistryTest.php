@@ -1,14 +1,14 @@
 <?php
 
-namespace Tests\Feature;
+namespace Tests\\Feature;
 
-use App\Models\PluginInstallation;
-use App\Services\Plugins\PluginContext;
-use App\Services\Plugins\PluginHookRegistry;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Route;
+use App\\Models\\PluginInstallation;
+use App\\Services\\Plugins\\PluginContext;
+use App\\Services\\Plugins\\PluginHookRegistry;
+use Illuminate\\Foundation\\Testing\\RefreshDatabase;
+use Illuminate\\Support\\Facades\\Route;
 use InvalidArgumentException;
-use Tests\TestCase;
+use Tests\\TestCase;
 
 class PluginHookRegistryTest extends TestCase
 {
@@ -49,6 +49,8 @@ class PluginHookRegistryTest extends TestCase
     {
         config(['plugins.trusted_public_keys' => ['test-release-key' => base64_encode(random_bytes(32))]]);
         Route::get('/plugin-hook-test', fn () => 'ok')->name('plugin-hook.test');
+        Route::getRoutes()->refreshNameLookups();
+        $this->assertTrue(Route::has('plugin-hook.test'));
 
         $plugin = $this->activePlugin();
         $registry = app(PluginHookRegistry::class);
