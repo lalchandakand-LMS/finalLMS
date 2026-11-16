@@ -82,4 +82,74 @@ PHP);
             'status' => 'rolled_back',
         ]);
     }
+
+    public function test_failed_migration_is_not_automatically_retried_after_possible_partial_ddl(): void
+    {
+        $name = '2026_11_15_000002_create_partial_plugin_probe.php';
+        $file = $this->root.'/migrations/'.$name;
+        file_put_contents($file, <<<'PHP'
+<?php
+return new class extends \\Illuminate\\Database\\Migrations\\Migration {
+    public function up(): void {
+        \\Illuminate\\Support\\Facades\\Schema::create('plugin_migration_attempts', function (\\Illuminate\\Database\\Schema\\Blueprint $table): void {
+            $table->id();
+        });
+        \\Illuminate\\Support\\Facades\\DB::table('plugin_migration_attempts')->insert([]);
+        throw new \\RuntimeException('Simulated failure after a DDL statement committed.');
+    }
+    public function down(): void {
+        \\Illuminate\\Support\\Facades\\Schema::dropIfExists('plugin_migration_attempts');
+    }
+};
+PHP);
+
+        $plugin = new PluginInstallation();
+        $plugin->forceFill([
+            'plugin_key' => 'test.migration-recovery',
+            'name' => 'Migration Recovery',
+            'version' => '1.0.0',
+            'type' => 'module',
+            'status' => 'installed',
+            'manifest' => ['migrations' => 'migrations'],
+            'package_path' => $this->relative,
+            'metadata' => [
+                'integrity_version' => 1,
+                'installed_file_hashes' => ['migrations/'.$name => hash_file('sha256', $file)],
+            ],
+        ])->save();
+
+        $runner = app(PluginMigrationRunner::class);
+
+        try {
+            $runner->migrate($plugin);
+            $this->fail('The simulated migration failure should be reported.');
+        } catch (\\RuntimeException $exception) {
+            $this->assertStringContainsString('migration failed', strtolower($exception->getMessage()));
+        }
+
+        $this->assertTrue(Schema::hasTable('plugin_migration_attempts'));
+        $this->assertDatabaseHas('plugin_migrations', [
+            'plugin_key' => 'test.migration-recovery',
+            'plugin_version' => '1.0.0',
+            'migration' => $name,
+            'status' => 'failed',
+        ]);
+        $this->assertSame(1, \\DB::table('plugin_migration_attempts')->count());
+
+        try {
+            $runner->migrate($plugin);
+            $this->fail('A failed migration must require manual recovery, not automatic retry.');
+        } catch (\\RuntimeException $exception) {
+            $this->assertStringContainsString('manual database recovery is required', strtolower($exception->getMessage()));
+        }
+
+        $this->assertSame(1, \\DB::table('plugin_migration_attempts')->count());
+        $this->assertDatabaseHas('plugin_migrations', [
+            'plugin_key' => 'test.migration-recovery',
+            'plugin_version' => '1.0.0',
+            'migration' => $name,
+            'status' => 'failed',
+        ]);
+    }
+
 }
