@@ -688,6 +688,8 @@ PHP;
         $this->actingAs($student)->get(route('admin.plugins.index'))->assertForbidden();
         $this->actingAs($student)->post(route('admin.plugins.install'), [])->assertForbidden();
         $this->actingAs($student)->post(route('admin.plugins.health-check', 'aec.course-management'))->assertForbidden();
+        $this->actingAs($student)->post(route('admin.plugins.update', 'aec.course-management'), [])->assertForbidden();
+        $this->actingAs($student)->post(route('admin.plugins.restore', ['aec.course-management', 1]), [])->assertForbidden();
         $this->assertDatabaseCount('plugin_registry', 0);
     }
 
