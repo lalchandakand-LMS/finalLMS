@@ -19,7 +19,16 @@ class AdminCourseBuilderController extends Controller
         $attachedPostIds = $course->curriculumItems->pluck('course_content_post_id')->all();
         $availablePosts = CourseContentPost::query()
             ->where(fn ($query) => $query->published()->orWhereIn('id', $attachedPostIds))
-            ->with('categories')
+            ->where(function ($query) use ($course, $attachedPostIds): void {
+                $query->whereNull('academic_level_id');
+                if ($course->academic_level_id) {
+                    $query->orWhere('academic_level_id', $course->academic_level_id);
+                }
+                if ($attachedPostIds) {
+                    $query->orWhereIn('id', $attachedPostIds);
+                }
+            })
+            ->with(['categories', 'academicLevel'])
             ->orderBy('title')
             ->get();
         $availableQuestionSets = QuestionSet::query()
@@ -38,13 +47,23 @@ class AdminCourseBuilderController extends Controller
         $attachedQuestionSetIds = $course->questionSets()->pluck('question_sets.id')->all();
         $data = $request->validate([
             'post_ids' => ['nullable', 'array', 'max:300'],
-            'post_ids.*' => ['integer', 'distinct', Rule::exists('course_content_posts', 'id')->where(fn ($query) => $query->where(function ($eligible) use ($attachedPostIds) {
-                $eligible->where(function ($published) {
-                    $published->where('status', 'published')
-                        ->whereNotNull('published_at')
-                        ->where('published_at', '<=', now());
-                })->orWhereIn('id', $attachedPostIds);
-            }))],
+            'post_ids.*' => ['integer', 'distinct', Rule::exists('course_content_posts', 'id')->where(function ($query) use ($attachedPostIds, $course): void {
+                $query->where(function ($eligible) use ($attachedPostIds): void {
+                    $eligible->where(function ($published): void {
+                        $published->where('status', 'published')
+                            ->whereNotNull('published_at')
+                            ->where('published_at', '<=', now());
+                    })->orWhereIn('id', $attachedPostIds);
+                })->where(function ($levelScope) use ($attachedPostIds, $course): void {
+                    $levelScope->whereNull('academic_level_id');
+                    if ($course->academic_level_id) {
+                        $levelScope->orWhere('academic_level_id', $course->academic_level_id);
+                    }
+                    if ($attachedPostIds) {
+                        $levelScope->orWhereIn('id', $attachedPostIds);
+                    }
+                });
+            })],
             'section_titles' => ['nullable', 'array'],
             'section_titles.*' => ['nullable', 'string', 'max:120'],
             'positions' => ['nullable', 'array'],
