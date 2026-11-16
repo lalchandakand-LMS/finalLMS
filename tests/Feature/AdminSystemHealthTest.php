@@ -31,7 +31,7 @@ class AdminSystemHealthTest extends TestCase
         $this->assertArrayHasKey('database', $results);
         $this->assertArrayHasKey('cache', $results);
         $this->assertArrayHasKey('storage', $results);
-        $this->assertArrayHasKey('queue', $results);
+        $this->assertArrayHasKey('queue_table', $results);
         $this->actingAs($admin)->get(route('admin.system-health.index'))
             ->assertOk()
             ->assertSee('Recent health checks');
@@ -47,7 +47,7 @@ class AdminSystemHealthTest extends TestCase
         $this->assertArrayHasKey('database', $results);
         $this->assertArrayHasKey('cache', $results);
         $this->assertArrayHasKey('storage', $results);
-        $this->assertArrayHasKey('queue', $results);
+        $this->assertArrayHasKey('queue_table', $results);
     }
 
     public function test_scheduler_heartbeat_command_records_execution_time(): void
