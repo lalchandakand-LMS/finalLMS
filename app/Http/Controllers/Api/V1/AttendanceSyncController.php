@@ -148,7 +148,7 @@ class AttendanceSyncController extends Controller
                     return $this->rememberResult($actor->id, $record, $payloadHash, $result);
                 }
 
-                $attendance = Attendance::query()->create([
+                $inserted = DB::table('attendances')->insertOrIgnore([
                     'batch_id' => $batch->id,
                     'student_id' => $student->id,
                     'marked_by' => $actor->id,
@@ -159,7 +159,26 @@ class AttendanceSyncController extends Controller
                     'location_accuracy_m' => $record['location_accuracy_m'],
                     'location_captured_at' => $capturedAt,
                     'source' => 'offline_sync',
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
+
+                $attendance = Attendance::query()
+                    ->where('batch_id', $batch->id)
+                    ->where('student_id', $student->id)
+                    ->whereDate('attendance_date', $record['attendance_date'])
+                    ->firstOrFail();
+
+                if ($inserted === 0) {
+                    return $this->rememberResult($actor->id, $record, $payloadHash, [
+                        'idempotency_key' => $record['idempotency_key'],
+                        'status' => $attendance->status === $record['status'] ? 'duplicate' : 'conflict',
+                        'code' => $attendance->status === $record['status'] ? 'already_recorded' : 'attendance_conflict',
+                        'attendance_id' => $attendance->id,
+                        'server_status' => $attendance->status,
+                        'client_status' => $record['status'],
+                    ]);
+                }
 
                 DB::table('attendance_audits')->insert([
                     'attendance_id' => $attendance->id,
@@ -413,7 +432,7 @@ class AttendanceSyncController extends Controller
 
     private function rememberResult(int $actorId, array $record, string $payloadHash, array $result): array
     {
-        DB::table('attendance_sync_operations')->insert([
+        DB::table('attendance_sync_operations')->insertOrIgnore([
             'actor_id' => $actorId,
             'idempotency_key' => $record['idempotency_key'],
             'payload_hash' => $payloadHash,
@@ -422,6 +441,15 @@ class AttendanceSyncController extends Controller
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+
+        $stored = DB::table('attendance_sync_operations')
+            ->where('actor_id', $actorId)
+            ->where('idempotency_key', $record['idempotency_key'])
+            ->first();
+
+        if ($stored && hash_equals($stored->payload_hash, $payloadHash)) {
+            return json_decode($stored->result_payload, true, 512, JSON_THROW_ON_ERROR);
+        }
 
         return $result;
     }
