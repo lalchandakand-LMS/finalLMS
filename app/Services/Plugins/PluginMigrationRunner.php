@@ -20,17 +20,55 @@ class PluginMigrationRunner
 
         foreach ($this->migrationFiles($root) as $file) {
             $name = basename($file);
-            $existing = DB::table('plugin_migrations')->where([
+            $identity = [
                 'plugin_key' => $plugin->plugin_key,
                 'plugin_version' => $plugin->version,
                 'migration' => $name,
-            ])->first();
-            if ($existing?->status === 'completed') continue;
+            ];
 
-            DB::table('plugin_migrations')->updateOrInsert(
-                ['plugin_key' => $plugin->plugin_key, 'plugin_version' => $plugin->version, 'migration' => $name],
-                ['status' => 'running', 'started_at' => now(), 'completed_at' => null, 'error_message' => null, 'updated_at' => now(), 'created_at' => now()]
-            );
+            // Claim a new migration atomically. The unique identity index ensures
+            // only one concurrent installer can create the running record.
+            $claimed = DB::table('plugin_migrations')->insertOrIgnore($identity + [
+                'status' => 'running',
+                'started_at' => now(),
+                'completed_at' => null,
+                'error_message' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]) === 1;
+
+            if (! $claimed) {
+                $existing = DB::table('plugin_migrations')->where($identity)->first();
+
+                if ($existing?->status === 'completed') {
+                    continue;
+                }
+
+                // A failed migration may have partially committed DDL, and a
+                // running row may represent a process that crashed mid-migration.
+                // Never execute either automatically; require an operator to
+                // inspect/reconcile the database before explicitly recovering it.
+                if (in_array($existing?->status, ['failed', 'running'], true)) {
+                    throw new RuntimeException(
+                        'A previous plugin migration attempt did not complete. Manual database recovery is required before retrying.'
+                    );
+                }
+
+                if ($existing?->status !== 'rolled_back'
+                    || DB::table('plugin_migrations')->where($identity)
+                        ->where('status', 'rolled_back')
+                        ->update([
+                            'status' => 'running',
+                            'started_at' => now(),
+                            'completed_at' => null,
+                            'error_message' => null,
+                            'updated_at' => now(),
+                        ]) !== 1) {
+                    throw new RuntimeException(
+                        'The plugin migration is already being processed or is in an unsupported state.'
+                    );
+                }
+            }
 
             try {
                 $migration = require $file;
