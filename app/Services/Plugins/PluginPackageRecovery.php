@@ -17,6 +17,27 @@ final class PluginPackageRecovery
         return storage_path('app/private/plugin-recovery');
     }
 
+    private function assertRecoveryDirectory(bool $create = false): string
+    {
+        $privateRoot = storage_path('app/private');
+        $directory = $this->recoveryDirectory();
+        if (is_link($privateRoot) || is_link($directory)) {
+            throw new RuntimeException('Plugin recovery storage must not contain symbolic links.');
+        }
+        if ($create && ! is_dir($directory)
+            && ! mkdir($directory, 0700, true) && ! is_dir($directory)) {
+            throw new RuntimeException('Plugin recovery storage could not be created.');
+        }
+        $realPrivateRoot = realpath($privateRoot);
+        $realDirectory = realpath($directory);
+        if ($realPrivateRoot === false || $realDirectory === false
+            || ! str_starts_with($realDirectory, rtrim($realPrivateRoot, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR)) {
+            throw new RuntimeException('Plugin recovery storage must remain inside private application storage.');
+        }
+        @chmod($realDirectory, 0700);
+        return $realDirectory;
+    }
+
     private function canonicalPackagePath(PluginInstallation $plugin): string
     {
         $parts = explode('.', (string) $plugin->plugin_key, 2);
@@ -73,11 +94,7 @@ final class PluginPackageRecovery
             throw new RuntimeException('Plugin package resolves outside the private plugins directory.');
         }
         $files = $this->assertSafeTree($real);
-        $directory = $this->recoveryDirectory();
-        if (! is_dir($directory) && ! mkdir($directory, 0700, true) && ! is_dir($directory)) {
-            throw new RuntimeException('Plugin recovery storage could not be created.');
-        }
-        if (is_link($directory)) throw new RuntimeException('Plugin recovery storage must not be a symbolic link.');
+        $directory = $this->assertRecoveryDirectory(true);
 
         $filename = bin2hex(random_bytes(20)).'.zip';
         $archivePath = $directory.DIRECTORY_SEPARATOR.$filename;
@@ -184,7 +201,7 @@ final class PluginPackageRecovery
             || preg_match('/^[a-f0-9]{64}$/D', $expectedArchiveHash) !== 1) {
             throw new RuntimeException('Plugin recovery reference is invalid.');
         }
-        $archivePath = $this->recoveryDirectory().DIRECTORY_SEPARATOR.$filename;
+        $archivePath = $this->assertRecoveryDirectory().DIRECTORY_SEPARATOR.$filename;
         if (is_link($archivePath) || ! is_file($archivePath)) throw new RuntimeException('Plugin recovery archive is unavailable.');
         $actualHash = hash_file('sha256', $archivePath);
         if (! is_string($actualHash) || ! hash_equals($expectedArchiveHash, $actualHash)) {
