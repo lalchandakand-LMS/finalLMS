@@ -13,7 +13,15 @@
     "academic_levels"
   ],
   "permissions": [],
-  "routes": [],
+  "routes": [
+    "courses.*",
+    "course-combos.*",
+    "teacher.courses.*",
+    "admin.courses.*",
+    "admin.course-categories.*",
+    "courses.comments.*",
+    "admin.course-combos.*"
+  ],
   "settings": [],
   "events": [],
   "directory": "plugins/course_management",
