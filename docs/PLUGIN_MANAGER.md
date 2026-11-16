@@ -73,4 +73,14 @@ The plugin manifest must declare `course.read` in its `permissions` list, and a 
 
 The middleware accepts only bound Eloquent models and currently supports `User` (student records), `Course`, `Batch` and `Enrollment`. Unknown model types and unauthorized records return 404. Root Admin can access supported resources; Branch Managers are restricted to their active branch; Teachers to assigned courses/batches and their enrolled students; Students to their own enrollments; Guardians to students connected by an approved active guardian link.
 
-This protects individual bound resources. It does **not** automatically scope collection queries, reports, exports or nested relations. Plugin controllers must still apply equivalent actor-scoped query constraints before returning lists or aggregates. That collection-scope layer remains a release gate for sensitive first-party plugins.
+For collection endpoints, apply the same policy before pagination or aggregation:
+
+```php
+$courses = app(PluginResourceAccess::class)
+    ->scopeQuery(Course::query(), $request->user())
+    ->paginate();
+```
+
+`scopeQuery()` supports User (student records), Course, Batch and Enrollment queries. It returns only records visible to the current actor and denies unsupported roles by returning an empty result. Admin access is unrestricted for these supported models.
+
+The middleware protects individual bound resources; the query helper protects the collection query itself. Reports, exports and nested relations must scope every underlying query as well. Never fetch an unrestricted collection and filter it in the view or after serialization.

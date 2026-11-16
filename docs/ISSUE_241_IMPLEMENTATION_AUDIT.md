@@ -29,7 +29,8 @@ The current repository includes a first-party Universal AI Assistant package. Po
 - **Implemented in this branch:** the Admin Plugin Manager can grant/revoke only manifest-declared permissions. Changes are audited and take effect on the next request; a package cannot grant itself permission.
 - **Applied to Universal AI Assistant:** Admin routes require `ai-assistant.configure`; Branch Manager, Teacher, Student, Guardian and Support Staff routes require `ai-assistant.use`.
 - **Implemented in this branch:** `PluginResourceAccess` plus `plugin.resource:{route-parameter}` middleware protects bound Student, Course, Batch and Enrollment records. Branch Managers are restricted to their active branch; Teachers to assigned courses/batches and enrolled students; Students to their own records; Guardians to approved active linked students. Unknown resource models are denied.
-- **Still required:** collection queries, reports, exports and nested relations are not automatically scoped by the bound-resource middleware. Every plugin list/aggregate endpoint must apply equivalent actor-scoped query constraints before sensitive first-party modules are exposed.
+- **Implemented in this branch:** `PluginResourceAccess::scopeQuery()` applies actor-scoped query constraints for User, Course, Batch and Enrollment collections, with deny-by-default behavior for unsupported roles.
+- **Still required:** report/export pipelines and nested relation queries must scope every underlying query as well; plugin developers must use the helper before pagination, aggregation or serialization and must not fetch unrestricted collections then filter them afterward.
 
 ### P1 — lifecycle completeness
 
