@@ -12,7 +12,12 @@
     "branch_management"
   ],
   "permissions": [],
-  "routes": [],
+  "routes": [
+    "teacher.batches.attendance.*",
+    "student.attendance.*",
+    "admin.attendance.*",
+    "admin.batches.attendance.*"
+  ],
   "settings": [],
   "events": [],
   "directory": "plugins/attendance",
