@@ -89,16 +89,16 @@ PHP);
         $file = $this->root.'/migrations/'.$name;
         file_put_contents($file, <<<'PHP'
 <?php
-return new class extends \\Illuminate\\Database\\Migrations\\Migration {
+return new class extends \Illuminate\Database\Migrations\Migration {
     public function up(): void {
-        \\Illuminate\\Support\\Facades\\Schema::create('plugin_migration_attempts', function (\\Illuminate\\Database\\Schema\\Blueprint $table): void {
+        \Illuminate\Support\Facades\Schema::create('plugin_migration_attempts', function (\Illuminate\Database\Schema\Blueprint $table): void {
             $table->id();
         });
-        \\Illuminate\\Support\\Facades\\DB::table('plugin_migration_attempts')->insert([]);
-        throw new \\RuntimeException('Simulated failure after a DDL statement committed.');
+        \Illuminate\Support\Facades\DB::table('plugin_migration_attempts')->insert([]);
+        throw new \RuntimeException('Simulated failure after a DDL statement committed.');
     }
     public function down(): void {
-        \\Illuminate\\Support\\Facades\\Schema::dropIfExists('plugin_migration_attempts');
+        \Illuminate\Support\Facades\Schema::dropIfExists('plugin_migration_attempts');
     }
 };
 PHP);
@@ -123,7 +123,7 @@ PHP);
         try {
             $runner->migrate($plugin);
             $this->fail('The simulated migration failure should be reported.');
-        } catch (\\RuntimeException $exception) {
+        } catch (\RuntimeException $exception) {
             $this->assertStringContainsString('migration failed', strtolower($exception->getMessage()));
         }
 
@@ -134,16 +134,16 @@ PHP);
             'migration' => $name,
             'status' => 'failed',
         ]);
-        $this->assertSame(1, \\DB::table('plugin_migration_attempts')->count());
+        $this->assertSame(1, \DB::table('plugin_migration_attempts')->count());
 
         try {
             $runner->migrate($plugin);
             $this->fail('A failed migration must require manual recovery, not automatic retry.');
-        } catch (\\RuntimeException $exception) {
+        } catch (\RuntimeException $exception) {
             $this->assertStringContainsString('manual database recovery is required', strtolower($exception->getMessage()));
         }
 
-        $this->assertSame(1, \\DB::table('plugin_migration_attempts')->count());
+        $this->assertSame(1, \DB::table('plugin_migration_attempts')->count());
         $this->assertDatabaseHas('plugin_migrations', [
             'plugin_key' => 'test.migration-recovery',
             'plugin_version' => '1.0.0',
