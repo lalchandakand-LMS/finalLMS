@@ -177,6 +177,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
             Route::put('/batches/{batch}', [BatchController::class, 'branchManagerUpdate'])->middleware('admin.permission:branch.batches')->name('batches.update');
             Route::get('/batches/{batch}/attendance', [AttendanceController::class, 'index'])->middleware('admin.permission:branch.attendance')->name('batches.attendance.index');
             Route::post('/batches/{batch}/attendance', [AttendanceController::class, 'store'])->middleware(['admin.permission:branch.attendance', 'throttle:30,1'])->name('batches.attendance.store');
+            Route::get('/attendance/reports', [AttendanceController::class, 'report'])->middleware('admin.permission:branch.attendance')->name('attendance.reports');
         });
 
     Route::middleware('role:accountant')
@@ -223,6 +224,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
     });
 
     Route::middleware('role:teacher')->get('/teacher/batches', [BatchController::class, 'teacherIndex'])->name('teacher.batches.index');
+    Route::middleware('role:teacher')->get('/teacher/attendance/reports', [AttendanceController::class, 'report'])->name('teacher.attendance.reports');
     Route::middleware('role:teacher')->get('/teacher/courses/{course}/lessons', [CourseController::class, 'teacherLessons'])->name('teacher.courses.lessons.index');
     Route::middleware('role:teacher')->post('/teacher/courses/{course}/lessons', [CourseController::class, 'storeLesson'])->name('teacher.courses.lessons.store');
     Route::middleware('role:teacher')->put('/teacher/courses/{course}/lessons/{lesson}', [CourseController::class, 'updateLesson'])->name('teacher.courses.lessons.update');
@@ -406,6 +408,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::get('/batches/{batch}/assignments', [AssignmentController::class, 'index'])->name('admin.batches.assignments.index');
         Route::post('/batches/{batch}/assignments', [AssignmentController::class, 'store'])->middleware('throttle:10,1')->name('admin.batches.assignments.store');
         Route::post('/assignments/{assignment}/submissions/{submission}/grade', [AssignmentController::class, 'grade'])->middleware('throttle:30,1')->name('admin.assignments.grade');
+        Route::get('/attendance/reports', [AttendanceController::class, 'report'])->name('admin.attendance.reports');
         Route::get('/batches/{batch}/attendance', [AttendanceController::class, 'index'])->name('admin.batches.attendance.index');
         Route::post('/batches/{batch}/attendance', [AttendanceController::class, 'store'])->name('admin.batches.attendance.store');
         Route::post('/branches', [BatchController::class, 'storeBranch'])->name('admin.branches.store');
