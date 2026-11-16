@@ -74,13 +74,22 @@ final class AssistantContextBuilder
 
         $linkedStudents = $role === 'guardian'
             ? $this->access->scopeQuery(User::query(), $actor)->select(['id', 'name'])->limit(10)->get()
-                ->map(static fn (User $student): array => ['id' => $student->id, 'name' => $student->name])->all()
+                ->map(static fn (User $student): array => ['source' => 'student:'.$student->id, 'id' => $student->id, 'name' => $student->name])->all()
+            : [];
+        $assignedStudents = $role === 'teacher'
+            ? $this->access->scopeQuery(User::query(), $actor)
+                ->whereIn('id', $enrollments->pluck('user_id')->unique()->all())
+                ->select(['id', 'name'])
+                ->limit(40)
+                ->get()
+                ->map(static fn (User $student): array => ['source' => 'student:'.$student->id, 'id' => $student->id, 'name' => $student->name])->all()
             : [];
 
         $batchIds = $batches->pluck('id')->map(static fn ($id): int => (int) $id)->all();
         $studentIds = match ($role) {
             'student' => [(int) $actor->id],
             'guardian' => array_map('intval', array_column($linkedStudents, 'id')),
+            'teacher' => $enrollments->pluck('user_id')->unique()->map(static fn ($id): int => (int) $id)->all(),
             default => [],
         };
 
@@ -166,6 +175,7 @@ final class AssistantContextBuilder
                 'guardian' => 'verified_active_linked_students',
             },
             'linked_students' => $linkedStudents,
+            'assigned_students' => $assignedStudents,
             'courses' => $courseContext,
             'batches' => $batches->map(static fn (Batch $batch): array => [
                 'source' => 'batch:'.$batch->id,
