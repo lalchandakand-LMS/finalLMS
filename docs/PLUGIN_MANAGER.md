@@ -56,3 +56,17 @@ controls yet. The isolated runtime must first enforce plugin boundaries for web
 routes, API routes, queued jobs, schedules, events and portal navigation. A
 plugin being installed does not mean its PHP entrypoint is loaded or executed.
 Manifest permissions are stored for review and are not automatically granted.
+
+## Portal resource authorization
+
+Plugin controllers must protect every route that loads an individual LMS resource through route model binding. Add the resource middleware to the route after declaring the route parameter:
+
+```php
+Route::get('/courses/{course}', [CourseController::class, 'show'])
+    ->middleware('plugin.resource:course')
+    ->name('courses.show');
+```
+
+The middleware accepts only bound Eloquent models and currently supports `User` (student records), `Course`, `Batch` and `Enrollment`. Unknown model types and unauthorized records return 404. Root Admin can access supported resources; Branch Managers are restricted to their active branch; Teachers to assigned courses/batches and their enrolled students; Students to their own enrollments; Guardians to students connected by an approved active guardian link.
+
+This protects individual bound resources. It does **not** automatically scope collection queries, reports, exports or nested relations. Plugin controllers must still apply equivalent actor-scoped query constraints before returning lists or aggregates. That collection-scope layer remains a release gate for sensitive first-party plugins.
