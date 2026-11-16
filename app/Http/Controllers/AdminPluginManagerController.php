@@ -10,6 +10,7 @@ use App\Services\Plugins\PluginManifestValidator;
 use App\Services\Plugins\PluginMigrationRunner;
 use App\Services\Plugins\PluginPackageRemover;
 use App\Services\Plugins\PluginUploadInstaller;
+use App\Services\Plugins\PluginSignatureVerifier;
 use App\Services\Plugins\PluginVersionHistoryRecorder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
