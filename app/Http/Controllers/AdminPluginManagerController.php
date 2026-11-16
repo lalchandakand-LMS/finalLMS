@@ -429,7 +429,8 @@ class AdminPluginManagerController extends Controller
     {
         try {
             $plugin = PluginInstallation::query()->where('plugin_key', $key)->firstOrFail();
-            if (! in_array($plugin->status, ['installed', 'inactive', 'failed'], true)) {
+            $retryingCleanup = $plugin->status === 'uninstalled';
+            if (! $retryingCleanup && ! in_array($plugin->status, ['installed', 'inactive', 'failed'], true)) {
                 throw new LogicException('Deactivate the plugin before uninstalling it.');
             }
 
@@ -443,9 +444,15 @@ class AdminPluginManagerController extends Controller
                 throw new LogicException('An active plugin depends on this plugin: '.$dependent->plugin_key);
             }
 
-            $plugin = $lifecycle->transition($plugin->plugin_key, 'uninstalled');
+            // The registry is marked uninstalled before filesystem cleanup so the
+            // package cannot execute during removal. If cleanup is interrupted,
+            // allow an administrator to retry this idempotent cleanup operation.
+            if (! $retryingCleanup) {
+                $plugin = $lifecycle->transition($plugin->plugin_key, 'uninstalled');
+            }
+
             $remover->remove($plugin);
-            $history->record($plugin, 'uninstalled', $request->user());
+            $history->record($plugin, $retryingCleanup ? 'package_cleanup_retried' : 'uninstalled', $request->user());
         } catch (Throwable $exception) {
             report($exception);
             $this->recordFailure($request, 'admin.plugins.uninstall_failed');
@@ -456,7 +463,7 @@ class AdminPluginManagerController extends Controller
             'Uninstalled plugin '.$plugin->plugin_key.'; application data and migration history were retained.');
 
         return redirect()->route('admin.plugins.index')->with('success',
-            __('Plugin uninstalled. Its executable package was removed; plugin data and migration records were retained.'));
+            __('Plugin uninstall cleanup completed. Its executable package was removed; plugin data and migration records were retained.'));
     }
 
     public function healthCheck(
