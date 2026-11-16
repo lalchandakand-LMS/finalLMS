@@ -12,7 +12,14 @@
     "student_management"
   ],
   "permissions": [],
-  "routes": [],
+  "routes": [
+    "teacher.batches.assignments.*",
+    "teacher.assignments.*",
+    "student.assignments.*",
+    "admin.assignments.*",
+    "admin.batches.assignments.*",
+    "assignment-submissions.*"
+  ],
   "settings": [],
   "events": [],
   "directory": "plugins/assignment",
