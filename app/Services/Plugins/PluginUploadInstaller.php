@@ -142,6 +142,129 @@ final class PluginUploadInstaller
         }
     }
 
+
+    /**
+     * Install a new immutable version beside the current package. The old
+     * package and its signed integrity snapshot remain available for restore.
+     * Updates are deliberately accepted only while the plugin is inactive.
+     */
+    public function update(UploadedFile $upload, string $manifestJson, string $signatureBase64, string $keyId): PluginInstallation
+    {
+        try {
+            $manifest = json_decode($manifestJson, true, 64, JSON_THROW_ON_ERROR);
+        } catch (\\JsonException $exception) {
+            throw new InvalidArgumentException('The plugin manifest must be valid JSON.', previous: $exception);
+        }
+
+        if (! is_array($manifest) || array_is_list($manifest)) {
+            throw new InvalidArgumentException('The plugin manifest must be a JSON object.');
+        }
+        $errors = $this->manifestValidator->errors($manifest);
+        if ($errors !== []) throw new InvalidArgumentException('The plugin manifest is invalid: '.implode(' ', $errors));
+        if (strtolower($upload->getClientOriginalExtension()) !== 'zip') throw new InvalidArgumentException('Upload a ZIP plugin package.');
+
+        $size = $upload->getSize();
+        $limit = max(1, (int) config('plugins.max_package_bytes', 52428800));
+        if ($size === false || $size < 1 || $size > $limit) throw new InvalidArgumentException('The plugin ZIP is empty or exceeds the configured package size limit.');
+
+        $plugin = PluginInstallation::query()->where('plugin_key', (string) $manifest['key'])->firstOrFail();
+        if (! in_array($plugin->status, ['installed', 'inactive'], true)) {
+            throw new RuntimeException('Deactivate the plugin and complete any recovery before updating it.');
+        }
+        if (version_compare((string) $manifest['version'], (string) $plugin->version, '<=')) {
+            throw new InvalidArgumentException('An update must use a strictly newer semantic version.');
+        }
+        if ((string) $manifest['name'] !== (string) $plugin->name || (string) $manifest['type'] !== (string) $plugin->type) {
+            throw new InvalidArgumentException('An update cannot change the registered plugin name or type.');
+        }
+
+        // Verify and retain a complete restore point before changing registry metadata.
+        $this->signatureVerifier->verifyInstalledSignature($plugin);
+        $this->archiveInstaller->verifyInstalledPackage($plugin);
+        $snapshot = [
+            'name' => $plugin->name,
+            'version' => $plugin->version,
+            'type' => $plugin->type,
+            'manifest' => $plugin->manifest,
+            'package_sha256' => $plugin->package_sha256,
+            'signature_key_id' => $plugin->signature_key_id,
+            'signature_verified_at' => $plugin->signature_verified_at?->toISOString(),
+            'package_path' => $plugin->package_path,
+            'metadata' => $plugin->metadata,
+            'installed_at' => $plugin->installed_at?->toISOString(),
+        ];
+        app(PluginVersionHistoryRecorder::class)->record($plugin, 'version_snapshot', auth()->user(), [
+            'snapshot' => $snapshot,
+        ]);
+
+        [$vendor, $slug] = explode('.', (string) $plugin->plugin_key, 2);
+        $finalPath = 'plugins/'.$vendor.'/'.str_replace('.', '-', $slug).'/'.$manifest['version'];
+        $finalAbsolutePath = base_path($finalPath);
+        if (file_exists($finalAbsolutePath) || is_link($finalAbsolutePath)) {
+            throw new RuntimeException('This version directory already exists. Existing release files are never overwritten.');
+        }
+
+        $stagingDirectory = $this->privateStagingDirectory();
+        $archivePath = null;
+        try {
+            $stored = $upload->move($stagingDirectory, 'upload-'.bin2hex(random_bytes(24)).'.zip');
+            $archivePath = $stored->getPathname();
+
+            $this->lifecycle->transition((string) $plugin->plugin_key, 'update_staged');
+            $metadata = $plugin->metadata ?? [];
+            unset($metadata['integrity_version'], $metadata['installed_file_hashes'], $metadata['release_signature'], $metadata['signature_record_version']);
+            $plugin->forceFill([
+                'name' => $manifest['name'],
+                'version' => $manifest['version'],
+                'type' => $manifest['type'],
+                'manifest' => $manifest,
+                'package_sha256' => null,
+                'signature_key_id' => null,
+                'signature_verified_at' => null,
+                'package_path' => $finalPath,
+                'metadata' => $metadata,
+                'health_status' => 'unknown',
+                'health_message' => null,
+            ])->save();
+
+            $this->lifecycle->transition((string) $plugin->plugin_key, 'staged');
+            $verified = $this->signatureVerifier->verifyAndRecord(
+                $plugin->fresh(), $manifest, $archivePath, $signatureBase64, $keyId, $finalPath
+            );
+            $installed = $this->archiveInstaller->installVerifiedPackage($verified, $archivePath);
+
+            try {
+                $this->migrationRunner->migrate($installed);
+            } catch (Throwable $exception) {
+                $this->lifecycle->transition((string) $plugin->plugin_key, 'failed', [
+                    'health_status' => 'failed',
+                    'health_message' => 'The new version migration failed. The previous signed version was retained; inspect database state before restoring it.',
+                ]);
+                throw $exception;
+            }
+
+            return $installed->fresh();
+        } catch (Throwable $exception) {
+            // Never silently point the registry back after a migration may have
+            // partially changed DDL. The failed new package and old restore point
+            // remain available for an explicit, verified recovery operation.
+            $fresh = PluginInstallation::query()->where('plugin_key', $plugin->plugin_key)->first();
+            if ($fresh && in_array($fresh->status, ['update_staged', 'staged'], true)) {
+                try {
+                    $this->lifecycle->transition((string) $fresh->plugin_key, 'failed', [
+                        'health_status' => 'failed',
+                        'health_message' => 'Plugin update did not complete; previous version snapshot retained.',
+                    ]);
+                } catch (Throwable) {
+                    // Preserve the original failure.
+                }
+            }
+            throw $exception;
+        } finally {
+            if (is_string($archivePath) && is_file($archivePath) && ! is_link($archivePath)) @unlink($archivePath);
+        }
+    }
+
     private function privateStagingDirectory(): string
     {
         $pluginsDirectory = base_path('plugins');
