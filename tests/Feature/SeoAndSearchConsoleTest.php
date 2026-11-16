@@ -81,11 +81,11 @@ class SeoAndSearchConsoleTest extends TestCase
             'password_confirmation' => 'StrongPassword123!',
         ];
 
-        $this->withCookie('marketing_consent', 'accepted')
+        $this->withUnencryptedCookie('marketing_consent', 'accepted')
             ->post(route('register.store'), $payload)
             ->assertRedirect(route('login'));
 
-        $this->withCookie('marketing_consent', 'accepted')
+        $this->withUnencryptedCookie('marketing_consent', 'accepted')
             ->get(route('login'))
             ->assertOk()
             ->assertSee("fbq('track','CompleteRegistration')", false);
