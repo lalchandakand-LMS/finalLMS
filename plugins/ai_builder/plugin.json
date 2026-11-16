@@ -11,7 +11,9 @@
     "identity"
   ],
   "permissions": [],
-  "routes": [],
+  "routes": [
+    "admin.ai-builder.*"
+  ],
   "settings": [],
   "events": [],
   "directory": "plugins/ai_builder",
