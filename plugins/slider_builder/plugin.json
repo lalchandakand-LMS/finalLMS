@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "key": "slider_builder",
+  "name": "Slider Builder",
+  "description": "Admin-managed homepage sliders, banners, slide ordering, scheduling and responsive display.",
+  "type": "first_party",
+  "status": "metadata_only",
+  "provider": null,
+  "dependencies": [
+    "core",
+    "website_cms",
+    "media_library"
+  ],
+  "capabilities": [
+    "sliders.create",
+    "sliders.edit",
+    "sliders.schedule",
+    "sliders.order",
+    "sliders.publish"
+  ],
+  "permissions": [
+    "website.sliders.view",
+    "website.sliders.create",
+    "website.sliders.update",
+    "website.sliders.publish"
+  ],
+  "routes": [
+    "admin.sliders.*",
+    "sliders.*"
+  ],
+  "settings": [],
+  "events": [],
+  "directory": "plugins/slider_builder",
+  "safety": {
+    "trusted_code_only": true,
+    "execute_uploaded_code": false,
+    "disable_preserves_data": true
+  }
+}
