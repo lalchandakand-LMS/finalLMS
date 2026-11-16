@@ -165,7 +165,7 @@ class UniversalAiAssistantPluginTest extends TestCase
         ], 'test-secret-provider-key', false);
 
         Route::post('/__test-ai-assistant/role-switch', [
-            \\Aloms\\UniversalAiAssistant\\AssistantController::class,
+            \Aloms\UniversalAiAssistant\AssistantController::class,
             'send',
         ]);
 
