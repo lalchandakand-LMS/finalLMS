@@ -69,7 +69,7 @@ class AdminPluginManagerTest extends TestCase
 
         $pluginRoot = base_path('plugins/aec/course-management');
         if (is_dir($pluginRoot) && ! is_link($pluginRoot)) {
-            \\Illuminate\\Support\\Facades\\File::deleteDirectory($pluginRoot);
+            \\Illuminate\Support\\Facades\\File::deleteDirectory($pluginRoot);
         }
 
         parent::tearDown();
@@ -414,8 +414,8 @@ PHP;
         $migrationV1 = <<<'PHP'
 <?php
 
-use Illuminate\\Database\\Migrations\\Migration;
-use Illuminate\\Support\\Facades\\Schema;
+use Illuminate\Database\\Migrations\\Migration;
+use Illuminate\Support\\Facades\\Schema;
 
 return new class extends Migration {
     public function up(): void
@@ -442,8 +442,8 @@ PHP;
         $migrationV2 = <<<'PHP'
 <?php
 
-use Illuminate\\Database\\Migrations\\Migration;
-use Illuminate\\Support\\Facades\\Schema;
+use Illuminate\Database\\Migrations\\Migration;
+use Illuminate\Support\\Facades\\Schema;
 
 return new class extends Migration {
     public function up(): void
