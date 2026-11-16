@@ -15,6 +15,7 @@ final class PluginUploadInstaller
         private readonly PluginLifecycle $lifecycle,
         private readonly PluginSignatureVerifier $signatureVerifier,
         private readonly PluginArchiveInstaller $archiveInstaller,
+        private readonly PluginMigrationRunner $migrationRunner,
     ) {
     }
 
@@ -100,7 +101,24 @@ final class PluginUploadInstaller
                 $finalPath,
             );
 
-            return $this->archiveInstaller->installVerifiedPackage($verified, $archivePath);
+            $installed = $this->archiveInstaller->installVerifiedPackage($verified, $archivePath);
+
+            try {
+                // Run signed migrations only after extraction and installed-file integrity metadata
+                // have been recorded. The plugin remains inactive until the Admin activates it.
+                $this->migrationRunner->migrate($installed);
+            } catch (Throwable $migrationException) {
+                // Keep the verified package available for health checks and safe recovery.
+                // Deleting it here could make partially-applied MySQL DDL impossible to inspect or reverse.
+                $this->lifecycle->transition($pluginKey, 'failed', [
+                    'health_status' => 'failed',
+                    'health_message' => 'A signed plugin migration failed. The package was retained for administrator recovery.',
+                ]);
+
+                throw $migrationException;
+            }
+
+            return $installed->fresh();
         } catch (Throwable $exception) {
             if ($plugin instanceof PluginInstallation && $plugin->exists) {
                 $current = $plugin->fresh();
