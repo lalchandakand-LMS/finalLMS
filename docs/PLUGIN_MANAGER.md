@@ -17,10 +17,10 @@ Admin workspace.
 5. The secure archive installer rechecks the checksum and safely extracts the
    package into plugins/vendor/plugin/version.
 6. The registry is marked installed only after the atomic filesystem move.
-7. The staged ZIP is deleted. The action is written to the admin activity log. No plugin entrypoint or migration is executed during installation.
+7. The staged ZIP is deleted. The action is written to the admin activity log. Plugin entrypoints are never executed during extraction. After installed-file hashes are recorded, the upload workflow runs only the signed migrations declared by the manifest; the plugin remains inactive until an Admin activates it.
 
 A failed, not-yet-installed registry entry can be retried after correcting the
-package or signature. An existing installed version cannot be overwritten. Package updates are available only for an installed or inactive plugin; active plugins must be deactivated first. The update must retain the plugin key and type and use a strictly newer version. The current package signature and installed-file hashes are verified before update. The new ZIP is signature-verified and extracted to a new version directory; neither the previous version directory nor customer/plugin data is overwritten or deleted. Existing permission grants are intersected with the new manifest permissions so an update cannot silently grant new capabilities. A snapshot of the previous signed manifest, package path, checksum, signing key, and integrity metadata is recorded in version history before the registry switches to the new version. A migration failure leaves the new package failed/inactive and retains the previous package for recovery; database migrations may partially apply on MySQL/MariaDB and must be reviewed before retry or rollback. Signed plugin migrations are executed only during explicit activation preflight, after installed-file integrity verification; installing a package alone does not mutate application data.
+package or signature. An existing installed version cannot be overwritten. Package updates are available only for an installed or inactive plugin; active plugins must be deactivated first. The update must retain the plugin key and type and use a strictly newer version. The current package signature and installed-file hashes are verified before update. The new ZIP is signature-verified and extracted to a new version directory; neither the previous version directory nor customer/plugin data is overwritten or deleted. Existing permission grants are intersected with the new manifest permissions so an update cannot silently grant new capabilities. A snapshot of the previous signed manifest, package path, checksum, signing key, and integrity metadata is recorded in version history before the registry switches to the new version. A migration failure leaves the new package failed/inactive and retains the previous package for recovery; database migrations may partially apply on MySQL/MariaDB and must be reviewed before retry or rollback. Package migration rollback verifies the current and retained packages, moves the registry into a non-activatable staging state before running down() migrations, and marks the plugin failed if rollback is interrupted.
 
 ## Example manifest
 
@@ -62,8 +62,14 @@ Deactivation blocks plugin routes immediately and retains package files and LMS
 data. Uninstall removes the executable package only after the plugin is inactive;
 database records and migration history are retained. Admins can run health checks
 to revalidate signatures, dependencies and installed-file integrity. Package
-upgrade, multiple installed package versions and package-version rollback are
-not enabled. Migration rollback is separate from package rollback.
+updates retain immutable version directories and a signed registry snapshot.
+Package-version rollback is available for installed/inactive plugins only; it
+verifies both package signatures and installed-file hashes, reverses the current
+version's recorded migrations, restores the retained package, and leaves the
+plugin inactive. A failed or interrupted migration rollback marks the plugin
+failed so it cannot be activated until an administrator performs recovery.
+Take a database backup first: migration down() methods may be destructive or
+only partially reversible on MySQL/MariaDB.
 
 ## Encrypted plugin settings
 
