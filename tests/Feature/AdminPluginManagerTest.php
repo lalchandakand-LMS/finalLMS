@@ -410,16 +410,58 @@ PHP;
     public function test_admin_can_update_and_restore_a_signed_plugin_version(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $this->manifest['migrations'] = 'migrations';
+        $migrationV1 = <<<'PHP'
+<?php
 
-        $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData())
+use Illuminate\\Database\\Migrations\\Migration;
+use Illuminate\\Support\\Facades\\Schema;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        Schema::create('plugin_version_v1_probe', function ($table): void {
+            $table->id();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('plugin_version_v1_probe');
+    }
+};
+PHP;
+
+        $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData(migrationSource: $migrationV1))
             ->assertRedirect(route('admin.plugins.index'))
             ->assertSessionHas('success');
         $oldPath = $this->finalPath;
         $this->assertDirectoryExists($oldPath);
+        $this->assertTrue(Schema::hasTable('plugin_version_v1_probe'));
 
+        $migrationV2 = <<<'PHP'
+<?php
+
+use Illuminate\\Database\\Migrations\\Migration;
+use Illuminate\\Support\\Facades\\Schema;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        Schema::create('plugin_version_v2_probe', function ($table): void {
+            $table->id();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('plugin_version_v2_probe');
+    }
+};
+PHP;
         $this->manifest['version'] = '1.1.0';
         $this->finalPath = base_path('plugins/aec/course-management/1.1.0');
-        $this->actingAs($admin)->post(route('admin.plugins.update', 'aec.course-management'), $this->uploadData())
+        $this->actingAs($admin)->post(route('admin.plugins.update', 'aec.course-management'), $this->uploadData(migrationSource: $migrationV2))
             ->assertRedirect(route('admin.plugins.index'))
             ->assertSessionHas('success');
 
@@ -430,6 +472,13 @@ PHP;
         ]);
         $this->assertDirectoryExists($oldPath);
         $this->assertDirectoryExists($this->finalPath);
+        $this->assertFalse(Schema::hasTable('plugin_version_v1_probe'));
+        $this->assertTrue(Schema::hasTable('plugin_version_v2_probe'));
+        $this->assertDatabaseHas('plugin_migrations', [
+            'plugin_key' => 'aec.course-management',
+            'plugin_version' => '1.0.0',
+            'status' => 'rolled_back',
+        ]);
 
         $snapshot = DB::table('plugin_version_history')
             ->where('plugin_key', 'aec.course-management')
@@ -450,6 +499,13 @@ PHP;
         ]);
         $this->assertDirectoryExists($oldPath);
         $this->assertDirectoryExists($this->finalPath);
+        $this->assertTrue(Schema::hasTable('plugin_version_v1_probe'));
+        $this->assertFalse(Schema::hasTable('plugin_version_v2_probe'));
+        $this->assertDatabaseHas('plugin_migrations', [
+            'plugin_key' => 'aec.course-management',
+            'plugin_version' => '1.0.0',
+            'status' => 'completed',
+        ]);
         $this->assertDatabaseHas('plugin_version_history', [
             'plugin_key' => 'aec.course-management',
             'action' => 'version_restored',
