@@ -17,7 +17,7 @@ return [
     'attendance' => ['api/v1/instructor/attendance/*', 'api/v1/instructor/batches/*/attendance/*', 'api/v1/attendance/qr/*'],
     'batch_management' => ['api/v1/instructor/batches*'],
     'student_mobile_app' => [
-        'api/v1/my/*', 'api/v1/checkout/*', 'api/v1/assignments/*',
+        'api/v1/attendance/qr/*', 'api/v1/my/*', 'api/v1/checkout/*', 'api/v1/assignments/*',
         'api/v1/exams/*', 'api/v1/exam-attempts/*',
         'api/v1/question-set-attempts/*',
     ],
