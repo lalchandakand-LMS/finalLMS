@@ -30,11 +30,11 @@ Artisan::command('system:health-check', function (): int {
     $startedAt = microtime(true);
     $results = [];
 
-    $probe = function (callable $callback) use (&$results): void {
+    $probe = function (string $name, callable $callback) use (&$results): void {
         $started = microtime(true);
         try {
             $details = $callback();
-            $results[] = [
+            $results[$name] = [
                 'status' => 'ok',
                 'duration_ms' => (int) round((microtime(true) - $started) * 1000),
                 'details' => $details,
@@ -49,7 +49,7 @@ Artisan::command('system:health-check', function (): int {
         }
     };
 
-    $probe(function (): string {
+    $probe('database', function (): string {
         try {
             DB::select('SELECT 1');
         } catch (Throwable $exception) {
@@ -62,7 +62,7 @@ Artisan::command('system:health-check', function (): int {
         return 'Database query succeeded.';
     });
 
-    $probe(function (): string {
+    $probe('cache', function (): string {
         $key = 'system-health-scheduled:' . Str::uuid();
         Cache::put($key, 'ok', 30);
         try {
@@ -76,7 +76,7 @@ Artisan::command('system:health-check', function (): int {
         return 'Cache read/write succeeded.';
     });
 
-    $probe(function (): string {
+    $probe('storage', function (): string {
         $disk = Storage::disk();
         $path = '.system-health/' . Str::uuid() . '.tmp';
         try {
@@ -90,7 +90,7 @@ Artisan::command('system:health-check', function (): int {
         return 'Default storage read/write succeeded.';
     });
 
-    $probe(function (): string {
+    $probe('queue', function (): string {
         if (config('queue.default') === 'database' && !Schema::hasTable('jobs')) {
             throw new RuntimeException('Configured database queue table is missing.');
         }
@@ -131,8 +131,7 @@ Artisan::command('system:health-check', function (): int {
         }
 
         if ($shouldSend && $recipients !== []) {
-            $failedNames = collect($results)->filter(fn (array $result) => $result['status'] === 'failed')
-                ->keys()->map(fn (int $index) => ['database', 'cache', 'storage', 'queue'][$index] ?? 'component')->implode(', ');
+            $failedNames = collect($results)->filter(fn (array $result) => $result['status'] === 'failed')->keys()->implode(', ');
             $body = "Alom's English Center LMS health check detected a degraded component.\n"
                 . "Failed checks: {$failedNames}\n"
                 . "Check the protected Admin > Website health page and application logs. No payment or student data was modified.";
