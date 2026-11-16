@@ -66,6 +66,7 @@ final class PluginPackageRecovery
         }
         $relativePath = $this->canonicalPackagePath($plugin);
         $source = base_path($relativePath);
+        if (is_link(base_path('plugins'))) throw new RuntimeException('The private plugins root must not be a symbolic link.');
         $root = realpath(base_path('plugins'));
         $real = realpath($source);
         if ($root === false || $real === false || ! str_starts_with($real, rtrim($root, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR)) {
@@ -210,9 +211,21 @@ final class PluginPackageRecovery
             }
 
             $target = base_path($metadata['package_path']);
+            $pluginsRootPath = base_path('plugins');
+            if (is_link($pluginsRootPath)) throw new RuntimeException('The private plugins root must not be a symbolic link.');
+            $pluginsRoot = realpath($pluginsRootPath);
             $parent = dirname($target);
-            if (is_link($parent) || ! is_dir($parent) || file_exists($target) || is_link($target)) {
-                throw new RuntimeException('Plugin restore destination is unavailable or already occupied.');
+            $realParent = realpath($parent);
+            $expectedParent = $pluginsRoot === false ? false : rtrim($pluginsRoot, DIRECTORY_SEPARATOR);
+            if ($pluginsRoot === false || $realParent === false
+                || ! str_starts_with($realParent, $expectedParent.DIRECTORY_SEPARATOR)
+                || is_link($parent) || file_exists($target) || is_link($target)) {
+                throw new RuntimeException('Plugin restore destination is unavailable or resolves outside the private plugins directory.');
+            }
+            $cursor = $pluginsRootPath;
+            foreach (explode('/', substr($metadata['package_path'], strlen('plugins/'), strrpos($metadata['package_path'], '/') - strlen('plugins/'))) as $segment) {
+                $cursor .= DIRECTORY_SEPARATOR.$segment;
+                if (is_link($cursor)) throw new RuntimeException('Plugin restore stopped because a destination path segment is a symbolic link.');
             }
             $staging = $parent.DIRECTORY_SEPARATOR.'.restore-'.Str::lower(Str::random(16));
             if (! mkdir($staging, 0700)) throw new RuntimeException('Plugin restore staging directory could not be created.');
