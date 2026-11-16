@@ -140,7 +140,8 @@ class UniversalAiAssistantPluginTest extends TestCase
                 && str_contains($request->data()['messages'][0]['content'] ?? '', 'Only My Assignment')
                 && str_contains($request->data()['messages'][0]['content'] ?? '', 'Only My Exam')
                 && ! str_contains($request->data()['messages'][0]['content'] ?? '', 'Private assignment instructions')
-                && ! str_contains($request->data()['messages'][0]['content'] ?? '', 'Private exam instructions');
+                && ! str_contains($request->data()['messages'][0]['content'] ?? '', 'Private exam instructions')
+                && ! str_contains($request->data()['messages'][0]['content'] ?? '', 'Lesson body is private.');
         });
         $this->assertDatabaseHas('ai_assistant_audit_events', [
             'event' => 'response_completed',
