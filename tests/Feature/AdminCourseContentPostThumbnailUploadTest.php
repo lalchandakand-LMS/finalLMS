@@ -14,6 +14,13 @@ class AdminCourseContentPostThumbnailUploadTest extends TestCase
 {
     use RefreshDatabase;
 
+    private function tinyPngUpload(string $name): UploadedFile
+    {
+        $bytes = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j0S8AAAAASUVORK5CYII=', true);
+
+        return UploadedFile::fake()->createWithContent($name, $bytes ?: '');
+    }
+
     public function test_admin_can_upload_a_thumbnail_when_creating_a_course_content_post(): void
     {
         Storage::fake('public');
@@ -23,7 +30,7 @@ class AdminCourseContentPostThumbnailUploadTest extends TestCase
             'title' => 'New lesson article',
             'long_description' => 'Lesson content for the learner.',
             'status' => 'draft',
-            'thumbnail_file' => UploadedFile::fake()->image('lesson-cover.png', 1200, 630),
+            'thumbnail_file' => $this->tinyPngUpload('lesson-cover.png'),
         ])->assertRedirect(route('admin.course-content-posts.index'))
             ->assertSessionHas('success');
 
@@ -64,7 +71,7 @@ class AdminCourseContentPostThumbnailUploadTest extends TestCase
             'title' => 'Existing lesson updated',
             'long_description' => 'Updated lesson content.',
             'status' => 'draft',
-            'thumbnail_file' => UploadedFile::fake()->image('new-cover.webp', 900, 500),
+            'thumbnail_file' => $this->tinyPngUpload('new-cover.png'),
         ])->assertRedirect(route('admin.course-content-posts.index'))
             ->assertSessionHas('success');
 
