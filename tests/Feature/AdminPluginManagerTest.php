@@ -205,7 +205,7 @@ PHP;
         ]);
     }
 
-    public function test_signed_plugin_migrations_complete_during_install_before_activation(): void
+    public function test_signed_plugin_migrations_complete_during_activation_after_install(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
         $this->manifest['migrations'] = 'migrations';
@@ -237,6 +237,17 @@ PHP;
             ->assertRedirect(route('admin.plugins.index'))
             ->assertSessionHas('success');
 
+        // Installation verifies and stages the signed package; data migrations run only on activation.
+        $this->assertDatabaseMissing('settings', ['key' => 'plugin_activation_probe']);
+        $this->assertDatabaseMissing('plugin_migrations', [
+            'plugin_key' => 'aec.course-management',
+            'migration' => '2026_11_15_000001_probe.php',
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.plugins.activate', 'aec.course-management'))
+            ->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+
         $this->assertDatabaseHas('settings', ['key' => 'plugin_activation_probe', 'value' => 'ran']);
         $this->assertDatabaseHas('plugin_migrations', [
             'plugin_key' => 'aec.course-management',
@@ -244,15 +255,6 @@ PHP;
             'migration' => '2026_11_15_000001_probe.php',
             'status' => 'completed',
         ]);
-        $this->assertDatabaseHas('plugin_registry', [
-            'plugin_key' => 'aec.course-management',
-            'status' => 'installed',
-        ]);
-
-        $this->actingAs($admin)->post(route('admin.plugins.activate', 'aec.course-management'))
-            ->assertRedirect(route('admin.plugins.index'))
-            ->assertSessionHas('success');
-
         $this->assertDatabaseHas('plugin_registry', [
             'plugin_key' => 'aec.course-management',
             'status' => 'active',
@@ -263,7 +265,8 @@ PHP;
             ->count());
     }
 
-    public function test_failed_signed_plugin_migration_fails_installation_and_records_failure(): void
+
+    public function test_failed_signed_plugin_migration_blocks_activation_and_records_failure(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
         $this->manifest['migrations'] = 'migrations';
@@ -283,6 +286,10 @@ return new class extends Migration {
 PHP;
 
         $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData(migrationSource: $migration))
+            ->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+
+        $this->actingAs($admin)->post(route('admin.plugins.activate', 'aec.course-management'))
             ->assertRedirect()
             ->assertSessionHas('error');
 
@@ -291,12 +298,14 @@ PHP;
             'migration' => '2026_11_15_000001_probe.php',
             'status' => 'failed',
         ]);
+        // A failed activation leaves the verified package installed but inactive.
         $this->assertDatabaseHas('plugin_registry', [
             'plugin_key' => 'aec.course-management',
-            'status' => 'failed',
+            'status' => 'installed',
         ]);
-        $this->assertDirectoryDoesNotExist($this->finalPath);
+        $this->assertDirectoryExists($this->finalPath);
     }
+
 
     public function test_activation_rejects_an_untrusted_release_key(): void
     {
