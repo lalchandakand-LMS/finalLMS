@@ -19,7 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'module.enabled' => \App\Http\Middleware\EnsureModuleEnabled::class,
-            'plugin.permission' => \\App\\Http\\Middleware\\EnsurePluginPermission::class,
+            'plugin.permission' => \App\Http\Middleware\EnsurePluginPermission::class,
             'plugin.active' => \App\Http\Middleware\EnsurePluginActive::class,
             'admin.permission' => \App\Http\Middleware\EnsureAdminModulePermission::class,
             'activity.log' => \App\Http\Middleware\LogUserActivity::class,
