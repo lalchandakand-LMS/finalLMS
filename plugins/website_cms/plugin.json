@@ -14,12 +14,9 @@
     "landing",
     "pages.*",
     "website-pages.*",
-    "news.*",
     "page",
     "admin.website.*",
     "admin.pages.*",
-    "admin.blog.*",
-    "admin.news.*",
     "admin.comments.*"
   ],
   "settings": [],
