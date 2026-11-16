@@ -1,10 +1,10 @@
 <?php
 
-namespace Aloms\\UniversalAiAssistant;
+namespace Aloms\UniversalAiAssistant;
 
-use App\\Contracts\\Ai\\AiProvider;
-use App\\Services\\AiDeveloperProviderEndpoint;
-use Illuminate\\Support\\Facades\\Http;
+use App\Contracts\Ai\AiProvider;
+use App\Services\AiDeveloperProviderEndpoint;
+use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
 final class OpenAiCompatibleProvider implements AiProvider
