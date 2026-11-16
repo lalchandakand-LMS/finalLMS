@@ -89,10 +89,11 @@ class AdminWebsiteMenuController extends Controller
             'label' => ['required', 'string', 'max:80'],
             'url' => ['required', 'string', 'max:500', function (string $attribute, mixed $value, \Closure $fail): void {
                 $url = trim((string) $value);
-                $validPath = str_starts_with($url, '/') && !str_starts_with($url, '//')
-                    && !preg_match('/[\r\n]/', $url);
+                $hasUnsafeCharacters = preg_match('/[\x00-\x20\x7f\\\\]/', $url) === 1;
+                $validPath = str_starts_with($url, '/') && !str_starts_with($url, '//') && !$hasUnsafeCharacters;
                 $parts = parse_url($url);
-                $validHttps = is_array($parts) && ($parts['scheme'] ?? null) === 'https'
+                $validHttps = !$hasUnsafeCharacters && filter_var($url, FILTER_VALIDATE_URL) !== false
+                    && is_array($parts) && strtolower($parts['scheme'] ?? '') === 'https'
                     && !empty($parts['host']) && !isset($parts['user']) && !isset($parts['pass']);
                 if (!$validPath && !$validHttps) {
                     $fail('Use a site-relative path or a complete HTTPS URL.');
