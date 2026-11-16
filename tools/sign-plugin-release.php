@@ -2,10 +2,6 @@
 
 declare(strict_types=1);
 
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
-use ZipArchive;
-
 $fail = static function (string $message): never {
     fwrite(STDERR, $message.PHP_EOL);
     exit(1);
@@ -44,7 +40,7 @@ if (! is_dir($outputDirectory) && ! mkdir($outputDirectory, 0700, true) && ! is_
     $fail('Unable to create the private release output directory.');
 }
 $outputDirectory = realpath($outputDirectory);
-if ($outputDirectory === false || str_starts_with($outputDirectory, $pluginRoot.DIRECTORY_SEPARATOR)) {
+if ($outputDirectory === false || $outputDirectory === $pluginRoot || str_starts_with($outputDirectory, $pluginRoot.DIRECTORY_SEPARATOR)) {
     $fail('Release output must be outside the plugin source directory.');
 }
 
