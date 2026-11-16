@@ -174,6 +174,9 @@ class UniversalAiAssistantPluginTest extends TestCase
         $this->assertSame(['Scoped Batch A'], array_column($studentContext['batches'], 'title'));
         $this->assertStringNotContainsString('Private Course B', json_encode($branchContext));
         $this->assertStringNotContainsString('Private Batch B', json_encode($studentContext));
+        $this->assertSame(1, $branchContext['assignments'][0]['submission_count']);
+        $this->assertSame(1, $branchContext['exams'][0]['attempt_count']);
+        $this->assertStringNotContainsString('private answer', json_encode($branchContext));
         $this->assertSame('submitted', $studentContext['assignments'][0]['student_status'][0]['status']);
         $this->assertSame('submitted', $studentContext['exams'][0]['student_status'][0]['status']);
         $this->assertSame(1, $studentContext['learning_progress'][0]['completed_lessons']);
@@ -190,6 +193,8 @@ class UniversalAiAssistantPluginTest extends TestCase
         $guardianContext = $builder->build($guardian, 'guardian');
         $this->assertSame([$studentA->id], array_column($guardianContext['linked_students'], 'id'));
         $this->assertSame(['Scoped Course A'], array_column($guardianContext['courses'], 'title'));
+        $this->assertSame('submitted', $guardianContext['assignments'][0]['student_status'][0]['status']);
+        $this->assertSame('submitted', $guardianContext['exams'][0]['student_status'][0]['status']);
         $this->assertStringNotContainsString('Private Course B', json_encode($guardianContext));
     }
 
