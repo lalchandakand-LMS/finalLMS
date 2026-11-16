@@ -98,15 +98,6 @@ final class AssistantController
             $conversation = DB::table('ai_assistant_conversations')->where('id', $conversationId)->first();
         }
 
-        DB::table('ai_assistant_messages')->insert([
-            'conversation_id' => $conversation->id,
-            'message_role' => 'user',
-            'content' => $message,
-            'token_count' => null,
-            'model' => null,
-            'created_at' => now(),
-        ]);
-
         try {
             $apiKey = AssistantSettings::apiKey();
             if (! $apiKey) return response()->json(['message' => __('The AI provider key has not been configured.')], 503);
@@ -114,10 +105,11 @@ final class AssistantController
             $baseUrl = rtrim((string) $settings['base_url'], '/');
             $curlOptions = app(AiDeveloperProviderEndpoint::class)->curlOptionsFor($baseUrl);
             $history = DB::table('ai_assistant_messages')->where('conversation_id', $conversation->id)
-                ->latest('id')->limit(12)->get()->reverse()->values();
+                ->latest('id')->limit(11)->get()->reverse()->values();
 
             $messages = [['role' => 'system', 'content' => AssistantSettings::rolePrompt($role)]];
             foreach ($history as $item) $messages[] = ['role' => $item->message_role, 'content' => $item->content];
+            $messages[] = ['role' => 'user', 'content' => $message];
 
             // Atomically reserve the prompt estimate and completion allowance under a
             // per-day row lock so concurrent requests cannot spend the same remaining budget.
@@ -135,6 +127,15 @@ final class AssistantController
             }
             $responseTokenLimit = $reservation['completion_limit'];
             $reservationId = $reservation['id'];
+
+            DB::table('ai_assistant_messages')->insert([
+                'conversation_id' => $conversation->id,
+                'message_role' => 'user',
+                'content' => $message,
+                'token_count' => null,
+                'model' => null,
+                'created_at' => now(),
+            ]);
 
             $response = Http::withToken($apiKey)->acceptJson()->timeout(40)->withOptions(array_merge([
                 'allow_redirects' => false,
