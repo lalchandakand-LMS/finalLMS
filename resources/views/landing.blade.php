@@ -294,7 +294,7 @@
                             @foreach($row as $comment)
                                 <article class="home-quote-card" aria-hidden="{{ $copy === 1 ? 'true' : 'false' }}">
                                     <span class="home-quote-mark">“</span>
-                                    <p>{{ \\Illuminate\\Support\\Str::limit(strip_tags($comment->body), 190) }}</p>
+                                    <p>{{ \Illuminate\Support\Str::limit(strip_tags($comment->body), 190) }}</p>
                                     <div class="home-quote-author">
                                         <span class="home-quote-avatar">{{ mb_strtoupper(mb_substr($comment->author?->name ?? 'S', 0, 1)) }}</span>
                                         <strong>{{ $comment->author?->name ?? __('Student') }}</strong>
