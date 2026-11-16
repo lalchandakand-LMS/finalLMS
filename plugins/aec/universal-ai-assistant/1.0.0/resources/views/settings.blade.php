@@ -56,7 +56,17 @@
     const input = document.getElementById('ai-model');
     const list = document.getElementById('ai-model-options');
     const status = document.getElementById('ai-model-status');
+    const temperature = document.getElementById('ai-temperature');
+    const modelCapabilities = new Map();
     if (!button || !input || !list || !status) return;
+    const syncCapabilities = () => {
+        const capability = modelCapabilities.get(input.value);
+        if (temperature) {
+            temperature.disabled = Boolean(capability && capability.temperature === false);
+            temperature.title = temperature.disabled ? 'This model does not support temperature; the parameter will be omitted.' : '';
+        }
+    };
+    input.addEventListener('change', syncCapabilities);
     button.addEventListener('click', async () => {
         button.disabled = true;
         status.textContent = 'Loading models…';
@@ -69,18 +79,23 @@
             if (!response.ok) throw new Error(data.message || 'Unable to load models.');
             list.replaceChildren();
             const models = Array.isArray(data.models) ? data.models : [];
-            models.forEach((model) => {
+            modelCapabilities.clear();
+            models.filter((model) => model && model.capabilities).forEach((model) => {
+                modelCapabilities.set(model.id, model.capabilities);
                 const option = document.createElement('option');
-                option.value = model;
+                option.value = model.id;
+                option.label = model.capabilities.temperature ? 'Temperature supported' : 'Temperature not supported';
                 list.appendChild(option);
             });
-            status.textContent = models.length ? 'Loaded ' + models.length + ' available models.' : 'No models were returned by the provider.';
+            syncCapabilities();
+            status.textContent = list.options.length ? 'Loaded ' + list.options.length + ' models with verified capability profiles. Unsupported models are hidden.' : 'No verified compatible models were returned.');
         } catch (error) {
             status.textContent = error.message || 'Unable to load models.';
         } finally {
             button.disabled = false;
         }
     });
+    syncCapabilities();
 })();
 </script>
 @endsection
