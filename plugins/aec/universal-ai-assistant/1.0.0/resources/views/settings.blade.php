@@ -45,9 +45,17 @@
         @endforeach
     </div>
     <hr>
-    <h2>{{ __('Data access policy') }}</h2>
-    <p><strong>{{ __('General Guidance Only') }}</strong></p>
-    <p class="muted">{{ __('Private LMS data access is disabled and cannot be enabled in this release. The assistant receives only the conversation text. Student records, grades, attendance, payments, guardian links, staff and branch data are never retrieved.') }}</p>
+    <h2>{{ __('Role-scoped LMS context') }}</h2>
+    <p class="muted">{{ __('General Guidance Only is the default. Enable read-only context separately for each role only after reviewing its scope. Every query is filtered server-side; Support Staff has no private-data context.') }}</p>
+    <div class="grid grid-2">
+        @foreach($roles as $role)
+            <label class="panel" style="display:flex;gap:10px;align-items:center;">
+                <input type="checkbox" name="role_data_access[{{ $role }}]" value="1" @checked(old('role_data_access.'.$role, $settings['role_data_access'][$role] ?? false))>
+                <span>{{ __(ucwords(str_replace('_', ' ', $role)).' scoped context') }}</span>
+            </label>
+        @endforeach
+    </div>
+    <p class="muted">{{ __('Current scope: Admin receives aggregate counts; Branch Manager receives assigned active-branch courses and batches; Teacher receives assigned courses and batches; Student receives own active/completed courses, lessons, published assignments/exams, submission/attempt status and lesson completion counts; Guardian receives the same summaries only for approved active linked students. Teacher receives assigned learners' permitted submission/attempt status and lesson completion summaries; Branch Manager receives assigned-branch course/batch and aggregate assignment/exam summaries. Scores, grades, answer content, attendance, payments, staff records and write tools are not exposed.') }}</p>
     <button class="btn primary" type="submit">{{ __('Save AI settings') }}</button>
 </form>
 <script>
@@ -56,7 +64,17 @@
     const input = document.getElementById('ai-model');
     const list = document.getElementById('ai-model-options');
     const status = document.getElementById('ai-model-status');
+    const temperature = document.getElementById('ai-temperature');
+    const modelCapabilities = new Map();
     if (!button || !input || !list || !status) return;
+    const syncCapabilities = () => {
+        const capability = modelCapabilities.get(input.value);
+        if (temperature) {
+            temperature.readOnly = Boolean(capability && capability.temperature === false);
+            temperature.title = temperature.readOnly ? 'This model does not support temperature; the parameter will be omitted.' : '';
+        }
+    };
+    input.addEventListener('change', syncCapabilities);
     button.addEventListener('click', async () => {
         button.disabled = true;
         status.textContent = 'Loading models…';
@@ -69,18 +87,23 @@
             if (!response.ok) throw new Error(data.message || 'Unable to load models.');
             list.replaceChildren();
             const models = Array.isArray(data.models) ? data.models : [];
-            models.forEach((model) => {
+            modelCapabilities.clear();
+            models.filter((model) => model && model.capabilities).forEach((model) => {
+                modelCapabilities.set(model.id, model.capabilities);
                 const option = document.createElement('option');
-                option.value = model;
+                option.value = model.id;
+                option.label = model.capabilities.temperature ? 'Temperature supported' : 'Temperature not supported';
                 list.appendChild(option);
             });
-            status.textContent = models.length ? 'Loaded ' + models.length + ' available models.' : 'No models were returned by the provider.';
+            syncCapabilities();
+            status.textContent = list.options.length ? 'Loaded ' + list.options.length + ' models with verified capability profiles. Unsupported models are hidden.' : 'No verified compatible models were returned.';
         } catch (error) {
             status.textContent = error.message || 'Unable to load models.';
         } finally {
             button.disabled = false;
         }
     });
+    syncCapabilities();
 })();
 </script>
 @endsection
