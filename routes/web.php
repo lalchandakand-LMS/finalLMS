@@ -287,6 +287,11 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         ->name('courses.lessons.complete');
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
+        Route::get('/academic-levels', [AcademicLevelController::class, 'index'])->name('admin.academic-levels.index');
+        Route::post('/academic-levels', [AcademicLevelController::class, 'store'])->name('admin.academic-levels.store');
+        Route::get('/academic-levels/{academicLevel}', [AcademicLevelController::class, 'show'])->name('admin.academic-levels.show');
+        Route::put('/academic-levels/{academicLevel}', [AcademicLevelController::class, 'update'])->name('admin.academic-levels.update');
+        Route::delete('/academic-levels/{academicLevel}', [AcademicLevelController::class, 'destroy'])->name('admin.academic-levels.destroy');
         Route::get('/modules', [AdminModuleRegistryController::class, 'index'])->name('admin.modules.index');
         Route::patch('/modules/{key}', [AdminModuleRegistryController::class, 'update'])->where('key', '[a-z_]+')->middleware('throttle:20,1')->name('admin.modules.update');
         Route::get('/plugins', [AdminPluginManagerController::class, 'index'])->name('admin.plugins.index');
