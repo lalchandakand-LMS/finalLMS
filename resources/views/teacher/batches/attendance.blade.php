@@ -8,7 +8,7 @@
             <span class="badge info">{{ $batch->course->title }}</span>
             <h1 style="margin:12px 0 0;">{{ $batch->title }} attendance</h1>
         </div>
-        <a href="{{ $attendanceBackUrl }}" class="btn secondary">{{ __('Back to batches') }}</a>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;"><a href="{{ $attendanceReportUrl }}" class="btn secondary">{{ __('Attendance reports') }}</a><a href="{{ $attendanceBackUrl }}" class="btn secondary">{{ __('Back to batches') }}</a></div>
     </div>
 
     <div class="panel">
