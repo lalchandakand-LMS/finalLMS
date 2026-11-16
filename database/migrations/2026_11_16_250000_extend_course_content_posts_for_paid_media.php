@@ -24,6 +24,7 @@ return new class extends Migration {
     public function down(): void
     {
         Schema::table('course_content_posts', function (Blueprint $table): void {
+            $table->dropUnique(['product_id']);
             $table->dropConstrainedForeignId('product_id');
             $table->dropConstrainedForeignId('academic_level_id');
             $table->dropColumn([
