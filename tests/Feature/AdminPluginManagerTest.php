@@ -725,6 +725,32 @@ PHP;
     }
 
 
+    public function test_uninstall_requires_explicit_server_side_confirmation(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $plugin = new PluginInstallation();
+        $plugin->forceFill([
+            'plugin_key' => 'test.universal-ai-assistant',
+            'name' => 'Universal AI Assistant',
+            'version' => '1.0.0',
+            'type' => 'module',
+            'status' => 'inactive',
+            'manifest' => $this->manifest,
+            'package_path' => 'plugins/test/universal-ai-assistant/1.0.0',
+            'signature_verified_at' => now(),
+            'package_sha256' => str_repeat('a', 64),
+            'signature_key_id' => 'test-release-key',
+        ])->save();
+
+        $this->actingAs($admin)->post(route('admin.plugins.uninstall', 'test.universal-ai-assistant'))
+            ->assertSessionHasErrors('confirm_uninstall');
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'test.universal-ai-assistant',
+            'status' => 'inactive',
+        ]);
+    }
+
     public function test_admin_can_uninstall_inactive_plugin_without_deleting_application_data(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
@@ -755,7 +781,7 @@ PHP;
             'updated_at' => now(),
         ]);
 
-        $this->actingAs($admin)->post(route('admin.plugins.uninstall', 'test.universal-ai-assistant'))
+        $this->actingAs($admin)->post(route('admin.plugins.uninstall', 'test.universal-ai-assistant'), ['confirm_uninstall' => '1'])
             ->assertRedirect(route('admin.plugins.index'))
             ->assertSessionHas('success');
 
@@ -797,7 +823,7 @@ PHP;
             'signature_key_id' => 'test-release-key',
         ])->save();
 
-        $this->actingAs($admin)->post(route('admin.plugins.uninstall', 'aec.course-management'))
+        $this->actingAs($admin)->post(route('admin.plugins.uninstall', 'aec.course-management'), ['confirm_uninstall' => '1'])
             ->assertRedirect(route('admin.plugins.index'))
             ->assertSessionHas('success');
 
