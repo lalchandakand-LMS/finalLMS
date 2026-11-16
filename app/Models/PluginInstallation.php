@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PluginInstallation extends Model
 {
@@ -25,5 +26,10 @@ class PluginInstallation extends Model
             'installed_at' => 'datetime',
             'activated_at' => 'datetime',
         ];
+    }
+
+    public function versionHistory(): HasMany
+    {
+        return $this->hasMany(PluginVersionHistory::class, 'plugin_key', 'plugin_key')->latest('created_at');
     }
 }
