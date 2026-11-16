@@ -374,6 +374,157 @@ class _AssessmentMetric extends StatelessWidget {
   );
 }
 
+class InstructorNoticesPage extends StatefulWidget {
+  const InstructorNoticesPage({required this.api, super.key});
+  final MobileApi api;
+
+  @override
+  State<InstructorNoticesPage> createState() => _InstructorNoticesPageState();
+}
+
+class _InstructorNoticesPageState extends State<InstructorNoticesPage> {
+  List<Map<String, dynamic>> notices = [];
+  int unreadCount = 0;
+  bool loading = true;
+  String? error;
+  final Set<int> markingRead = {};
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  Future<void> load() async {
+    if (mounted) setState(() { loading = true; error = null; });
+    try {
+      final response = await widget.api.get('/instructor/notices');
+      if (!mounted) return;
+      final items = response['data'] as List<dynamic>? ?? [];
+      final meta = response['meta'] as Map<String, dynamic>? ?? {};
+      setState(() {
+        notices = items.whereType<Map<String, dynamic>>().toList();
+        unreadCount = (meta['unread_count'] as num?)?.toInt() ??
+            notices.where((item) => item['is_read'] != true).length;
+      });
+    } catch (exception) {
+      if (mounted) setState(() => error = exception.toString());
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> markRead(Map<String, dynamic> notice) async {
+    final id = (notice['id'] as num?)?.toInt();
+    if (id == null || notice['is_read'] == true || markingRead.contains(id)) return;
+    setState(() => markingRead.add(id));
+    try {
+      await widget.api.postJson('/instructor/notices/$id/read', const {});
+      if (!mounted) return;
+      setState(() {
+        notices = notices.map((item) => item['id'] == id
+            ? {...item, 'is_read': true}
+            : item).toList();
+        unreadCount = (unreadCount - 1).clamp(0, 1 << 30);
+      });
+    } catch (exception) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(exception.toString())),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => markingRead.remove(id));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      title: Text(unreadCount > 0 ? 'Academy notices ($unreadCount)' : 'Academy notices'),
+      actions: [
+        IconButton(
+          onPressed: loading ? null : load,
+          icon: const Icon(Icons.refresh),
+          tooltip: 'Refresh notices',
+        ),
+      ],
+    ),
+    body: loading
+        ? const Center(child: CircularProgressIndicator())
+        : error != null
+            ? Center(child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Text(error!),
+                  const SizedBox(height: 12),
+                  FilledButton(onPressed: load, child: const Text('Retry')),
+                ]),
+              ))
+            : RefreshIndicator(
+                onRefresh: load,
+                child: notices.isEmpty
+                    ? ListView(children: const [
+                        SizedBox(height: 100),
+                        Center(child: Text('No academy notices are available right now.')),
+                      ])
+                    : ListView.separated(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: notices.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (context, index) {
+                          final notice = notices[index];
+                          final read = notice['is_read'] == true;
+                          final id = (notice['id'] as num?)?.toInt();
+                          final busy = id != null && markingRead.contains(id);
+                          final course = notice['course'] as Map<String, dynamic>?;
+                          return Card(
+                            child: ListTile(
+                              leading: Icon(
+                                read ? Icons.drafts_outlined : Icons.markunread_outlined,
+                                color: read ? null : Theme.of(context).colorScheme.primary,
+                              ),
+                              title: Text(
+                                notice['title']?.toString() ?? 'Academy notice',
+                                style: TextStyle(fontWeight: read ? FontWeight.normal : FontWeight.w700),
+                              ),
+                              subtitle: Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(notice['body']?.toString() ?? ''),
+                                    if (course != null)
+                                      Text('Course: ${course['title'] ?? ''}'),
+                                    if (notice['published_at'] != null)
+                                      Text(
+                                        notice['published_at'].toString(),
+                                        style: Theme.of(context).textTheme.bodySmall,
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              isThreeLine: true,
+                              trailing: read
+                                  ? const Icon(Icons.check, semanticLabel: 'Read')
+                                  : busy
+                                      ? const SizedBox(
+                                          width: 20, height: 20,
+                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                        )
+                                      : TextButton(
+                                          onPressed: () => markRead(notice),
+                                          child: const Text('Mark read'),
+                                        ),
+                              onTap: read || busy ? null : () => markRead(notice),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+  );
+}
+
 class InstructorHome extends StatefulWidget {
   const InstructorHome({required this.api, required this.onLogout, super.key});
   final MobileApi api;
@@ -1187,6 +1338,12 @@ class _InstructorHomeState extends State<InstructorHome> {
     }
   }
 
+  Future<void> openNotices() async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => InstructorNoticesPage(api: widget.api),
+    ));
+  }
+
   Future<void> openAssessments() async {
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => InstructorAssessmentsPage(api: widget.api),
@@ -1265,13 +1422,21 @@ class _InstructorHomeState extends State<InstructorHome> {
             ));
           }),
           const SizedBox(height: 24),
-          Row(
+          Text('Teaching tools', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              Expanded(child: Text('Assessments & Results', style: Theme.of(context).textTheme.titleLarge)),
               OutlinedButton.icon(
                 onPressed: openAssessments,
                 icon: const Icon(Icons.analytics_outlined),
                 label: const Text('View results'),
+              ),
+              OutlinedButton.icon(
+                onPressed: openNotices,
+                icon: const Icon(Icons.campaign_outlined),
+                label: const Text('Notices'),
               ),
             ],
           ),
