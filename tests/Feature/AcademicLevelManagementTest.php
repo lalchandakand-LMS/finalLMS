@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\AcademicLevel;
 use App\Models\Course;
 use App\Models\User;
+use App\Models\WebsitePage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -47,6 +48,39 @@ class AcademicLevelManagementTest extends TestCase
             ->assertSee('value="'.$level->id.'" selected', false);
 
         $this->get(route('admin.website-pages.create', ['academic_level_id' => $level->id]))
+            ->assertOk()
+            ->assertSee('value="'.$level->id.'" selected', false);
+    }
+
+    public function test_existing_courses_and_pages_keep_inactive_level_assignments_editable(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $level = AcademicLevel::create(['name' => 'Archived Level', 'slug' => 'archived-level', 'is_active' => false]);
+
+        $course = Course::create([
+            'teacher_id' => $teacher->id,
+            'academic_level_id' => $level->id,
+            'title' => 'Archived Level Course',
+            'slug' => 'archived-level-course',
+            'description' => 'Existing course',
+            'price' => 0,
+            'status' => 'draft',
+        ]);
+        $page = WebsitePage::create([
+            'title' => 'Archived Level Page',
+            'slug' => 'archived-level-page',
+            'template' => 'standard',
+            'status' => 'draft',
+            'created_by' => $admin->id,
+            'academic_level_id' => $level->id,
+            'sections' => [],
+        ]);
+
+        $this->actingAs($admin)->get(route('admin.courses.edit', $course))
+            ->assertOk()
+            ->assertSee('value="'.$level->id.'" selected', false);
+        $this->get(route('admin.website-pages.edit', $page))
             ->assertOk()
             ->assertSee('value="'.$level->id.'" selected', false);
     }
