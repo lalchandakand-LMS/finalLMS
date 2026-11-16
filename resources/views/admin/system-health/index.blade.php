@@ -50,6 +50,7 @@
                             <strong>{{ str($name)->replace('_', ' ')->title() }}</strong>:
                             @if(($result['status'] ?? 'failed') === 'ok')
                                 <span class="badge success">{{ __('OK') }}</span>
+                                @if(!empty($result['details']))<p class="muted">{{ $result['details'] }}</p>@endif
                             @else
                                 <span class="badge danger">{{ __('Failed') }}</span>
                                 <p class="muted">{{ $result['message'] ?? __('Check failed.') }}</p>
