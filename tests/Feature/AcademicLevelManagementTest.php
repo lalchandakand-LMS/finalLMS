@@ -90,7 +90,7 @@ class AcademicLevelManagementTest extends TestCase
         AcademicLevel::create(['name' => 'Keep this level', 'slug' => 'keep-this-level', 'is_active' => true]);
         $migration = require database_path('migrations/2026_11_16_160000_create_academic_levels_and_assignments.php');
 
-        $this->expectException(\\RuntimeException::class);
+        $this->expectException(\RuntimeException::class);
         $migration->down();
     }
 
