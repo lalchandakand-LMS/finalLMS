@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Aloms\UniversalAiAssistant\AssistantSettings;
+use Aloms\UniversalAiAssistant\AssistantTokenBudget;
 use App\Models\PluginInstallation;
 use App\Models\User;
 use App\Services\AiDeveloperProviderEndpoint;
@@ -22,6 +23,7 @@ class UniversalAiAssistantPluginTest extends TestCase
     {
         parent::setUp();
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantSettings.php');
+        require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantTokenBudget.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantController.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AdminSettingsController.php');
         if (! Schema::hasTable('ai_assistant_settings')) {
@@ -42,6 +44,25 @@ class UniversalAiAssistantPluginTest extends TestCase
         $this->assertSame(365, $settings['retention_days']);
         foreach (AssistantSettings::ROLES as $role) $this->assertFalse($settings['role_enabled'][$role]);
         $this->assertNull(AssistantSettings::apiKey());
+    }
+
+    public function test_completion_limit_reserves_prompt_tokens_and_never_exceeds_remaining_daily_budget(): void
+    {
+        $messages = [
+            ['role' => 'system', 'content' => AssistantSettings::rolePrompt('student')],
+            ['role' => 'user', 'content' => 'Hello'],
+        ];
+
+        $remaining = AssistantTokenBudget::remaining(5000, 1000);
+        $estimatedPrompt = AssistantTokenBudget::estimatePromptTokens($messages);
+        $limit = AssistantTokenBudget::completionLimit(8192, $remaining, $estimatedPrompt);
+
+        $this->assertGreaterThan(0, $estimatedPrompt);
+        $this->assertGreaterThan(0, $limit);
+        $this->assertLessThanOrEqual($remaining - $estimatedPrompt, $limit);
+        $this->assertLessThanOrEqual(8192, $limit);
+        $this->assertSame(0, AssistantTokenBudget::completionLimit(1200, 100, 100));
+        $this->assertSame(0, AssistantTokenBudget::remaining(1000, 1200));
     }
 
     public function test_provider_key_is_encrypted_and_never_in_public_settings(): void
