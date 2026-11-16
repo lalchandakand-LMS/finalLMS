@@ -67,7 +67,7 @@ final class AssistantController
         ]);
     }
 
-    public function send(Request $request): JsonResponse
+    public function send(Request $request, AiProvider $provider): JsonResponse
     {
         $role = AssistantSettings::roleForUser((string) $request->user()->role);
         abort_unless($role !== null && $this->isAvailable($role), 404);
@@ -102,8 +102,6 @@ final class AssistantController
             $apiKey = AssistantSettings::apiKey();
             if (! $apiKey) return response()->json(['message' => __('The AI provider key has not been configured.')], 503);
 
-            $baseUrl = rtrim((string) $settings['base_url'], '/');
-            $curlOptions = app(AiDeveloperProviderEndpoint::class)->curlOptionsFor($baseUrl);
             $history = DB::table('ai_assistant_messages')->where('conversation_id', $conversation->id)
                 ->latest('id')->limit(11)->get()->reverse()->values();
 
@@ -111,8 +109,12 @@ final class AssistantController
             foreach ($history as $item) $messages[] = ['role' => $item->message_role, 'content' => $item->content];
             $messages[] = ['role' => 'user', 'content' => $message];
 
-            // Atomically reserve the prompt estimate and completion allowance under a
-            // per-day row lock so concurrent requests cannot spend the same remaining budget.
+            $capabilities = $provider->capabilities((string) $settings['model']);
+            if ($capabilities === null || (int) $settings['max_tokens'] > $capabilities['max_output_tokens']) {
+                return response()->json(['message' => __('The configured AI model is unsupported or its output limit exceeds its verified capabilities.')], 503);
+            }
+
+            // Reserve usage before contacting the provider; this is serialized across concurrent requests.
             $estimatedPromptTokens = AssistantTokenBudget::estimatePromptTokens($messages);
             $reservation = AssistantTokenBudget::reserve(
                 (int) $settings['daily_token_budget'],
@@ -142,48 +144,18 @@ final class AssistantController
                 ]);
             });
 
-            $response = Http::withToken($apiKey)->acceptJson()->timeout(40)->withOptions(array_merge([
-                'allow_redirects' => false,
-                'stream' => true,
-            ], $curlOptions))->post($baseUrl.'/chat/completions', [
-                'model' => $settings['model'],
-                'temperature' => $settings['temperature'],
-                'max_tokens' => $responseTokenLimit,
-                'messages' => $messages,
-            ]);
-
-            if (! $response->successful()) {
-                AssistantTokenBudget::release($reservationId);
-                return response()->json(['message' => __('The AI provider is temporarily unavailable.')], 502);
-            }
-
-            $maxBytes = 524288;
-            $body = $response->toPsrResponse()->getBody();
-            $contentLength = $response->header('Content-Length');
-            if (is_numeric($contentLength) && (int) $contentLength > $maxBytes) {
-                AssistantTokenBudget::release($reservationId);
-                return response()->json(['message' => __('The AI provider response exceeded the configured size limit.')], 502);
-            }
-
-            $raw = '';
-            while (! $body->eof()) {
-                $raw .= $body->read(min(8192, $maxBytes + 1 - strlen($raw)));
-                if (strlen($raw) > $maxBytes) {
-                    AssistantTokenBudget::release($reservationId);
-                    return response()->json(['message' => __('The AI provider response exceeded the configured size limit.')], 502);
-                }
-            }
-
-            $decoded = json_decode($raw, true);
-            $answer = data_get($decoded, 'choices.0.message.content');
-            if (! is_string($answer) || trim($answer) === '') {
-                AssistantTokenBudget::release($reservationId);
-                return response()->json(['message' => __('The AI provider returned an unsupported response.')], 502);
-            }
-
+            $providerResult = $provider->complete(
+                $apiKey,
+                rtrim((string) $settings['base_url'], '/'),
+                (string) $settings['model'],
+                $messages,
+                (float) $settings['temperature'],
+                (int) $responseTokenLimit
+            );
+            $answer = $providerResult['content'];
+            $reportedTokens = $providerResult['total_tokens'];
             $answer = $this->redactSensitiveText(trim($answer));
-            $reportedTokens = (int) data_get($decoded, 'usage.total_tokens', 0);
-            $tokens = $reportedTokens > 0
+            $tokens = is_int($reportedTokens) && $reportedTokens > 0
                 ? $reportedTokens
                 : AssistantTokenBudget::estimatePromptTokens(array_merge($messages, [
                     ['role' => 'assistant', 'content' => $answer],
