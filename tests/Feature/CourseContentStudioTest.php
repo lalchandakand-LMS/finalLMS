@@ -255,6 +255,35 @@ class CourseContentStudioTest extends TestCase
         $this->assertStringStartsWith('private/course-content/', $post->content_file_path);
     }
 
+    public function test_paid_product_uses_selected_media_library_thumbnail(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $media = MediaAsset::create([
+            'uploaded_by' => $admin->id,
+            'disk' => 'public',
+            'path' => 'media/2026/11/cover.jpg',
+            'original_name' => 'cover.jpg',
+            'mime_type' => 'image/jpeg',
+            'size' => 1024,
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.course-content-posts.store'), [
+            'title' => 'Paid Geography Notes',
+            'long_description' => 'Geography PDF',
+            'access_type' => 'paid',
+            'regular_price' => '125',
+            'thumbnail_media_id' => $media->id,
+            'status' => 'published',
+            'content_file' => UploadedFile::fake()->create('geography.pdf', 20, 'application/pdf'),
+        ])->assertRedirect();
+
+        $post = CourseContentPost::where('slug', 'paid-geography-notes')->firstOrFail();
+        $this->assertSame($media->id, $post->thumbnail_media_id);
+        $this->assertSame($media->path, $post->product->image_path);
+    }
+
     public function test_content_studio_updates_paid_pdf_price_and_thumbnail_without_replacing_purchased_pdf(): void
     {
         Storage::fake('local');
