@@ -108,6 +108,17 @@ class PluginActivationServiceTest extends TestCase
         $this->assertNotNull($activated->activated_at);
     }
 
+
+    public function test_activation_uses_default_lms_version_when_environment_value_is_empty(): void
+    {
+        $plugin = $this->createPlugin();
+        config(['plugins.lms_version' => '']);
+
+        $activated = app(PluginActivationService::class)->activate($plugin->plugin_key);
+
+        $this->assertSame('active', $activated->status);
+    }
+
     public function test_activation_requires_all_declared_dependencies_to_be_active(): void
     {
         $plugin = $this->createPlugin(dependencies: ['test.required']);
