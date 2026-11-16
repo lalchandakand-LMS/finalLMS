@@ -386,7 +386,7 @@ class UniversalAiAssistantPluginTest extends TestCase
     public function test_expired_token_reservations_cannot_persist_prompts_or_settle_responses(): void
     {
         $user = User::factory()->create(['role' => 'student']);
-        $conversationId = \\DB::table('ai_assistant_conversations')->insertGetId([
+        $conversationId = \DB::table('ai_assistant_conversations')->insertGetId([
             'user_id' => $user->id,
             'assistant_role' => 'student',
             'title' => 'Expired reservation test',
@@ -396,7 +396,7 @@ class UniversalAiAssistantPluginTest extends TestCase
 
         $promptReservation = AssistantTokenBudget::reserve(5000, 100, 1000, 20, 'student', 'openai-compatible', 'test-model', $user->id, $conversationId);
         $this->assertNotNull($promptReservation);
-        \\DB::table('ai_assistant_token_reservations')->where('id', $promptReservation['id'])
+        \DB::table('ai_assistant_token_reservations')->where('id', $promptReservation['id'])
             ->update(['expires_at' => now()->subSecond()]);
 
         $promptPersisted = false;
@@ -405,14 +405,14 @@ class UniversalAiAssistantPluginTest extends TestCase
                 $promptPersisted = true;
             });
             $this->fail('An expired reservation must not persist a prompt.');
-        } catch (\\RuntimeException $exception) {
+        } catch (\RuntimeException $exception) {
             $this->assertStringContainsString('expired', $exception->getMessage());
         }
         $this->assertFalse($promptPersisted);
 
         $responseReservation = AssistantTokenBudget::reserve(5000, 100, 1000, 20, 'student', 'openai-compatible', 'test-model', $user->id, $conversationId);
         $this->assertNotNull($responseReservation);
-        \\DB::table('ai_assistant_token_reservations')->where('id', $responseReservation['id'])
+        \DB::table('ai_assistant_token_reservations')->where('id', $responseReservation['id'])
             ->update(['expires_at' => now()->subSecond()]);
 
         $responsePersisted = false;
@@ -421,7 +421,7 @@ class UniversalAiAssistantPluginTest extends TestCase
                 $responsePersisted = true;
             });
             $this->fail('An expired reservation must not settle a response.');
-        } catch (\\RuntimeException $exception) {
+        } catch (\RuntimeException $exception) {
             $this->assertStringContainsString('expired', $exception->getMessage());
         }
         $this->assertFalse($responsePersisted);
