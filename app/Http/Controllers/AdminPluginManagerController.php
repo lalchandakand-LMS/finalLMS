@@ -529,12 +529,14 @@ class AdminPluginManagerController extends Controller
             if (! $signatureVerifier->verifyInstalledSignature($plugin)) {
                 throw new RuntimeException('The restored package does not contain a verifiable detached release signature.');
             }
-            $integrityVerifier->verify($plugin);
+            // IntegrityVerifier intentionally rejects the terminal uninstalled
+            // state, so only enter installed after the detached signature passes.
             $plugin = $lifecycle->transition($plugin->plugin_key, 'installed', [
                 'health_status' => 'healthy',
                 'health_message' => 'Restored from a signed, checksum-verified pre-uninstall package snapshot.',
                 'last_health_check_at' => now(),
             ]);
+            $integrityVerifier->verify($plugin);
             $history->record($plugin, 'package_restored', $request->user(), [
                 'recovery_path' => $details['recovery_path'],
                 'recovery_sha256' => $details['recovery_sha256'],
@@ -542,8 +544,15 @@ class AdminPluginManagerController extends Controller
             $this->audit($request, 'admin.plugins.package_restored',
                 'Restored verified package '.$plugin->plugin_key.' version '.$plugin->version.'; plugin remains inactive.');
         } catch (Throwable $exception) {
-            if ($packageRestored && $plugin instanceof PluginInstallation && $plugin->status === 'uninstalled') {
-                try { $remover->remove($plugin); } catch (Throwable $cleanupException) { report($cleanupException); }
+            if ($packageRestored && $plugin instanceof PluginInstallation) {
+                try {
+                    if (in_array($plugin->status, ['installed', 'inactive', 'failed'], true)) {
+                        $plugin = $lifecycle->transition($plugin->plugin_key, 'uninstalled');
+                    }
+                    if ($plugin->status === 'uninstalled') $remover->remove($plugin);
+                } catch (Throwable $cleanupException) {
+                    report($cleanupException);
+                }
             }
             report($exception);
             $this->recordFailure($request, 'admin.plugins.package_restore_failed');
