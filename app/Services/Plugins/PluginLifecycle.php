@@ -61,7 +61,8 @@ final class PluginLifecycle
                 throw new LogicException('A plugin cannot be installed or activated without a verified signed package.');
             }
 
-            $plugin->fill($attributes);
+            // Only this lifecycle service may write signature verification metadata after trust checks.
+            $plugin->forceFill($attributes);
             $plugin->status = $target;
 
             if ($target === 'active') {

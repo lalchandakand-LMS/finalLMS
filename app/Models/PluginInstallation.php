@@ -17,7 +17,6 @@ class PluginInstallation extends Model
         'package_sha256',
         'signature_key_id',
         'package_path',
-        'signature_verified_at',
     ];
 
     protected function casts(): array
