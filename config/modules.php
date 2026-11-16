@@ -38,7 +38,7 @@ return [
     'seo' => ['name' => 'SEO', 'description' => 'Metadata, sitemap and search optimization.', 'type' => 'module', 'dependencies' => ['core', 'website_cms']],
     'analytics' => ['name' => 'Analytics & Search Console', 'description' => 'Analytics and reporting.', 'type' => 'module', 'dependencies' => ['core', 'website_cms']],
     'marketing' => ['name' => 'Marketing Center', 'description' => 'Campaign planning and growth tools.', 'type' => 'module', 'dependencies' => ['core']],
-    'popup_ads' => ['name' => 'Popup Ads & Campaigns', 'description' => 'Admin-managed popup ads, targeting and campaign analytics.', 'type' => 'module', 'dependencies' => ['core', 'identity', 'storage']],
+    'popup_ads' => ['name' => 'Popup Ads & Campaigns', 'description' => 'Optional popup ads and announcement plugin. Install and activate its signed package from Plugin Manager.', 'type' => 'module', 'plugin_key' => 'aec.popup-ads', 'dependencies' => ['core', 'identity', 'storage']],
     'meta_pixel' => ['name' => 'Meta Pixel', 'description' => 'Facebook/Instagram Pixel events and consent controls.', 'type' => 'module', 'dependencies' => ['core', 'marketing', 'website_cms']],
     'meta_ads' => ['name' => 'Meta Ads & Boost', 'description' => 'Meta campaign planning and authorized ad management.', 'type' => 'module', 'dependencies' => ['core', 'marketing', 'meta_pixel']],
     'support_center' => ['name' => 'Support Center', 'description' => 'Support tickets and customer assistance.', 'type' => 'module', 'dependencies' => ['core', 'identity']],

@@ -14,13 +14,6 @@
         $googleSearchConsoleVerification = $hasSettingsTable ? \App\Models\Setting::value('google_search_console_verification') : null;
         $marketingConsent = request()->cookie('marketing_consent') === 'accepted';
         $isAdminLayout = auth()->check() && (auth()->user()->isAdmin() || auth()->user()->isBranchManager() || auth()->user()->isAccountant());
-        $visitorPopup = null;
-        $popupAdsEnabled = $hasSettingsTable && app(\App\Services\Modules\ModuleRegistry::class)->isEnabled('popup_ads');
-        if ($popupAdsEnabled && \Illuminate\Support\Facades\Schema::hasTable('visitor_popups') && ! $isAdminLayout) {
-            $visitorPopup = \App\Models\VisitorPopup::currentlyActive()->with('image')
-                ->where(function ($query) { $query->where('audience', 'all')->orWhere('audience', auth()->check() ? 'members' : 'guests'); })
-                ->orderByDesc('priority')->latest()->first();
-        }
         $isPublicLayout = ! $isAdminLayout;
         $websiteHeaderLinks = $isPublicLayout && $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('header_links', '[]'), true) : [];
         $websiteFooterTitle = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('footer_title', config('app.name')) : config('app.name');
@@ -304,7 +297,7 @@
             <a class="{{ request()->routeIs('admin.marketing.meta-ads.*') ? 'active' : '' }}" href="{{ route('admin.marketing.meta-ads.index') }}"><span>🔗</span><span class="nav-text">Meta Ads integration</span></a>
             <a class="{{ request()->routeIs('admin.comments.*') ? 'active' : '' }}" href="{{ route('admin.comments.index') }}"><span>💬</span><span class="nav-text">Comment moderation</span></a>
             <a class="{{ request()->routeIs('admin.support-tickets.*') ? 'active' : '' }}" href="{{ route('admin.support-tickets.index') }}"><span>🎧</span><span class="nav-text">Support tickets</span></a>
-            @if(app(\App\Services\Modules\ModuleRegistry::class)->isEnabled('popup_ads'))
+            @if(\Illuminate\Support\Facades\Route::has('admin.visitor-popups.index'))
                 <a class="{{ request()->routeIs('admin.visitor-popups.*') ? 'active' : '' }}" href="{{ route('admin.visitor-popups.index') }}"><span>📣</span><span class="nav-text">Popup Ads</span></a>
             @endif
             <a class="{{ request()->routeIs('admin.dashboard-announcements.*') ? 'active' : '' }}" href="{{ route('admin.dashboard-announcements.index') }}"><span>🔔</span><span class="nav-text">Dashboard announcements</span></a>
@@ -525,7 +518,9 @@
             });
         })();
     </script>
-    @includeWhen($visitorPopup, 'components.visitor-promo-popup', ['visitorPopup' => $visitorPopup])
+    @if(! $isAdminLayout && app()->bound('popup_ads.render'))
+        {!! app('popup_ads.render')(request()) !!}
+    @endif
     @stack('scripts')
 </body>
 </html>

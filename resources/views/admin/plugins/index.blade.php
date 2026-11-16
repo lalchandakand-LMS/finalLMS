@@ -88,6 +88,9 @@
                                     <button class="btn primary" type="submit">{{ __('Activate') }}</button>
                                 </form>
                             @elseif($plugin->status === 'active')
+                                @if($plugin->plugin_key === 'aec.popup-ads' && \Illuminate\Support\Facades\Route::has('admin.visitor-popups.index'))
+                                    <a class="btn secondary" href="{{ route('admin.visitor-popups.index') }}">{{ __('Configure') }}</a>
+                                @endif
                                 <form method="POST" action="{{ route('admin.plugins.deactivate', $plugin->plugin_key) }}" style="display:inline;" onsubmit="return confirm('{{ __('Deactivate this plugin? Its data and installed files will be retained.') }}')">
                                     @csrf
                                     <button class="btn secondary" type="submit">{{ __('Deactivate') }}</button>
