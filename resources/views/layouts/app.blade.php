@@ -312,13 +312,16 @@
             @elseif(auth()->user()->isBranchManager())
                 <div class="admin-sidebar-label">Overview</div>
                 <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><span>▦</span><span class="nav-text">Dashboard</span></a>
-                @if(auth()->user()->hasAdminPermission('branch.batches') || auth()->user()->hasAdminPermission('branch.students'))
+                @if(auth()->user()->hasAdminPermission('branch.batches') || auth()->user()->hasAdminPermission('branch.students') || auth()->user()->hasAdminPermission('branch.attendance'))
                     <div class="admin-sidebar-label">Branch workspace</div>
                     @if(auth()->user()->hasAdminPermission('branch.batches'))
                         <a class="{{ request()->routeIs('admin.branch-workspace.batches.*') ? 'active' : '' }}" href="{{ route('admin.branch-workspace.batches.index') }}"><span>🗓️</span><span class="nav-text">My branch batches</span></a>
                     @endif
                     @if(auth()->user()->hasAdminPermission('branch.students'))
                         <a class="{{ request()->routeIs('admin.branch-workspace.students.*') ? 'active' : '' }}" href="{{ route('admin.branch-workspace.students.index') }}"><span>👥</span><span class="nav-text">Branch students</span></a>
+                    @endif
+                    @if(auth()->user()->hasAdminPermission('branch.attendance'))
+                        <a class="{{ request()->routeIs('admin.branch-workspace.attendance.*') || request()->routeIs('admin.branch-workspace.batches.attendance.*') ? 'active' : '' }}" href="{{ route('admin.branch-workspace.attendance.reports') }}"><span>📋</span><span class="nav-text">Branch attendance</span></a>
                     @endif
                 @endif
             @elseif(auth()->user()->isAccountant())
