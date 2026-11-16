@@ -28,6 +28,10 @@ Route::prefix('v1')->group(function (): void {
 
     Route::middleware(['api.token', 'throttle:120,1'])->group(function (): void {
         Route::get('/auth/me', [AuthController::class, 'me']);\n        Route::post('/instructor/attendance/sync', [AttendanceSyncController::class, 'sync'])->middleware('throttle:10,1');
+        Route::post('/instructor/batches/{batch}/attendance/qr', [AttendanceSyncController::class, 'createQrSession'])->middleware('throttle:10,1');
+        Route::post('/attendance/qr/{session}/check-in', [AttendanceSyncController::class, 'checkInQr'])
+            ->middleware(['signed', 'throttle:10,1'])
+            ->name('api.v1.attendance.qr.checkin');
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::post('/auth/logout-all', [AuthController::class, 'logoutAll']);
         Route::get('/my/courses', [CourseController::class, 'myCourses']);
