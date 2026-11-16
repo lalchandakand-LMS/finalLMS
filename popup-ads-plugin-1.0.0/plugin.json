@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "key": "aec.popup-ads",
+  "name": "Popup Ads & Announcements",
+  "version": "1.0.0",
+  "type": "module",
+  "entrypoint": "src/Plugin.php",
+  "requires": {
+    "php": "^8.3",
+    "laravel": "^12.0",
+    "lms": "^1.0"
+  },
+  "dependencies": [],
+  "conflicts": [],
+  "portals": [
+    "admin",
+    "public"
+  ],
+  "permissions": [
+    "popup-ads.manage",
+    "popup-ads.view"
+  ],
+  "capabilities": [
+    "campaign-scheduling",
+    "sanitized-rich-content",
+    "audience-and-path-targeting",
+    "frequency-capping",
+    "consent-aware-analytics",
+    "export-and-safe-retention"
+  ],
+  "migrations": "migrations"
+}
