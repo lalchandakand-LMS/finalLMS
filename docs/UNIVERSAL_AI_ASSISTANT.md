@@ -45,7 +45,7 @@ untrusted data. Retrieval events record the role, scope and source identifiers; 
 responses and provider failures are recorded without storing prompt text or provider secrets.
 
 The provider adapter retries transient connection/5xx/429 failures before any stream bytes are emitted; it does not retry after a stream has begun. Successful model discovery is the Admin's provider availability check.\n\nThe context exposes no grades, marks, answer content or feedback. It intentionally does **not** expose attendance, payments,
-private staff records, full lesson bodies, assignment submissions, exam answers, or mutation
+private staff records, full lesson bodies, assignment submission answers/attachments, exam questions/answers, or mutation
 tools. Those sources require separate policy review, minimized DTOs, audit and isolation tests
 before they can be added. There is no autonomous action execution.
 
@@ -54,9 +54,7 @@ before they can be added. There is no autonomous action execution.
 The existing Plugin Manager runtime requires a trusted signature, verified package checksum,
 manifest identity and installed-file integrity before loading an active plugin. Deactivation
 and uninstall are registry-controlled; the AI conversation/settings tables are separate from
-the plugin code and are retained by default. The repository change does not create a release
-signature: signing requires the institution's configured release private key and a trusted
-public-key configuration. Do not activate or distribute an unsigned package.
+the plugin code and are retained by default. An offline Ed25519 release signer is included, but no signed archive has been created. Signing requires the institution's configured release private key on a trusted build workstation and a matching trusted public-key configuration in the LMS. Do not activate or distribute an unsigned package.
 
 ## Remaining release gates
 
