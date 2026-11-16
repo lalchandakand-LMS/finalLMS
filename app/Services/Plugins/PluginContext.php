@@ -64,14 +64,12 @@ final class PluginContext
         $role = self::PORTAL_ROLES[$portal];
         if ($role !== null) {
             $declaredPermissions = $this->plugin->manifest['permissions'] ?? [];
-            if ($declaredPermissions !== []) {
-                if (! is_string($permission) || ! in_array($permission, $declaredPermissions, true)) {
-                    throw new InvalidArgumentException('Authenticated plugin routes must declare one of the permissions in the signed manifest.');
-                }
-                $permissionMiddleware = 'plugin.permission:'.$this->plugin->plugin_key.','.$permission;
-            } elseif ($permission !== null) {
-                throw new InvalidArgumentException('A plugin route cannot request a permission absent from its signed manifest.');
+            if (! is_array($declaredPermissions)
+                || ! is_string($permission)
+                || ! in_array($permission, $declaredPermissions, true)) {
+                throw new InvalidArgumentException('Every authenticated plugin route group must require a permission declared in the signed manifest.');
             }
+            $permissionMiddleware = 'plugin.permission:'.$this->plugin->plugin_key.','.$permission;
             $middleware[] = 'auth';
             $middleware[] = 'verified';
             $middleware[] = 'role:'.$role;
