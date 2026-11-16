@@ -186,6 +186,31 @@ PHP;
         $this->assertFileExists($this->finalPath.'/src/Plugin.php');
     }
 
+    public function test_admin_can_request_signed_plugin_migration_rollback_only_while_inactive(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData())
+            ->assertRedirect(route('admin.plugins.index'));
+
+        $runner = $this->mock(PluginMigrationRunner::class);
+        $runner->shouldReceive('rollback')->once()->with(\Mockery::type(PluginInstallation::class));
+
+        $this->actingAs($admin)->post(route('admin.plugins.rollback-migrations', 'aec.course-management'), [
+            'confirm_rollback' => '1',
+        ])->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'status' => 'installed',
+        ]);
+        $this->assertDatabaseHas('plugin_version_history', [
+            'plugin_key' => 'aec.course-management',
+            'action' => 'migrations_rolled_back',
+            'version' => '1.0.0',
+        ]);
+    }
+
     public function test_plugin_migrations_run_before_activation_and_failure_keeps_plugin_inactive(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
