@@ -605,7 +605,7 @@ class UniversalAiAssistantPluginTest extends TestCase
         });
         Http::fake([
             'api.openai.com/v1/chat/completions' => Http::response(
-                "data: {\"choices\":[{\"delta\":{\"content\":\"Let us practise English.\"}}],\"usage\":{\"total_tokens\":12}}\n\n".
+                "data: {\"choices\":[{\"delta\":{\"content\":\"Bearer ".str_repeat('A', 400)." is a test token. Let us practise English.\"}}],\"usage\":{\"total_tokens\":12}}\n\n".
                 "data: [DONE]\n\n",
                 200,
                 ['Content-Type' => 'text/event-stream']
@@ -620,7 +620,9 @@ class UniversalAiAssistantPluginTest extends TestCase
             'message' => 'Please help me; my key is '.$secret,
         ]);
         $response->assertOk();
-        $response->streamedContent();
+        $streamed = $response->streamedContent();
+        $this->assertStringNotContainsString(str_repeat('A', 400), $streamed);
+        $this->assertStringContainsString('Bearer [REDACTED]', $streamed);
 
         $conversation = \DB::table('ai_assistant_conversations')->where('user_id', $user->id)->first();
         $message = \DB::table('ai_assistant_messages')->where('conversation_id', $conversation->id)->where('message_role', 'user')->first();
