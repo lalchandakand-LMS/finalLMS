@@ -38,13 +38,14 @@ final class AssistantTokenBudget
         int $dailyBudget,
         int $estimatedPromptTokens,
         int $configuredCompletionLimit,
+        int $dailyRequestLimit,
         int $userId,
         int $conversationId
     ): ?array {
         $date = today()->toDateString();
 
         return DB::transaction(function () use (
-            $date, $dailyBudget, $estimatedPromptTokens, $configuredCompletionLimit, $userId, $conversationId
+            $date, $dailyBudget, $estimatedPromptTokens, $configuredCompletionLimit, $dailyRequestLimit, $userId, $conversationId
         ): ?array {
             DB::table('ai_assistant_budget_days')->insertOrIgnore([
                 'budget_date' => $date,
@@ -56,6 +57,17 @@ final class AssistantTokenBudget
                 ->where('budget_date', $date)
                 ->lockForUpdate()
                 ->first();
+
+            $todayRequests = (int) DB::table('ai_assistant_messages')
+                ->join('ai_assistant_conversations', 'ai_assistant_conversations.id', '=', 'ai_assistant_messages.conversation_id')
+                ->where('ai_assistant_conversations.user_id', $userId)
+                ->where('ai_assistant_messages.message_role', 'user')
+                ->whereDate('ai_assistant_messages.created_at', $date)
+                ->count();
+
+            if ($todayRequests > max(0, $dailyRequestLimit)) {
+                return null;
+            }
 
             $usedTokens = (int) DB::table('ai_assistant_messages')
                 ->where('message_role', 'assistant')
