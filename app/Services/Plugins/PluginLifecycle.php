@@ -4,6 +4,7 @@ namespace App\Services\Plugins;
 
 use App\Models\PluginInstallation;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use InvalidArgumentException;
 use LogicException;
 
