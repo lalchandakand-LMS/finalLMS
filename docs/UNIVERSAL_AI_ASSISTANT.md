@@ -6,7 +6,7 @@ branding, generated dashboard, or `.aistudio` directory belongs in the LMS repos
 
 ## Provider boundary
 
-The application-level `App\\Contracts\\Ai\\AiProvider` contract separates provider
+The application-level `App\Contracts\Ai\AiProvider` contract separates provider
 capabilities, model discovery, standard completion and streaming from assistant routes.
 The plugin currently registers one OpenAI-compatible adapter. Model discovery exposes only
 model IDs with an explicit capability profile. Unknown models fail closed. The adapter chooses
