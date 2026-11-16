@@ -22,7 +22,7 @@ return [
     ],
     'instructor_mobile_app' => ['api/v1/instructor/*'],
     'course_management' => [
-        'api/v1/courses', 'api/v1/courses/*', 'api/v1/instructor/courses*',
+        'api/v1/courses', 'api/v1/courses/*', 'api/v1/checkout/courses*', 'api/v1/instructor/courses*',
         'api/v1/my/courses*', 'api/v1/my/wishlist*', 'api/v1/courses/*/wishlist',
         'api/v1/my/cart*', 'api/v1/my/courses/*/reviews', 'api/v1/courses/*/reviews',
     ],
@@ -38,6 +38,7 @@ return [
     ],
     'live_classes' => ['api/v1/instructor/live-classes*', 'api/v1/instructor/batches/*/live-classes'],
     'payments' => ['api/v1/checkout/*', 'api/v1/my/payments*', 'api/v1/my/invoices*', 'api/v1/my/cart/checkout/*'],
+    'fee_management' => ['api/v1/my/invoices*'],
     'coupons_promotions' => ['api/v1/my/cart/coupon'],
     'notice_board' => ['api/v1/my/notices*', 'api/v1/instructor/notices*'],
     'support_center' => ['api/v1/my/support-tickets*'],
