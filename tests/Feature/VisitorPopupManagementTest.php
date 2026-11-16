@@ -18,6 +18,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use Tests\TestCase;
@@ -379,18 +380,24 @@ class VisitorPopupManagementTest extends TestCase
             'priority' => 10,
         ]);
 
-        // Without marketing_consent cookie, event endpoint declines recording.
-        $this->postJson(route('popups.events', $popup->id), ['event' => 'impression'])
+        // Unsigned callers cannot forge campaign IDs to manipulate aggregate analytics.
+        $this->postJson(route('popups.events', $popup->id), ['event' => 'impression'])->assertForbidden();
+        $this->assertSame(0, PopupAdEvent::query()->count());
+
+        $eventUrl = URL::temporarySignedRoute('popups.events', now()->addMinutes(5), ['popup' => $popup->id]);
+
+        // Without marketing_consent cookie, a valid event URL still declines recording.
+        $this->postJson($eventUrl, ['event' => 'impression'])
             ->assertStatus(202)
             ->assertJson(['recorded' => false, 'reason' => 'consent_required']);
         $this->assertSame(0, PopupAdEvent::query()->count());
 
         // With marketing_consent cookie, impression and click are recorded cleanly without PII columns.
-        $this->call('POST', route('popups.events', $popup->id), ['event' => 'impression'], ['marketing_consent' => 'accepted'])
+        $this->call('POST', $eventUrl, ['event' => 'impression'], ['marketing_consent' => 'accepted'])
             ->assertOk()
             ->assertJson(['recorded' => true]);
 
-        $this->call('POST', route('popups.events', $popup->id), ['event' => 'click'], ['marketing_consent' => 'accepted'])
+        $this->call('POST', $eventUrl, ['event' => 'click'], ['marketing_consent' => 'accepted'])
             ->assertOk()
             ->assertJson(['recorded' => true]);
 
