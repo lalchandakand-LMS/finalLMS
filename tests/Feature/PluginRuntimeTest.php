@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\PluginInstallation;
 use App\Models\User;
 use App\Services\Plugins\PluginRuntime;
+use App\Services\Plugins\PluginSignatureVerifier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Tests\TestCase;
@@ -15,6 +16,7 @@ class PluginRuntimeTest extends TestCase
 
     private string $packagePath = 'plugins/test/runtime-check/1.0.0';
     private string $absolutePath;
+    private string $keyPair;
 
     protected function setUp(): void
     {
@@ -24,7 +26,8 @@ class PluginRuntimeTest extends TestCase
             mkdir($this->absolutePath, 0750, true);
         }
 
-        config(['plugins.trusted_public_keys' => ['test-release-key' => 'dGVzdC1rZXk=']]);
+        $this->keyPair = sodium_crypto_sign_keypair();
+        config(['plugins.trusted_public_keys' => ['test-release-key' => base64_encode(sodium_crypto_sign_publickey($this->keyPair))]]);
     }
 
     protected function tearDown(): void
@@ -60,6 +63,12 @@ class PluginRuntimeTest extends TestCase
             'capabilities' => ['runtime'],
         ];
 
+        $checksum = hash('sha256', 'signed test archive');
+        $signature = base64_encode(sodium_crypto_sign_detached(
+            PluginSignatureVerifier::payloadForSignature($manifest, $checksum),
+            sodium_crypto_sign_secretkey($this->keyPair),
+        ));
+
         $plugin = new PluginInstallation();
         $plugin->forceFill([
             'plugin_key' => $manifest['key'],
@@ -68,13 +77,15 @@ class PluginRuntimeTest extends TestCase
             'type' => $manifest['type'],
             'status' => $status,
             'manifest' => $manifest,
-            'package_sha256' => hash('sha256', 'signed test archive'),
+            'package_sha256' => $checksum,
             'signature_key_id' => 'test-release-key',
             'signature_verified_at' => now(),
             'package_path' => $this->packagePath,
             'metadata' => [
                 'granted_permissions' => ['runtime.check'],
                 'integrity_version' => 1,
+                'release_signature' => $signature,
+                'signature_record_version' => 1,
                 'installed_file_hashes' => [
                     'src/Plugin.php' => hash_file('sha256', $entrypointPath),
                 ],
@@ -192,6 +203,20 @@ PHP;
         app(PluginRuntime::class)->registerActivePlugins();
 
         $this->assertSame('failed', $plugin->fresh()->status);
+    }
+
+
+    public function test_tampered_persisted_release_signature_blocks_entrypoint_execution(): void
+    {
+        $plugin = $this->createPlugin($this->validEntrypoint());
+        $metadata = $plugin->metadata ?? [];
+        $metadata['release_signature'] = base64_encode(random_bytes(SODIUM_CRYPTO_SIGN_BYTES));
+        $plugin->forceFill(['metadata' => $metadata])->save();
+
+        app(PluginRuntime::class)->registerActivePlugins();
+
+        $this->assertSame('failed', $plugin->fresh()->status);
+        $this->assertFalse(app()->bound('plugin.runtime.registered'));
     }
 
     public function test_revoked_signing_key_prevents_plugin_loading(): void

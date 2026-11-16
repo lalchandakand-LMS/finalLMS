@@ -10,6 +10,8 @@ use App\Services\Plugins\PluginManifestValidator;
 use App\Services\Plugins\PluginMigrationRunner;
 use App\Services\Plugins\PluginPackageRemover;
 use App\Services\Plugins\PluginUploadInstaller;
+use App\Services\Plugins\PluginSignatureVerifier;
+use App\Services\Plugins\PluginVersionHistoryRecorder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -23,7 +25,7 @@ class AdminPluginManagerController extends Controller
     public function index(): View
     {
         return view('admin.plugins.index', [
-            'plugins' => PluginInstallation::query()->orderBy('plugin_key')->get(),
+            'plugins' => PluginInstallation::query()->with(['versionHistory.actor'])->orderBy('plugin_key')->get(),
             'maxPackageBytes' => (int) config('plugins.max_package_bytes', 52428800),
         ]);
     }
@@ -55,7 +57,7 @@ class AdminPluginManagerController extends Controller
             __('Plugin permissions saved. Unchecked permissions are denied immediately.'));
     }
 
-    public function install(Request $request, PluginUploadInstaller $installer): RedirectResponse
+    public function install(Request $request, PluginUploadInstaller $installer, PluginVersionHistoryRecorder $history): RedirectResponse
     {
         $validated = $request->validate([
             'package' => ['required', 'file', 'max:51200'],
@@ -81,6 +83,7 @@ class AdminPluginManagerController extends Controller
                 __('Plugin installation failed. The package was not activated; check the manifest, signature, trusted key and server logs.'));
         }
 
+        $history->record($plugin, 'installed', $request->user());
         $this->audit($request, 'admin.plugins.installed', 'Installed signed plugin '.$plugin->plugin_key.' version '.$plugin->version);
 
         return redirect()->route('admin.plugins.index')->with('success',
@@ -92,8 +95,10 @@ class AdminPluginManagerController extends Controller
         string $key,
         PluginManifestValidator $manifestValidator,
         PluginIntegrityVerifier $integrityVerifier,
+        PluginSignatureVerifier $signatureVerifier,
         PluginMigrationRunner $migrationRunner,
         PluginLifecycle $lifecycle,
+        PluginVersionHistoryRecorder $history,
     ): RedirectResponse {
         if (app()->routesAreCached()) {
             return back()->with('error', __('Clear the Laravel route cache before activating plugins. Plugin routes cannot be safely registered from a cached route file.'));
@@ -105,12 +110,7 @@ class AdminPluginManagerController extends Controller
                 throw new LogicException('Only an installed or inactive plugin can be activated.');
             }
 
-            $trustedKeys = config('plugins.trusted_public_keys', []);
-            if (! is_array($trustedKeys) || ! is_string($plugin->signature_key_id)
-                || ! array_key_exists($plugin->signature_key_id, $trustedKeys)
-                || $plugin->signature_verified_at === null) {
-                throw new RuntimeException('The plugin release signature is not currently trusted.');
-            }
+            $signatureVerifier->verifyInstalledSignature($plugin);
 
             $errors = $manifestValidator->errors($plugin->manifest ?? []);
             if ($errors !== []) {
@@ -136,13 +136,14 @@ class AdminPluginManagerController extends Controller
             return back()->with('error', __('Plugin activation was blocked by a security or dependency check. Review the plugin manifest, dependencies, trusted release key and server logs.'));
         }
 
+        $history->record($plugin, 'activated', $request->user());
         $this->audit($request, 'admin.plugins.activated', 'Activated signed plugin '.$plugin->plugin_key.' version '.$plugin->version);
 
         return redirect()->route('admin.plugins.index')->with('success',
             __('Plugin activated. Its verified runtime will register on the next request.'));
     }
 
-    public function deactivate(Request $request, string $key, PluginLifecycle $lifecycle): RedirectResponse
+    public function deactivate(Request $request, string $key, PluginLifecycle $lifecycle, PluginVersionHistoryRecorder $history): RedirectResponse
     {
         try {
             $plugin = PluginInstallation::query()->where('plugin_key', $key)->firstOrFail();
@@ -167,6 +168,7 @@ class AdminPluginManagerController extends Controller
             return back()->with('error', __('Plugin could not be deactivated. It may have active dependants; no registry state was changed.'));
         }
 
+        $history->record($plugin, 'deactivated', $request->user());
         $this->audit($request, 'admin.plugins.deactivated',
             'Deactivated plugin '.$plugin->plugin_key.'; installed files and data were retained.');
 
@@ -175,7 +177,7 @@ class AdminPluginManagerController extends Controller
     }
 
 
-    public function uninstall(Request $request, string $key, PluginLifecycle $lifecycle, PluginPackageRemover $remover): RedirectResponse
+    public function uninstall(Request $request, string $key, PluginLifecycle $lifecycle, PluginPackageRemover $remover, PluginVersionHistoryRecorder $history): RedirectResponse
     {
         try {
             $plugin = PluginInstallation::query()->where('plugin_key', $key)->firstOrFail();
@@ -195,6 +197,7 @@ class AdminPluginManagerController extends Controller
 
             $plugin = $lifecycle->transition($plugin->plugin_key, 'uninstalled');
             $remover->remove($plugin);
+            $history->record($plugin, 'uninstalled', $request->user());
         } catch (Throwable $exception) {
             report($exception);
             $this->recordFailure($request, 'admin.plugins.uninstall_failed');
@@ -206,6 +209,85 @@ class AdminPluginManagerController extends Controller
 
         return redirect()->route('admin.plugins.index')->with('success',
             __('Plugin uninstalled. Its executable package was removed; plugin data and migration records were retained.'));
+    }
+
+    public function healthCheck(
+        Request $request,
+        string $key,
+        PluginManifestValidator $manifestValidator,
+        PluginIntegrityVerifier $integrityVerifier,
+        PluginSignatureVerifier $signatureVerifier,
+        PluginLifecycle $lifecycle,
+        PluginVersionHistoryRecorder $history,
+    ): RedirectResponse {
+        $plugin = PluginInstallation::query()->where('plugin_key', $key)->firstOrFail();
+        if (! in_array($plugin->status, ['installed', 'inactive', 'active', 'failed'], true)) {
+            return back()->with('error', __('Health checks are available only for installed plugins.'));
+        }
+
+        try {
+            $signatureReverified = $signatureVerifier->verifyInstalledSignature($plugin);
+
+            $errors = $manifestValidator->errors($plugin->manifest ?? []);
+            if ($errors !== []) {
+                throw new RuntimeException('The plugin manifest is invalid: '.implode(' ', $errors));
+            }
+
+            if (! hash_equals((string) $plugin->plugin_key, (string) $plugin->manifest['key'])
+                || (string) $plugin->name !== (string) $plugin->manifest['name']
+                || (string) $plugin->version !== (string) $plugin->manifest['version']
+                || (string) $plugin->type !== (string) $plugin->manifest['type']) {
+                throw new RuntimeException('The plugin manifest identity does not match its installed registry record.');
+            }
+
+            $this->assertDependenciesAvailable($plugin);
+            $integrityVerifier->verify($plugin);
+            $healthAttributes = [
+                'health_status' => 'healthy',
+                'health_message' => $signatureReverified
+                    ? 'Detached release signature, manifest and installed files verified.'
+                    : 'Legacy release signature was verified at install; manifest and installed files verified.',
+                'last_health_check_at' => now(),
+            ];
+            if ($plugin->status === 'failed') {
+                $plugin = $lifecycle->transition($plugin->plugin_key, 'inactive', $healthAttributes);
+            } else {
+                $plugin->forceFill($healthAttributes)->save();
+                $plugin->refresh();
+            }
+            $history->record($plugin, 'health_check_passed', $request->user());
+            $this->audit($request, 'admin.plugins.health_check_passed',
+                'Verified plugin health for '.$plugin->plugin_key.' version '.$plugin->version);
+
+            return redirect()->route('admin.plugins.index')->with('success', __('Plugin health check passed.'));
+        } catch (Throwable $exception) {
+            report($exception);
+            $attributes = [
+                'health_status' => 'failed',
+                'health_message' => 'A trusted signature, manifest, dependency or installed-file integrity check failed. Plugin execution is blocked when active.',
+                'last_health_check_at' => now(),
+            ];
+
+            if ($plugin->status === 'active') {
+                try {
+                    $plugin = $lifecycle->transition($plugin->plugin_key, 'failed', $attributes);
+                } catch (Throwable $transitionException) {
+                    report($transitionException);
+                    $plugin->forceFill($attributes)->save();
+                    $plugin->refresh();
+                }
+            } else {
+                $plugin->forceFill($attributes)->save();
+                $plugin->refresh();
+            }
+
+            $history->record($plugin, 'health_check_failed', $request->user(), [
+                'failure_type' => class_basename($exception),
+            ]);
+            $this->recordFailure($request, 'admin.plugins.health_check_failed');
+
+            return back()->with('error', __('Plugin health check failed. Review the activity log; active plugin execution was blocked.'));
+        }
     }
 
     private function assertDependenciesAvailable(PluginInstallation $plugin): void

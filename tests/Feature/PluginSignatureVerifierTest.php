@@ -89,16 +89,63 @@ class PluginSignatureVerifierTest extends TestCase
     {
         $plugin = $this->registeredPlugin();
 
+        $signature = $this->signedPackage();
         $verified = app(PluginSignatureVerifier::class)->verifyAndRecord(
-            $plugin, $this->manifest, $this->archivePath, $this->signedPackage(),
+            $plugin, $this->manifest, $this->archivePath, $signature,
             'test-release-key', 'plugins/aec/course-management/1.0.0',
         );
 
+        $this->assertSame($signature, $verified->metadata['release_signature']);
+        $this->assertSame(1, $verified->metadata['signature_record_version']);
+        $this->assertTrue(app(PluginSignatureVerifier::class)->verifyInstalledSignature($verified));
         $this->assertSame('staged', $verified->status);
         $this->assertSame(hash_file('sha256', $this->archivePath), $verified->package_sha256);
         $this->assertSame('test-release-key', $verified->signature_key_id);
         $this->assertNotNull($verified->signature_verified_at);
         $this->assertSame('plugins/aec/course-management/1.0.0', $verified->package_path);
+    }
+
+
+    public function test_persisted_release_signature_fails_if_signature_bytes_are_tampered(): void
+    {
+        $plugin = app(PluginSignatureVerifier::class)->verifyAndRecord(
+            $this->registeredPlugin(), $this->manifest, $this->archivePath,
+            $this->signedPackage(), 'test-release-key', 'plugins/aec/course-management/1.0.0',
+        );
+        $metadata = $plugin->metadata ?? [];
+        $metadata['release_signature'] = base64_encode(random_bytes(SODIUM_CRYPTO_SIGN_BYTES));
+        $plugin->forceFill(['metadata' => $metadata])->save();
+
+        $this->expectException(RuntimeException::class);
+        app(PluginSignatureVerifier::class)->verifyInstalledSignature($plugin->fresh());
+    }
+
+    public function test_persisted_release_signature_fails_if_trusted_key_is_replaced(): void
+    {
+        $plugin = app(PluginSignatureVerifier::class)->verifyAndRecord(
+            $this->registeredPlugin(), $this->manifest, $this->archivePath,
+            $this->signedPackage(), 'test-release-key', 'plugins/aec/course-management/1.0.0',
+        );
+        $replacementKey = sodium_crypto_sign_keypair();
+        config(['plugins.trusted_public_keys' => [
+            'test-release-key' => base64_encode(sodium_crypto_sign_publickey($replacementKey)),
+        ]]);
+
+        $this->expectException(RuntimeException::class);
+        app(PluginSignatureVerifier::class)->verifyInstalledSignature($plugin->fresh());
+    }
+
+    public function test_legacy_install_without_persisted_signature_is_identified_for_compatibility(): void
+    {
+        $plugin = app(PluginSignatureVerifier::class)->verifyAndRecord(
+            $this->registeredPlugin(), $this->manifest, $this->archivePath,
+            $this->signedPackage(), 'test-release-key', 'plugins/aec/course-management/1.0.0',
+        );
+        $metadata = $plugin->metadata ?? [];
+        unset($metadata['release_signature'], $metadata['signature_record_version']);
+        $plugin->forceFill(['metadata' => $metadata])->save();
+
+        $this->assertFalse(app(PluginSignatureVerifier::class)->verifyInstalledSignature($plugin->fresh()));
     }
 
     public function test_invalid_signature_is_rejected_without_recording_trust(): void

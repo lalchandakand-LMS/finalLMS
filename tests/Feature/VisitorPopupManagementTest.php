@@ -46,7 +46,7 @@ class VisitorPopupManagementTest extends TestCase
             $hashes[$relative] = hash_file('sha256', $item->getRealPath());
         }
 
-        config(['plugins.trusted_public_keys' => ['aec-release-2026' => 'dGVzdC1wdWJsaWMta2V5']]);
+        config(['plugins.trusted_public_keys' => ['aec-release-2026' => base64_encode(random_bytes(SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES))]]);
 
         $plugin = PluginInstallation::query()->where('plugin_key', 'aec.popup-ads')->first()
             ?? new PluginInstallation();

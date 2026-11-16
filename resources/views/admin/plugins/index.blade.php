@@ -65,6 +65,7 @@
                         <th>{{ __('Type') }}</th>
                         <th>{{ __('Status') }}</th>
                         <th>{{ __('Signature') }}</th>
+                        <th>{{ __('Health') }}</th>
                         <th>{{ __('Installed') }}</th>
                         <th>{{ __('Actions') }}</th>
                     </tr>
@@ -91,13 +92,40 @@
                                     </form>
                                 </details>
                             @endif
+
+                            @if($plugin->versionHistory->isNotEmpty())
+                                <details style="margin-top:8px;">
+                                    <summary>{{ __('Version history') }}</summary>
+                                    <ol style="margin:8px 0 0;padding-left:20px;">
+                                        @foreach($plugin->versionHistory->take(10) as $history)
+                                            <li style="margin:4px 0;">
+                                                <strong>{{ ucfirst(str_replace('_', ' ', $history->action)) }}</strong>
+                                                <span class="muted">v{{ $history->version }} · {{ $history->created_at?->format('Y-m-d H:i') }}</span>
+                                                @if($history->actor)
+                                                    <span class="muted">· {{ $history->actor->name }}</span>
+                                                @endif
+                                            </li>
+                                        @endforeach
+                                    </ol>
+                                </details>
+                            @endif
                         </td>
                         <td><code>{{ $plugin->version }}</code></td>
                         <td>{{ ucfirst($plugin->type) }}</td>
                         <td><span class="badge {{ $plugin->status === 'installed' ? 'success' : 'warning' }}">{{ ucfirst(str_replace('_', ' ', $plugin->status)) }}</span></td>
                         <td>{{ $plugin->signature_verified_at ? __('Verified') : __('Not verified') }}</td>
+                        <td>
+                            <span class="badge {{ $plugin->health_status === 'healthy' ? 'success' : ($plugin->health_status === 'failed' ? 'danger' : 'warning') }}">{{ ucfirst($plugin->health_status) }}</span>
+                            <div class="muted">{{ $plugin->last_health_check_at?->format('Y-m-d H:i') ?? __('Not checked') }}</div>
+                        </td>
                         <td>{{ $plugin->installed_at?->format('Y-m-d H:i') ?? '—' }}</td>
                         <td>
+                            @if(in_array($plugin->status, ['installed', 'inactive', 'active', 'failed'], true))
+                                <form method="POST" action="{{ route('admin.plugins.health-check', $plugin->plugin_key) }}" style="display:inline;">
+                                    @csrf
+                                    <button class="btn secondary" type="submit">{{ __('Run health check') }}</button>
+                                </form>
+                            @endif
                             @if(in_array($plugin->status, ['installed', 'inactive'], true))
                                 <form method="POST" action="{{ route('admin.plugins.activate', $plugin->plugin_key) }}" style="display:inline;" onsubmit="return confirm('{{ __('Activate this signed plugin? Its code will execute as trusted application code.') }}')">
                                     @csrf

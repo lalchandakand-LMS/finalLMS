@@ -122,6 +122,13 @@ PHP;
             'signature_key_id' => 'test-release-key',
         ]);
         $this->assertFileExists($this->finalPath.'/src/Plugin.php');
+        $this->assertDatabaseHas('plugin_version_history', [
+            'plugin_key' => 'aec.course-management',
+            'action' => 'installed',
+            'version' => '1.0.0',
+        ]);
+        $installedPlugin = PluginInstallation::query()->where('plugin_key', 'aec.course-management')->firstOrFail();
+        $this->assertNotEmpty($installedPlugin->metadata['release_signature'] ?? null);
         $this->assertDatabaseHas('activity_logs', [
             'user_id' => $admin->id,
             'event' => 'admin.plugins.installed',
@@ -261,6 +268,96 @@ PHP;
             'status' => 'installed',
         ]);
         $this->assertFileExists($this->finalPath.'/src/Plugin.php');
+
+        $this->actingAs($admin)->post(route('admin.plugins.activate', 'aec.course-management'))
+            ->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+        $this->actingAs($admin)->post(route('admin.plugins.deactivate', 'aec.course-management'))
+            ->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('plugin_version_history', ['plugin_key' => 'aec.course-management', 'action' => 'activated']);
+        $this->assertDatabaseHas('plugin_version_history', ['plugin_key' => 'aec.course-management', 'action' => 'deactivated']);
+    }
+
+
+    public function test_admin_can_run_plugin_health_check_and_record_version_history(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData())
+            ->assertRedirect(route('admin.plugins.index'));
+
+        $this->actingAs($admin)->post(route('admin.plugins.health-check', 'aec.course-management'))
+            ->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'health_status' => 'healthy',
+        ]);
+        $this->assertDatabaseHas('plugin_version_history', [
+            'plugin_key' => 'aec.course-management',
+            'action' => 'health_check_passed',
+        ]);
+
+        $this->actingAs($admin)->get(route('admin.plugins.index'))
+            ->assertOk()
+            ->assertSee('Version history')
+            ->assertSee('Run health check')
+            ->assertSee('Healthy');
+    }
+
+
+    public function test_successful_health_check_recovers_a_failed_plugin_to_inactive(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData())
+            ->assertRedirect(route('admin.plugins.index'));
+
+        app(\App\Services\Plugins\PluginLifecycle::class)->transition('aec.course-management', 'failed', [
+            'health_status' => 'failed',
+            'health_message' => 'A prior runtime check failed.',
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.plugins.health-check', 'aec.course-management'))
+            ->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'status' => 'inactive',
+            'health_status' => 'healthy',
+        ]);
+    }
+
+    public function test_health_check_failure_marks_inactive_plugin_unhealthy_when_signature_is_tampered(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData())
+            ->assertRedirect(route('admin.plugins.index'));
+        $this->actingAs($admin)->post(route('admin.plugins.activate', 'aec.course-management'))
+            ->assertRedirect(route('admin.plugins.index'));
+        $this->actingAs($admin)->post(route('admin.plugins.deactivate', 'aec.course-management'))
+            ->assertRedirect(route('admin.plugins.index'));
+
+        $plugin = PluginInstallation::query()->where('plugin_key', 'aec.course-management')->firstOrFail();
+        $metadata = $plugin->metadata ?? [];
+        $metadata['release_signature'] = base64_encode(random_bytes(SODIUM_CRYPTO_SIGN_BYTES));
+        $plugin->forceFill(['metadata' => $metadata])->save();
+
+        $this->actingAs($admin)->post(route('admin.plugins.health-check', 'aec.course-management'))
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'status' => 'inactive',
+            'health_status' => 'failed',
+        ]);
+        $this->assertDatabaseHas('plugin_version_history', [
+            'plugin_key' => 'aec.course-management',
+            'action' => 'health_check_failed',
+        ]);
     }
 
 
@@ -307,6 +404,10 @@ PHP;
             'status' => 'completed',
         ]);
         $this->assertDirectoryDoesNotExist($this->finalPath);
+        $this->assertDatabaseHas('plugin_version_history', [
+            'plugin_key' => 'test.universal-ai-assistant',
+            'action' => 'uninstalled',
+        ]);
     }
 
     public function test_non_admin_cannot_view_or_install_plugins(): void
@@ -315,6 +416,7 @@ PHP;
 
         $this->actingAs($student)->get(route('admin.plugins.index'))->assertForbidden();
         $this->actingAs($student)->post(route('admin.plugins.install'), [])->assertForbidden();
+        $this->actingAs($student)->post(route('admin.plugins.health-check', 'aec.course-management'))->assertForbidden();
         $this->assertDatabaseCount('plugin_registry', 0);
     }
 
