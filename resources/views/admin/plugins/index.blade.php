@@ -189,6 +189,13 @@
                                     </form>
                                 </details>
                             @endif
+                            @if(in_array($plugin->status, ['installed', 'inactive'], true) && $plugin->versionHistory->contains(fn ($history) => $history->action === 'package_update_snapshot' && $history->version !== $plugin->version))
+                                <form method="POST" action="{{ route('admin.plugins.rollback-package', $plugin->plugin_key) }}" style="display:inline;" onsubmit="return confirm('{{ __('Rollback to the retained previous package? This reverses the current version migrations. Create a database backup first.') }}')">
+                                    @csrf
+                                    <input type="hidden" name="confirm_rollback" value="1">
+                                    <button class="btn secondary" type="submit">{{ __('Rollback package version') }}</button>
+                                </form>
+                            @endif
                             @if(in_array($plugin->status, ['installed', 'inactive', 'failed'], true))
                                 <form method="POST" action="{{ route('admin.plugins.uninstall', $plugin->plugin_key) }}" style="display:inline;" onsubmit="return confirm('{{ __('Uninstall this plugin package? Conversation history, LMS data and migration records will be retained.') }}')">
                                     @csrf
