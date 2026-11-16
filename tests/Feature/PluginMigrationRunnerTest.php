@@ -94,7 +94,7 @@ return new class extends \Illuminate\Database\Migrations\Migration {
         \Illuminate\Support\Facades\Schema::create('plugin_migration_attempts', function (\Illuminate\Database\Schema\Blueprint $table): void {
             $table->id();
         });
-        \Illuminate\Support\Facades\DB::table('plugin_migration_attempts')->insert([]);
+        \Illuminate\Support\Facades\DB::table('plugin_migration_attempts')->insert(['id' => 1]);
         throw new \RuntimeException('Simulated failure after a DDL statement committed.');
     }
     public function down(): void {
