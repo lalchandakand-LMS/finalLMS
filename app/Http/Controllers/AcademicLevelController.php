@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AcademicLevel;
+use App\Models\Exam;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -18,11 +19,26 @@ class AcademicLevelController extends Controller
         return view('admin.academic-levels.index', compact('levels'));
     }
 
-    public function show(AcademicLevel $academicLevel): View
+    public function show(Request $request, AcademicLevel $academicLevel): View
     {
+        $filters = $request->validate([
+            'exam_search' => ['nullable', 'string', 'max:120'],
+        ]);
         $academicLevel->load(['courses.teacher', 'courses.batches.branch', 'courses.batches.teacher', 'courses.batches.exams', 'pages']);
+        $exams = Exam::query()
+            ->with(['batch.course'])
+            ->whereHas('batch.course', fn ($courses) => $courses->where('academic_level_id', $academicLevel->id))
+            ->when($filters['exam_search'] ?? null, function ($query, string $term): void {
+                $term = trim($term);
+                if ($term !== '') {
+                    $query->where('title', 'like', '%'.$term.'%');
+                }
+            })
+            ->latest('starts_at')
+            ->paginate(15)
+            ->withQueryString();
 
-        return view('admin.academic-levels.show', compact('academicLevel'));
+        return view('admin.academic-levels.show', compact('academicLevel', 'exams', 'filters'));
     }
 
     public function store(Request $request): RedirectResponse
