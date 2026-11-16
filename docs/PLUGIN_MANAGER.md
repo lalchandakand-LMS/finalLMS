@@ -17,11 +17,11 @@ Admin workspace.
 5. The secure archive installer rechecks the checksum and safely extracts the
    package into plugins/vendor/plugin/version.
 6. The registry is marked installed only after the atomic filesystem move.
-7. The staged ZIP is deleted. The action is written to the admin activity log. No plugin entrypoint or migration is executed during installation.
+7. The staged ZIP is deleted. The action is written to the admin activity log. No plugin entrypoint is executed. After extraction and installed-file integrity metadata are recorded, signed migrations are run while the plugin remains inactive.
 
 A failed, not-yet-installed registry entry can be retried after correcting the
 package or signature. An existing installed version cannot be overwritten.
-In-place updates are not enabled yet. Signed plugin migrations are executed only during explicit activation preflight, after installed-file integrity verification; installing a package alone does not mutate application data.
+In-place updates are not enabled yet. Signed migrations run after package extraction and installed-file integrity verification, before installation reports success; the plugin remains inactive until explicit Admin activation. If a migration fails, the verified package and failed migration record are retained because MySQL DDL may have partially committed and deleting the source would prevent safe recovery.
 
 ## Example manifest
 
@@ -49,13 +49,22 @@ PluginSignatureVerifier::payloadForSignature($manifest, $sha256). See
 PLUGIN_SIGNATURE_VERIFICATION.md for the trusted public key configuration and
 canonical signing rules.
 
-## Not yet enabled
+## Available lifecycle controls and remaining gaps
 
-The Manager deliberately does not offer activate, deactivate, update or uninstall
-controls yet. The isolated runtime must first enforce plugin boundaries for web
-routes, API routes, queued jobs, schedules, events and portal navigation. A
-plugin being installed does not mean its PHP entrypoint is loaded or executed.
-Manifest permissions are stored for review and are not automatically granted.
+The Admin Manager supports signed-package install, permission grants, activate,
+deactivate, health checks and uninstall. Activation rechecks the trusted key,
+manifest identity, dependencies and installed-file hashes, skips previously
+completed migrations and transitions the registry to active. The runtime loads
+only active verified packages. Deactivation blocks plugin routes and preserves
+installed files and application data. Uninstall removes executable package files
+while retaining application data and migration history.
+
+In-place package update and rollback controls are not implemented yet. Do not
+overwrite an installed version or manually replace plugin files. Prepare a new
+signed version and complete a reviewed staging migration/rollback process before
+enabling update support. A plugin being installed does not mean its PHP entrypoint
+is loaded or executed. Manifest permissions are stored for review and are not
+automatically granted.
 
 ## Portal resource authorization
 
