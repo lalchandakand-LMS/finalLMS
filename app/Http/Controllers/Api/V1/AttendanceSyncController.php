@@ -244,6 +244,7 @@ class AttendanceSyncController extends Controller
 
         return DB::transaction(function () use ($attendance, $teacher, $data, $capturedAt): JsonResponse {
             $row = Attendance::query()->whereKey($attendance->id)->lockForUpdate()->firstOrFail();
+            abort_unless($row->student?->branch_id === null || (int) $row->student->branch_id === (int) $row->batch->branch_id, 403, 'The student is outside the batch branch.');
             $activeEnrollment = $row->batch->enrollments()
                 ->where('user_id', $row->student_id)
                 ->where('status', 'active')
@@ -355,6 +356,7 @@ class AttendanceSyncController extends Controller
 
         return DB::transaction(function () use ($student, $qrSession, $data, $capturedAt): JsonResponse {
             $batch = Batch::query()->findOrFail($qrSession->batch_id);
+            abort_unless((int) $batch->teacher_id === (int) $qrSession->created_by, 403, 'The QR session owner is no longer assigned to this batch.');
             abort_unless($student->branch_id === null || (int) $student->branch_id === (int) $batch->branch_id, 403, 'This batch is outside your branch.');
 
             $enrolled = $batch->enrollments()
