@@ -142,7 +142,7 @@
                     <a href="{{ route('admin.branch-workspace.students.index') }}" class="btn secondary">{{ __('View branch students') }}</a>
                 @endif
                 @if($user->hasAdminPermission('branch.attendance'))
-                    <a href="{{ route('admin.branch-workspace.attendance.reports') }}" class="btn secondary">{{ __('View branch attendance reports') }}</a>
+                    <a href="{{ route('admin.branch-workspace.attendance.batches.index') }}" class="btn secondary">{{ __('Manage branch attendance') }}</a>
                 @endif
             </section>
         @endif
