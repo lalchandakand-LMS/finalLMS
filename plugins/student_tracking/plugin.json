@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "key": "student_tracking",
+  "name": "Student Tracking & Insights",
+  "description": "Privacy-first academic progress, attendance, engagement and at-risk insights for authorized LMS portals.",
+  "type": "first_party",
+  "status": "metadata_only",
+  "provider": null,
+  "dependencies": [
+    "core",
+    "identity",
+    "student_management",
+    "branch_management",
+    "attendance",
+    "course_management",
+    "exam_management",
+    "assignment_management",
+    "academic_levels"
+  ],
+  "permissions": [
+    "student_tracking.view",
+    "student_tracking.export",
+    "student_tracking.manage_rules",
+    "student_tracking.add_notes"
+  ],
+  "portals": [
+    "admin",
+    "branch",
+    "teacher",
+    "student",
+    "guardian"
+  ],
+  "routes": [
+    "admin.student-tracking.*",
+    "branch.student-tracking.*",
+    "teacher.student-tracking.*",
+    "student.tracking.*",
+    "guardian.student-tracking.*"
+  ],
+  "settings": [
+    "inactive_days_threshold",
+    "consecutive_absence_threshold",
+    "declining_score_threshold",
+    "overdue_assignment_threshold"
+  ],
+  "events": [
+    "attendance.recorded",
+    "lesson.completed",
+    "exam.attempt.submitted",
+    "assignment.submission.created",
+    "enrollment.status.changed"
+  ],
+  "directory": "plugins/student_tracking",
+  "safety": {
+    "trusted_code_only": true,
+    "execute_uploaded_code": false,
+    "disable_preserves_data": true,
+    "no_gps_or_hidden_surveillance": true,
+    "guardian_access_requires_student_consent": true
+  }
+}
