@@ -112,6 +112,9 @@ class UniversalAiAssistantPluginTest extends TestCase
             'id' => $retry['id'],
             'status' => 'completed',
             'actual_tokens' => 900,
+            'assistant_role' => 'student',
+            'provider' => 'openai-compatible',
+            'model' => 'test-model',
         ]);
         $this->assertDatabaseHas('ai_assistant_messages', [
             'conversation_id' => $conversationId,
