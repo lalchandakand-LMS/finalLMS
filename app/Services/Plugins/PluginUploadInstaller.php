@@ -204,13 +204,22 @@ final class PluginUploadInstaller
             throw new RuntimeException('This version directory already exists. Existing release files are never overwritten.');
         }
 
+        $originalStatus = $plugin->status;
         $oldVersionCandidate = clone $plugin;
         $oldVersionCandidate->status = 'inactive';
+        $registrySwitched = false;
+        $newPackageInstalled = false;
         $stagingDirectory = $this->privateStagingDirectory();
         $archivePath = null;
         try {
             $stored = $upload->move($stagingDirectory, 'upload-'.bin2hex(random_bytes(24)).'.zip');
             $archivePath = $stored->getPathname();
+
+            // Reject an invalid release while the current registry pointer and
+            // schema are still untouched.
+            $this->signatureVerifier->verifyDetachedPackage(
+                $plugin, $manifest, $archivePath, $signatureBase64, $keyId, $finalPath
+            );
 
             $this->lifecycle->transition((string) $plugin->plugin_key, 'update_staged');
             $plugin = $plugin->fresh();
@@ -234,12 +243,14 @@ final class PluginUploadInstaller
                 'health_status' => 'unknown',
                 'health_message' => null,
             ])->save();
+            $registrySwitched = true;
 
             $this->lifecycle->transition((string) $plugin->plugin_key, 'staged');
             $verified = $this->signatureVerifier->verifyAndRecord(
                 $plugin->fresh(), $manifest, $archivePath, $signatureBase64, $keyId, $finalPath
             );
             $installed = $this->archiveInstaller->installVerifiedPackage($verified, $archivePath);
+            $newPackageInstalled = true;
 
             // The new signed package is now safely installed. Roll back the old
             // version's migrations using its immutable retained package, then
@@ -263,11 +274,27 @@ final class PluginUploadInstaller
             // partially changed DDL. The failed new package and old restore point
             // remain available for an explicit, verified recovery operation.
             $fresh = PluginInstallation::query()->where('plugin_key', $plugin->plugin_key)->first();
-            if ($fresh && in_array($fresh->status, ['update_staged', 'staged', 'installed'], true)) {
+            if ($registrySwitched && $fresh && ! $newPackageInstalled) {
+                // No new package was committed and old migrations were not
+                // touched; safely restore the exact old registry snapshot.
+                $fresh->forceFill([
+                    'name' => $snapshot['name'],
+                    'version' => $snapshot['version'],
+                    'type' => $snapshot['type'],
+                    'manifest' => $snapshot['manifest'],
+                    'package_sha256' => $snapshot['package_sha256'],
+                    'signature_key_id' => $snapshot['signature_key_id'],
+                    'signature_verified_at' => $snapshot['signature_verified_at'],
+                    'package_path' => $snapshot['package_path'],
+                    'metadata' => $snapshot['metadata'],
+                    'installed_at' => $snapshot['installed_at'],
+                    'status' => $originalStatus,
+                ])->save();
+            } elseif ($registrySwitched && $fresh && in_array($fresh->status, ['update_staged', 'staged', 'installed'], true)) {
                 try {
                     $this->lifecycle->transition((string) $fresh->plugin_key, 'failed', [
                         'health_status' => 'failed',
-                        'health_message' => 'Plugin update did not complete; previous version snapshot retained.',
+                        'health_message' => 'Plugin update did not complete after the new package was installed; manual database recovery may be required.',
                     ]);
                 } catch (Throwable) {
                     // Preserve the original failure.
