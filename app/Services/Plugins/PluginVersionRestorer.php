@@ -49,8 +49,8 @@ final class PluginVersionRestorer
             || ! is_string($snapshot['package_sha256']) || ! is_string($snapshot['signature_key_id'])) {
             throw new RuntimeException('The selected version snapshot contains invalid metadata.');
         }
-        if (version_compare($snapshot['version'], (string) $plugin->version, '>=')) {
-            throw new RuntimeException('Only an earlier installed version can be restored.');
+        if (hash_equals($snapshot['version'], (string) $plugin->version)) {
+            throw new RuntimeException('The selected version is already installed.');
         }
 
         $parts = explode('.', (string) $plugin->plugin_key, 2);
@@ -87,6 +87,18 @@ final class PluginVersionRestorer
         // requires manual database reconciliation; no registry switch occurs.
         $this->signatureVerifier->verifyInstalledSignature($plugin);
         $this->integrityVerifier->verify($plugin);
+        $this->history->recordSnapshot($plugin, $actor, [
+            'name' => $plugin->name,
+            'version' => $plugin->version,
+            'type' => $plugin->type,
+            'manifest' => $plugin->manifest,
+            'package_sha256' => $plugin->package_sha256,
+            'signature_key_id' => $plugin->signature_key_id,
+            'signature_verified_at' => $plugin->signature_verified_at?->toISOString(),
+            'package_path' => $plugin->package_path,
+            'metadata' => $plugin->metadata,
+            'installed_at' => $plugin->installed_at?->toISOString(),
+        ]);
         $this->migrationRunner->rollback($plugin);
 
         DB::transaction(function () use ($plugin, $snapshot): void {
