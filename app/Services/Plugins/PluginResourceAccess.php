@@ -144,7 +144,11 @@ final class PluginResourceAccess
 
             return $branchId === null
                 ? $this->denyQuery($query)
-                : $query->whereHas('batch', fn ($batches) => $batches->where('branch_id', $branchId));
+                : $query->whereHas('user', fn ($users) => $users->where('branch_id', $branchId))
+                    ->where(function ($enrollments) use ($branchId): void {
+                        $enrollments->whereNull('batch_id')
+                            ->orWhereHas('batch', fn ($batches) => $batches->where('branch_id', $branchId));
+                    });
         }
 
         if ($actor->isTeacher()) {
@@ -164,12 +168,12 @@ final class PluginResourceAccess
 
     private function allowsStudent(User $actor, User $student): bool
     {
-        if ((int) $actor->id === (int) $student->id) {
-            return true;
-        }
-
         if (! $student->isStudent()) {
             return false;
+        }
+
+        if ((int) $actor->id === (int) $student->id) {
+            return true;
         }
 
         if ($actor->isStudent()) {
@@ -263,10 +267,13 @@ final class PluginResourceAccess
         }
 
         if ($actor->isBranchManager()) {
-            return $this->hasActiveBranch($actor)
-                && $actor->branch_id !== null
-                && $enrollment->batch_id !== null
-                && Batch::query()->whereKey($enrollment->batch_id)->where('branch_id', $actor->branch_id)->exists();
+            if (! $this->hasActiveBranch($actor)
+                || (int) $enrollment->user()->value('branch_id') !== (int) $actor->branch_id) {
+                return false;
+            }
+
+            return $enrollment->batch_id === null
+                || Batch::query()->whereKey($enrollment->batch_id)->where('branch_id', $actor->branch_id)->exists();
         }
 
         if ($actor->isTeacher()) {

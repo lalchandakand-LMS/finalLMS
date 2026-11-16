@@ -54,6 +54,7 @@ class PluginResourceAccessTest extends TestCase
         $batchA = $this->batch($courseA, $teacher, $branchA, 'Branch A Batch');
         $batchB = $this->batch($courseB, $teacher, $branchB, 'Branch B Batch');
         $enrollmentA = Enrollment::query()->create(['user_id' => $studentA->id, 'course_id' => $courseA->id, 'batch_id' => $batchA->id, 'status' => 'active']);
+        $directEnrollmentA = Enrollment::query()->create(['user_id' => $studentA->id, 'course_id' => $courseA->id, 'status' => 'active']);
         Enrollment::query()->create(['user_id' => $studentB->id, 'course_id' => $courseB->id, 'batch_id' => $batchB->id, 'status' => 'active']);
 
         $access = app(PluginResourceAccess::class);
@@ -67,12 +68,15 @@ class PluginResourceAccessTest extends TestCase
         $this->assertSame([$studentA->id], $access->scopeQuery(User::query(), $manager)->pluck('id')->all());
         $this->assertSame([$courseA->id], $access->scopeQuery(Course::query(), $manager)->pluck('id')->all());
         $this->assertSame([$batchA->id], $access->scopeQuery(Batch::query(), $manager)->pluck('id')->all());
-        $this->assertSame([$enrollmentA->id], $access->scopeQuery(Enrollment::query(), $manager)->pluck('id')->all());
+        $this->assertEqualsCanonicalizing(
+            [$enrollmentA->id, $directEnrollmentA->id],
+            $access->scopeQuery(Enrollment::query(), $manager)->pluck('id')->all()
+        );
 
         $branchA->update(['is_active' => false]);
         $this->assertFalse($access->allows($manager, $studentA));
         $this->assertFalse($access->allows($manager, $batchA));
-        $this->assertFalse($access->allows($manager, $course));
+        $this->assertFalse($access->allows($manager, $courseA));
     }
 
     public function test_teacher_and_student_access_is_limited_to_assigned_courses_and_enrollments(): void
@@ -169,5 +173,6 @@ class PluginResourceAccessTest extends TestCase
 
         $this->assertTrue($access->allows($admin, $student));
         $this->assertFalse($access->allows($admin, new MediaAsset()));
+        $this->assertFalse($access->allows($student, $admin));
     }
 }
