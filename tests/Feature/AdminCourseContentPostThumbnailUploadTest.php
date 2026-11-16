@@ -16,7 +16,7 @@ class AdminCourseContentPostThumbnailUploadTest extends TestCase
 
     private function tinyPngUpload(string $name): UploadedFile
     {
-        $bytes = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j0S8AAAAASUVORK5CYII=', true);
+        $bytes = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGP4DwQACfsD/fteaysAAAAASUVORK5CYII=', true);
 
         return UploadedFile::fake()->createWithContent($name, $bytes ?: '');
     }
