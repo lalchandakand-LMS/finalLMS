@@ -56,7 +56,7 @@ class PluginMigrationRunner
 
     public function rollback(PluginInstallation $plugin): void
     {
-        if (! in_array($plugin->status, ['installed', 'inactive'], true)) {
+        if (! in_array($plugin->status, ['installed', 'inactive', 'update_staged'], true)) {
             throw new RuntimeException('Deactivate the plugin before rolling back its migrations.');
         }
         $this->integrityVerifier->verify($plugin);
