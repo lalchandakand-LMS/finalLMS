@@ -228,14 +228,14 @@ PHP);
         $file = $this->root.'/migrations/'.$name;
         file_put_contents($file, <<<'PHP'
 <?php
-return new class extends \\Illuminate\\Database\\Migrations\\Migration {
+return new class extends \Illuminate\Database\Migrations\Migration {
     public function up(): void {
-        \\Illuminate\\Support\\Facades\\Schema::create('plugin_interrupted_rollback_probe', function (\\Illuminate\\Database\\Schema\\Blueprint $table): void {
+        \Illuminate\Support\Facades\Schema::create('plugin_interrupted_rollback_probe', function (\Illuminate\Database\Schema\Blueprint $table): void {
             $table->id();
         });
     }
     public function down(): void {
-        \\Illuminate\\Support\\Facades\\Schema::dropIfExists('plugin_interrupted_rollback_probe');
+        \Illuminate\Support\Facades\Schema::dropIfExists('plugin_interrupted_rollback_probe');
     }
 };
 PHP);
