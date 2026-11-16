@@ -11,7 +11,8 @@
     "identity",
     "branch_management",
     "student_management",
-    "academic_levels"
+    "academic_levels",
+    "batch_management"
   ],
   "permissions": [],
   "routes": [
