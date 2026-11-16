@@ -2,13 +2,19 @@
 
 namespace Tests\Feature;
 
+use App\Models\AcademicLevel;
 use App\Models\Course;
 use App\Models\CourseCategory;
 use App\Models\CourseContentPost;
 use App\Models\CourseCurriculumItem;
+use App\Models\DownloadPermission;
 use App\Models\Enrollment;
+use App\Models\Order;
+use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class CourseContentStudioTest extends TestCase
