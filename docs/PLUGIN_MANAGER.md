@@ -49,13 +49,22 @@ PluginSignatureVerifier::payloadForSignature($manifest, $sha256). See
 PLUGIN_SIGNATURE_VERIFICATION.md for the trusted public key configuration and
 canonical signing rules.
 
-## Not yet enabled
+## Available lifecycle controls and remaining gaps
 
-The Manager deliberately does not offer activate, deactivate, update or uninstall
-controls yet. The isolated runtime must first enforce plugin boundaries for web
-routes, API routes, queued jobs, schedules, events and portal navigation. A
-plugin being installed does not mean its PHP entrypoint is loaded or executed.
-Manifest permissions are stored for review and are not automatically granted.
+The Admin Manager currently supports signed-package install, permission grants,
+activate, deactivate and uninstall. Activation rechecks the trusted key,
+manifest identity, dependencies and installed-file hashes, runs the verified
+plugin migrations, and transitions the registry to active. The runtime loads
+only active verified packages. Deactivation blocks plugin routes and preserves
+installed files and application data. Uninstall removes executable package files
+while retaining application data and migration history.
+
+In-place update and rollback controls are not implemented yet. Do not overwrite
+an installed version or manually replace plugin files. Prepare a new signed
+version and complete a reviewed staging migration/rollback process before
+enabling update support. A plugin being installed does not mean its PHP
+entrypoint is loaded or executed. Manifest permissions are stored for review
+and are not automatically granted.
 
 ## Portal resource authorization
 
