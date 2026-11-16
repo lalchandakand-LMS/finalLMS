@@ -2,7 +2,7 @@
   "schema_version": 1,
   "key": "attendance",
   "name": "Attendance",
-  "description": "Online and offline-first student attendance. Planned capabilities include manual roster marking, authenticated offline sync, idempotency, conflict resolution and optional short-lived QR check-in.",
+  "description": "Online and offline-first attendance with bulk marking, audit history, authenticated idempotent sync, explicit conflict resolution, mandatory foreground location and short-lived signed QR check-in.",
   "type": "first_party",
   "status": "metadata_only",
   "provider": null,
@@ -19,17 +19,25 @@
     "student.attendance.*",
     "admin.attendance.*",
     "admin.batches.attendance.*",
-    "branch.attendance.*"
+    "branch.attendance.*",
+    "api.v1.instructor.attendance.*",
+    "api.v1.attendance.qr.*"
   ],
   "settings": [],
   "events": [],
   "directory": "plugins/attendance",
   "planned_capabilities": [
     "online_manual_roster",
+    "present_absent_late_excused_policy",
+    "correction_reason_audit",
     "offline_first_roster",
     "idempotent_sync",
     "conflict_resolution",
-    "short_lived_qr_checkin"
+    "short_lived_signed_qr_checkin",
+    "mandatory_foreground_location",
+    "academic_level_branch_course_batch_reports",
+    "student_self_service",
+    "consented_guardian_read_only"
   ],
   "safety": {
     "trusted_code_only": true,
@@ -38,6 +46,9 @@
     "server_is_source_of_truth": true,
     "offline_records_provisional_until_synced": true,
     "geofence_default_off": true,
-    "no_covert_location_tracking": true
+    "no_covert_location_tracking": true,
+    "mandatory_foreground_location": true,
+    "no_background_location_tracking": true,
+    "qr_tokens_short_lived": true
   }
 }
