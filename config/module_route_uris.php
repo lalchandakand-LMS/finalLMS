@@ -10,13 +10,22 @@
 */
 return [
     'mobile_api' => ['api/v1/*'],
+    'identity' => ['api/v1/auth/*'],
+    'mobile_verification' => ['api/v1/auth/verify-device', 'api/v1/auth/device-status'],
+    'student_management' => ['api/v1/my/*'],
+    'teacher_management' => ['api/v1/instructor/*'],
+    'batch_management' => ['api/v1/instructor/batches*'],
     'student_mobile_app' => [
         'api/v1/my/*', 'api/v1/checkout/*', 'api/v1/assignments/*',
         'api/v1/exams/*', 'api/v1/exam-attempts/*',
         'api/v1/question-set-attempts/*',
     ],
     'instructor_mobile_app' => ['api/v1/instructor/*'],
-    'course_management' => ['api/v1/courses', 'api/v1/courses/*'],
+    'course_management' => [
+        'api/v1/courses', 'api/v1/courses/*', 'api/v1/instructor/courses*',
+        'api/v1/my/courses*', 'api/v1/my/wishlist*', 'api/v1/courses/*/wishlist',
+        'api/v1/my/cart*', 'api/v1/my/courses/*/reviews', 'api/v1/courses/*/reviews',
+    ],
     'lesson_management' => [
         'api/v1/courses/*/lessons', 'api/v1/courses/*/lessons/*',
         'api/v1/instructor/courses/*/lessons', 'api/v1/instructor/courses/*/lessons/*',
@@ -25,9 +34,11 @@ return [
     'exam_management' => [
         'api/v1/exams/*', 'api/v1/exam-attempts/*',
         'api/v1/question-set-attempts/*', 'api/v1/instructor/exams/*',
+        'api/v1/my/quizzes*', 'api/v1/courses/*/question-sets/*',
     ],
     'live_classes' => ['api/v1/instructor/live-classes*', 'api/v1/instructor/batches/*/live-classes'],
-    'payments' => ['api/v1/checkout/*', 'api/v1/my/payments*', 'api/v1/my/invoices*'],
+    'payments' => ['api/v1/checkout/*', 'api/v1/my/payments*', 'api/v1/my/invoices*', 'api/v1/my/cart/checkout/*'],
+    'coupons_promotions' => ['api/v1/my/cart/coupon'],
     'notice_board' => ['api/v1/my/notices*', 'api/v1/instructor/notices*'],
     'support_center' => ['api/v1/my/support-tickets*'],
 ];
