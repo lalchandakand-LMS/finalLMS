@@ -52,7 +52,7 @@ class PluginHookRegistryTest extends TestCase
 
         $plugin = $this->activePlugin();
         $registry = app(PluginHookRegistry::class);
-        $registry->registerCapabilities($plugin->plugin_key, $plugin->manifest['capabilities']);
+        $registry->registerCapabilities($plugin->plugin_key, ['course-studio', 'admin.superuser']);
 
         $context = new PluginContext(app(), app('router'), $plugin, $registry);
         $context->registerHook('lms.dashboard.widgets', fn (array $payload) => 'widget-'.$payload['role'], 5);
@@ -62,6 +62,7 @@ class PluginHookRegistryTest extends TestCase
         ]);
 
         $this->assertTrue($registry->hasCapability('course-studio'));
+        $this->assertFalse($registry->hasCapability('admin.superuser'));
         $this->assertTrue($context->hasPermission('courses.view'));
         $this->assertTrue($context->hasCapability('course-studio'));
         $this->assertSame(['widget-teacher'], $registry->dispatch('lms.dashboard.widgets', ['role' => 'teacher']));

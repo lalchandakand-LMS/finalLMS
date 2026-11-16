@@ -64,9 +64,16 @@ final class PluginHookRegistry
      */
     public function registerCapabilities(string $pluginKey, array $capabilities): void
     {
+        $plugin = PluginInstallation::query()->where('plugin_key', $pluginKey)->first();
+        $declared = $plugin && is_array($plugin->manifest['capabilities'] ?? null)
+            ? $plugin->manifest['capabilities']
+            : [];
+
         $clean = [];
         foreach ($capabilities as $capability) {
-            if (is_string($capability) && trim($capability) !== '') {
+            if (is_string($capability)
+                && trim($capability) !== ''
+                && in_array(trim($capability), $declared, true)) {
                 $clean[] = trim($capability);
             }
         }
