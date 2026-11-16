@@ -152,7 +152,7 @@ class WebsiteBuilderTest extends TestCase
     }
 
 
-    public function test_admin_can_select_one_of_fifteen_homepage_presets_without_changing_content(): void
+    public function test_admin_can_select_one_of_sixteen_homepage_presets_without_changing_content(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
         Setting::setValue('home_title', 'Existing academy headline');
