@@ -47,7 +47,7 @@ class AdminSystemHealthTest extends TestCase
         $this->assertArrayHasKey('database', $results);
         $this->assertArrayHasKey('cache', $results);
         $this->assertArrayHasKey('storage', $results);
-        $this->assertArrayHasKey('queue_table', $results);
+        $this->assertArrayHasKey('queue', $results);
     }
 
     public function test_scheduler_heartbeat_command_records_execution_time(): void
