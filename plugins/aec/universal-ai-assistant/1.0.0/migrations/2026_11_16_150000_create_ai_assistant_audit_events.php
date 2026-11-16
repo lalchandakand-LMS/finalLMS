@@ -2,7 +2,9 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use RuntimeException;
 
 return new class extends Migration
 {
@@ -27,6 +29,9 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (Schema::hasTable('ai_assistant_audit_events') && DB::table('ai_assistant_audit_events')->exists()) {
+            throw new RuntimeException('Export or explicitly erase AI audit events before rolling back this migration.');
+        }
         Schema::dropIfExists('ai_assistant_audit_events');
     }
 };
