@@ -60,8 +60,6 @@ class PluginMigrationRunner
             throw new RuntimeException('Deactivate the plugin before rolling back its migrations.');
         }
         $this->integrityVerifier->verify($plugin);
-        $root = $this->migrationRoot($plugin);
-        if ($root === null) return;
 
         $unsettled = DB::table('plugin_migrations')->where([
             'plugin_key' => $plugin->plugin_key,
@@ -71,6 +69,9 @@ class PluginMigrationRunner
         if ($unsettled) {
             throw new RuntimeException('A failed or interrupted migration requires manual database recovery before package rollback.');
         }
+
+        $root = $this->migrationRoot($plugin);
+        if ($root === null) return;
 
         $records = DB::table('plugin_migrations')->where([
             'plugin_key' => $plugin->plugin_key,
