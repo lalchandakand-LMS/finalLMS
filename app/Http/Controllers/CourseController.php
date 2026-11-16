@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Certificate;
+use App\Models\AcademicLevel;
 use App\Models\Course;
 use App\Models\CourseCategory;
 use App\Models\CourseContentProgress;
