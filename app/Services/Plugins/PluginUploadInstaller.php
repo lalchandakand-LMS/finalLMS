@@ -197,11 +197,6 @@ final class PluginUploadInstaller
         ];
         app(PluginVersionHistoryRecorder::class)->recordSnapshot($plugin, auth()->user(), $snapshot);
 
-        // Each version owns its own migrations. Reverse the current version
-        // before applying the next one so a later restore can rebuild the exact
-        // target schema without leaving intermediate-version DDL behind.
-        $this->migrationRunner->rollback($plugin);
-
         [$vendor, $slug] = explode('.', (string) $plugin->plugin_key, 2);
         $finalPath = 'plugins/'.$vendor.'/'.str_replace('.', '-', $slug).'/'.$manifest['version'];
         $finalAbsolutePath = base_path($finalPath);
@@ -209,6 +204,8 @@ final class PluginUploadInstaller
             throw new RuntimeException('This version directory already exists. Existing release files are never overwritten.');
         }
 
+        $oldVersionCandidate = clone $plugin;
+        $oldVersionCandidate->status = 'inactive';
         $stagingDirectory = $this->privateStagingDirectory();
         $archivePath = null;
         try {
@@ -239,6 +236,12 @@ final class PluginUploadInstaller
             );
             $installed = $this->archiveInstaller->installVerifiedPackage($verified, $archivePath);
 
+            // The new signed package is now safely installed. Roll back the old
+            // version's migrations using its immutable retained package, then
+            // apply the new version's migrations. A failure never silently swaps
+            // registry pointers or deletes either release.
+            $this->migrationRunner->rollback($oldVersionCandidate);
+
             try {
                 $this->migrationRunner->migrate($installed);
             } catch (Throwable $exception) {
@@ -255,7 +258,7 @@ final class PluginUploadInstaller
             // partially changed DDL. The failed new package and old restore point
             // remain available for an explicit, verified recovery operation.
             $fresh = PluginInstallation::query()->where('plugin_key', $plugin->plugin_key)->first();
-            if ($fresh && in_array($fresh->status, ['update_staged', 'staged'], true)) {
+            if ($fresh && in_array($fresh->status, ['update_staged', 'staged', 'installed'], true)) {
                 try {
                     $this->lifecycle->transition((string) $fresh->plugin_key, 'failed', [
                         'health_status' => 'failed',
