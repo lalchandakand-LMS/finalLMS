@@ -92,6 +92,7 @@ final class PluginPackageRecovery
             'manifest' => $plugin->manifest,
             'package_sha256' => $plugin->package_sha256,
             'signature_key_id' => $plugin->signature_key_id,
+            'release_signature' => is_array($plugin->metadata) ? ($plugin->metadata['release_signature'] ?? null) : null,
             'signature_verified_at' => $plugin->signature_verified_at?->toISOString(),
             'files' => $files,
             'created_at' => now()->toIso8601String(),
@@ -206,6 +207,8 @@ final class PluginPackageRecovery
             if (! hash_equals((string) $plugin->plugin_key, (string) ($metadata['plugin_key'] ?? ''))
                 || ! hash_equals((string) $plugin->version, (string) ($metadata['version'] ?? ''))
                 || ! hash_equals($this->canonicalPackagePath($plugin), (string) ($metadata['package_path'] ?? ''))
+                || ! is_string($metadata['release_signature'] ?? null)
+                || ! hash_equals((string) ($plugin->metadata['release_signature'] ?? ''), $metadata['release_signature'])
                 || ! is_array($metadata['files'] ?? null) || $metadata['files'] === []) {
                 throw new RuntimeException('Recovery archive does not belong to this exact plugin version.');
             }
