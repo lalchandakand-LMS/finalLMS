@@ -216,6 +216,11 @@ final class PluginUploadInstaller
             $plugin = $plugin->fresh();
             $metadata = $plugin->metadata ?? [];
             unset($metadata['integrity_version'], $metadata['installed_file_hashes'], $metadata['release_signature'], $metadata['signature_record_version']);
+            $declaredPermissions = is_array($manifest['permissions'] ?? null) ? $manifest['permissions'] : [];
+            $metadata['granted_permissions'] = array_values(array_intersect(
+                is_array($metadata['granted_permissions'] ?? null) ? $metadata['granted_permissions'] : [],
+                $declaredPermissions,
+            ));
             $plugin->forceFill([
                 'name' => $manifest['name'],
                 'version' => $manifest['version'],
