@@ -72,7 +72,7 @@ class UniversalAiAssistantPluginTest extends TestCase
     public function test_daily_token_budget_reservations_are_atomic_and_released_or_settled(): void
     {
         $user = User::factory()->create(['role' => 'student']);
-        $conversationId = \\DB::table('ai_assistant_conversations')->insertGetId([
+        $conversationId = \DB::table('ai_assistant_conversations')->insertGetId([
             'user_id' => $user->id,
             'assistant_role' => 'student',
             'title' => 'Budget reservation test',
@@ -94,7 +94,7 @@ class UniversalAiAssistantPluginTest extends TestCase
         $this->assertNotNull($retry);
 
         AssistantTokenBudget::settle($retry['id'], 900, function () use ($conversationId): void {
-            \\DB::table('ai_assistant_messages')->insert([
+            \DB::table('ai_assistant_messages')->insert([
                 'conversation_id' => $conversationId,
                 'message_role' => 'assistant',
                 'content' => 'A response',
