@@ -12,7 +12,12 @@
     "branch_management"
   ],
   "permissions": [],
-  "routes": [],
+  "routes": [
+    "admin.students.*",
+    "admin.student-applications.*",
+    "students.*",
+    "students.summary"
+  ],
   "settings": [],
   "events": [],
   "directory": "plugins/student_management",
