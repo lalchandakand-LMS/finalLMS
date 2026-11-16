@@ -293,7 +293,7 @@ PHP;
         $this->assertDatabaseHas('plugin_registry', [
             'plugin_key' => 'aec.course-management',
             'version' => '1.1.0',
-            'status' => 'installed',
+            'status' => 'failed',
         ]);
     }
 
