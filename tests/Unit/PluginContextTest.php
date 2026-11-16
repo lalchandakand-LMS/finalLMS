@@ -18,12 +18,12 @@ class PluginContextTest extends TestCase
         ]);
 
         $context = new PluginContext(app(), app('router'), $plugin);
-        $context->apiRoutesForPortal('student', 'api/v1/plugins/mobile-test', 'api.plugins.mobile_test.', function (): void {
+        $context->apiRoutesForPortal('student', 'api/v1/plugins/aec/mobile-test', 'api.plugins.mobile_test.', function (): void {
             Route::get('/health', fn () => response()->json(['ok' => true]))->name('health');
         }, 'mobile.read');
 
         $route = collect(app('router')->getRoutes()->getRoutes())
-            ->first(fn ($candidate) => $candidate->uri() === 'api/v1/plugins/mobile-test/health');
+            ->first(fn ($candidate) => $candidate->uri() === 'api/v1/plugins/aec/mobile-test/health');
 
         $this->assertNotNull($route);
         $this->assertContains('api', $route->middleware());
@@ -46,7 +46,7 @@ class PluginContextTest extends TestCase
 
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('student and teacher mobile portals');
-        $context->apiRoutesForPortal('guardian', 'api/v1/plugins/guardian-test', 'api.plugins.guardian_test.', function (): void {
+        $context->apiRoutesForPortal('guardian', 'api/v1/plugins/aec/guardian-api-test', 'api.plugins.guardian_test.', function (): void {
             Route::get('/health', fn () => response()->json(['ok' => true]))->name('health');
         }, 'guardian.read');
     }
