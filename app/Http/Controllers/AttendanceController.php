@@ -60,7 +60,7 @@ class AttendanceController extends Controller
                 ? route('admin.batches.attendance.store', $batch)
                 : route('teacher.batches.attendance.store', $batch));
         $attendanceBackUrl = $user->isBranchManager()
-            ? route('admin.branch-workspace.batches.index')
+            ? route('admin.branch-workspace.attendance.batches.index')
             : ($user->isAdmin() ? route('admin.batches.index') : route('teacher.batches.index'));
         $attendanceReportUrl = $user->isBranchManager()
             ? route('admin.branch-workspace.attendance.reports')
@@ -176,6 +176,23 @@ class AttendanceController extends Controller
             ->with('success', 'Attendance saved successfully.');
     }
 
+
+
+    public function branchBatches(Request $request): View
+    {
+        $manager = $request->user();
+        abort_unless($manager?->isBranchManager()
+            && $manager->branch_id
+            && $manager->hasAdminPermission('branch.attendance'), 403);
+
+        $batches = Batch::query()
+            ->with('course:id,title')
+            ->where('branch_id', $manager->branch_id)
+            ->orderBy('title')
+            ->paginate(25);
+
+        return view('attendance.branch-batches', compact('batches'));
+    }
 
     public function report(Request $request): View
     {
