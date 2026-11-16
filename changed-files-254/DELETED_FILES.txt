@@ -1,0 +1,5 @@
+app/Http/Controllers/AdminVisitorPopupController.php
+app/Models/VisitorPopup.php
+resources/views/admin/visitor-popups/form.blade.php
+resources/views/admin/visitor-popups/index.blade.php
+resources/views/components/visitor-promo-popup.blade.php
