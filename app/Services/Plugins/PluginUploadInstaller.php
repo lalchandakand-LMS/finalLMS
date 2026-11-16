@@ -179,7 +179,9 @@ final class PluginUploadInstaller
         }
 
         // Verify and retain a complete restore point before changing registry metadata.
-        $this->signatureVerifier->verifyInstalledSignature($plugin);
+        if (! $this->signatureVerifier->verifyInstalledSignature($plugin)) {
+            throw new RuntimeException('The current plugin release has no re-verifiable detached signature and cannot be updated safely.');
+        }
         app(PluginIntegrityVerifier::class)->verify($plugin);
         $snapshot = [
             'name' => $plugin->name,
@@ -194,6 +196,11 @@ final class PluginUploadInstaller
             'installed_at' => $plugin->installed_at?->toISOString(),
         ];
         app(PluginVersionHistoryRecorder::class)->recordSnapshot($plugin, auth()->user(), $snapshot);
+
+        // Each version owns its own migrations. Reverse the current version
+        // before applying the next one so a later restore can rebuild the exact
+        // target schema without leaving intermediate-version DDL behind.
+        $this->migrationRunner->rollback($plugin);
 
         [$vendor, $slug] = explode('.', (string) $plugin->plugin_key, 2);
         $finalPath = 'plugins/'.$vendor.'/'.str_replace('.', '-', $slug).'/'.$manifest['version'];
