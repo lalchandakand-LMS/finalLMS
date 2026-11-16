@@ -101,7 +101,7 @@ class AttendanceController extends Controller
         }
 
         $capturedAt = \Illuminate\Support\Carbon::parse($validated['location_captured_at']);
-        if ($capturedAt->greaterThan(now()->addMinutes(5))) {
+        if ($capturedAt->greaterThan(now()->addMinutes(5)) || $capturedAt->lessThan(now()->subMinutes((int) config('attendance.online_location_max_age_minutes', 10)))) {
             return back()->withErrors(['location_captured_at' => 'Invalid location capture time.'])->withInput();
         }
 
