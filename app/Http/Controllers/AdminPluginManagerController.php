@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\PluginInstallation;
+use App\Models\PluginVersionHistory;
 use App\Services\Plugins\PluginIntegrityVerifier;
 use App\Services\Plugins\PluginLifecycle;
 use App\Services\Plugins\PluginManifestValidator;
@@ -121,6 +122,53 @@ class AdminPluginManagerController extends Controller
 
         return redirect()->route('admin.plugins.index')->with('success',
             __('Plugin package verified and installed. Review its permissions before activation.'));
+    }
+
+    public function updatePackage(
+        Request $request,
+        string $key,
+        PluginUploadInstaller $installer,
+        PluginIntegrityVerifier $integrityVerifier,
+        PluginVersionHistoryRecorder $history,
+    ): RedirectResponse {
+        $validated = $request->validate([
+            'package' => ['required', 'file', 'max:51200'],
+            'manifest' => ['required', 'string', 'max:32768'],
+            'signature' => ['required', 'string', 'max:512'],
+            'key_id' => ['required', 'string', 'max:120'],
+            'confirm_update' => ['required', 'accepted'],
+        ]);
+
+        try {
+            $plugin = $installer->update(
+                $request->file('package'),
+                $validated['manifest'],
+                $validated['signature'],
+                $validated['key_id'],
+                $key,
+                $integrityVerifier,
+                $history,
+            );
+        } catch (InvalidArgumentException $exception) {
+            $this->recordFailure($request, 'admin.plugins.update_failed');
+            return back()->withInput($request->except('package'))->with('error', $exception->getMessage());
+        } catch (Throwable $exception) {
+            report($exception);
+            $this->recordFailure($request, 'admin.plugins.update_failed');
+            return back()->with('error', __('Plugin update failed safely. The previous package was retained; run a health check and review the activity log.'));
+        }
+
+        $history->record($plugin, 'updated', $request->user(), [
+            'previous_version' => PluginVersionHistory::query()
+                ->where('plugin_key', $plugin->plugin_key)
+                ->where('action', 'package_update_snapshot')
+                ->latest('created_at')
+                ->value('version'),
+        ]);
+        $this->audit($request, 'admin.plugins.updated', 'Updated signed plugin '.$plugin->plugin_key.' to version '.$plugin->version);
+
+        return redirect()->route('admin.plugins.index')->with('success',
+            __('Signed plugin package updated. The previous version was retained; review health and permissions before activation.'));
     }
 
     public function activate(
