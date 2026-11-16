@@ -69,6 +69,7 @@ final class AssistantTokenBudget
                 ->where('budget_date', $date)
                 ->where('user_id', $userId)
                 ->where('status', 'pending')
+                ->where('prompt_persisted', false)
                 ->where('expires_at', '>', now())
                 ->count();
 
@@ -106,12 +107,39 @@ final class AssistantTokenBudget
                 'completion_limit' => $completionLimit,
                 'status' => 'pending',
                 'actual_tokens' => null,
+                'prompt_persisted' => false,
                 'expires_at' => now()->addMinutes(5),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
 
             return ['id' => (int) $id, 'completion_limit' => $completionLimit];
+        }, 3);
+    }
+
+    /**
+     * Persist a user prompt and mark its request reservation in one transaction.
+     */
+    public static function persistPrompt(int $reservationId, callable $persistPrompt): void
+    {
+        DB::transaction(function () use ($reservationId, $persistPrompt): void {
+            $reservation = DB::table('ai_assistant_token_reservations')
+                ->where('id', $reservationId)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $reservation || $reservation->status !== 'pending') {
+                throw new RuntimeException('The AI token reservation is no longer active.');
+            }
+
+            $persistPrompt();
+
+            DB::table('ai_assistant_token_reservations')
+                ->where('id', $reservationId)
+                ->update([
+                    'prompt_persisted' => true,
+                    'updated_at' => now(),
+                ]);
         }, 3);
     }
 
