@@ -18,7 +18,7 @@ final class PluginLifecycle
         'active' => ['inactive', 'update_staged', 'failed'],
         'inactive' => ['active', 'update_staged', 'uninstalled', 'failed'],
         'update_staged' => ['staged', 'installed', 'active', 'inactive', 'failed'],
-        'failed' => ['inactive', 'uninstalled'],
+        'failed' => ['inactive', 'update_staged', 'uninstalled'],
         'uninstalled' => ['failed'],
     ];
 
