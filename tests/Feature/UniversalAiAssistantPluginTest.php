@@ -482,7 +482,7 @@ class UniversalAiAssistantPluginTest extends TestCase
             ], 200),
         ]);
 
-        $response = (new \Aloms\UniversalAiAssistant\AdminSettingsController())->models();
+        $response = (new \Aloms\UniversalAiAssistant\AdminSettingsController())->models(app(\App\Contracts\Ai\AiProvider::class));
         $payload = $response->getData(true);
 
         $this->assertSame(200, $response->getStatusCode());
