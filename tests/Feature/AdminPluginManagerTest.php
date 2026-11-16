@@ -217,6 +217,35 @@ PHP;
         ]);
     }
 
+    public function test_invalid_update_signature_restores_previous_package_and_keeps_plugin_inactive(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData())
+            ->assertRedirect(route('admin.plugins.index'));
+
+        $this->manifest['version'] = '1.1.0';
+        $data = $this->uploadData();
+        $data['signature'] = base64_encode(random_bytes(SODIUM_CRYPTO_SIGN_BYTES));
+        $data['confirm_update'] = '1';
+
+        $this->actingAs($admin)->post(route('admin.plugins.update-package', 'aec.course-management'), $data)
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'version' => '1.0.0',
+            'status' => 'inactive',
+        ]);
+        $this->assertFileExists($this->finalPath.'/src/Plugin.php');
+        $this->assertDirectoryDoesNotExist(base_path('plugins/aec/course-management/1.1.0'));
+        $this->assertDatabaseHas('plugin_version_history', [
+            'plugin_key' => 'aec.course-management',
+            'version' => '1.0.0',
+            'action' => 'package_update_snapshot',
+        ]);
+    }
+
     public function test_active_plugin_cannot_be_updated_until_it_is_deactivated(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
