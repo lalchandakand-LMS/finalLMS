@@ -62,10 +62,14 @@ Manifest permissions are stored for review and are not automatically granted.
 Plugin controllers must protect every route that loads an individual LMS resource through route model binding. Add the resource middleware to the route after declaring the route parameter:
 
 ```php
-Route::get('/courses/{course}', [CourseController::class, 'show'])
-    ->middleware('plugin.resource:course')
-    ->name('courses.show');
+$context->routesForPortal('teacher', 'teacher/plugin-courses', 'teacher.plugin-courses.', function (): void {
+    Route::get('/{course:slug}', [CourseController::class, 'show'])
+        ->middleware('plugin.resource:course')
+        ->name('show');
+}, 'course.read');
 ```
+
+The plugin manifest must declare `course.read` in its `permissions` list, and a root Admin must grant it in Plugin Manager. The portal group still applies the plugin-active, authenticated, verified and role checks; the resource middleware adds the per-record scope.
 
 The middleware accepts only bound Eloquent models and currently supports `User` (student records), `Course`, `Batch` and `Enrollment`. Unknown model types and unauthorized records return 404. Root Admin can access supported resources; Branch Managers are restricted to their active branch; Teachers to assigned courses/batches and their enrolled students; Students to their own enrollments; Guardians to students connected by an approved active guardian link.
 
