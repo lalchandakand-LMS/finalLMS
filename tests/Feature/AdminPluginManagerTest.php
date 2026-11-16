@@ -268,6 +268,14 @@ PHP;
             'status' => 'installed',
         ]);
         $this->assertFileExists($this->finalPath.'/src/Plugin.php');
+
+        $this->actingAs($admin)->post(route('admin.plugins.activate', 'aec.course-management'))
+            ->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+        $this->actingAs($admin)->post(route('admin.plugins.deactivate', 'aec.course-management'))
+            ->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+
         $this->assertDatabaseHas('plugin_version_history', ['plugin_key' => 'aec.course-management', 'action' => 'activated']);
         $this->assertDatabaseHas('plugin_version_history', ['plugin_key' => 'aec.course-management', 'action' => 'deactivated']);
     }
