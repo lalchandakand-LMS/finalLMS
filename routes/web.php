@@ -291,6 +291,8 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::patch('/modules/{key}', [AdminModuleRegistryController::class, 'update'])->where('key', '[a-z_]+')->middleware('throttle:20,1')->name('admin.modules.update');
         Route::get('/plugins', [AdminPluginManagerController::class, 'index'])->name('admin.plugins.index');
         Route::post('/plugins/install', [AdminPluginManagerController::class, 'install'])->middleware('throttle:3,10')->name('admin.plugins.install');
+        Route::post('/plugins/{key}/update', [AdminPluginManagerController::class, 'updateVersion'])->where('key', '[a-z0-9.-]+')->middleware('throttle:2,10')->name('admin.plugins.update');
+        Route::post('/plugins/{key}/restore/{snapshotId}', [AdminPluginManagerController::class, 'restoreVersion'])->where(['key' => '[a-z0-9.-]+', 'snapshotId' => '[0-9]+'])->middleware('throttle:2,10')->name('admin.plugins.restore');
         Route::put('/plugins/{key}/permissions', [AdminPluginManagerController::class, 'updatePermissions'])->where('key', '[a-z0-9.-]+')->middleware('throttle:10,1')->name('admin.plugins.permissions');
         Route::post('/plugins/{key}/health-check', [AdminPluginManagerController::class, 'healthCheck'])->where('key', '[a-z0-9.-]+')->middleware('throttle:10,1')->name('admin.plugins.health-check');
         Route::post('/plugins/{key}/rollback-migrations', [AdminPluginManagerController::class, 'rollbackMigrations'])->where('key', '[a-z0-9.-]+')->middleware('throttle:2,10')->name('admin.plugins.rollback-migrations');
