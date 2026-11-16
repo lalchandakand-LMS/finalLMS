@@ -1,6 +1,6 @@
 # Online and Offline Attendance Plugin — Implementation Contract
 
-Status: backend offline-sync foundation implemented; remaining online UI, QR, reporting, mobile client and full plugin lifecycle work is tracked in issue #282.
+Status: online web roster, correction audit, scoped reports, authenticated offline sync API, explicit conflict resolution and signed short-lived QR backend are implemented on the feature branch. The encrypted mobile queue/automatic reconnect client, end-to-end device QA and full signed plugin lifecycle remain outstanding.
 
 ## Source of truth
 
@@ -27,7 +27,7 @@ The existing `attendances` table and `Attendance` model remain canonical. No par
 - The mobile app downloads only rosters and sessions the signed-in teacher is authorized to manage.
 - Pending records are stored locally using encrypted database/storage provided by the platform. Never put bearer tokens in attendance payloads or queue records.
 - Each operation includes a random UUID idempotency key, batch/session, student, date, status, location coordinates, accuracy and capture time.
-- The authenticated teacher sync endpoint accepts up to 100 operations per request and is rate-limited.
+- The authenticated teacher sync endpoint accepts up to 100 operations per request and is rate-limited. Offline records older than the configured retention window (default seven days) are rejected for manual review.
 - Server rechecks role, batch assignment, branch, active enrollment and attendance uniqueness at sync time.
 - Replaying the same key and same payload returns the original result; reusing a key with a different payload is rejected.
 - Results are per operation: synced, duplicate, conflict or failed. Client UI maps these to Pending, Synced, Conflict and Failed.
@@ -45,7 +45,7 @@ The existing `attendances` table and `Attendance` model remain canonical. No par
 
 - Student sees only their own attendance.
 - Guardian has read-only access only through an active, student-approved guardian link.
-- Reports are scoped server-side by Academic Level, branch, course, batch, date and student.
+- Reports are scoped server-side by Academic Level, branch, course, batch, date and student. The teacher, Branch Manager and admin report views apply their own server-side scopes.
 - Never expose raw device tokens, raw user-agent or unrelated session security metadata.
 
 ## Required acceptance tests
