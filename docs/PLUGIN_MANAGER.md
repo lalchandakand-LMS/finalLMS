@@ -49,13 +49,34 @@ PluginSignatureVerifier::payloadForSignature($manifest, $sha256). See
 PLUGIN_SIGNATURE_VERIFICATION.md for the trusted public key configuration and
 canonical signing rules.
 
-## Not yet enabled
+## Available lifecycle controls
 
-The Manager deliberately does not offer activate, deactivate, update or uninstall
-controls yet. The isolated runtime must first enforce plugin boundaries for web
-routes, API routes, queued jobs, schedules, events and portal navigation. A
-plugin being installed does not mean its PHP entrypoint is loaded or executed.
-Manifest permissions are stored for review and are not automatically granted.
+The Admin Plugin Manager supports signed package installation, permission grants,
+activation, deactivation, health checks and uninstall. Activation verifies the
+trusted signature, manifest identity, declared dependencies/conflicts and every
+installed-file hash before running the signed migrations. The plugin remains
+inactive when installation or migration fails. Third-party entrypoints are not
+loaded directly by the core runtime; registered plugin routes remain subject to
+plugin-active, permission and resource-scope middleware.
+
+Deactivation blocks plugin routes immediately and retains package files and LMS
+data. Uninstall removes the executable package only after the plugin is inactive;
+database records and migration history are retained. Admins can run health checks
+to revalidate signatures, dependencies and installed-file integrity. Package
+upgrade, multiple installed package versions and package-version rollback are
+not enabled. Migration rollback is separate from package rollback.
+
+## Encrypted plugin settings
+
+Plugin Manager lets an Admin save a plugin-specific key/value setting. Values are
+encrypted using Laravel's application encryption key before persistence. The
+manager displays setting names and update timestamps only; it never renders or
+returns decrypted values. Plugin code retrieves a value through
+PluginSettingsManager::get($plugin, $key). Settings remain stored when a plugin
+is deactivated or uninstalled so reinstall/recovery does not silently discard
+credentials. Protect APP_KEY and include it in encrypted-backup recovery
+procedures; changing it without re-encrypting settings makes stored values
+unreadable. Migration rollback refuses to drop a non-empty settings table.
 
 ## Portal resource authorization
 
