@@ -128,14 +128,16 @@ final class AssistantController
             $responseTokenLimit = $reservation['completion_limit'];
             $reservationId = $reservation['id'];
 
-            DB::table('ai_assistant_messages')->insert([
-                'conversation_id' => $conversation->id,
-                'message_role' => 'user',
-                'content' => $message,
-                'token_count' => null,
-                'model' => null,
-                'created_at' => now(),
-            ]);
+            AssistantTokenBudget::persistPrompt($reservationId, function () use ($conversation, $message): void {
+                DB::table('ai_assistant_messages')->insert([
+                    'conversation_id' => $conversation->id,
+                    'message_role' => 'user',
+                    'content' => $message,
+                    'token_count' => null,
+                    'model' => null,
+                    'created_at' => now(),
+                ]);
+            });
 
             $response = Http::withToken($apiKey)->acceptJson()->timeout(40)->withOptions(array_merge([
                 'allow_redirects' => false,
