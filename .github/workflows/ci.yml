@@ -38,7 +38,7 @@ jobs:
           coverage: none
       - name: Lint PHP source files
         run: |
-          find app bootstrap config database plugins public routes tests .github/scripts -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          find app bootstrap config database plugins public routes tests tools .github/scripts -type f -name '*.php' -print0 | xargs -0 -n1 php -l
           php -l artisan
       - uses: actions/setup-node@v5
         with:
