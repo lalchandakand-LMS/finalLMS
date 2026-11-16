@@ -27,6 +27,7 @@ return new class extends Migration
                 $table->unsignedInteger('completion_limit');
                 $table->string('status', 16)->default('pending');
                 $table->unsignedInteger('actual_tokens')->nullable();
+                $table->boolean('prompt_persisted')->default(false);
                 $table->timestamp('expires_at')->index();
                 $table->timestamps();
                 $table->index(['budget_date', 'status'], 'ai_assistant_reservations_budget_idx');
