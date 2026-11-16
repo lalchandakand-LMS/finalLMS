@@ -17,24 +17,19 @@ class PublicPopupController extends Controller
             return response()->json(['popup' => null]);
         }
 
-        $validated = $request->validate([
-            'path' => ['nullable', 'string', 'max:255'],
-            'course_id' => ['nullable', 'integer', 'min:1'],
-            'batch_id' => ['nullable', 'integer', 'min:1'],
-        ]);
-
-        $rawPath = isset($validated['path']) ? trim((string) $validated['path']) : null;
-        $overridePath = null;
-        if ($rawPath !== null && $rawPath !== '') {
-            $overridePath = '/'.ltrim(str_replace(['..', '\\'], '', $rawPath), '/');
-        }
-
+        // This endpoint cannot verify which page initiated the request. Never accept
+        // caller-supplied path/course/batch IDs as trusted targeting context.
+        // Page-specific campaigns are rendered by the server-side layout hook, where
+        // the actual route, route models and enrollment are authoritative.
         $consentGranted = $request->cookie('marketing_consent') === 'accepted';
-        $courseId = isset($validated['course_id']) ? (int) $validated['course_id'] : null;
-        $batchId = isset($validated['batch_id']) ? (int) $validated['batch_id'] : null;
 
         $candidates = PopupCampaign::query()
             ->currentlyEligible()
+            ->whereNull('target_course_id')
+            ->whereNull('target_batch_id')
+            ->where(function ($query): void {
+                $query->whereNull('target_paths')->orWhere('target_paths', '');
+            })
             ->with(['image', 'mobileImage', 'events'])
             ->orderByDesc('priority')
             ->latest('id')
@@ -42,7 +37,7 @@ class PublicPopupController extends Controller
             ->get();
 
         $matched = $candidates->first(fn (PopupCampaign $campaign): bool =>
-            $campaign->matchesRequestContext($request, $overridePath, $courseId, $batchId)
+            $campaign->matchesRequestContext($request)
         );
 
         return response()->json([

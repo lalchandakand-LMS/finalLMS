@@ -335,13 +335,21 @@ class VisitorPopupManagementTest extends TestCase
             ->assertSee('Admin-only preview');
         $this->actingAs($studentInBranch)->get(route('admin.visitor-popups.preview', $draftPopup->id))->assertForbidden();
 
-        // Wrong user or excluded path -> no match; matching student on /courses -> returns targeted campaign.
-        $this->actingAs($otherStudent)->getJson('/popups/active?path=/courses')->assertOk()->assertJson(['popup' => null]);
-        $this->actingAs($studentInBranch)->getJson('/popups/active?path=/courses/excluded')->assertOk()->assertJson(['popup' => null]);
-        $this->actingAs($studentInBranch)->getJson('/popups/active?path=/courses')
+        // Public API callers cannot forge page/course/batch context to reveal a targeted campaign.
+        $this->actingAs($studentInBranch)
+            ->getJson('/popups/active?path=/courses&course_id='.$course->id.'&batch_id=999999')
             ->assertOk()
-            ->assertJsonPath('popup.id', $targetedPopup->id)
-            ->assertJsonPath('popup.title', 'Branch Course Offer');
+            ->assertJson(['popup' => null]);
+        $this->actingAs($otherStudent)
+            ->getJson('/popups/active?path=/courses&course_id='.$course->id)
+            ->assertOk()
+            ->assertJson(['popup' => null]);
+
+        // The real course page uses server-verified route/enrollment/path context and can render it.
+        $this->actingAs($studentInBranch)->get(route('courses.index'))
+            ->assertOk()
+            ->assertSee('Branch Course Offer');
+        $this->actingAs($studentInBranch)->get('/courses/excluded')->assertNotFound();
     }
 
     public function test_consent_aware_analytics_impression_caps_export_purge_and_access_control(): void
