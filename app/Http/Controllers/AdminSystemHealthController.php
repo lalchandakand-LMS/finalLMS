@@ -16,8 +16,9 @@ class AdminSystemHealthController extends Controller
     public function index(): View
     {
         $checks = DB::table('system_health_checks')->latest('checked_at')->limit(20)->get();
+        $schedulerHeartbeat = DB::table('system_health_heartbeats')->where('name', 'scheduler')->value('last_seen_at');
 
-        return view('admin.system-health.index', compact('checks'));
+        return view('admin.system-health.index', compact('checks', 'schedulerHeartbeat'));
     }
 
     public function run(): RedirectResponse
