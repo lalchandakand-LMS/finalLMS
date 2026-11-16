@@ -50,6 +50,7 @@ final class OpenAiCompatibleProvider implements AiProvider
                 return ['id' => $id, 'capabilities' => $this->capabilities($id)];
             })
             ->filter()
+            ->filter(static fn (array $model): bool => $model['capabilities'] !== null)
             ->unique('id')
             ->sortBy('id')
             ->values()
