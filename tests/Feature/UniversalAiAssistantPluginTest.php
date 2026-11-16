@@ -33,6 +33,7 @@ class UniversalAiAssistantPluginTest extends TestCase
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/OpenAiCompatibleProvider.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantTokenBudget.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantContextBuilder.php');
+        app()->bind(\\App\\Contracts\\Ai\\AiProvider::class, fn () => new OpenAiCompatibleProvider(app(AiDeveloperProviderEndpoint::class)));
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantController.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AdminSettingsController.php');
         if (! Schema::hasTable('ai_assistant_settings')) {
@@ -341,7 +342,8 @@ class UniversalAiAssistantPluginTest extends TestCase
         $payload = $response->getData(true);
 
         $this->assertSame(200, $response->getStatusCode());
-        $this->assertSame(['gpt-4.1', 'gpt-4o-mini', 'text-embedding-3-small'], $payload['models']);
+        $this->assertSame(['gpt-4.1', 'gpt-4o-mini'], array_column($payload['models'], 'id'));
+        $this->assertNotNull($payload['models'][0]['capabilities']);
         $this->assertStringNotContainsString('test-secret-provider-key', json_encode($payload));
         Http::assertSent(fn ($request) => $request->url() === 'https://api.openai.com/v1/models');
     }
@@ -388,10 +390,12 @@ class UniversalAiAssistantPluginTest extends TestCase
             public function curlOptionsFor(string $url): array { return []; }
         });
         Http::fake([
-            'api.openai.com/v1/chat/completions' => Http::response([
-                'choices' => [['message' => ['content' => 'Let us practise English.']]],
-                'usage' => ['total_tokens' => 12],
-            ], 200),
+            'api.openai.com/v1/chat/completions' => Http::response(
+                "data: {\"choices\":[{\"delta\":{\"content\":\"Let us practise English.\"}}],\"usage\":{\"total_tokens\":12}}\n\n".
+                "data: [DONE]\n\n",
+                200,
+                ['Content-Type' => 'text/event-stream']
+            ),
         ]);
 
         $user = User::factory()->create(['role' => 'student']);
