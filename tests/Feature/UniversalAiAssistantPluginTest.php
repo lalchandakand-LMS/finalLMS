@@ -34,6 +34,7 @@ class UniversalAiAssistantPluginTest extends TestCase
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/OpenAiCompatibleProvider.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantTokenBudget.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantContextBuilder.php');
+        require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantAudit.php');
         app()->bind(\App\Contracts\Ai\AiProvider::class, fn () => new OpenAiCompatibleProvider(app(AiDeveloperProviderEndpoint::class)));
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantController.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AdminSettingsController.php');
@@ -49,10 +50,61 @@ class UniversalAiAssistantPluginTest extends TestCase
             $contextMigration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_16_140000_add_ai_assistant_role_data_access.php');
             $contextMigration->up();
         }
+        if (! Schema::hasTable('ai_assistant_audit_events')) {
+            $auditMigration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_16_150000_create_ai_assistant_audit_events.php');
+            $auditMigration->up();
+        }
         if (! Schema::hasTable('ai_assistant_token_reservations')) {
             $budgetMigration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_16_120000_create_ai_assistant_token_reservations.php');
             $budgetMigration->up();
         }
+    }
+
+    public function test_enabled_role_context_is_audited_and_sent_only_with_scoped_course_data(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $course = Course::factory()->create(['teacher_id' => $teacher->id, 'title' => 'Only My Enrolled Course']);
+        Enrollment::query()->create(['user_id' => $student->id, 'course_id' => $course->id, 'status' => 'active']);
+
+        AssistantSettings::save([
+            'model' => 'gpt-4o-mini',
+            'base_url' => 'https://api.openai.com/v1',
+            'temperature' => 0.4,
+            'max_tokens' => 800,
+            'global_enabled' => true,
+            'role_enabled' => array_replace(array_fill_keys(AssistantSettings::ROLES, false), ['student' => true]),
+            'role_data_access' => array_replace(array_fill_keys(AssistantSettings::ROLES, false), ['student' => true]),
+            'daily_request_limit' => 20,
+            'daily_token_budget' => 50000,
+            'retention_days' => 365,
+        ], 'test-secret-provider-key', false);
+
+        Http::fake([
+            'api.openai.com/v1/chat/completions' => Http::response(
+                "data: {\"choices\":[{\"delta\":{\"content\":\"Course context received.\"}}],\"usage\":{\"total_tokens\":14}}\n\n".
+                "data: [DONE]\n\n",
+                200,
+                ['Content-Type' => 'text/event-stream']
+            ),
+        ]);
+        Route::post('/__test-ai-assistant/scoped-context', [\\Aloms\\UniversalAiAssistant\\AssistantController::class, 'send']);
+
+        $response = $this->actingAs($student)->postJson('/__test-ai-assistant/scoped-context', ['message' => 'What course am I enrolled in?']);
+        $response->assertOk();
+        $response->streamedContent();
+
+        $audit = \\DB::table('ai_assistant_audit_events')->where('event', 'role_context_retrieved')->first();
+        $this->assertNotNull($audit);
+        $metadata = json_decode($audit->metadata, true);
+        $this->assertContains('course:'.$course->id, $metadata['source_ids']);
+        Http::assertSent(function ($request): bool {
+            return str_contains($request->data()['messages'][0]['content'] ?? '', 'Only My Enrolled Course');
+        });
+        $this->assertDatabaseHas('ai_assistant_audit_events', [
+            'event' => 'response_completed',
+            'user_id' => $student->id,
+        ]);
     }
 
     public function test_context_builder_scopes_branch_student_and_guardian_data_before_retrieval(): void
