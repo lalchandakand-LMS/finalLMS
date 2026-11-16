@@ -8,8 +8,6 @@ use App\Services\Plugins\PluginSignatureVerifier;
 use App\Services\Plugins\PluginMigrationRunner;
 use App\Services\Plugins\PluginLifecycle;
 use LogicException;
-use App\Services\Plugins\PluginLifecycle;
-use LogicException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
