@@ -407,6 +407,7 @@ class UniversalAiAssistantPluginTest extends TestCase
             'message' => 'Please help me; my key is '.$secret,
         ]);
         $response->assertOk();
+        $response->streamedContent();
 
         $conversation = \DB::table('ai_assistant_conversations')->where('user_id', $user->id)->first();
         $message = \DB::table('ai_assistant_messages')->where('conversation_id', $conversation->id)->where('message_role', 'user')->first();
