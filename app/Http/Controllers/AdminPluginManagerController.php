@@ -427,6 +427,8 @@ class AdminPluginManagerController extends Controller
 
     public function uninstall(Request $request, string $key, PluginLifecycle $lifecycle, PluginPackageRemover $remover, PluginVersionHistoryRecorder $history): RedirectResponse
     {
+        $request->validate(['confirm_uninstall' => ['required', 'accepted']]);
+
         try {
             $plugin = PluginInstallation::query()->where('plugin_key', $key)->firstOrFail();
             $retryingCleanup = $plugin->status === 'uninstalled';
