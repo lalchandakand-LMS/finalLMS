@@ -27,6 +27,7 @@ class AdminPluginManagerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
 
         if (! class_exists(ZipArchive::class) || ! function_exists('sodium_crypto_sign_keypair')) {
             $this->markTestSkipped('The PHP zip and sodium extensions are required.');
