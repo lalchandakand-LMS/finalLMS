@@ -29,6 +29,7 @@
                         <span class="muted">{{ $enrollment->completed_lessons_count }} / {{ $enrollment->total_lessons_count }} {{ __('lessons completed') }}</span>
                     </div>
                     <h2 style="margin:14px 0 6px;">{{ $course->title }}</h2>
+                    @if($course->academicLevel)<span class="badge info">{{ $course->academicLevel->name }}</span>@endif
                     <p class="muted">{{ __('Instructor') }}: {{ $course->teacher?->name ?? '—' }}</p>
                     <p>{{ \Illuminate\Support\Str::limit($course->description, 160) }}</p>
 
