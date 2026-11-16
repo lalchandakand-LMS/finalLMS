@@ -32,6 +32,25 @@ class AcademicLevelManagementTest extends TestCase
         $this->actingAs($admin)->get(route('admin.academic-levels.index'))->assertOk()->assertSee('Primary');
     }
 
+    public function test_level_detail_links_to_prefilled_course_and_page_creation(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $level = AcademicLevel::create(['name' => 'Early Years', 'slug' => 'early-years', 'is_active' => true]);
+
+        $this->actingAs($admin)->get(route('admin.academic-levels.show', $level))
+            ->assertOk()
+            ->assertSee('Add course')
+            ->assertSee('Add page');
+
+        $this->get(route('admin.courses.create', ['academic_level_id' => $level->id]))
+            ->assertOk()
+            ->assertSee('value="'.$level->id.'" selected', false);
+
+        $this->get(route('admin.website-pages.create', ['academic_level_id' => $level->id]))
+            ->assertOk()
+            ->assertSee('value="'.$level->id.'" selected', false);
+    }
+
     public function test_level_cannot_be_deleted_while_courses_or_pages_are_assigned(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
