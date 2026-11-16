@@ -578,4 +578,74 @@ PHP;
 
         $this->assertDatabaseCount('plugin_registry', 0);
     }
+
+    public function test_lifecycle_rejects_activation_when_a_required_dependency_is_not_active(): void
+    {
+        $plugin = new PluginInstallation();
+        $plugin->forceFill([
+            'plugin_key' => 'test.dependent',
+            'name' => 'Dependent Plugin',
+            'version' => '1.0.0',
+            'type' => 'module',
+            'status' => 'installed',
+            'manifest' => ['dependencies' => ['test.core'], 'conflicts' => []],
+            'package_path' => 'plugins/test/dependent/1.0.0',
+            'signature_verified_at' => now(),
+            'package_sha256' => str_repeat('a', 64),
+            'signature_key_id' => 'test-release-key',
+        ])->save();
+
+        try {
+            app(\\App\\Services\\Plugins\\PluginLifecycle::class)->transition('test.dependent', 'active');
+            $this->fail('A plugin with an inactive dependency must not activate.');
+        } catch (\\LogicException $exception) {
+            $this->assertStringContainsString('dependency is not active', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'test.dependent',
+            'status' => 'installed',
+        ]);
+    }
+
+    public function test_lifecycle_prevents_deactivation_of_a_required_active_dependency(): void
+    {
+        foreach ([
+            [
+                'plugin_key' => 'test.core',
+                'name' => 'Core Plugin',
+                'manifest' => ['dependencies' => [], 'conflicts' => []],
+            ],
+            [
+                'plugin_key' => 'test.dependent',
+                'name' => 'Dependent Plugin',
+                'manifest' => ['dependencies' => ['test.core'], 'conflicts' => []],
+            ],
+        ] as $record) {
+            $plugin = new PluginInstallation();
+            $plugin->forceFill(array_merge($record, [
+                'version' => '1.0.0',
+                'type' => 'module',
+                'status' => 'active',
+                'package_path' => 'plugins/test/'.str_replace('test.', '', $record['plugin_key']).'/1.0.0',
+                'signature_verified_at' => now(),
+                'package_sha256' => str_repeat('b', 64),
+                'signature_key_id' => 'test-release-key',
+            ]))->save();
+        }
+
+        try {
+            app(\\App\\Services\\Plugins\\PluginLifecycle::class)->transition('test.core', 'inactive');
+            $this->fail('A dependency of an active plugin must not be deactivated.');
+        } catch (\\LogicException $exception) {
+            $this->assertStringContainsString('active plugin depends on this plugin', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'test.core',
+            'status' => 'active',
+        ]);
+    }
+
+
 }
