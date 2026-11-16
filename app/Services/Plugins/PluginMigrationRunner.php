@@ -94,10 +94,23 @@ class PluginMigrationRunner
 
     public function rollback(PluginInstallation $plugin): void
     {
-        if (! in_array($plugin->status, ['installed', 'inactive'], true)) {
+        if (! in_array($plugin->status, ['installed', 'inactive', 'failed'], true)) {
             throw new RuntimeException('Deactivate the plugin before rolling back its migrations.');
         }
         $this->integrityVerifier->verify($plugin);
+
+        // A failed migration may have partially committed DDL. Even when the
+        // plugin itself is in a failed health state, never roll back other
+        // completed migrations around an unresolved failed/running migration.
+        if ($plugin->status === 'failed' && DB::table('plugin_migrations')
+            ->where('plugin_key', $plugin->plugin_key)
+            ->where('plugin_version', $plugin->version)
+            ->whereIn('status', ['failed', 'running'])
+            ->exists()) {
+            throw new RuntimeException(
+                'A failed or interrupted migration requires manual database recovery before version restore.'
+            );
+        }
         $root = $this->migrationRoot($plugin);
         if ($root === null) return;
 
