@@ -104,6 +104,13 @@
                                                 @if($history->actor)
                                                     <span class="muted">· {{ $history->actor->name }}</span>
                                                 @endif
+                                                @if($history->action === 'version_snapshot' && in_array($plugin->status, ['installed', 'inactive'], true) && version_compare((string) ($history->details['snapshot']['version'] ?? ''), (string) $plugin->version, '<'))
+                                                    <form method="POST" action="{{ route('admin.plugins.restore', [$plugin->plugin_key, $history->id]) }}" style="display:inline;margin-top:5px;" onsubmit="return confirm('{{ __('Restore this verified version? The current version migrations will be rolled back first. Back up the database before continuing.') }}')">
+                                                        @csrf
+                                                        <input type="hidden" name="confirm_restore" value="1">
+                                                        <button class="btn danger" type="submit">{{ __('Restore this version') }} · v{{ $history->details['snapshot']['version'] }}</button>
+                                                    </form>
+                                                @endif
                                             </li>
                                         @endforeach
                                     </ol>
@@ -120,6 +127,19 @@
                         </td>
                         <td>{{ $plugin->installed_at?->format('Y-m-d H:i') ?? '—' }}</td>
                         <td>
+                            @if(in_array($plugin->status, ['installed', 'inactive'], true))
+                                <details style="margin-bottom:8px;">
+                                    <summary>{{ __('Install newer version') }}</summary>
+                                    <form method="POST" action="{{ route('admin.plugins.update', $plugin->plugin_key) }}" enctype="multipart/form-data" style="margin-top:8px;">
+                                        @csrf
+                                        <label>{{ __('New signed ZIP package') }}<input type="file" name="package" accept=".zip,application/zip" required></label>
+                                        <label>{{ __('New version manifest JSON') }}<textarea name="manifest" rows="7" required spellcheck="false"></textarea></label>
+                                        <label>{{ __('Detached Base64 signature') }}<textarea name="signature" rows="2" required spellcheck="false"></textarea></label>
+                                        <label>{{ __('Trusted key ID') }}<input type="text" name="key_id" maxlength="120" required></label>
+                                        <button class="btn primary" type="submit">{{ __('Verify and install update') }}</button>
+                                    </form>
+                                </details>
+                            @endif
                             @if(in_array($plugin->status, ['installed', 'inactive', 'active', 'failed'], true))
                                 <form method="POST" action="{{ route('admin.plugins.health-check', $plugin->plugin_key) }}" style="display:inline;">
                                     @csrf
