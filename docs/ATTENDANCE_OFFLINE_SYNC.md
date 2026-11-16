@@ -1,50 +1,61 @@
 # Online and Offline Attendance Plugin — Implementation Contract
 
-Status: design/implementation scope only. The current Attendance module remains metadata-only until the complete signed plugin lifecycle and acceptance tests are implemented.
+Status: backend offline-sync foundation implemented; remaining online UI, QR, reporting, mobile client and full plugin lifecycle work is tracked in issue #282.
 
-## Existing source of truth
+## Source of truth
 
-The current `attendances` records and `Attendance` model are the canonical attendance source. Online marking already supports present, absent and late for active batch enrollments. Do not create a second attendance table or a client-owned source of truth.
+The existing `attendances` table and `Attendance` model remain canonical. No parallel attendance table is introduced. Database uniqueness remains one attendance row per batch, student and date.
 
-## Online workflow
+## Online attendance
 
-1. An authorized teacher opens an assigned batch and selects a class date/session.
-2. The server returns the active roster within the caller's branch and batch scope.
-3. The teacher submits attendance in bulk.
-4. The server validates each student is currently enrolled and the teacher is assigned to the batch (or caller has an explicit administrative permission).
-5. Updates are audited with actor, timestamp, previous value, new value and a required reason for corrections.
+- Teacher, admin and an explicitly authorized Branch Manager may mark attendance only within their assigned batch/branch scope.
+- Supported statuses: Present, Absent, Late and Excused. Excused is disabled by default and must be enabled by institutional policy (`ATTENDANCE_ALLOW_EXCUSED=true`) before use.
+- Bulk roster marking is the normal workflow.
+- Any correction must include a reason and create an immutable audit record with actor, old/new status and timestamp.
+- Server validates active enrollment and actor scope on every write.
+
+## Mandatory location and privacy
+
+- A foreground location permission prompt is required when attendance is recorded. If the user denies permission, attendance submission is blocked.
+- Store latitude, longitude, reported accuracy and capture time with the attendance record; location is used only for attendance integrity.
+- Location is captured only at the explicit attendance action. No background collection, continuous GPS, geofencing or covert tracking.
+- The mobile client must clearly disclose this requirement and request permission only when the teacher/student performs the attendance action.
+- Offline records retain the captured location and capture timestamp until sync; stale/future capture times are rejected by policy.
 
 ## Offline-first workflow
 
-- Client downloads only the roster and sessions the signed-in teacher is authorized to manage.
-- Pending attendance is stored locally by the mobile client; use platform secure storage/encrypted local database where supported. Never persist bearer tokens in queued attendance records.
-- Each queued operation carries a random idempotency key, batch/session identifier, student identifier, intended status, client-created timestamp and schema version.
-- On reconnect, the client submits a bounded batch to an authenticated, throttled API endpoint.
-- The server rechecks current role, batch assignment, branch, enrollment, date policy and plugin-active status at sync time. Client timestamps are informational only.
-- The server returns a result for every operation: accepted, duplicate/already-applied, conflict, rejected or retryable failure.
-- Replaying the same idempotency key must not create another attendance record.
-- A conflicting newer server record is never silently overwritten. An authorized user resolves it with a reason; the resolution is audited.
-- Pending local records remain visibly provisional until accepted by the server. Failed/conflicting rows remain available for correction and safe retry.
-- Queue data is cleared or invalidated on logout, account switch, device revocation, expiry or plugin disable. Expiry must not silently delete unsynced records without warning/export/recovery UX.
+- The mobile app downloads only rosters and sessions the signed-in teacher is authorized to manage.
+- Pending records are stored locally using encrypted database/storage provided by the platform. Never put bearer tokens in attendance payloads or queue records.
+- Each operation includes a random UUID idempotency key, batch/session, student, date, status, location coordinates, accuracy and capture time.
+- The authenticated teacher sync endpoint accepts up to 100 operations per request and is rate-limited.
+- Server rechecks role, batch assignment, branch, active enrollment and attendance uniqueness at sync time.
+- Replaying the same key and same payload returns the original result; reusing a key with a different payload is rejected.
+- Results are per operation: synced, duplicate, conflict or failed. Client UI maps these to Pending, Synced, Conflict and Failed.
+- Existing server attendance with a different status is returned as conflict and is never silently overwritten. A new explicit resolution operation with reason and audit is required.
+- Pending records are provisional until server-accepted. Failed/conflicting rows remain available for safe correction/retry.
+- Logout, account switch, device revocation and plugin disable must invalidate local access safely without silently deleting unsynced records.
 
-## Optional QR check-in
+## QR attendance
 
-If implemented, use short-lived, server-signed, session-bound tokens with nonce/replay protection, rate limits and server-side enrollment checks. Static reusable QR codes are not acceptable. Manual attendance remains available.
+- QR check-in must use short-lived (maximum two minutes), signed, session-bound tokens with a unique nonce and replay protection.
+- The student must authenticate, have active enrollment in the batch, and provide foreground location at scan time.
+- Static reusable QR codes are prohibited. Manual marking remains available.
 
-## Privacy and safety
+## Visibility and reports
 
-- Geofencing is disabled by default and is not required for offline attendance.
-- No covert GPS, background location tracking, keystroke collection or unrelated device surveillance.
-- Guardian access is read-only and requires an active student-approved guardian link.
-- Do not expose device tokens, raw user-agent, IP address or unrelated session security metadata in attendance screens.
+- Student sees only their own attendance.
+- Guardian has read-only access only through an active, student-approved guardian link.
+- Reports are scoped server-side by Academic Level, branch, course, batch, date and student.
+- Never expose raw device tokens, raw user-agent or unrelated session security metadata.
 
 ## Required acceptance tests
 
-- Online batch marking and correction reason/audit.
-- Offline queue sync, duplicate idempotency, partial batch success and retry.
-- Server/client conflict and explicit resolution.
+- Online bulk marking and correction reason/audit.
+- Offline sync, duplicate idempotency, partial success, retry and conflict.
 - Stale enrollment, changed teacher assignment, cross-branch and cross-batch IDOR.
+- Missing/denied location, invalid coordinates and invalid capture timestamp.
 - Invalid/expired/replayed QR token.
-- Disabled plugin blocks web and API endpoints while preserving attendance history.
+- Disabled plugin blocks web/API endpoints while preserving attendance history.
 - Student sees only their own records; guardian sees only actively consented linked student records.
-- Android/iOS client contract, cPanel deployment compatibility, Bangla/English UI and full CI/CodeQL.
+- Android/iOS encrypted queue, automatic reconnect sync, Bangla/English UI and cPanel deployment compatibility.
+- Exact-head CI and CodeQL plus manual device/browser QA before merge.
