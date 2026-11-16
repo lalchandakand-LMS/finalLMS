@@ -80,16 +80,6 @@ final class AssistantController
 
         $message = $this->redactSensitiveText(trim($validated['message']));
         $settings = AssistantSettings::record();
-        $todayRequests = DB::table('ai_assistant_messages')
-            ->join('ai_assistant_conversations', 'ai_assistant_conversations.id', '=', 'ai_assistant_messages.conversation_id')
-            ->where('ai_assistant_conversations.user_id', $request->user()->id)
-            ->whereDate('ai_assistant_messages.created_at', today())
-            ->where('ai_assistant_messages.message_role', 'user')
-            ->count();
-        if ($todayRequests >= $settings['daily_request_limit']) {
-            return response()->json(['message' => __('Your daily AI request limit has been reached.')], 429);
-        }
-
         if (! empty($validated['conversation_id'])) {
             $conversation = DB::table('ai_assistant_conversations')
                 ->where('id', $validated['conversation_id'])
@@ -136,11 +126,12 @@ final class AssistantController
                 (int) $settings['daily_token_budget'],
                 $estimatedPromptTokens,
                 (int) $settings['max_tokens'],
+                (int) $settings['daily_request_limit'],
                 (int) $request->user()->id,
                 (int) $conversation->id
             );
             if ($reservation === null) {
-                return response()->json(['message' => __('The institution daily AI token budget has been reached or is insufficient for this prompt.')], 429);
+                return response()->json(['message' => __('The daily AI request or institution token budget has been reached or is insufficient for this prompt.')], 429);
             }
             $responseTokenLimit = $reservation['completion_limit'];
             $reservationId = $reservation['id'];
