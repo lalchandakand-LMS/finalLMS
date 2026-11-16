@@ -70,8 +70,15 @@ class PluginMigrationRunner
         ])->orderByDesc('id')->get();
 
         foreach ($records as $record) {
+            if (! is_string($record->migration)
+                || preg_match('/^[A-Za-z0-9_-]{1,180}\\.php$/D', $record->migration) !== 1) {
+                throw new RuntimeException('A recorded plugin migration name is unsafe; rollback was stopped.');
+            }
+
             $file = $root.DIRECTORY_SEPARATOR.$record->migration;
-            if (! is_file($file) || is_link($file)) {
+            $realFile = realpath($file);
+            if (! is_file($file) || is_link($file) || $realFile === false
+                || ! str_starts_with($realFile, rtrim($root, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR)) {
                 throw new RuntimeException('A recorded plugin migration file is missing or unsafe; rollback was stopped.');
             }
             $migration = require $file;
