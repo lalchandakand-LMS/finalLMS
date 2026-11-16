@@ -8,6 +8,7 @@ use App\Services\Plugins\PluginSignatureVerifier;
 use App\Services\Plugins\PluginMigrationRunner;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 use ZipArchive;
@@ -71,7 +72,7 @@ class AdminPluginManagerTest extends TestCase
         parent::tearDown();
     }
 
-    private function uploadData(?string $signature = null, ?string $manifestJson = null): array
+    private function uploadData(?string $signature = null, ?string $manifestJson = null, ?string $migrationSource = null): array
     {
         $zip = new ZipArchive();
         $this->assertTrue($zip->open($this->archivePath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === true);
@@ -84,6 +85,9 @@ return new class implements \App\Contracts\Plugins\PluginContract {
 };
 PHP;
         $this->assertTrue($zip->addFromString('src/Plugin.php', $entrypoint));
+        if ($migrationSource !== null) {
+            $this->assertTrue($zip->addFromString('migrations/2026_11_15_000001_probe.php', $migrationSource));
+        }
         $this->assertTrue($zip->close());
 
         $bytes = file_get_contents($this->archivePath);
@@ -199,6 +203,99 @@ PHP;
             'plugin_key' => 'aec.course-management',
             'status' => 'installed',
         ]);
+    }
+
+    public function test_signed_plugin_migrations_complete_during_install_before_activation(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $this->manifest['migrations'] = 'migrations';
+        $migration = <<<'PHP'
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\DB;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        DB::table('settings')->insert([
+            'key' => 'plugin_activation_probe',
+            'value' => 'ran',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    public function down(): void
+    {
+        DB::table('settings')->where('key', 'plugin_activation_probe')->delete();
+    }
+};
+PHP;
+
+        $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData(migrationSource: $migration))
+            ->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('settings', ['key' => 'plugin_activation_probe', 'value' => 'ran']);
+        $this->assertDatabaseHas('plugin_migrations', [
+            'plugin_key' => 'aec.course-management',
+            'plugin_version' => '1.0.0',
+            'migration' => '2026_11_15_000001_probe.php',
+            'status' => 'completed',
+        ]);
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'status' => 'installed',
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.plugins.activate', 'aec.course-management'))
+            ->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'status' => 'active',
+        ]);
+        $this->assertSame(1, DB::table('plugin_migrations')
+            ->where('plugin_key', 'aec.course-management')
+            ->where('migration', '2026_11_15_000001_probe.php')
+            ->count());
+    }
+
+    public function test_failed_signed_plugin_migration_fails_installation_and_records_failure(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $this->manifest['migrations'] = 'migrations';
+        $migration = <<<'PHP'
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        throw new \RuntimeException('Deliberate migration test failure.');
+    }
+
+    public function down(): void {}
+};
+PHP;
+
+        $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData(migrationSource: $migration))
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseHas('plugin_migrations', [
+            'plugin_key' => 'aec.course-management',
+            'migration' => '2026_11_15_000001_probe.php',
+            'status' => 'failed',
+        ]);
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'status' => 'failed',
+        ]);
+        $this->assertDirectoryDoesNotExist($this->finalPath);
     }
 
     public function test_activation_rejects_an_untrusted_release_key(): void
