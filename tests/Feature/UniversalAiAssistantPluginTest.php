@@ -126,22 +126,14 @@ class UniversalAiAssistantPluginTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+        $first = AssistantTokenBudget::reserve(5000, 100, 1000, 1, $user->id, $conversationId);
+        $this->assertNotNull($first);
+        AssistantTokenBudget::release($first['id']);
+
         \DB::table('ai_assistant_messages')->insert([
             'conversation_id' => $conversationId,
             'message_role' => 'user',
             'content' => 'First request',
-            'token_count' => null,
-            'model' => null,
-            'created_at' => now(),
-        ]);
-
-        $first = AssistantTokenBudget::reserve(5000, 100, 1000, 1, $user->id, $conversationId);
-        $this->assertNotNull($first);
-
-        \DB::table('ai_assistant_messages')->insert([
-            'conversation_id' => $conversationId,
-            'message_role' => 'user',
-            'content' => 'Second request',
             'token_count' => null,
             'model' => null,
             'created_at' => now(),
