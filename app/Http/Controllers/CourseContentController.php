@@ -102,18 +102,16 @@ class CourseContentController extends Controller
                 ->whereHas('orderItem.order', fn ($query) => $query->where('status', 'completed'))->exists()
             : false;
         $previewFileAllowed = $post->access_type !== 'paid' && $curriculumItem->is_preview;
-        abort_unless($canManage || $isEnrolled || $hasPurchased || $post->access_type === 'free' || $previewFileAllowed, 403);
-
         if ($post->access_type === 'paid' && ! $canManage && ! $isEnrolled) {
-            $permission = DownloadPermission::query()->where('user_id', $user->id)
-                ->where('product_id', $post->product_id)->whereNull('revoked_at')
-                ->where(fn ($query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()))
-                ->where(fn ($query) => $query->whereNull('downloads_remaining')->orWhere('downloads_remaining', '>', 0))
+            $permission = DownloadPermission::query()->where('user_id', $user?->id)
+                ->where('product_id', $post->product_id)
                 ->whereHas('orderItem.order', fn ($query) => $query->where('status', 'completed'))
                 ->firstOrFail();
 
             return app(EbookStoreController::class)->download($permission, $request);
         }
+
+        abort_unless($canManage || $isEnrolled || $hasPurchased || $post->access_type === 'free' || $previewFileAllowed, 403);
 
         $absolutePath = Storage::disk('local')->path($post->content_file_path);
         $mime = $post->content_file_mime ?: 'application/octet-stream';
