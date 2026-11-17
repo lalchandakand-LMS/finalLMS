@@ -1,9 +1,8 @@
 <?php
 
-use Illuminate\\Database\\Migrations\\Migration;
-use Illuminate\\Database\\Schema\\Blueprint;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\Support\\Facades\\Schema;
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -25,7 +24,7 @@ return new class extends Migration
     {
         if (Schema::hasTable('ai_assistant_user_daily_requests')
             && DB::table('ai_assistant_user_daily_requests')->exists()) {
-            throw new \\RuntimeException('AI request quota records exist; preserve them during rollback.');
+            throw new \RuntimeException('AI request quota records exist; preserve them during rollback.');
         }
 
         Schema::dropIfExists('ai_assistant_user_daily_requests');
