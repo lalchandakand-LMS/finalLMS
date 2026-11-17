@@ -29,7 +29,6 @@ class LearnEarnQuestion extends Model
         'correct_option' => 'integer',
         'marks' => 'integer',
         'negative_marks' => 'integer',
-        'is_active' => 'boolean',
     ];
 
     public function category(): BelongsTo
