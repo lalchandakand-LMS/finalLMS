@@ -260,6 +260,11 @@ class StudentTrackingPluginTest extends TestCase
         $this->assertSame(1, $index->getData()['summary']['attendance_today']);
         $this->assertSame(1, (int) $trackedStudent->attendance_total);
         $this->assertSame(100.0, (float) $trackedStudent->attendance_rate);
+        $this->assertSame(1, (int) $trackedStudent->active_enrollments_count);
+        $this->assertContains(
+            'No recorded LMS learning activity in the last 14 days',
+            $trackedStudent->tracking_risk_reasons
+        );
     }
 
     public function test_guardian_loses_tracking_access_after_link_is_revoked(): void
