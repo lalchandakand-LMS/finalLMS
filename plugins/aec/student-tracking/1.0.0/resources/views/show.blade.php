@@ -79,7 +79,7 @@
         <h3 style="margin-top:18px;">{{ __('Risk action audit history') }}</h3>
         @foreach($riskActions as $action)
             <div style="padding:8px 0;border-bottom:1px solid var(--border);">
-                <strong>{{ ucfirst($action->action) }} · {{ str_replace('_', ' ', $action->risk_code) }}</strong>
+                <strong>{{ __($action->action) }} · {{ str_replace('_', ' ', $action->risk_code) }}</strong>
                 <div class="muted" style="font-size:.82rem;">{{ $action->actor_name }} · {{ \Illuminate\Support\Carbon::parse($action->created_at)->format('d M Y, H:i') }}</div>
                 @if($action->note)
                     <p style="margin:6px 0;">{{ $action->note }}</p>
@@ -94,7 +94,7 @@
     @forelse($enrollments as $enrollment)
         <div style="padding:12px 0;border-bottom:1px solid var(--border);">
             <strong>{{ $enrollment->course?->title ?? __('Course unavailable') }}</strong>
-            <span class="badge {{ $enrollment->status === 'active' ? 'success' : 'secondary' }}">{{ ucfirst($enrollment->status) }}</span>
+            <span class="badge {{ $enrollment->status === 'active' ? 'success' : 'secondary' }}">{{ __($enrollment->status) }}</span>
             <div class="muted" style="font-size:.85rem;">{{ $enrollment->batch?->title ?? __('No batch assigned') }} · {{ $enrollment->batch?->branch?->name ?? __('Branch not assigned') }}</div>
         </div>
     @empty
@@ -113,7 +113,7 @@
                     <td style="padding:9px;">{{ $record->attendance_date?->format('d M Y') }}</td>
                     <td style="padding:9px;">{{ $record->batch?->title ?? '—' }}</td>
                     <td style="padding:9px;">{{ $record->batch?->course?->title ?? '—' }}</td>
-                    <td style="padding:9px;"><span class="badge {{ $record->status === 'present' ? 'success' : ($record->status === 'late' ? 'warning' : 'danger') }}">{{ ucfirst($record->status) }}</span></td>
+                    <td style="padding:9px;"><span class="badge {{ $record->status === 'present' ? 'success' : ($record->status === 'late' ? 'warning' : 'danger') }}">{{ __($record->status) }}</span></td>
                 </tr>
             @empty
                 <tr><td colspan="4" class="muted" style="padding:16px;">{{ __('No attendance records found.') }}</td></tr>
@@ -175,7 +175,7 @@
             @forelse($supportTickets as $ticket)
                 <div style="padding:10px 0;border-bottom:1px solid var(--border);">
                     <strong>{{ $ticket->subject }}</strong>
-                    <span class="badge {{ $ticket->status === 'closed' ? 'secondary' : 'info' }}">{{ ucfirst($ticket->status) }}</span>
+                    <span class="badge {{ $ticket->status === 'closed' ? 'secondary' : 'info' }}">{{ __($ticket->status) }}</span>
                     <div class="muted" style="font-size:.82rem;">{{ $ticket->branch?->name ?? __('No branch') }} · {{ __('Last activity :time', ['time' => $ticket->last_message_at?->diffForHumans() ?? __('Not recorded')]) }}</div>
                     <a href="{{ route('admin.support-tickets.show', $ticket->id) }}" class="btn secondary" style="margin-top:6px;">{{ __('Open support ticket') }}</a>
                 </div>
@@ -205,7 +205,7 @@
             <div style="padding:10px 0;border-bottom:1px solid var(--border);">
                 <strong>{{ $attempt->exam?->title ?? __('Assessment') }}</strong>
                 <div class="muted" style="font-size:.82rem;">
-                    {{ ucfirst($attempt->status) }}
+                    {{ __($attempt->status) }}
                     · {{ __('Score: :score', ['score' => $attempt->score === null ? __('Not graded') : $attempt->score]) }}
                     · {{ $attempt->submitted_at?->format('d M Y, H:i') ?? __('Not submitted') }}
                 </div>
@@ -220,7 +220,7 @@
             <div style="padding:10px 0;border-bottom:1px solid var(--border);">
                 <strong>{{ $submission->assignment?->title ?? __('Assignment') }}</strong>
                 <div class="muted" style="font-size:.82rem;">
-                    {{ ucfirst($submission->status) }}
+                    {{ __($submission->status) }}
                     · {{ __('Score: :score', ['score' => $submission->score === null ? __('Not graded') : $submission->score]) }}
                     · {{ __('Submitted: :time', ['time' => $submission->submitted_at?->format('d M Y, H:i') ?? __('Not submitted')]) }}
                 </div>
