@@ -230,14 +230,14 @@ class StudentTrackingController extends Controller
                 'ip_address' => $request->ip(),
                 'user_agent' => substr((string) $request->userAgent(), 0, 1000),
             ]);
-        } catch (\\Throwable $exception) {
-            throw new \\RuntimeException('Student tracking export could not be audited; export was blocked.', previous: $exception);
+        } catch (\Throwable $exception) {
+            throw new \RuntimeException('Student tracking export could not be audited; export was blocked.', previous: $exception);
         }
 
         return response()->streamDownload(function () use ($students): void {
             $stream = fopen('php://output', 'w');
             if ($stream === false) {
-                throw new \\RuntimeException('CSV export stream could not be opened.');
+                throw new \RuntimeException('CSV export stream could not be opened.');
             }
 
             fputcsv($stream, [
