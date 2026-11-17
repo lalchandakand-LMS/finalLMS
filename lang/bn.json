@@ -1331,5 +1331,24 @@
     "Changed by": "পরিবর্তন করেছেন",
     "Built-in Alom LMS theme": "বিল্ট-ইন Alom LMS থিম",
     "System": "সিস্টেম",
-    "To roll back, preview and activate a previously installed theme, or reset to the built-in theme.": "আগের থিমে ফিরতে ইনস্টল করা থিম প্রিভিউ করে সক্রিয় করুন অথবা বিল্ট-ইন থিমে রিসেট করুন।"
+    "To roll back, preview and activate a previously installed theme, or reset to the built-in theme.": "আগের থিমে ফিরতে ইনস্টল করা থিম প্রিভিউ করে সক্রিয় করুন অথবা বিল্ট-ইন থিমে রিসেট করুন।",
+    "Isolated theme preview": "বিচ্ছিন্ন থিম প্রিভিউ",
+    "The preview runs in a sandboxed frame. Theme CSS cannot style or interact with the Admin Panel.": "প্রিভিউটি স্যান্ডবক্স করা ফ্রেমে চলে। থিমের CSS অ্যাডমিন প্যানেলকে পরিবর্তন বা নিয়ন্ত্রণ করতে পারে না।",
+    "Permanently delete this inactive theme and its package files? Website content and activation history will be retained.": "এই নিষ্ক্রিয় থিম ও এর প্যাকেজ ফাইল স্থায়ীভাবে মুছে ফেলবেন? ওয়েবসাইটের কনটেন্ট ও ইতিহাস সংরক্ষিত থাকবে।",
+    "The active theme cannot be deleted. Activate another theme or reset to the built-in theme first.": "সক্রিয় থিম মুছে ফেলা যাবে না। আগে অন্য থিম সক্রিয় করুন অথবা বিল্ট-ইন থিমে রিসেট করুন।",
+    "Theme deletion is unavailable because the lifecycle lock is missing.": "লাইফসাইকেল লক অনুপস্থিত থাকায় থিম মুছে ফেলা যাচ্ছে না।",
+    "The installed theme has invalid storage metadata; deletion was blocked.": "ইনস্টল করা থিমের স্টোরেজ তথ্য অবৈধ; মুছে ফেলা বন্ধ করা হয়েছে।",
+    "The installed theme asset list is invalid; deletion was blocked.": "ইনস্টল করা থিমের অ্যাসেট তালিকা অবৈধ; মুছে ফেলা বন্ধ করা হয়েছে।",
+    "An unsafe theme asset path was found; deletion was blocked.": "থিমের একটি অনিরাপদ ফাইল পাথ পাওয়া গেছে; মুছে ফেলা বন্ধ করা হয়েছে।",
+    "The theme preview path is outside its package directory; deletion was blocked.": "থিম প্রিভিউর পাথ প্যাকেজ ডিরেক্টরির বাইরে; মুছে ফেলা বন্ধ করা হয়েছে।",
+    "The original theme package path is invalid; deletion was blocked.": "মূল থিম প্যাকেজের পাথ অবৈধ; মুছে ফেলা বন্ধ করা হয়েছে।",
+    "An unsafe theme storage path was detected.": "থিম স্টোরেজে অনিরাপদ পাথ শনাক্ত হয়েছে।",
+    "Theme storage is unavailable; deletion was blocked.": "থিম স্টোরেজ পাওয়া যাচ্ছে না; মুছে ফেলা বন্ধ করা হয়েছে।",
+    "A symbolic link was found in theme storage; deletion was blocked.": "থিম স্টোরেজে সিম্বলিক লিংক পাওয়া গেছে; মুছে ফেলা বন্ধ করা হয়েছে।",
+    "A theme storage path resolves outside its storage directory; deletion was blocked.": "থিম স্টোরেজের একটি পাথ নির্ধারিত ডিরেক্টরির বাইরে নির্দেশ করছে; মুছে ফেলা বন্ধ করা হয়েছে।",
+    "The inactive theme and its verified package files were deleted. The audit history and website content were retained.": "নিষ্ক্রিয় থিম ও যাচাইকৃত প্যাকেজ ফাইল মুছে ফেলা হয়েছে। অডিট ইতিহাস ও ওয়েবসাইটের কনটেন্ট সংরক্ষিত রয়েছে।",
+    "Duplicate or invalid archive paths are not allowed.": "আর্কাইভে একই বা অবৈধ পাথ অনুমোদিত নয়।",
+    "A theme archive entry exceeds its allowed uncompressed size.": "থিম আর্কাইভের একটি ফাইল অনুমোদিত আনকমপ্রেসড আকার অতিক্রম করেছে।",
+    "Deleted theme": "মুছে ফেলা থিম"
+
 }
