@@ -219,6 +219,7 @@ class ThemeManagerController extends Controller
     {
         $record = DB::table('themes')->where('id', $theme)->first();
         abort_unless($record, 404);
+        $this->assertThemeCanActivate($record);
         $assets = json_decode($record->assets, true) ?: [];
         $css = '';
         foreach ($assets as $asset) {
@@ -346,9 +347,17 @@ class ThemeManagerController extends Controller
         $assets = json_decode($theme->assets, true) ?: [];
         $asset = 'assets/'.$file;
         $path = 'themes/'.$slug.'/'.$version.'/'.$asset;
-        abort_unless(in_array($asset, $assets, true) && Storage::disk('public')->exists($path), 404);
+        $manifest = json_decode((string) $theme->manifest, true);
+        $digest = is_array($manifest) ? ($manifest['assets'][$asset] ?? null) : null;
+        abort_unless(in_array($asset, $assets, true)
+            && is_string($digest)
+            && preg_match('/^[a-f0-9]{64}$/i', $digest)
+            && Storage::disk('public')->exists($path), 404);
 
-        return response(Storage::disk('public')->get($path), 200, [
+        $contents = Storage::disk('public')->get($path);
+        abort_unless(hash_equals(strtolower($digest), hash('sha256', $contents)), 404);
+
+        return response($contents, 200, [
             'Content-Type' => 'text/css; charset=UTF-8',
             'Cache-Control' => 'public, max-age=31536000, immutable',
             'X-Content-Type-Options' => 'nosniff',

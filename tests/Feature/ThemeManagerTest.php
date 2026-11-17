@@ -142,7 +142,10 @@ class ThemeManagerTest extends TestCase
             'version' => '1.0.0',
             'name' => 'Blue Academy',
             'min_lms_version' => '1.0.0',
-            'manifest' => '{}',
+            'manifest' => json_encode([
+                'product_id' => 'aloms-lms-theme',
+                'assets' => ['assets/theme.css' => hash('sha256', 'body { color: #123456; }')],
+            ]),
             'assets' => json_encode(['assets/theme.css']),
             'package_path' => 'themes/packages/test.zip',
             'package_sha256' => str_repeat('b', 64),
@@ -153,6 +156,10 @@ class ThemeManagerTest extends TestCase
         $this->get(route('themes.asset', ['slug' => 'blue-academy', 'version' => '1.0.0', 'file' => 'theme.css']))
             ->assertOk()->assertHeader('Content-Type', 'text/css; charset=UTF-8')->assertSee('color: #123456', false);
         $this->get(route('themes.asset', ['slug' => 'blue-academy', 'version' => '1.0.0', 'file' => 'other.css']))
+            ->assertNotFound();
+
+        Storage::disk('public')->put('themes/blue-academy/1.0.0/assets/theme.css', 'body { color: #ff0000; }');
+        $this->get(route('themes.asset', ['slug' => 'blue-academy', 'version' => '1.0.0', 'file' => 'theme.css']))
             ->assertNotFound();
     }
 
