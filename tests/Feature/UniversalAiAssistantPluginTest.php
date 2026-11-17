@@ -3,6 +3,11 @@
 namespace Tests\Feature;
 
 use Aloms\UniversalAiAssistant\AssistantSettings;
+use Aloms\UniversalAiAssistant\AssistantContextRetriever;
+use App\Models\Branch;
+use App\Models\Course;
+use App\Models\Enrollment;
+use App\Models\GuardianStudentLink;
 use Aloms\UniversalAiAssistant\AssistantTokenBudget;
 use App\Models\PluginInstallation;
 use App\Models\User;
@@ -23,6 +28,7 @@ class UniversalAiAssistantPluginTest extends TestCase
     {
         parent::setUp();
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantSettings.php');
+        require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantContextRetriever.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantTokenBudget.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantRequestLimit.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantController.php');
@@ -43,6 +49,11 @@ class UniversalAiAssistantPluginTest extends TestCase
         if (! Schema::hasTable('ai_assistant_user_daily_requests')) {
             $requestMigration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_17_100000_create_ai_assistant_user_daily_requests.php');
             $requestMigration->up();
+        }
+
+        if (Schema::hasTable('ai_assistant_settings') && ! Schema::hasColumn('ai_assistant_settings', 'role_data_access')) {
+            $dataAccessMigration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_17_110000_add_ai_assistant_role_data_access.php');
+            $dataAccessMigration->up();
         }
     }
 
