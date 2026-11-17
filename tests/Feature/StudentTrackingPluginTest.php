@@ -30,6 +30,16 @@ class StudentTrackingPluginTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        if (! Schema::hasTable('student_tracking_risk_actions')) {
+            $migration = require base_path('plugins/aec/student-tracking/1.0.0/migrations/2026_11_17_180000_create_student_tracking_risk_actions.php');
+            $migration->up();
+        }
+    }
+
     private function indexFor(User $actor, array $query = [])
     {
         // These controller-level tests bypass PluginRuntime, so mirror the view
@@ -62,6 +72,18 @@ class StudentTrackingPluginTest extends TestCase
         $request->setUserResolver(fn () => $actor);
 
         return app(StudentTrackingController::class)->export($request, app(PluginResourceAccess::class));
+    }
+
+    private function riskActionFor(User $actor, int $studentId, array $data)
+    {
+        $request = Request::create('/student-tracking/'.$studentId.'/risk-actions', 'POST', $data);
+        $request->setUserResolver(fn () => $actor);
+
+        return app(StudentTrackingController::class)->storeRiskAction(
+            $request,
+            $studentId,
+            app(PluginResourceAccess::class)
+        );
     }
 
     public function test_admin_can_configure_and_audit_student_tracking_risk_thresholds(): void
@@ -98,6 +120,59 @@ class StudentTrackingPluginTest extends TestCase
 
         $this->expectException(\\Symfony\Component\HttpKernel\Exception\HttpException::class);
         app(StudentTrackingSettingsController::class)->update($request);
+    }
+
+    public function test_teacher_can_dismiss_a_scoped_risk_flag_with_audited_note(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $branch = Branch::create(['name' => 'Risk scope', 'slug' => 'risk-scope', 'is_active' => true]);
+        $student = User::factory()->create(['role' => 'student', 'branch_id' => $branch->id]);
+        $course = Course::factory()->create(['teacher_id' => $teacher->id]);
+        $batch = Batch::create([
+            'branch_id' => $branch->id,
+            'course_id' => $course->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Risk batch',
+            'capacity' => 20,
+            'starts_at' => now()->subDay(),
+            'ends_at' => now()->addMonth(),
+            'status' => 'active',
+        ]);
+        Enrollment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'batch_id' => $batch->id,
+            'status' => 'active',
+        ]);
+
+        $this->riskActionFor($teacher, $student->id, [
+            'risk_code' => 'inactive_learning',
+            'action' => 'dismiss',
+            'note' => 'Follow-up call scheduled with guardian.',
+        ]);
+
+        $index = $this->indexFor($teacher);
+        $this->assertFalse($index->getData()['students']->first()->tracking_needs_attention);
+
+        $detail = $this->showFor($teacher, $student->id);
+        $this->assertSame(['inactive_learning'], array_column($detail->getData()['dismissedRiskFlags'], 'code'));
+        $this->assertSame('Follow-up call scheduled with guardian.', $detail->getData()['riskActions']->first()->note);
+        $this->assertDatabaseHas('activity_logs', [
+            'user_id' => $teacher->id,
+            'event' => 'student_tracking.risk_action',
+        ]);
+    }
+
+    public function test_student_cannot_write_staff_risk_actions(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+
+        $this->expectException(\\Symfony\\Component\\HttpKernel\\Exception\\HttpException::class);
+        $this->riskActionFor($student, $student->id, [
+            'risk_code' => 'inactive_learning',
+            'action' => 'dismiss',
+            'note' => 'Not allowed.',
+        ]);
     }
 
     public function test_admin_can_view_all_students_and_tracking_metrics(): void
