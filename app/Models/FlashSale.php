@@ -20,7 +20,7 @@ class FlashSale extends Model
 
     public function isAvailableFor(?int $userId = null): bool
     {
-        if (! self::pluginIsActive()
+        if (! self::isPluginActive()
             || $this->status !== 'active'
             || $this->starts_at->isFuture()
             || $this->ends_at->isPast()) {
@@ -51,7 +51,7 @@ class FlashSale extends Model
 
     public function discountedPrice(float $basePrice): float
     {
-        if (! self::pluginIsActive()) {
+        if (! self::isPluginActive()) {
             return round(max(0, $basePrice), 2);
         }
 
@@ -63,7 +63,7 @@ class FlashSale extends Model
 
     public static function activeForCourse(int $courseId, ?int $userId = null): ?self
     {
-        if (! self::pluginIsActive()) {
+        if (! self::isPluginActive()) {
             return null;
         }
 
@@ -77,7 +77,7 @@ class FlashSale extends Model
             ->first(fn (self $sale) => $sale->isAvailableFor($userId));
     }
 
-    private static function pluginIsActive(): bool
+    public static function isPluginActive(): bool
     {
         $plugin = PluginInstallation::query()
             ->where('plugin_key', 'aec.flash-sale')
@@ -94,7 +94,7 @@ class FlashSale extends Model
 
     public static function activeCampaigns(): \Illuminate\Support\Collection
     {
-        if (! self::pluginIsActive()) {
+        if (! self::isPluginActive()) {
             return collect();
         }
 
