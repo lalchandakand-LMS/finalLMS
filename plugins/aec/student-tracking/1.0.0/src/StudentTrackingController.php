@@ -8,6 +8,7 @@ use App\Models\Attendance;
 use App\Models\Branch;
 use App\Models\CourseContentProgress;
 use App\Models\Enrollment;
+use App\Models\Setting;
 use App\Models\LessonProgress;
 use App\Models\User;
 use App\Services\Plugins\PluginResourceAccess;
@@ -98,8 +99,14 @@ class StudentTrackingController extends Controller
             ->whereDate('attendance_date', today())
             ->count();
 
+        $riskRules = [
+            'low_attendance_percent' => max(1, min(100, (int) Setting::value('student_tracking_low_attendance_percent', 75))),
+            'minimum_attendance_records' => max(1, min(30, (int) Setting::value('student_tracking_minimum_attendance_records', 5))),
+            'inactive_days' => max(1, min(365, (int) Setting::value('student_tracking_inactive_days', 14))),
+        ];
+
         $students = $query->orderBy('users.name')->paginate(25)->withQueryString();
-        $students->getCollection()->transform(function (User $student): User {
+        $students->getCollection()->transform(function (User $student) use ($riskRules): User {
             $student->setAttribute('attendance_rate', (int) $student->attendance_total > 0
                 ? round(((int) $student->attendance_attended / (int) $student->attendance_total) * 100, 1)
                 : null);
@@ -111,14 +118,15 @@ class StudentTrackingController extends Controller
 
             $student->setAttribute('tracking_last_activity_at', $activityDates->first());
             $lastActivity = $activityDates->first();
-            $lowAttendance = (int) $student->attendance_total >= 5 && (float) $student->attendance_rate < 75;
-            $inactive = ! $lastActivity || now()->diffInDays($lastActivity) >= 14;
+            $lowAttendance = (int) $student->attendance_total >= $riskRules['minimum_attendance_records']
+                && (float) $student->attendance_rate < $riskRules['low_attendance_percent'];
+            $inactive = ! $lastActivity || now()->diffInDays($lastActivity) >= $riskRules['inactive_days'];
             $riskReasons = [];
             if ($lowAttendance) {
-                $riskReasons[] = 'Attendance below 75% across at least 5 recent records';
+                $riskReasons[] = 'Attendance below '.$riskRules['low_attendance_percent'].'% across at least '.$riskRules['minimum_attendance_records'].' records in the selected date range';
             }
             if ($inactive) {
-                $riskReasons[] = 'No recorded LMS learning activity in the last 14 days';
+                $riskReasons[] = 'No recorded LMS learning activity in the last '.$riskRules['inactive_days'].' days';
             }
             $student->setAttribute('tracking_risk_reasons', $riskReasons);
             $student->setAttribute('tracking_needs_attention', $riskReasons !== []);
@@ -141,6 +149,7 @@ class StudentTrackingController extends Controller
             ],
             'branches' => $branches,
             'statusOptions' => $statusOptions,
+            'riskRules' => $riskRules,
             'filters' => [
                 'q' => $search,
                 'branch_id' => $branchFilter ?: null,
