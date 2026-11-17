@@ -7,7 +7,7 @@ return new class extends Migration {
  public function up(): void {
   if(Schema::hasTable('phonetics_entries'))return;
   Schema::create('phonetics_entries',function(Blueprint $table):void{
-   $table->id();$table->foreignId('course_id')->nullable()->constrained('courses')->nullOnDelete();
+   $table->id();$table->foreignId('course_id')->nullable()->constrained('courses')->restrictOnDelete();
    $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
    $table->string('entry_type',16)->default('word');$table->string('term',180);$table->text('translation');
    $table->string('uk_ipa',180)->nullable();$table->string('us_ipa',180)->nullable();
