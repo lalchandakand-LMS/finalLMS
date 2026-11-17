@@ -1,14 +1,14 @@
 <?php
-namespace Tests\\Feature;
-use Aloms\\PhoneticsPractice\\PhoneticsEntry;
-use Aloms\\PhoneticsPractice\\PhoneticsPracticeController;
-use App\\Models\\Course;
-use App\\Models\\Enrollment;
-use App\\Models\\User;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Illuminate\\Support\\Facades\\Route;
-use Illuminate\\Support\\Facades\\Schema;
-use Tests\\TestCase;
+namespace Tests\Feature;
+use Aloms\PhoneticsPractice\PhoneticsEntry;
+use Aloms\PhoneticsPractice\PhoneticsPracticeController;
+use App\Models\Course;
+use App\Models\Enrollment;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
+use Tests\TestCase;
 class PhoneticsPracticePluginTest extends TestCase {
  use RefreshDatabase;
  protected function setUp(): void {
