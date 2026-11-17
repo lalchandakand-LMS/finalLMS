@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', '{{ __('Student Tracking Risk Rules') }}')
+@section('title', __('Student Tracking Risk Rules'))
 
 @section('content')
 <div class="page-header">
