@@ -4,6 +4,7 @@ namespace Aloms\StudentTracking;
 
 use App\Models\ActivityLog;
 use App\Models\Setting;
+use App\Models\PluginInstallation;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,7 +16,9 @@ final class StudentTrackingSettingsController
 {
     public function index(Request $request): View
     {
-        abort_unless($request->user() instanceof User && $request->user()->isAdmin(), 403);
+        abort_unless($request->user() instanceof User
+            && $request->user()->isAdmin()
+            && $this->hasGrantedPermission(), 403);
 
         return view('student-tracking::settings', [
             'lowAttendancePercent' => (int) Setting::value('student_tracking_low_attendance_percent', 75),
@@ -24,10 +27,23 @@ final class StudentTrackingSettingsController
         ]);
     }
 
+    private function hasGrantedPermission(): bool
+    {
+        $plugin = PluginInstallation::query()
+            ->where('plugin_key', 'aec.student-tracking')
+            ->where('status', 'active')
+            ->first();
+
+        $metadata = is_array($plugin?->metadata) ? $plugin->metadata : [];
+        $granted = $metadata['granted_permissions'] ?? [];
+
+        return is_array($granted) && in_array('student-tracking.configure', $granted, true);
+    }
+
     public function update(Request $request): RedirectResponse
     {
         $actor = $request->user();
-        abort_unless($actor instanceof User && $actor->isAdmin(), 403);
+        abort_unless($actor instanceof User && $actor->isAdmin() && $this->hasGrantedPermission(), 403);
 
         $values = $request->validate([
             'low_attendance_percent' => ['required', 'integer', 'min:1', 'max:100'],
