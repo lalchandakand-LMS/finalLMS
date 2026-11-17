@@ -21,6 +21,7 @@ class AdminPluginManagerTest extends TestCase
     private string $keyPair;
     private array $manifest;
     private string $finalPath;
+    private ?string $updatedPath = null;
 
     protected function setUp(): void
     {
@@ -67,6 +68,10 @@ class AdminPluginManagerTest extends TestCase
 
         if (isset($this->finalPath) && is_dir($this->finalPath) && ! is_link($this->finalPath)) {
             \Illuminate\Support\Facades\File::deleteDirectory($this->finalPath);
+        }
+
+        if (is_string($this->updatedPath) && is_dir($this->updatedPath) && ! is_link($this->updatedPath)) {
+            \Illuminate\Support\Facades\File::deleteDirectory($this->updatedPath);
         }
 
         parent::tearDown();
