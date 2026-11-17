@@ -127,7 +127,6 @@ class AiDeveloperAdminTest extends TestCase
 
     public function test_ai_workspace_renders_bangla_labels_when_bangla_locale_is_selected(): void
     {
-        app()->setLocale('bn');
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
         AiDeveloperTask::create([
             'user_id' => $admin->id,
@@ -136,7 +135,7 @@ class AiDeveloperAdminTest extends TestCase
             'status' => 'completed',
         ]);
 
-        $this->actingAs($admin)->get(route('admin.ai-developer.index'))
+        $this->withSession(['locale' => 'bn'])->actingAs($admin)->get(route('admin.ai-developer.index'))
             ->assertOk()
             ->assertSee('এআই ডেভেলপার')
             ->assertSee('শুধু অ্যাডমিন')
