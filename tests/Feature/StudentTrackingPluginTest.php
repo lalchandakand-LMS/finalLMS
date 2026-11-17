@@ -157,6 +157,21 @@ class StudentTrackingPluginTest extends TestCase
         $detail = $this->showFor($teacher, $student->id);
         $this->assertSame(['inactive_learning'], array_column($detail->getData()['dismissedRiskFlags'], 'code'));
         $this->assertSame('Follow-up call scheduled with guardian.', $detail->getData()['riskActions']->first()->note);
+
+        $guardian = User::factory()->create(['role' => 'guardian']);
+        GuardianStudentLink::create([
+            'guardian_id' => $guardian->id,
+            'student_id' => $student->id,
+            'relationship' => 'Parent',
+            'status' => 'active',
+            'requested_by' => $guardian->id,
+            'reviewed_by' => $student->id,
+            'requested_at' => now(),
+            'reviewed_at' => now(),
+        ]);
+        $guardianView = $this->showFor($guardian, $student->id);
+        $this->assertCount(0, $guardianView->getData()['riskActions']);
+
         $this->assertDatabaseHas('activity_logs', [
             'user_id' => $teacher->id,
             'event' => 'student_tracking.risk_action',
