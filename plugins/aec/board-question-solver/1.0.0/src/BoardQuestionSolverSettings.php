@@ -1,6 +1,6 @@
 <?php
-namespace Aloms\\BoardQuestionSolver;
-use Illuminate\\Support\\Facades\\DB;
+namespace Aloms\BoardQuestionSolver;
+use Illuminate\Support\Facades\DB;
 final class BoardQuestionSolverSettings {
  public static function defaults():array{return ['enabled'=>false,'allow_image_questions'=>true,'max_question_length'=>4000,'max_image_kb'=>5120,'daily_request_limit'=>10,'default_language'=>'bn'];}
  public static function get():array{$row=DB::table('board_question_solver_settings')->where('id',1)->first();return array_replace(self::defaults(),$row?(array)$row:[]);}
