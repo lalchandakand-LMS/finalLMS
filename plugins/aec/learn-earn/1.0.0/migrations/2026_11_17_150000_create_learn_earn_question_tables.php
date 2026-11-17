@@ -3,7 +3,6 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
-use RuntimeException;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -52,7 +51,7 @@ return new class extends Migration
             && DB::table('learn_earn_categories')->exists();
 
         if ($hasQuestionData || $hasCategoryData) {
-            throw new RuntimeException('Learn & Earn questions or categories exist; preserve them during plugin migration rollback.');
+            throw new \RuntimeException('Learn & Earn questions or categories exist; preserve them during plugin migration rollback.');
         }
 
         Schema::dropIfExists('learn_earn_questions');
