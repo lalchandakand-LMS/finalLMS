@@ -342,6 +342,10 @@ class ThemeManagerTest extends TestCase
             ->assertSessionHas('success');
 
         $this->assertDatabaseMissing('themes', ['id' => $themeId]);
+        $this->actingAs($admin)->get(route('admin.themes.index'))
+            ->assertOk()
+            ->assertSee('Remove Theme')
+            ->assertSee('Delete');
         $this->assertDatabaseHas('theme_activations', [
             'theme_id' => null,
             'action' => 'delete',
