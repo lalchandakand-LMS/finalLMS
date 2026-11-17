@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Setting;
+use App\Models\MediaAsset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -17,9 +18,10 @@ class SetupWizardController extends Controller
         abort_unless(in_array($step, self::STEPS, true), 404);
 
         $settings = Setting::query()->pluck('value', 'key')->toArray();
+        $mediaAssets = MediaAsset::query()->where('mime_type', 'like', 'image/%')->latest()->get();
         $paymentMethods = Setting::paymentMethods();
 
-        return view('admin.setup-wizard.index', compact('step', 'settings', 'paymentMethods'));
+        return view('admin.setup-wizard.index', compact('step', 'settings', 'paymentMethods', 'mediaAssets'));
     }
 
     public function update(Request $request): RedirectResponse
@@ -37,11 +39,20 @@ class SetupWizardController extends Controller
                 'institution_website' => ['nullable', 'url', 'max:255'],
                 'institution_logo_url' => ['nullable', 'url', 'max:500'],
                 'institution_favicon_url' => ['nullable', 'url', 'max:500'],
+                'site_logo_media_id' => ['nullable', 'integer', 'exists:media_assets,id'],
+                'site_favicon_media_id' => ['nullable', 'integer', 'exists:media_assets,id'],
                 'institution_address' => ['nullable', 'string', 'max:500'],
                 'institution_default_locale' => ['required', 'in:en,bn'],
                 'institution_timezone' => ['required', 'timezone'],
                 'site_primary_color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             ]);
+
+            foreach (['site_logo_media_id', 'site_favicon_media_id'] as $mediaSetting) {
+                $mediaId = $validated[$mediaSetting] ?? null;
+                if ($mediaId !== null && !MediaAsset::query()->whereKey($mediaId)->where('mime_type', 'like', 'image/%')->exists()) {
+                    return back()->withErrors([$mediaSetting => __('Please select a valid image from the Media Library.')])->withInput();
+                }
+            }
 
             $this->save($validated);
         } elseif ($step === 2) {
