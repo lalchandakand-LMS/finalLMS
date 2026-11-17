@@ -43,7 +43,7 @@
             <input type="search" name="q" value="{{ $filters['q'] }}" placeholder="{{ __('Name or email') }}">
         </label>
         @if($branches->isNotEmpty())
-            <label>Branch
+            <label>{{ __('Branch') }}
                 <select name="branch_id">
                     <option value="">{{ __('All branches') }}</option>
                     @foreach($branches as $branch)
@@ -93,7 +93,7 @@
                 <tr style="text-align:left;border-bottom:1px solid var(--border);">
                     <th style="padding:11px;">{{ __('Student') }}</th>
                     <th style="padding:11px;">{{ __('Active courses') }}</th>
-                    <th style="padding:11px;">Attendance ({{ $filters['from_date'] }} – {{ $filters['to_date'] }})</th>
+                    <th style="padding:11px;">{{ __('Attendance (:from – :to)', ['from' => $filters['from_date'], 'to' => $filters['to_date']]) }}</th>
                     <th style="padding:11px;">{{ __('Completed lessons') }}</th>
                     <th style="padding:11px;">{{ __('Last learning activity') }}</th>
                     <th style="padding:11px;">{{ __('Status') }}</th>
@@ -148,5 +148,5 @@
     </div>
     <div style="margin-top:18px;">{{ $students->links() }}</div>
 </div>
-<p class="muted" style="font-size:.85rem;margin-top:12px;">{{ __('Attendance and completion totals use the selected date range; learning inactivity uses the latest activity across all dates.') }} A student is flagged below {{ $riskRules['low_attendance_percent'] }}% attendance after {{ $riskRules['minimum_attendance_records'] }} records, or after {{ $riskRules['inactive_days'] }} days without recorded learning activity. {{ __('Flags are review signals, not automated disciplinary decisions. GPS or background location is not collected.') }}</p>
+<p class="muted" style="font-size:.85rem;margin-top:12px;">{{ __('Attendance and completion totals use the selected date range; learning inactivity uses the latest activity across all dates.') }} {{ __('A student is flagged below :percent% attendance after :count records, or after :days days without recorded learning activity.', ['percent' => $riskRules['low_attendance_percent'], 'count' => $riskRules['minimum_attendance_records'], 'days' => $riskRules['inactive_days']]) }} {{ __('Flags are review signals, not automated disciplinary decisions. GPS or background location is not collected.') }}</p>
 @endsection
