@@ -26,6 +26,7 @@ class AttendanceQrController extends Controller
         $data = $request->validate([
             'attendance_date' => ['required', 'date_format:Y-m-d'],
         ]);
+        abort_unless(Carbon::createFromFormat('Y-m-d', $data['attendance_date'])->isToday(), 422, 'QR attendance sessions can only be created for today.');
 
         $publicId = (string) Str::uuid();
         $nonce = (string) Str::uuid();
@@ -81,6 +82,13 @@ class AttendanceQrController extends Controller
         abort_unless($nonce !== '' && hash_equals($qrSession->nonce_hash, hash('sha256', $nonce)), 403);
 
         $capturedAt = Carbon::parse($data['captured_at']);
+        $sessionCreatedAt = Carbon::parse($qrSession->created_at);
+        abort_if(
+            $capturedAt->lt($sessionCreatedAt->copy()->subSeconds(15))
+                || $capturedAt->lt(now()->subSeconds(120)),
+            422,
+            'QR check-in requires a fresh foreground location capture taken during the active QR session.'
+        );
         $maxAge = max(1, min(1440, (int) Setting::value('attendance_max_location_age_minutes', '10')));
         abort_if($capturedAt->greaterThan(now()->addMinutes(5))
             || $capturedAt->lessThan(now()->subMinutes($maxAge)), 422, 'Invalid or stale foreground location capture.');
