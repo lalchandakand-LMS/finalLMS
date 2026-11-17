@@ -1350,5 +1350,7 @@
     "Duplicate or invalid archive paths are not allowed.": "আর্কাইভে একই বা অবৈধ পাথ অনুমোদিত নয়।",
     "A theme archive entry exceeds its allowed uncompressed size.": "থিম আর্কাইভের একটি ফাইল অনুমোদিত আনকমপ্রেসড আকার অতিক্রম করেছে।",
     "Deleted theme": "মুছে ফেলা থিম"
+,
+    "A theme archive entry could not be safely read.": "থিম আর্কাইভের একটি ফাইল নিরাপদভাবে পড়া যায়নি।"
 
 }
