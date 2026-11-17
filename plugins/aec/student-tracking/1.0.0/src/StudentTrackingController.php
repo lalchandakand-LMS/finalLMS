@@ -123,18 +123,53 @@ class StudentTrackingController extends Controller
             $lowAttendance = (int) $student->attendance_total >= $riskRules['minimum_attendance_records']
                 && (float) $student->attendance_rate < $riskRules['low_attendance_percent'];
             $inactive = ! $lastActivity || now()->diffInDays($lastActivity) >= $riskRules['inactive_days'];
-            $riskReasons = [];
+            $riskFlags = [];
             if ($lowAttendance) {
-                $riskReasons[] = 'Attendance below '.$riskRules['low_attendance_percent'].'% across at least '.$riskRules['minimum_attendance_records'].' records in the selected date range';
+                $riskFlags[] = [
+                    'code' => 'low_attendance',
+                    'reason' => 'Attendance below '.$riskRules['low_attendance_percent'].'% across at least '.$riskRules['minimum_attendance_records'].' records in the selected date range',
+                ];
             }
             if ($inactive) {
-                $riskReasons[] = 'No recorded LMS learning activity in the last '.$riskRules['inactive_days'].' days';
+                $riskFlags[] = [
+                    'code' => 'inactive_learning',
+                    'reason' => 'No recorded LMS learning activity in the last '.$riskRules['inactive_days'].' days',
+                ];
             }
-            $student->setAttribute('tracking_risk_reasons', $riskReasons);
-            $student->setAttribute('tracking_needs_attention', $riskReasons !== []);
+            $student->setAttribute('tracking_risk_flags', $riskFlags);
+            $student->setAttribute('tracking_risk_reasons', array_column($riskFlags, 'reason'));
+            $student->setAttribute('tracking_needs_attention', $riskFlags !== []);
 
             return $student;
         });
+
+        if (Schema::hasTable('student_tracking_risk_actions')) {
+            $pageStudentIds = $students->getCollection()->modelKeys();
+            if ($pageStudentIds !== []) {
+                $latestRiskActions = DB::table('student_tracking_risk_actions')
+                    ->whereIn('student_id', $pageStudentIds)
+                    ->whereIn('action', ['dismiss', 'reopen'])
+                    ->orderBy('id')
+                    ->get()
+                    ->groupBy(fn ($action) => $action->student_id.':'.$action->risk_code)
+                    ->map(fn ($actions) => $actions->last());
+
+                $students->getCollection()->transform(function (User $student) use ($latestRiskActions): User {
+                    $flags = collect($student->tracking_risk_flags)
+                        ->reject(function (array $flag) use ($student, $latestRiskActions): bool {
+                            $latest = $latestRiskActions->get($student->id.':'.$flag['code']);
+                            return $latest?->action === 'dismiss';
+                        })
+                        ->values()
+                        ->all();
+                    $student->setAttribute('tracking_risk_flags', $flags);
+                    $student->setAttribute('tracking_risk_reasons', array_column($flags, 'reason'));
+                    $student->setAttribute('tracking_needs_attention', $flags !== []);
+
+                    return $student;
+                });
+            }
+        }
 
         $needsAttention = $students->getCollection()->where('tracking_needs_attention', true)->count();
         $branches = $actor->isAdmin()
@@ -282,6 +317,49 @@ class StudentTrackingController extends Controller
             'Content-Type' => 'text/csv; charset=UTF-8',
             'Cache-Control' => 'no-store, private',
         ]);
+    }
+
+    public function storeRiskAction(Request $request, int $student, PluginResourceAccess $access): RedirectResponse
+    {
+        $actor = $request->user();
+        abort_unless($actor instanceof User && ($actor->isAdmin() || $actor->isBranchManager() || $actor->isTeacher()), 403);
+
+        $studentRecord = $access->scopeQuery(User::query(), $actor)
+            ->where('users.role', 'student')
+            ->whereKey($student)
+            ->firstOrFail();
+
+        $validated = $request->validate([
+            'risk_code' => ['required', 'in:low_attendance,inactive_learning'],
+            'action' => ['required', 'in:dismiss,note,reopen'],
+            'note' => ['required_if:action,dismiss,note', 'nullable', 'string', 'max:1000'],
+        ]);
+
+        abort_unless(Schema::hasTable('student_tracking_risk_actions'), 503);
+
+        DB::transaction(function () use ($actor, $studentRecord, $validated, $request): void {
+            DB::table('student_tracking_risk_actions')->insert([
+                'student_id' => $studentRecord->id,
+                'actor_id' => $actor->id,
+                'risk_code' => $validated['risk_code'],
+                'action' => $validated['action'],
+                'note' => $validated['note'] ?? null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            ActivityLog::query()->create([
+                'user_id' => $actor->id,
+                'event' => 'student_tracking.risk_action',
+                'description' => 'Student risk action '.$validated['action'].' recorded for '.$validated['risk_code'].'; note content omitted.',
+                'method' => 'POST',
+                'route' => $request->route()?->getName() ?? 'student-tracking.risk-actions.store',
+                'ip_address' => $request->ip(),
+                'user_agent' => substr((string) $request->userAgent(), 0, 1000),
+            ]);
+        });
+
+        return back()->with('success', __('Student tracking risk action saved.'));
     }
 
     public function show(Request $request, int $student, PluginResourceAccess $access): View
