@@ -72,7 +72,7 @@
             <select name="status">
                 <option value="">{{ __('All statuses') }}</option>
                 @foreach($statusOptions as $status)
-                    <option value="{{ $status }}" @selected($filters['status'] === $status)>{{ ucfirst($status) }}</option>
+                    <option value="{{ $status }}" @selected($filters['status'] === $status)>{{ __($status) }}</option>
                 @endforeach
             </select>
         </label>
