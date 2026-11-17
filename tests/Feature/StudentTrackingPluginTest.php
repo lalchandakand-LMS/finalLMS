@@ -497,6 +497,15 @@ class StudentTrackingPluginTest extends TestCase
             'graded_by' => $otherTeacher->id,
             'status' => 'graded',
         ]);
+        $overdueAssignment = Assignment::create([
+            'batch_id' => $ownBatch->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Overdue unsubmitted work',
+            'instructions' => 'Submit the overdue work.',
+            'due_at' => now()->subDay(),
+            'max_marks' => 20,
+            'status' => 'published',
+        ]);
 
         $view = $this->showFor($teacher, $student->id);
 
@@ -504,6 +513,8 @@ class StudentTrackingPluginTest extends TestCase
         $this->assertSame([$ownBatch->id], $view->getData()['attendanceRecords']->pluck('batch_id')->unique()->values()->all());
         $this->assertSame([$ownExam->id], $view->getData()['examAttempts']->pluck('exam_id')->all());
         $this->assertSame([$ownAssignment->id], $view->getData()['assignmentSubmissions']->pluck('assignment_id')->all());
+        $this->assertSame([$overdueAssignment->id], $view->getData()['overdueAssignments']->pluck('id')->all());
+        $this->assertContains('overdue_assignments', array_column($view->getData()['riskFlags'], 'code'));
         $this->assertArrayNotHasKey('feedback', $view->getData()['assignmentSubmissions']->first()->getAttributes());
         $this->assertArrayNotHasKey('answer', $view->getData()['assignmentSubmissions']->first()->getAttributes());
 
