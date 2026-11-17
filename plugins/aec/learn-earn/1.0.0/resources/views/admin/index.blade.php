@@ -9,7 +9,7 @@
         <h1>{{ __('Learn & Earn Question Bank') }}</h1>
         <p class="muted">{{ __('Create reusable MCQs with categories, positive marks and negative marks.') }}</p>
     </div>
-    <a class="btn primary" href="{{ route('admin.learn-earn.questions.create') }}">{{ __('Create MCQ') }}</a>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;"><a class="btn secondary" href="{{ route('admin.learn-earn.exams.index') }}">{{ __('Manage exams') }}</a><a class="btn primary" href="{{ route('admin.learn-earn.questions.create') }}">{{ __('Create MCQ') }}</a></div>
 </div>
 
 <div class="grid grid-3" style="margin-bottom:20px;">
