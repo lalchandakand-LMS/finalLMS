@@ -548,6 +548,64 @@ class StudentTrackingPluginTest extends TestCase
         $this->assertCount(0, $view->getData()['students']->getCollection());
     }
 
+    public function test_academic_level_filter_respects_teacher_scope(): void
+    {
+        if (! Schema::hasTable('academic_levels') || ! Schema::hasColumn('courses', 'academic_level_id')) {
+            $this->markTestSkipped('Academic Level schema is delivered by the Academic Level module.');
+        }
+
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $branch = Branch::create(['name' => 'Level scope', 'slug' => 'level-scope', 'is_active' => true]);
+        $levelOne = \\DB::table('academic_levels')->insertGetId([
+            'name' => 'Level One',
+            'slug' => 'level-one',
+            'sort_order' => 1,
+            'is_active' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $levelTwo = \\DB::table('academic_levels')->insertGetId([
+            'name' => 'Level Two',
+            'slug' => 'level-two',
+            'sort_order' => 2,
+            'is_active' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $studentOne = User::factory()->create(['role' => 'student', 'branch_id' => $branch->id]);
+        $studentTwo = User::factory()->create(['role' => 'student', 'branch_id' => $branch->id]);
+        $courseOne = Course::factory()->create(['teacher_id' => $teacher->id]);
+        $courseTwo = Course::factory()->create(['teacher_id' => $teacher->id]);
+        \\DB::table('courses')->where('id', $courseOne->id)->update(['academic_level_id' => $levelOne]);
+        \\DB::table('courses')->where('id', $courseTwo->id)->update(['academic_level_id' => $levelTwo]);
+
+        $batchOne = Batch::create([
+            'branch_id' => $branch->id,
+            'course_id' => $courseOne->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Level One batch',
+            'capacity' => 20,
+            'starts_at' => now()->subDay(),
+            'ends_at' => now()->addMonth(),
+            'status' => 'active',
+        ]);
+        $batchTwo = Batch::create([
+            'branch_id' => $branch->id,
+            'course_id' => $courseTwo->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Level Two batch',
+            'capacity' => 20,
+            'starts_at' => now()->subDay(),
+            'ends_at' => now()->addMonth(),
+            'status' => 'active',
+        ]);
+        Enrollment::create(['user_id' => $studentOne->id, 'course_id' => $courseOne->id, 'batch_id' => $batchOne->id, 'status' => 'active']);
+        Enrollment::create(['user_id' => $studentTwo->id, 'course_id' => $courseTwo->id, 'batch_id' => $batchTwo->id, 'status' => 'active']);
+
+        $view = $this->indexFor($teacher, ['academic_level_id' => $levelOne]);
+        $this->assertSame([$studentOne->id], $view->getData()['students']->getCollection()->pluck('id')->all());
+    }
+
     public function test_student_only_sees_their_own_tracking_record(): void
     {
         $student = User::factory()->create(['role' => 'student']);
