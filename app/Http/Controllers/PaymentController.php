@@ -304,8 +304,10 @@ class PaymentController extends Controller
     public function index(): View
     {
         $payments = Payment::query()
-            ->where(fn ($query) => $query->whereNotNull('course_id')->orWhereNotNull('course_combo_id'))
-            ->with(['user', 'course', 'courseCombo', 'comboCourses', 'reviewer'])
+            ->where(fn ($query) => $query->whereNotNull('course_id')
+                ->orWhereNotNull('course_combo_id')
+                ->orWhereNotNull('learn_earn_exam_id'))
+            ->with(['user', 'course', 'courseCombo', 'comboCourses', 'learnEarnExam', 'reviewer'])
             ->latest()
             ->paginate(20);
 
@@ -314,6 +316,9 @@ class PaymentController extends Controller
 
     public function approve(Payment $payment): RedirectResponse
     {
+        if ($payment->learn_earn_exam_id) {
+            return back()->with('error', 'Paid exam payments are fulfilled only by a matching server-verified gateway callback.');
+        }
         if ($payment->order_id) {
             return back()->with('error', 'eBook order payments must be fulfilled through verified eBook checkout.');
         }
@@ -403,6 +408,9 @@ class PaymentController extends Controller
 
     public function reject(Payment $payment, Request $request): RedirectResponse
     {
+        if ($payment->learn_earn_exam_id) {
+            return back()->with('error', 'Paid exam gateway payments must be reconciled through server-side provider verification.');
+        }
         if (filled($payment->gateway_provider)) {
             return back()->with('error', 'Gateway payments must be reconciled through the payment provider.');
         }
