@@ -23,14 +23,12 @@ class FlashSalePluginPackageTest extends TestCase
     {
         $migration = file_get_contents(base_path('plugins/aec/flash-sale/1.0.0/migrations/2026_11_17_190000_validate_legacy_flash_sale_schema.php'));
 
-        foreach ([
-            "Schema::hasTable('flash_sales')",
-            "Schema::hasTable('flash_sale_course')",
-            "Schema::hasTable('flash_sale_course_category')",
-            'Schema::hasColumn',
-            'Plugin uninstall must never delete or rewrite that data.',
-        ] as $expected) {
-            $this->assertStringContainsString($expected, $migration);
+        foreach (['flash_sales', 'flash_sale_course', 'flash_sale_course_category', 'payments', 'enrollments'] as $table) {
+            $this->assertStringContainsString("'".$table."'", $migration);
         }
+
+        $this->assertStringContainsString('Schema::hasTable($table)', $migration);
+        $this->assertStringContainsString('Schema::hasColumn($table, $column)', $migration);
+        $this->assertStringContainsString('Plugin uninstall must never delete or rewrite that data.', $migration);
     }
 }
