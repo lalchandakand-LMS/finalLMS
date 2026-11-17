@@ -14,12 +14,12 @@ class SetLocale
     public function handle(Request $request, Closure $next): mixed
     {
         $defaultLocale = 'en';
-        $timezone = 'UTC';
+        $timezone = 'Asia/Dhaka';
 
         try {
             if (Schema::hasTable('settings')) {
                 $defaultLocale = (string) \App\Models\Setting::value('institution_default_locale', 'en');
-                $timezone = (string) \App\Models\Setting::value('institution_timezone', 'UTC');
+                $timezone = (string) \App\Models\Setting::value('institution_timezone', 'Asia/Dhaka');
             }
         } catch (\Throwable) {
             // The installer may be running before the database is configured
@@ -31,7 +31,7 @@ class SetLocale
         }
 
         if (! in_array($timezone, timezone_identifiers_list(), true)) {
-            $timezone = 'UTC';
+            $timezone = 'Asia/Dhaka';
         }
 
         $locale = $request->session()->get('locale', $defaultLocale);
