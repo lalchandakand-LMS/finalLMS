@@ -246,6 +246,57 @@ class LearnEarnPaidExamPaymentTest extends TestCase
         ]);
     }
 
+    public function test_paid_exam_callback_does_not_grant_access_if_exam_is_unpublished(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $exam = $this->paidExam();
+        DB::table('learn_earn_exams')->where('id', $exam->id)->update(['status' => 'draft']);
+        $payment = Payment::query()->create([
+            'user_id' => $student->id,
+            'course_id' => null,
+            'order_id' => null,
+            'learn_earn_exam_id' => $exam->id,
+            'method' => 'bkash',
+            'gateway_provider' => 'bkash',
+            'amount' => '350.00',
+            'currency' => 'BDT',
+            'transaction_reference' => 'LEARN-EARN-UNPUBLISHED-INVOICE',
+            'gateway_payment_id' => 'BKASH-LEARN-EARN-UNPUBLISHED',
+            'status' => 'pending',
+        ]);
+
+        Http::fake([
+            '*/tokenized/checkout/token/grant' => Http::response(['id_token' => 'verification-token'], 200),
+            '*/tokenized/checkout/execute' => Http::response([
+                'transactionStatus' => 'Completed',
+                'paymentID' => 'BKASH-LEARN-EARN-UNPUBLISHED',
+                'trxID' => 'BKASH-LEARN-EARN-UNPUBLISHED-TRX',
+                'amount' => '350.00',
+                'currency' => 'BDT',
+                'merchantInvoiceNumber' => $payment->transaction_reference,
+            ], 200),
+            '*/tokenized/checkout/payment/status' => Http::response([
+                'transactionStatus' => 'Completed',
+                'paymentID' => 'BKASH-LEARN-EARN-UNPUBLISHED',
+                'trxID' => 'BKASH-LEARN-EARN-UNPUBLISHED-TRX',
+                'amount' => '350.00',
+                'currency' => 'BDT',
+                'merchantInvoiceNumber' => $payment->transaction_reference,
+            ], 200),
+        ]);
+
+        $this->get(route('payments.bkash.callback', [
+            'paymentID' => 'BKASH-LEARN-EARN-UNPUBLISHED',
+            'status' => 'success',
+        ]))->assertRedirect('/student/learn-earn/exams');
+
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'rejected']);
+        $this->assertDatabaseMissing('learn_earn_exam_entitlements', [
+            'exam_id' => $exam->id,
+            'student_id' => $student->id,
+        ]);
+    }
+
     public function test_plugin_uninstall_guard_preserves_all_schema_when_exam_content_exists(): void
     {
         $exam = $this->paidExam();
