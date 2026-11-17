@@ -53,6 +53,25 @@
                     <div><label>{{ __('Website') }}</label><input type="url" name="institution_website" value="{{ old('institution_website', $settings['institution_website'] ?? '') }}"></div>
                     <div><label>{{ __('Logo URL') }}</label><input type="url" name="institution_logo_url" maxlength="500" value="{{ old('institution_logo_url', $settings['institution_logo_url'] ?? '') }}"></div>
                     <div><label>{{ __('Favicon URL') }}</label><input type="url" name="institution_favicon_url" maxlength="500" value="{{ old('institution_favicon_url', $settings['institution_favicon_url'] ?? '') }}"></div>
+                    <div>
+                        <label for="setup-logo-media">{{ __('Logo from Media Library') }}</label>
+                        <select id="setup-logo-media" name="site_logo_media_id">
+                            <option value="">{{ __('Use logo URL / no uploaded logo') }}</option>
+                            @foreach($mediaAssets as $asset)
+                                <option value="{{ $asset->id }}" @selected((string) old('site_logo_media_id', $settings['site_logo_media_id'] ?? '') === (string) $asset->id)>{{ $asset->original_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label for="setup-favicon-media">{{ __('Favicon from Media Library') }}</label>
+                        <select id="setup-favicon-media" name="site_favicon_media_id">
+                            <option value="">{{ __('Use favicon URL / no uploaded favicon') }}</option>
+                            @foreach($mediaAssets as $asset)
+                                <option value="{{ $asset->id }}" @selected((string) old('site_favicon_media_id', $settings['site_favicon_media_id'] ?? '') === (string) $asset->id)>{{ $asset->original_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div style="grid-column:1/-1" class="muted">{{ __('Upload images in Media Library first, then select them here. A selected library image takes priority over its URL.') }} <a href="{{ route('admin.media.index') }}">{{ __('Open Media Library') }}</a></div>
                     <div><label>{{ __('Default language') }}</label><select name="institution_default_locale"><option value="en" @selected(old('institution_default_locale', $settings['institution_default_locale'] ?? 'en') === 'en')>{{ __('English') }}</option><option value="bn" @selected(old('institution_default_locale', $settings['institution_default_locale'] ?? 'en') === 'bn')>{{ __('বাংলা') }}</option></select></div>
                     <div><label>{{ __('Timezone') }}</label><select name="institution_timezone">@foreach(['Asia/Dhaka'=>'Bangladesh (Dhaka)','Asia/Kolkata'=>'India (Kolkata)','Asia/Karachi'=>'Pakistan (Karachi)','Asia/Dubai'=>'UAE (Dubai)','Europe/London'=>'United Kingdom (London)','UTC'=>'UTC'] as $zone=>$label)<option value="{{ $zone }}" @selected(old('institution_timezone', $settings['institution_timezone'] ?? 'Asia/Dhaka') === $zone)>{{ $label }}</option>@endforeach</select></div>
                     <div><label>{{ __('Primary brand color') }}</label><input type="color" name="site_primary_color" value="{{ old('site_primary_color', $settings['site_primary_color'] ?? '#1546a8') }}"></div>
