@@ -810,14 +810,29 @@ class StudentTrackingPluginTest extends TestCase
         $student = User::factory()->create(['role' => 'student']);
 
         Setting::setValue('module_registry', json_encode([
+            'course_management' => false,
+            'attendance' => false,
+            'lesson_management' => false,
+            'course_content_studio' => false,
+            'exam_management' => false,
+            'assignment' => false,
             'notice_board' => false,
             'support_center' => false,
         ], JSON_THROW_ON_ERROR));
 
         $view = $this->showFor($admin, $student->id);
 
+        $this->assertFalse($view->getData()['courseTrackingAvailable']);
+        $this->assertFalse($view->getData()['attendanceTrackingAvailable']);
+        $this->assertFalse($view->getData()['lessonTrackingAvailable']);
+        $this->assertFalse($view->getData()['contentTrackingAvailable']);
+        $this->assertFalse($view->getData()['examTrackingAvailable']);
+        $this->assertFalse($view->getData()['assignmentTrackingAvailable']);
         $this->assertFalse($view->getData()['noticeTrackingAvailable']);
         $this->assertFalse($view->getData()['supportTrackingAvailable']);
+        $this->assertCount(0, $view->getData()['attendanceRecords']);
+        $this->assertCount(0, $view->getData()['examAttempts']);
+        $this->assertCount(0, $view->getData()['assignmentSubmissions']);
         $this->assertCount(0, $view->getData()['announcements']);
         $this->assertCount(0, $view->getData()['supportTickets']);
     }
