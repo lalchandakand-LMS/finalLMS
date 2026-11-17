@@ -86,9 +86,14 @@ class ThemeManagerController extends Controller
             if (! preg_match('/^\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?$/', $minVersion)) {
                 throw new \RuntimeException(__('The theme minimum LMS version is invalid.'));
             }
+            $maxVersion = $manifest['max_lms_version'] ?? null;
+            if ($maxVersion !== null && (! is_string($maxVersion) || ! preg_match('/^\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?$/', $maxVersion))) {
+                throw new \RuntimeException(__('The theme maximum LMS version is invalid.'));
+            }
             $currentVersion = (string) config('app.version', '1.0.0');
-            if (version_compare($currentVersion, $minVersion, '<')) {
-                throw new \RuntimeException(__('This theme requires a newer LMS version.'));
+            if (version_compare($currentVersion, $minVersion, '<')
+                || (is_string($maxVersion) && version_compare($currentVersion, $maxVersion, '>'))) {
+                throw new \RuntimeException(__('This theme is not compatible with the current LMS version.'));
             }
 
             $assetContents = [];
@@ -219,7 +224,11 @@ class ThemeManagerController extends Controller
     {
         $record = DB::table('themes')->where('id', $theme)->first();
         abort_unless($record, 404);
-        $this->assertThemeCanActivate($record);
+        try {
+            $this->assertThemeCanActivate($record);
+        } catch (\RuntimeException) {
+            abort(404);
+        }
         $assets = json_decode($record->assets, true) ?: [];
         $css = '';
         foreach ($assets as $asset) {
