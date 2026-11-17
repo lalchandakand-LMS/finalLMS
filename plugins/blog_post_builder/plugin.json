@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "key": "blog_post_builder",
+  "name": "Post & Blog Builder",
+  "description": "News, blog posts, categories, tags and SEO authoring.",
+  "type": "first_party",
+  "status": "metadata_only",
+  "provider": null,
+  "dependencies": [
+    "core",
+    "website_cms"
+  ],
+  "permissions": [],
+  "routes": [
+    "news.*",
+    "admin.blog.*",
+    "admin.news.*"
+  ],
+  "settings": [],
+  "events": [],
+  "directory": "plugins/blog_post_builder",
+  "safety": {
+    "trusted_code_only": true,
+    "execute_uploaded_code": false,
+    "disable_preserves_data": true
+  }
+}

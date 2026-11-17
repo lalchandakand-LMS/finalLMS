@@ -13,7 +13,7 @@
 @foreach($availablePosts as $post)
 @php($item = $current->get($post->id))
 <tr style="border-top:1px solid var(--border);"><td style="padding:12px;"><input type="checkbox" name="post_ids[]" value="{{ $post->id }}" @checked($item) style="width:auto;"></td>
-<td><strong>{{ $post->title }}</strong><div class="muted">{{ $post->categories->pluck('name')->join(', ') }} · {{ __(ucfirst($post->status)) }}</div></td>
+<td><strong>{{ $post->title }}</strong><div class="muted">{{ $post->academicLevel?->name ?: __('All levels') }} · {{ $post->categories->pluck('name')->join(', ') }} · {{ __(ucwords(str_replace('_', ' ', $post->access_type))) }} · {{ __(ucfirst($post->status)) }}</div></td>
 <td><input name="section_titles[{{ $post->id }}]" maxlength="120" value="{{ old('section_titles.'.$post->id, $item?->section_title) }}" placeholder="{{ __('e.g. Module 1') }}"></td>
 <td><input type="number" name="positions[{{ $post->id }}]" min="0" max="100000" value="{{ old('positions.'.$post->id, $item?->position ?? (($loop->iteration) * 10)) }}" style="width:90px;"></td>
 <td><input type="number" name="durations[{{ $post->id }}]" min="1" max="600" value="{{ old('durations.'.$post->id, $item?->duration_minutes) }}" style="width:90px;"></td>

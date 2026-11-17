@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="page-header">
-        <div><span class="badge info">{{ $batch->course->title }}</span><h1 style="margin:12px 0 0;">{{ $batch->title }} exams</h1></div>
+        <div><span class="badge info">{{ $batch->course->title }}</span><span class="badge info">{{ $batch->course->academicLevel?->name ?? 'General' }}</span><h1 style="margin:12px 0 0;">{{ $batch->title }} exams</h1></div>
         <a href="{{ $isAdmin ? route('admin.batches.index') : route('teacher.batches.index') }}" class="btn secondary">{{ $isAdmin ? __('All batches') : __('My batches') }}</a>
     </div>
 

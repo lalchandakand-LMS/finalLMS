@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "key": "support_center",
+  "name": "Support Center",
+  "description": "Support tickets and customer assistance.",
+  "type": "first_party",
+  "status": "metadata_only",
+  "provider": null,
+  "dependencies": [
+    "core",
+    "identity"
+  ],
+  "permissions": [],
+  "routes": [
+    "admin.support-tickets.*",
+    "support.*"
+  ],
+  "settings": [],
+  "events": [],
+  "directory": "plugins/support_center",
+  "safety": {
+    "trusted_code_only": true,
+    "execute_uploaded_code": false,
+    "disable_preserves_data": true
+  }
+}

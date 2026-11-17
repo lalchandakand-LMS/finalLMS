@@ -26,6 +26,9 @@
         $isAdminLayout = auth()->check() && (auth()->user()->isAdmin() || auth()->user()->isBranchManager() || auth()->user()->isAccountant());
         $isPublicLayout = ! $isAdminLayout;
         $websiteHeaderLinks = $isPublicLayout && $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('header_links', '[]'), true) : [];
+        $websitePageLinks = $isPublicLayout && \Illuminate\Support\Facades\Schema::hasTable('website_pages')
+            ? \App\Models\WebsitePage::query()->where('status', 'published')->where('show_in_menu', true)->orderBy('menu_order')->orderBy('title')->get(['title', 'slug', 'menu_label'])
+            : collect();
         $websiteFooterTitle = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('footer_title', config('app.name')) : config('app.name');
         $websiteFooterText = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('footer_text', '') : '';
         $websiteFooterLinks = $isPublicLayout && $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('footer_links', '[]'), true) : [];
@@ -362,6 +365,7 @@
             <div class="admin-sidebar-label">Overview</div>
             <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><span>▦</span><span class="nav-text">Dashboard</span></a>
             <div class="admin-sidebar-label">Academy</div>
+            <a href="{{ route('admin.academic-levels.index') }}"><span>🎓</span><span class="nav-text">Academic levels</span></a>
             <a href="{{ route('admin.courses.index') }}"><span>📚</span><span class="nav-text">Courses & lessons</span></a>
             <a class="{{ request()->routeIs('admin.ebooks.*') ? 'active' : '' }}" href="{{ route('admin.ebooks.index') }}"><span>📕</span><span class="nav-text">eBook management</span></a>
             <a class="{{ request()->routeIs('admin.ebooks.orders.*') ? 'active' : '' }}" href="{{ route('admin.ebooks.orders.index') }}"><span>🧾</span><span class="nav-text">eBook orders</span></a>
@@ -473,7 +477,10 @@
                         @endif
                     @endforeach
                 @auth
-                    <a href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a>
+                    <a href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a>                    @foreach($websitePageLinks as $websitePageLink)
+                        <a href="{{ route('website-pages.show', $websitePageLink->slug) }}">{{ $websitePageLink->menu_label ?: $websitePageLink->title }}</a>
+                    @endforeach
+
                     <a href="{{ route('notices.index') }}">{{ __('Notice Board') }}</a>
                     <a href="{{ route('profile.edit') }}">{{ __('Profile') }}</a>
                     <a href="{{ route('live-classes.index') }}">{{ __('Live classes') }}</a>

@@ -8,7 +8,7 @@ use InvalidArgumentException;
 use RuntimeException;
 use SodiumException;
 
-final class PluginSignatureVerifier
+class PluginSignatureVerifier
 {
     public function __construct(private readonly PluginManifestValidator $manifestValidator)
     {

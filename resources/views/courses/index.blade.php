@@ -45,7 +45,15 @@
     <form method="GET" action="{{ route('courses.index') }}" class="panel course-filter-panel">
         <h2 style="margin-top:0;">{{ __('Find your course') }}</h2>
         <div class="course-filter-grid">
-            <label>{{ __('Search') }}
+            <label>Academic level
+            <select name="academic_level_id">
+                <option value="">All levels</option>
+                @foreach($academicLevels as $academicLevel)
+                    <option value="{{ $academicLevel->id }}" @selected((string) request('academic_level_id') === (string) $academicLevel->id)>{{ $academicLevel->name }}</option>
+                @endforeach
+            </select>
+        </label>
+        <label>{{ __('Search') }}
                 <input type="search" name="q" value="{{ request('q') }}" maxlength="120" placeholder="{{ __('Course title, topic or teacher') }}">
             </label>
             <label>{{ __('Category') }}

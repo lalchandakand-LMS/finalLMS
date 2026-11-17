@@ -4,12 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\PluginInstallation;
+use App\Models\PluginVersionHistory;
 use App\Services\Plugins\PluginIntegrityVerifier;
-use App\Services\Plugins\PluginLifecycle;
 use App\Services\Plugins\PluginCompatibilityChecker;
+use App\Services\Plugins\PluginLifecycle;
+use App\Services\Plugins\PluginSettingsManager;
 use App\Services\Plugins\PluginManifestValidator;
 use App\Services\Plugins\PluginMigrationRunner;
 use App\Services\Plugins\PluginPackageRemover;
+use App\Services\Plugins\PluginPackageRecovery;
 use App\Services\Plugins\PluginUploadInstaller;
 use App\Services\Plugins\PluginSignatureVerifier;
 use App\Services\Plugins\PluginVersionHistoryRecorder;
@@ -23,12 +26,45 @@ use Throwable;
 
 class AdminPluginManagerController extends Controller
 {
-    public function index(): View
+    public function index(PluginSettingsManager $settings): View
     {
+        $plugins = PluginInstallation::query()->with(['versionHistory.actor'])->orderBy('plugin_key')->get();
+
         return view('admin.plugins.index', [
-            'plugins' => PluginInstallation::query()->with(['versionHistory.actor'])->orderBy('plugin_key')->get(),
+            'plugins' => $plugins,
+            'pluginSettings' => $plugins->mapWithKeys(fn (PluginInstallation $plugin): array => [
+                $plugin->plugin_key => $settings->keys($plugin),
+            ]),
             'maxPackageBytes' => (int) config('plugins.max_package_bytes', 52428800),
         ]);
+    }
+
+    public function storeSetting(Request $request, string $key, PluginSettingsManager $settings): RedirectResponse
+    {
+        $plugin = PluginInstallation::query()->where('plugin_key', $key)->firstOrFail();
+        abort_unless(in_array($plugin->status, ['installed', 'active', 'inactive'], true), 404);
+
+        $validated = $request->validate([
+            'setting_key' => ['required', 'string', 'max:120', 'regex:/^[a-z][a-z0-9_.-]{0,119}$/D'],
+            'setting_value' => ['required', 'string', 'min:1', 'max:4096'],
+        ]);
+
+        $settings->set($plugin, $validated['setting_key'], $validated['setting_value']);
+        $this->audit($request, 'admin.plugins.setting_saved', 'Saved encrypted setting '.$validated['setting_key'].' for '.$plugin->plugin_key);
+
+        return back()->with('success', __('Plugin setting saved encrypted. Its value is never displayed in the manager.'));
+    }
+
+    public function deleteSetting(Request $request, string $key, string $settingKey, PluginSettingsManager $settings): RedirectResponse
+    {
+        $plugin = PluginInstallation::query()->where('plugin_key', $key)->firstOrFail();
+        abort_unless($plugin->status !== 'uninstalled', 404);
+        abort_unless(preg_match('/^[a-z][a-z0-9_.-]{0,119}$/D', $settingKey) === 1, 404);
+
+        $settings->forget($plugin, $settingKey);
+        $this->audit($request, 'admin.plugins.setting_deleted', 'Deleted encrypted setting '.$settingKey.' for '.$plugin->plugin_key);
+
+        return back()->with('success', __('Plugin setting deleted.'));
     }
 
     public function updatePermissions(Request $request, string $key): RedirectResponse
@@ -89,6 +125,219 @@ class AdminPluginManagerController extends Controller
 
         return redirect()->route('admin.plugins.index')->with('success',
             __('Plugin package verified and installed. Review its permissions before activation.'));
+    }
+
+    public function updatePackage(
+        Request $request,
+        string $key,
+        PluginUploadInstaller $installer,
+        PluginIntegrityVerifier $integrityVerifier,
+        PluginVersionHistoryRecorder $history,
+    ): RedirectResponse {
+        $validated = $request->validate([
+            'package' => ['required', 'file', 'max:51200'],
+            'manifest' => ['required', 'string', 'max:32768'],
+            'signature' => ['required', 'string', 'max:512'],
+            'key_id' => ['required', 'string', 'max:120'],
+            'confirm_update' => ['required', 'accepted'],
+        ]);
+
+        try {
+            $plugin = $installer->update(
+                $request->file('package'),
+                $validated['manifest'],
+                $validated['signature'],
+                $validated['key_id'],
+                $key,
+                $integrityVerifier,
+            );
+        } catch (InvalidArgumentException $exception) {
+            $this->recordFailure($request, 'admin.plugins.update_failed');
+            return back()->withInput($request->except('package'))->with('error', $exception->getMessage());
+        } catch (Throwable $exception) {
+            report($exception);
+            $this->recordFailure($request, 'admin.plugins.update_failed');
+            return back()->with('error', __('Plugin update failed safely. The previous package was retained; run a health check and review the activity log.'));
+        }
+
+        $history->record($plugin, 'updated', $request->user(), [
+            'previous_version' => PluginVersionHistory::query()
+                ->where('plugin_key', $plugin->plugin_key)
+                ->where('action', 'package_update_snapshot')
+                ->latest('created_at')
+                ->value('version'),
+        ]);
+        $this->audit($request, 'admin.plugins.updated', 'Updated signed plugin '.$plugin->plugin_key.' to version '.$plugin->version);
+
+        return redirect()->route('admin.plugins.index')->with('success',
+            __('Signed plugin package updated. The previous version was retained; review health and permissions before activation.'));
+    }
+
+    public function rollbackMigrations(
+        Request $request,
+        string $key,
+        PluginMigrationRunner $migrationRunner,
+        PluginVersionHistoryRecorder $history,
+    ): RedirectResponse {
+        $request->validate(['confirm_rollback' => ['required', 'accepted']]);
+
+        $plugin = PluginInstallation::query()->where('plugin_key', $key)->firstOrFail();
+        if (! in_array($plugin->status, ['installed', 'inactive'], true)) {
+            return back()->with('error', __('Only an installed or inactive plugin can roll back its recorded migrations.'));
+        }
+
+        try {
+            $migrationRunner->rollback($plugin);
+            $history->record($plugin, 'migrations_rolled_back', $request->user());
+            $this->audit($request, 'admin.plugins.migrations_rolled_back',
+                'Rolled back recorded migrations for plugin '.$plugin->plugin_key.' version '.$plugin->version);
+        } catch (Throwable $exception) {
+            report($exception);
+            $this->recordFailure($request, 'admin.plugins.migration_rollback_failed');
+            return back()->with('error', __('Plugin migrations could not be rolled back. The plugin was not activated; inspect migration logs.'));
+        }
+
+        return redirect()->route('admin.plugins.index')->with('success',
+            __('Recorded plugin migrations were rolled back. The plugin remains inactive until explicitly activated.'));
+    }
+
+    public function rollbackPackage(
+        Request $request,
+        string $key,
+        PluginIntegrityVerifier $integrityVerifier,
+        PluginSignatureVerifier $signatureVerifier,
+        PluginMigrationRunner $migrationRunner,
+        PluginLifecycle $lifecycle,
+        PluginVersionHistoryRecorder $history,
+    ): RedirectResponse {
+        $request->validate([
+            'confirm_rollback' => ['required', 'accepted'],
+        ]);
+
+        $plugin = PluginInstallation::query()->where('plugin_key', $key)->firstOrFail();
+        if (! in_array($plugin->status, ['installed', 'inactive'], true)) {
+            return back()->with('error', __('Deactivate the plugin and resolve failed states before rolling back its package version.'));
+        }
+
+        $snapshotRecord = PluginVersionHistory::query()
+            ->where('plugin_key', $plugin->plugin_key)
+            ->where('action', 'package_update_snapshot')
+            ->where('version', '!=', $plugin->version)
+            ->orderByDesc('created_at')->orderByDesc('id')
+            ->first();
+
+        $details = $snapshotRecord?->details;
+        $snapshot = is_array($details) && ($details['snapshot_schema'] ?? null) === 1
+            ? ($details['snapshot'] ?? null)
+            : null;
+
+        if (! is_array($snapshot) || ! is_string($snapshot['version'] ?? null)
+            || hash_equals($snapshot['version'], (string) $plugin->version)) {
+            return back()->with('error', __('No verified previous package version is available for rollback.'));
+        }
+
+        // Preserve the package being rolled back so a later recovery can move forward again.
+        PluginVersionHistory::query()->create([
+            'plugin_key' => $plugin->plugin_key,
+            'version' => $plugin->version,
+            'package_sha256' => $plugin->package_sha256,
+            'signature_key_id' => $plugin->signature_key_id,
+            'action' => 'package_update_snapshot',
+            'status' => $plugin->status,
+            'actor_id' => $request->user()->id,
+            'details' => [
+                'snapshot_schema' => 1,
+                'snapshot' => [
+                    'name' => $plugin->name,
+                    'version' => $plugin->version,
+                    'type' => $plugin->type,
+                    'manifest' => $plugin->manifest,
+                    'package_path' => $plugin->package_path,
+                    'package_sha256' => $plugin->package_sha256,
+                    'signature_key_id' => $plugin->signature_key_id,
+                    'signature_verified_at' => $plugin->signature_verified_at?->toISOString(),
+                    'metadata' => $plugin->metadata,
+                    'installed_at' => $plugin->installed_at?->toISOString(),
+                    'health_status' => $plugin->health_status,
+                    'health_message' => $plugin->health_message,
+                    'last_health_check_at' => $plugin->last_health_check_at?->toISOString(),
+                ],
+            ],
+            'created_at' => now(),
+        ]);
+
+        try {
+            $candidate = clone $plugin;
+            $candidate->forceFill([
+                'name' => $snapshot['name'],
+                'version' => $snapshot['version'],
+                'type' => $snapshot['type'],
+                'manifest' => $snapshot['manifest'],
+                'package_path' => $snapshot['package_path'],
+                'package_sha256' => $snapshot['package_sha256'],
+                'signature_key_id' => $snapshot['signature_key_id'],
+                'signature_verified_at' => $snapshot['signature_verified_at'],
+                'metadata' => $snapshot['metadata'],
+                'status' => 'inactive',
+            ]);
+
+            // Verify both the retained old package and the currently installed package
+            // before reversing only the current version's recorded migrations.
+            $signatureVerifier->verifyInstalledSignature($candidate);
+            $integrityVerifier->verify($candidate);
+            $signatureVerifier->verifyInstalledSignature($plugin);
+            $integrityVerifier->verify($plugin);
+
+            // Enter a non-activatable state before running down() migrations. If any
+            // migration fails midway, the catch below marks the plugin failed.
+            $plugin = $lifecycle->transition($plugin->plugin_key, 'update_staged');
+            $migrationRunner->rollback($plugin);
+
+            $plugin->forceFill([
+                'name' => $snapshot['name'],
+                'version' => $snapshot['version'],
+                'type' => $snapshot['type'],
+                'manifest' => $snapshot['manifest'],
+                'package_path' => $snapshot['package_path'],
+                'package_sha256' => $snapshot['package_sha256'],
+                'signature_key_id' => $snapshot['signature_key_id'],
+                'signature_verified_at' => $snapshot['signature_verified_at'],
+                'metadata' => $snapshot['metadata'],
+                'installed_at' => $snapshot['installed_at'],
+                'activated_at' => null,
+            ])->save();
+
+            $plugin = $lifecycle->transition($plugin->plugin_key, 'inactive', [
+                'health_status' => 'healthy',
+                'health_message' => 'Previous signed package restored after signature and installed-file verification.',
+                'last_health_check_at' => now(),
+            ]);
+
+            $history->record($plugin, 'package_rolled_back', $request->user(), [
+                'from_version' => $snapshotRecord->version,
+                'to_version' => $plugin->version,
+            ]);
+            $this->audit($request, 'admin.plugins.package_rolled_back',
+                'Rolled back plugin '.$plugin->plugin_key.' to retained version '.$plugin->version);
+        } catch (Throwable $exception) {
+            report($exception);
+            $current = PluginInstallation::query()->where('plugin_key', $key)->first();
+            if ($current?->status === 'update_staged') {
+                try {
+                    $lifecycle->transition($key, 'failed', [
+                        'health_status' => 'failed',
+                        'health_message' => 'Package rollback was interrupted. Verify the database and retained package before recovery.',
+                    ]);
+                } catch (Throwable $transitionException) {
+                    report($transitionException);
+                }
+            }
+            $this->recordFailure($request, 'admin.plugins.package_rollback_failed');
+            return back()->with('error', __('Package rollback failed. The plugin was not reactivated; inspect migration and integrity logs before retrying.'));
+        }
+
+        return redirect()->route('admin.plugins.index')->with('success',
+            __('Previous signed package restored. The plugin remains inactive until an administrator activates it.'));
     }
 
     public function activate(
@@ -180,11 +429,22 @@ class AdminPluginManagerController extends Controller
     }
 
 
-    public function uninstall(Request $request, string $key, PluginLifecycle $lifecycle, PluginPackageRemover $remover, PluginVersionHistoryRecorder $history): RedirectResponse
-    {
+    public function uninstall(
+        Request $request,
+        string $key,
+        PluginLifecycle $lifecycle,
+        PluginPackageRemover $remover,
+        PluginPackageRecovery $recovery,
+        PluginSignatureVerifier $signatureVerifier,
+        PluginIntegrityVerifier $integrityVerifier,
+        PluginVersionHistoryRecorder $history,
+    ): RedirectResponse {
+        $request->validate(['confirm_uninstall' => ['required', 'accepted']]);
+
         try {
             $plugin = PluginInstallation::query()->where('plugin_key', $key)->firstOrFail();
-            if (! in_array($plugin->status, ['installed', 'inactive', 'failed'], true)) {
+            $retryingCleanup = $plugin->status === 'uninstalled';
+            if (! $retryingCleanup && ! in_array($plugin->status, ['installed', 'inactive', 'failed'], true)) {
                 throw new LogicException('Deactivate the plugin before uninstalling it.');
             }
 
@@ -198,20 +458,131 @@ class AdminPluginManagerController extends Controller
                 throw new LogicException('An active plugin depends on this plugin: '.$dependent->plugin_key);
             }
 
-            $plugin = $lifecycle->transition($plugin->plugin_key, 'uninstalled');
+            if (! $retryingCleanup) {
+                if (! $signatureVerifier->verifyInstalledSignature($plugin)) {
+                    throw new RuntimeException('The plugin has no verifiable detached release signature; uninstall is blocked.');
+                }
+                $integrityVerifier->verify($plugin);
+                $snapshot = $recovery->createSnapshot($plugin);
+                try {
+                    PluginVersionHistory::query()->create([
+                        'plugin_key' => $plugin->plugin_key,
+                        'version' => $plugin->version,
+                        'package_sha256' => $plugin->package_sha256,
+                        'signature_key_id' => $plugin->signature_key_id,
+                        'action' => 'pre_uninstall_snapshot',
+                        'status' => $plugin->status,
+                        'actor_id' => $request->user()->id,
+                        'details' => [
+                            'recovery_path' => $snapshot['path'],
+                            'recovery_sha256' => $snapshot['sha256'],
+                            'recovery_bytes' => $snapshot['bytes'],
+                        ],
+                        'created_at' => now(),
+                    ]);
+                } catch (Throwable $historyException) {
+                    $recovery->deleteSnapshot($snapshot['path']);
+                    throw $historyException;
+                }
+                $plugin = $lifecycle->transition($plugin->plugin_key, 'uninstalled');
+            }
+
             $remover->remove($plugin);
-            $history->record($plugin, 'uninstalled', $request->user());
+            $history->record($plugin, $retryingCleanup ? 'package_cleanup_retried' : 'uninstalled', $request->user());
         } catch (Throwable $exception) {
             report($exception);
+
+            // If package cleanup failed after the registry transition, record a retryable
+            // failed state. Preserve the signed recovery snapshot, LMS data and migrations.
+            if (isset($plugin) && $plugin instanceof PluginInstallation && $plugin->status === 'uninstalled') {
+                try {
+                    $plugin = $lifecycle->transition($plugin->plugin_key, 'failed', [
+                        'health_status' => 'failed',
+                        'health_message' => 'Plugin package cleanup failed; retry uninstall after reviewing protected server logs.',
+                    ]);
+                } catch (Throwable $stateException) {
+                    report($stateException);
+                }
+            }
+
             $this->recordFailure($request, 'admin.plugins.uninstall_failed');
             return back()->with('error', __('Plugin uninstall was blocked or package cleanup failed. Plugin data and migration records were retained.'));
         }
 
         $this->audit($request, 'admin.plugins.uninstalled',
-            'Uninstalled plugin '.$plugin->plugin_key.'; application data and migration history were retained.');
+            'Uninstalled plugin '.$plugin->plugin_key.'; LMS data and migration history were retained with a verified package recovery snapshot.');
 
         return redirect()->route('admin.plugins.index')->with('success',
-            __('Plugin uninstalled. Its executable package was removed; plugin data and migration records were retained.'));
+            __('Plugin package removed. A verified recovery snapshot is retained; LMS data and migration records were preserved.'));
+    }
+
+    public function restorePackage(
+        Request $request,
+        string $key,
+        PluginPackageRecovery $recovery,
+        PluginPackageRemover $remover,
+        PluginSignatureVerifier $signatureVerifier,
+        PluginIntegrityVerifier $integrityVerifier,
+        PluginLifecycle $lifecycle,
+        PluginVersionHistoryRecorder $history,
+    ): RedirectResponse {
+        $request->validate(['confirm_restore' => ['required', 'accepted']]);
+        $plugin = null;
+        $packageRestored = false;
+
+        try {
+            $plugin = PluginInstallation::query()->where('plugin_key', $key)->firstOrFail();
+            if ($plugin->status !== 'uninstalled') {
+                throw new LogicException('Only an uninstalled plugin can be restored.');
+            }
+            $snapshotRecord = PluginVersionHistory::query()
+                ->where('plugin_key', $plugin->plugin_key)
+                ->where('version', $plugin->version)
+                ->where('action', 'pre_uninstall_snapshot')
+                ->latest('created_at')->first();
+            $details = $snapshotRecord?->details;
+            if (! is_array($details) || ! is_string($details['recovery_path'] ?? null)
+                || ! is_string($details['recovery_sha256'] ?? null)) {
+                throw new RuntimeException('No pre-uninstall recovery snapshot is recorded for this plugin version.');
+            }
+
+            $recovery->restoreSnapshot($plugin, $details['recovery_path'], $details['recovery_sha256']);
+            $packageRestored = true;
+            if (! $signatureVerifier->verifyInstalledSignature($plugin)) {
+                throw new RuntimeException('The restored package does not contain a verifiable detached release signature.');
+            }
+            // IntegrityVerifier intentionally rejects the terminal uninstalled
+            // state, so only enter installed after the detached signature passes.
+            $plugin = $lifecycle->transition($plugin->plugin_key, 'installed', [
+                'health_status' => 'healthy',
+                'health_message' => 'Restored from a signed, checksum-verified pre-uninstall package snapshot.',
+                'last_health_check_at' => now(),
+            ]);
+            $integrityVerifier->verify($plugin);
+            $history->record($plugin, 'package_restored', $request->user(), [
+                'recovery_path' => $details['recovery_path'],
+                'recovery_sha256' => $details['recovery_sha256'],
+            ]);
+            $this->audit($request, 'admin.plugins.package_restored',
+                'Restored verified package '.$plugin->plugin_key.' version '.$plugin->version.'; plugin remains inactive.');
+        } catch (Throwable $exception) {
+            if ($packageRestored && $plugin instanceof PluginInstallation) {
+                try {
+                    if (in_array($plugin->status, ['installed', 'inactive', 'failed'], true)) {
+                        $plugin = $lifecycle->transition($plugin->plugin_key, 'uninstalled');
+                    }
+                    if ($plugin->status === 'uninstalled') $remover->remove($plugin);
+                } catch (Throwable $cleanupException) {
+                    report($cleanupException);
+                }
+            }
+            report($exception);
+            $this->recordFailure($request, 'admin.plugins.package_restore_failed');
+            return back()->with('error', __('Plugin package restore failed verification. The plugin remains disabled; inspect the activity log.'));
+        }
+
+        return redirect()->route('admin.plugins.index')->with('success',
+            __('Verified plugin package restored. It remains installed and inactive until explicitly activated.'));
     }
 
     public function healthCheck(

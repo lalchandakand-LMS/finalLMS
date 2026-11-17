@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "key": "refund_management",
+  "name": "Refunds",
+  "description": "Refunds and reconciliation.",
+  "type": "first_party",
+  "status": "metadata_only",
+  "provider": null,
+  "dependencies": [
+    "core",
+    "finance",
+    "payments"
+  ],
+  "permissions": [],
+  "routes": [
+    "admin.finance.refunds.*",
+    "admin.refunds.*",
+    "refunds.*",
+    "accountant.refunds.*"
+  ],
+  "settings": [],
+  "events": [],
+  "directory": "plugins/refund_management",
+  "safety": {
+    "trusted_code_only": true,
+    "execute_uploaded_code": false,
+    "disable_preserves_data": true
+  }
+}

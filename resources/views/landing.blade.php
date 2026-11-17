@@ -44,8 +44,8 @@
             $asset = \App\Models\MediaAsset::query()->whereKey($slide['image_id'])->where('mime_type', 'like', 'image/%')->first();
             return $asset ? ['asset' => $asset, 'title' => $slide['title'] ?? '', 'subtitle' => $slide['subtitle'] ?? '', 'button_label' => $slide['button_label'] ?? '', 'button_url' => $slide['button_url'] ?? ''] : null;
         })->filter()->values();
-        $homepageTemplate = (string) ($hasSettingsTable ? \App\Models\Setting::value('homepage_template', 'academy-modern') : 'academy-modern');
-        $homepageTemplate = array_key_exists($homepageTemplate, \App\Http\Controllers\WebsiteBuilderController::homepageTemplates()) ? $homepageTemplate : 'academy-modern';
+        $homepageTemplate = (string) ($hasSettingsTable ? \App\Models\Setting::value('homepage_template', 'redwans-method') : 'redwans-method');
+        $homepageTemplate = array_key_exists($homepageTemplate, \App\Http\Controllers\WebsiteBuilderController::homepageTemplates()) ? $homepageTemplate : 'redwans-method';
 
         $homeBatchesTitle = $hasSettingsTable ? \App\Models\Setting::value('home_batches_title', 'Online Batches are ongoing!') : 'Online Batches are ongoing!';
         $homeStatsTitle = $hasSettingsTable ? \App\Models\Setting::value('home_stats_title', 'See the stats!') : 'See the stats!';
@@ -106,6 +106,17 @@
         .homepage-template .btn.primary { background: var(--template-accent); }
         .homepage-template .badge.info { background: color-mix(in srgb, var(--template-accent) 12%, white); color: var(--template-accent); }
         .homepage-template .stat { border-radius: calc(var(--template-radius) * .7); }
+        .homepage-template--redwans-method { --template-accent:#08a9c7; --template-radius:16px; padding:18px 24px 0; color:#e7f6fb; background:#062f43; }
+        .homepage-template--redwans-method .home-carousel { max-width:1120px; margin:0 auto 24px !important; }
+        .homepage-template--redwans-method .home-carousel__viewport { border-radius:18px; box-shadow:0 18px 44px #001b2b66; }
+        .homepage-template--redwans-method .home-overview { max-width:1120px; margin:0 auto 22px; padding:0 0 22px; background:transparent; }
+        .homepage-template--redwans-method .home-overview__panel { border-color:#0b7180; background:linear-gradient(145deg,#084d55,#0a3c57); }
+        .homepage-template--redwans-method .home-overview__panel--stats { background:linear-gradient(145deg,#08445a,#123b69); }
+        .homepage-template--redwans-method .home-overview h2 { color:#fff; }
+        .homepage-template--redwans-method .home-paths { background:linear-gradient(135deg,#f1edff,#f5f1ff 55%,#eaf5ff); }
+        .homepage-template--redwans-method .home-testimonials { background:linear-gradient(135deg,#111d31,#17263e 55%,#0c1b30); }
+        .homepage-template--redwans-method .home-testimonial-track { animation-duration:48s; }
+        @media(max-width:820px) { .homepage-template--redwans-method { padding:12px 12px 0; } .homepage-template--redwans-method .home-overview { padding-bottom:16px; } }
         .homepage-template--academy-modern { --template-accent:#2457c5; --template-radius:20px; }
         .homepage-template--academy-modern .hero { background:linear-gradient(135deg,#eff6ff,#fff 60%); border-radius:26px; padding:clamp(18px,3vw,32px); }
         .homepage-template--bold-academy { --template-accent:#172554; --template-radius:10px; }
@@ -264,17 +275,17 @@
         @endif
         <div class="home-paths__footer"><a class="home-button home-button--primary" href="{{ route('courses.index') }}">{{ __('Browse all courses') }}</a></div>
     </section>
-    @if($hasLearnerVoices)
-        @php
-            $testimonialRows = [
-                $learnerVoices->values()->slice(0, 6),
-                $learnerVoices->values()->slice(6, 6),
-            ];
-            if ($testimonialRows[1]->isEmpty()) {
-                $testimonialRows[1] = $testimonialRows[0];
-            }
-        @endphp
-        <section class="home-testimonials"><div class="home-section-heading home-section-heading--dark"><span class="home-heading-kicker">{{ __('Student reviews') }}</span><h2>{{ $homeReviewsTitle }}</h2><p>{{ __('Approved feedback from our learners') }}</p></div>
+    @php
+        $testimonialRows = [
+            $learnerVoices->values()->slice(0, 6),
+            $learnerVoices->values()->slice(6, 6),
+        ];
+        if ($testimonialRows[1]->isEmpty()) {
+            $testimonialRows[1] = $testimonialRows[0];
+        }
+    @endphp
+    <section class="home-testimonials"><div class="home-section-heading home-section-heading--dark"><span class="home-heading-kicker">{{ __('Student reviews') }}</span><h2>{{ $homeReviewsTitle }}</h2><p>{{ __('Approved feedback from our learners') }}</p></div>
+        @if($hasLearnerVoices)
             @foreach($testimonialRows as $rowIndex => $row)
                 <div class="home-testimonial-viewport">
                     <div class="home-testimonial-track {{ $rowIndex === 1 ? 'home-testimonial-track--reverse' : '' }}">
@@ -293,8 +304,10 @@
                     </div>
                 </div>
             @endforeach
-        </section>
-    @endif
+        @else
+            <p class="home-empty home-empty--dark">{{ __('Student reviews will appear here after approved feedback is received.') }}</p>
+        @endif
+    </section>
 
     @php
         $builderSections = $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('website_sections', '[]'), true) : [];

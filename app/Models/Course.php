@@ -15,6 +15,7 @@ class Course extends Model
 
     protected $fillable = [
         'teacher_id',
+        'academic_level_id',
         'title',
         'slug',
         'description',
@@ -40,6 +41,11 @@ class Course extends Model
     public function combos(): BelongsToMany
     {
         return $this->belongsToMany(CourseCombo::class, 'course_combo_course')->withPivot('position')->withTimestamps();
+    }
+
+    public function academicLevel(): BelongsTo
+    {
+        return $this->belongsTo(AcademicLevel::class);
     }
 
     public function teacher(): BelongsTo

@@ -51,6 +51,8 @@
                     <div class="lesson-player" style="margin-bottom:22px;">
                         <iframe src="{{ $post->video_embed_url }}" title="{{ $post->title }}" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
                     </div>
+                @elseif($post->thumbnail_path)
+                    <img src="{{ asset('storage/'.$post->thumbnail_path) }}" alt="{{ $post->title }}" loading="lazy" style="width:100%;max-height:360px;object-fit:cover;border-radius:14px;margin-bottom:20px;">
                 @elseif($post->thumbnail)
                     <img src="{{ $post->thumbnail->url }}" alt="{{ $post->thumbnail->alt_text ?: $post->title }}" loading="lazy" style="width:100%;max-height:360px;object-fit:cover;border-radius:14px;margin-bottom:20px;">
                 @endif
@@ -68,6 +70,15 @@
                 @endif
 
                 <div class="lesson-copy">{{ $post->long_description }}</div>
+
+                @if($post->content_file_path)
+                    <div class="panel" style="margin-top:20px;padding:16px;">
+                        <strong>{{ __('Lesson resource') }}</strong>
+                        <p class="muted">{{ $post->content_file_name }}</p>
+                        <a class="btn primary" href="{{ route('courses.content.file', [$course, $post]) }}">{{ $post->access_type === 'paid' ? __('Download purchased PDF') : __('Open / download lesson file') }}</a>
+                    </div>
+                @endif
+
 
                 @if($contentProgress)
                     <div class="meta-row" style="margin-top:22px;padding-top:16px;border-top:1px solid var(--border);justify-content:space-between;">

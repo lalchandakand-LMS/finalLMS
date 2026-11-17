@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "key": "media_library",
+  "name": "Media Library",
+  "description": "Image, document and media asset management.",
+  "type": "first_party",
+  "status": "metadata_only",
+  "provider": null,
+  "dependencies": [
+    "core",
+    "storage"
+  ],
+  "permissions": [],
+  "routes": [
+    "admin.media.*",
+    "media.*"
+  ],
+  "settings": [],
+  "events": [],
+  "directory": "plugins/media_library",
+  "safety": {
+    "trusted_code_only": true,
+    "execute_uploaded_code": false,
+    "disable_preserves_data": true
+  }
+}

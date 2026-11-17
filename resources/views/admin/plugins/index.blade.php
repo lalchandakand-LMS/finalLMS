@@ -93,6 +93,32 @@
                                 </details>
                             @endif
 
+                            @php($settingsForPlugin = $pluginSettings[$plugin->plugin_key] ?? [])
+                            @if(in_array($plugin->status, ['installed', 'active', 'inactive'], true))
+                                <details style="margin-top:8px;">
+                                    <summary>{{ __('Encrypted plugin settings') }} ({{ count($settingsForPlugin) }})</summary>
+                                    <form method="POST" action="{{ route('admin.plugins.settings.store', $plugin->plugin_key) }}" style="margin-top:8px;display:grid;gap:8px;max-width:420px;">
+                                        @csrf
+                                        <label>{{ __('Setting key') }}<input name="setting_key" maxlength="120" pattern="[a-z][a-z0-9_.-]{0,119}" placeholder="api_key" required></label>
+                                        <label>{{ __('Secret / value') }}<input type="password" name="setting_value" maxlength="4096" autocomplete="new-password" required></label>
+                                        <button class="btn secondary" type="submit">{{ __('Save encrypted setting') }}</button>
+                                    </form>
+                                    @forelse($settingsForPlugin as $storedSetting)
+                                        <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+                                            <code>{{ $storedSetting['key'] }}</code>
+                                            <span class="muted">{{ $storedSetting['updated_at']?->format('Y-m-d H:i') }}</span>
+                                            <form method="POST" action="{{ route('admin.plugins.settings.delete', [$plugin->plugin_key, $storedSetting['key']]) }}" onsubmit="return confirm('{{ __('Delete this plugin setting?') }}')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button class="btn danger" type="submit">{{ __('Delete') }}</button>
+                                            </form>
+                                        </div>
+                                    @empty
+                                        <p class="muted">{{ __('No plugin settings saved.') }}</p>
+                                    @endforelse
+                                </details>
+                            @endif
+
                             @if($plugin->versionHistory->isNotEmpty())
                                 <details style="margin-top:8px;">
                                     <summary>{{ __('Version history') }}</summary>
@@ -140,10 +166,48 @@
                                     <button class="btn secondary" type="submit">{{ __('Deactivate') }}</button>
                                 </form>
                             @endif
-                            @if(in_array($plugin->status, ['installed', 'inactive', 'failed'], true))
-                                <form method="POST" action="{{ route('admin.plugins.uninstall', $plugin->plugin_key) }}" style="display:inline;" onsubmit="return confirm('{{ __('Uninstall this plugin package? Conversation history, LMS data and migration records will be retained.') }}')">
+                            @if(in_array($plugin->status, ['installed', 'inactive'], true))
+                                <details style="margin-top:8px;">
+                                    <summary>{{ __('Update signed package') }}</summary>
+                                    <p class="muted">{{ __('Only a newer signed version can be installed. Deactivate first; the previous package and its version metadata are retained.') }}</p>
+                                    <form method="POST" action="{{ route('admin.plugins.update-package', $plugin->plugin_key) }}" enctype="multipart/form-data" style="display:grid;gap:8px;max-width:520px;" onsubmit="return confirm('{{ __('Update this plugin? The plugin must be inactive. Review the signed release and take a database backup first.') }}')">
+                                        @csrf
+                                        <input type="hidden" name="confirm_update" value="1">
+                                        <label>{{ __('New plugin ZIP') }}
+                                            <input type="file" name="package" accept=".zip,application/zip" required>
+                                        </label>
+                                        <label>{{ __('Trusted release key ID') }}
+                                            <input type="text" name="key_id" maxlength="120" value="{{ $plugin->signature_key_id }}" required>
+                                        </label>
+                                        <label>{{ __('New signed manifest JSON') }}
+                                            <textarea name="manifest" rows="8" spellcheck="false" required>{{ json_encode($plugin->manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) }}</textarea>
+                                        </label>
+                                        <label>{{ __('New detached signature (Base64)') }}
+                                            <textarea name="signature" rows="3" maxlength="512" spellcheck="false" required></textarea>
+                                        </label>
+                                        <button class="btn primary" type="submit">{{ __('Verify and update package') }}</button>
+                                    </form>
+                                </details>
+                            @endif
+                            @if(in_array($plugin->status, ['installed', 'inactive'], true) && $plugin->versionHistory->contains(fn ($history) => $history->action === 'package_update_snapshot' && $history->version !== $plugin->version))
+                                <form method="POST" action="{{ route('admin.plugins.rollback-package', $plugin->plugin_key) }}" style="display:inline;" onsubmit="return confirm('{{ __('Rollback to the retained previous package? This reverses the current version migrations. Create a database backup first.') }}')">
                                     @csrf
-                                    <button class="btn danger" type="submit">{{ __('Uninstall') }}</button>
+                                    <input type="hidden" name="confirm_rollback" value="1">
+                                    <button class="btn secondary" type="submit">{{ __('Rollback package version') }}</button>
+                                </form>
+                            @endif
+                            @if($plugin->status === 'uninstalled' && $plugin->versionHistory->contains(fn ($history) => $history->action === 'pre_uninstall_snapshot' && $history->version === $plugin->version))
+                                <form method="POST" action="{{ route('admin.plugins.restore-package', $plugin->plugin_key) }}" style="display:inline;" onsubmit="return confirm('{{ __('Restore this exact signed plugin package from its verified pre-uninstall snapshot? It will remain inactive.') }}')">
+                                    @csrf
+                                    <input type="hidden" name="confirm_restore" value="1">
+                                    <button class="btn secondary" type="submit">{{ __('Restore package') }}</button>
+                                </form>
+                            @endif
+                            @if(in_array($plugin->status, ['installed', 'inactive', 'failed', 'uninstalled'], true))
+                                <form method="POST" action="{{ route('admin.plugins.uninstall', $plugin->plugin_key) }}" style="display:inline;" onsubmit="return confirm('{{ $plugin->status === 'uninstalled' ? __('Retry removal of remaining plugin package files? LMS data and migration records will be retained.') : __('Uninstall this plugin package? LMS data and migration records will be retained.') }}')">
+                                    @csrf
+                                    <input type="hidden" name="confirm_uninstall" value="1">
+                                    <button class="btn danger" type="submit">{{ $plugin->status === 'uninstalled' ? __('Retry package cleanup') : __('Uninstall') }}</button>
                                 </form>
                             @endif
                         </td>

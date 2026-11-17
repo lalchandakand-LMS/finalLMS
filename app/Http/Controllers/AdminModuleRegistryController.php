@@ -18,7 +18,7 @@ class AdminModuleRegistryController extends Controller
 
     public function update(Request $request, string $key, ModuleRegistry $registry): RedirectResponse
     {
-        $validated = $request->validate(['enabled' => ['required', 'boolean']]);
+        $validated = $request->validate(['enabled' => ['present', 'boolean']]);
         $enabled = (bool) $validated['enabled'];
 
         try {

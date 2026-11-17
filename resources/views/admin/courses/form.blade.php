@@ -1,20 +1,22 @@
 @extends('layouts.app')
 
-@section('title', isset($course) ? __('Edit course') . ' | ' . config('app.name') : __('Create course') . ' | ' . config('app.name'))
+@php($isEditing = $course?->exists ?? false)
+
+@section('title', $isEditing ? __('Edit course') . ' | ' . config('app.name') : __('Create course') . ' | ' . config('app.name'))
 
 @section('content')
     @php($selectedCategoryIds = collect(old('category_ids', $course?->categories?->pluck('id')->all() ?? []))->map(fn ($id) => (int) $id)->all())
     <div class="page-header">
         <div>
             <span class="badge info">{{ __('Admin') }}</span>
-            <h1 style="margin: 12px 0 0;">{{ isset($course) ? __('Edit course') : __('Create course') }}</h1>
+            <h1 style="margin: 12px 0 0;">{{ $isEditing ? __('Edit course') : __('Create course') }}</h1>
         </div>
     </div>
 
     <div class="panel" style="max-width: 800px; margin: 0 auto;">
-        <form method="POST" enctype="multipart/form-data" action="{{ isset($course) ? route('admin.courses.update', $course) : route('admin.courses.store') }}">
+        <form method="POST" enctype="multipart/form-data" action="{{ $isEditing ? route('admin.courses.update', $course) : route('admin.courses.store') }}">
             @csrf
-            @if(isset($course))
+            @if($isEditing)
                 @method('PUT')
             @endif
 
@@ -101,6 +103,16 @@
             <label>
                 {{ __('SEO description') }}
                 <textarea name="seo_description" rows="2" maxlength="320">{{ old('seo_description', $course?->seo_description ?? '') }}</textarea>
+            </label>
+
+            <label>
+                {{ __('Academic level') }}
+                <select name="academic_level_id">
+                    <option value="">No academic level</option>
+                    @foreach($academicLevels as $academicLevel)
+                        <option value="{{ $academicLevel->id }}" @selected((string) old('academic_level_id', $course?->academic_level_id ?? '') === (string) $academicLevel->id)>{{ $academicLevel->name }}</option>
+                    @endforeach
+                </select>
             </label>
 
             <label>

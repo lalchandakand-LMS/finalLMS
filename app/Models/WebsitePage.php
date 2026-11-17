@@ -9,7 +9,7 @@ class WebsitePage extends Model
 {
     protected $fillable = [
         'title', 'slug', 'menu_label', 'template', 'sections', 'seo_title',
-        'seo_description', 'show_in_menu', 'menu_order', 'status', 'published_at', 'created_by',
+        'seo_description', 'show_in_menu', 'menu_order', 'status', 'published_at', 'created_by', 'academic_level_id',
     ];
 
     protected $casts = [
@@ -17,6 +17,11 @@ class WebsitePage extends Model
         'show_in_menu' => 'boolean',
         'published_at' => 'datetime',
     ];
+
+    public function academicLevel(): BelongsTo
+    {
+        return $this->belongsTo(AcademicLevel::class);
+    }
 
     public function creator(): BelongsTo
     {
