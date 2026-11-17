@@ -85,8 +85,8 @@ final class PluginSignatureVerifier
         return DB::transaction(function () use ($plugin, $manifest, $checksum, $keyId, $finalRelativePath, $signatureBase64): PluginInstallation {
             $locked = PluginInstallation::query()->lockForUpdate()->findOrFail($plugin->getKey());
 
-            if (! in_array($locked->status, ['validated', 'staged'], true)) {
-                throw new RuntimeException('Only a validated or staged plugin can receive package verification metadata.');
+            if (! in_array($locked->status, ['validated', 'staged', 'update_staged'], true)) {
+                throw new RuntimeException('Only a validated, staged or update-staged plugin can receive package verification metadata.');
             }
 
             if (! hash_equals((string) $locked->plugin_key, (string) $manifest['key'])
