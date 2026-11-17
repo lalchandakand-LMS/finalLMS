@@ -25,6 +25,9 @@ return new class implements PluginContract
 
         foreach ($portals as $portal => [$prefix, $namePrefix, $label]) {
             $context->routesForPortal($portal, $prefix, $namePrefix, function (): void {
+                Route::get('/export', [StudentTrackingController::class, 'export'])
+                    ->middleware('throttle:5,1')
+                    ->name('export');
                 Route::get('/', [StudentTrackingController::class, 'index'])->name('index');
                 Route::get('/{student}', [StudentTrackingController::class, 'show'])
                     ->whereNumber('student')
