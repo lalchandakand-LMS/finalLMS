@@ -462,6 +462,7 @@ class StudentTrackingController extends Controller
         }
 
         $riskActions = collect();
+        $dismissedRiskFlags = [];
         if (Schema::hasTable('student_tracking_risk_actions')) {
             $latestActions = DB::table('student_tracking_risk_actions')
                 ->where('student_id', $studentRecord->id)
@@ -470,6 +471,10 @@ class StudentTrackingController extends Controller
                 ->get()
                 ->groupBy('risk_code')
                 ->map(fn ($actions) => $actions->last());
+            $dismissedRiskFlags = collect($riskFlags)
+                ->filter(fn (array $flag) => $latestActions->get($flag['code'])?->action === 'dismiss')
+                ->values()
+                ->all();
             $riskFlags = collect($riskFlags)
                 ->reject(fn (array $flag) => $latestActions->get($flag['code'])?->action === 'dismiss')
                 ->values()
@@ -501,6 +506,7 @@ class StudentTrackingController extends Controller
             'assignmentSubmissions' => $assignmentSubmissions,
             'attendanceRate' => $attendanceRate,
             'riskFlags' => $riskFlags,
+            'dismissedRiskFlags' => $dismissedRiskFlags,
             'riskActions' => $riskActions,
             'portalTitle' => $this->portalTitle($actor),
         ]);
