@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -24,6 +25,17 @@ class AdminAttendanceAuditController extends Controller
     {
         $filters = $this->filters($request);
         $query = $this->query($filters)->orderBy('logs.id');
+        $actor = $request->user();
+
+        ActivityLog::query()->create([
+            'user_id' => $actor?->id,
+            'event' => 'attendance.audit.exported',
+            'description' => 'Attendance audit CSV exported; filters='.json_encode($filters, JSON_THROW_ON_ERROR),
+            'method' => 'GET',
+            'route' => $request->route()?->getName() ?? 'admin.attendance-audit.export',
+            'ip_address' => $request->ip(),
+            'user_agent' => substr((string) $request->userAgent(), 0, 1000),
+        ]);
 
         return response()->streamDownload(function () use ($query): void {
             $output = fopen('php://output', 'w');
@@ -50,6 +62,7 @@ class AdminAttendanceAuditController extends Controller
             fclose($output);
         }, 'attendance-audit-'.now()->format('Ymd-His').'.csv', [
             'Content-Type' => 'text/csv; charset=UTF-8',
+            'Cache-Control' => 'no-store, private',
         ]);
     }
 
