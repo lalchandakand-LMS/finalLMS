@@ -117,4 +117,154 @@ class AttendanceManagementTest extends TestCase
             ->get(route('teacher.batches.attendance.index', $batch))
             ->assertForbidden();
     }
+    public function test_changing_saved_attendance_requires_reason_and_records_audit_history(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $student = User::factory()->create(['role' => 'student']);
+        $course = Course::create([
+            'teacher_id' => $teacher->id,
+            'title' => 'Attendance Correction Course',
+            'slug' => 'attendance-correction-course',
+            'description' => 'Correction audit test.',
+            'price' => 1000,
+            'status' => 'published',
+        ]);
+        $branch = Branch::create(['name' => 'Correction Center', 'slug' => 'correction-center']);
+        $batch = Batch::create([
+            'branch_id' => $branch->id,
+            'course_id' => $course->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Correction Batch',
+            'capacity' => 20,
+            'starts_at' => now(),
+            'ends_at' => now()->addMonth(),
+            'fee' => 0,
+            'status' => 'open',
+        ]);
+        Enrollment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'batch_id' => $batch->id,
+            'status' => 'active',
+        ]);
+        Attendance::create([
+            'batch_id' => $batch->id,
+            'student_id' => $student->id,
+            'marked_by' => $teacher->id,
+            'attendance_date' => now()->toDateString(),
+            'status' => 'absent',
+        ]);
+
+        $this->actingAs($teacher)
+            ->post(route('teacher.batches.attendance.store', $batch), [
+                'attendance_date' => now()->toDateString(),
+                'records' => [['student_id' => $student->id, 'status' => 'present']],
+            ])
+            ->assertSessionHasErrors('reason');
+
+        $this->assertDatabaseHas('attendances', [
+            'batch_id' => $batch->id,
+            'student_id' => $student->id,
+            'status' => 'absent',
+        ]);
+
+        $this->actingAs($teacher)
+            ->post(route('teacher.batches.attendance.store', $batch), [
+                'attendance_date' => now()->toDateString(),
+                'records' => [[
+                    'student_id' => $student->id,
+                    'status' => 'present',
+                    'reason' => 'Checked against the signed register.',
+                ]],
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('attendances', [
+            'batch_id' => $batch->id,
+            'student_id' => $student->id,
+            'status' => 'present',
+        ]);
+        $this->assertDatabaseHas('attendance_change_logs', [
+            'actor_id' => $teacher->id,
+            'previous_status' => 'absent',
+            'new_status' => 'present',
+            'reason' => 'Checked against the signed register.',
+            'source' => 'web',
+        ]);
+    }
+
+    public function test_branch_manager_can_mark_attendance_only_for_an_authorized_assigned_branch(): void
+    {
+        $branch = Branch::create(['name' => 'Branch Attendance Center', 'slug' => 'branch-attendance-center']);
+        $otherBranch = Branch::create(['name' => 'Other Attendance Center', 'slug' => 'other-attendance-center']);
+        $manager = User::factory()->create([
+            'role' => 'branch_manager',
+            'branch_id' => $branch->id,
+            'admin_permissions' => ['branch.attendance'],
+        ]);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $student = User::factory()->create(['role' => 'student']);
+        $otherStudent = User::factory()->create(['role' => 'student']);
+        $course = Course::create([
+            'teacher_id' => $teacher->id,
+            'title' => 'Branch Attendance Course',
+            'slug' => 'branch-attendance-course',
+            'description' => 'Branch scope test.',
+            'price' => 1000,
+            'status' => 'published',
+        ]);
+        $batch = Batch::create([
+            'branch_id' => $branch->id,
+            'course_id' => $course->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Assigned Branch Batch',
+            'capacity' => 20,
+            'starts_at' => now(),
+            'ends_at' => now()->addMonth(),
+            'fee' => 0,
+            'status' => 'open',
+        ]);
+        $otherBatch = Batch::create([
+            'branch_id' => $otherBranch->id,
+            'course_id' => $course->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Other Branch Batch',
+            'capacity' => 20,
+            'starts_at' => now(),
+            'ends_at' => now()->addMonth(),
+            'fee' => 0,
+            'status' => 'open',
+        ]);
+        foreach ([[$batch, $student], [$otherBatch, $otherStudent]] as [$enrolledBatch, $enrolledStudent]) {
+            Enrollment::create([
+                'user_id' => $enrolledStudent->id,
+                'course_id' => $course->id,
+                'batch_id' => $enrolledBatch->id,
+                'status' => 'active',
+            ]);
+        }
+
+        $this->actingAs($manager)
+            ->get(route('admin.branch-workspace.batches.attendance.index', $batch))
+            ->assertOk()
+            ->assertSee('Assigned Branch Batch');
+
+        $this->actingAs($manager)
+            ->post(route('admin.branch-workspace.batches.attendance.store', $batch), [
+                'attendance_date' => now()->toDateString(),
+                'records' => [['student_id' => $student->id, 'status' => 'present']],
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('attendances', [
+            'batch_id' => $batch->id,
+            'student_id' => $student->id,
+            'status' => 'present',
+        ]);
+
+        $this->actingAs($manager)
+            ->get(route('admin.branch-workspace.batches.attendance.index', $otherBatch))
+            ->assertForbidden();
+    }
+
 }

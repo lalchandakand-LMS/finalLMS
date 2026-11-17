@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+import 'attendance_offline_queue.dart';
 import 'package:http/http.dart' as http;
 
 enum LoginState { authenticated, verifyPhone, pendingApproval }
@@ -289,6 +291,17 @@ class MobileApi {
       await storage.delete(key: _tokenKey);
     }
     return _decode(response);
+  }
+
+  /// Uploads queued attendance using the current authenticated session.
+  ///
+  /// The queue remains pending when the request fails or the server omits an
+  /// acknowledgement. The server endpoint must return per-record results with
+  /// idempotency_key and status (synced, duplicate, conflict or failed).
+  Future<void> syncAttendanceQueue(AttendanceOfflineQueue queue) async {
+    await queue.sync(
+      (payload) => postJson('/instructor/attendance/sync', payload),
+    );
   }
 
   Future<void> logout() async {

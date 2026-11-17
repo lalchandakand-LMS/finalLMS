@@ -8,14 +8,14 @@
             <span class="badge info">{{ $batch->course->title }}</span>
             <h1 style="margin:12px 0 0;">{{ $batch->title }} attendance</h1>
         </div>
-        <a href="{{ route('teacher.batches.index') }}" class="btn secondary">My batches</a>
+        <a href="{{ route($attendanceBackRoute) }}" class="btn secondary">My batches</a>
     </div>
 
     <div class="panel">
         @if($students->isEmpty())
             <p class="muted" style="margin:0;">{{ __('No students are enrolled in this batch.') }}</p>
         @else
-            <form method="POST" action="{{ route('teacher.batches.attendance.store', $batch) }}">
+            <form method="POST" action="{{ route($attendanceStoreRoute, $batch) }}">
                 @csrf
                 <label for="attendance-date">{{ __('Class date') }}</label>
                 <input id="attendance-date" type="date" name="attendance_date" value="{{ request('date', now()->toDateString()) }}" required>
@@ -26,8 +26,12 @@
                             <input type="hidden" name="records[{{ $index }}][student_id]" value="{{ $enrollment->user_id }}">
                             <div class="meta-row" style="margin-top:0; align-items:center;">
                                 <div><strong>{{ $enrollment->user->name }}</strong><div class="muted">{{ $enrollment->user->email }}</div></div>
+                                @php($attendanceStatuses = ['present' => __('Present'), 'absent' => __('Absent'), 'late' => __('Late')])
+                                @if($allowExcused)
+                                    @php($attendanceStatuses['excused'] = __('Excused'))
+                                @endif
                                 <select name="records[{{ $index }}][status]" required>
-                                    @foreach(['present' => __('Present'), 'absent' => __('Absent'), 'late' => __('Late')] as $value => $label)
+                                    @foreach($attendanceStatuses as $value => $label)
                                         <option value="{{ $value }}" @selected(($attendance[$enrollment->user_id] ?? 'present') === $value)>{{ $label }}</option>
                                     @endforeach
                                 </select>

@@ -10,6 +10,9 @@ dependencies:
   flutter_secure_storage: ^9.2.2
   material_ui: ^1.0.0
   http: ^1.2.2
+  geolocator: ^13.0.2
+  connectivity_plus: ^6.1.4
+  qr_flutter: ^4.1.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

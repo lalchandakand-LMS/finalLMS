@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:file_picker/file_picker.dart';
 import 'package:material_ui/material_ui.dart';
 import 'api_client.dart';
+import 'qr_attendance_page.dart';
 import 'package:video_player/video_player.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -430,6 +431,12 @@ class _StudentHomeState extends State<StudentHome> {
     ));
   }
 
+  Future<void> openQrAttendance() async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => StudentQrAttendancePage(api: widget.api),
+    ));
+  }
+
   Future<void> openNotices() async {
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => StudentNoticesPage(api: widget.api),
@@ -579,6 +586,16 @@ class _StudentHomeState extends State<StudentHome> {
               : ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
+                    Card(
+                      child: ListTile(
+                        leading: const Icon(Icons.qr_code_scanner, size: 32),
+                        title: const Text('QR attendance check-in'),
+                        subtitle: const Text('Scan your instructor’s temporary classroom QR code.'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: openQrAttendance,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     Text('My Courses',
                         style: Theme.of(context).textTheme.titleLarge),
                     if (myCourses.isEmpty)
