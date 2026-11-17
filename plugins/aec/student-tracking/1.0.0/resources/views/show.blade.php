@@ -149,6 +149,7 @@
 </div>
 
 <div class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;">
+    @if($noticeTrackingAvailable)
     <div class="panel">
         <h2>{{ __('Student-visible notices') }}</h2>
         @forelse($announcements as $announcement)
@@ -169,7 +170,8 @@
             <p class="muted">{{ __('No active student-visible notices in this student\'s branch/course scope.') }}</p>
         @endforelse
     </div>
-    @if(auth()->user()->role === 'admin')
+    @endif
+    @if($supportTrackingAvailable)
         <div class="panel">
             <h2>{{ __('Support engagement (Admin only)') }}</h2>
             @forelse($supportTickets as $ticket)
