@@ -26,6 +26,11 @@ final class AssistantTokenBudget
         $reservationId = (string) Str::uuid();
 
         return DB::transaction(function () use ($dailyBudget, $configuredLimit, $promptTokens, $date, $reservationId): ?array {
+            DB::table('ai_assistant_token_reservations')
+                ->whereIn('status', ['completed', 'released', 'expired'])
+                ->where('created_at', '<', now()->subDays(30))
+                ->delete();
+
             $created = DB::table('ai_assistant_daily_budgets')->insertOrIgnore([
                 'budget_date' => $date,
                 'used_tokens' => 0,
