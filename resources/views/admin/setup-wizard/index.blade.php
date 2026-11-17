@@ -51,6 +51,8 @@
                     <div><label>{{ __('Contact email') }}</label><input type="email" name="institution_contact_email" value="{{ old('institution_contact_email', $settings['institution_contact_email'] ?? '') }}"></div>
                     <div><label>{{ __('Contact phone') }}</label><input name="institution_contact_phone" maxlength="40" value="{{ old('institution_contact_phone', $settings['institution_contact_phone'] ?? '') }}"></div>
                     <div><label>{{ __('Website') }}</label><input type="url" name="institution_website" value="{{ old('institution_website', $settings['institution_website'] ?? '') }}"></div>
+                    <div><label>{{ __('Logo URL') }}</label><input type="url" name="institution_logo_url" maxlength="500" value="{{ old('institution_logo_url', $settings['institution_logo_url'] ?? '') }}"></div>
+                    <div><label>{{ __('Favicon URL') }}</label><input type="url" name="institution_favicon_url" maxlength="500" value="{{ old('institution_favicon_url', $settings['institution_favicon_url'] ?? '') }}"></div>
                     <div><label>{{ __('Default language') }}</label><select name="institution_default_locale"><option value="en" @selected(old('institution_default_locale', $settings['institution_default_locale'] ?? 'en') === 'en')>{{ __('English') }}</option><option value="bn" @selected(old('institution_default_locale', $settings['institution_default_locale'] ?? 'en') === 'bn')>{{ __('বাংলা') }}</option></select></div>
                     <div><label>{{ __('Timezone') }}</label><select name="institution_timezone">@foreach(['Asia/Dhaka'=>'Bangladesh (Dhaka)','Asia/Kolkata'=>'India (Kolkata)','Asia/Karachi'=>'Pakistan (Karachi)','Asia/Dubai'=>'UAE (Dubai)','Europe/London'=>'United Kingdom (London)','UTC'=>'UTC'] as $zone=>$label)<option value="{{ $zone }}" @selected(old('institution_timezone', $settings['institution_timezone'] ?? 'Asia/Dhaka') === $zone)>{{ $label }}</option>@endforeach</select></div>
                     <div><label>{{ __('Primary brand color') }}</label><input type="color" name="site_primary_color" value="{{ old('site_primary_color', $settings['site_primary_color'] ?? '#1546a8') }}"></div>
@@ -72,7 +74,7 @@
                         @php($values = $paymentMethods[$method])
                         <div class="panel" style="padding:16px;border:1px solid var(--border)">
                             <input type="hidden" name="payment_methods[{{ $method }}][enabled]" value="0">
-                            <label><input type="checkbox" name="payment_methods[{{ $method }}][enabled]" value="1" @checked(old("payment_methods.$method.enabled", $values['enabled']))> {{ $label }}</label>
+                            <label><input type="checkbox" name="payment_methods[{{ $method }}][enabled]" value="1" @checked(old("payment_methods.$method.enabled", $values['enabled']))> {{ __($label) }}</label>
                             <div><label>{{ __('Account / payment details') }}</label><input name="payment_methods[{{ $method }}][account]" maxlength="120" value="{{ old("payment_methods.$method.account", $values['account']) }}"></div>
                             <div><label>{{ __('Instructions') }}</label><textarea name="payment_methods[{{ $method }}][instructions]" rows="2" maxlength="500">{{ old("payment_methods.$method.instructions", $values['instructions']) }}</textarea></div>
                         </div>
