@@ -1,8 +1,8 @@
 <?php
 
-namespace App\\Services\\Plugins;
+namespace App\Services\Plugins;
 
-use Illuminate\\Foundation\\Application;
+use Illuminate\Foundation\Application;
 use InvalidArgumentException;
 
 final class PluginCompatibilityChecker
@@ -33,10 +33,10 @@ final class PluginCompatibilityChecker
     private function satisfies(string $version, string $constraint): bool
     {
         $constraint = trim($constraint);
-        if (class_exists(\\Composer\\Semver\\Semver::class)) {
+        if (class_exists(\Composer\Semver\Semver::class)) {
             try {
-                return \\Composer\\Semver\\Semver::satisfies($version, $constraint);
-            } catch (\\UnexpectedValueException) {
+                return \Composer\Semver\Semver::satisfies($version, $constraint);
+            } catch (\UnexpectedValueException) {
                 return false;
             }
         }
@@ -45,7 +45,7 @@ final class PluginCompatibilityChecker
             return true;
         }
 
-        if (preg_match('/^(\\^|~)(\\d+)\\.(\\d+)(?:\\.(\\d+))?$/D', $constraint, $matches) === 1) {
+        if (preg_match('/^(\^|~)(\d+)\.(\d+)(?:\.(\d+))?$/D', $constraint, $matches) === 1) {
             $operator = $matches[1];
             $major = (int) $matches[2];
             $minor = (int) $matches[3];
@@ -66,11 +66,11 @@ final class PluginCompatibilityChecker
                     : version_compare($version, '0.0.'.($patch + 1), '<'));
         }
 
-        if (preg_match('/^(>=|<=|>|<)\\s*(\\d+\\.\\d+(?:\\.\\d+)?)$/D', $constraint, $matches) === 1) {
+        if (preg_match('/^(>=|<=|>|<)\s*(\d+\.\d+(?:\.\d+)?)$/D', $constraint, $matches) === 1) {
             return version_compare($version, $matches[2], $matches[1]);
         }
 
-        if (preg_match('/^\\d+\\.\\d+(?:\\.\\d+)?$/D', $constraint) === 1) {
+        if (preg_match('/^\d+\.\d+(?:\.\d+)?$/D', $constraint) === 1) {
             return version_compare($version, $constraint, '=');
         }
 
