@@ -1,9 +1,9 @@
 <?php
-namespace Aloms\\PhoneticsPractice;
-use App\\Contracts\\Plugins\\PluginContract;
-use App\\Services\\Plugins\\PluginContext;
-use Illuminate\\Support\\Facades\\Route;
-use Illuminate\\Support\\Facades\\View;
+namespace Aloms\PhoneticsPractice;
+use App\Contracts\Plugins\PluginContract;
+use App\Services\Plugins\PluginContext;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\View;
 require_once __DIR__.'/PhoneticsEntry.php';
 require_once __DIR__.'/PhoneticsPracticeController.php';
 return new class implements PluginContract {
