@@ -585,9 +585,7 @@ class StudentTrackingController extends Controller
             $aggregates['last_lesson_activity'] = LessonProgress::query()
                 ->selectRaw('MAX(COALESCE(last_viewed_at, completed_at, updated_at))')
                 ->whereColumn('lesson_progress.user_id', 'users.id')
-                ->whereHas('lesson', fn (Builder $lessons) => $lessons->whereIn('course_id', $scopedCourseIds()))
-                ->whereDate('updated_at', '>=', $fromDate)
-                ->whereDate('updated_at', '<=', $toDate);
+                ->whereHas('lesson', fn (Builder $lessons) => $lessons->whereIn('course_id', $scopedCourseIds()));
         }
 
         if (Schema::hasTable('course_content_progress')) {
@@ -601,9 +599,7 @@ class StudentTrackingController extends Controller
             $aggregates['last_content_activity'] = CourseContentProgress::query()
                 ->selectRaw('MAX(COALESCE(last_viewed_at, completed_at, updated_at))')
                 ->whereColumn('course_content_progress.user_id', 'users.id')
-                ->whereHas('curriculumItem', fn (Builder $items) => $items->whereIn('course_id', $scopedCourseIds()))
-                ->whereDate('updated_at', '>=', $fromDate)
-                ->whereDate('updated_at', '<=', $toDate);
+                ->whereHas('curriculumItem', fn (Builder $items) => $items->whereIn('course_id', $scopedCourseIds()));
         }
 
         $query->addSelect($aggregates);
