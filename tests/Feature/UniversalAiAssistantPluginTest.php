@@ -24,6 +24,7 @@ class UniversalAiAssistantPluginTest extends TestCase
         parent::setUp();
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantSettings.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantTokenBudget.php');
+        require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantRequestLimit.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantController.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AdminSettingsController.php');
         if (! Schema::hasTable('ai_assistant_settings')) {
@@ -37,6 +38,11 @@ class UniversalAiAssistantPluginTest extends TestCase
         if (! Schema::hasTable('ai_assistant_daily_budgets')) {
             $budgetMigration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_17_090000_create_ai_assistant_token_budget_tables.php');
             $budgetMigration->up();
+        }
+
+        if (! Schema::hasTable('ai_assistant_user_daily_requests')) {
+            $requestMigration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_17_100000_create_ai_assistant_user_daily_requests.php');
+            $requestMigration->up();
         }
     }
 
