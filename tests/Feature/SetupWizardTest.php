@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Setting;
+use App\Models\MediaAsset;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -28,6 +29,70 @@ class SetupWizardTest extends TestCase
 
         $this->actingAs($admin)->get(route('admin.setup-wizard.index'))
             ->assertOk()->assertSee('Academic year');
+    }
+
+    public function test_admin_can_select_logo_and_favicon_from_media_library_during_setup(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $logo = MediaAsset::query()->create([
+            'uploaded_by' => $admin->id,
+            'disk' => 'public',
+            'path' => 'media/academy-logo.png',
+            'original_name' => 'academy-logo.png',
+            'mime_type' => 'image/png',
+            'size' => 1024,
+        ]);
+        $favicon = MediaAsset::query()->create([
+            'uploaded_by' => $admin->id,
+            'disk' => 'public',
+            'path' => 'media/academy-icon.png',
+            'original_name' => 'academy-icon.png',
+            'mime_type' => 'image/png',
+            'size' => 512,
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.setup-wizard.update'), [
+            'step' => 1,
+            'institution_name' => 'Alom Learning Center',
+            'institution_logo_url' => 'https://example.test/logo.png',
+            'institution_favicon_url' => 'https://example.test/favicon.png',
+            'site_logo_media_id' => $logo->id,
+            'site_favicon_media_id' => $favicon->id,
+            'institution_default_locale' => 'bn',
+            'institution_timezone' => 'Asia/Dhaka',
+            'site_primary_color' => '#123456',
+        ])->assertRedirect(route('admin.setup-wizard.index', ['step' => 2]));
+
+        $this->assertSame((string) $logo->id, Setting::value('site_logo_media_id'));
+        $this->assertSame((string) $favicon->id, Setting::value('site_favicon_media_id'));
+        $this->assertSame('https://example.test/logo.png', Setting::value('institution_logo_url'));
+    }
+
+    public function test_setup_wizard_rejects_non_image_media_for_logo(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $document = MediaAsset::query()->create([
+            'uploaded_by' => $admin->id,
+            'disk' => 'public',
+            'path' => 'media/notes.pdf',
+            'original_name' => 'notes.pdf',
+            'mime_type' => 'application/pdf',
+            'size' => 1024,
+        ]);
+
+        $this->actingAs($admin)->from(route('admin.setup-wizard.index', ['step' => 1]))
+            ->post(route('admin.setup-wizard.update'), [
+                'step' => 1,
+                'institution_name' => 'Alom Learning Center',
+                'site_logo_media_id' => $document->id,
+                'institution_default_locale' => 'bn',
+                'institution_timezone' => 'Asia/Dhaka',
+                'site_primary_color' => '#123456',
+            ])->assertRedirect(route('admin.setup-wizard.index', ['step' => 1]))
+            ->assertSessionHasErrors('site_logo_media_id');
+
+        $this->assertSame(null, Setting::value('site_logo_media_id'));
+        $this->assertSame('1', Setting::value('setup_wizard_step', '1'));
     }
 
     public function test_admin_can_save_academic_year_and_complete_payment_step(): void
