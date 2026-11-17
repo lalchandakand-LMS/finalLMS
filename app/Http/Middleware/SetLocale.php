@@ -16,9 +16,14 @@ class SetLocale
         $defaultLocale = 'en';
         $timezone = 'UTC';
 
-        if (Schema::hasTable('settings')) {
-            $defaultLocale = (string) \App\Models\Setting::value('institution_default_locale', 'en');
-            $timezone = (string) \App\Models\Setting::value('institution_timezone', 'UTC');
+        try {
+            if (Schema::hasTable('settings')) {
+                $defaultLocale = (string) \App\Models\Setting::value('institution_default_locale', 'en');
+                $timezone = (string) \App\Models\Setting::value('institution_timezone', 'UTC');
+            }
+        } catch (\Throwable) {
+            // The installer may be running before the database is configured
+            // or migrations have created the settings table. Keep safe defaults.
         }
 
         if (! in_array($defaultLocale, self::SUPPORTED, true)) {
