@@ -194,3 +194,27 @@ Tracked by Issue #241:
 Required tests include lifecycle transitions, tampered/unsigned package, traversal/zip-bomb/symlink, incompatible version, missing dependency/cycle/conflict, secret redaction, unauthorized admin action, disabled plugin routes/jobs, branch isolation, guardian-child isolation, OTP expiry/replay/rate limits, notice audience isolation, migration rollback, retained data, bilingual UI and cPanel package build.
 
 No production plugin installation or activation until exact-head CI/CodeQL pass and isolated cPanel staging install/upgrade/backup/restore/browser acceptance is complete.
+
+---
+
+## Current implementation status (2026-11-17)
+
+The following capabilities are present in the current mainline code; this is a code inventory, not a production-readiness claim:
+
+- Private `plugins/` directory with private staging and web-server deny rules.
+- Signed ZIP installation, manifest validation, SHA-256 archive binding, safe extraction limits and installed-file integrity records.
+- Admin activation/deactivation, compatibility checks for PHP/Laravel/LMS, dependency/conflict preflight, tracked plugin migrations, health checks, permission grants and data-preserving uninstall.
+- Verified runtime loading through `PluginContract`, portal route registration, active-state middleware, hook/capability registry, portal navigation and resource-scope helpers.
+- First-party Popup Ads and Universal AI Assistant package source are present under the private plugin tree.
+- Automated tests cover package safety, signatures, integrity, runtime loading, lifecycle and selected role/branch/guardian boundaries.
+
+The following remain incomplete or require external acceptance before being called production-ready:
+
+- Signed in-place plugin updates, side-by-side versions, safe rollback and verified backup/restore orchestration.
+- A full marketplace/catalogue and a complete plugin lifecycle UI for every optional core module.
+- Comprehensive queue/scheduler/webhook isolation and cancellation for every background entry point.
+- Migration of all existing academic, finance, communications, OTP, notice-board, CMS/builder and portal modules into independently managed first-party plugins without duplicate data stores.
+- Provider-specific sandbox/merchant acceptance for SMS, email, payment and storage integrations.
+- Full browser acceptance across Admin, Branch Manager, Teacher, Student and Guardian portals; disposable cPanel install/upgrade/backup/restore rehearsal; and real-device mobile QA where applicable.
+
+A green CI run verifies the tested code on that commit. It does not prove live hosting, external provider credentials, mobile hardware, customer data migration or production acceptance. Keep production deployment and live plugin activation gated until the relevant staging, backup, rollback and owner acceptance checks are complete.
