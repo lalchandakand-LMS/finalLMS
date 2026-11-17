@@ -186,6 +186,29 @@ PHP;
         $this->assertFileExists($this->finalPath.'/src/Plugin.php');
     }
 
+    public function test_activation_rejects_a_plugin_that_requires_a_newer_php_runtime(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $this->manifest['requires']['php'] = '^99.0';
+
+        $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData())
+            ->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+
+        $this->actingAs($admin)->post(route('admin.plugins.activate', 'aec.course-management'))
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'status' => 'installed',
+        ]);
+        $this->assertDatabaseMissing('plugin_version_history', [
+            'plugin_key' => 'aec.course-management',
+            'action' => 'activated',
+        ]);
+    }
+
     public function test_plugin_migrations_run_before_activation_and_failure_keeps_plugin_inactive(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);

@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\PluginInstallation;
 use App\Services\Plugins\PluginIntegrityVerifier;
 use App\Services\Plugins\PluginLifecycle;
+use App\Services\Plugins\PluginCompatibilityChecker;
 use App\Services\Plugins\PluginManifestValidator;
 use App\Services\Plugins\PluginMigrationRunner;
 use App\Services\Plugins\PluginPackageRemover;
@@ -94,6 +95,7 @@ class AdminPluginManagerController extends Controller
         Request $request,
         string $key,
         PluginManifestValidator $manifestValidator,
+        PluginCompatibilityChecker $compatibilityChecker,
         PluginIntegrityVerifier $integrityVerifier,
         PluginSignatureVerifier $signatureVerifier,
         PluginMigrationRunner $migrationRunner,
@@ -116,6 +118,7 @@ class AdminPluginManagerController extends Controller
             if ($errors !== []) {
                 throw new RuntimeException('The plugin manifest is invalid: '.implode(' ', $errors));
             }
+            $compatibilityChecker->assertCompatible($plugin->manifest ?? []);
 
             if (! hash_equals((string) $plugin->plugin_key, (string) $plugin->manifest['key'])
                 || (string) $plugin->name !== (string) $plugin->manifest['name']
