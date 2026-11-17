@@ -2,7 +2,6 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\Schema;
-use RuntimeException;
 
 return new class extends Migration
 {
@@ -18,7 +17,7 @@ return new class extends Migration
 
         foreach ($requiredTables as $table) {
             if (! Schema::hasTable($table)) {
-                throw new RuntimeException("Flash Sale requires the LMS shared {$table} schema. Run core LMS migrations first.");
+                throw new \RuntimeException("Flash Sale requires the LMS shared {$table} schema. Run core LMS migrations first.");
             }
         }
 
