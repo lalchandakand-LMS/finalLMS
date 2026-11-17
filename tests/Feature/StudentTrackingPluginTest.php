@@ -249,18 +249,37 @@ class StudentTrackingPluginTest extends TestCase
             'attendance_date' => today(),
             'status' => 'absent',
         ]);
+        Attendance::create([
+            'batch_id' => $ownBatch->id,
+            'student_id' => $student->id,
+            'marked_by' => $admin->id,
+            'attendance_date' => today()->subDay(),
+            'status' => 'absent',
+        ]);
 
         $view = $this->showFor($teacher, $student->id);
 
         $this->assertSame([$ownCourse->id], $view->getData()['enrollments']->pluck('course_id')->all());
-        $this->assertSame([$ownBatch->id], $view->getData()['attendanceRecords']->pluck('batch_id')->all());
+        $this->assertSame([$ownBatch->id], $view->getData()['attendanceRecords']->pluck('batch_id')->unique()->values()->all());
 
         $index = $this->indexFor($teacher);
         $trackedStudent = $index->getData()['students']->first();
         $this->assertSame(1, $index->getData()['summary']['attendance_today']);
-        $this->assertSame(1, (int) $trackedStudent->attendance_total);
-        $this->assertSame(100.0, (float) $trackedStudent->attendance_rate);
+        $this->assertSame(2, (int) $trackedStudent->attendance_total);
+        $this->assertSame(50.0, (float) $trackedStudent->attendance_rate);
         $this->assertSame(1, (int) $trackedStudent->active_enrollments_count);
+
+        $todayOnly = $this->indexFor($teacher, [
+            'from_date' => today()->toDateString(),
+            'to_date' => today()->toDateString(),
+            'status' => 'active',
+        ]);
+        $todayStudent = $todayOnly->getData()['students']->first();
+        $this->assertSame(1, (int) $todayStudent->attendance_total);
+        $this->assertSame(100.0, (float) $todayStudent->attendance_rate);
+
+        $noMatchingStatus = $this->indexFor($teacher, ['status' => 'completed']);
+        $this->assertCount(0, $noMatchingStatus->getData()['students']->getCollection());
         $this->assertContains(
             'No recorded LMS learning activity in the last 14 days',
             $trackedStudent->tracking_risk_reasons
