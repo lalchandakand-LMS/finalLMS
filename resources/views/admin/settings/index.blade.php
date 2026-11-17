@@ -55,6 +55,23 @@
                 </div>
                 <small class="muted">{{ __('Use HTTPS image URLs. Direct Media Library upload and selection will be integrated into the complete identity editor.') }}</small>
             </section>
+            <section class="panel" style="padding:20px;margin-bottom:24px;border:1px solid var(--border);">
+                <span class="badge info">{{ __('Brand experience') }}</span>
+                <h2 style="margin:12px 0 6px;">{{ __('Custom loading screen') }}</h2>
+                <p class="muted">{{ __('Replace the default spinning indicator with your own institution logo. The loader appears during page navigation and form submissions.') }}</p>
+                <div class="grid grid-2">
+                    <div><label for="loading-screen-enabled">{{ __('Loading screen') }}</label><select id="loading-screen-enabled" name="loading_screen_enabled"><option value="1" @selected(old('loading_screen_enabled', $settings['loading_screen_enabled'] ?? '1') === '1')>{{ __('Enabled') }}</option><option value="0" @selected(old('loading_screen_enabled', $settings['loading_screen_enabled'] ?? '1') === '0')>{{ __('Disabled') }}</option></select></div>
+                    <div><label for="loading-screen-logo">{{ __('Logo from Media Library') }}</label><select id="loading-screen-logo" name="loading_screen_logo_media_id"><option value="">{{ __('Use website logo') }}</option>@foreach($mediaAssets as $asset)<option value="{{ $asset->id }}" @selected((string) old('loading_screen_logo_media_id', $settings['loading_screen_logo_media_id'] ?? '') === (string) $asset->id)>{{ $asset->original_name }}</option>@endforeach</select><small class="muted">{{ __('Choose an image in Media Library, or leave blank to use the institution logo.') }} <a href="{{ route('admin.media.index') }}">{{ __('Open Media Library') }}</a></small></div>
+                    <div><label for="loading-screen-style">{{ __('Animation style') }}</label><select id="loading-screen-style" name="loading_screen_style"><option value="orbit" @selected(old('loading_screen_style', $settings['loading_screen_style'] ?? 'orbit') === 'orbit')>{{ __('Orbit') }}</option><option value="pulse" @selected(old('loading_screen_style', $settings['loading_screen_style'] ?? 'orbit') === 'pulse')>{{ __('Logo pulse') }}</option><option value="ring" @selected(old('loading_screen_style', $settings['loading_screen_style'] ?? 'orbit') === 'ring')>{{ __('Rotating ring') }}</option></select></div>
+                    <div><label for="loading-screen-text">{{ __('Loading text') }}</label><input id="loading-screen-text" name="loading_screen_text" maxlength="60" value="{{ old('loading_screen_text', $settings['loading_screen_text'] ?? 'Loading...') }}"></div>
+                    <div><label for="loading-screen-background">{{ __('Background color') }}</label><input id="loading-screen-background" type="color" name="loading_screen_background" value="{{ old('loading_screen_background', $settings['loading_screen_background'] ?? '#ffffff') }}"></div>
+                    <div><label for="loading-screen-speed">{{ __('Animation speed') }}</label><input id="loading-screen-speed" type="range" name="loading_screen_speed" min="6" max="24" value="{{ old('loading_screen_speed', $settings['loading_screen_speed'] ?? '12') }}"><small class="muted">{{ __('Higher value means faster animation.') }}</small></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;margin-top:16px;padding:16px;border:1px dashed var(--border);border-radius:12px;background:{{ old('loading_screen_background', $settings['loading_screen_background'] ?? '#ffffff') }};">
+                    @if(!empty($settings['loading_screen_logo_media_id']) && ($previewLogo = $mediaAssets->firstWhere('id', (int) $settings['loading_screen_logo_media_id'])))<img src="{{ $previewLogo->url }}" alt="" style="width:54px;height:54px;object-fit:contain;">@elseif($institutionLogoUrl = ($settings['institution_logo_url'] ?? null))<img src="{{ $institutionLogoUrl }}" alt="" style="width:54px;height:54px;object-fit:contain;">@else<span style="font-size:2rem;">📘</span>@endif
+                    <strong>{{ old('loading_screen_text', $settings['loading_screen_text'] ?? 'Loading...') }}</strong><span class="muted">{{ __('Preview') }}</span>
+                </div>
+            </section>
             @php($savedSlides = json_decode((string) ($settings['home_slides'] ?? '[]'), true) ?: [])
 
             <div class="grid grid-2" style="margin-bottom: 18px;">
