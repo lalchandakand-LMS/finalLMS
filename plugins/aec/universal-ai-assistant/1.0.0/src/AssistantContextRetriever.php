@@ -1,14 +1,14 @@
 <?php
 
-namespace Aloms\\UniversalAiAssistant;
+namespace Aloms\UniversalAiAssistant;
 
-use App\\Models\\ActivityLog;
-use App\\Models\\Course;
-use App\\Models\\Enrollment;
-use App\\Models\\User;
-use App\\Services\\Plugins\\PluginResourceAccess;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Facades\\DB;
+use App\Models\ActivityLog;
+use App\Models\Course;
+use App\Models\Enrollment;
+use App\Models\User;
+use App\Services\Plugins\PluginResourceAccess;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Throwable;
 
 final class AssistantContextRetriever
@@ -90,7 +90,7 @@ final class AssistantContextRetriever
             ]);
         } catch (Throwable) {
             // Context retrieval remains bounded; audit failures are reported without logging retrieved content.
-            report(new \\RuntimeException('Unable to persist AI scoped-context access audit record.'));
+            report(new \RuntimeException('Unable to persist AI scoped-context access audit record.'));
         }
     }
 }
