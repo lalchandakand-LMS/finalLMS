@@ -255,7 +255,7 @@ class StudentTrackingPluginTest extends TestCase
         $otherTeacher = User::factory()->create(['role' => 'teacher']);
         $admin = User::factory()->create(['role' => 'admin']);
         $branch = Branch::create(['name' => 'Detail scope', 'slug' => 'detail-scope', 'is_active' => true]);
-        $student = User::factory()->create(['role' => 'student', 'branch_id' => $branch->id]);
+        $student = User::factory()->create(['role' => 'student', 'branch_id' => $branch->id, 'name' => '=HYPERLINK("https://example.invalid")']);
         $ownCourse = Course::factory()->create(['teacher_id' => $teacher->id]);
         $otherCourse = Course::factory()->create(['teacher_id' => $otherTeacher->id]);
 
@@ -340,6 +340,7 @@ class StudentTrackingPluginTest extends TestCase
         $export->sendContent();
         $csv = (string) ob_get_clean();
         $this->assertStringContainsString('student_id,student_name,attendance_rate_percent', $csv);
+        $this->assertStringContainsString("'=HYPERLINK(\"https://example.invalid\")", $csv);
         $this->assertStringContainsString(',50,2,1,1,0,0,', $csv);
         $this->assertStringNotContainsString('Unassigned batch', $csv);
         $this->assertDatabaseHas('activity_logs', [
