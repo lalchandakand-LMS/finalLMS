@@ -15,6 +15,7 @@ use App\Models\LessonProgress;
 use App\Models\User;
 use App\Services\Plugins\PluginResourceAccess;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -434,6 +435,61 @@ class StudentTrackingController extends Controller
         $attendanceTotal = $attendanceRecords->count();
         $attendedTotal = $attendanceRecords->whereIn('status', ['present', 'late'])->count();
         $attendanceRate = $attendanceTotal > 0 ? round(($attendedTotal / $attendanceTotal) * 100, 1) : null;
+        $riskRules = [
+            'low_attendance_percent' => max(1, min(100, (int) Setting::value('student_tracking_low_attendance_percent', 75))),
+            'minimum_attendance_records' => max(1, min(30, (int) Setting::value('student_tracking_minimum_attendance_records', 5))),
+            'inactive_days' => max(1, min(365, (int) Setting::value('student_tracking_inactive_days', 14))),
+        ];
+        $activityDates = $lessonProgress->map(fn ($progress) => $progress->last_viewed_at ?? $progress->completed_at ?? $progress->updated_at)
+            ->merge($contentProgress->map(fn ($progress) => $progress->last_viewed_at ?? $progress->completed_at ?? $progress->updated_at))
+            ->filter()
+            ->sortDesc();
+        $lastActivity = $activityDates->first();
+        $riskFlags = [];
+        if ($attendanceTotal >= $riskRules['minimum_attendance_records']
+            && $attendanceRate !== null
+            && $attendanceRate < $riskRules['low_attendance_percent']) {
+            $riskFlags[] = [
+                'code' => 'low_attendance',
+                'reason' => 'Attendance below '.$riskRules['low_attendance_percent'].'% across at least '.$riskRules['minimum_attendance_records'].' records',
+            ];
+        }
+        if (! $lastActivity || now()->diffInDays($lastActivity) >= $riskRules['inactive_days']) {
+            $riskFlags[] = [
+                'code' => 'inactive_learning',
+                'reason' => 'No recorded LMS learning activity in the last '.$riskRules['inactive_days'].' days',
+            ];
+        }
+
+        $riskActions = collect();
+        if (Schema::hasTable('student_tracking_risk_actions')) {
+            $latestActions = DB::table('student_tracking_risk_actions')
+                ->where('student_id', $studentRecord->id)
+                ->whereIn('action', ['dismiss', 'reopen'])
+                ->orderBy('id')
+                ->get()
+                ->groupBy('risk_code')
+                ->map(fn ($actions) => $actions->last());
+            $riskFlags = collect($riskFlags)
+                ->reject(fn (array $flag) => $latestActions->get($flag['code'])?->action === 'dismiss')
+                ->values()
+                ->all();
+
+            if ($actor->isAdmin() || $actor->isBranchManager() || $actor->isTeacher()) {
+                $riskActions = DB::table('student_tracking_risk_actions as actions')
+                    ->join('users as actors', 'actors.id', '=', 'actions.actor_id')
+                    ->where('actions.student_id', $studentRecord->id)
+                    ->orderByDesc('actions.id')
+                    ->limit(20)
+                    ->get([
+                        'actions.risk_code',
+                        'actions.action',
+                        'actions.note',
+                        'actions.created_at',
+                        'actors.name as actor_name',
+                    ]);
+            }
+        }
 
         return view('student-tracking::show', [
             'student' => $studentRecord,
@@ -444,6 +500,8 @@ class StudentTrackingController extends Controller
             'examAttempts' => $examAttempts,
             'assignmentSubmissions' => $assignmentSubmissions,
             'attendanceRate' => $attendanceRate,
+            'riskFlags' => $riskFlags,
+            'riskActions' => $riskActions,
             'portalTitle' => $this->portalTitle($actor),
         ]);
     }
