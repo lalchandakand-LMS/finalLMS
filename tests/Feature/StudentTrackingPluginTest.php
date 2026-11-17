@@ -10,11 +10,14 @@ use App\Models\AssignmentSubmission;
 use App\Models\Batch;
 use App\Models\Branch;
 use App\Models\Course;
+use App\Models\DashboardAnnouncement;
+use App\Models\DashboardAnnouncementRead;
 use App\Models\Enrollment;
 use App\Models\Exam;
 use App\Models\ExamAttempt;
 use App\Models\GuardianStudentLink;
 use App\Models\Setting;
+use App\Models\SupportTicket;
 use App\Models\User;
 use App\Services\Plugins\PluginResourceAccess;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -697,6 +700,84 @@ class StudentTrackingPluginTest extends TestCase
 
         $view = $this->indexFor($teacher, ['academic_level_id' => $levelOne]);
         $this->assertSame([$studentOne->id], $view->getData()['students']->getCollection()->pluck('id')->all());
+    }
+
+    public function test_student_timeline_scopes_notices_and_admin_only_support_tickets(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $branch = Branch::create(['name' => 'Timeline branch', 'slug' => 'timeline-branch', 'is_active' => true]);
+        $otherBranch = Branch::create(['name' => 'Other timeline branch', 'slug' => 'other-timeline-branch', 'is_active' => true]);
+        $student = User::factory()->create(['role' => 'student', 'branch_id' => $branch->id]);
+        $course = Course::factory()->create();
+        $otherCourse = Course::factory()->create();
+
+        Enrollment::create(['user_id' => $student->id, 'course_id' => $course->id, 'status' => 'active']);
+
+        $globalNotice = DashboardAnnouncement::create([
+            'title' => 'Global student notice',
+            'body' => 'Academy-wide information.',
+            'audience' => 'all',
+            'is_active' => true,
+            'created_by' => $admin->id,
+        ]);
+        $courseNotice = DashboardAnnouncement::create([
+            'title' => 'Course student notice',
+            'body' => 'Course information.',
+            'audience' => 'student',
+            'branch_id' => $branch->id,
+            'course_id' => $course->id,
+            'is_active' => true,
+            'created_by' => $admin->id,
+        ]);
+        DashboardAnnouncement::create([
+            'title' => 'Wrong branch notice',
+            'audience' => 'student',
+            'branch_id' => $otherBranch->id,
+            'is_active' => true,
+            'created_by' => $admin->id,
+        ]);
+        DashboardAnnouncement::create([
+            'title' => 'Wrong course notice',
+            'audience' => 'student',
+            'course_id' => $otherCourse->id,
+            'is_active' => true,
+            'created_by' => $admin->id,
+        ]);
+        DashboardAnnouncement::create([
+            'title' => 'Staff-only notice',
+            'audience' => 'teacher',
+            'is_active' => true,
+            'created_by' => $admin->id,
+        ]);
+        DashboardAnnouncementRead::create([
+            'announcement_id' => $courseNotice->id,
+            'user_id' => $student->id,
+            'read_at' => now(),
+        ]);
+
+        SupportTicket::create([
+            'user_id' => $student->id,
+            'branch_id' => $branch->id,
+            'subject' => 'Student support request',
+            'status' => 'open',
+            'last_message_at' => now(),
+        ]);
+
+        $adminView = $this->showFor($admin, $student->id);
+        $announcements = $adminView->getData()['announcements'];
+        $this->assertEqualsCanonicalizing(
+            [$globalNotice->id, $courseNotice->id],
+            $announcements->pluck('id')->all()
+        );
+        $this->assertTrue($announcements->firstWhere('id', $courseNotice->id)->reads->isNotEmpty());
+        $this->assertCount(1, $adminView->getData()['supportTickets']);
+
+        $studentView = $this->showFor($student, $student->id);
+        $this->assertCount(0, $studentView->getData()['supportTickets']);
+        $this->assertEqualsCanonicalizing(
+            [$globalNotice->id, $courseNotice->id],
+            $studentView->getData()['announcements']->pluck('id')->all()
+        );
     }
 
     public function test_student_only_sees_their_own_tracking_record(): void
