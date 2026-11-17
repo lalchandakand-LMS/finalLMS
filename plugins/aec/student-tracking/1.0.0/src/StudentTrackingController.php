@@ -676,6 +676,7 @@ class StudentTrackingController extends Controller
             ? ExamAttempt::query()
                 ->where('student_id', $student->id)
                 ->where('status', 'submitted')
+                ->whereNotNull('submitted_at')
                 ->whereNotNull('score')
                 ->whereHas('exam', fn (Builder $exams) => $exams->whereIn('batch_id', $batchIds))
                 ->with(['exam:id,batch_id', 'exam.questions:id,exam_id,marks'])
