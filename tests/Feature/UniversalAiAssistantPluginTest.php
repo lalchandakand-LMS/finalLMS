@@ -820,7 +820,7 @@ class UniversalAiAssistantPluginTest extends TestCase
         $this->mock(PluginSignatureVerifier::class)
             ->shouldReceive('verifyInstalledSignature')
             ->once()
-            ->andReturnTrue();
+            ->andReturn(true);
         $this->mock(PluginIntegrityVerifier::class)
             ->shouldReceive('verify')
             ->once();
