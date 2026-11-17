@@ -427,7 +427,7 @@ class StudentTrackingController extends Controller
                 ->whereIn('audience', ['all', 'student'])
                 ->where(fn (Builder $query) => $query->whereNull('branch_id')->orWhere('branch_id', $studentRecord->branch_id))
                 ->where(fn (Builder $query) => $query->whereNull('course_id')->orWhereIn('course_id', $allowedCourseIds))
-                ->with(['course:id,title', 'reads' => fn (Builder $reads) => $reads->where('user_id', $studentRecord->id)])
+                ->with(['course:id,title', 'reads' => fn ($reads) => $reads->where('user_id', $studentRecord->id)])
                 ->orderByDesc('priority')
                 ->orderByDesc('created_at')
                 ->limit(30)
