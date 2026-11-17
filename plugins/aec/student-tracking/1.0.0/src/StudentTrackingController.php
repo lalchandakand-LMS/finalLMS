@@ -29,7 +29,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StudentTrackingController extends Controller
 {
-    public function index(Request $request, PluginResourceAccess $access): View
+    public function index(Request $request, PluginResourceAccess $access, ModuleRegistry $modules): View
     {
         $actor = $request->user();
         abort_unless($actor instanceof User, 403);
@@ -100,7 +100,7 @@ class StudentTrackingController extends Controller
             });
         }
 
-        $this->addTrackingAggregates($query, $actor, $access, $fromDate, $toDate);
+        $this->addTrackingAggregates($query, $actor, $access, $modules, $fromDate, $toDate);
 
         $totalStudents = (clone $query)->count('users.id');
         $studentIds = (clone $query)->select('users.id');
@@ -109,11 +109,13 @@ class StudentTrackingController extends Controller
         $activeEnrollments = (clone $accessibleEnrollments)
             ->where('status', 'active')
             ->count();
-        $attendanceToday = Attendance::query()
-            ->whereIn('student_id', (clone $query)->select('users.id'))
-            ->whereIn('batch_id', (clone $accessibleEnrollments)->whereNotNull('batch_id')->select('batch_id'))
-            ->whereDate('attendance_date', today())
-            ->count();
+        $attendanceToday = $modules->isEnabled('attendance')
+            ? Attendance::query()
+                ->whereIn('student_id', (clone $query)->select('users.id'))
+                ->whereIn('batch_id', (clone $accessibleEnrollments)->whereNotNull('batch_id')->select('batch_id'))
+                ->whereDate('attendance_date', today())
+                ->count()
+            : 0;
 
         $riskRules = [
             'low_attendance_percent' => max(1, min(100, (int) Setting::value('student_tracking_low_attendance_percent', 75))),
@@ -122,7 +124,7 @@ class StudentTrackingController extends Controller
         ];
 
         $students = $query->orderBy('users.name')->paginate(25)->withQueryString();
-        $students->getCollection()->transform(function (User $student) use ($riskRules, $actor, $access): User {
+        $students->getCollection()->transform(function (User $student) use ($riskRules, $actor, $access, $modules): User {
             $student->setAttribute('attendance_rate', (int) $student->attendance_total > 0
                 ? round(((int) $student->attendance_attended / (int) $student->attendance_total) * 100, 1)
                 : null);
@@ -136,7 +138,9 @@ class StudentTrackingController extends Controller
             $lastActivity = $activityDates->first();
             $lowAttendance = (int) $student->attendance_total >= $riskRules['minimum_attendance_records']
                 && (float) $student->attendance_rate < $riskRules['low_attendance_percent'];
-            $inactive = ! $lastActivity || now()->diffInDays($lastActivity) >= $riskRules['inactive_days'];
+            $learningTrackingEnabled = $modules->isEnabled('lesson_management') || $modules->isEnabled('course_content_studio');
+            $inactive = $learningTrackingEnabled
+                && (! $lastActivity || now()->diffInDays($lastActivity) >= $riskRules['inactive_days']);
             $riskFlags = [];
             if ($lowAttendance) {
                 $riskFlags[] = [
@@ -159,7 +163,7 @@ class StudentTrackingController extends Controller
                     'reason' => __(':count published assignment(s) are overdue and have no submission', ['count' => (int) $student->overdue_assignments_count]),
                 ];
             }
-            $riskFlags = array_merge($riskFlags, $this->additionalRiskSignals($student, $actor, $access));
+            $riskFlags = array_merge($riskFlags, $this->additionalRiskSignals($student, $actor, $access, $modules));
             $student->setAttribute('tracking_risk_flags', $riskFlags);
             $student->setAttribute('tracking_risk_reasons', array_column($riskFlags, 'reason'));
             $student->setAttribute('tracking_needs_attention', $riskFlags !== []);
@@ -229,7 +233,7 @@ class StudentTrackingController extends Controller
         ]);
     }
 
-    public function export(Request $request, PluginResourceAccess $access): StreamedResponse
+    public function export(Request $request, PluginResourceAccess $access, ModuleRegistry $modules): StreamedResponse
     {
         $actor = $request->user();
         abort_unless($actor instanceof User, 403);
@@ -607,6 +611,7 @@ class StudentTrackingController extends Controller
         Builder $query,
         User $actor,
         PluginResourceAccess $access,
+        ModuleRegistry $modules,
         string $fromDate,
         string $toDate
     ): void {
@@ -626,20 +631,24 @@ class StudentTrackingController extends Controller
         );
 
         $aggregates = [
-            'attendance_total' => Attendance::query()
-                ->selectRaw('COUNT(*)')
-                ->whereColumn('attendances.student_id', 'users.id')
-                ->whereIn('batch_id', $scopedBatchIds())
-                ->whereDate('attendance_date', '>=', $fromDate)
-                ->whereDate('attendance_date', '<=', $toDate),
-            'attendance_attended' => Attendance::query()
-                ->selectRaw('COUNT(*)')
-                ->whereColumn('attendances.student_id', 'users.id')
-                ->whereIn('batch_id', $scopedBatchIds())
-                ->whereDate('attendance_date', '>=', $fromDate)
-                ->whereDate('attendance_date', '<=', $toDate)
-                ->whereIn('status', ['present', 'late']),
-            'overdue_assignments_count' => Schema::hasTable('assignments') && Schema::hasTable('assignment_submissions')
+            'attendance_total' => $modules->isEnabled('attendance')
+                ? Attendance::query()
+                    ->selectRaw('COUNT(*)')
+                    ->whereColumn('attendances.student_id', 'users.id')
+                    ->whereIn('batch_id', $scopedBatchIds())
+                    ->whereDate('attendance_date', '>=', $fromDate)
+                    ->whereDate('attendance_date', '<=', $toDate)
+                : DB::raw('0'),
+            'attendance_attended' => $modules->isEnabled('attendance')
+                ? Attendance::query()
+                    ->selectRaw('COUNT(*)')
+                    ->whereColumn('attendances.student_id', 'users.id')
+                    ->whereIn('batch_id', $scopedBatchIds())
+                    ->whereDate('attendance_date', '>=', $fromDate)
+                    ->whereDate('attendance_date', '<=', $toDate)
+                    ->whereIn('status', ['present', 'late'])
+                : DB::raw('0'),
+            'overdue_assignments_count' => $modules->isEnabled('assignment') && Schema::hasTable('assignments') && Schema::hasTable('assignment_submissions')
                 ? Assignment::query()
                     ->selectRaw('COUNT(*)')
                     ->whereIn('batch_id', $scopedBatchIds())
@@ -653,7 +662,7 @@ class StudentTrackingController extends Controller
             'last_content_activity' => DB::raw('NULL'),
         ];
 
-        if (Schema::hasTable('lesson_progress')) {
+        if ($modules->isEnabled('lesson_management') && Schema::hasTable('lesson_progress')) {
             $aggregates['completed_lessons'] = LessonProgress::query()
                 ->selectRaw('COUNT(*)')
                 ->whereColumn('lesson_progress.user_id', 'users.id')
@@ -667,7 +676,7 @@ class StudentTrackingController extends Controller
                 ->whereHas('lesson', fn (Builder $lessons) => $lessons->whereIn('course_id', $scopedCourseIds()));
         }
 
-        if (Schema::hasTable('course_content_progress')) {
+        if ($modules->isEnabled('course_content_studio') && Schema::hasTable('course_content_progress')) {
             $aggregates['completed_content'] = CourseContentProgress::query()
                 ->selectRaw('COUNT(*)')
                 ->whereColumn('course_content_progress.user_id', 'users.id')
@@ -687,7 +696,7 @@ class StudentTrackingController extends Controller
     /**
      * @return list<array{code:string,reason:string}>
      */
-    private function additionalRiskSignals(User $student, User $actor, PluginResourceAccess $access): array
+    private function additionalRiskSignals(User $student, User $actor, PluginResourceAccess $access, ModuleRegistry $modules): array
     {
         $batchIds = $access->scopeQuery(Enrollment::query(), $actor)
             ->where('user_id', $student->id)
@@ -699,13 +708,15 @@ class StudentTrackingController extends Controller
         }
 
         $signals = [];
-        $recentStatuses = Attendance::query()
-            ->where('student_id', $student->id)
-            ->whereIn('batch_id', $batchIds)
-            ->orderByDesc('attendance_date')
-            ->orderByDesc('id')
-            ->limit(3)
-            ->pluck('status');
+        $recentStatuses = $modules->isEnabled('attendance')
+            ? Attendance::query()
+                ->where('student_id', $student->id)
+                ->whereIn('batch_id', $batchIds)
+                ->orderByDesc('attendance_date')
+                ->orderByDesc('id')
+                ->limit(3)
+                ->pluck('status')
+            : collect();
 
         if ($recentStatuses->count() === 3 && $recentStatuses->every(fn ($status) => $status === 'absent')) {
             $signals[] = [
@@ -714,7 +725,7 @@ class StudentTrackingController extends Controller
             ];
         }
 
-        $examScores = Schema::hasTable('exam_attempts') && Schema::hasTable('exam_questions')
+        $examScores = $modules->isEnabled('exam_management') && Schema::hasTable('exam_attempts') && Schema::hasTable('exam_questions')
             ? ExamAttempt::query()
                 ->where('student_id', $student->id)
                 ->where('status', 'submitted')
@@ -739,7 +750,7 @@ class StudentTrackingController extends Controller
                 ->filter()
             : collect();
 
-        $assignmentScores = Schema::hasTable('assignment_submissions')
+        $assignmentScores = $modules->isEnabled('assignment') && Schema::hasTable('assignment_submissions')
             ? AssignmentSubmission::query()
                 ->where('student_id', $student->id)
                 ->where('status', 'graded')
