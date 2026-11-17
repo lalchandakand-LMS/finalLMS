@@ -538,6 +538,8 @@ class StudentTrackingController extends Controller
         }
 
         $riskFlags = array_merge($riskFlags, $this->additionalRiskSignals($studentRecord, $actor, $access));
+        $canManageRisk = ($actor->isAdmin() || $actor->isBranchManager() || $actor->isTeacher())
+            && $this->hasGrantedPermission('student-tracking.manage-risk');
 
         $riskActions = collect();
         $dismissedRiskFlags = [];
@@ -558,7 +560,7 @@ class StudentTrackingController extends Controller
                 ->values()
                 ->all();
 
-            if ($actor->isAdmin() || $actor->isBranchManager() || $actor->isTeacher()) {
+            if ($canManageRisk) {
                 $riskActions = DB::table('student_tracking_risk_actions as actions')
                     ->join('users as actors', 'actors.id', '=', 'actions.actor_id')
                     ->where('actions.student_id', $studentRecord->id)
@@ -576,8 +578,7 @@ class StudentTrackingController extends Controller
 
         return view('student-tracking::show', [
             'student' => $studentRecord,
-            'canManageRisk' => ($actor->isAdmin() || $actor->isBranchManager() || $actor->isTeacher())
-                && $this->hasGrantedPermission('student-tracking.manage-risk'),
+            'canManageRisk' => $canManageRisk,
             'enrollments' => $enrollments,
             'announcements' => $announcements,
             'noticeTrackingAvailable' => $noticeTrackingAvailable,
