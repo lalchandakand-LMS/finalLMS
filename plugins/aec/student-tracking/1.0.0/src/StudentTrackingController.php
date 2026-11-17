@@ -3,6 +3,7 @@
 namespace Aloms\StudentTracking;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\Attendance;
 use App\Models\Branch;
 use App\Models\CourseContentProgress;
@@ -15,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StudentTrackingController extends Controller
 {
@@ -81,8 +83,7 @@ class StudentTrackingController extends Controller
             });
         }
 
-        $since = now()->subDays(29)->startOfDay();
-        $this->addTrackingAggregates($query, $since, $actor, $access, $fromDate, $toDate);
+        $this->addTrackingAggregates($query, $actor, $access, $fromDate, $toDate);
 
         $totalStudents = (clone $query)->count('users.id');
         $studentIds = (clone $query)->select('users.id');
@@ -153,6 +154,125 @@ class StudentTrackingController extends Controller
         ]);
     }
 
+    public function export(Request $request, PluginResourceAccess $access): StreamedResponse
+    {
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 403);
+
+        $validatedDates = $request->validate([
+            'from_date' => ['nullable', 'date'],
+            'to_date' => ['nullable', 'date', 'after_or_equal:from_date'],
+        ]);
+        $fromDate = $validatedDates['from_date'] ?? now()->subDays(29)->toDateString();
+        $toDate = $validatedDates['to_date'] ?? today()->toDateString();
+
+        $query = $access->scopeQuery(User::query(), $actor)
+            ->where('users.role', 'student')
+            ->select('users.*')
+            ->withCount([
+                'enrollments as active_enrollments_count' => function (Builder $enrollments) use ($access, $actor): void {
+                    $access->scopeQuery($enrollments, $actor)->where('status', 'active');
+                },
+            ]);
+
+        $search = trim((string) $request->query('q', ''));
+        if ($search !== '') {
+            $query->where(function (Builder $students) use ($search): void {
+                $students->where('users.name', 'like', '%'.$search.'%')
+                    ->orWhere('users.email', 'like', '%'.$search.'%');
+            });
+        }
+
+        if ($actor->isAdmin() && $request->integer('branch_id') > 0) {
+            $query->where('users.branch_id', $request->integer('branch_id'));
+        }
+
+        $batchId = $request->integer('batch_id');
+        if ($batchId > 0) {
+            $query->whereHas('enrollments', function (Builder $enrollments) use ($access, $actor, $batchId): void {
+                $access->scopeQuery($enrollments, $actor)->where('batch_id', $batchId);
+            });
+        }
+
+        $courseId = $request->integer('course_id');
+        if ($courseId > 0) {
+            $query->whereHas('enrollments', function (Builder $enrollments) use ($access, $actor, $courseId): void {
+                $access->scopeQuery($enrollments, $actor)->where('course_id', $courseId);
+            });
+        }
+
+        $status = trim((string) $request->query('status', ''));
+        if ($status !== '') {
+            $query->whereHas('enrollments', function (Builder $enrollments) use ($access, $actor, $status): void {
+                $access->scopeQuery($enrollments, $actor)->where('status', $status);
+            });
+        }
+
+        $this->addTrackingAggregates($query, $actor, $access, $fromDate, $toDate);
+        $students = $query->orderBy('users.name')->limit(5000)->get();
+        $students->each(function (User $student): void {
+            $total = (int) $student->attendance_total;
+            $attended = (int) $student->attendance_attended;
+            $student->setAttribute('attendance_rate', $total > 0 ? round(($attended / $total) * 100, 1) : null);
+            $activityDates = collect([$student->last_lesson_activity, $student->last_content_activity])
+                ->filter()
+                ->sortDesc();
+            $student->setAttribute('tracking_last_activity_at', $activityDates->first());
+        });
+
+        try {
+            ActivityLog::query()->create([
+                'user_id' => $actor->id,
+                'event' => 'student_tracking.exported',
+                'description' => 'Student tracking CSV exported; rows='.$students->count().'; scope='.$actor->role.'.',
+                'method' => 'GET',
+                'route' => $request->route()?->getName() ?? 'student-tracking.export',
+                'ip_address' => $request->ip(),
+                'user_agent' => substr((string) $request->userAgent(), 0, 1000),
+            ]);
+        } catch (\\Throwable $exception) {
+            throw new \\RuntimeException('Student tracking export could not be audited; export was blocked.', previous: $exception);
+        }
+
+        return response()->streamDownload(function () use ($students): void {
+            $stream = fopen('php://output', 'w');
+            if ($stream === false) {
+                throw new \\RuntimeException('CSV export stream could not be opened.');
+            }
+
+            fputcsv($stream, [
+                'student_id',
+                'student_name',
+                'attendance_rate_percent',
+                'attendance_records',
+                'attended_records',
+                'active_enrollments',
+                'completed_lessons',
+                'completed_content',
+                'last_learning_activity',
+            ]);
+
+            foreach ($students as $student) {
+                fputcsv($stream, [
+                    $student->id,
+                    $student->name,
+                    $student->attendance_rate,
+                    (int) $student->attendance_total,
+                    (int) $student->attendance_attended,
+                    (int) $student->active_enrollments_count,
+                    (int) $student->completed_lessons,
+                    (int) $student->completed_content,
+                    $student->tracking_last_activity_at,
+                ]);
+            }
+
+            fclose($stream);
+        }, 'student-tracking-'.now()->format('Ymd-His').'.csv', [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Cache-Control' => 'no-store, private',
+        ]);
+    }
+
     public function show(Request $request, int $student, PluginResourceAccess $access): View
     {
         $actor = $request->user();
@@ -217,7 +337,6 @@ class StudentTrackingController extends Controller
 
     private function addTrackingAggregates(
         Builder $query,
-        $since,
         User $actor,
         PluginResourceAccess $access,
         string $fromDate,
