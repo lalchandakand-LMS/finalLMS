@@ -4,7 +4,6 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use RuntimeException;
 
 return new class extends Migration
 {
@@ -39,12 +38,12 @@ return new class extends Migration
     public function down(): void
     {
         if (Schema::hasTable('learn_earn_exam_entitlements') && DB::table('learn_earn_exam_entitlements')->exists()) {
-            throw new RuntimeException('Learn & Earn payment entitlements exist; preserve them during plugin migration rollback.');
+            throw new \RuntimeException('Learn & Earn payment entitlements exist; preserve them during plugin migration rollback.');
         }
 
         if (Schema::hasTable('payments') && Schema::hasColumn('payments', 'learn_earn_exam_id')
             && DB::table('payments')->whereNotNull('learn_earn_exam_id')->exists()) {
-            throw new RuntimeException('Learn & Earn payment records exist; preserve them during plugin migration rollback.');
+            throw new \RuntimeException('Learn & Earn payment records exist; preserve them during plugin migration rollback.');
         }
 
         Schema::dropIfExists('learn_earn_exam_entitlements');
