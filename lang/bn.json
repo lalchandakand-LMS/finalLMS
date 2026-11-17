@@ -1323,5 +1323,13 @@
     "Theme package verified and installed. It has not been activated.": "থিম প্যাকেজ যাচাই করে ইনস্টল করা হয়েছে। এটি এখনো সক্রিয় করা হয়নি।",
     "The theme package could not be installed safely.": "থিম প্যাকেজটি নিরাপদভাবে ইনস্টল করা যায়নি।",
     "Theme activated. The previous theme is retained in activation history.": "থিম সক্রিয় করা হয়েছে। আগের থিমের তথ্য অ্যাক্টিভেশন ইতিহাসে সংরক্ষিত আছে।",
-    "The built-in Alom LMS theme has been restored. Your pages, menus, media and course data were not changed.": "বিল্ট-ইন Alom LMS থিম পুনরুদ্ধার করা হয়েছে। আপনার পেজ, মেনু, মিডিয়া এবং কোর্সের তথ্য পরিবর্তন করা হয়নি।"
+    "The built-in Alom LMS theme has been restored. Your pages, menus, media and course data were not changed.": "বিল্ট-ইন Alom LMS থিম পুনরুদ্ধার করা হয়েছে। আপনার পেজ, মেনু, মিডিয়া এবং কোর্সের তথ্য পরিবর্তন করা হয়নি।",
+    "Activation History": "অ্যাক্টিভেশন ইতিহাস",
+    "No theme changes have been recorded yet.": "এখনো কোনো থিম পরিবর্তনের ইতিহাস সংরক্ষিত হয়নি।",
+    "Theme": "থিম",
+    "Previous theme": "আগের থিম",
+    "Changed by": "পরিবর্তন করেছেন",
+    "Built-in Alom LMS theme": "বিল্ট-ইন Alom LMS থিম",
+    "System": "সিস্টেম",
+    "To roll back, preview and activate a previously installed theme, or reset to the built-in theme.": "আগের থিমে ফিরতে ইনস্টল করা থিম প্রিভিউ করে সক্রিয় করুন অথবা বিল্ট-ইন থিমে রিসেট করুন।"
 }

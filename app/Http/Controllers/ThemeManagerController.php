@@ -18,10 +18,24 @@ class ThemeManagerController extends Controller
     public function index(): View
     {
         $themes = DB::table('themes')->orderBy('name')->orderByDesc('created_at')->get();
+        $history = DB::table('theme_activations')
+            ->leftJoin('users', 'users.id', '=', 'theme_activations.actor_id')
+            ->leftJoin('themes', 'themes.id', '=', 'theme_activations.theme_id')
+            ->orderByDesc('theme_activations.id')
+            ->limit(50)
+            ->get([
+                'theme_activations.id',
+                'theme_activations.action',
+                'theme_activations.previous_state',
+                'theme_activations.created_at',
+                'users.name as actor_name',
+                'themes.name as theme_name',
+            ]);
         $activeThemeId = (int) Setting::value('active_theme_id', 0);
 
         return view('admin.themes.index', [
             'themes' => $themes,
+            'history' => $history,
             'activeThemeId' => $activeThemeId,
             'signingConfigured' => filled(config('themes.public_key')),
         ]);

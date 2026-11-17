@@ -67,4 +67,36 @@
         @endforeach
     </div>
 @endif
+
+<div class="panel" style="margin-top:24px;">
+    <h2>{{ __('Activation History') }}</h2>
+    @if($history->isEmpty())
+        <p class="muted">{{ __('No theme changes have been recorded yet.') }}</p>
+    @else
+        <div class="table-responsive">
+            <table class="table">
+                <thead><tr>
+                    <th>{{ __('Action') }}</th>
+                    <th>{{ __('Theme') }}</th>
+                    <th>{{ __('Previous theme') }}</th>
+                    <th>{{ __('Changed by') }}</th>
+                    <th>{{ __('Date') }}</th>
+                </tr></thead>
+                <tbody>
+                    @foreach($history as $entry)
+                        @php($previous = json_decode((string) $entry->previous_state, true) ?: [])
+                        <tr>
+                            <td>{{ __(ucfirst($entry->action)) }}</td>
+                            <td>{{ $entry->theme_name ?: __('Built-in Alom LMS theme') }}</td>
+                            <td>{{ $previous['slug'] ?? __('Built-in Alom LMS theme') }} {{ $previous['version'] ?? '' }}</td>
+                            <td>{{ $entry->actor_name ?: __('System') }}</td>
+                            <td>{{ \Illuminate\Support\Carbon::parse($entry->created_at)->format('Y-m-d H:i') }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+        <p class="muted">{{ __('To roll back, preview and activate a previously installed theme, or reset to the built-in theme.') }}</p>
+    @endif
+</div>
 @endsection

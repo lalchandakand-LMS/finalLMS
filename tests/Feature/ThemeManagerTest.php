@@ -64,6 +64,24 @@ class ThemeManagerTest extends TestCase
         $this->assertDatabaseHas('theme_activations', ['action' => 'reset', 'actor_id' => $admin->id]);
     }
 
+    public function test_theme_manager_displays_activation_history_for_admin(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        DB::table('theme_activations')->insert([
+            'theme_id' => null,
+            'action' => 'reset',
+            'previous_state' => json_encode(['id' => 0, 'slug' => 'legacy-blue', 'version' => '1.0.0']),
+            'actor_id' => $admin->id,
+            'created_at' => now(),
+        ]);
+
+        $this->actingAs($admin)->get(route('admin.themes.index'))
+            ->assertOk()
+            ->assertSee('Activation History')
+            ->assertSee('legacy-blue')
+            ->assertSee($admin->name);
+    }
+
     public function test_admin_can_preview_and_activate_an_installed_theme(): void
     {
         Storage::fake('public');
