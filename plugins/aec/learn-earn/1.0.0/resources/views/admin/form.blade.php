@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="page-header">
-    <div><span class="badge info">{{ __('Learn & Earn') }}</span><h1>{{ $question->exists ? __('Edit MCQ') : __('Create MCQ') }}</h1><p class="muted">{{ __('One question per record. Exam copies will preserve the selected question version.') }}</p></div>
+    <div><span class="badge info">{{ __('Learn & Earn') }}</span><h1>{{ $question->exists ? __('Edit MCQ') : __('Create MCQ') }}</h1><p class="muted">{{ __('Create and organize reusable MCQs for future Learn & Earn exams.') }}</p></div>
     <a class="btn secondary" href="{{ route('admin.learn-earn.questions.index') }}">{{ __('Back to question bank') }}</a>
 </div>
 
