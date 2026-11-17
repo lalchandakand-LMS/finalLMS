@@ -144,6 +144,148 @@ PHP;
         ]);
     }
 
+    public function test_admin_can_update_inactive_signed_plugin_and_retain_previous_version(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData())
+            ->assertRedirect(route('admin.plugins.index'));
+        $this->actingAs($admin)->post(route('admin.plugins.deactivate', 'aec.course-management'))
+            ->assertRedirect(route('admin.plugins.index'));
+
+        $this->manifest['version'] = '1.1.0';
+        $this->updatedPath = base_path('plugins/aec/course-management/1.1.0');
+        $this->actingAs($admin)->post(route('admin.plugins.update', 'aec.course-management'), $this->uploadData() + [
+            'backup_confirmed' => '1',
+        ])->assertRedirect(route('admin.plugins.index'))->assertSessionHas('success');
+
+        $plugin = PluginInstallation::query()->where('plugin_key', 'aec.course-management')->firstOrFail();
+        $this->assertSame('1.1.0', $plugin->version);
+        $this->assertSame('installed', $plugin->status);
+        $this->assertSame('plugins/aec/course-management/1.1.0', $plugin->package_path);
+        $this->assertSame('1.0.0', $plugin->metadata['previous_version_snapshot']['version'] ?? null);
+        $this->assertDirectoryExists($this->finalPath);
+        $this->assertFileExists($this->updatedPath.'/src/Plugin.php');
+        $this->assertDatabaseHas('plugin_version_history', [
+            'plugin_key' => 'aec.course-management',
+            'action' => 'updated',
+            'version' => '1.1.0',
+        ]);
+    }
+
+    public function test_admin_can_rollback_to_previous_signed_version_and_keep_both_package_directories(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData())
+            ->assertRedirect(route('admin.plugins.index'));
+        $this->actingAs($admin)->post(route('admin.plugins.deactivate', 'aec.course-management'))
+            ->assertRedirect(route('admin.plugins.index'));
+
+        $this->manifest['version'] = '1.1.0';
+        $this->updatedPath = base_path('plugins/aec/course-management/1.1.0');
+        $this->actingAs($admin)->post(route('admin.plugins.update', 'aec.course-management'), $this->uploadData() + [
+            'backup_confirmed' => '1',
+        ])->assertRedirect(route('admin.plugins.index'));
+
+        $this->actingAs($admin)->post(route('admin.plugins.rollback', 'aec.course-management'), [
+            'confirm_rollback' => '1',
+            'backup_confirmed' => '1',
+        ])->assertRedirect(route('admin.plugins.index'))->assertSessionHas('success');
+
+        $plugin = PluginInstallation::query()->where('plugin_key', 'aec.course-management')->firstOrFail();
+        $this->assertSame('1.0.0', $plugin->version);
+        $this->assertSame('inactive', $plugin->status);
+        $this->assertSame('plugins/aec/course-management/1.0.0', $plugin->package_path);
+        $this->assertDirectoryExists($this->finalPath);
+        $this->assertFileExists($this->updatedPath.'/src/Plugin.php');
+        $this->assertDatabaseHas('plugin_version_history', [
+            'plugin_key' => 'aec.course-management',
+            'action' => 'update_rolled_back',
+            'version' => '1.0.0',
+        ]);
+    }
+
+    public function test_invalid_signed_update_restores_the_previous_registry_and_package(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData())
+            ->assertRedirect(route('admin.plugins.index'));
+        $this->actingAs($admin)->post(route('admin.plugins.deactivate', 'aec.course-management'))
+            ->assertRedirect(route('admin.plugins.index'));
+
+        $this->manifest['version'] = '1.1.0';
+        $this->updatedPath = base_path('plugins/aec/course-management/1.1.0');
+        $invalidSignature = base64_encode(random_bytes(SODIUM_CRYPTO_SIGN_BYTES));
+        $this->actingAs($admin)->post(route('admin.plugins.update', 'aec.course-management'), $this->uploadData($invalidSignature) + [
+            'backup_confirmed' => '1',
+        ])->assertRedirect()->assertSessionHas('error');
+
+        $plugin = PluginInstallation::query()->where('plugin_key', 'aec.course-management')->firstOrFail();
+        $this->assertSame('1.0.0', $plugin->version);
+        $this->assertSame('inactive', $plugin->status);
+        $this->assertSame('plugins/aec/course-management/1.0.0', $plugin->package_path);
+        $this->assertDirectoryExists($this->finalPath);
+        $this->assertDirectoryDoesNotExist($this->updatedPath);
+    }
+
+    public function test_rollback_is_blocked_when_new_version_migration_refuses_to_drop_retained_data(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData())
+            ->assertRedirect(route('admin.plugins.index'));
+        $this->actingAs($admin)->post(route('admin.plugins.deactivate', 'aec.course-management'))
+            ->assertRedirect(route('admin.plugins.index'));
+
+        $this->manifest['version'] = '1.1.0';
+        $this->manifest['migrations'] = 'migrations';
+        $this->updatedPath = base_path('plugins/aec/course-management/1.1.0');
+        $migration = <<<'PHP'
+<?php
+
+use Illuminate\\Database\\Migrations\\Migration;
+use Illuminate\\Support\\Facades\\DB;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        DB::table('settings')->insert([
+            'key' => 'plugin_update_retained_data',
+            'value' => 'preserve',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    public function down(): void
+    {
+        throw new \\RuntimeException('Retained data prevents rollback.');
+    }
+};
+PHP;
+        $this->actingAs($admin)->post(route('admin.plugins.update', 'aec.course-management'), $this->uploadData(migrationSource: $migration) + [
+            'backup_confirmed' => '1',
+        ])->assertRedirect(route('admin.plugins.index'));
+        $this->actingAs($admin)->post(route('admin.plugins.activate', 'aec.course-management'))
+            ->assertRedirect(route('admin.plugins.index'))->assertSessionHas('success');
+        $this->actingAs($admin)->post(route('admin.plugins.deactivate', 'aec.course-management'))
+            ->assertRedirect(route('admin.plugins.index'));
+
+        $this->actingAs($admin)->post(route('admin.plugins.rollback', 'aec.course-management'), [
+            'confirm_rollback' => '1',
+            'backup_confirmed' => '1',
+        ])->assertRedirect()->assertSessionHas('error');
+
+        $plugin = PluginInstallation::query()->where('plugin_key', 'aec.course-management')->firstOrFail();
+        $this->assertSame('1.1.0', $plugin->version);
+        $this->assertSame('inactive', $plugin->status);
+        $this->assertDatabaseHas('settings', ['key' => 'plugin_update_retained_data', 'value' => 'preserve']);
+        $this->assertDatabaseHas('plugin_migrations', [
+            'plugin_key' => 'aec.course-management',
+            'plugin_version' => '1.1.0',
+            'migration' => '2026_11_15_000001_probe.php',
+            'status' => 'completed',
+        ]);
+    }
+
     public function test_admin_can_grant_only_permissions_declared_by_the_signed_manifest(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
