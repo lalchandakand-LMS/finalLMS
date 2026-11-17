@@ -59,9 +59,12 @@ class FlashSaleTest extends TestCase
         $plugin = require base_path('plugins/aec/flash-sale/1.0.0/src/Plugin.php');
         $plugin->register(new PluginContext(app(), app('router'), $installation, app(PluginHookRegistry::class)));
 
-        $registeredFlashRoutes = array_filter(
-            array_keys(Route::getRoutes()->getRoutesByName()),
-            fn (string $name): bool => str_contains($name, 'flash-sale')
+        $registeredFlashRoutes = array_map(
+            fn ($route): string => $route->uri().' => '.($route->getName() ?? 'unnamed'),
+            array_filter(
+                Route::getRoutes()->getRoutes(),
+                fn ($route): bool => str_contains($route->uri(), 'flash-sale')
+            )
         );
         $this->assertTrue(
             Route::has('admin.flash-sales.index') && Route::has('flash-sales.public'),
