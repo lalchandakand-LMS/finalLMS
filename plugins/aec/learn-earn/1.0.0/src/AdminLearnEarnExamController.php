@@ -85,6 +85,8 @@ class AdminLearnEarnExamController extends Controller
 
             $questionCount = $data['questions_per_attempt'] ?? $orderedQuestions->count();
             abort_if($questionCount > $orderedQuestions->count(), 422, __('Questions per attempt cannot exceed the selected question count.'));
+            $minimumReachableMarks = (int) $orderedQuestions->pluck('marks')->sort()->take($questionCount)->sum();
+            abort_if((int) $data['pass_marks'] > $minimumReachableMarks, 422, __('Pass marks cannot exceed the lowest possible total for the configured question count.'));
 
             $baseSlug = Str::slug($data['title']) ?: 'exam';
             $slug = $baseSlug;
