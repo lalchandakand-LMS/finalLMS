@@ -23,9 +23,15 @@
 </div>
 
 <div class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:20px;">
-    <div class="panel" style="margin:0;"><div class="muted">{{ __('Active enrollments') }}</div><div style="font-size:1.6rem;font-weight:800;">{{ $enrollments->where('status','active')->count() }}</div></div>
-    <div class="panel" style="margin:0;"><div class="muted">{{ __('Attendance (latest 30)') }}</div><div style="font-size:1.6rem;font-weight:800;">{{ $attendanceRate === null ? '—' : number_format($attendanceRate,1).'%' }}</div></div>
-    <div class="panel" style="margin:0;"><div class="muted">{{ __('Completed lessons') }}</div><div style="font-size:1.6rem;font-weight:800;">{{ $completedLessonCount + $completedContentCount }}</div></div>
+    @if($courseTrackingAvailable)
+        <div class="panel" style="margin:0;"><div class="muted">{{ __('Active enrollments') }}</div><div style="font-size:1.6rem;font-weight:800;">{{ $enrollments->where('status','active')->count() }}</div></div>
+    @endif
+    @if($attendanceTrackingAvailable)
+        <div class="panel" style="margin:0;"><div class="muted">{{ __('Attendance (latest 30)') }}</div><div style="font-size:1.6rem;font-weight:800;">{{ $attendanceRate === null ? '—' : number_format($attendanceRate,1).'%' }}</div></div>
+    @endif
+    @if($lessonTrackingAvailable || $contentTrackingAvailable)
+        <div class="panel" style="margin:0;"><div class="muted">{{ __('Completed lessons') }}</div><div style="font-size:1.6rem;font-weight:800;">{{ $completedLessonCount + $completedContentCount }}</div></div>
+    @endif
 </div>
 
 <div class="panel">
@@ -88,6 +94,7 @@
     @endif
 </div>
 
+@if($courseTrackingAvailable)
 <div class="panel">
     <h2>{{ __('Course enrollments') }}</h2>
     @forelse($enrollments as $enrollment)
@@ -100,7 +107,9 @@
         <p class="muted">{{ __('No course enrollments found.') }}</p>
     @endforelse
 </div>
+@endif
 
+@if($attendanceTrackingAvailable)
 <div class="panel">
     <h2>{{ __('Attendance history') }}</h2>
     <div style="overflow-x:auto;">
@@ -121,8 +130,10 @@
         </table>
     </div>
 </div>
+@endif
 
 <div class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;">
+    @if($lessonTrackingAvailable)
     <div class="panel">
         <h2>{{ __('Lesson progress') }}</h2>
         @forelse($lessonProgress as $progress)
@@ -134,6 +145,8 @@
             <p class="muted">{{ __('No legacy lesson progress recorded.') }}</p>
         @endforelse
     </div>
+    @endif
+    @if($contentTrackingAvailable)
     <div class="panel">
         <h2>{{ __('Course Content Studio progress') }}</h2>
         @forelse($contentProgress as $progress)
@@ -145,6 +158,7 @@
             <p class="muted">{{ __('No Course Content Studio progress recorded.') }}</p>
         @endforelse
     </div>
+    @endif
 </div>
 
 <div class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;">
