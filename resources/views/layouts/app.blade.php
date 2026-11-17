@@ -9,6 +9,12 @@
         $institutionShortName = $hasSettingsTable ? \App\Models\Setting::value('institution_short_name', '') : '';
         $institutionLogoUrl = $hasSettingsTable ? \App\Models\Setting::value('institution_logo_url') : null;
         $institutionFaviconUrl = $hasSettingsTable ? \App\Models\Setting::value('institution_favicon_url') : null;
+        $institutionLogoMediaId = $hasSettingsTable ? (int) \App\Models\Setting::value('site_logo_media_id', 0) : 0;
+        $institutionFaviconMediaId = $hasSettingsTable ? (int) \App\Models\Setting::value('site_favicon_media_id', 0) : 0;
+        $institutionLogoMedia = $institutionLogoMediaId ? \App\Models\MediaAsset::query()->whereKey($institutionLogoMediaId)->where('mime_type', 'like', 'image/%')->first() : null;
+        $institutionFaviconMedia = $institutionFaviconMediaId ? \App\Models\MediaAsset::query()->whereKey($institutionFaviconMediaId)->where('mime_type', 'like', 'image/%')->first() : null;
+        $institutionLogoUrl = $institutionLogoMedia?->url ?: $institutionLogoUrl;
+        $institutionFaviconUrl = $institutionFaviconMedia?->url ?: $institutionFaviconUrl;
         $seoTitle = $hasSettingsTable ? \App\Models\Setting::value('seo_title', config('app.name')) : config('app.name');
         $seoDescription = $hasSettingsTable ? \App\Models\Setting::value('seo_description', 'Learn with guided courses, track your progress, and grow your skills.') : 'Learn with guided courses, track your progress, and grow your skills.';
         $seoKeywords = $hasSettingsTable ? \App\Models\Setting::value('seo_keywords', 'online learning, courses, education') : 'online learning, courses, education';
