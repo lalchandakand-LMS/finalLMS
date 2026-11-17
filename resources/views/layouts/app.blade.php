@@ -653,6 +653,10 @@
                     return;
                 }
                 const collapsed = shell.classList.toggle('admin-sidebar-collapsed');
+                const groups = Array.from(sidebar.querySelectorAll('.admin-menu-group'));
+                groups.forEach((group, index) => {
+                    group.open = collapsed || Boolean(group.querySelector('a.active')) || index === 0;
+                });
                 try { localStorage.setItem('aec-admin-sidebar-collapsed', collapsed ? '1' : '0'); } catch (_) {}
                 setExpanded(!collapsed);
             });
@@ -662,6 +666,7 @@
             try {
                 if (!mobile() && localStorage.getItem('aec-admin-sidebar-collapsed') === '1') {
                     shell.classList.add('admin-sidebar-collapsed');
+                    sidebar.querySelectorAll('.admin-menu-group').forEach(group => { group.open = true; });
                     setExpanded(false);
                 } else setExpanded(!mobile());
             } catch (_) { setExpanded(!mobile()); }
