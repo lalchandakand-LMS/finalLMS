@@ -81,7 +81,7 @@ final class PluginContext
             throw new InvalidArgumentException('Public plugin routes cannot use authenticated permission grants.');
         }
 
-        Route::middleware($middleware)->prefix($prefix)->name($namePrefix)->group($routes);
+        Route::middleware($middleware)->prefix($prefix)->as($namePrefix)->group($routes);
     }
     public function registerHook(string $hook, callable $callback, int $priority = 10): void
     {
