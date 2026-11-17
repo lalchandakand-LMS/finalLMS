@@ -55,6 +55,20 @@
         <label>Course ID
             <input type="number" min="1" name="course_id" value="{{ $filters['course_id'] }}" style="width:110px;">
         </label>
+        <label>Enrollment status
+            <select name="status">
+                <option value="">All statuses</option>
+                @foreach($statusOptions as $status)
+                    <option value="{{ $status }}" @selected($filters['status'] === $status)>{{ ucfirst($status) }}</option>
+                @endforeach
+            </select>
+        </label>
+        <label>Activity from
+            <input type="date" name="from_date" value="{{ $filters['from_date'] }}">
+        </label>
+        <label>Activity to
+            <input type="date" name="to_date" value="{{ $filters['to_date'] }}">
+        </label>
         <button class="btn primary" type="submit">Apply filters</button>
         <a class="btn secondary" href="{{ route($baseRoute.'.index') }}">Reset</a>
     </form>
