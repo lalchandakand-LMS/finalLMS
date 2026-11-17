@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Aloms\UniversalAiAssistant\AssistantSettings;
+use Aloms\UniversalAiAssistant\AssistantTokenBudget;
 use App\Models\PluginInstallation;
 use App\Models\User;
 use App\Services\AiDeveloperProviderEndpoint;
@@ -22,6 +23,8 @@ class UniversalAiAssistantPluginTest extends TestCase
     {
         parent::setUp();
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantSettings.php');
+        require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantTokenBudget.php');
+        require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantRequestLimit.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantController.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AdminSettingsController.php');
         if (! Schema::hasTable('ai_assistant_settings')) {
@@ -31,6 +34,15 @@ class UniversalAiAssistantPluginTest extends TestCase
         if (Schema::hasTable('ai_assistant_settings') && ! Schema::hasColumn('ai_assistant_settings', 'retention_days')) {
             $retentionMigration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_15_190000_add_ai_assistant_conversation_retention.php');
             $retentionMigration->up();
+        }
+        if (! Schema::hasTable('ai_assistant_daily_budgets')) {
+            $budgetMigration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_17_090000_create_ai_assistant_token_budget_tables.php');
+            $budgetMigration->up();
+        }
+
+        if (! Schema::hasTable('ai_assistant_user_daily_requests')) {
+            $requestMigration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_17_100000_create_ai_assistant_user_daily_requests.php');
+            $requestMigration->up();
         }
     }
 
@@ -231,4 +243,433 @@ class UniversalAiAssistantPluginTest extends TestCase
 
         $this->assertDatabaseHas('ai_assistant_conversations', ['id' => $conversationId, 'title' => 'Retained history']);
     }
+
+    public function test_daily_token_budget_reservations_prevent_oversubscription_and_release_or_settle_capacity(): void
+    {
+        $messages = [
+            ['role' => 'system', 'content' => 'General guidance only.'],
+            ['role' => 'user', 'content' => 'Practise English with me.'],
+        ];
+
+        $reservation = AssistantTokenBudget::reserve(1500, 1200, $messages);
+        $this->assertNotNull($reservation);
+        $this->assertLessThanOrEqual(1500, $reservation['reserved_tokens']);
+        $this->assertNull(AssistantTokenBudget::reserve($reservation['reserved_tokens'], 1200, $messages));
+
+        AssistantTokenBudget::release($reservation['id']);
+        $this->assertDatabaseHas('ai_assistant_token_reservations', [
+            'id' => $reservation['id'],
+            'status' => 'released',
+        ]);
+
+        $next = AssistantTokenBudget::reserve(1500, 1200, $messages);
+        $this->assertNotNull($next);
+        AssistantTokenBudget::settle($next['id'], 42);
+
+        $this->assertDatabaseHas('ai_assistant_daily_budgets', [
+            'budget_date' => today()->toDateString(),
+            'used_tokens' => 42,
+            'reserved_tokens' => 0,
+        ]);
+    }
+
+    public function test_expired_token_reservations_are_reclaimed_before_new_requests(): void
+    {
+        $messages = [['role' => 'user', 'content' => 'Hello']];
+        $reservation = AssistantTokenBudget::reserve(1000, 800, $messages);
+        $this->assertNotNull($reservation);
+
+        \DB::table('ai_assistant_token_reservations')
+            ->where('id', $reservation['id'])
+            ->update(['expires_at' => now()->subMinute()]);
+
+        $replacement = AssistantTokenBudget::reserve(1000, 800, $messages);
+
+        $this->assertNotNull($replacement);
+        $this->assertDatabaseHas('ai_assistant_token_reservations', [
+            'id' => $reservation['id'],
+            'status' => 'expired',
+        ]);
+    }
+
+    public function test_abandoned_reservations_older_than_thirty_days_are_pruned(): void
+    {
+        $reservationId = (string) \Illuminate\Support\Str::uuid();
+        $oldDate = today()->subDays(31)->toDateString();
+
+        \DB::table('ai_assistant_daily_budgets')->insert([
+            'budget_date' => $oldDate,
+            'used_tokens' => 25,
+            'reserved_tokens' => 75,
+            'created_at' => now()->subDays(31),
+            'updated_at' => now()->subDays(31),
+        ]);
+        \DB::table('ai_assistant_token_reservations')->insert([
+            'id' => $reservationId,
+            'budget_date' => $oldDate,
+            'reserved_tokens' => 75,
+            'status' => 'reserved',
+            'expires_at' => now()->subDays(31),
+            'created_at' => now()->subDays(31),
+            'updated_at' => now()->subDays(31),
+        ]);
+        $completedReservationId = (string) \Illuminate\Support\Str::uuid();
+        \DB::table('ai_assistant_token_reservations')->insert([
+            'id' => $completedReservationId,
+            'budget_date' => $oldDate,
+            'reserved_tokens' => 20,
+            'status' => 'completed',
+            'expires_at' => now()->subDays(31),
+            'created_at' => now()->subDays(31),
+            'updated_at' => now()->subDays(31),
+        ]);
+
+        $replacement = AssistantTokenBudget::reserve(1000, 800, [
+            ['role' => 'user', 'content' => 'A new day, a new lesson.'],
+        ]);
+
+        $this->assertNotNull($replacement);
+        $this->assertDatabaseMissing('ai_assistant_token_reservations', ['id' => $reservationId]);
+        $this->assertDatabaseHas('ai_assistant_daily_budgets', [
+            'budget_date' => $oldDate,
+            'used_tokens' => 25,
+            'reserved_tokens' => 0,
+        ]);
+        $this->assertDatabaseHas('ai_assistant_token_reservations', [
+            'id' => $completedReservationId,
+            'status' => 'completed',
+        ]);
+    }
+
+    public function test_daily_request_limit_rejects_before_creating_a_conversation_or_calling_provider(): void
+    {
+        AssistantSettings::save([
+            'model' => 'gpt-4o-mini', 'base_url' => 'https://api.openai.com/v1',
+            'temperature' => 0.4, 'max_tokens' => 800, 'global_enabled' => true,
+            'role_enabled' => array_replace(array_fill_keys(AssistantSettings::ROLES, false), ['student' => true]),
+            'daily_request_limit' => 1, 'daily_token_budget' => 50000, 'retention_days' => 365,
+        ], 'test-secret-provider-key', false);
+
+        $user = User::factory()->create(['role' => 'student']);
+        \DB::table('ai_assistant_user_daily_requests')->insert([
+            'user_id' => $user->id,
+            'request_date' => today()->toDateString(),
+            'request_count' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        Http::fake();
+        Route::post('/__test-ai-assistant/request-limit', [\Aloms\UniversalAiAssistant\AssistantController::class, 'send']);
+
+        $this->actingAs($user)->postJson('/__test-ai-assistant/request-limit', [
+            'message' => 'Help me practise English.',
+        ])->assertStatus(429);
+
+        $this->assertDatabaseMissing('ai_assistant_conversations', ['user_id' => $user->id]);
+        Http::assertNothingSent();
+    }
+
+    public function test_insufficient_daily_budget_rejects_before_any_provider_request(): void
+    {
+        AssistantSettings::save([
+            'model' => 'gpt-4o-mini', 'base_url' => 'https://api.openai.com/v1',
+            'temperature' => 0.4, 'max_tokens' => 800, 'global_enabled' => true,
+            'role_enabled' => array_replace(array_fill_keys(AssistantSettings::ROLES, false), ['student' => true]),
+            'daily_request_limit' => 20, 'daily_token_budget' => 5, 'retention_days' => 365,
+        ], 'test-secret-provider-key', false);
+
+        app()->instance(AiDeveloperProviderEndpoint::class, new class extends AiDeveloperProviderEndpoint {
+            public function curlOptionsFor(string $url): array { return []; }
+        });
+        Http::fake();
+
+        $user = User::factory()->create(['role' => 'student']);
+        Route::post('/__test-ai-assistant/budget-messages', [\Aloms\UniversalAiAssistant\AssistantController::class, 'send']);
+
+        $this->actingAs($user)->postJson('/__test-ai-assistant/budget-messages', [
+            'message' => 'Help me practise English.',
+        ])->assertStatus(429);
+
+        Http::assertNothingSent();
+    }
+
+    public function test_unknown_or_scoped_data_access_mode_fails_closed_before_provider_or_database_retrieval(): void
+    {
+        AssistantSettings::save([
+            'model' => 'gpt-4o-mini',
+            'base_url' => 'https://api.openai.com/v1',
+            'temperature' => 0.4,
+            'max_tokens' => 800,
+            'global_enabled' => true,
+            'role_enabled' => array_replace(array_fill_keys(AssistantSettings::ROLES, false), ['student' => true]),
+            'daily_request_limit' => 20,
+            'daily_token_budget' => 50000,
+            'retention_days' => 365,
+        ], 'test-secret-provider-key', false);
+        \DB::table('ai_assistant_settings')->where('id', 1)->update([
+            'data_access_mode' => 'branch_scoped',
+        ]);
+
+        Http::fake();
+        $student = User::factory()->create(['role' => 'student']);
+        Route::post('/__test-ai-assistant/unsupported-data-mode', [\Aloms\UniversalAiAssistant\AssistantController::class, 'send']);
+
+        $this->actingAs($student)->postJson('/__test-ai-assistant/unsupported-data-mode', [
+            'message' => 'Show me my grades.',
+        ])->assertNotFound();
+
+        $this->assertDatabaseMissing('ai_assistant_conversations', ['user_id' => $student->id]);
+        Http::assertNothingSent();
+    }
+
+    public function test_each_role_assistant_switch_is_independently_mapped_and_default_deny(): void
+    {
+        $roleMap = [
+            'admin' => 'admin',
+            'branch_manager' => 'branch_manager',
+            'teacher' => 'teacher',
+            'student' => 'student',
+            'guardian' => 'guardian',
+            'accountant' => 'support_staff',
+        ];
+
+        foreach ($roleMap as $userRole => $assistantRole) {
+            $switches = array_fill_keys(AssistantSettings::ROLES, false);
+            $switches[$assistantRole] = true;
+            AssistantSettings::save([
+                'model' => 'gpt-4o-mini', 'base_url' => 'https://api.openai.com/v1',
+                'temperature' => 0.4, 'max_tokens' => 800, 'global_enabled' => true,
+                'role_enabled' => $switches, 'daily_request_limit' => 20,
+                'daily_token_budget' => 50000, 'retention_days' => 365,
+            ], null, false);
+
+            $this->assertSame($assistantRole, AssistantSettings::roleForUser($userRole));
+            foreach (AssistantSettings::ROLES as $candidate) {
+                $this->assertSame($candidate === $assistantRole, AssistantSettings::record()['role_enabled'][$candidate]);
+            }
+        }
+    }
+
+    public function test_student_cannot_append_to_another_students_conversation(): void
+    {
+        AssistantSettings::save([
+            'model' => 'gpt-4o-mini', 'base_url' => 'https://api.openai.com/v1',
+            'temperature' => 0.4, 'max_tokens' => 800, 'global_enabled' => true,
+            'role_enabled' => array_replace(array_fill_keys(AssistantSettings::ROLES, false), ['student' => true]),
+            'daily_request_limit' => 20, 'daily_token_budget' => 50000, 'retention_days' => 365,
+        ], 'test-secret-provider-key', false);
+
+        $owner = User::factory()->create(['role' => 'student']);
+        $otherStudent = User::factory()->create(['role' => 'student']);
+        $conversationId = \DB::table('ai_assistant_conversations')->insertGetId([
+            'user_id' => $owner->id, 'assistant_role' => 'student', 'title' => 'Private conversation',
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        Route::post('/__test-ai-assistant/isolation-messages', [\Aloms\UniversalAiAssistant\AssistantController::class, 'send']);
+
+        $this->actingAs($otherStudent)->postJson('/__test-ai-assistant/isolation-messages', [
+            'message' => 'Append to this conversation',
+            'conversation_id' => $conversationId,
+        ])->assertNotFound();
+
+        $this->assertDatabaseCount('ai_assistant_messages', 0);
+    }
+
+    public function test_provider_failure_releases_token_reservation_and_does_not_charge_usage(): void
+    {
+        AssistantSettings::save([
+            'model' => 'gpt-4o-mini', 'base_url' => 'https://api.openai.com/v1',
+            'temperature' => 0.4, 'max_tokens' => 800, 'global_enabled' => true,
+            'role_enabled' => array_replace(array_fill_keys(AssistantSettings::ROLES, false), ['student' => true]),
+            'daily_request_limit' => 20, 'daily_token_budget' => 50000, 'retention_days' => 365,
+        ], 'test-secret-provider-key', false);
+
+        app()->instance(AiDeveloperProviderEndpoint::class, new class extends AiDeveloperProviderEndpoint {
+            public function curlOptionsFor(string $url): array { return []; }
+        });
+        Http::fake(['api.openai.com/v1/chat/completions' => Http::response(['error' => 'provider unavailable'], 503)]);
+
+        $user = User::factory()->create(['role' => 'student']);
+        Route::post('/__test-ai-assistant/failure-messages', [\Aloms\UniversalAiAssistant\AssistantController::class, 'send']);
+
+        $this->actingAs($user)->postJson('/__test-ai-assistant/failure-messages', [
+            'message' => 'Help me practise English.',
+        ])->assertStatus(502);
+
+        $this->assertDatabaseHas('ai_assistant_token_reservations', ['status' => 'released']);
+        $this->assertDatabaseHas('ai_assistant_daily_budgets', [
+            'budget_date' => today()->toDateString(),
+            'used_tokens' => 0,
+            'reserved_tokens' => 0,
+        ]);
+    }
+
+
+    public function test_assistant_conversations_are_isolated_between_roles_even_for_the_same_user(): void
+    {
+        AssistantSettings::save([
+            'model' => 'gpt-4o-mini', 'base_url' => 'https://api.openai.com/v1',
+            'temperature' => 0.4, 'max_tokens' => 800, 'global_enabled' => true,
+            'role_enabled' => array_replace(array_fill_keys(AssistantSettings::ROLES, false), [
+                'teacher' => true,
+                'student' => true,
+            ]),
+            'daily_request_limit' => 20, 'daily_token_budget' => 50000, 'retention_days' => 365,
+        ], 'test-secret-provider-key', false);
+
+        $user = User::factory()->create(['role' => 'teacher']);
+        $conversationId = \DB::table('ai_assistant_conversations')->insertGetId([
+            'user_id' => $user->id,
+            'assistant_role' => 'teacher',
+            'title' => 'Teacher-only context',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // A role change must not make a conversation created in the previous role visible.
+        $user->forceFill(['role' => 'student'])->save();
+        Route::post('/__test-ai-assistant/cross-role-messages', [\Aloms\UniversalAiAssistant\AssistantController::class, 'send']);
+
+        $this->actingAs($user)->postJson('/__test-ai-assistant/cross-role-messages', [
+            'message' => 'Continue this conversation',
+            'conversation_id' => $conversationId,
+        ])->assertNotFound();
+
+        $this->assertDatabaseCount('ai_assistant_messages', 0);
+    }
+
+    public function test_every_role_prompt_explicitly_denies_private_lms_data_and_consequential_actions(): void
+    {
+        foreach (AssistantSettings::ROLES as $role) {
+            $prompt = AssistantSettings::rolePrompt($role);
+
+            $this->assertStringContainsString('GENERAL GUIDANCE ONLY', $prompt);
+            $this->assertStringContainsString('no access to LMS databases', $prompt);
+            $this->assertStringContainsString('Never claim to have looked up', $prompt);
+            $this->assertStringContainsString('Do not perform consequential actions', $prompt);
+        }
+    }
+
+
+    public function test_admin_uninstall_preserves_all_ai_settings_history_and_usage_records(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $student = User::factory()->create(['role' => 'student', 'email_verified_at' => now()]);
+
+        AssistantSettings::save([
+            'model' => 'gpt-4o-mini',
+            'base_url' => 'https://api.openai.com/v1',
+            'temperature' => 0.4,
+            'max_tokens' => 800,
+            'global_enabled' => false,
+            'role_enabled' => array_fill_keys(AssistantSettings::ROLES, false),
+            'daily_request_limit' => 20,
+            'daily_token_budget' => 50000,
+            'retention_days' => 365,
+        ], 'retained-provider-secret', false);
+
+        $conversationId = \DB::table('ai_assistant_conversations')->insertGetId([
+            'user_id' => $student->id,
+            'assistant_role' => 'student',
+            'title' => 'Preserve this conversation',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $messageId = \DB::table('ai_assistant_messages')->insertGetId([
+            'conversation_id' => $conversationId,
+            'message_role' => 'assistant',
+            'content' => 'Retained answer',
+            'token_count' => 12,
+            'model' => 'gpt-4o-mini',
+            'created_at' => now(),
+        ]);
+        \DB::table('ai_assistant_daily_budgets')->insert([
+            'budget_date' => today()->toDateString(),
+            'used_tokens' => 12,
+            'reserved_tokens' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $reservationId = (string) \Illuminate\Support\Str::uuid();
+        \DB::table('ai_assistant_token_reservations')->insert([
+            'id' => $reservationId,
+            'budget_date' => today()->toDateString(),
+            'reserved_tokens' => 0,
+            'status' => 'settled',
+            'expires_at' => now()->addMinute(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        \DB::table('ai_assistant_user_daily_requests')->insert([
+            'user_id' => $student->id,
+            'request_date' => today()->toDateString(),
+            'request_count' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $relative = 'plugins/test/ai-data-retention/1.0.0';
+        $directory = base_path($relative);
+        \Illuminate\Support\Facades\File::ensureDirectoryExists($directory);
+        file_put_contents($directory.'/entry.php', '<?php // test-only signed package');
+
+        $plugin = new PluginInstallation();
+        $plugin->forceFill([
+            'plugin_key' => 'test.ai-data-retention',
+            'name' => 'AI Data Retention Test',
+            'version' => '1.0.0',
+            'type' => 'ai',
+            'status' => 'inactive',
+            'manifest' => [],
+            'package_path' => $relative,
+        ])->save();
+
+        \DB::table('plugin_migrations')->insert([
+            'plugin_key' => 'test.ai-data-retention',
+            'plugin_version' => '1.0.0',
+            'migration' => '2026_11_15_000001_ai_assistant.php',
+            'status' => 'completed',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.plugins.uninstall', 'test.ai-data-retention'))
+            ->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'test.ai-data-retention',
+            'status' => 'uninstalled',
+        ]);
+        $this->assertDatabaseHas('ai_assistant_settings', ['id' => 1]);
+        $this->assertSame('retained-provider-secret', AssistantSettings::apiKey());
+        $this->assertDatabaseHas('ai_assistant_conversations', [
+            'id' => $conversationId,
+            'title' => 'Preserve this conversation',
+        ]);
+        $this->assertDatabaseHas('ai_assistant_messages', [
+            'id' => $messageId,
+            'content' => 'Retained answer',
+        ]);
+        $this->assertDatabaseHas('ai_assistant_daily_budgets', [
+            'budget_date' => today()->toDateString(),
+            'used_tokens' => 12,
+        ]);
+        $this->assertDatabaseHas('ai_assistant_token_reservations', [
+            'id' => $reservationId,
+            'status' => 'settled',
+        ]);
+        $this->assertDatabaseHas('ai_assistant_user_daily_requests', [
+            'user_id' => $student->id,
+            'request_count' => 1,
+        ]);
+        $this->assertDatabaseHas('plugin_migrations', [
+            'plugin_key' => 'test.ai-data-retention',
+            'status' => 'completed',
+        ]);
+        $this->assertDirectoryDoesNotExist($directory);
+    }
+
 }
