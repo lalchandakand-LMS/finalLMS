@@ -5,10 +5,14 @@ namespace Tests\Feature;
 use Aloms\StudentTracking\StudentTrackingController;
 use Aloms\StudentTracking\StudentTrackingSettingsController;
 use App\Models\Attendance;
+use App\Models\Assignment;
+use App\Models\AssignmentSubmission;
 use App\Models\Batch;
 use App\Models\Branch;
 use App\Models\Course;
 use App\Models\Enrollment;
+use App\Models\Exam;
+use App\Models\ExamAttempt;
 use App\Models\GuardianStudentLink;
 use App\Models\Setting;
 use App\Models\User;
@@ -304,10 +308,92 @@ class StudentTrackingPluginTest extends TestCase
             'status' => 'absent',
         ]);
 
+        $ownExam = Exam::create([
+            'batch_id' => $ownBatch->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Assigned assessment',
+            'instructions' => 'Complete the assessment.',
+            'starts_at' => now()->subHour(),
+            'ends_at' => now()->addHour(),
+            'duration_minutes' => 30,
+            'pass_marks' => 10,
+            'status' => 'published',
+        ]);
+        $otherExam = Exam::create([
+            'batch_id' => $otherBatch->id,
+            'teacher_id' => $otherTeacher->id,
+            'title' => 'Unassigned assessment',
+            'instructions' => 'Private assessment.',
+            'starts_at' => now()->subHour(),
+            'ends_at' => now()->addHour(),
+            'duration_minutes' => 30,
+            'pass_marks' => 10,
+            'status' => 'published',
+        ]);
+        ExamAttempt::create([
+            'exam_id' => $ownExam->id,
+            'student_id' => $student->id,
+            'started_at' => now()->subMinutes(30),
+            'submitted_at' => now()->subMinutes(10),
+            'score' => 18,
+            'status' => 'submitted',
+        ]);
+        ExamAttempt::create([
+            'exam_id' => $otherExam->id,
+            'student_id' => $student->id,
+            'started_at' => now()->subMinutes(30),
+            'submitted_at' => now()->subMinutes(10),
+            'score' => 2,
+            'status' => 'submitted',
+        ]);
+
+        $ownAssignment = Assignment::create([
+            'batch_id' => $ownBatch->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Assigned homework',
+            'instructions' => 'Complete the homework.',
+            'due_at' => now()->addDay(),
+            'max_marks' => 20,
+            'status' => 'published',
+        ]);
+        $otherAssignment = Assignment::create([
+            'batch_id' => $otherBatch->id,
+            'teacher_id' => $otherTeacher->id,
+            'title' => 'Unassigned homework',
+            'instructions' => 'Private homework.',
+            'due_at' => now()->addDay(),
+            'max_marks' => 20,
+            'status' => 'published',
+        ]);
+        AssignmentSubmission::create([
+            'assignment_id' => $ownAssignment->id,
+            'student_id' => $student->id,
+            'answer' => 'My work',
+            'submitted_at' => now()->subHour(),
+            'score' => 15,
+            'feedback' => 'Private teacher feedback.',
+            'graded_by' => $teacher->id,
+            'status' => 'graded',
+        ]);
+        AssignmentSubmission::create([
+            'assignment_id' => $otherAssignment->id,
+            'student_id' => $student->id,
+            'answer' => 'Other work',
+            'submitted_at' => now()->subHour(),
+            'score' => 1,
+            'feedback' => 'Other private feedback.',
+            'graded_by' => $otherTeacher->id,
+            'status' => 'graded',
+        ]);
+
         $view = $this->showFor($teacher, $student->id);
 
         $this->assertSame([$ownCourse->id], $view->getData()['enrollments']->pluck('course_id')->all());
         $this->assertSame([$ownBatch->id], $view->getData()['attendanceRecords']->pluck('batch_id')->unique()->values()->all());
+        $this->assertSame([$ownExam->id], $view->getData()['examAttempts']->pluck('exam_id')->all());
+        $this->assertSame([$ownAssignment->id], $view->getData()['assignmentSubmissions']->pluck('assignment_id')->all());
+        $this->assertArrayNotHasKey('feedback', $view->getData()['assignmentSubmissions']->first()->getAttributes());
+        $this->assertArrayNotHasKey('answer', $view->getData()['assignmentSubmissions']->first()->getAttributes());
 
         $index = $this->indexFor($teacher);
         $trackedStudent = $index->getData()['students']->first();
