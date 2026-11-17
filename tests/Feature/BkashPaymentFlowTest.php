@@ -30,6 +30,7 @@ class BkashPaymentFlowTest extends TestCase
         parent::setUp();
 
         config([
+            'plugins.trusted_public_keys' => ['flash-sale-test-key' => 'test-public-key'],
             'services.bkash.enabled' => true,
             'services.bkash.base_url' => 'https://tokenized.sandbox.bka.sh/v1.2.0-beta',
             'services.bkash.username' => 'sandbox-user',
@@ -46,6 +47,8 @@ class BkashPaymentFlowTest extends TestCase
             'type' => 'module',
             'status' => 'active',
             'manifest' => json_encode(['key' => 'aec.flash-sale', 'permissions' => []], JSON_THROW_ON_ERROR),
+            'signature_key_id' => 'flash-sale-test-key',
+            'signature_verified_at' => now(),
             'health_status' => 'healthy',
             'metadata' => json_encode(['granted_permissions' => []], JSON_THROW_ON_ERROR),
             'created_at' => now(),
