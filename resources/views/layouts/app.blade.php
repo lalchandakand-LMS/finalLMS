@@ -244,6 +244,98 @@
         body.public-menu-open { overflow:hidden; }
         @media(max-width:820px) { .nav { flex-direction:row; align-items:center; } .nav .brand { max-width:65%; font-size:1.1rem; } .public-nav-trigger { padding:10px 13px; } .container { padding:22px 16px 48px; } }
         @media(prefers-reduced-motion:reduce) { .public-nav-backdrop,.public-drawer,.public-nav-trigger-icon i,.public-drawer-links a { transition:none!important; } }
+
+        /* Alom's unified LMS admin workspace */
+        .admin-shell { --admin-sidebar-width:270px; --admin-toolbar-height:66px; }
+        .admin-shell .admin-sidebar { width:var(--admin-sidebar-width); padding:18px 13px 22px; transition:width .22s ease,transform .22s ease; }
+        .admin-shell .admin-sidebar-brand { min-height:54px; padding-bottom:18px; }
+        .admin-menu-group { margin:7px 0 13px; }
+        .admin-menu-group > summary { list-style:none; cursor:pointer; margin:0 8px 6px; padding:9px 8px; color:#8fa9d7; font-size:.68rem; font-weight:800; letter-spacing:.13em; text-transform:uppercase; border-radius:8px; }
+        .admin-menu-group > summary::-webkit-details-marker { display:none; }
+        .admin-menu-group > summary:after { content:'⌄'; float:right; font-size:.9rem; transition:transform .18s ease; }
+        .admin-menu-group:not([open]) > summary:after { transform:rotate(-90deg); }
+        .admin-menu-group > summary:hover { color:#fff; background:#ffffff10; }
+        .admin-menu-group > a { margin:2px 0; }
+        .admin-shell .topbar { margin-left:var(--admin-sidebar-width); min-height:var(--admin-toolbar-height); }
+        .admin-shell .nav { min-height:var(--admin-toolbar-height); padding:10px 22px; gap:16px; }
+        .admin-shell .nav > .brand { font-size:1.05rem; white-space:nowrap; }
+        .admin-shell .nav-links { gap:9px; }
+        .admin-shell .nav-links > a.admin-view-site { display:inline-flex; }
+        .admin-shell .nav-links > a[href*="dashboard"], .admin-shell .nav-links > a[href*="profile"] { display:none; }
+        .admin-toolbar-toggle { display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px; border:1px solid var(--border); border-radius:10px; color:#23334d; background:#fff; font-size:1.15rem; cursor:pointer; }
+        .admin-toolbar-toggle:hover { background:#eef4ff; border-color:#9db5e4; }
+        .admin-shell .container { margin-left:var(--admin-sidebar-width); padding:28px clamp(18px,2.5vw,38px) 60px; min-height:calc(100vh - var(--admin-toolbar-height)); }
+        .admin-sidebar-backdrop { display:none; }
+        .admin-shell.admin-sidebar-collapsed { --admin-sidebar-width:78px; }
+        .admin-sidebar-collapsed .admin-sidebar { padding-inline:9px; }
+        .admin-sidebar-collapsed .admin-sidebar-brand { justify-content:center; padding-inline:0; }
+        .admin-sidebar-collapsed .admin-sidebar-brand strong,
+        .admin-sidebar-collapsed .admin-sidebar-label,
+        .admin-sidebar-collapsed .admin-menu-group > summary,
+        .admin-sidebar-collapsed .admin-sidebar a .nav-text,
+        .admin-sidebar-collapsed .admin-sidebar-footer { display:none; }
+        .admin-sidebar-collapsed .admin-menu-group { margin:6px 0; }
+        .admin-sidebar-collapsed .admin-menu-group:not([open]) { display:none; }
+        .admin-sidebar-collapsed .admin-sidebar a { justify-content:center; padding:11px 4px; }
+        .admin-sidebar-collapsed .admin-sidebar a span:first-child { width:auto; }
+        .admin-shell .admin-sidebar a:focus-visible,
+        .admin-menu-group > summary:focus-visible,
+        .admin-toolbar-toggle:focus-visible { outline:3px solid #f7c65c; outline-offset:2px; }
+        @media(max-width:900px) {
+            .admin-shell { --admin-sidebar-width:270px; }
+            .admin-shell .admin-sidebar { width:270px; transform:translateX(-105%); box-shadow:16px 0 40px rgba(5,18,44,.2); }
+            .admin-shell.admin-mobile-menu-open .admin-sidebar { transform:translateX(0); }
+            .admin-shell .admin-sidebar-brand { justify-content:flex-start; }
+            .admin-shell .admin-sidebar-brand strong,
+            .admin-shell .admin-sidebar-label,
+            .admin-shell .admin-menu-group > summary,
+            .admin-shell .admin-sidebar a .nav-text,
+            .admin-shell .admin-sidebar-footer { display:initial; }
+            .admin-shell .admin-sidebar a { justify-content:flex-start; padding:10px 12px; }
+            .admin-shell .admin-sidebar a span:first-child { width:22px; }
+            .admin-shell .topbar,.admin-shell .container { margin-left:0; }
+            .admin-shell .nav { flex-direction:row; align-items:center; }
+            .admin-shell .nav-links { width:auto; margin-left:auto; flex-wrap:nowrap; }
+            .admin-shell .nav-links form label { display:none; }
+            .admin-shell .container { padding:22px 16px 48px; }
+            .admin-sidebar-backdrop { display:block; position:fixed; inset:0; z-index:29; background:rgba(5,18,44,.48); opacity:0; visibility:hidden; transition:opacity .2s ease,visibility .2s ease; }
+            .admin-mobile-menu-open .admin-sidebar-backdrop { opacity:1; visibility:visible; }
+            .admin-shell.admin-sidebar-collapsed { --admin-sidebar-width:270px; }
+        }
+        @media(max-width:560px) {
+            .admin-shell .nav { padding:9px 12px; gap:8px; }
+            .admin-shell .nav > .brand { max-width:44vw; overflow:hidden; text-overflow:ellipsis; font-size:.92rem; }
+            .admin-shell .nav-links { gap:6px; }
+            .admin-shell .nav-links > a.admin-view-site { display:none; }
+            .admin-shell .nav-links select { max-width:82px; padding:7px 5px!important; }
+            .admin-shell .nav-links form.inline-form:last-child button { padding:8px 9px; font-size:.78rem; }
+            .admin-toolbar-toggle { width:36px; height:36px; flex:0 0 36px; }
+        }
+        @media(prefers-reduced-motion:reduce) { .admin-shell .admin-sidebar,.admin-sidebar-backdrop,.admin-menu-group > summary:after { transition:none!important; } }
+
+        /* Shared visual language for core LMS screens and plugin-owned screens */
+        .admin-shell .page-header { padding:2px 0 18px; margin-bottom:22px; border-bottom:1px solid #e3e9f2; }
+        .admin-shell .page-header h1,.admin-shell main h1 { color:#172b4d; letter-spacing:-.025em; }
+        .admin-shell .panel,.admin-shell .card,.admin-shell .summary-box { border:1px solid #e2e8f1; border-radius:13px; box-shadow:0 3px 14px rgba(18,39,76,.045); }
+        .admin-shell .panel:hover,.admin-shell .card:hover,.admin-shell .summary-box:hover { transform:none; box-shadow:0 7px 22px rgba(18,39,76,.075); }
+        .admin-shell table { width:100%; border-collapse:separate; border-spacing:0; background:#fff; border:1px solid #e2e8f1; border-radius:12px; overflow:hidden; }
+        .admin-shell thead th { padding:13px 15px; color:#52627a; background:#f5f7fb; border-bottom:1px solid #e2e8f1; font-size:.78rem; font-weight:800; letter-spacing:.035em; text-align:left; }
+        .admin-shell tbody td { padding:13px 15px; border-bottom:1px solid #edf0f5; color:#27364d; vertical-align:middle; }
+        .admin-shell tbody tr:last-child td { border-bottom:0; }
+        .admin-shell tbody tr:hover td { background:#fafcff; }
+        .admin-shell input:not([type=checkbox]):not([type=radio]),.admin-shell select,.admin-shell textarea { border-color:#d7dfeb; border-radius:9px; box-shadow:none; }
+        .admin-shell input:focus,.admin-shell select:focus,.admin-shell textarea:focus { outline:0; border-color:#527bc4; box-shadow:0 0 0 3px rgba(50,103,190,.12); }
+        .admin-shell .btn { border-radius:9px; font-weight:700; }
+        .admin-shell .btn.primary { background:#17479d; }
+        .admin-shell .btn.secondary { border-color:#d7dfeb; color:#263a5a; background:#fff; }
+        .admin-shell .flash { border:1px solid transparent; border-radius:10px; }
+        .admin-shell .dash-summary { gap:14px; }
+        .admin-shell .summary-box strong { color:#173b7a; }
+        @media(max-width:760px) {
+            .admin-shell table { display:block; max-width:100%; overflow-x:auto; white-space:nowrap; }
+            .admin-shell .page-header { gap:10px; }
+            .admin-shell .panel { padding:16px; }
+        }
     </style>
 </head>
 <body class="{{ $isAdminLayout ? 'admin-shell' : '' }}">
@@ -344,6 +436,8 @@
             <a href="/{{ auth()->check() ? 'dashboard' : '' }}" class="brand">{{ config('app.name') }}</a>
             @if($isAdminLayout)
             <div class="nav-links">
+                <button type="button" class="admin-toolbar-toggle" id="admin-sidebar-toggle" aria-label="Toggle admin navigation" aria-expanded="true">☰</button>
+                <a class="admin-view-site" href="/" target="_blank" rel="noopener">{{ __("View site") }} ↗</a>
                 <form method="POST" action="{{ route('locale.update') }}" class="inline-form" style="display:inline-flex;gap:6px;align-items:center;">
                     @csrf
                     <label for="locale-switch" class="muted" style="margin:0;">{{ __('Language') }}</label>
@@ -521,6 +615,67 @@
     @if(! $isAdminLayout && app()->bound('popup_ads.render'))
         {!! app('popup_ads.render')(request()) !!}
     @endif
+
+    <script>
+        (() => {
+            const shell = document.body;
+            const sidebar = document.querySelector('.admin-sidebar');
+            const toggle = document.getElementById('admin-sidebar-toggle');
+            if (!sidebar || !toggle) return;
+            const headings = Array.from(sidebar.querySelectorAll(':scope > .admin-sidebar-label'));
+            headings.forEach((heading, index) => {
+                const group = document.createElement('details');
+                group.className = 'admin-menu-group';
+                const summary = document.createElement('summary');
+                summary.textContent = heading.textContent.trim();
+                summary.setAttribute('aria-label', summary.textContent + ' menu');
+                heading.replaceWith(group);
+                group.appendChild(summary);
+                while (group.nextSibling && !(group.nextSibling.nodeType === 1 && group.nextSibling.matches('.admin-sidebar-label,.admin-sidebar-footer'))) {
+                    group.appendChild(group.nextSibling);
+                }
+                group.open = Boolean(group.querySelector('a.active')) || index === 0;
+            });
+            const backdrop = document.createElement('div');
+            backdrop.className = 'admin-sidebar-backdrop';
+            backdrop.setAttribute('aria-hidden', 'true');
+            sidebar.before(backdrop);
+            const mobile = () => window.matchMedia('(max-width: 900px)').matches;
+            const setExpanded = expanded => {
+                toggle.setAttribute('aria-expanded', String(expanded));
+                toggle.setAttribute('aria-label', mobile() ? (expanded ? 'Close admin navigation' : 'Open admin navigation') : (expanded ? 'Collapse admin navigation' : 'Expand admin navigation'));
+            };
+            const closeMobile = () => { shell.classList.remove('admin-mobile-menu-open'); setExpanded(false); };
+            toggle.addEventListener('click', () => {
+                if (mobile()) {
+                    const open = shell.classList.toggle('admin-mobile-menu-open');
+                    setExpanded(open);
+                    return;
+                }
+                const collapsed = shell.classList.toggle('admin-sidebar-collapsed');
+                const groups = Array.from(sidebar.querySelectorAll('.admin-menu-group'));
+                groups.forEach((group, index) => {
+                    group.open = collapsed || Boolean(group.querySelector('a.active')) || index === 0;
+                });
+                try { localStorage.setItem('aec-admin-sidebar-collapsed', collapsed ? '1' : '0'); } catch (_) {}
+                setExpanded(!collapsed);
+            });
+            backdrop.addEventListener('click', closeMobile);
+            sidebar.querySelectorAll('a').forEach(link => link.addEventListener('click', () => { if (mobile()) closeMobile(); }));
+            document.addEventListener('keydown', event => { if (event.key === 'Escape' && shell.classList.contains('admin-mobile-menu-open')) closeMobile(); });
+            try {
+                if (!mobile() && localStorage.getItem('aec-admin-sidebar-collapsed') === '1') {
+                    shell.classList.add('admin-sidebar-collapsed');
+                    sidebar.querySelectorAll('.admin-menu-group').forEach(group => { group.open = true; });
+                    setExpanded(false);
+                } else setExpanded(!mobile());
+            } catch (_) { setExpanded(!mobile()); }
+            window.addEventListener('resize', () => {
+                if (!mobile()) closeMobile();
+                setExpanded(mobile() ? shell.classList.contains('admin-mobile-menu-open') : !shell.classList.contains('admin-sidebar-collapsed'));
+            });
+        })();
+    </script>
     @stack('scripts')
 </body>
 </html>
