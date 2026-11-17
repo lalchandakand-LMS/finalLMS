@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "key": "aec.bcs-bank-admission-question-bank",
+  "name": "BCS, Bank Job & Admission Question Bank",
+  "version": "1.0.0",
+  "type": "education",
+  "entrypoint": "src/Plugin.php",
+  "requires": {"php":"^8.3","laravel":"^12.0","lms":"^1.0"},
+  "dependencies": [],
+  "conflicts": [],
+  "portals": ["admin"],
+  "permissions": ["prep-question-bank.manage"],
+  "capabilities": ["bcs-question-bank","bank-job-question-bank","admission-question-bank","mcq-and-written-questions","exam-set-builder","random-question-selection","printable-question-papers","answer-key-for-admin"]
+}
