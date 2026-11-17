@@ -292,6 +292,35 @@ class UniversalAiAssistantPluginTest extends TestCase
         ]);
     }
 
+    public function test_daily_request_limit_rejects_before_creating_a_conversation_or_calling_provider(): void
+    {
+        AssistantSettings::save([
+            'model' => 'gpt-4o-mini', 'base_url' => 'https://api.openai.com/v1',
+            'temperature' => 0.4, 'max_tokens' => 800, 'global_enabled' => true,
+            'role_enabled' => array_replace(array_fill_keys(AssistantSettings::ROLES, false), ['student' => true]),
+            'daily_request_limit' => 1, 'daily_token_budget' => 50000, 'retention_days' => 365,
+        ], 'test-secret-provider-key', false);
+
+        $user = User::factory()->create(['role' => 'student']);
+        \DB::table('ai_assistant_user_daily_requests')->insert([
+            'user_id' => $user->id,
+            'request_date' => today()->toDateString(),
+            'request_count' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        Http::fake();
+        Route::post('/__test-ai-assistant/request-limit', [\Aloms\UniversalAiAssistant\AssistantController::class, 'send']);
+
+        $this->actingAs($user)->postJson('/__test-ai-assistant/request-limit', [
+            'message' => 'Help me practise English.',
+        ])->assertStatus(429);
+
+        $this->assertDatabaseMissing('ai_assistant_conversations', ['user_id' => $user->id]);
+        Http::assertNothingSent();
+    }
+
     public function test_insufficient_daily_budget_rejects_before_any_provider_request(): void
     {
         AssistantSettings::save([
