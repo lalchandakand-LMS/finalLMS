@@ -1,14 +1,14 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use App\\Http\\Middleware\\SetLocale;
-use App\\Models\\Setting;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Illuminate\\Http\\Request;
-use Illuminate\\Session\\ArraySessionHandler;
-use Illuminate\\Session\\Store;
-use Tests\\TestCase;
+use App\Http\Middleware\SetLocale;
+use App\Models\Setting;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
+use Illuminate\Session\ArraySessionHandler;
+use Illuminate\Session\Store;
+use Tests\TestCase;
 
 class InstitutionLocaleTimezoneTest extends TestCase
 {
