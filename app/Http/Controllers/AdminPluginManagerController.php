@@ -179,9 +179,10 @@ class AdminPluginManagerController extends Controller
             __('Plugin deactivated. Its installed files and data were retained.'));
     }
 
-
     public function uninstall(Request $request, string $key, PluginLifecycle $lifecycle, PluginPackageRemover $remover, PluginVersionHistoryRecorder $history): RedirectResponse
     {
+        $plugin = null;
+
         try {
             $plugin = PluginInstallation::query()->where('plugin_key', $key)->firstOrFail();
             if (! in_array($plugin->status, ['installed', 'inactive', 'failed'], true)) {
@@ -203,6 +204,21 @@ class AdminPluginManagerController extends Controller
             $history->record($plugin, 'uninstalled', $request->user());
         } catch (Throwable $exception) {
             report($exception);
+
+            // The registry is marked uninstalled before filesystem cleanup. If cleanup
+            // fails, move it to a retryable failed state; never delete plugin data or
+            // migration history and never leave an unremovable "uninstalled" record.
+            if ($plugin instanceof PluginInstallation && $plugin->status === 'uninstalled') {
+                try {
+                    $plugin = $lifecycle->transition($plugin->plugin_key, 'failed', [
+                        'health_status' => 'failed',
+                        'health_message' => 'Plugin package cleanup failed; retry uninstall after reviewing protected server logs.',
+                    ]);
+                } catch (Throwable $stateException) {
+                    report($stateException);
+                }
+            }
+
             $this->recordFailure($request, 'admin.plugins.uninstall_failed');
             return back()->with('error', __('Plugin uninstall was blocked or package cleanup failed. Plugin data and migration records were retained.'));
         }
@@ -308,11 +324,16 @@ class AdminPluginManagerController extends Controller
         }
     }
 
+    private function recordFailure(Request $request, string $event = 'admin.plugins.install_failed'): void
+    {
+        $this->audit($request, $event, 'A plugin lifecycle operation failed. Review protected server logs for details.');
+    }
+
     private function audit(Request $request, string $event, string $description): void
     {
         try {
             ActivityLog::create([
-                'user_id' => $request->user()->id,
+                'user_id' => $request->user()?->id,
                 'event' => $event,
                 'description' => $description,
                 'method' => $request->method(),
@@ -320,25 +341,8 @@ class AdminPluginManagerController extends Controller
                 'ip_address' => $request->ip(),
                 'user_agent' => substr((string) $request->userAgent(), 0, 1000),
             ]);
-        } catch (Throwable $exception) {
-            report($exception);
-        }
-    }
-
-    private function recordFailure(Request $request, string $event = 'admin.plugins.install_failed'): void
-    {
-        try {
-            ActivityLog::create([
-                'user_id' => $request->user()->id,
-                'event' => $event,
-                'description' => 'A plugin lifecycle operation was rejected or failed validation.',
-                'method' => $request->method(),
-                'route' => $request->route()?->getName(),
-                'ip_address' => $request->ip(),
-                'user_agent' => substr((string) $request->userAgent(), 0, 1000),
-            ]);
-        } catch (Throwable $exception) {
-            report($exception);
+        } catch (Throwable) {
+            // Never expose credentials or plugin internals when audit persistence fails.
         }
     }
 }

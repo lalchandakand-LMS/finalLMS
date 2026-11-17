@@ -6,9 +6,13 @@ use App\Models\PluginInstallation;
 use App\Models\User;
 use App\Services\Plugins\PluginSignatureVerifier;
 use App\Services\Plugins\PluginMigrationRunner;
+use App\Services\Plugins\PluginLifecycle;
+use App\Services\Plugins\PluginPackageRemover;
+use LogicException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 use ZipArchive;
@@ -584,4 +588,121 @@ PHP;
 
         $this->assertDatabaseCount('plugin_registry', 0);
     }
+
+    public function test_lifecycle_rejects_activation_when_dependency_is_not_active(): void
+    {
+        $this->createVerifiedPlugin('aec.required', ['dependencies' => []], 'inactive');
+        $consumer = $this->createVerifiedPlugin('aec.consumer', ['dependencies' => ['aec.required']]);
+
+        try {
+            app(PluginLifecycle::class)->transition($consumer->plugin_key, 'active');
+            $this->fail('A plugin must not activate while its dependency is inactive.');
+        } catch (LogicException $exception) {
+            $this->assertStringContainsString('dependency is not active', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('plugin_registry', ['plugin_key' => 'aec.consumer', 'status' => 'installed']);
+    }
+
+    public function test_lifecycle_rejects_activation_when_a_conflicting_plugin_is_active(): void
+    {
+        $this->createVerifiedPlugin('aec.existing', [], 'active');
+        $candidate = $this->createVerifiedPlugin('aec.candidate', ['conflicts' => ['aec.existing']]);
+
+        try {
+            app(PluginLifecycle::class)->transition($candidate->plugin_key, 'active');
+            $this->fail('A plugin must not activate while a declared conflict is active.');
+        } catch (LogicException $exception) {
+            $this->assertStringContainsString('conflicting plugin is active', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('plugin_registry', ['plugin_key' => 'aec.candidate', 'status' => 'installed']);
+    }
+
+    public function test_lifecycle_blocks_deactivation_of_a_required_plugin(): void
+    {
+        $required = $this->createVerifiedPlugin('aec.required', [], 'active');
+        $this->createVerifiedPlugin('aec.consumer', ['dependencies' => ['aec.required']], 'active');
+
+        try {
+            app(PluginLifecycle::class)->transition($required->plugin_key, 'inactive');
+            $this->fail('A required plugin must not be deactivated while an active dependent exists.');
+        } catch (LogicException $exception) {
+            $this->assertStringContainsString('active plugin depends on this plugin', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('plugin_registry', ['plugin_key' => 'aec.required', 'status' => 'active']);
+    }
+
+    public function test_failed_uninstall_cleanup_is_retryable_without_removing_plugin_data(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $plugin = $this->createVerifiedPlugin('aec.retryable', [], 'inactive');
+        DB::table('plugin_migrations')->insert([
+            'plugin_key' => $plugin->plugin_key,
+            'plugin_version' => $plugin->version,
+            'migration' => '2026_11_15_000001_retained.php',
+            'status' => 'completed',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $directory = base_path($plugin->package_path);
+        File::ensureDirectoryExists($directory);
+        file_put_contents($directory.'/package.php', '<?php // retained package fixture');
+        File::shouldReceive('deleteDirectory')->once()->andThrow(new \RuntimeException('Simulated filesystem failure.'));
+
+        $this->actingAs($admin)->post(route('admin.plugins.uninstall', $plugin->plugin_key))
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseHas('plugin_registry', ['plugin_key' => $plugin->plugin_key, 'status' => 'failed']);
+        $this->assertDatabaseHas('plugin_migrations', ['plugin_key' => $plugin->plugin_key, 'status' => 'completed']);
+
+        File::swap(new \Illuminate\Filesystem\Filesystem());
+        $this->actingAs($admin)->post(route('admin.plugins.uninstall', $plugin->plugin_key))
+            ->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('plugin_registry', ['plugin_key' => $plugin->plugin_key, 'status' => 'uninstalled']);
+        $this->assertDatabaseHas('plugin_migrations', ['plugin_key' => $plugin->plugin_key, 'status' => 'completed']);
+    }
+
+    private function createVerifiedPlugin(string $key, array $manifestOverrides = [], string $status = 'installed'): PluginInstallation
+    {
+        [$vendor, $slug] = explode('.', $key, 2);
+        $manifest = array_replace([
+            'schema_version' => 1,
+            'key' => $key,
+            'name' => 'Test '.$slug,
+            'version' => '1.0.0',
+            'type' => 'module',
+            'entrypoint' => 'src/Plugin.php',
+            'requires' => ['php' => '^8.3', 'laravel' => '^12.0', 'lms' => '^1.0'],
+            'dependencies' => [],
+            'conflicts' => [],
+            'portals' => ['admin'],
+            'permissions' => [],
+            'capabilities' => [],
+        ], $manifestOverrides);
+
+        $plugin = new PluginInstallation();
+        $plugin->forceFill([
+            'plugin_key' => $key,
+            'name' => $manifest['name'],
+            'version' => $manifest['version'],
+            'type' => $manifest['type'],
+            'status' => $status,
+            'manifest' => $manifest,
+            'package_sha256' => str_repeat('a', 64),
+            'signature_key_id' => 'test-release-key',
+            'signature_verified_at' => now(),
+            'package_path' => 'plugins/'.$vendor.'/'.str_replace('.', '-', $slug).'/1.0.0',
+            'installed_at' => now(),
+            'activated_at' => $status === 'active' ? now() : null,
+        ])->save();
+
+        return $plugin;
+    }
+
 }
