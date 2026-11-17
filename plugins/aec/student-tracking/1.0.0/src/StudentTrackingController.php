@@ -87,6 +87,14 @@ class StudentTrackingController extends Controller
             });
         }
 
+        $academicLevelFilter = $request->integer('academic_level_id');
+        if ($academicLevelFilter > 0 && Schema::hasColumn('courses', 'academic_level_id')) {
+            $query->whereHas('enrollments', function (Builder $enrollments) use ($access, $actor, $academicLevelFilter): void {
+                $access->scopeQuery($enrollments, $actor)
+                    ->whereHas('course', fn (Builder $courses) => $courses->where('academic_level_id', $academicLevelFilter));
+            });
+        }
+
         $this->addTrackingAggregates($query, $actor, $access, $fromDate, $toDate);
 
         $totalStudents = (clone $query)->count('users.id');
@@ -187,12 +195,16 @@ class StudentTrackingController extends Controller
             ],
             'branches' => $branches,
             'statusOptions' => $statusOptions,
+            'academicLevels' => Schema::hasTable('academic_levels')
+                ? DB::table('academic_levels')->where('is_active', true)->orderBy('sort_order')->get(['id', 'name'])
+                : collect(),
             'riskRules' => $riskRules,
             'filters' => [
                 'q' => $search,
                 'branch_id' => $branchFilter ?: null,
                 'batch_id' => $batchFilter ?: null,
                 'course_id' => $courseFilter ?: null,
+                'academic_level_id' => $academicLevelFilter ?: null,
                 'status' => $statusFilter ?: null,
                 'from_date' => $fromDate,
                 'to_date' => $toDate,
@@ -245,6 +257,14 @@ class StudentTrackingController extends Controller
         if ($courseId > 0) {
             $query->whereHas('enrollments', function (Builder $enrollments) use ($access, $actor, $courseId): void {
                 $access->scopeQuery($enrollments, $actor)->where('course_id', $courseId);
+            });
+        }
+
+        $academicLevelId = $request->integer('academic_level_id');
+        if ($academicLevelId > 0 && Schema::hasColumn('courses', 'academic_level_id')) {
+            $query->whereHas('enrollments', function (Builder $enrollments) use ($access, $actor, $academicLevelId): void {
+                $access->scopeQuery($enrollments, $actor)
+                    ->whereHas('course', fn (Builder $courses) => $courses->where('academic_level_id', $academicLevelId));
             });
         }
 
