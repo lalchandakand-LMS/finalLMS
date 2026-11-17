@@ -16,7 +16,7 @@ final class AssistantContextRetriever
     public function retrieve(User $actor, string $role, ?Request $request = null): ?string
     {
         $settings = AssistantSettings::record();
-        if (! in_array($role, AssistantSettings::ROLES, true)
+        if (! in_array($role, AssistantSettings::DATA_ACCESS_ROLES, true)
             || ! ($settings['role_data_access'][$role] ?? false)
             || AssistantSettings::roleForUser((string) $actor->role) !== $role) {
             return null;
