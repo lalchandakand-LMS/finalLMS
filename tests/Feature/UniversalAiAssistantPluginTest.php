@@ -407,13 +407,13 @@ class UniversalAiAssistantPluginTest extends TestCase
             'daily_token_budget' => 50000,
             'retention_days' => 365,
         ], 'test-secret-provider-key', false);
-        \\DB::table('ai_assistant_settings')->where('id', 1)->update([
+        \DB::table('ai_assistant_settings')->where('id', 1)->update([
             'data_access_mode' => 'branch_scoped',
         ]);
 
         Http::fake();
         $student = User::factory()->create(['role' => 'student']);
-        Route::post('/__test-ai-assistant/unsupported-data-mode', [\\Aloms\\UniversalAiAssistant\\AssistantController::class, 'send']);
+        Route::post('/__test-ai-assistant/unsupported-data-mode', [\Aloms\UniversalAiAssistant\AssistantController::class, 'send']);
 
         $this->actingAs($student)->postJson('/__test-ai-assistant/unsupported-data-mode', [
             'message' => 'Show me my grades.',
