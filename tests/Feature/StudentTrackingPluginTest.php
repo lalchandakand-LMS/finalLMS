@@ -191,7 +191,7 @@ class StudentTrackingPluginTest extends TestCase
         $reopened = $this->indexFor($teacher)->getData()['students']->first();
         $this->assertTrue($reopened->tracking_needs_attention);
 
-        $guardian = User::factory()->create(['role' => 'guardian']);
+        $guardian = User::factory()->create(['role' => 'guardian', 'branch_id' => $branch->id]);
         GuardianStudentLink::create([
             'guardian_id' => $guardian->id,
             'student_id' => $student->id,
@@ -576,7 +576,7 @@ class StudentTrackingPluginTest extends TestCase
         $export->sendContent();
         $csv = (string) ob_get_clean();
         $this->assertStringContainsString('student_id,student_name,attendance_rate_percent', $csv);
-        $this->assertStringContainsString("'=HYPERLINK(\"https://example.invalid\")", $csv);
+        $this->assertStringContainsString("'=HYPERLINK(\"\"https://example.invalid\"\")", $csv);
         $this->assertStringContainsString(',50,2,1,1,0,0,', $csv);
         $this->assertStringNotContainsString('Unassigned batch', $csv);
         $this->assertDatabaseHas('activity_logs', [
