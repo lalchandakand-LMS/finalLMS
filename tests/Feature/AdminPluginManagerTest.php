@@ -867,8 +867,10 @@ PHP;
 
         // Simulate a filesystem cleanup error after the verified recovery snapshot
         // and registry transition have succeeded.
-        File::partialMock()->shouldReceive('deleteDirectory')->once()
+        $filesystem = \Mockery::mock(new \Illuminate\Filesystem\Filesystem())->makePartial();
+        $filesystem->shouldReceive('deleteDirectory')->once()
             ->andThrow(new \RuntimeException('Simulated filesystem cleanup failure.'));
+        File::swap($filesystem);
         $this->actingAs($admin)->post(route('admin.plugins.uninstall', 'aec.course-management'), ['confirm_uninstall' => '1'])
             ->assertRedirect()
             ->assertSessionHas('error');
