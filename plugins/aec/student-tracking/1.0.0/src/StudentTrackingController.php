@@ -248,6 +248,7 @@ class StudentTrackingController extends Controller
 
     public function export(Request $request, PluginResourceAccess $access, ModuleRegistry $modules): StreamedResponse
     {
+        $courseTrackingEnabled = $modules->isEnabled('course_management');
         $actor = $request->user();
         abort_unless($actor instanceof User, 403);
 
@@ -280,21 +281,21 @@ class StudentTrackingController extends Controller
         }
 
         $batchId = $request->integer('batch_id');
-        if ($batchId > 0) {
+        if ($courseTrackingEnabled && $batchId > 0) {
             $query->whereHas('enrollments', function (Builder $enrollments) use ($access, $actor, $batchId): void {
                 $access->scopeQuery($enrollments, $actor)->where('batch_id', $batchId);
             });
         }
 
         $courseId = $request->integer('course_id');
-        if ($courseId > 0) {
+        if ($courseTrackingEnabled && $courseId > 0) {
             $query->whereHas('enrollments', function (Builder $enrollments) use ($access, $actor, $courseId): void {
                 $access->scopeQuery($enrollments, $actor)->where('course_id', $courseId);
             });
         }
 
         $academicLevelId = $request->integer('academic_level_id');
-        if ($academicLevelId > 0 && Schema::hasColumn('courses', 'academic_level_id')) {
+        if ($courseTrackingEnabled && $academicLevelId > 0 && Schema::hasColumn('courses', 'academic_level_id')) {
             $query->whereHas('enrollments', function (Builder $enrollments) use ($access, $actor, $academicLevelId): void {
                 $access->scopeQuery($enrollments, $actor)
                     ->whereHas('course', fn (Builder $courses) => $courses->where('academic_level_id', $academicLevelId));
@@ -302,7 +303,7 @@ class StudentTrackingController extends Controller
         }
 
         $status = trim((string) $request->query('status', ''));
-        if ($status !== '') {
+        if ($courseTrackingEnabled && $status !== '') {
             $query->whereHas('enrollments', function (Builder $enrollments) use ($access, $actor, $status): void {
                 $access->scopeQuery($enrollments, $actor)->where('status', $status);
             });
