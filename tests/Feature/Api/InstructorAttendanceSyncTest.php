@@ -489,6 +489,15 @@ class InstructorAttendanceSyncTest extends TestCase
             ])
             ->assertUnprocessable();
 
+        $this->actingAs($student)
+            ->postJson($checkInPath, [
+                'latitude' => 23.8103,
+                'longitude' => 90.4125,
+                'accuracy_meters' => 12.5,
+                'captured_at' => now()->addMinute()->toIso8601String(),
+            ])
+            ->assertUnprocessable();
+
         $this->assertDatabaseCount('attendances', 0);
         $this->assertDatabaseCount('attendance_qr_checkins', 0);
     }
