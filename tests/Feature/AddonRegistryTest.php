@@ -24,7 +24,7 @@ class AddonRegistryTest extends TestCase
         ]);
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
 
-        $this->withSession(['locale' => 'bn'])->actingAs($admin)->get(route('admin.addons.index'))
+        $this->withSession(['locale' => 'en'])->actingAs($admin)->get(route('admin.addons.index'))
             ->assertOk()
             ->assertSee('Allow-listed Add-on Registry')
             ->assertSee('bKash Tokenized Checkout')
