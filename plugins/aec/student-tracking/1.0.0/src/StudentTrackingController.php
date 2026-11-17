@@ -5,6 +5,7 @@ namespace Aloms\StudentTracking;
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\Attendance;
+use App\Models\Assignment;
 use App\Models\Branch;
 use App\Models\CourseContentProgress;
 use App\Models\Enrollment;
@@ -143,6 +144,12 @@ class StudentTrackingController extends Controller
                 $riskFlags[] = [
                     'code' => 'inactive_learning',
                     'reason' => 'No recorded LMS learning activity in the last '.$riskRules['inactive_days'].' days',
+                ];
+            }
+            if ((int) $student->overdue_assignments_count > 0) {
+                $riskFlags[] = [
+                    'code' => 'overdue_assignments',
+                    'reason' => (int) $student->overdue_assignments_count.' published assignment(s) are overdue and have no submission',
                 ];
             }
             $student->setAttribute('tracking_risk_flags', $riskFlags);
@@ -351,7 +358,7 @@ class StudentTrackingController extends Controller
             ->firstOrFail();
 
         $validated = $request->validate([
-            'risk_code' => ['required', 'in:low_attendance,inactive_learning'],
+            'risk_code' => ['required', 'in:low_attendance,inactive_learning,overdue_assignments,consecutive_absences,declining_scores'],
             'action' => ['required', 'in:dismiss,note,reopen'],
             'note' => ['required_if:action,dismiss,note', 'nullable', 'string', 'max:1000'],
         ]);
@@ -441,6 +448,18 @@ class StudentTrackingController extends Controller
                 ->get()
             : collect();
 
+        $overdueAssignments = Schema::hasTable('assignments') && Schema::hasTable('assignment_submissions')
+            ? Assignment::query()
+                ->whereIn('batch_id', $allowedBatchIds)
+                ->where('status', 'published')
+                ->where('due_at', '<', now())
+                ->whereDoesntHave('submissions', fn (Builder $submissions) => $submissions->where('student_id', $studentRecord->id))
+                ->with(['batch:id,title'])
+                ->orderBy('due_at')
+                ->limit(50)
+                ->get(['id', 'batch_id', 'title', 'due_at'])
+            : collect();
+
         $assignmentSubmissions = Schema::hasTable('assignment_submissions')
             ? AssignmentSubmission::query()
                 ->select(['id', 'assignment_id', 'student_id', 'submitted_at', 'score', 'status'])
@@ -478,6 +497,12 @@ class StudentTrackingController extends Controller
             $riskFlags[] = [
                 'code' => 'inactive_learning',
                 'reason' => 'No recorded LMS learning activity in the last '.$riskRules['inactive_days'].' days',
+            ];
+        }
+        if ($overdueAssignments->isNotEmpty()) {
+            $riskFlags[] = [
+                'code' => 'overdue_assignments',
+                'reason' => $overdueAssignments->count().' published assignment(s) are overdue and have no submission',
             ];
         }
 
@@ -524,6 +549,7 @@ class StudentTrackingController extends Controller
             'contentProgress' => $contentProgress,
             'examAttempts' => $examAttempts,
             'assignmentSubmissions' => $assignmentSubmissions,
+            'overdueAssignments' => $overdueAssignments,
             'attendanceRate' => $attendanceRate,
             'riskFlags' => $riskFlags,
             'dismissedRiskFlags' => $dismissedRiskFlags,
@@ -568,6 +594,14 @@ class StudentTrackingController extends Controller
                 ->whereDate('attendance_date', '>=', $fromDate)
                 ->whereDate('attendance_date', '<=', $toDate)
                 ->whereIn('status', ['present', 'late']),
+            'overdue_assignments_count' => Schema::hasTable('assignments') && Schema::hasTable('assignment_submissions')
+                ? Assignment::query()
+                    ->selectRaw('COUNT(*)')
+                    ->whereIn('batch_id', $scopedBatchIds())
+                    ->where('status', 'published')
+                    ->where('due_at', '<', now())
+                    ->whereDoesntHave('submissions', fn (Builder $submissions) => $submissions->whereColumn('student_id', 'users.id'))
+                : DB::raw('0'),
             'completed_lessons' => DB::raw('0'),
             'completed_content' => DB::raw('0'),
             'last_lesson_activity' => DB::raw('NULL'),
