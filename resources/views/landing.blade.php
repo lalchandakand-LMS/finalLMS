@@ -40,6 +40,7 @@
             'overlay' => $hasSettingsTable ? max(20, min(90, (int) \App\Models\Setting::value('home_slider_overlay', 60))) : 60,
         ];
         $flashSales = \Illuminate\Support\Facades\Route::has('flash-sales.public')
+            && \App\Models\FlashSale::isPluginActive()
             && (bool) (int) \App\Models\Setting::value('flash_sale_page_enabled', '1')
             ? \App\Models\FlashSale::activeCampaigns()
             : collect();
