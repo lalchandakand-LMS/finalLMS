@@ -8,7 +8,7 @@
             <span class="badge info">Admin</span>
             <h1 style="margin: 12px 0 0;">{{ __('Website & institution settings') }}</h1>
         </div>
-        <a href="{{ route('dashboard') }}" class="btn secondary">{{ __('Back to dashboard') }}</a>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;"><a href="{{ route('admin.setup-wizard.index') }}" class="btn secondary">{{ __('Initial setup wizard') }}</a><a href="{{ route('dashboard') }}" class="btn secondary">{{ __('Back to dashboard') }}</a></div>
     </div>
 
     <div class="panel" style="max-width: 980px; margin: 0 auto;">
@@ -46,6 +46,9 @@
                             @endforeach
                         </select>
                     </div>
+                    <div><label for="institution-default-locale">{{ __('Default language') }}</label><select id="institution-default-locale" name="institution_default_locale"><option value="en" @selected(old('institution_default_locale', $settings['institution_default_locale'] ?? 'en') === 'en')>{{ __('English') }}</option><option value="bn" @selected(old('institution_default_locale', $settings['institution_default_locale'] ?? 'en') === 'bn')>{{ __('বাংলা') }}</option></select></div>
+                    <div><label for="institution-timezone">{{ __('Institution timezone') }}</label><select id="institution-timezone" name="institution_timezone">@foreach(['Asia/Dhaka' => 'Bangladesh (Dhaka)', 'Asia/Kolkata' => 'India (Kolkata)', 'Asia/Karachi' => 'Pakistan (Karachi)', 'Asia/Dubai' => 'UAE (Dubai)', 'Europe/London' => 'United Kingdom (London)', 'UTC' => 'UTC'] as $timezone => $label)<option value="{{ $timezone }}" @selected(old('institution_timezone', $settings['institution_timezone'] ?? 'Asia/Dhaka') === $timezone)>{{ $label }}</option>@endforeach</select></div>
+                    <div style="grid-column:1/-1;" class="muted">{{ __('Financial records currently use BDT as their stored currency. Per-record currency support must be added before changing this installation’s currency, so existing invoices and payments are never relabelled incorrectly.') }}</div>
                     <div style="grid-column:1/-1;"><label for="institution-address">{{ __('Institution address') }}</label><textarea id="institution-address" name="institution_address" rows="2" maxlength="500">{{ old('institution_address', $settings['institution_address'] ?? '') }}</textarea></div>
                     <div><label for="site-primary-color">{{ __('Primary brand color') }}</label><input id="site-primary-color" type="color" name="site_primary_color" value="{{ old('site_primary_color', $settings['site_primary_color'] ?? '#1546a8') }}"></div>
                     <div><label for="site-background-color">{{ __('Website background color') }}</label><input id="site-background-color" type="color" name="site_background_color" value="{{ old('site_background_color', $settings['site_background_color'] ?? '#f3f6fb') }}"></div>
