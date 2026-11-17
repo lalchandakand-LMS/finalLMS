@@ -163,7 +163,9 @@ class FlashSaleTest extends TestCase
 
         Setting::setValue('flash_sale_page_enabled', '0');
         $this->get(route('flash-sales.public'))->assertNotFound();
-        $this->get('/')->assertOk()->assertDontSee(route('flash-sales.public'));
+        $this->get('/')->assertOk()
+            ->assertDontSee(route('flash-sales.public'))
+            ->assertDontSee('November Mega Sale');
 
         $this->assertDatabaseHas('flash_sales', ['id' => $sale->id, 'status' => 'active']);
         $this->assertDatabaseHas('flash_sale_course', ['flash_sale_id' => $sale->id, 'course_id' => $course->id]);
