@@ -422,6 +422,56 @@ class InstructorAttendanceSyncTest extends TestCase
         ]);
     }
 
+    public function test_qr_session_cannot_be_created_for_another_attendance_date(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $student = User::factory()->create(['role' => 'student']);
+        $batch = $this->makeBatch($teacher, $student);
+
+        $this->withoutMiddleware([
+            \\App\\Http\\Middleware\\AuthenticateApiToken::class,
+            \\App\\Http\\Middleware\\EnsureModuleEnabled::class,
+        ])->actingAs($teacher)
+            ->postJson('/api/v1/instructor/batches/'.$batch->id.'/attendance/qr', [
+                'attendance_date' => now()->addDay()->toDateString(),
+            ])
+            ->assertUnprocessable();
+
+        $this->assertDatabaseCount('attendance_qr_sessions', 0);
+    }
+
+    public function test_qr_checkin_requires_fresh_location_captured_during_active_session(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $student = User::factory()->create(['role' => 'student']);
+        $batch = $this->makeBatch($teacher, $student);
+
+        $this->withoutMiddleware([
+            \\App\\Http\\Middleware\\AuthenticateApiToken::class,
+            \\App\\Http\\Middleware\\EnsureModuleEnabled::class,
+        ]);
+
+        $session = $this->actingAs($teacher)
+            ->postJson('/api/v1/instructor/batches/'.$batch->id.'/attendance/qr', [
+                'attendance_date' => now()->toDateString(),
+            ])
+            ->assertCreated();
+
+        $signedUrl = $session->json('data.check_in_url');
+        $checkInPath = parse_url($signedUrl, PHP_URL_PATH).'?'.parse_url($signedUrl, PHP_URL_QUERY);
+        $this->actingAs($student)
+            ->postJson($checkInPath, [
+                'latitude' => 23.8103,
+                'longitude' => 90.4125,
+                'accuracy_meters' => 12.5,
+                'captured_at' => now()->subMinutes(3)->toIso8601String(),
+            ])
+            ->assertUnprocessable();
+
+        $this->assertDatabaseCount('attendances', 0);
+        $this->assertDatabaseCount('attendance_qr_checkins', 0);
+    }
+
     public function test_expired_signed_qr_session_is_rejected(): void
     {
         $teacher = User::factory()->create(['role' => 'teacher']);
