@@ -71,8 +71,8 @@
                     @foreach(['bkash'=>'bKash','rocket'=>'Rocket','bank'=>'Bank transfer','manual'=>'Manual payment'] as $method=>$label)
                         @php($values = $paymentMethods[$method])
                         <div class="panel" style="padding:16px;border:1px solid var(--border)">
-                            <label><input type="checkbox" name="payment_methods[{{ $method }}][enabled]" value="1" @checked(old("payment_methods.$method.enabled", $values['enabled']))> {{ $label }}</label>
                             <input type="hidden" name="payment_methods[{{ $method }}][enabled]" value="0">
+                            <label><input type="checkbox" name="payment_methods[{{ $method }}][enabled]" value="1" @checked(old("payment_methods.$method.enabled", $values['enabled']))> {{ $label }}</label>
                             <div><label>{{ __('Account / payment details') }}</label><input name="payment_methods[{{ $method }}][account]" maxlength="120" value="{{ old("payment_methods.$method.account", $values['account']) }}"></div>
                             <div><label>{{ __('Instructions') }}</label><textarea name="payment_methods[{{ $method }}][instructions]" rows="2" maxlength="500">{{ old("payment_methods.$method.instructions", $values['instructions']) }}</textarea></div>
                         </div>
