@@ -114,23 +114,29 @@
                             <strong>{{ $student->name }}</strong>
                             <div class="muted" style="font-size:.82rem;">{{ $student->email }}</div>
                         </td>
-                        <td style="padding:12px 11px;">{{ $student->active_enrollments_count }}</td>
-                        <td style="padding:12px 11px;">
-                            @if($student->attendance_rate === null)
-                                <span class="muted">{{ __('No records') }}</span>
-                            @else
-                                <strong>{{ number_format($student->attendance_rate, 1) }}%</strong>
-                                <div class="muted" style="font-size:.8rem;">{{ $student->attendance_attended }}/{{ $student->attendance_total }} {{ __('present or late') }}</div>
-                            @endif
-                        </td>
-                        <td style="padding:12px 11px;">{{ (int)$student->completed_lessons + (int)$student->completed_content }}</td>
-                        <td style="padding:12px 11px;">
-                            @if($student->tracking_last_activity_at)
-                                {{ \Illuminate\Support\Carbon::parse($student->tracking_last_activity_at)->diffForHumans() }}
-                            @else
-                                <span class="muted">{{ __('No activity recorded') }}</span>
-                            @endif
-                        </td>
+                        @if($courseTrackingAvailable)
+                            <td style="padding:12px 11px;">{{ $student->active_enrollments_count }}</td>
+                        @endif
+                        @if($attendanceTrackingAvailable)
+                            <td style="padding:12px 11px;">
+                                @if($student->attendance_rate === null)
+                                    <span class="muted">{{ __('No records') }}</span>
+                                @else
+                                    <strong>{{ number_format($student->attendance_rate, 1) }}%</strong>
+                                    <div class="muted" style="font-size:.8rem;">{{ $student->attendance_attended }}/{{ $student->attendance_total }} {{ __('present or late') }}</div>
+                                @endif
+                            </td>
+                        @endif
+                        @if($learningTrackingAvailable)
+                            <td style="padding:12px 11px;">{{ (int)$student->completed_lessons + (int)$student->completed_content }}</td>
+                            <td style="padding:12px 11px;">
+                                @if($student->tracking_last_activity_at)
+                                    {{ \\Illuminate\\Support\\Carbon::parse($student->tracking_last_activity_at)->diffForHumans() }}
+                                @else
+                                    <span class="muted">{{ __('No activity recorded') }}</span>
+                                @endif
+                            </td>
+                        @endif
                         <td style="padding:12px 11px;">
                             @if($student->tracking_needs_attention)
                                 <span class="badge warning">{{ __('Needs attention') }}</span>
@@ -148,7 +154,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="7" class="muted" style="padding:24px;text-align:center;">{{ __('No students found in your permitted scope.') }}</td></tr>
+                    <tr><td colspan="{{ 3 + ($courseTrackingAvailable ? 1 : 0) + ($attendanceTrackingAvailable ? 1 : 0) + ($learningTrackingAvailable ? 2 : 0) }}" class="muted" style="padding:24px;text-align:center;">{{ __('No students found in your permitted scope.') }}</td></tr>
                 @endforelse
             </tbody>
         </table>
