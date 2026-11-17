@@ -35,6 +35,8 @@ class SetupWizardController extends Controller
                 'institution_contact_email' => ['nullable', 'email', 'max:190'],
                 'institution_contact_phone' => ['nullable', 'string', 'max:40'],
                 'institution_website' => ['nullable', 'url', 'max:255'],
+                'institution_logo_url' => ['nullable', 'url', 'max:500'],
+                'institution_favicon_url' => ['nullable', 'url', 'max:500'],
                 'institution_address' => ['nullable', 'string', 'max:500'],
                 'institution_default_locale' => ['required', 'in:en,bn'],
                 'institution_timezone' => ['required', 'timezone'],
@@ -76,13 +78,13 @@ class SetupWizardController extends Controller
             Setting::setValue('setup_wizard_completed_at', now()->toIso8601String());
             Setting::setValue('setup_wizard_step', 3);
 
-            return redirect()->route('admin.setup-wizard.index')->with('success', 'Initial setup is complete. You can revisit these settings at any time.');
+            return redirect()->route('admin.setup-wizard.index')->with('success', __('Initial setup is complete. You can revisit these settings at any time.'));
         }
 
         Setting::setValue('setup_wizard_step', min(3, $step + 1));
 
         return redirect()->route('admin.setup-wizard.index', ['step' => min(3, $step + 1)])
-            ->with('success', 'Your progress has been saved. You can continue later.');
+            ->with('success', __('Your progress has been saved. You can continue later.'));
     }
 
     public function skip(Request $request): RedirectResponse
@@ -94,14 +96,14 @@ class SetupWizardController extends Controller
             Setting::setValue('setup_wizard_completed_at', now()->toIso8601String());
             Setting::setValue('setup_wizard_step', 3);
 
-            return redirect()->route('admin.setup-wizard.index')->with('success', 'Setup wizard marked complete. Optional integrations can be configured later.');
+            return redirect()->route('admin.setup-wizard.index')->with('success', __('Setup wizard marked complete. Optional integrations can be configured later.'));
         }
 
         $next = $step + 1;
         Setting::setValue('setup_wizard_step', $next);
 
         return redirect()->route('admin.setup-wizard.index', ['step' => $next])
-            ->with('status', 'This optional step was skipped. You can return to it later.');
+            ->with('status', __('This optional step was skipped. You can return to it later.'));
     }
 
     private function save(array $settings): void
