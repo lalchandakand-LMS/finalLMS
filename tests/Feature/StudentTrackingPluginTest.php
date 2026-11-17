@@ -804,6 +804,24 @@ class StudentTrackingPluginTest extends TestCase
         );
     }
 
+    public function test_student_timeline_respects_notice_and_support_module_disablement(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+
+        Setting::setValue('module_registry', json_encode([
+            'notice_board' => false,
+            'support_center' => false,
+        ], JSON_THROW_ON_ERROR));
+
+        $view = $this->showFor($admin, $student->id);
+
+        $this->assertFalse($view->getData()['noticeTrackingAvailable']);
+        $this->assertFalse($view->getData()['supportTrackingAvailable']);
+        $this->assertCount(0, $view->getData()['announcements']);
+        $this->assertCount(0, $view->getData()['supportTickets']);
+    }
+
     public function test_student_only_sees_their_own_tracking_record(): void
     {
         $student = User::factory()->create(['role' => 'student']);
