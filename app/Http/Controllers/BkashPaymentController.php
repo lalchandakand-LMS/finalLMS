@@ -344,11 +344,15 @@ class BkashPaymentController extends Controller
                     $studentRole = DB::table('users')->where('id', $lockedPayment->user_id)->value('role');
 
                     if (! $exam
+                        || $exam->status !== 'published'
+                        || strtotime((string) $exam->ends_at) < now()->timestamp
                         || $lockedPayment->course_id !== null
                         || $lockedPayment->order_id !== null
                         || $studentRole !== 'student'
                         || $exam->access_type !== 'paid'
-                        || strtoupper((string) $lockedPayment->currency) !== 'BDT') {
+                        || (float) $lockedPayment->amount <= 0
+                        || strtoupper((string) $lockedPayment->currency) !== 'BDT'
+                        || $lockedPayment->gateway_provider !== 'bkash') {
                         $lockedPayment->update([
                             'status' => 'rejected',
                             'gateway_transaction_id' => $transactionId,
@@ -445,7 +449,7 @@ class BkashPaymentController extends Controller
 
             if ($payment->learn_earn_exam_id) {
                 return match ($result) {
-                    'learn_earn_exam_approved' => redirect()->to('/student/learn-earn/exams')
+                    'learn_earn_exam_approved', 'already' => redirect()->to('/student/learn-earn/exams')
                         ->with('success', __('bKash payment verified. Your paid exam access is now active.')),
                     'learn_earn_exam_already_owned' => redirect()->to('/student/learn-earn/exams')
                         ->with('error', __('An active entitlement already exists. The academy must review this duplicate payment for refund.')),
