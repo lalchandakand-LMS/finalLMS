@@ -12,11 +12,14 @@ This package is the first implementation slice for the owner-approved aec.learn-
 - Search and filters by category/status, pagination and admin activity audit entries.
 - Dedicated routes and navigation guarded by the declared learn-earn.manage permission.
 - Migration rollback refuses to drop existing question/category data.
+- Admin exam builder selects published MCQs and stores immutable snapshots of question text, options, answer key, category label and positive/negative marks.
+- Exam settings include schedule, duration, pass marks, question count, attempt limit, free/paid classification, BDT price, randomization and result visibility.
+- Exam creation validates selected question availability, maximum marks and configured question count; exam creation and snapshots are committed atomically.
 
 ## Not delivered yet
 
 - Signed distributable ZIP and trusted release-key provisioning.
-- Exam builder using selected saved MCQs and immutable exam/attempt snapshots.
+- Student/public exam catalogue, immutable attempt snapshots and free exam attempts.
 - Public/student exam catalogue, free exam attempts and result history.
 - Paid exam checkout, payment verification and entitlement.
 - Attempt timing, concurrency controls, attempt limits and answer-key confidentiality.
