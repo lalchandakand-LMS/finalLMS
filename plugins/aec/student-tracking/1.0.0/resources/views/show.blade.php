@@ -201,6 +201,7 @@
     @endif
 </div>
 
+@if($assignmentTrackingAvailable)
 <div class="panel">
     <h2>{{ __('Overdue assignments') }}</h2>
     @forelse($overdueAssignments as $assignment)
@@ -212,8 +213,10 @@
         <p class="muted">{{ __('No overdue assignments without a submission in your permitted batch scope.') }}</p>
     @endforelse
 </div>
+@endif
 
 <div class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;">
+    @if($examTrackingAvailable)
     <div class="panel">
         <h2>{{ __('Recent assessment results') }}</h2>
         @forelse($examAttempts as $attempt)
@@ -229,6 +232,8 @@
             <p class="muted">{{ __('No assessment attempts in your permitted course scope.') }}</p>
         @endforelse
     </div>
+    @endif
+    @if($assignmentTrackingAvailable)
     <div class="panel">
         <h2>{{ __('Assignment submissions') }}</h2>
         @forelse($assignmentSubmissions as $submission)
@@ -247,5 +252,6 @@
             <p class="muted">{{ __('No assignment submissions in your permitted batch scope.') }}</p>
         @endforelse
     </div>
+    @endif
 </div>
 @endsection
