@@ -1,16 +1,16 @@
 <?php
-namespace Aloms\\BoardQuestionSolver;
-use Aloms\\UniversalAiAssistant\\AssistantRequestLimit;
-use Aloms\\UniversalAiAssistant\\AssistantSettings;
-use Aloms\\UniversalAiAssistant\\AssistantTokenBudget;
-use App\\Http\\Controllers\\Controller;
-use App\\Services\\AiDeveloperProviderEndpoint;
-use Illuminate\\Http\\JsonResponse;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\Support\\Facades\\Http;
-use Illuminate\\Support\\Facades\\Storage;
-use Illuminate\\View\\View;
+namespace Aloms\BoardQuestionSolver;
+use Aloms\UniversalAiAssistant\AssistantRequestLimit;
+use Aloms\UniversalAiAssistant\AssistantSettings;
+use Aloms\UniversalAiAssistant\AssistantTokenBudget;
+use App\Http\Controllers\Controller;
+use App\Services\AiDeveloperProviderEndpoint;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\View\View;
 use Throwable;
 final class BoardQuestionSolverController extends Controller {
  public function index(Request $request):View{$this->assertAvailable();$history=DB::table('board_question_solutions')->where('user_id',$request->user()->id)->latest()->limit(10)->get();return view('board-question-solver::student.index',['settings'=>BoardQuestionSolverSettings::get(),'history'=>$history]);}
@@ -32,12 +32,13 @@ final class BoardQuestionSolverController extends Controller {
   $reservation=null;$settled=false;
   try{
    $key=AssistantSettings::apiKey();$base=rtrim((string)$ai['base_url'],'/');$options=app(AiDeveloperProviderEndpoint::class)->curlOptionsFor($base);
-   $budgetMessages=$messages;if($imageData!==null)$budgetMessages[]=['role'=>'user','content'=>'[One uploaded question image; reserve an additional vision-token allowance.] '.str_repeat('image ',1000)];\n   $reservation=AssistantTokenBudget::reserve((int)$ai['daily_token_budget'],min((int)$ai['max_tokens'],2400),$budgetMessages);
+   $budgetMessages=$messages;if($imageData!==null)$budgetMessages[]=['role'=>'user','content'=>'[One uploaded question image; reserve an additional vision-token allowance.] '.str_repeat('image ',1000)];
+   $reservation=AssistantTokenBudget::reserve((int)$ai['daily_token_budget'],min((int)$ai['max_tokens'],2400),$budgetMessages);
    if($reservation===null)return response()->json(['message'=>'Institution AI token budget is exhausted.'],429);
    $response=Http::withToken($key)->acceptJson()->timeout(60)->withOptions(array_merge(['allow_redirects'=>false,'stream'=>true],$options))->post($base.'/chat/completions',['model'=>$ai['model'],'temperature'=>0.2,'max_tokens'=>$reservation['max_tokens'],'messages'=>$messages]);
    if(!$response->successful())return response()->json(['message'=>'AI provider failed. For image questions, ensure the selected model supports vision.'],502);
    $body=$response->toPsrResponse()->getBody();$raw='';while(!$body->eof()){$raw.=$body->read(min(8192,524289-strlen($raw)));if(strlen($raw)>524288)return response()->json(['message'=>'AI response exceeded the size limit.'],502);}
-   $decoded=json_decode($raw,true);$answer=data_get($decoded,'choices.0.message.content');if(is_array($answer))$answer=collect($answer)->pluck('text')->filter()->implode("\\n");
+   $decoded=json_decode($raw,true);$answer=data_get($decoded,'choices.0.message.content');if(is_array($answer))$answer=collect($answer)->pluck('text')->filter()->implode("\n");
    if(!is_string($answer)||trim($answer)==='')return response()->json(['message'=>'The AI provider returned no readable solution.'],502);
    $tokens=max(0,(int)data_get($decoded,'usage.total_tokens',0));AssistantTokenBudget::settle($reservation['id'],$tokens>0?$tokens:$reservation['reserved_tokens']);$settled=true;
    $id=DB::table('board_question_solutions')->insertGetId(['user_id'=>$user->id,'board'=>$data['board']??null,'exam_year'=>$data['exam_year']??null,'class_level'=>$data['class_level']??null,'subject'=>$data['subject'],'question_type'=>$data['question_type'],'mode'=>$data['mode'],'language'=>$data['language'],'question'=>trim((string)($data['question']??''))?:'[Image question]','solution'=>$answer,'created_at'=>now(),'updated_at'=>now()]);
