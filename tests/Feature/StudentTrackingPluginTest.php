@@ -54,7 +54,7 @@ class StudentTrackingPluginTest extends TestCase
         $request = Request::create('/student-tracking', 'GET', $query);
         $request->setUserResolver(fn () => $actor);
 
-        return app(StudentTrackingController::class)->index($request, app(PluginResourceAccess::class));
+        return app(StudentTrackingController::class)->index($request, app(PluginResourceAccess::class), app(ModuleRegistry::class));
     }
 
     private function showFor(User $actor, int $studentId)
@@ -77,7 +77,7 @@ class StudentTrackingPluginTest extends TestCase
         $request = Request::create('/student-tracking/export', 'GET', $query);
         $request->setUserResolver(fn () => $actor);
 
-        return app(StudentTrackingController::class)->export($request, app(PluginResourceAccess::class));
+        return app(StudentTrackingController::class)->export($request, app(PluginResourceAccess::class), app(ModuleRegistry::class));
     }
 
     private function grantStudentTrackingPermissions(array $permissions): void
