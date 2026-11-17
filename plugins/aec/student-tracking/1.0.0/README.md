@@ -1,44 +1,57 @@
 # Student Tracking & Monitoring Plugin
 
-This first-party plugin is a read-only academic overview with audited staff follow-up actions. It reuses existing LMS records; it does not create a second attendance, enrollment, exam or learning-progress source of truth.
+Plugin key: `aec.student-tracking`  
+Package: `plugins/aec/student-tracking/1.0.0`
+
+This optional first-party plugin presents existing LMS student records to the five supported portals. It does not replace attendance, enrollment, course progress, assessment or guardian-consent source records.
 
 ## Portal access
 
-- Admin: all students and branches.
-- Branch Manager: students and records within the active assigned branch.
-- Teacher: students and records in assigned courses/batches only.
-- Student: own progress only.
-- Guardian: read-only linked-student view only while the guardian link is active and reviewed.
+- Admin: all students and branches, with optional filters.
+- Branch Manager: students and related records in the manager's authorized branch.
+- Teacher: students and records belonging to assigned courses/batches only.
+- Student: only their own tracking record.
+- Guardian: only students with an approved active guardian relationship; risk notes and staff action history are never exposed.
 
-The same access scope is applied to student filters, nested detail queries, dashboard aggregates and CSV exports. Student and guardian views never receive staff risk notes or action history.
+Every portal route is registered through `PluginContext::routesForPortal()`. Enrollment counts, attendance, lesson/content progress, exam attempts, assignment submissions, risk actions and CSV rows are scoped server-side. Request filters cannot broaden the actor's authorized scope.
 
 ## Data shown
 
-- Enrollment and batch/course relationships.
-- Attendance and recent learning-progress records.
-- Exam attempt outcomes and assignment submission status/score.
-- Last recorded LMS learning activity.
-- Transparent risk flags for low attendance and learning inactivity.
+- Search and branch, batch, course, Academic Level and enrollment-status filters.
+- Activity date range for attendance and completed lesson/content counts; inactivity uses the latest authorized learning activity across all dates.
+- Attendance today, attendance percentage, active enrollments, completed learning and last recorded activity.
+- Scoped course enrollments, attendance, legacy lesson progress, Course Content Studio progress, exam outcomes and assignment submission status/scores.
+- Student-targeted active notice-board announcements and an Admin-only support-ticket timeline. Private support message bodies are not copied or rendered.
 
-Assessment and assignment queries select only outcome fields; answers, teacher feedback, private notes, payment secrets, IP addresses and raw user-agent strings are not rendered.
+Assessment and assignment queries select only outcome fields; answers, teacher feedback, private notes, payment secrets, IP addresses and raw user-agent strings are not exposed.
 
 ## Risk rules and follow-up
 
-Admins can configure the low-attendance percentage, minimum record count and inactivity days. Flags are review signals only; they do not suspend accounts, alter grades or trigger disciplinary actions.
+Admins with the explicitly granted `student-tracking.configure` permission can configure the low-attendance percentage, minimum attendance record count and inactivity days.
 
-Admin, Branch Manager and authorized Teacher users can save a follow-up note, dismiss a flag or reopen it. Each action is stored in the plugin's student_tracking_risk_actions history and an ActivityLog event. The ActivityLog description does not copy the note content.
+Transparent review signals include:
+- Low attendance against the configured threshold.
+- Learning inactivity against the configured day threshold.
+- Published assignments overdue without a submission.
+- The latest three recorded attendance sessions all marked absent.
+- A decline of at least 20 percentage points across the latest three normalized graded outcomes.
+
+These signals are review prompts only. They do not suspend accounts, alter grades or trigger disciplinary actions and must not be used as the sole basis for sanctions, exclusion or fee decisions.
+
+Admin, Branch Manager and Teacher users with the explicitly granted `student-tracking.manage-risk` permission can save follow-up notes, dismiss a flag or reopen it. Each action is stored in the plugin-owned `student_tracking_risk_actions` table and an ActivityLog event. Dismissal suppresses only the matching risk code; it never changes source academic records. Student and Guardian views do not receive staff notes or action history.
 
 ## Export
 
-The CSV export uses the same server-side role scope and selected filters, is capped at 5,000 rows and throttled to 5 requests per minute. Export events are audited. Formula-leading student names are prefixed to prevent spreadsheet formula injection. Email, phone, answers, feedback and private notes are not exported.
+CSV export applies the same server-side role scope and selected filters, is capped at 5,000 rows and throttled to 5 requests per minute. Export events are audited. Formula-leading student names are prefixed to prevent spreadsheet formula injection. Email, phone, answers, feedback and private notes are not exported.
 
-## Explicitly not included
+## Data and privacy boundary
 
-- GPS/background location, keystroke capture, device surveillance or unrelated browsing data.
-- Automated notification delivery or claims of delivery without a connected provider.
-- Overdue-assignment, consecutive-absence and declining-score risk rules (future opt-in work).
-- Notice/support engagement records until their permissions and privacy boundaries are verified.
+The plugin reads existing LMS attendance, enrollment, lesson/content progress, exam, assignment, guardian-link, notice and support-ticket records. Its only plugin-owned table is `student_tracking_risk_actions`, created by the migration in this package. Restrictive foreign keys preserve the audit history.
+
+The plugin does not collect GPS coordinates, live/background location, microphone/camera data, keystrokes, unrelated browsing data or new analytics cookies. It does not claim to deliver notifications without a connected provider.
+
+Deactivation leaves source academic data and risk-action history intact. Migration rollback/uninstallation must follow the platform's explicit plugin lifecycle and data-retention policy.
 
 ## Release requirements
 
-Run plugin migration 2026_11_17_180000_create_student_tracking_risk_actions.php through the trusted plugin lifecycle. Do not activate an unsigned package. Exact-head CI, CodeQL, cPanel package verification and manual browser QA are required before production activation.
+The source package is not active merely by being present under `plugins/`. Exact-head Laravel CI, CodeQL, signed package creation/verification, migration preflight, disposable activation/deactivation, rollback rehearsal, browser acceptance and role-isolation review are required. Upload through Plugin Manager, grant permissions explicitly, and activate only after release gates pass. Never commit a release private key.
