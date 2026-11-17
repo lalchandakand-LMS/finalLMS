@@ -90,9 +90,9 @@ final class AssistantContextRetriever
                 'ip_address' => $request?->ip(),
                 'user_agent' => substr((string) ($request?->userAgent() ?? ''), 0, 1000),
             ]);
-        } catch (Throwable) {
-            // Context retrieval remains bounded; audit failures are reported without logging retrieved content.
-            report(new \RuntimeException('Unable to persist AI scoped-context access audit record.'));
+        } catch (Throwable $exception) {
+            // Never send scoped records to a provider if the required access audit cannot be persisted.
+            throw new \RuntimeException('AI scoped-context access could not be audited; provider retrieval was blocked.', previous: $exception);
         }
     }
 }
