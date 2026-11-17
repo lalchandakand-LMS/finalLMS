@@ -1,11 +1,11 @@
 <?php
 
-namespace App\\Http\\Middleware;
+namespace App\Http\Middleware;
 
 use Closure;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Facades\\App;
-use Illuminate\\Support\\Facades\\Schema;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Schema;
 
 class SetLocale
 {
@@ -17,8 +17,8 @@ class SetLocale
         $timezone = 'UTC';
 
         if (Schema::hasTable('settings')) {
-            $defaultLocale = (string) \\App\\Models\\Setting::value('institution_default_locale', 'en');
-            $timezone = (string) \\App\\Models\\Setting::value('institution_timezone', 'UTC');
+            $defaultLocale = (string) \App\Models\Setting::value('institution_default_locale', 'en');
+            $timezone = (string) \App\Models\Setting::value('institution_timezone', 'UTC');
         }
 
         if (! in_array($defaultLocale, self::SUPPORTED, true)) {
