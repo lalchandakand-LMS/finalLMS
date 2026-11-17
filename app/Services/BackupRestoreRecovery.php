@@ -170,15 +170,32 @@ class BackupRestoreRecovery
 
     private function restoreFiles(array $publicFiles, array $privateFiles): void
     {
+        $publicDisk = Storage::disk('public');
+        foreach ($publicDisk->allFiles() as $path) {
+            if (! array_key_exists($path, $publicFiles) && ! $publicDisk->delete($path)) {
+                throw new RuntimeException('An extra public media file could not be removed during exact restore.');
+            }
+        }
+
+        $privateDisk = Storage::disk('local');
+        foreach ($privateDisk->allFiles() as $path) {
+            if (str_starts_with($path, 'backups/') || str_starts_with($path, 'updates/')) {
+                continue;
+            }
+            if (! array_key_exists($path, $privateFiles) && ! $privateDisk->delete($path)) {
+                throw new RuntimeException('An extra private file could not be removed during exact restore.');
+            }
+        }
+
         foreach ($publicFiles as $path => $encoded) {
             $contents = base64_decode($encoded, true);
-            if (! is_string($contents) || ! Storage::disk('public')->put($path, $contents)) {
+            if (! is_string($contents) || ! $publicDisk->put($path, $contents)) {
                 throw new RuntimeException('A public media file could not be restored.');
             }
         }
         foreach ($privateFiles as $path => $encoded) {
             $contents = base64_decode($encoded, true);
-            if (! is_string($contents) || ! Storage::disk('local')->put($path, $contents)) {
+            if (! is_string($contents) || ! $privateDisk->put($path, $contents)) {
                 throw new RuntimeException('A private media file could not be restored.');
             }
         }
