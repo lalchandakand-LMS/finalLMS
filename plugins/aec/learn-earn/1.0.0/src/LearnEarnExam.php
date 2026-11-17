@@ -47,6 +47,11 @@ class LearnEarnExam extends Model
         return $this->hasMany(LearnEarnExamQuestion::class, 'exam_id')->orderBy('position');
     }
 
+    public function attempts(): HasMany
+    {
+        return $this->hasMany(LearnEarnExamAttempt::class, 'exam_id');
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
