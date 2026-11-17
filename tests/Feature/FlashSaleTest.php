@@ -14,6 +14,7 @@ use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
 use App\Services\Plugins\PluginContext;
 use App\Services\Plugins\PluginHookRegistry;
 use Tests\TestCase;
@@ -57,6 +58,15 @@ class FlashSaleTest extends TestCase
         $installation = PluginInstallation::query()->where('plugin_key', 'aec.flash-sale')->firstOrFail();
         $plugin = require base_path('plugins/aec/flash-sale/1.0.0/src/Plugin.php');
         $plugin->register(new PluginContext(app(), app('router'), $installation, app(PluginHookRegistry::class)));
+
+        $registeredFlashRoutes = array_filter(
+            array_keys(Route::getRoutes()->getRoutesByName()),
+            fn (string $name): bool => str_contains($name, 'flash-sale')
+        );
+        $this->assertTrue(
+            Route::has('admin.flash-sales.index') && Route::has('flash-sales.public'),
+            'Flash Sale plugin routes were not registered: '.implode(', ', $registeredFlashRoutes)
+        );
     }
 
     private function makeCourse(float $price = 1000): Course
