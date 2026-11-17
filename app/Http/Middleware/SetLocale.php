@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Schema;
 
 class SetLocale
 {
@@ -12,14 +13,46 @@ class SetLocale
 
     public function handle(Request $request, Closure $next): mixed
     {
-        $locale = $request->session()->get('locale', config('app.locale', 'en'));
+        $defaultLocale = 'en';
+        $timezone = 'UTC';
 
-        if (! in_array($locale, self::SUPPORTED, true)) {
-            $locale = 'en';
+        try {
+            if (Schema::hasTable('settings')) {
+                $defaultLocale = (string) \App\Models\Setting::value('institution_default_locale', 'en');
+                $timezone = (string) \App\Models\Setting::value('institution_timezone', 'UTC');
+            }
+        } catch (\Throwable) {
+            // The installer may be running before the database is configured
+            // or migrations have created the settings table. Keep safe defaults.
         }
 
-        App::setLocale($locale);
+        if (! in_array($defaultLocale, self::SUPPORTED, true)) {
+            $defaultLocale = 'en';
+        }
 
-        return $next($request);
+        if (! in_array($timezone, timezone_identifiers_list(), true)) {
+            $timezone = 'UTC';
+        }
+
+        $locale = $request->session()->get('locale', $defaultLocale);
+        if (! in_array($locale, self::SUPPORTED, true)) {
+            $locale = $defaultLocale;
+        }
+
+        // Restore process-global state after the response. This prevents one
+        // institution's locale/timezone leaking into another request when the
+        // application runs under a long-lived worker such as Octane.
+        $previousLocale = App::getLocale();
+        $previousTimezone = date_default_timezone_get();
+
+        App::setLocale($locale);
+        date_default_timezone_set($timezone);
+
+        try {
+            return $next($request);
+        } finally {
+            App::setLocale($previousLocale);
+            date_default_timezone_set($previousTimezone);
+        }
     }
 }
