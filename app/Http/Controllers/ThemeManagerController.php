@@ -246,15 +246,149 @@ class ThemeManagerController extends Controller
         } catch (\RuntimeException) {
             abort(404);
         }
-        $assets = json_decode($record->assets, true) ?: [];
+
+        return view('admin.themes.preview', ['theme' => $record]);
+    }
+
+    public function previewFrame(int $theme)
+    {
+        $record = DB::table('themes')->where('id', $theme)->first();
+        abort_unless($record, 404);
+        try {
+            $this->assertThemeCanActivate($record);
+        } catch (\RuntimeException) {
+            abort(404);
+        }
+
         $css = '';
-        foreach ($assets as $asset) {
-            if (is_string($asset) && preg_match('/^assets\/[a-z0-9][a-z0-9._-]*\.css$/i', $asset)) {
+        foreach (json_decode($record->assets, true) ?: [] as $asset) {
+            if (is_string($asset) && preg_match('/^assets\/[a-z0-9][a-z0-9._-]{0,100}\.css$/i', $asset)) {
                 $css .= Storage::disk('public')->get('themes/'.$record->slug.'/'.$record->version.'/'.$asset)."\n";
             }
         }
 
-        return view('admin.themes.preview', ['theme' => $record, 'css' => $css]);
+        return response()
+            ->view('admin.themes.preview-frame', ['theme' => $record, 'css' => $css])
+            ->header('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src 'none'; script-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'; frame-ancestors 'self'")
+            ->header('X-Content-Type-Options', 'nosniff')
+            ->header('Referrer-Policy', 'no-referrer');
+    }
+
+    public function destroy(Request $request, int $theme): RedirectResponse
+    {
+        $paths = [];
+        $packagePath = null;
+
+        try {
+            DB::transaction(function () use ($request, $theme, &$paths, &$packagePath): void {
+                $lock = DB::table('theme_manager_locks')->where('id', 1)->lockForUpdate()->first();
+                if (! $lock) {
+                    throw new \RuntimeException(__('Theme deletion is unavailable because the lifecycle lock is missing.'));
+                }
+
+                $record = DB::table('themes')->where('id', $theme)->lockForUpdate()->first();
+                abort_unless($record, 404);
+
+                $activeId = (int) Setting::value('active_theme_id', 0);
+                $activeSlug = (string) Setting::value('active_theme_slug', '');
+                $activeVersion = (string) Setting::value('active_theme_version', '');
+                if ($activeId === (int) $record->id
+                    || ($activeSlug !== '' && $activeSlug === $record->slug && $activeVersion === $record->version)) {
+                    throw new \RuntimeException(__('The active theme cannot be deleted. Activate another theme or reset to the built-in theme first.'));
+                }
+
+                if (! preg_match('/^[a-z0-9][a-z0-9-]{1,79}$/', (string) $record->slug)
+                    || ! preg_match('/^\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?$/', (string) $record->version)) {
+                    throw new \RuntimeException(__('The installed theme has invalid storage metadata; deletion was blocked.'));
+                }
+
+                $base = 'themes/'.$record->slug.'/'.$record->version;
+                $assets = json_decode((string) $record->assets, true);
+                if (! is_array($assets)) {
+                    throw new \RuntimeException(__('The installed theme asset list is invalid; deletion was blocked.'));
+                }
+                foreach ($assets as $asset) {
+                    if (! is_string($asset) || ! preg_match('/^assets\/[a-z0-9][a-z0-9._-]{0,100}\.css$/i', $asset) || str_contains($asset, '..')) {
+                        throw new \RuntimeException(__('An unsafe theme asset path was found; deletion was blocked.'));
+                    }
+                    $paths[] = ['public', $base.'/'.$asset];
+                }
+
+                if ($record->preview_path !== null) {
+                    if ($record->preview_path !== $base.'/preview.png') {
+                        throw new \RuntimeException(__('The theme preview path is outside its package directory; deletion was blocked.'));
+                    }
+                    $paths[] = ['public', $record->preview_path];
+                }
+
+                $packagePath = (string) $record->package_path;
+                if (! preg_match('#^themes/packages/[a-f0-9-]{36}\.zip$#i', $packagePath)) {
+                    throw new \RuntimeException(__('The original theme package path is invalid; deletion was blocked.'));
+                }
+
+                foreach ($paths as [$diskName, $relativePath]) {
+                    $this->assertSafeThemeStoragePath($diskName, $relativePath);
+                }
+                $this->assertSafeThemeStoragePath('local', $packagePath);
+
+                DB::table('theme_activations')->insert([
+                    'theme_id' => $record->id,
+                    'action' => 'delete',
+                    'previous_state' => json_encode([
+                        'id' => (int) $record->id,
+                        'slug' => $record->slug,
+                        'version' => $record->version,
+                        'name' => $record->name,
+                        'package_sha256' => $record->package_sha256,
+                    ], JSON_THROW_ON_ERROR),
+                    'actor_id' => $request->user()->id,
+                    'created_at' => now(),
+                ]);
+
+                DB::table('themes')->where('id', $record->id)->delete();
+            }, 3);
+        } catch (\RuntimeException $exception) {
+            return back()->withErrors(['theme' => $exception->getMessage()]);
+        }
+
+        foreach ($paths as [$diskName, $relativePath]) {
+            if (Storage::disk($diskName)->exists($relativePath)) {
+                Storage::disk($diskName)->delete($relativePath);
+            }
+        }
+        if ($packagePath && Storage::disk('local')->exists($packagePath)) {
+            Storage::disk('local')->delete($packagePath);
+        }
+
+        return redirect()->route('admin.themes.index')->with('success', __('The inactive theme and its verified package files were deleted. The audit history and website content were retained.'));
+    }
+
+    private function assertSafeThemeStoragePath(string $diskName, string $relativePath): void
+    {
+        if ($relativePath === '' || str_starts_with($relativePath, '/') || str_contains($relativePath, '\\')
+            || in_array('..', explode('/', $relativePath), true)) {
+            throw new \RuntimeException(__('An unsafe theme storage path was detected.'));
+        }
+
+        $disk = Storage::disk($diskName);
+        $root = realpath($disk->path(''));
+        if ($root === false) {
+            throw new \RuntimeException(__('Theme storage is unavailable; deletion was blocked.'));
+        }
+
+        $cursor = rtrim($disk->path(''), DIRECTORY_SEPARATOR);
+        foreach (explode('/', $relativePath) as $segment) {
+            $cursor .= DIRECTORY_SEPARATOR.$segment;
+            if (is_link($cursor)) {
+                throw new \RuntimeException(__('A symbolic link was found in theme storage; deletion was blocked.'));
+            }
+            if (file_exists($cursor)) {
+                $real = realpath($cursor);
+                if ($real === false || ($real !== $root && ! str_starts_with($real, $root.DIRECTORY_SEPARATOR))) {
+                    throw new \RuntimeException(__('A theme storage path resolves outside its storage directory; deletion was blocked.'));
+                }
+            }
+        }
     }
 
     public function activate(Request $request, int $theme): RedirectResponse
