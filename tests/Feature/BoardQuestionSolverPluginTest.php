@@ -18,7 +18,7 @@ class BoardQuestionSolverPluginTest extends TestCase {
   require_once base_path('plugins/aec/board-question-solver/1.0.0/src/BoardQuestionSolverSettings.php');
   require_once base_path('plugins/aec/board-question-solver/1.0.0/src/BoardQuestionSolverController.php');
   if(!Schema::hasTable('board_question_solver_settings')){$migration=require base_path('plugins/aec/board-question-solver/1.0.0/migrations/2026_11_18_020000_create_board_question_solver_tables.php');$migration->up();}
-  Route::get('/__test-board-solver/history',[BoardQuestionSolverController::class,'history']);
+  Route::get('/__test-board-solver/history',[BoardQuestionSolverController::class,'history']);\n  Route::post('/__test-board-solver/solve',[BoardQuestionSolverController::class,'solve']);
  }
  public function test_students_can_only_see_their_own_board_question_history():void {
   $student=User::factory()->create(['role'=>'student']);
@@ -29,7 +29,7 @@ class BoardQuestionSolverPluginTest extends TestCase {
   ]);
   $this->actingAs($student)->get('/__test-board-solver/history')->assertOk()->assertViewHas('history',function($history){return $history->count()===1&&$history->first()->question==='My own question';})->assertSee('My own solution')->assertDontSee('Private other question');
  }
- public function test_plugin_is_disabled_by_default_and_admin_settings_are_bounded():void {
+ public function test_solver_is_unavailable_until_admin_enables_it():void {\n  $student=User::factory()->create(['role'=>'student']);\n  $this->actingAs($student)->postJson('/__test-board-solver/solve',['subject'=>'English','question_type'=>'grammar','mode'=>'full','language'=>'bn','question'=>'Test question'])->assertNotFound();\n }\n public function test_plugin_is_disabled_by_default_and_admin_settings_are_bounded():void {
   $this->assertFalse((bool)BoardQuestionSolverSettings::get()['enabled']);
   BoardQuestionSolverSettings::save(['enabled'=>true,'allow_image_questions'=>false,'max_question_length'=>5000,'max_image_kb'=>2048,'daily_request_limit'=>7,'default_language'=>'en']);
   $settings=BoardQuestionSolverSettings::get();
