@@ -9,7 +9,7 @@ use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use FilesystemIterator;
 
-final class PluginIntegrityVerifier
+class PluginIntegrityVerifier
 {
     /**
      * Verify every installed file and reject missing, modified, extra or linked files.
