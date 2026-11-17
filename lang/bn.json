@@ -1318,5 +1318,16 @@
     "Assignment": "অ্যাসাইনমেন্ট",
     "Score: :score": "নম্বর: :score",
     "Submitted: :time": "জমা: :time",
-    "Attendance (:from – :to)": "উপস্থিতি (:from – :to)"
+    "Attendance (:from – :to)": "উপস্থিতি (:from – :to)",
+    "Student Tracking": "শিক্ষার্থী ট্র্যাকিং",
+    "A student is flagged below :percent% attendance after :count records, or after :days days without recorded learning activity.": "অন্তত :countটি রেকর্ডে উপস্থিতি :percent%-এর নিচে হলে অথবা :days দিন শেখার কার্যক্রম না থাকলে শিক্ষার্থীকে পর্যালোচনার জন্য চিহ্নিত করা হয়।",
+    "present": "উপস্থিত",
+    "absent": "অনুপস্থিত",
+    "late": "বিলম্বিত",
+    "excused": "অনুমোদিত অনুপস্থিতি",
+    "graded": "মূল্যায়িত",
+    "submitted": "জমা দেওয়া",
+    "closed": "বন্ধ",
+    "open": "খোলা",
+    "Not recorded": "রেকর্ড নেই"
 }
