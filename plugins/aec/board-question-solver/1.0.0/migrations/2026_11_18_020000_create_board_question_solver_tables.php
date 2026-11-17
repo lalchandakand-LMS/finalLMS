@@ -1,8 +1,8 @@
 <?php
-use Illuminate\\Database\\Migrations\\Migration;
-use Illuminate\\Database\\Schema\\Blueprint;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\Support\\Facades\\Schema;
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
  public function up():void {
   if(!Schema::hasTable('board_question_solver_settings'))Schema::create('board_question_solver_settings',function(Blueprint $t):void{$t->unsignedTinyInteger('id')->primary();$t->boolean('enabled')->default(false);$t->boolean('allow_image_questions')->default(true);$t->unsignedInteger('max_question_length')->default(4000);$t->unsignedInteger('max_image_kb')->default(5120);$t->unsignedInteger('daily_request_limit')->default(10);$t->string('default_language',8)->default('bn');$t->timestamps();});
