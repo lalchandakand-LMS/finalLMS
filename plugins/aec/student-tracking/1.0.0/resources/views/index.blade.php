@@ -99,6 +99,11 @@
                         <td style="padding:12px 11px;">
                             @if($student->tracking_needs_attention)
                                 <span class="badge warning">Needs attention</span>
+                                <ul class="muted" style="font-size:.78rem;margin:6px 0 0;padding-left:16px;">
+                                    @foreach($student->tracking_risk_reasons as $reason)
+                                        <li>{{ $reason }}</li>
+                                    @endforeach
+                                </ul>
                             @else
                                 <span class="badge success">On track</span>
                             @endif
