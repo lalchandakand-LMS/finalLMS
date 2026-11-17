@@ -145,6 +145,22 @@ class UniversalAiAssistantPluginTest extends TestCase
         ]);
     }
 
+    public function test_non_boolean_database_grants_are_normalized_to_denied(): void
+    {
+        $this->saveScopedAssistantSettings(['student']);
+        \\DB::table('ai_assistant_settings')->where('id', 1)->update([
+            'role_enabled' => json_encode(['student' => 'false']),
+            'role_data_access' => json_encode(['student' => 'true']),
+        ]);
+
+        $settings = AssistantSettings::record();
+        $this->assertFalse($settings['role_enabled']['student']);
+        $this->assertFalse($settings['role_data_access']['student']);
+
+        $student = User::factory()->create(['role' => 'student']);
+        $this->assertNull(app(AssistantContextRetriever::class)->retrieve($student, 'student'));
+    }
+
     public function test_guardian_context_contains_only_courses_of_student_approved_linked_children(): void
     {
         $this->saveScopedAssistantSettings(['guardian']);
