@@ -50,7 +50,6 @@ use App\Http\Controllers\BackupController;
 use App\Http\Controllers\InstallController;
 use App\Http\Controllers\SetupWizardController;
 use App\Http\Controllers\QuizContestController;
-use App\Http\Controllers\FlashSaleController;
 use App\Http\Controllers\AdminCouponController;
 use App\Http\Controllers\AdminProductController;
 use App\Http\Controllers\AdminQuestionSetController;
@@ -111,7 +110,6 @@ Route::get('/payments/bkash/callback', [BkashPaymentController::class, 'callback
 Route::get('/student/invoices/{invoice}/print', [StudentInvoiceController::class, 'printInvoice'])->middleware(['signed', 'throttle:30,1'])->name('student.invoices.print');
 Route::get('/student/invoices/{invoice}/payments/{payment}/print', [StudentInvoiceController::class, 'printReceipt'])->middleware(['signed', 'throttle:30,1'])->name('student.invoices.receipts.print');
 
-Route::get('/flash-sale', [FlashSaleController::class, 'publicIndex'])->name('flash-sales.public');
 Route::get('/contests', [QuizContestController::class, 'index'])->name('contests.index');
 Route::get('/contests/{contest}', [QuizContestController::class, 'show'])->name('contests.show');
 
@@ -358,10 +356,6 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::post('/coupons', [AdminCouponController::class, 'store'])->name('admin.coupons.store');
         Route::put('/coupons/{coupon}', [AdminCouponController::class, 'update'])->name('admin.coupons.update');
         Route::delete('/coupons/{coupon}', [AdminCouponController::class, 'destroy'])->name('admin.coupons.destroy');
-        Route::get('/flash-sales', [FlashSaleController::class, 'index'])->name('admin.flash-sales.index');
-        Route::post('/flash-sales', [FlashSaleController::class, 'store'])->name('admin.flash-sales.store');
-        Route::put('/flash-sales/{flashSale}', [FlashSaleController::class, 'update'])->name('admin.flash-sales.update');
-        Route::delete('/flash-sales/{flashSale}', [FlashSaleController::class, 'destroy'])->name('admin.flash-sales.destroy');
         Route::get('/contests', [QuizContestController::class, 'adminIndex'])->name('admin.contests.index');
         Route::get('/contests/{contest}/entries', [QuizContestController::class, 'adminEntries'])->name('admin.contests.entries');
         Route::post('/contests', [QuizContestController::class, 'store'])->middleware('throttle:10,1')->name('admin.contests.store');
