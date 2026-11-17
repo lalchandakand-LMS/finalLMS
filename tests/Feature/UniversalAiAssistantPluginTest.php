@@ -547,7 +547,7 @@ class UniversalAiAssistantPluginTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        $reservationId = (string) \Illuminate\\Support\\Str::uuid();
+        $reservationId = (string) \Illuminate\Support\Str::uuid();
         \DB::table('ai_assistant_token_reservations')->insert([
             'id' => $reservationId,
             'budget_date' => today()->toDateString(),
@@ -567,7 +567,7 @@ class UniversalAiAssistantPluginTest extends TestCase
 
         $relative = 'plugins/test/ai-data-retention/1.0.0';
         $directory = base_path($relative);
-        \Illuminate\\Support\\Facades\\File::ensureDirectoryExists($directory);
+        \Illuminate\Support\Facades\File::ensureDirectoryExists($directory);
         file_put_contents($directory.'/entry.php', '<?php // test-only signed package');
 
         $plugin = new PluginInstallation();
