@@ -21,6 +21,7 @@ class ThemeManagerTest extends TestCase
         $student = User::factory()->create(['role' => 'student']);
         $this->actingAs($student)->get(route('admin.themes.index'))->assertForbidden();
         $this->actingAs($student)->post(route('admin.themes.reset'))->assertForbidden();
+        $this->actingAs($student)->delete(route('admin.themes.destroy', 1))->assertForbidden();
     }
 
     public function test_admin_can_open_theme_manager_and_sees_signing_key_requirement(): void
@@ -115,7 +116,8 @@ class ThemeManagerTest extends TestCase
             ->assertOk()
             ->assertSee('Blue Academy')
             ->assertSee('sandbox', false)
-            ->assertSee(route('admin.themes.preview.frame', $themeId));
+            ->assertSee(route('admin.themes.preview.frame', $themeId))
+            ->assertDontSee('border-radius: 24px', false);
 
         $this->actingAs($admin)->get(route('admin.themes.preview.frame', $themeId))
             ->assertOk()
