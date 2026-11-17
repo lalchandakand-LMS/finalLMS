@@ -4,7 +4,6 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use RuntimeException;
 
 return new class extends Migration
 {
@@ -63,7 +62,7 @@ return new class extends Migration
             && DB::table('learn_earn_exams')->exists();
 
         if ($hasQuestions || $hasExams) {
-            throw new RuntimeException('Learn & Earn exams or exam snapshots exist; preserve them during plugin migration rollback.');
+            throw new \RuntimeException('Learn & Earn exams or exam snapshots exist; preserve them during plugin migration rollback.');
         }
 
         Schema::dropIfExists('learn_earn_exam_questions');
