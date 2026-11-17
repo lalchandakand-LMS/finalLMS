@@ -64,6 +64,21 @@ class InstitutionLocaleTimezoneTest extends TestCase
         $this->assertSame($previousTimezone, date_default_timezone_get());
     }
 
+    public function test_missing_institution_settings_use_the_installation_defaults(): void
+    {
+        $request = Request::create('/');
+        $session = new Store('test-session', new ArraySessionHandler(120));
+        $session->start();
+        $request->setLaravelSession($session);
+
+        (new SetLocale())->handle($request, function () {
+            $this->assertSame('en', app()->getLocale());
+            $this->assertSame('Asia/Dhaka', date_default_timezone_get());
+
+            return response('ok');
+        });
+    }
+
     public function test_unsupported_saved_defaults_fall_back_safely(): void
     {
         Setting::setValue('institution_default_locale', 'xx');
@@ -76,7 +91,7 @@ class InstitutionLocaleTimezoneTest extends TestCase
 
         (new SetLocale())->handle($request, function () {
             $this->assertSame('en', app()->getLocale());
-            $this->assertSame('UTC', date_default_timezone_get());
+            $this->assertSame('Asia/Dhaka', date_default_timezone_get());
 
             return response('ok');
         });
