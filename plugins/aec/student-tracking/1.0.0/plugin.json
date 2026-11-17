@@ -37,7 +37,9 @@
     "at-risk-learning-indicators",
     "overdue-assignment-risk",
     "consecutive-absence-risk",
-    "declining-score-risk"
+    "declining-score-risk",
+    "scoped-student-notice-timeline",
+    "admin-support-engagement-timeline"
   ],
   "migrations": "migrations"
 }
