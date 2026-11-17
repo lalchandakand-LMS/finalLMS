@@ -20,7 +20,7 @@ class DashboardController extends Controller
 {
     public function index(): View
     {
-        $user = Auth::user();
+        $user = Auth::user();\n        $institutionName = Setting::value('institution_name', config('app.name'));\n        $setupWizardPending = $user->isAdmin() && ! Setting::value('setup_wizard_completed_at');
         $announcementSlides = DashboardAnnouncement::currentlyActive()
             ->whereIn('audience', ['all', $user->role])
             ->where(fn ($query) => $query->whereNull('branch_id')->orWhere('branch_id', $user->branch_id))
@@ -121,7 +121,7 @@ class DashboardController extends Controller
             'certificates' => Certificate::count(),
         ];
 
-        return view('dashboard', compact('user', 'courses', 'enrolledCourses', 'recentCertificates', 'stats', 'announcementSlides', 'studentInsights', 'teacherInsights'));
+        return view('dashboard', compact('user', 'courses', 'enrolledCourses', 'recentCertificates', 'stats', 'announcementSlides', 'studentInsights', 'teacherInsights', 'institutionName', 'setupWizardPending'));
     }
 
     public function certificate(Certificate $certificate): View
