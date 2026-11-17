@@ -111,7 +111,16 @@ class ThemeManagerTest extends TestCase
         ]);
 
         $this->actingAs($admin)->get(route('admin.themes.preview', $themeId))
-            ->assertOk()->assertSee('Blue Academy')->assertSee('.theme-preview-shell', false);
+            ->assertOk()
+            ->assertSee('Blue Academy')
+            ->assertSee('sandbox', false)
+            ->assertSee(route('admin.themes.preview.frame', $themeId));
+
+        $this->actingAs($admin)->get(route('admin.themes.preview.frame', $themeId))
+            ->assertOk()
+            ->assertHeader('Content-Security-Policy')
+            ->assertSee('.theme-preview-shell', false)
+            ->assertSee('border-radius: 24px', false);
 
         $this->actingAs($admin)->post(route('admin.themes.activate', $themeId))
             ->assertRedirect(route('admin.themes.index'));
@@ -258,4 +267,116 @@ class ThemeManagerTest extends TestCase
         Storage::disk('public')->assertExists('themes/signed-blue/1.0.0/assets/theme.css');
         @unlink($zipPath);
     }
+
+    public function test_active_theme_cannot_be_deleted(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $packagePath = 'themes/packages/123e4567-e89b-12d3-a456-426614174000.zip';
+        $cssPath = 'themes/keep-theme/1.0.0/assets/theme.css';
+        Storage::disk('public')->put($cssPath, 'body { color: #123456; }');
+        Storage::disk('local')->put($packagePath, 'signed package');
+        $themeId = DB::table('themes')->insertGetId([
+            'slug' => 'keep-theme',
+            'version' => '1.0.0',
+            'name' => 'Keep Theme',
+            'min_lms_version' => '1.0.0',
+            'manifest' => json_encode(['product_id' => 'aloms-lms-theme', 'assets' => ['assets/theme.css' => hash('sha256', 'body { color: #123456; }')]]),
+            'assets' => json_encode(['assets/theme.css']),
+            'package_path' => $packagePath,
+            'package_sha256' => str_repeat('a', 64),
+            'installed_by' => $admin->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        Setting::setValue('active_theme_id', $themeId);
+        Setting::setValue('active_theme_slug', 'keep-theme');
+        Setting::setValue('active_theme_version', '1.0.0');
+
+        $this->actingAs($admin)->delete(route('admin.themes.destroy', $themeId))
+            ->assertRedirect()
+            ->assertSessionHasErrors('theme');
+
+        $this->assertDatabaseHas('themes', ['id' => $themeId]);
+        Storage::disk('public')->assertExists($cssPath);
+        Storage::disk('local')->assertExists($packagePath);
+        $this->assertDatabaseMissing('theme_activations', ['action' => 'delete']);
+    }
+
+    public function test_inactive_theme_deletion_removes_only_package_files_and_keeps_audit_and_site_content(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $packagePath = 'themes/packages/123e4567-e89b-12d3-a456-426614174000.zip';
+        $cssPath = 'themes/remove-theme/1.0.0/assets/theme.css';
+        $previewPath = 'themes/remove-theme/1.0.0/preview.png';
+        Storage::disk('public')->put($cssPath, 'body { color: #123456; }');
+        Storage::disk('public')->put($previewPath, 'preview bytes');
+        Storage::disk('local')->put($packagePath, 'signed package');
+        $themeId = DB::table('themes')->insertGetId([
+            'slug' => 'remove-theme',
+            'version' => '1.0.0',
+            'name' => 'Remove Theme',
+            'min_lms_version' => '1.0.0',
+            'manifest' => json_encode(['product_id' => 'aloms-lms-theme', 'assets' => ['assets/theme.css' => hash('sha256', 'body { color: #123456; }')]]),
+            'assets' => json_encode(['assets/theme.css']),
+            'preview_path' => $previewPath,
+            'package_path' => $packagePath,
+            'package_sha256' => str_repeat('b', 64),
+            'installed_by' => $admin->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        Setting::setValue('active_theme_id', 0);
+        Setting::setValue('active_theme_slug', '');
+        Setting::setValue('active_theme_version', '');
+        Setting::setValue('website_sections', '[{"type":"courses","enabled":true}]');
+
+        $this->actingAs($admin)->delete(route('admin.themes.destroy', $themeId))
+            ->assertRedirect(route('admin.themes.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseMissing('themes', ['id' => $themeId]);
+        $this->assertDatabaseHas('theme_activations', [
+            'theme_id' => null,
+            'action' => 'delete',
+            'actor_id' => $admin->id,
+        ]);
+        $history = DB::table('theme_activations')->where('action', 'delete')->latest('id')->first();
+        $this->assertSame('remove-theme', json_decode($history->previous_state, true)['slug']);
+        $this->assertSame('[{"type":"courses","enabled":true}]', Setting::value('website_sections'));
+        Storage::disk('public')->assertMissing($cssPath);
+        Storage::disk('public')->assertMissing($previewPath);
+        Storage::disk('local')->assertMissing($packagePath);
+    }
+
+    public function test_theme_deletion_refuses_untrusted_asset_paths_without_removing_the_record(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $themeId = DB::table('themes')->insertGetId([
+            'slug' => 'unsafe-theme',
+            'version' => '1.0.0',
+            'name' => 'Unsafe Theme',
+            'min_lms_version' => '1.0.0',
+            'manifest' => json_encode(['product_id' => 'aloms-lms-theme', 'assets' => []]),
+            'assets' => json_encode(['assets/../../outside.css']),
+            'package_path' => 'themes/packages/123e4567-e89b-12d3-a456-426614174000.zip',
+            'package_sha256' => str_repeat('c', 64),
+            'installed_by' => $admin->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($admin)->delete(route('admin.themes.destroy', $themeId))
+            ->assertRedirect()
+            ->assertSessionHasErrors('theme');
+
+        $this->assertDatabaseHas('themes', ['id' => $themeId]);
+        $this->assertDatabaseMissing('theme_activations', ['action' => 'delete']);
+    }
+
 }
