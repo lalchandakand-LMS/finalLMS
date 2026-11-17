@@ -85,7 +85,8 @@ class AttendanceQrController extends Controller
         $sessionCreatedAt = Carbon::parse($qrSession->created_at);
         abort_if(
             $capturedAt->lt($sessionCreatedAt->copy()->subSeconds(15))
-                || $capturedAt->lt(now()->subSeconds(120)),
+                || $capturedAt->lt(now()->subSeconds(120))
+                || $capturedAt->gt(now()->addSeconds(30)),
             422,
             'QR check-in requires a fresh foreground location capture taken during the active QR session.'
         );
