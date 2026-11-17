@@ -1,0 +1,119 @@
+@extends('layouts.app')
+
+@section('title', $portalTitle)
+
+@section('content')
+@php
+    $baseRoute = match(auth()->user()->role) {
+        'admin' => 'admin.student-tracking',
+        'branch_manager' => 'branch.student-tracking',
+        'teacher' => 'teacher.student-tracking',
+        'guardian' => 'guardian.student-tracking',
+        default => 'student.tracking',
+    };
+@endphp
+<div class="page-header">
+    <div>
+        <span class="badge info">Student insights</span>
+        <h1>{{ $portalTitle }}</h1>
+        <p class="muted">Attendance, course participation and learning progress from the LMS records.</p>
+    </div>
+</div>
+
+<div class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin:0 0 20px;">
+    @foreach([
+        ['label' => 'Students in scope', 'value' => $summary['students']],
+        ['label' => 'Active enrollments', 'value' => $summary['active_enrollments']],
+        ['label' => 'Attendance records today', 'value' => $summary['attendance_today']],
+        ['label' => 'Needs attention on this page', 'value' => $summary['needs_attention']],
+    ] as $metric)
+        <div class="panel" style="margin:0;">
+            <div class="muted">{{ $metric['label'] }}</div>
+            <div style="font-size:1.7rem;font-weight:800;margin-top:5px;">{{ number_format($metric['value']) }}</div>
+        </div>
+    @endforeach
+</div>
+
+<div class="panel">
+    <form method="GET" action="{{ route($baseRoute.'.index') }}" style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:18px;">
+        <label style="flex:1;min-width:220px;">Search student
+            <input type="search" name="q" value="{{ $filters['q'] }}" placeholder="Name or email">
+        </label>
+        @if($branches->isNotEmpty())
+            <label>Branch
+                <select name="branch_id">
+                    <option value="">All branches</option>
+                    @foreach($branches as $branch)
+                        <option value="{{ $branch->id }}" @selected((string)$filters['branch_id'] === (string)$branch->id)>{{ $branch->name }}</option>
+                    @endforeach
+                </select>
+            </label>
+        @endif
+        <label>Batch ID
+            <input type="number" min="1" name="batch_id" value="{{ $filters['batch_id'] }}" style="width:110px;">
+        </label>
+        <label>Course ID
+            <input type="number" min="1" name="course_id" value="{{ $filters['course_id'] }}" style="width:110px;">
+        </label>
+        <button class="btn primary" type="submit">Apply filters</button>
+        <a class="btn secondary" href="{{ route($baseRoute.'.index') }}">Reset</a>
+    </form>
+
+    <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;min-width:760px;">
+            <thead>
+                <tr style="text-align:left;border-bottom:1px solid var(--border);">
+                    <th style="padding:11px;">Student</th>
+                    <th style="padding:11px;">Active courses</th>
+                    <th style="padding:11px;">Attendance (30 days)</th>
+                    <th style="padding:11px;">Completed lessons</th>
+                    <th style="padding:11px;">Last learning activity</th>
+                    <th style="padding:11px;">Status</th>
+                    <th style="padding:11px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($students as $student)
+                    <tr style="border-bottom:1px solid var(--border);">
+                        <td style="padding:12px 11px;">
+                            <strong>{{ $student->name }}</strong>
+                            <div class="muted" style="font-size:.82rem;">{{ $student->email }}</div>
+                        </td>
+                        <td style="padding:12px 11px;">{{ $student->active_enrollments_count }}</td>
+                        <td style="padding:12px 11px;">
+                            @if($student->attendance_rate === null)
+                                <span class="muted">No records</span>
+                            @else
+                                <strong>{{ number_format($student->attendance_rate, 1) }}%</strong>
+                                <div class="muted" style="font-size:.8rem;">{{ $student->attendance_attended }}/{{ $student->attendance_total }} present or late</div>
+                            @endif
+                        </td>
+                        <td style="padding:12px 11px;">{{ (int)$student->completed_lessons + (int)$student->completed_content }}</td>
+                        <td style="padding:12px 11px;">
+                            @if($student->tracking_last_activity_at)
+                                {{ \Illuminate\Support\Carbon::parse($student->tracking_last_activity_at)->diffForHumans() }}
+                            @else
+                                <span class="muted">No activity recorded</span>
+                            @endif
+                        </td>
+                        <td style="padding:12px 11px;">
+                            @if($student->tracking_needs_attention)
+                                <span class="badge warning">Needs attention</span>
+                            @else
+                                <span class="badge success">On track</span>
+                            @endif
+                        </td>
+                        <td style="padding:12px 11px;text-align:right;">
+                            <a class="btn secondary" href="{{ route($baseRoute.'.show', $student->id) }}">View</a>
+                        </td>
+                    </tr>
+                @empty
+                    <tr><td colspan="7" class="muted" style="padding:24px;text-align:center;">No students found in your permitted scope.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+    <div style="margin-top:18px;">{{ $students->links() }}</div>
+</div>
+<p class="muted" style="font-size:.85rem;margin-top:12px;">Attendance rate uses the last 30 days. “Needs attention” is a review signal, not an automated disciplinary decision. GPS or background location is not collected.</p>
+@endsection
