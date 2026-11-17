@@ -60,6 +60,9 @@ return new class extends Migration {
 
     public function down(): void
     {
+        if (Schema::hasTable('aec_prep_question_sets') && DB::table('aec_prep_question_sets')->exists()) {
+            throw new RuntimeException('Exam papers exist. Export or explicitly remove exam papers before uninstalling this plugin.');
+        }
         if (Schema::hasTable('aec_prep_question_set_items') && DB::table('aec_prep_question_set_items')->exists()) {
             throw new RuntimeException('Exam question sets exist. Export or explicitly remove exam sets before uninstalling this plugin.');
         }
