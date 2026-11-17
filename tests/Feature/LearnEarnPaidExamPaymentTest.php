@@ -233,7 +233,7 @@ class LearnEarnPaidExamPaymentTest extends TestCase
         try {
             $migration->down();
             $this->fail('The newest plugin migration must block partial rollback when exam content exists.');
-        } catch (\\RuntimeException $exception) {
+        } catch (\RuntimeException $exception) {
             $this->assertStringContainsString('preserve the complete plugin schema', $exception->getMessage());
         }
 
