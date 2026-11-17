@@ -26,10 +26,8 @@ class MetaAdsIntegrationController extends Controller
         $boostNotices = DashboardAnnouncement::currentlyActive()
             ->where('audience', 'all')->whereNull('branch_id')->orderBy('title')
             ->get(['id', 'title', 'body', 'button_url']);
-        $boostOffers = Route::has('flash-sales.public')
-            ? FlashSale::query()->where('status', 'active')
-                ->where('starts_at', '<=', now())->where('ends_at', '>=', now())
-                ->orderBy('title')->get(['id', 'title', 'description', 'banner_path'])
+        $boostOffers = Route::has('flash-sales.public') && FlashSale::isPluginActive()
+            ? FlashSale::activeCampaigns()
             : collect();
 
         $token = $this->accessToken();
@@ -273,14 +271,17 @@ class MetaAdsIntegrationController extends Controller
 
         if (filled($data['source_reference'] ?? null)) {
             [$sourceType, $sourceId] = explode(':', $data['source_reference'], 2);
+            $offer = null;
             if ($sourceType === 'offer') {
-                abort_unless(Route::has('flash-sales.public'), 404);
+                abort_unless(Route::has('flash-sales.public') && FlashSale::isPluginActive(), 404);
+                $offer = FlashSale::activeCampaigns()->firstWhere('id', (int) $sourceId);
+                abort_unless($offer, 404);
             }
 
             $source = match ($sourceType) {
                 'course' => Course::query()->where('status', 'published')->findOrFail((int) $sourceId),
                 'notice' => DashboardAnnouncement::currentlyActive()->where('audience', 'all')->whereNull('branch_id')->findOrFail((int) $sourceId),
-                'offer' => FlashSale::query()->where('status', 'active')->where('starts_at', '<=', now())->where('ends_at', '>=', now())->findOrFail((int) $sourceId),
+                'offer' => $offer,
             };
 
             $sourceMessage = match ($sourceType) {
