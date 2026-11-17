@@ -556,7 +556,7 @@ class StudentTrackingPluginTest extends TestCase
 
         $teacher = User::factory()->create(['role' => 'teacher']);
         $branch = Branch::create(['name' => 'Level scope', 'slug' => 'level-scope', 'is_active' => true]);
-        $levelOne = \\DB::table('academic_levels')->insertGetId([
+        $levelOne = \DB::table('academic_levels')->insertGetId([
             'name' => 'Level One',
             'slug' => 'level-one',
             'sort_order' => 1,
@@ -564,7 +564,7 @@ class StudentTrackingPluginTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        $levelTwo = \\DB::table('academic_levels')->insertGetId([
+        $levelTwo = \DB::table('academic_levels')->insertGetId([
             'name' => 'Level Two',
             'slug' => 'level-two',
             'sort_order' => 2,
@@ -576,8 +576,8 @@ class StudentTrackingPluginTest extends TestCase
         $studentTwo = User::factory()->create(['role' => 'student', 'branch_id' => $branch->id]);
         $courseOne = Course::factory()->create(['teacher_id' => $teacher->id]);
         $courseTwo = Course::factory()->create(['teacher_id' => $teacher->id]);
-        \\DB::table('courses')->where('id', $courseOne->id)->update(['academic_level_id' => $levelOne]);
-        \\DB::table('courses')->where('id', $courseTwo->id)->update(['academic_level_id' => $levelTwo]);
+        \DB::table('courses')->where('id', $courseOne->id)->update(['academic_level_id' => $levelOne]);
+        \DB::table('courses')->where('id', $courseTwo->id)->update(['academic_level_id' => $levelTwo]);
 
         $batchOne = Batch::create([
             'branch_id' => $branch->id,
