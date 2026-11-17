@@ -423,9 +423,10 @@ class ThemeManagerTest extends TestCase
 
     public function test_shared_layout_renders_before_theme_manager_tables_exist(): void
     {
-        Schema::dropIfExists('theme_activations');
-        Schema::dropIfExists('themes');
-        Schema::dropIfExists('theme_manager_locks');
+        Schema::partialMock()
+            ->shouldReceive('hasTable')
+            ->with('themes')
+            ->andReturn(false);
 
         $this->get(route('landing'))->assertOk();
     }
