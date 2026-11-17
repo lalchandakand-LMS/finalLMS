@@ -16,6 +16,7 @@ use App\Models\Enrollment;
 use App\Models\Exam;
 use App\Models\ExamAttempt;
 use App\Models\GuardianStudentLink;
+use App\Models\PluginInstallation;
 use App\Models\Setting;
 use App\Models\SupportTicket;
 use App\Models\User;
@@ -77,6 +78,23 @@ class StudentTrackingPluginTest extends TestCase
         $request->setUserResolver(fn () => $actor);
 
         return app(StudentTrackingController::class)->export($request, app(PluginResourceAccess::class));
+    }
+
+    private function grantStudentTrackingPermissions(array $permissions): void
+    {
+        $plugin = new PluginInstallation();
+        $plugin->forceFill([
+            'plugin_key' => 'aec.student-tracking',
+            'name' => 'Student Tracking & Monitoring',
+            'version' => '1.0.0',
+            'type' => 'module',
+            'status' => 'active',
+            'manifest' => [
+                'key' => 'aec.student-tracking',
+                'permissions' => ['student-tracking.view', 'student-tracking.configure', 'student-tracking.manage-risk'],
+            ],
+            'metadata' => ['granted_permissions' => $permissions],
+        ])->save();
     }
 
     private function riskActionFor(User $actor, int $studentId, array $data)
@@ -150,6 +168,7 @@ class StudentTrackingPluginTest extends TestCase
             'status' => 'active',
         ]);
 
+        $this->grantStudentTrackingPermissions(['student-tracking.view', 'student-tracking.manage-risk']);
         $this->riskActionFor($teacher, $student->id, [
             'risk_code' => 'inactive_learning',
             'action' => 'dismiss',
@@ -160,6 +179,7 @@ class StudentTrackingPluginTest extends TestCase
         $this->assertFalse($index->getData()['students']->first()->tracking_needs_attention);
 
         $detail = $this->showFor($teacher, $student->id);
+        $this->assertTrue($detail->getData()['canManageRisk']);
         $this->assertSame(['inactive_learning'], array_column($detail->getData()['dismissedRiskFlags'], 'code'));
         $this->assertSame('Follow-up call scheduled with guardian.', $detail->getData()['riskActions']->first()->note);
 
