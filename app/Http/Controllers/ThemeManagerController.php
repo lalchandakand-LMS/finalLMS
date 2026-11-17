@@ -306,15 +306,10 @@ class ThemeManagerController extends Controller
                 'slug' => Setting::value('active_theme_slug'),
                 'version' => Setting::value('active_theme_version'),
             ];
-            // Legacy settings can point to a theme row that no longer exists.
-            // Keep the FK nullable while retaining the full previous state in JSON.
-            $previousThemeId = $previous['id'] > 0
-                && DB::table('themes')->where('id', $previous['id'])->exists()
-                    ? $previous['id']
-                    : null;
-
+            // A reset activates the built-in theme, which has no themes-table row.
+            // The previous installed theme remains available in previous_state for rollback/audit.
             DB::table('theme_activations')->insert([
-                'theme_id' => $previousThemeId,
+                'theme_id' => null,
                 'action' => 'reset',
                 'previous_state' => json_encode($previous, JSON_THROW_ON_ERROR),
                 'actor_id' => $request->user()->id,

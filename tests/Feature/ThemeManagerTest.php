@@ -61,7 +61,9 @@ class ThemeManagerTest extends TestCase
         $this->assertSame('0', (string) Setting::value('active_theme_id'));
         $this->assertSame('', (string) Setting::value('active_theme_slug'));
         $this->assertSame('[{"type":"courses","enabled":true}]', Setting::value('website_sections'));
-        $this->assertDatabaseHas('theme_activations', ['action' => 'reset', 'actor_id' => $admin->id]);
+        $this->assertDatabaseHas('theme_activations', ['action' => 'reset', 'actor_id' => $admin->id, 'theme_id' => null]);
+        $history = DB::table('theme_activations')->where('action', 'reset')->latest('id')->first();
+        $this->assertSame('old-theme', json_decode($history->previous_state, true)['slug']);
     }
 
     public function test_theme_manager_displays_activation_history_for_admin(): void
