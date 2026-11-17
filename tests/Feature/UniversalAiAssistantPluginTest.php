@@ -508,4 +508,124 @@ class UniversalAiAssistantPluginTest extends TestCase
     }
 
 
+    public function test_admin_uninstall_preserves_all_ai_settings_history_and_usage_records(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $student = User::factory()->create(['role' => 'student', 'email_verified_at' => now()]);
+
+        AssistantSettings::save([
+            'model' => 'gpt-4o-mini',
+            'base_url' => 'https://api.openai.com/v1',
+            'temperature' => 0.4,
+            'max_tokens' => 800,
+            'global_enabled' => false,
+            'role_enabled' => array_fill_keys(AssistantSettings::ROLES, false),
+            'daily_request_limit' => 20,
+            'daily_token_budget' => 50000,
+            'retention_days' => 365,
+        ], 'retained-provider-secret', false);
+
+        $conversationId = \\DB::table('ai_assistant_conversations')->insertGetId([
+            'user_id' => $student->id,
+            'assistant_role' => 'student',
+            'title' => 'Preserve this conversation',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $messageId = \\DB::table('ai_assistant_messages')->insertGetId([
+            'conversation_id' => $conversationId,
+            'message_role' => 'assistant',
+            'content' => 'Retained answer',
+            'token_count' => 12,
+            'model' => 'gpt-4o-mini',
+            'created_at' => now(),
+        ]);
+        \\DB::table('ai_assistant_daily_budgets')->insert([
+            'budget_date' => today()->toDateString(),
+            'used_tokens' => 12,
+            'reserved_tokens' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $reservationId = (string) \\Illuminate\\Support\\Str::uuid();
+        \\DB::table('ai_assistant_token_reservations')->insert([
+            'id' => $reservationId,
+            'budget_date' => today()->toDateString(),
+            'reserved_tokens' => 0,
+            'status' => 'settled',
+            'expires_at' => now()->addMinute(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        \\DB::table('ai_assistant_user_daily_requests')->insert([
+            'user_id' => $student->id,
+            'request_date' => today()->toDateString(),
+            'request_count' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $relative = 'plugins/test/ai-data-retention/1.0.0';
+        $directory = base_path($relative);
+        \\Illuminate\\Support\\Facades\\File::ensureDirectoryExists($directory);
+        file_put_contents($directory.'/entry.php', '<?php // test-only signed package');
+
+        $plugin = new PluginInstallation();
+        $plugin->forceFill([
+            'plugin_key' => 'test.ai-data-retention',
+            'name' => 'AI Data Retention Test',
+            'version' => '1.0.0',
+            'type' => 'ai',
+            'status' => 'inactive',
+            'manifest' => [],
+            'package_path' => $relative,
+        ])->save();
+
+        \\DB::table('plugin_migrations')->insert([
+            'plugin_key' => 'test.ai-data-retention',
+            'plugin_version' => '1.0.0',
+            'migration' => '2026_11_15_000001_ai_assistant.php',
+            'status' => 'completed',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.plugins.uninstall', 'test.ai-data-retention'))
+            ->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'test.ai-data-retention',
+            'status' => 'uninstalled',
+        ]);
+        $this->assertDatabaseHas('ai_assistant_settings', ['id' => 1]);
+        $this->assertSame('retained-provider-secret', AssistantSettings::apiKey());
+        $this->assertDatabaseHas('ai_assistant_conversations', [
+            'id' => $conversationId,
+            'title' => 'Preserve this conversation',
+        ]);
+        $this->assertDatabaseHas('ai_assistant_messages', [
+            'id' => $messageId,
+            'content' => 'Retained answer',
+        ]);
+        $this->assertDatabaseHas('ai_assistant_daily_budgets', [
+            'budget_date' => today()->toDateString(),
+            'used_tokens' => 12,
+        ]);
+        $this->assertDatabaseHas('ai_assistant_token_reservations', [
+            'id' => $reservationId,
+            'status' => 'settled',
+        ]);
+        $this->assertDatabaseHas('ai_assistant_user_daily_requests', [
+            'user_id' => $student->id,
+            'request_count' => 1,
+        ]);
+        $this->assertDatabaseHas('plugin_migrations', [
+            'plugin_key' => 'test.ai-data-retention',
+            'status' => 'completed',
+        ]);
+        $this->assertDirectoryDoesNotExist($directory);
+    }
+
 }
