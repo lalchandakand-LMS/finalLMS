@@ -295,7 +295,7 @@ class StudentTrackingController extends Controller
             });
         }
 
-        $this->addTrackingAggregates($query, $actor, $access, $fromDate, $toDate);
+        $this->addTrackingAggregates($query, $actor, $access, $modules, $fromDate, $toDate);
         $students = $query->orderBy('users.name')->limit(5000)->get();
         $students->each(function (User $student): void {
             $total = (int) $student->attendance_total;
@@ -449,15 +449,17 @@ class StudentTrackingController extends Controller
             : collect();
         $allowedBatchIds = $enrollments->pluck('batch_id')->filter()->unique()->values();
 
-        $attendanceRecords = Attendance::query()
-            ->where('student_id', $studentRecord->id)
-            ->whereIn('batch_id', $allowedBatchIds)
-            ->with(['batch:id,title,course_id,branch_id', 'batch.course:id,title', 'batch.branch:id,name'])
-            ->latest('attendance_date')
-            ->limit(30)
-            ->get();
+        $attendanceRecords = $modules->isEnabled('attendance')
+            ? Attendance::query()
+                ->where('student_id', $studentRecord->id)
+                ->whereIn('batch_id', $allowedBatchIds)
+                ->with(['batch:id,title,course_id,branch_id', 'batch.course:id,title', 'batch.branch:id,name'])
+                ->latest('attendance_date')
+                ->limit(30)
+                ->get()
+            : collect();
 
-        $lessonProgress = Schema::hasTable('lesson_progress')
+        $lessonProgress = $modules->isEnabled('lesson_management') && Schema::hasTable('lesson_progress')
             ? LessonProgress::query()
                 ->where('user_id', $studentRecord->id)
                 ->whereHas('lesson', fn (Builder $lessons) => $lessons->whereIn('course_id', $allowedCourseIds))
@@ -467,7 +469,7 @@ class StudentTrackingController extends Controller
                 ->get()
             : collect();
 
-        $contentProgress = Schema::hasTable('course_content_progress')
+        $contentProgress = $modules->isEnabled('course_content_studio') && Schema::hasTable('course_content_progress')
             ? CourseContentProgress::query()
                 ->where('user_id', $studentRecord->id)
                 ->whereHas('curriculumItem', fn (Builder $items) => $items->whereIn('course_id', $allowedCourseIds))
@@ -477,7 +479,7 @@ class StudentTrackingController extends Controller
                 ->get()
             : collect();
 
-        $examAttempts = Schema::hasTable('exam_attempts')
+        $examAttempts = $modules->isEnabled('exam_management') && Schema::hasTable('exam_attempts')
             ? ExamAttempt::query()
                 ->select(['id', 'exam_id', 'student_id', 'submitted_at', 'score', 'status'])
                 ->where('student_id', $studentRecord->id)
@@ -488,7 +490,7 @@ class StudentTrackingController extends Controller
                 ->get()
             : collect();
 
-        $overdueAssignments = Schema::hasTable('assignments') && Schema::hasTable('assignment_submissions')
+        $overdueAssignments = $modules->isEnabled('assignment') && Schema::hasTable('assignments') && Schema::hasTable('assignment_submissions')
             ? Assignment::query()
                 ->whereIn('batch_id', $allowedBatchIds)
                 ->where('status', 'published')
@@ -500,7 +502,7 @@ class StudentTrackingController extends Controller
                 ->get(['id', 'batch_id', 'title', 'due_at'])
             : collect();
 
-        $assignmentSubmissions = Schema::hasTable('assignment_submissions')
+        $assignmentSubmissions = $modules->isEnabled('assignment') && Schema::hasTable('assignment_submissions')
             ? AssignmentSubmission::query()
                 ->select(['id', 'assignment_id', 'student_id', 'submitted_at', 'score', 'status'])
                 ->where('student_id', $studentRecord->id)
@@ -525,18 +527,22 @@ class StudentTrackingController extends Controller
             ->sortDesc();
         $lastActivity = $activityDates->first();
         $riskFlags = [];
-        if ($attendanceTotal >= $riskRules['minimum_attendance_records']
+        if ($modules->isEnabled('attendance') && $attendanceTotal >= $riskRules['minimum_attendance_records']
             && $attendanceRate !== null
             && $attendanceRate < $riskRules['low_attendance_percent']) {
             $riskFlags[] = [
                 'code' => 'low_attendance',
-                'reason' => 'Attendance below '.$riskRules['low_attendance_percent'].'% across at least '.$riskRules['minimum_attendance_records'].' records',
+                'reason' => __('Attendance below :percent% across at least :count records in the selected date range', [
+                    'percent' => $riskRules['low_attendance_percent'],
+                    'count' => $riskRules['minimum_attendance_records'],
+                ]),
             ];
         }
-        if (! $lastActivity || now()->diffInDays($lastActivity) >= $riskRules['inactive_days']) {
+        $learningTrackingEnabled = $modules->isEnabled('lesson_management') || $modules->isEnabled('course_content_studio');
+        if ($learningTrackingEnabled && (! $lastActivity || now()->diffInDays($lastActivity) >= $riskRules['inactive_days'])) {
             $riskFlags[] = [
                 'code' => 'inactive_learning',
-                'reason' => 'No recorded LMS learning activity in the last '.$riskRules['inactive_days'].' days',
+                'reason' => __('No recorded LMS learning activity in the last :days days', ['days' => $riskRules['inactive_days']]),
             ];
         }
         if ($overdueAssignments->isNotEmpty()) {
@@ -546,7 +552,7 @@ class StudentTrackingController extends Controller
             ];
         }
 
-        $riskFlags = array_merge($riskFlags, $this->additionalRiskSignals($studentRecord, $actor, $access));
+        $riskFlags = array_merge($riskFlags, $this->additionalRiskSignals($studentRecord, $actor, $access, $modules));
         $canManageRisk = ($actor->isAdmin() || $actor->isBranchManager() || $actor->isTeacher())
             && $this->hasGrantedPermission('student-tracking.manage-risk');
 
