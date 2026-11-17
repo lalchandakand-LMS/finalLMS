@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
 use App\Models\Setting;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
