@@ -231,6 +231,9 @@ class StudentTrackingController extends Controller
                 ? DB::table('academic_levels')->where('is_active', true)->orderBy('sort_order')->get(['id', 'name'])
                 : collect(),
             'riskRules' => $riskRules,
+            'courseTrackingAvailable' => $courseTrackingEnabled,
+            'attendanceTrackingAvailable' => $attendanceTrackingEnabled,
+            'learningTrackingAvailable' => $lessonTrackingEnabled || $contentTrackingEnabled,
             'canConfigureRisk' => $actor->isAdmin() && $this->hasGrantedPermission('student-tracking.configure'),
             'filters' => [
                 'q' => $search,
