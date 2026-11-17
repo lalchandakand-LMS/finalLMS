@@ -158,6 +158,13 @@ class StudentTrackingPluginTest extends TestCase
         $this->assertSame(['inactive_learning'], array_column($detail->getData()['dismissedRiskFlags'], 'code'));
         $this->assertSame('Follow-up call scheduled with guardian.', $detail->getData()['riskActions']->first()->note);
 
+        $this->riskActionFor($teacher, $student->id, [
+            'risk_code' => 'inactive_learning',
+            'action' => 'reopen',
+        ]);
+        $reopened = $this->indexFor($teacher)->getData()['students']->first();
+        $this->assertTrue($reopened->tracking_needs_attention);
+
         $guardian = User::factory()->create(['role' => 'guardian']);
         GuardianStudentLink::create([
             'guardian_id' => $guardian->id,
@@ -175,6 +182,21 @@ class StudentTrackingPluginTest extends TestCase
         $this->assertDatabaseHas('activity_logs', [
             'user_id' => $teacher->id,
             'event' => 'student_tracking.risk_action',
+        ]);
+    }
+
+    public function test_branch_manager_cannot_write_risk_actions_for_another_branch(): void
+    {
+        $branch = Branch::create(['name' => 'Manager branch', 'slug' => 'manager-branch', 'is_active' => true]);
+        $otherBranch = Branch::create(['name' => 'Other branch', 'slug' => 'other-branch', 'is_active' => true]);
+        $manager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $branch->id]);
+        $student = User::factory()->create(['role' => 'student', 'branch_id' => $otherBranch->id]);
+
+        $this->expectException(\\Illuminate\\Database\\Eloquent\\ModelNotFoundException::class);
+        $this->riskActionFor($manager, $student->id, [
+            'risk_code' => 'inactive_learning',
+            'action' => 'dismiss',
+            'note' => 'Out-of-branch record must remain inaccessible.',
         ]);
     }
 
