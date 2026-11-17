@@ -16,6 +16,7 @@ final class PluginUploadInstaller
         private readonly PluginLifecycle $lifecycle,
         private readonly PluginSignatureVerifier $signatureVerifier,
         private readonly PluginArchiveInstaller $archiveInstaller,
+        private readonly PluginIntegrityVerifier $integrityVerifier,
     ) {
     }
 
@@ -168,6 +169,10 @@ final class PluginUploadInstaller
                 if ($existing->status !== 'inactive') {
                     throw new RuntimeException('Deactivate the installed plugin before applying an update.');
                 }
+                if (! $this->signatureVerifier->verifyInstalledSignature($existing)) {
+                    throw new RuntimeException('The existing plugin release signature cannot be re-verified; update was blocked.');
+                }
+                $this->integrityVerifier->verify($existing);
                 if ((string) $existing->type !== (string) $manifest['type']) {
                     throw new RuntimeException('A plugin update cannot change the registered plugin type.');
                 }
