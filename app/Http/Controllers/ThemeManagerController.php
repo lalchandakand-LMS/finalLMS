@@ -90,6 +90,9 @@ class ThemeManagerController extends Controller
             if ($maxVersion !== null && (! is_string($maxVersion) || ! preg_match('/^\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?$/', $maxVersion))) {
                 throw new \RuntimeException(__('The theme maximum LMS version is invalid.'));
             }
+            if (is_string($maxVersion) && version_compare($minVersion, $maxVersion, '>')) {
+                throw new \RuntimeException(__('The theme LMS compatibility range is invalid.'));
+            }
             $currentVersion = (string) config('app.version', '1.0.0');
             if (version_compare($currentVersion, $minVersion, '<')
                 || (is_string($maxVersion) && version_compare($currentVersion, $maxVersion, '>'))) {
