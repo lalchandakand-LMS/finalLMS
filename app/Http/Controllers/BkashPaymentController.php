@@ -339,6 +339,8 @@ class BkashPaymentController extends Controller
                 if ($lockedPayment->learn_earn_exam_id) {
                     $exam = DB::table('learn_earn_exams')
                         ->where('id', $lockedPayment->learn_earn_exam_id)
+                        ->where('status', 'published')
+                        ->where('ends_at', '>=', now())
                         ->lockForUpdate()
                         ->first();
                     $studentRole = DB::table('users')->where('id', $lockedPayment->user_id)->value('role');
