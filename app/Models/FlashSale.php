@@ -75,10 +75,17 @@ class FlashSale extends Model
 
     private static function pluginIsActive(): bool
     {
-        return PluginInstallation::query()
+        $plugin = PluginInstallation::query()
             ->where('plugin_key', 'aec.flash-sale')
             ->where('status', 'active')
-            ->exists();
+            ->first();
+        $trustedKeys = config('plugins.trusted_public_keys', []);
+
+        return $plugin !== null
+            && $plugin->signature_verified_at !== null
+            && is_array($trustedKeys)
+            && is_string($plugin->signature_key_id)
+            && array_key_exists($plugin->signature_key_id, $trustedKeys);
     }
 
     public static function activeCampaigns(): \Illuminate\Support\Collection
