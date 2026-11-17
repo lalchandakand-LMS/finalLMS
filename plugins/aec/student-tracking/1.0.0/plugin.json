@@ -26,6 +26,7 @@
     "attendance-monitoring",
     "course-learning-progress",
     "student-activity-overview",
+    "scoped-audited-csv-export",
     "branch-and-teacher-scoped-access",
     "guardian-approved-student-summary",
     "at-risk-learning-indicators"
