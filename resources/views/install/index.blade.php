@@ -11,8 +11,8 @@
 <body>
 <div class="wrap">
     <main class="panel">
-        <h1>Alom’s English Center LMS</h1>
-        <p class="muted">Secure first-time setup. Use a new, empty MySQL database. Your database password and administrator password are written to the private .env file and are not stored in the database as plain text.</p>
+        <h1>{{ config('app.name') }}</h1>
+        <p class="muted">Secure first-time setup for your institution. Use a new, empty MySQL database. Your database password and administrator password are written to the private .env file and are not stored in the database as plain text.</p>
 
         @if ($errors->any())
             <div class="error">
@@ -25,7 +25,7 @@
             <div class="section">
                 <h2>Website settings</h2>
                 <div class="grid">
-                    <div class="field full"><label for="site_name">Center / website name</label><input id="site_name" name="site_name" required maxlength="120" value="{{ old('site_name', 'Alom’s English Center') }}"></div>
+                    <div class="field full"><label for="site_name">Institution / website name</label><input id="site_name" name="site_name" required maxlength="120" value="{{ old('site_name', config('app.name')) }}"></div>
                     <div class="field full"><label for="app_url">Website URL (HTTPS)</label><input id="app_url" name="app_url" type="url" required placeholder="https://example.com" value="{{ old('app_url') }}"></div>
                 </div>
             </div>
