@@ -27,6 +27,8 @@ The current main README lists a number of foundations as implemented: registrati
 
 **Important:** this is the README's implementation inventory, not independent verification that every workflow passes tests or is production ready. Inspect source and CI before changing status.
 
+| [#311](https://github.com/lalchandakand-LMS/finalLMS/pull/311) | Phonetics & Pronunciation Practice plugin | Draft PR: Admin-curated English word/sentence + Bangla translation, separate en-GB/en-US IPA/audio, browser TTS/speech recognition, course-enrollment-scoped practice for free/paid courses. Exact phrase library lookup only; no external translation API. CI has not yet reported checks for the current head. |
+
 ## Active / recent PR workstreams (last known context; re-fetch GitHub before relying)
 
 | PR | Workstream | Last known note |
