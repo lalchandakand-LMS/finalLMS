@@ -28,6 +28,24 @@
                     <div><label for="institution-website">{{ __('Website URL') }}</label><input id="institution-website" type="url" name="institution_website" maxlength="255" placeholder="https://example.edu" value="{{ old('institution_website', $settings['institution_website'] ?? '') }}"></div>
                     <div><label for="institution-logo-url">{{ __('Logo URL') }}</label><input id="institution-logo-url" type="url" name="institution_logo_url" maxlength="500" placeholder="https://example.edu/logo.png" value="{{ old('institution_logo_url', $settings['institution_logo_url'] ?? '') }}"></div>
                     <div><label for="institution-favicon-url">{{ __('Favicon URL') }}</label><input id="institution-favicon-url" type="url" name="institution_favicon_url" maxlength="500" placeholder="https://example.edu/favicon.ico" value="{{ old('institution_favicon_url', $settings['institution_favicon_url'] ?? '') }}"></div>
+                    <div>
+                        <label for="institution-logo-media">{{ __('Logo from Media Library') }}</label>
+                        <select id="institution-logo-media" name="site_logo_media_id">
+                            <option value="">{{ __('Use logo URL / no uploaded logo') }}</option>
+                            @foreach($mediaAssets as $asset)
+                                <option value="{{ $asset->id }}" @selected((string) old('site_logo_media_id', $settings['site_logo_media_id'] ?? '') === (string) $asset->id)>{{ $asset->original_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label for="institution-favicon-media">{{ __('Favicon from Media Library') }}</label>
+                        <select id="institution-favicon-media" name="site_favicon_media_id">
+                            <option value="">{{ __('Use favicon URL / no uploaded favicon') }}</option>
+                            @foreach($mediaAssets as $asset)
+                                <option value="{{ $asset->id }}" @selected((string) old('site_favicon_media_id', $settings['site_favicon_media_id'] ?? '') === (string) $asset->id)>{{ $asset->original_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                     <div style="grid-column:1/-1;"><label for="institution-address">{{ __('Institution address') }}</label><textarea id="institution-address" name="institution_address" rows="2" maxlength="500">{{ old('institution_address', $settings['institution_address'] ?? '') }}</textarea></div>
                 </div>
                 <small class="muted">{{ __('Use HTTPS image URLs. Direct Media Library upload and selection will be integrated into the complete identity editor.') }}</small>
