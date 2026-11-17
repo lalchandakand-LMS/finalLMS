@@ -32,7 +32,7 @@ Enrollment counts, attendance, lesson/content progress, exam attempts, assignmen
 
 The plugin reads existing `attendances`, `enrollments`, `lesson_progress`, `course_content_progress`, `exam_attempts`, `assignment_submissions`, guardian links and core user/course/batch records.
 
-The only plugin-owned table is `student_tracking_risk_actions`, created from the signed package migration directory declared in `plugin.json`. It stores staff follow-up notes and dismiss/reopen decisions, not copied academic records. The migration uses restrictive foreign keys to prevent silently deleting the audit trail.
+The only plugin-owned table is `student_tracking_risk_actions`, created from the signed package migration directory declared in `plugin.json`. Notice/read state and support-ticket references are read from existing LMS records; private support message bodies are not copied into tracking. It stores staff follow-up notes and dismiss/reopen decisions, not copied academic records. The migration uses restrictive foreign keys to prevent silently deleting the audit trail.
 
 Deactivating the plugin leaves all source academic data and its risk-action audit history intact. Migration rollback/uninstallation must follow the platform's explicit plugin lifecycle and data-retention policy.
 
