@@ -1,13 +1,13 @@
 <?php
-namespace Aloms\\BoardQuestionSolver;
-use App\\Contracts\\Plugins\\PluginContract;
-use App\\Services\\Plugins\\PluginContext;
-use Illuminate\\Support\\Facades\\Route;
-use Illuminate\\Support\\Facades\\View;
+namespace Aloms\BoardQuestionSolver;
+use App\Contracts\Plugins\PluginContract;
+use App\Services\Plugins\PluginContext;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\View;
 $dependency = base_path('plugins/aec/universal-ai-assistant/1.0.0/src/');
 foreach (['AssistantSettings.php','AssistantTokenBudget.php','AssistantRequestLimit.php'] as $file) {
     $path = $dependency.$file;
-    if (! is_file($path)) throw new \\RuntimeException('Board Question Solver requires the Universal AI Assistant plugin to be installed.');
+    if (! is_file($path)) throw new \RuntimeException('Board Question Solver requires the Universal AI Assistant plugin to be installed.');
     require_once $path;
 }
 require_once __DIR__.'/BoardQuestionSolverController.php';
