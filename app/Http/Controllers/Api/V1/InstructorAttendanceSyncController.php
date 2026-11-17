@@ -166,6 +166,15 @@ class InstructorAttendanceSyncController extends Controller
                 ];
             }
 
+            $attendanceDate = Carbon::createFromFormat('Y-m-d', $data['attendance_date']);
+            if ($attendanceDate->isFuture()) {
+                return [
+                    'idempotency_key' => $key,
+                    'status' => 'failed',
+                    'message' => 'Attendance cannot be recorded for a future date.',
+                ];
+            }
+
             $activeEnrollment = $batch->enrollments()
                 ->where('user_id', $data['student_id'])
                 ->where('status', 'active')
