@@ -485,7 +485,18 @@ class BkashPaymentController extends Controller
 
             return redirect()->route('courses.show', $payment->course)
                 ->with('success', 'bKash payment verified. Your course enrollment is now active.');
-        } catch (Throwable) {
+        } catch (Throwable $exception) {
+            report($exception);
+
+            // Keep diagnostics useful without recording callback query data, tokens,
+            // payer details, or provider credentials.
+            \Illuminate\Support\Facades\Log::warning('bKash callback verification failed.', [
+                'payment_record_id' => $payment->id,
+                'payment_intent' => $payment->learn_earn_exam_id ? 'learn_earn_exam' : ($payment->order_id ? 'ebook' : 'course'),
+                'exception_class' => get_class($exception),
+                'exception_message' => \Illuminate\Support\Str::limit($exception->getMessage(), 240),
+            ]);
+
             if ($payment->learn_earn_exam_id) {
                 return redirect()->to('/student/learn-earn/exams')
                     ->with('warning', __('Your bKash payment is awaiting server-side verification. Do not pay again; contact the academy if this message remains.'));
