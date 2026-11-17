@@ -17,7 +17,9 @@
   "capabilities": [
     "reusable-mcq-authoring",
     "question-categories",
-    "positive-negative-marking"
+    "positive-negative-marking",
+    "exam-builder",
+    "immutable-question-snapshots"
   ],
   "migrations": "migrations"
 }
