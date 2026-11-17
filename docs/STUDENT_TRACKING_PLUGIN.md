@@ -14,7 +14,7 @@ This optional plugin presents existing LMS student records to Admin, Branch Mana
 - CSV export with the same role/resource scope, selected filters, a 5,000-row cap, 5 requests/minute throttle, private/no-store response headers and an audit event. Spreadsheet formula-leading student names are escaped.
 - Admin-configurable risk thresholds: attendance percentage, minimum record count and learning inactivity days. Changes are validated and committed atomically with their audit event.
 - Staff follow-up notes, dismissal and reopening for each risk type. Risk actions are recorded in a dedicated plugin-owned table and mirrored in the LMS activity audit log. Dismissal suppresses only the matching risk code; it never alters source academic records.
-- Explicit reasons accompany active risk indicators. These are review signals only and must not be used as the sole basis for sanctions, exclusion or fee decisions.
+- Explicit reasons accompany active risk indicators for low attendance, learning inactivity, overdue unsubmitted assignments, three consecutive absences and a decline of at least 20 percentage points across the latest three normalized graded outcomes. These are review signals only and must not be used as the sole basis for sanctions, exclusion or fee decisions.
 
 ## Access isolation
 
