@@ -3,7 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ __('Payment receipt') }} {{ $payment->id }} | {{ config('app.name') }}</title>
+    @php($institutionName = \App\Models\Setting::value('institution_name', config('app.name')))
+    <title>{{ __('Payment receipt') }} {{ $payment->id }} | {{ $institutionName }}</title>
     <style>
         body{font-family:Arial,sans-serif;color:#172033;background:#f4f6fa;margin:0;padding:32px}
         .receipt{max-width:760px;margin:0 auto;background:#fff;padding:36px;border:1px solid #dce2ea;border-radius:12px}
@@ -18,7 +19,7 @@
     <div class="actions"><button class="btn" onclick="window.print()">{{ __('Print / Save PDF') }}</button></div>
     <main class="receipt">
         <div class="top">
-            <div><h1>{{ config('app.name', "Alom's English Center") }}</h1><div class="muted">{{ __('Official payment receipt') }}</div></div>
+            <div><h1>{{ $institutionName }}</h1><div class="muted">{{ __('Official payment receipt') }}</div></div>
             <div style="text-align:right"><strong>{{ __('RECEIPT') }}</strong><div class="muted">#{{ str_pad((string) $payment->id, 6, '0', STR_PAD_LEFT) }}</div></div>
         </div>
         <div class="amount">৳{{ number_format((float) $payment->amount, 2) }}</div>
