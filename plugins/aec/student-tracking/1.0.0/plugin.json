@@ -20,13 +20,15 @@
     "guardian"
   ],
   "permissions": [
-    "student-tracking.view"
+    "student-tracking.view",
+    "student-tracking.configure"
   ],
   "capabilities": [
     "attendance-monitoring",
     "course-learning-progress",
     "student-activity-overview",
     "scoped-audited-csv-export",
+    "configurable-risk-rules",
     "branch-and-teacher-scoped-access",
     "guardian-approved-student-summary",
     "at-risk-learning-indicators"
