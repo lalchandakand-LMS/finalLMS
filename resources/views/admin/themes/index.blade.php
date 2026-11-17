@@ -61,6 +61,11 @@
                             @csrf
                             <button class="btn primary" type="submit">{{ __('Activate') }}</button>
                         </form>
+                        <form method="POST" action="{{ route('admin.themes.destroy', $theme->id) }}" onsubmit="return confirm('{{ __('Permanently delete this inactive theme and its package files? Website content and activation history will be retained.') }}')">
+                            @csrf
+                            @method('DELETE')
+                            <button class="btn danger" type="submit">{{ __('Delete') }}</button>
+                        </form>
                     @endif
                 </div>
             </article>
