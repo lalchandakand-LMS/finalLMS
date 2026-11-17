@@ -277,6 +277,32 @@
             <hr style="border: 0; border-top: 1px solid var(--border); margin: 28px 0;">
             <div style="margin-bottom: 18px;">
                 <span class="badge info">{{ __('Bangladesh payments') }}</span>
+
+            <hr style="border: 0; border-top: 1px solid var(--border); margin: 28px 0;">
+            <section style="margin-bottom:24px;">
+                <span class="badge info">{{ __('Attendance policy') }}</span>
+                <h2 style="margin:12px 0 6px;">{{ __('Attendance status rules') }}</h2>
+                <p class="muted">{{ __('Choose whether instructors may mark an enrolled student as excused. The default is disabled; changes apply to web and mobile attendance validation.') }}</p>
+                <input type="hidden" name="attendance_allow_excused" value="0">
+                <div style="margin-top:16px;max-width:420px;">
+                    <label for="attendance-stale-action">{{ __('When a location capture is stale') }}</label>
+                    <select id="attendance-stale-action" name="attendance_stale_location_action">
+                        <option value="reject" @selected(old('attendance_stale_location_action', $settings['attendance_stale_location_action'] ?? 'reject') === 'reject')>{{ __('Reject sync') }}</option>
+                        <option value="manual_review" @selected(old('attendance_stale_location_action', $settings['attendance_stale_location_action'] ?? 'reject') === 'manual_review')>{{ __('Send to administrator review queue') }}</option>
+                    </select>
+                    <p><a href="{{ route('admin.attendance-sync-reviews.index') }}">{{ __('Open attendance manual-review queue') }}</a></p>
+                </div>
+                <div style="margin-top:16px;max-width:420px;">
+                    <label for="attendance-max-location-age">{{ __('Maximum offline location age (minutes)') }}</label>
+                    <input id="attendance-max-location-age" type="number" name="attendance_max_location_age_minutes" min="1" max="1440" required value="{{ old('attendance_max_location_age_minutes', $settings['attendance_max_location_age_minutes'] ?? '10') }}">
+                    <small class="muted">{{ __('Older captures are rejected by sync and appear as failed records; staff can verify them through the existing attendance correction process. Choose 1 to 1440 minutes.') }}</small>
+                </div>
+                <label style="display:flex;align-items:center;gap:10px;">
+                    <input type="checkbox" name="attendance_allow_excused" value="1" style="width:auto;" @checked(old('attendance_allow_excused', $settings['attendance_allow_excused'] ?? '0') === '1')>
+                    {{ __('Allow Excused attendance status') }}
+                </label>
+            </section>
+                <span class="badge info">{{ __('Bangladesh payments') }}</span>
                 <h2 style="margin: 12px 0 6px;">{{ __('Payment methods') }}</h2>
                 <p class="muted" style="margin: 0;">{{ __('Enable a method only after adding your receiving account and payment instructions. Submissions require manual review.') }}</p>
             </div>

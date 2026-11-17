@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import 'api_client.dart';
+import 'attendance_page.dart';
 
 void main() => runApp(const InstructorApp());
 
@@ -1410,6 +1411,16 @@ class _InstructorHomeState extends State<InstructorHome> {
             ));
           }),
           const SizedBox(height: 24),
+          const SizedBox(height: 16),
+          Card(child: ListTile(
+            leading: const Icon(Icons.fact_check_outlined),
+            title: const Text('Attendance & Offline Sync'),
+            subtitle: const Text('Mark attendance with foreground location and sync queued records.'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => InstructorAttendancePage(api: widget.api),
+            )),
+          )),
           Row(
             children: [
               Expanded(child: Text('Assignments', style: Theme.of(context).textTheme.titleLarge)),
