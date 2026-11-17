@@ -68,6 +68,55 @@ class ThemeManagerController extends Controller
                 throw new \RuntimeException(__('The theme archive contains an invalid number of files.'));
             }
 
+            // Inspect the complete central directory before decompressing any entry.
+            // This prevents oversized compressed entries from being read into memory first.
+            $seenNames = [];
+            $declaredExpandedBytes = 0;
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $stat = $zip->statIndex($i);
+                $name = $stat['name'] ?? '';
+                $size = (int) ($stat['size'] ?? -1);
+
+                if ($name === '' || isset($seenNames[$name])) {
+                    throw new \RuntimeException(__('Duplicate or invalid archive paths are not allowed.'));
+                }
+                $seenNames[$name] = true;
+
+                $allowedName = in_array($name, ['theme.json', 'theme.sig', 'preview.png', 'assets/'], true)
+                    || preg_match('#^assets/[a-z0-9][a-z0-9._-]{0,100}\.css$#i', $name);
+                if (! $allowedName || $size < 0) {
+                    throw new \RuntimeException(__('The archive contains an unexpected file or directory.'));
+                }
+
+                $entryLimit = match ($name) {
+                    'theme.json' => 65536,
+                    'theme.sig' => 4096,
+                    'preview.png' => 1048576,
+                    'assets/' => 0,
+                    default => 262144,
+                };
+                if ($size > $entryLimit) {
+                    throw new \RuntimeException(__('A theme archive entry exceeds its allowed uncompressed size.'));
+                }
+
+                $opsys = 0;
+                $attributes = 0;
+                if ($zip->getExternalAttributesIndex($i, $opsys, $attributes)
+                    && $opsys === ZipArchive::OPSYS_UNIX
+                    && (($attributes >> 16) & 0170000) === 0120000) {
+                    throw new \RuntimeException(__('Symbolic links are not allowed in theme packages.'));
+                }
+
+                $declaredExpandedBytes += $size;
+                if ($declaredExpandedBytes > (int) config('themes.max_expanded_kb', 2048) * 1024) {
+                    throw new \RuntimeException(__('The expanded theme exceeds the allowed size.'));
+                }
+            }
+
+            if (! isset($seenNames['theme.json'], $seenNames['theme.sig'])) {
+                throw new \RuntimeException(__('The archive must contain theme.json and theme.sig.'));
+            }
+
             $manifestBytes = $zip->getFromName('theme.json');
             $signatureBytes = $zip->getFromName('theme.sig');
             if (! is_string($manifestBytes) || ! is_string($signatureBytes) || strlen($manifestBytes) > 65536 || strlen($signatureBytes) > 4096) {
@@ -346,6 +395,16 @@ class ThemeManagerController extends Controller
                 ]);
 
                 DB::table('themes')->where('id', $record->id)->delete();
+
+                ActivityLog::create([
+                    'user_id' => $request->user()->id,
+                    'event' => 'theme.deleted',
+                    'description' => 'Deleted theme '.$record->slug.'@'.$record->version.' (id '.$record->id.')',
+                    'method' => 'DELETE',
+                    'route' => substr($request->route()?->getName() ?? 'admin.themes.destroy', 0, 190),
+                    'ip_address' => $request->ip(),
+                    'user_agent' => substr((string) $request->userAgent(), 0, 1000),
+                ]);
             }, 3);
         } catch (\RuntimeException $exception) {
             return back()->withErrors(['theme' => $exception->getMessage()]);
