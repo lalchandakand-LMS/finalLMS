@@ -232,25 +232,36 @@ class ThemeManagerController extends Controller
 
     public function activate(Request $request, int $theme): RedirectResponse
     {
-        DB::transaction(function () use ($request, $theme): void {
-            $record = DB::table('themes')->where('id', $theme)->lockForUpdate()->first();
-            abort_unless($record, 404);
-            $previous = [
-                'id' => (int) Setting::value('active_theme_id', 0),
-                'slug' => Setting::value('active_theme_slug'),
-                'version' => Setting::value('active_theme_version'),
-            ];
-            DB::table('theme_activations')->insert([
-                'theme_id' => $record->id,
-                'action' => 'activate',
-                'previous_state' => json_encode($previous, JSON_THROW_ON_ERROR),
-                'actor_id' => $request->user()->id,
-                'created_at' => now(),
-            ]);
-            Setting::setValue('active_theme_id', $record->id);
-            Setting::setValue('active_theme_slug', $record->slug);
-            Setting::setValue('active_theme_version', $record->version);
-        }, 3);
+        try {
+            DB::transaction(function () use ($request, $theme): void {
+                $lock = DB::table('theme_manager_locks')->where('id', 1)->lockForUpdate()->first();
+                if (! $lock) {
+                    throw new \RuntimeException(__('Theme activation is unavailable because the lifecycle lock is missing.'));
+                }
+
+                $record = DB::table('themes')->where('id', $theme)->lockForUpdate()->first();
+                abort_unless($record, 404);
+                $this->assertThemeCanActivate($record);
+
+                $previous = [
+                    'id' => (int) Setting::value('active_theme_id', 0),
+                    'slug' => Setting::value('active_theme_slug'),
+                    'version' => Setting::value('active_theme_version'),
+                ];
+                DB::table('theme_activations')->insert([
+                    'theme_id' => $record->id,
+                    'action' => 'activate',
+                    'previous_state' => json_encode($previous, JSON_THROW_ON_ERROR),
+                    'actor_id' => $request->user()->id,
+                    'created_at' => now(),
+                ]);
+                Setting::setValue('active_theme_id', $record->id);
+                Setting::setValue('active_theme_slug', $record->slug);
+                Setting::setValue('active_theme_version', $record->version);
+            }, 3);
+        } catch (\RuntimeException $exception) {
+            return back()->withErrors(['theme' => $exception->getMessage()]);
+        }
 
         return redirect()->route('admin.themes.index')->with('success', __('Theme activated. The previous theme is retained in activation history.'));
     }
@@ -258,6 +269,11 @@ class ThemeManagerController extends Controller
     public function reset(Request $request): RedirectResponse
     {
         DB::transaction(function () use ($request): void {
+            $lock = DB::table('theme_manager_locks')->where('id', 1)->lockForUpdate()->first();
+            if (! $lock) {
+                throw new \RuntimeException('Theme lifecycle lock is missing.');
+            }
+
             $previous = [
                 'id' => (int) Setting::value('active_theme_id', 0),
                 'slug' => Setting::value('active_theme_slug'),
@@ -276,6 +292,47 @@ class ThemeManagerController extends Controller
         }, 3);
 
         return redirect()->route('admin.themes.index')->with('success', __('The built-in Alom LMS theme has been restored. Your pages, menus, media and course data were not changed.'));
+    }
+
+    private function assertThemeCanActivate(object $theme): void
+    {
+        $manifest = json_decode((string) $theme->manifest, true);
+        $assets = json_decode((string) $theme->assets, true);
+        if (! is_array($manifest)
+            || ($manifest['product_id'] ?? null) !== 'aloms-lms-theme'
+            || ! is_array($assets)
+            || ! is_array($manifest['assets'] ?? null)) {
+            throw new \RuntimeException(__('The installed theme manifest is invalid.'));
+        }
+
+        $currentVersion = (string) config('app.version', '1.0.0');
+        $minimum = (string) ($theme->min_lms_version ?: '1.0.0');
+        $maximum = $manifest['max_lms_version'] ?? null;
+        if (version_compare($currentVersion, $minimum, '<')
+            || (is_string($maximum) && preg_match('/^\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?$/', $maximum) && version_compare($currentVersion, $maximum, '>'))) {
+            throw new \RuntimeException(__('This theme is not compatible with the current LMS version.'));
+        }
+
+        foreach ($assets as $asset) {
+            if (! is_string($asset)
+                || ! preg_match('/^assets\/[a-z0-9][a-z0-9._-]{0,100}\.css$/i', $asset)
+                || str_contains($asset, '..')) {
+                throw new \RuntimeException(__('The installed theme contains an invalid asset path.'));
+            }
+
+            $digest = $manifest['assets'][$asset] ?? null;
+            $path = 'themes/'.$theme->slug.'/'.$theme->version.'/'.$asset;
+            if (! is_string($digest)
+                || ! preg_match('/^[a-f0-9]{64}$/i', $digest)
+                || ! Storage::disk('public')->exists($path)) {
+                throw new \RuntimeException(__('A required theme asset is missing or has an invalid checksum.'));
+            }
+
+            $contents = Storage::disk('public')->get($path);
+            if (! hash_equals(strtolower($digest), hash('sha256', $contents))) {
+                throw new \RuntimeException(__('A theme asset changed after installation; activation was blocked.'));
+            }
+        }
     }
 
     public function asset(string $slug, string $version, string $file)

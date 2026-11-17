@@ -77,7 +77,10 @@ class ThemeManagerTest extends TestCase
             'author' => 'Alom',
             'description' => 'A test theme',
             'min_lms_version' => '1.0.0',
-            'manifest' => json_encode(['product_id' => 'aloms-lms-theme']),
+            'manifest' => json_encode([
+                'product_id' => 'aloms-lms-theme',
+                'assets' => ['assets/theme.css' => hash('sha256', '.theme-preview-shell { border-radius: 24px; }')],
+            ]),
             'assets' => json_encode(['assets/theme.css']),
             'preview_path' => null,
             'package_path' => 'themes/packages/test.zip',
@@ -96,6 +99,38 @@ class ThemeManagerTest extends TestCase
         $this->assertSame((string) $themeId, (string) Setting::value('active_theme_id'));
         $this->assertSame('blue-academy', Setting::value('active_theme_slug'));
         $this->assertDatabaseHas('theme_activations', ['theme_id' => $themeId, 'action' => 'activate']);
+    }
+
+    public function test_theme_activation_rejects_assets_changed_after_installation(): void
+    {
+        Storage::fake('public');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $expected = 'body { color: #123456; }';
+        $path = 'themes/blue-academy/1.0.0/assets/theme.css';
+        Storage::disk('public')->put($path, 'body { color: #ff0000; }');
+        $themeId = DB::table('themes')->insertGetId([
+            'slug' => 'blue-academy',
+            'version' => '1.0.0',
+            'name' => 'Blue Academy',
+            'min_lms_version' => '1.0.0',
+            'manifest' => json_encode([
+                'product_id' => 'aloms-lms-theme',
+                'assets' => ['assets/theme.css' => hash('sha256', $expected)],
+            ]),
+            'assets' => json_encode(['assets/theme.css']),
+            'package_path' => 'themes/packages/test.zip',
+            'package_sha256' => str_repeat('c', 64),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        Setting::setValue('active_theme_id', 0);
+        $this->actingAs($admin)->post(route('admin.themes.activate', $themeId))
+            ->assertRedirect()
+            ->assertSessionHasErrors('theme');
+
+        $this->assertSame('0', (string) Setting::value('active_theme_id'));
+        $this->assertDatabaseMissing('theme_activations', ['theme_id' => $themeId, 'action' => 'activate']);
     }
 
     public function test_public_theme_asset_route_only_serves_registered_css_files(): void

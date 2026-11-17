@@ -2,7 +2,7 @@
 
 **Product:** Alom's LMS  
 **Roadmap:** Issue #306, step 1 of 8  
-**Status:** Initial runtime implementation is in PR #307. Admin install/preview/activate/reset, signed ZIP verification, declarative CSS assets, activation history and feature tests are implemented. ZIP installation remains disabled until the institution public key is configured; cPanel staging acceptance is still required.
+**Status:** Initial runtime implementation is in PR #307. Admin install/preview/activate/reset, detached signature verification, CSS asset checksums, activation history and safe public asset serving are implemented. ZIP installation remains disabled until the institution public key is configured; cPanel staging acceptance is still required.
 
 ## Goals
 
@@ -10,55 +10,55 @@ Provide an Admin-only Theme Manager with four explicit actions: install a Theme 
 
 ## Existing capability to reuse
 
-The current Website Builder already provides 15 homepage presets, draft preview/publish, revisions, logo selection, and partial public-site typography/color controls. The Theme Manager must complement those content/layout tools, not replace them or silently overwrite homepage content. Existing settings remain the source of truth until a theme is explicitly activated.
+The current Website Builder already provides homepage presets, draft preview/publish, revisions, logo selection, and partial public-site typography/color controls. The Theme Manager complements those content/layout tools; it does not replace them or overwrite homepage content.
 
-## Package format (declarative only)
+## Package format (declarative CSS only)
 
-A Theme ZIP must contain exactly one top-level theme directory with:
-- `theme.json`: product identifier `aloms-lms-theme`, unique slug, semantic version, display name, author label, description, minimum/maximum supported LMS versions, supported locales, asset entrypoints, and SHA-256 digest for every packaged asset.
-- `preview.png`: optional preview image, MIME-verified and size-limited.
-- `assets/`: CSS, fonts and image assets only.
+The current package is a ZIP with root-level:
+- `theme.json`: product identifier `aloms-lms-theme`, unique slug, semantic version, display name, optional author/description, minimum LMS version, and a map of CSS asset paths to SHA-256 digests.
+- `theme.sig`: base64 detached OpenSSL SHA-256 signature over the exact UTF-8 bytes of `theme.json`.
+- `assets/*.css`: up to the configured asset count/size limits.
+- `preview.png`: optional PNG preview whose digest is declared as `preview_sha256`.
 
-Reject PHP, Blade, JavaScript, HTML entrypoints, shell scripts, SQL, symlinks, hard links, nested archives, duplicate normalized paths, absolute paths, traversal segments, hidden runtime/config files, and files outside the allowlist. Themes are not plugins and may not register routes, listeners, jobs, migrations, or executable hooks.
+Only CSS assets and the optional PNG preview are supported. PHP, Blade, JavaScript, HTML entrypoints, shell scripts, SQL, fonts, arbitrary images, nested archives, symlinks, duplicate paths, traversal segments, hidden runtime/config files and unexpected files are rejected. Themes are not plugins and may not register routes, listeners, jobs, migrations or executable hooks.
 
 ## Trust and ZIP validation
 
-- Accept packages only when a detached signature validates against a configured institution/release public key. The private signing key must remain outside the repository and production host.
+- Accept packages only when a detached signature validates against the configured institution/release public key. The private signing key must remain outside the repository and production host.
 - No unsigned, self-signed-by-upload, URL-fetched, or admin-supplied arbitrary package is trusted.
-- Verify signature, product identifier, slug/version, compatibility, every asset digest, MIME, file count, expanded size, compression ratio, and total upload size before extraction.
-- Extract to a private non-public staging directory using normalized paths; never extract directly into the active theme directory or public web root.
-- Reject archive entries whose resolved destination escapes the staging root. Do not follow links.
-- If the trusted public key is not provisioned, the UI must explain that signed installation is unavailable; do not weaken verification to make the button work.
+- Verify signature, product identifier, slug/version, minimum LMS compatibility, every CSS asset digest, optional preview MIME/digest, file count, expanded byte limits and total upload size before storing assets.
+- The application reads declared entries from the ZIP and writes only validated CSS/PNG bytes to their versioned storage paths; it does not extract arbitrary archive contents.
+- If the trusted public key is not provisioned, the UI explains that signed installation is unavailable; verification is never weakened to make the button work.
 
 ## Lifecycle
 
 1. Upload ZIP to a private temporary location with strict size/time limits.
-2. Inspect and verify without changing the active theme.
-3. Extract into an immutable versioned theme directory and record package digest, manifest, install actor and timestamp.
-4. Preview through a short-lived, signed, Admin-only preview token. Preview must not persist activation or mutate global settings.
-5. Activate in a database transaction after compatibility and asset checks; preserve the prior active theme and an immutable settings snapshot for rollback.
-6. Verify public rendering and required assets. If activation fails, restore the prior active theme automatically.
-7. Reset selects the built-in safe theme and restores its baseline design tokens; it does not delete installed themes, homepage content, media, pages, menus, or user data.
-8. Uninstalling a theme is a separate action and is blocked while it is active or referenced by a retained rollback snapshot.
+2. Inspect and verify the detached signature, manifest, archive entries and every declared asset.
+3. Store the original ZIP on the private local disk and validated CSS/optional PNG under a versioned public asset path; record package digest, manifest, installer and timestamp.
+4. Preview through an Admin-only route using sample content. Preview does not change activation or public settings; no public preview token is currently used.
+5. Activate in a database transaction after checking LMS compatibility, asset presence and SHA-256 digests. A dedicated lifecycle-lock row serializes activation/reset; the previous active theme is appended to activation history.
+6. Reset selects the built-in safe theme and records the previous active state. It does not delete installed themes or change homepage content, media, pages, menus, courses or user data.
+7. A previous installed theme can be reactivated from its theme card. There is no separate one-click rollback or theme uninstall action in this initial phase; those remain follow-up scope.
 
 ## Admin UX
 
 - Admin-only navigation entry: Appearance → Themes.
-- Theme cards show name, version, compatibility, install state, active state and preview thumbnail.
-- Actions: Upload/Install ZIP, Preview, Activate, Reset to safe theme, View details.
-- Preview is isolated from public visitors and clearly marked as unpublished.
-- Activation/reset require explicit confirmation and create an audit record.
-- Show progress, validation errors, empty state, unavailable signing-key state and recovery status.
-- Bangla/English, keyboard operation, mobile-friendly layout, and no third-party CMS/developer branding.
+- Theme cards show name, version, active state and preview thumbnail.
+- Actions: Upload/Install ZIP, Preview, Activate, Reset to safe theme.
+- Preview is Admin-only and clearly marked as unpublished.
+- Activation/reset require explicit confirmation and create an audit/history record.
+- Bangla/English labels and validation/error messages; keyboard-accessible forms and responsive layout.
+- No third-party CMS/developer branding.
 
 ## Current implementation
 
 The initial implementation adds:
 - Admin-only Appearance → Theme Manager routes and responsive install/list/preview/activate/reset screens.
-- Dedicated `themes` and `theme_activations` tables; installed package ZIPs are retained on the private local disk, while validated CSS and optional PNG preview assets are stored under the public `themes/` path.
-- Public CSS is served only for an asset path registered to an installed theme, with a fixed CSS content type, immutable caching and `nosniff`. The public layout loads active theme CSS only for non-admin layouts.
-- The ZIP manifest and detached signature are `theme.json` and base64 `theme.sig`; `THEME_PUBLIC_KEY` must contain the PEM public key. The exact manifest bytes are verified with OpenSSL SHA-256. Every CSS asset is SHA-256 checked. Optional `preview.png` must declare `preview_sha256`.
-- The package currently supports a deliberately narrow CSS-only asset allowlist. External CSS URLs, imports, JavaScript, templates, PHP, symlinks, duplicate paths, unexpected files and oversized archives are rejected.
+- Dedicated `themes`, `theme_activations` and `theme_manager_locks` tables.
+- Original ZIP packages retained on the private local disk; validated CSS and optional PNG preview assets stored under the public `themes/` path.
+- Public CSS served only for an asset path registered to an installed theme, with a fixed CSS content type, immutable caching and `nosniff`. The public layout loads active theme CSS only for non-admin layouts.
+- Theme signature, product/manifest, CSS asset digests, file count, archive path allowlist, optional preview digest/MIME and expanded size validation.
+- Activation checks compatibility and re-verifies every stored asset digest before changing the active theme pointer.
 - Reset clears the active theme pointer and records the prior state; it does not remove installed themes or alter pages, menus, media, course records or homepage content.
 
 ### Theme ZIP layout
@@ -88,24 +88,24 @@ Example manifest shape (the `assets` values are SHA-256 hex digests):
 
 Set `THEME_PUBLIC_KEY` in the hosting environment to the PEM public key (escape newlines as `\\n` where the hosting panel requires a single-line value). Keep the private key in a separate offline signing environment. Sign the exact UTF-8 bytes of `theme.json` with SHA-256 and place the base64 detached signature in `theme.sig`.
 
-## Data model and implementation guidance
+## Data model and safety
 
-Prefer dedicated `themes`, `theme_activations` (or immutable activation history), and `theme_previews` records over overloading generic website settings. Store package metadata and file paths, never executable source. Store theme assets on a non-executable public asset disk only after validation; keep the original ZIP and temporary extraction private. Use database transactions and an application lock to serialize activation/reset.
-
-All routes must be protected by the unified Admin authorization middleware and CSRF. Do not trust a hidden form field or UI visibility for authorization. Validate every theme slug against a strict allowlist pattern and resolve assets only through the recorded installed-theme registry.
+- Theme metadata and paths are stored in dedicated tables; package files are never executed.
+- A dedicated lock row is held with `SELECT ... FOR UPDATE` while activating/resetting so concurrent changes cannot overwrite each other's previous-state history.
+- Every activation re-checks compatibility and the SHA-256 digest of each stored CSS asset.
+- All routes use Admin authorization and CSRF. Theme slugs and asset names are strictly allowlisted; public assets resolve only through the installed-theme registry.
 
 ## Required tests
 
-- Admin can view the manager; branch manager, teacher, student and guardian receive 403.
+- Admin can view/manage themes; student and other non-admin roles are denied.
 - Reject unsigned/tampered packages, wrong product ID, incompatible versions, invalid digests, path traversal, symlinks, executable files, duplicate paths, oversized archives and ZIP bombs.
 - Valid signed package installs without changing active theme.
-- Preview is admin-only, expires, and does not activate or mutate content.
-- Activation persists one active theme and writes an audit/history snapshot.
-- Failed activation restores previous active theme.
+- Preview is Admin-only and does not activate or mutate content.
+- Activation persists one active theme, writes history and refuses tampered/missing assets.
+- Concurrent activation/reset is serialized by the lifecycle lock.
 - Reset returns to safe theme and preserves pages, homepage content, media, menus and installed package records.
-- Active or rollback-referenced theme cannot be removed.
-- Fresh install and upgrade migrations are safe on supported MySQL/MariaDB; cPanel staging validates filesystem permissions and atomicity.
+- Fresh install/upgrade migrations are safe on supported MySQL/MariaDB; cPanel staging validates filesystem permissions and backup/restore.
 
 ## Release gates
 
-Runtime signed ZIP installation must remain disabled until the institution's trusted public key is provisioned and a matching signed test package is available. Before production use, test on a separate cPanel staging site with backup/restore and rollback. No production theme activation is authorized by this specification.
+Runtime signed ZIP installation remains disabled until the institution's trusted public key is provisioned and a matching signed test package is available. Before production use, test on a separate cPanel staging site with backup/restore and rollback. No production theme activation is authorized by this specification.

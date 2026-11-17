@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -27,6 +28,16 @@ return new class extends Migration
             $table->index(['slug', 'created_at']);
         });
 
+        Schema::create('theme_manager_locks', function (Blueprint $table) {
+            $table->unsignedTinyInteger('id')->primary();
+            $table->timestamps();
+        });
+        DB::table('theme_manager_locks')->insert([
+            'id' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
         Schema::create('theme_activations', function (Blueprint $table) {
             $table->id();
             $table->foreignId('theme_id')->nullable()->constrained('themes')->nullOnDelete();
@@ -42,5 +53,6 @@ return new class extends Migration
     {
         Schema::dropIfExists('theme_activations');
         Schema::dropIfExists('themes');
+        Schema::dropIfExists('theme_manager_locks');
     }
 };
