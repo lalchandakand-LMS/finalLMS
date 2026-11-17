@@ -35,7 +35,6 @@ class AdminSettingsController extends Controller
             'site_background_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'institution_default_locale' => ['required', 'in:en,bn'],
             'institution_timezone' => ['required', 'timezone'],
-            'institution_currency' => ['required', 'in:BDT,USD,INR,GBP,EUR'],
             'site_logo_media_id' => ['nullable', 'integer', 'min:1'],
             'site_favicon_media_id' => ['nullable', 'integer', 'min:1'],
             'home_title' => ['nullable', 'string', 'max:255'],
