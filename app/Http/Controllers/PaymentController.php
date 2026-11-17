@@ -14,6 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -303,13 +304,29 @@ class PaymentController extends Controller
 
     public function index(): View
     {
-        $payments = Payment::query()
-            ->where(fn ($query) => $query->whereNotNull('course_id')
-                ->orWhereNotNull('course_combo_id')
-                ->orWhereNotNull('learn_earn_exam_id'))
-            ->with(['user', 'course', 'courseCombo', 'comboCourses', 'learnEarnExam', 'reviewer'])
-            ->latest()
-            ->paginate(20);
+        $hasExamPayments = Schema::hasTable('learn_earn_exams')
+            && Schema::hasColumn('payments', 'learn_earn_exam_id');
+
+        $query = Payment::query()
+            ->where(function ($query) use ($hasExamPayments): void {
+                $query->whereNotNull('course_id')->orWhereNotNull('course_combo_id');
+                if ($hasExamPayments) {
+                    $query->orWhereNotNull('learn_earn_exam_id');
+                }
+            })
+            ->with(['user', 'course', 'courseCombo', 'comboCourses', 'reviewer']);
+
+        if ($hasExamPayments) {
+            $query->with('learnEarnExam');
+        }
+
+        $payments = $query->latest()->paginate(20);
+
+        if (! $hasExamPayments) {
+            $payments->getCollection()->each(
+                fn (Payment $payment) => $payment->setRelation('learnEarnExam', null)
+            );
+        }
 
         return view('admin.payments.index', compact('payments'));
     }
