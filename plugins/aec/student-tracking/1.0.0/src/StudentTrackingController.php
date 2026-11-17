@@ -139,19 +139,22 @@ class StudentTrackingController extends Controller
             if ($lowAttendance) {
                 $riskFlags[] = [
                     'code' => 'low_attendance',
-                    'reason' => 'Attendance below '.$riskRules['low_attendance_percent'].'% across at least '.$riskRules['minimum_attendance_records'].' records in the selected date range',
+                    'reason' => __('Attendance below :percent% across at least :count records in the selected date range', [
+                        'percent' => $riskRules['low_attendance_percent'],
+                        'count' => $riskRules['minimum_attendance_records'],
+                    ]),
                 ];
             }
             if ($inactive) {
                 $riskFlags[] = [
                     'code' => 'inactive_learning',
-                    'reason' => 'No recorded LMS learning activity in the last '.$riskRules['inactive_days'].' days',
+                    'reason' => __('No recorded LMS learning activity in the last :days days', ['days' => $riskRules['inactive_days']]),
                 ];
             }
             if ((int) $student->overdue_assignments_count > 0) {
                 $riskFlags[] = [
                     'code' => 'overdue_assignments',
-                    'reason' => (int) $student->overdue_assignments_count.' published assignment(s) are overdue and have no submission',
+                    'reason' => __(':count published assignment(s) are overdue and have no submission', ['count' => (int) $student->overdue_assignments_count]),
                 ];
             }
             $riskFlags = array_merge($riskFlags, $this->additionalRiskSignals($student, $actor, $access));
@@ -525,7 +528,7 @@ class StudentTrackingController extends Controller
         if ($overdueAssignments->isNotEmpty()) {
             $riskFlags[] = [
                 'code' => 'overdue_assignments',
-                'reason' => $overdueAssignments->count().' published assignment(s) are overdue and have no submission',
+                'reason' => __(':count published assignment(s) are overdue and have no submission', ['count' => $overdueAssignments->count()]),
             ];
         }
 
@@ -692,7 +695,7 @@ class StudentTrackingController extends Controller
         if ($recentStatuses->count() === 3 && $recentStatuses->every(fn ($status) => $status === 'absent')) {
             $signals[] = [
                 'code' => 'consecutive_absences',
-                'reason' => 'The latest three recorded attendance sessions are all marked absent',
+                'reason' => __('The latest three recorded attendance sessions are all marked absent'),
             ];
         }
 
@@ -757,7 +760,10 @@ class StudentTrackingController extends Controller
             if ($latest <= $first - 20) {
                 $signals[] = [
                     'code' => 'declining_scores',
-                    'reason' => 'The latest three graded outcomes show a decline of at least 20 percentage points (from '.$first.'% to '.$latest.'%)',
+                    'reason' => __('The latest three graded outcomes show a decline of at least 20 percentage points (from :first% to :latest%)', [
+                        'first' => $first,
+                        'latest' => $latest,
+                    ]),
                 ];
             }
         }
