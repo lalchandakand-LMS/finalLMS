@@ -147,8 +147,8 @@ class InstructorAttendanceSyncTest extends TestCase
         $payload['attendance_date'] = now()->addDay()->toDateString();
 
         $this->withoutMiddleware([
-            \App\Http\Middleware\\AuthenticateApiToken::class,
-            \App\Http\Middleware\\EnsureModuleEnabled::class,
+            \App\Http\Middleware\AuthenticateApiToken::class,
+            \App\Http\Middleware\EnsureModuleEnabled::class,
         ])
             ->actingAs($teacher)
             ->postJson('/api/v1/instructor/attendance/sync', ['records' => [$payload]])
@@ -450,8 +450,8 @@ class InstructorAttendanceSyncTest extends TestCase
         $batch = $this->makeBatch($teacher, $student);
 
         $this->withoutMiddleware([
-            \App\Http\Middleware\\AuthenticateApiToken::class,
-            \App\Http\Middleware\\EnsureModuleEnabled::class,
+            \App\Http\Middleware\AuthenticateApiToken::class,
+            \App\Http\Middleware\EnsureModuleEnabled::class,
         ])->actingAs($teacher)
             ->postJson('/api/v1/instructor/batches/'.$batch->id.'/attendance/qr', [
                 'attendance_date' => now()->addDay()->toDateString(),
@@ -468,8 +468,8 @@ class InstructorAttendanceSyncTest extends TestCase
         $batch = $this->makeBatch($teacher, $student);
 
         $this->withoutMiddleware([
-            \App\Http\Middleware\\AuthenticateApiToken::class,
-            \App\Http\Middleware\\EnsureModuleEnabled::class,
+            \App\Http\Middleware\AuthenticateApiToken::class,
+            \App\Http\Middleware\EnsureModuleEnabled::class,
         ]);
 
         $session = $this->actingAs($teacher)
