@@ -16,6 +16,7 @@ final class PrepQuestionBankController extends Controller
 
     public function index(Request $request): View
     {
+        $this->ensureAdmin($request);
         $filters = $request->validate([
             'track' => ['nullable', Rule::in(self::TRACKS)],
             'subject' => ['nullable', 'string', 'max:100'],
@@ -43,13 +44,15 @@ final class PrepQuestionBankController extends Controller
         return view('prep-question-bank::admin.index', compact('questions', 'filters', 'counts', 'subjects', 'sets'));
     }
 
-    public function createQuestion(): View
+    public function createQuestion(Request $request): View
     {
+        $this->ensureAdmin($request);
         return view('prep-question-bank::admin.question-form', ['question' => null]);
     }
 
     public function storeQuestion(Request $request): RedirectResponse
     {
+        $this->ensureAdmin($request);
         $data = $this->validatedQuestion($request);
         $data['created_by'] = $request->user()->id;
         $id = DB::table('aec_prep_questions')->insertGetId($data + ['created_at' => now(), 'updated_at' => now()]);
@@ -57,8 +60,9 @@ final class PrepQuestionBankController extends Controller
         return redirect()->route('admin.prep-question-bank.index')->with('success', __('Question added to the preparation question bank.'));
     }
 
-    public function editQuestion(int $question): View
+    public function editQuestion(Request $request, int $question): View
     {
+        $this->ensureAdmin($request);
         $record = DB::table('aec_prep_questions')->where('id', $question)->first();
         abort_unless($record, 404);
         $record->options = $record->options ? json_decode($record->options, true) : [];
@@ -67,14 +71,16 @@ final class PrepQuestionBankController extends Controller
 
     public function updateQuestion(Request $request, int $question): RedirectResponse
     {
+        $this->ensureAdmin($request);
         abort_unless(DB::table('aec_prep_questions')->where('id', $question)->exists(), 404);
         $data = $this->validatedQuestion($request);
         DB::table('aec_prep_questions')->where('id', $question)->update($data + ['updated_at' => now()]);
         return redirect()->route('admin.prep-question-bank.index')->with('success', __('Question updated.'));
     }
 
-    public function destroyQuestion(int $question): RedirectResponse
+    public function destroyQuestion(Request $request, int $question): RedirectResponse
     {
+        $this->ensureAdmin($request);
         $used = DB::table('aec_prep_question_set_items')->where('source_question_id', $question)->exists();
         if ($used) {
             return back()->withErrors(['question' => __('This question is already used in an exam set. It is preserved to protect existing papers.')]);
@@ -83,8 +89,9 @@ final class PrepQuestionBankController extends Controller
         return back()->with('success', __('Question deleted.'));
     }
 
-    public function sets(): View
+    public function sets(Request $request): View
     {
+        $this->ensureAdmin($request);
         $sets = DB::table('aec_prep_question_sets')
             ->select('aec_prep_question_sets.*')
             ->selectSub(fn ($q) => $q->from('aec_prep_question_set_items')->whereColumn('question_set_id', 'aec_prep_question_sets.id')->selectRaw('COUNT(*)'), 'questions_count')
@@ -94,6 +101,7 @@ final class PrepQuestionBankController extends Controller
 
     public function createSet(Request $request): View
     {
+        $this->ensureAdmin($request);
         $filters = $request->validate([
             'track' => ['nullable', Rule::in(self::TRACKS)],
             'subject' => ['nullable', 'string', 'max:100'],
@@ -111,6 +119,7 @@ final class PrepQuestionBankController extends Controller
 
     public function storeSet(Request $request): RedirectResponse
     {
+        $this->ensureAdmin($request);
         $data = $request->validate([
             'track' => ['required', Rule::in(self::TRACKS)],
             'title' => ['required', 'string', 'max:180'],
@@ -156,8 +165,9 @@ final class PrepQuestionBankController extends Controller
         return redirect()->route('admin.prep-question-bank.sets.show', $setId)->with('success', __('Exam question paper created.'));
     }
 
-    public function showSet(int $set): View
+    public function showSet(Request $request, int $set): View
     {
+        $this->ensureAdmin($request);
         $paper = DB::table('aec_prep_question_sets')->where('id', $set)->first();
         abort_unless($paper, 404);
         $items = DB::table('aec_prep_question_set_items')->where('question_set_id', $set)->orderBy('position')->get();
@@ -166,13 +176,19 @@ final class PrepQuestionBankController extends Controller
         return view('prep-question-bank::admin.paper', compact('paper', 'items', 'totalMarks'));
     }
 
-    public function destroySet(int $set): RedirectResponse
+    public function destroySet(Request $request, int $set): RedirectResponse
     {
+        $this->ensureAdmin($request);
         DB::transaction(function () use ($set): void {
             DB::table('aec_prep_question_set_items')->where('question_set_id', $set)->delete();
             DB::table('aec_prep_question_sets')->where('id', $set)->delete();
         });
         return redirect()->route('admin.prep-question-bank.sets.index')->with('success', __('Question paper deleted.'));
+    }
+
+    private function ensureAdmin(Request $request): void
+    {
+        abort_unless($request->user()?->isAdmin(), 403);
     }
 
     private function validatedQuestion(Request $request): array
