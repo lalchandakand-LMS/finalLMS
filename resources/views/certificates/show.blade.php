@@ -3,10 +3,11 @@
 @section('title', __('Certificate') . ' | ' . config('app.name'))
 
 @section('content')
+    @php($institutionName = \App\Models\Setting::value('institution_name', config('app.name')))
     <div class="panel" style="max-width: 900px; margin: 30px auto; border: 2px solid #dfe7f6; background: linear-gradient(135deg, #fff, #f6f9ff);">
         <div style="text-align: center; margin-bottom: 24px;">
             <span class="badge info">{{ __('Certificate of Completion') }}</span>
-            <h1 style="font-size: 3rem; margin: 12px 0; color: var(--primary-dark);">{{ config('app.name') }}</h1>
+            <h1 style="font-size: 3rem; margin: 12px 0; color: var(--primary-dark);">{{ $institutionName }}</h1>
         </div>
 
         <div style="text-align: center; margin-bottom: 20px;">
