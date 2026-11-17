@@ -3,7 +3,7 @@
 @section('title', __('Student login') . ' | ' . config('app.name'))
 
 @section('content')
-    @php($institutionName = \\App\\Models\\Setting::value('institution_name', config('app.name')))
+    @php($institutionName = \App\Models\\Setting::value('institution_name', config('app.name')))
     <style>
         .auth-login-wrap{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(320px,.95fr);gap:22px;max-width:980px;margin:28px auto;align-items:stretch}
         .auth-login-intro{display:flex;flex-direction:column;justify-content:center;padding:clamp(28px,5vw,54px);border-radius:22px;color:#fff;background:radial-gradient(circle at 85% 12%,#2689a2,transparent 35%),linear-gradient(145deg,#102e52,#0d6476)}
