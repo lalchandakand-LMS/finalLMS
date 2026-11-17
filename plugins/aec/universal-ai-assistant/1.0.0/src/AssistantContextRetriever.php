@@ -17,6 +17,8 @@ final class AssistantContextRetriever
     {
         $settings = AssistantSettings::record();
         if (! in_array($role, AssistantSettings::DATA_ACCESS_ROLES, true)
+            || ! $settings['global_enabled']
+            || ! ($settings['role_enabled'][$role] ?? false)
             || ! ($settings['role_data_access'][$role] ?? false)
             || AssistantSettings::roleForUser((string) $actor->role) !== $role) {
             return null;
