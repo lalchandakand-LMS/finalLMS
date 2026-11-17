@@ -28,5 +28,12 @@ class LearnEarnPluginPackageTest extends TestCase
         $this->assertStringContainsString('if ($hasQuestionData || $hasCategoryData)', $migrationSource);
         $this->assertStringContainsString('throw new RuntimeException', $migrationSource);
         $this->assertStringContainsString("Schema::dropIfExists('learn_earn_questions')", $migrationSource);
+
+        $examMigration = file_get_contents(base_path('plugins/aec/learn-earn/1.0.0/migrations/2026_11_17_160000_create_learn_earn_exam_tables.php'));
+        $this->assertStringContainsString("Schema::create('learn_earn_exams'", $examMigration);
+        $this->assertStringContainsString("Schema::create('learn_earn_exam_questions'", $examMigration);
+        $this->assertStringContainsString("'source_question_id'", $examMigration);
+        $this->assertStringContainsString("'negative_marks'", $examMigration);
+        $this->assertStringContainsString('throw new RuntimeException', $examMigration);
     }
 }
