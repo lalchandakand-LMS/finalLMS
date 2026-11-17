@@ -67,14 +67,15 @@ class AdminFlashSaleController extends Controller
         $categoryIds = $data['category_ids'] ?? [];
         unset($data['course_ids'], $data['category_ids'], $data['banner']);
 
+        $oldBannerPath = $flashSale->banner_path;
         if ($image) {
-            if ($flashSale->banner_path) {
-                Storage::disk('public')->delete($flashSale->banner_path);
-            }
             $data['banner_path'] = $image->store('flash-sales', 'public');
         }
 
         $flashSale->update($data);
+        if ($image && $oldBannerPath) {
+            Storage::disk('public')->delete($oldBannerPath);
+        }
         $flashSale->courses()->sync($courseIds);
         $flashSale->categories()->sync($categoryIds);
 
@@ -90,12 +91,13 @@ class AdminFlashSaleController extends Controller
             return back()->with('error', __('This campaign has redemption history. Archive it instead.'));
         }
 
-        if ($flashSale->banner_path) {
-            Storage::disk('public')->delete($flashSale->banner_path);
-        }
-
         $saleId = $flashSale->id;
+        $bannerPath = $flashSale->banner_path;
         $flashSale->delete();
+
+        if ($bannerPath) {
+            Storage::disk('public')->delete($bannerPath);
+        }
         $this->audit($request, 'flash_sale.deleted', 'Deleted Flash Sale campaign #'.$saleId);
 
         return back()->with('success', __('Flash sale campaign deleted.'));
