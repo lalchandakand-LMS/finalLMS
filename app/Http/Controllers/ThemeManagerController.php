@@ -118,8 +118,8 @@ class ThemeManagerController extends Controller
                 throw new \RuntimeException(__('The archive must contain theme.json and theme.sig.'));
             }
 
-            $manifestBytes = $zip->getFromName('theme.json');
-            $signatureBytes = $zip->getFromName('theme.sig');
+            $manifestBytes = $this->readZipEntryBounded($zip, 'theme.json', 65536);
+            $signatureBytes = $this->readZipEntryBounded($zip, 'theme.sig', 4096);
             if (! is_string($manifestBytes) || ! is_string($signatureBytes) || strlen($manifestBytes) > 65536 || strlen($signatureBytes) > 4096) {
                 throw new \RuntimeException(__('The archive must contain theme.json and theme.sig.'));
             }
@@ -175,7 +175,7 @@ class ThemeManagerController extends Controller
                     throw new \RuntimeException(__('The theme contains an invalid asset declaration.'));
                 }
                 $expectedNames[$assetName] = true;
-                $contents = $zip->getFromName($assetName);
+                $contents = $this->readZipEntryBounded($zip, $assetName, 262144);
                 if (! is_string($contents) || strlen($contents) > 262144 || ! hash_equals(strtolower($digest), hash('sha256', $contents))) {
                     throw new \RuntimeException(__('A theme asset is missing, too large or has an invalid checksum.'));
                 }
@@ -187,7 +187,7 @@ class ThemeManagerController extends Controller
                 $assetContents[$assetName] = $contents;
             }
 
-            $previewBytes = $zip->getFromName('preview.png');
+            $previewBytes = $this->readZipEntryBounded($zip, 'preview.png', 1048576);
             if (is_string($previewBytes)) {
                 if (! is_string($manifest['preview_sha256'] ?? null) || ! hash_equals(strtolower($manifest['preview_sha256']), hash('sha256', $previewBytes))) {
                     throw new \RuntimeException(__('The theme preview checksum is missing or invalid.'));
@@ -421,6 +421,41 @@ class ThemeManagerController extends Controller
         }
 
         return redirect()->route('admin.themes.index')->with('success', __('The inactive theme and its verified package files were deleted. The audit history and website content were retained.'));
+    }
+
+    private function readZipEntryBounded(ZipArchive $zip, string $name, int $maxBytes): ?string
+    {
+        $stream = $zip->getStream($name);
+        if ($stream === false) {
+            return null;
+        }
+
+        $contents = '';
+        try {
+            while (! feof($stream)) {
+                $remaining = ($maxBytes + 1) - strlen($contents);
+                if ($remaining <= 0) {
+                    throw new \RuntimeException(__('A theme archive entry exceeds its allowed uncompressed size.'));
+                }
+
+                $chunk = fread($stream, min(8192, $remaining));
+                if ($chunk === false) {
+                    throw new \RuntimeException(__('A theme archive entry could not be safely read.'));
+                }
+                if ($chunk === '') {
+                    break;
+                }
+
+                $contents .= $chunk;
+                if (strlen($contents) > $maxBytes) {
+                    throw new \RuntimeException(__('A theme archive entry exceeds its allowed uncompressed size.'));
+                }
+            }
+        } finally {
+            fclose($stream);
+        }
+
+        return $contents;
     }
 
     private function assertSafeThemeStoragePath(string $diskName, string $relativePath): void
