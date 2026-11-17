@@ -92,7 +92,7 @@ class StudentTrackingPluginTest extends TestCase
         ]);
         $request->setUserResolver(fn () => $teacher);
 
-        $this->expectException(\\Symfony\\Component\\HttpKernel\\Exception\\HttpException::class);
+        $this->expectException(\\Symfony\Component\HttpKernel\Exception\HttpException::class);
         app(StudentTrackingSettingsController::class)->update($request);
     }
 
