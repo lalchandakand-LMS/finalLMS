@@ -309,24 +309,23 @@ class PaymentController extends Controller
 
         $query = Payment::query()
             ->where(function ($query) use ($hasExamPayments): void {
-                $query->whereNotNull('course_id')->orWhereNotNull('course_combo_id');
+                $query->whereNotNull('payments.course_id')->orWhereNotNull('payments.course_combo_id');
                 if ($hasExamPayments) {
-                    $query->orWhereNotNull('learn_earn_exam_id');
+                    $query->orWhereNotNull('payments.learn_earn_exam_id');
                 }
             })
             ->with(['user', 'course', 'courseCombo', 'comboCourses', 'reviewer']);
 
         if ($hasExamPayments) {
-            $query->with('learnEarnExam');
+            // Use a left join rather than an Eloquent plugin-model relation so the
+            // admin payment page remains usable when the plugin is installed but inactive.
+            $query->leftJoin('learn_earn_exams', 'payments.learn_earn_exam_id', '=', 'learn_earn_exams.id')
+                ->addSelect('payments.*', 'learn_earn_exams.title as learn_earn_exam_title');
+        } else {
+            $query->select('payments.*');
         }
 
-        $payments = $query->latest()->paginate(20);
-
-        if (! $hasExamPayments) {
-            $payments->getCollection()->each(
-                fn (Payment $payment) => $payment->setRelation('learnEarnExam', null)
-            );
-        }
+        $payments = $query->orderByDesc('payments.created_at')->paginate(20);
 
         return view('admin.payments.index', compact('payments'));
     }
