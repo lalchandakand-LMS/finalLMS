@@ -245,7 +245,7 @@
         @media(max-width:820px) { .nav { flex-direction:row; align-items:center; } .nav .brand { max-width:65%; font-size:1.1rem; } .public-nav-trigger { padding:10px 13px; } .container { padding:22px 16px 48px; } }
         @media(prefers-reduced-motion:reduce) { .public-nav-backdrop,.public-drawer,.public-nav-trigger-icon i,.public-drawer-links a { transition:none!important; } }
 
-        /* WordPress-inspired Alom's LMS admin workspace */
+        /* Alom's unified LMS admin workspace */
         .admin-shell { --admin-sidebar-width:270px; --admin-toolbar-height:66px; }
         .admin-shell .admin-sidebar { width:var(--admin-sidebar-width); padding:18px 13px 22px; transition:width .22s ease,transform .22s ease; }
         .admin-shell .admin-sidebar-brand { min-height:54px; padding-bottom:18px; }
