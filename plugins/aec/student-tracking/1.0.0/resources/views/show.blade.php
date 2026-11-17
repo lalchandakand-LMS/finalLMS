@@ -148,6 +148,44 @@
     </div>
 </div>
 
+<div class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;">
+    <div class="panel">
+        <h2>Student-visible notices</h2>
+        @forelse($announcements as $announcement)
+            <div style="padding:10px 0;border-bottom:1px solid var(--border);">
+                <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+                    <strong>{{ $announcement->title }}</strong>
+                    <span class="badge {{ $announcement->reads->isNotEmpty() ? 'success' : 'secondary' }}">{{ $announcement->reads->isNotEmpty() ? 'Read' : 'Unread' }}</span>
+                </div>
+                @if($announcement->course)
+                    <div class="muted" style="font-size:.82rem;">{{ $announcement->course->title }}</div>
+                @endif
+                @if($announcement->body)
+                    <p style="margin:6px 0;">{{ \Illuminate\Support\Str::limit(strip_tags($announcement->body), 240) }}</p>
+                @endif
+                <div class="muted" style="font-size:.78rem;">{{ $announcement->created_at?->format('d M Y, H:i') }}</div>
+            </div>
+        @empty
+            <p class="muted">No active student-visible notices in this student's branch/course scope.</p>
+        @endforelse
+    </div>
+    @if(auth()->user()->role === 'admin')
+        <div class="panel">
+            <h2>Support engagement (Admin only)</h2>
+            @forelse($supportTickets as $ticket)
+                <div style="padding:10px 0;border-bottom:1px solid var(--border);">
+                    <strong>{{ $ticket->subject }}</strong>
+                    <span class="badge {{ $ticket->status === 'closed' ? 'secondary' : 'info' }}">{{ ucfirst($ticket->status) }}</span>
+                    <div class="muted" style="font-size:.82rem;">{{ $ticket->branch?->name ?? 'No branch' }} · Last activity {{ $ticket->last_message_at?->diffForHumans() ?? 'Not recorded' }}</div>
+                    <a href="{{ route('admin.support-tickets.show', $ticket->id) }}" class="btn secondary" style="margin-top:6px;">Open support ticket</a>
+                </div>
+            @empty
+                <p class="muted">No support tickets are recorded for this student.</p>
+            @endforelse
+        </div>
+    @endif
+</div>
+
 <div class="panel">
     <h2>Overdue assignments</h2>
     @forelse($overdueAssignments as $assignment)
