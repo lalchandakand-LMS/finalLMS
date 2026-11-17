@@ -39,6 +39,8 @@
         $themeFont = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('site_font_family', 'system') : 'system';
         $themeFonts = ['system' => 'Arial, Helvetica, sans-serif', 'inter' => 'Inter, Arial, sans-serif', 'nunito' => 'Nunito, Arial, sans-serif', 'poppins' => 'Poppins, Arial, sans-serif', 'georgia' => 'Georgia, serif'];
         $themeFontFamily = $themeFonts[$themeFont] ?? $themeFonts['system'];
+        $activeThemeSlug = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('active_theme_slug') : null;
+        $activeThemeVersion = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('active_theme_version') : null;
         $themeHeadingScale = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('site_heading_scale', '1') : '1';
         $themeBodyScale = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('site_body_scale', '1') : '1';
         if (!in_array($themeHeadingScale, ['0.9', '1', '1.1', '1.2'], true)) $themeHeadingScale = '1';
@@ -47,6 +49,14 @@
         $pageSeoDescription = trim($__env->yieldContent('seo_description')) ?: (trim($__env->yieldContent('meta_description')) ?: $seoDescription);
     @endphp
     @if($institutionFaviconUrl)<link rel="icon" href="{{ $institutionFaviconUrl }}">@endif
+    @if($activeThemeSlug && $activeThemeVersion)
+        @php $activeThemeRecord = \Illuminate\Support\Facades\DB::table('themes')->where('slug', $activeThemeSlug)->where('version', $activeThemeVersion)->first(); $activeThemeAssets = $activeThemeRecord ? json_decode($activeThemeRecord->assets, true) : []; @endphp
+        @foreach(is_array($activeThemeAssets) ? $activeThemeAssets : [] as $activeThemeAsset)
+            @if(is_string($activeThemeAsset) && preg_match('/^assets\/[a-z0-9][a-z0-9._-]*\.css$/i', $activeThemeAsset))
+                <link rel="stylesheet" href="{{ route('themes.asset', ['slug' => $activeThemeSlug, 'version' => $activeThemeVersion, 'file' => basename($activeThemeAsset)]) }}">
+            @endif
+        @endforeach
+    @endif
     <title>@yield('title', $pageSeoTitle)</title>
     <meta name="description" content="{{ $pageSeoDescription }}">
     <meta name="keywords" content="{{ $seoKeywords }}">
@@ -390,6 +400,7 @@
             <div class="admin-sidebar-label">Website & tools</div>
             <a class="{{ request()->routeIs('admin.modules.*') ? 'active' : '' }}" href="{{ route('admin.modules.index') }}"><span>🧩</span><span class="nav-text">Module Manager</span></a>
             <a class="{{ request()->routeIs('admin.plugins.*') ? 'active' : '' }}" href="{{ route('admin.plugins.index') }}"><span>🧰</span><span class="nav-text">Plugin Manager</span></a>
+            <a class="{{ request()->routeIs('admin.themes.*') ? 'active' : '' }}" href="{{ route('admin.themes.index') }}"><span>🎨</span><span class="nav-text">Theme Manager</span></a>
             <a href="{{ route('admin.website-builder.index') }}"><span>🖥️</span><span class="nav-text">Website builder</span></a>
             <a href="{{ route('admin.website-pages.index') }}"><span>📄</span><span class="nav-text">Custom pages</span></a>
             <a href="{{ route('admin.media.index') }}"><span>🖼️</span><span class="nav-text">Media library</span></a>
