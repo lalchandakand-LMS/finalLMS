@@ -1,12 +1,12 @@
 <?php
-namespace Aloms\\PhoneticsPractice;
-use App\\Http\\Controllers\\Controller;
-use App\\Models\\Course;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Facades\\Storage;
-use Illuminate\\Validation\\Rule;
-use Illuminate\\View\\View;
-use Symfony\\Component\\HttpFoundation\\BinaryFileResponse;
+namespace Aloms\PhoneticsPractice;
+use App\Http\Controllers\Controller;
+use App\Models\Course;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
+use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 class PhoneticsPracticeController extends Controller {
  public function adminIndex(): View {$entries=PhoneticsEntry::with('course')->latest()->paginate(25);return view('phonetics-practice::admin.index',compact('entries'));}
  public function create(): View {$entry=new PhoneticsEntry(['entry_type'=>'word','status'=>'published']);$courses=Course::orderBy('title')->get(['id','title','price']);return view('phonetics-practice::admin.form',compact('entry','courses'));}
