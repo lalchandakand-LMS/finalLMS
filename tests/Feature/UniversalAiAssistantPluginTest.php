@@ -81,6 +81,43 @@ class UniversalAiAssistantPluginTest extends TestCase
         ], 'test-secret-provider-key', false);
     }
 
+    public function test_assistant_controller_sends_only_server_scoped_context_to_the_provider(): void
+    {
+        $this->saveScopedAssistantSettings(['student']);
+        $student = User::factory()->create(['role' => 'student']);
+        $otherStudent = User::factory()->create(['role' => 'student']);
+        $ownCourse = Course::factory()->create(['title' => 'Controller permitted course']);
+        $privateCourse = Course::factory()->create(['title' => 'Controller private course']);
+        Enrollment::query()->create(['user_id' => $student->id, 'course_id' => $ownCourse->id, 'status' => 'active']);
+        Enrollment::query()->create(['user_id' => $otherStudent->id, 'course_id' => $privateCourse->id, 'status' => 'active']);
+
+        app()->instance(AiDeveloperProviderEndpoint::class, new class extends AiDeveloperProviderEndpoint {
+            public function curlOptionsFor(string $url): array { return []; }
+        });
+        Http::fake([
+            'api.openai.com/v1/chat/completions' => Http::response([
+                'choices' => [['message' => ['content' => 'Your course is ready.']]],
+                'usage' => ['total_tokens' => 42],
+            ], 200),
+        ]);
+        Route::post('/__test-ai-assistant/scoped-context', [\\Aloms\\UniversalAiAssistant\\AssistantController::class, 'send']);
+
+        $this->actingAs($student)->postJson('/__test-ai-assistant/scoped-context', [
+            'message' => 'What course am I enrolled in?',
+        ])->assertOk()->assertJson(['response' => 'Your course is ready.']);
+
+        Http::assertSent(function ($request): bool {
+            $messages = $request->data()['messages'] ?? [];
+            $combined = implode("\\n", array_map(static fn ($message) => (string) ($message['content'] ?? ''), $messages));
+            return str_contains($combined, 'Controller permitted course')
+                && ! str_contains($combined, 'Controller private course');
+        });
+        $this->assertDatabaseHas('activity_logs', [
+            'user_id' => $student->id,
+            'event' => 'ai_assistant.scoped_context_retrieved',
+        ]);
+    }
+
     public function test_scoped_context_is_default_deny_and_requires_an_explicit_role_grant(): void
     {
         $student = User::factory()->create(['role' => 'student']);
