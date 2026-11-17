@@ -30,6 +30,8 @@
     "student-activity-overview",
     "scoped-audited-csv-export",
     "configurable-risk-rules",
+    "risk-dismissal-and-note-audit-trail",
+    "scoped-assessment-and-assignment-outcomes",
     "branch-and-teacher-scoped-access",
     "guardian-approved-student-summary",
     "at-risk-learning-indicators"
