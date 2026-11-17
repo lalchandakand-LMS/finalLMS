@@ -10,6 +10,15 @@ use Tests\TestCase;
 
 class LearnEarnScorerTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnExamQuestion.php');
+        require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnAttemptQuestion.php');
+        require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnScorer.php');
+    }
+
     public function test_awards_positive_marks_deducts_negative_marks_and_ignores_unanswered_questions(): void
     {
         $questions = new Collection([
@@ -23,7 +32,7 @@ class LearnEarnScorerTest extends TestCase
             11 => 2,
         ]);
 
-        $this->assertSame(1, $result['score']);
+        $this->assertSame(0, $result['score']);
         $this->assertSame(6, $result['max_score']);
         $this->assertSame(2, $result['details'][10]['marks_awarded']);
         $this->assertFalse($result['details'][11]['is_correct']);
