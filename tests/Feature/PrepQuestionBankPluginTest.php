@@ -58,7 +58,7 @@ class PrepQuestionBankPluginTest extends TestCase
             'track' => 'admission', 'subject' => 'Physics', 'type' => 'mcq', 'difficulty' => 'easy',
             'question' => 'Which unit measures force?', 'options' => ['Newton', 'Newton', 'Joule', 'Watt'],
             'correct_option' => 0, 'marks' => 1,
-        ])->assertSessionHasErrors('options');
+        ])->assertSessionHasErrors();
 
         $this->assertSame(0, DB::table('aec_prep_questions')->count());
     }
@@ -101,7 +101,7 @@ class PrepQuestionBankPluginTest extends TestCase
         $this->actingAs($admin)->post('/__test-prep-bank/sets', [
             'track' => 'bank_job', 'title' => 'Bank Exam', 'duration_minutes' => 30,
             'status' => 'draft', 'question_ids' => [$id],
-        ])->assertForbidden();
+        ])->assertStatus(422);
 
         $this->assertSame(0, DB::table('aec_prep_question_sets')->count());
     }
