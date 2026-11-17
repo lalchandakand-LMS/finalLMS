@@ -264,7 +264,7 @@ class StudentTrackingController extends Controller
             foreach ($students as $student) {
                 fputcsv($stream, [
                     $student->id,
-                    $student->name,
+                    $this->safeCsvCell((string) $student->name),
                     $student->attendance_rate,
                     (int) $student->attendance_total,
                     (int) $student->attendance_attended,
@@ -419,6 +419,11 @@ class StudentTrackingController extends Controller
         }
 
         $query->addSelect($aggregates);
+    }
+
+    private function safeCsvCell(string $value): string
+    {
+        return preg_match('/^[\\s]*[=+@-]/', $value) === 1 ? "'".$value : $value;
     }
 
     private function portalTitle(User $actor): string
