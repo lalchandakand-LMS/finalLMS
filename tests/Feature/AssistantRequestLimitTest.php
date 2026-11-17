@@ -1,11 +1,10 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use Aloms\\UniversalAiAssistant\\AssistantRequestLimit;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Illuminate\\Support\\Facades\\Schema;
-use Tests\\TestCase;
+use Aloms\UniversalAiAssistant\AssistantRequestLimit;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class AssistantRequestLimitTest extends TestCase
 {
@@ -22,8 +21,8 @@ class AssistantRequestLimitTest extends TestCase
 
     public function test_daily_request_limit_is_enforced_and_scoped_per_user(): void
     {
-        $firstUser = \\App\\Models\\User::factory()->create();
-        $secondUser = \\App\\Models\\User::factory()->create();
+        $firstUser = \App\Models\User::factory()->create();
+        $secondUser = \App\Models\User::factory()->create();
 
         $this->assertTrue(AssistantRequestLimit::reserve($firstUser->id, 2));
         $this->assertTrue(AssistantRequestLimit::reserve($firstUser->id, 2));
@@ -39,7 +38,7 @@ class AssistantRequestLimitTest extends TestCase
 
     public function test_invalid_limits_fail_closed(): void
     {
-        $user = \\App\\Models\\User::factory()->create();
+        $user = \App\Models\User::factory()->create();
 
         $this->assertFalse(AssistantRequestLimit::reserve($user->id, 0));
         $this->assertFalse(AssistantRequestLimit::reserve(0, 10));
