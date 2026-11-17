@@ -103,6 +103,27 @@ class LearnEarnPaidExamPaymentTest extends TestCase
         $this->assertSame('https://tokenized.sandbox.bka.sh/checkout/pay/BKASH-LEARN-EARN-001', $response->getTargetUrl());
 
         $payment = Payment::query()->where('gateway_payment_id', 'BKASH-LEARN-EARN-001')->firstOrFail();
+
+        Http::fake([
+            '*/tokenized/checkout/token/grant' => Http::response(['id_token' => 'verification-token'], 200),
+            '*/tokenized/checkout/execute' => Http::response([
+                'transactionStatus' => 'Completed',
+                'paymentID' => 'BKASH-LEARN-EARN-001',
+                'trxID' => 'BKASH-LEARN-EARN-TRX-001',
+                'amount' => '350.00',
+                'currency' => 'BDT',
+                'merchantInvoiceNumber' => $payment->transaction_reference,
+            ], 200),
+            '*/tokenized/checkout/payment/status' => Http::response([
+                'transactionStatus' => 'Completed',
+                'paymentID' => 'BKASH-LEARN-EARN-001',
+                'trxID' => 'BKASH-LEARN-EARN-TRX-001',
+                'amount' => '350.00',
+                'currency' => 'BDT',
+                'merchantInvoiceNumber' => $payment->transaction_reference,
+            ], 200),
+        ]);
+
         $this->assertSame('pending', $payment->status);
         $this->assertDatabaseMissing('learn_earn_exam_entitlements', [
             'exam_id' => $exam->id,
