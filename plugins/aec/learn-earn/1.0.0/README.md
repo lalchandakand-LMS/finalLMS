@@ -1,29 +1,29 @@
 # Learn & Earn plugin — implementation status
 
-This package is the first implementation slice for the owner-approved aec.learn-earn module.
+This is a first-party, independently installable module built on the signed Alom's LMS plugin runtime. The package contains no external AI-builder branding or third-party developer branding.
 
-## Delivered in this slice
+## Delivered in this implementation slice
 
-- First-party plugin manifest following the signed plugin runtime contract.
-- Isolated plugin-owned learn_earn_categories and learn_earn_questions tables.
-- Admin MCQ create/edit/archive workflow with exactly four distinct options.
-- Independent question categories with create, edit, activate and archive controls.
-- Positive marks, negative marks, difficulty, subject and optional explanation.
-- Search and filters by category/status, pagination and admin activity audit entries.
-- Dedicated routes and navigation guarded by the declared learn-earn.manage permission.
-- Migration rollback refuses to drop existing question/category data.
-- Admin exam builder selects published MCQs and stores immutable snapshots of question text, options, answer key, category label and positive/negative marks.
-- Exam settings include schedule, duration, pass marks, question count, attempt limit, free/paid classification, BDT price, randomization and result visibility.
-- Exam creation validates selected question availability, maximum marks and configured question count; exam creation and snapshots are committed atomically.
+- Signed-runtime manifest for admin, student and public portals.
+- Isolated plugin-owned categories, reusable MCQs, exam snapshots, attempts and answer tables.
+- Admin MCQ authoring with four distinct options, categories, difficulty, subject, positive marks, negative marks and explanations.
+- Admin exam builder with schedule, duration, pass marks, question count, attempt limit, free/paid classification, BDT price, randomization and result visibility.
+- Immutable exam question snapshots; later question edits do not change existing exams.
+- Public exam catalogue and details without exposing question keys.
+- Student exam catalogue, free-exam attempt creation, active-attempt resume, attempt history and result page.
+- Server-side answer validation and scoring; wrong answers deduct configured negative marks, unanswered questions score zero, and the final total cannot fall below zero.
+- Student ownership checks, exam-window checks, attempt limits, transactional attempt creation/submission and server-side deadlines.
+- Migration rollback refuses to drop existing questions, exams, snapshots, attempts or answers.
+- Admin audit events for question/category/exam changes.
+- Permission-gated routes and admin/student/public navigation.
 
-## Not delivered yet
+## Not delivered yet — do not mark complete
 
+- Paid exam checkout and verified payment entitlement. Paid attempts are intentionally blocked; the browser cannot grant access.
+- Automatic answer autosave and recovery after browser/device interruption.
+- Student-facing real-device/browser acceptance, accessibility and Bangla/English copy QA.
 - Signed distributable ZIP and trusted release-key provisioning.
-- Student/public exam catalogue, immutable attempt snapshots and free exam attempts.
-- Public/student exam catalogue, free exam attempts and result history.
-- Paid exam checkout, payment verification and entitlement.
-- Attempt timing, concurrency controls, attempt limits and answer-key confidentiality.
 - Flash Sale extraction into its own independent plugin.
-- Full lifecycle backup/restore, cPanel staging and five-portal browser acceptance.
+- Full lifecycle backup/restore and cPanel staging rehearsal.
 
-Do not activate in production or describe Learn & Earn as complete until the remaining items are implemented and accepted.
+Paid exam access must remain disabled until a provider callback/webhook is verified server-side, payment amount/currency/exam/student are matched, duplicate callbacks are idempotently rejected, and an entitlement is created transactionally.
