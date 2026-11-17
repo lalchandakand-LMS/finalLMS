@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    @if($institutionFaviconUrl)<link rel="icon" href="{{ $institutionFaviconUrl }}">@endif
     @php
         $hasSettingsTable = \Illuminate\Support\Facades\Schema::hasTable('settings');
         $institutionName = $hasSettingsTable ? \App\Models\Setting::value('institution_name', config('app.name')) : config('app.name');
@@ -41,6 +40,7 @@
         $pageSeoTitle = trim($__env->yieldContent('seo_title')) ?: (trim($__env->yieldContent('title')) ?: $seoTitle);
         $pageSeoDescription = trim($__env->yieldContent('seo_description')) ?: (trim($__env->yieldContent('meta_description')) ?: $seoDescription);
     @endphp
+    @if($institutionFaviconUrl)<link rel="icon" href="{{ $institutionFaviconUrl }}">@endif
     <title>@yield('title', $pageSeoTitle)</title>
     <meta name="description" content="{{ $pageSeoDescription }}">
     <meta name="keywords" content="{{ $seoKeywords }}">
