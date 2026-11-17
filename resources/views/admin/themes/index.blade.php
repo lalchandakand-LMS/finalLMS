@@ -92,8 +92,8 @@
                         @php($previous = json_decode((string) $entry->previous_state, true) ?: [])
                         <tr>
                             <td>{{ __(ucfirst($entry->action)) }}</td>
-                            <td>{{ $entry->theme_name ?: __('Built-in Alom LMS theme') }}</td>
-                            <td>{{ $previous['slug'] ?? __('Built-in Alom LMS theme') }} {{ $previous['version'] ?? '' }}</td>
+                            <td>{{ $entry->action === 'delete' ? ($previous['name'] ?? $previous['slug'] ?? __('Deleted theme')) : ($entry->theme_name ?: __('Built-in Alom LMS theme')) }}</td>
+                            <td>{{ $entry->action === 'delete' ? '—' : (($previous['slug'] ?? __('Built-in Alom LMS theme')).' '.($previous['version'] ?? '')) }}</td>
                             <td>{{ $entry->actor_name ?: __('System') }}</td>
                             <td>{{ \Illuminate\Support\Carbon::parse($entry->created_at)->format('Y-m-d H:i') }}</td>
                         </tr>
