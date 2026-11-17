@@ -21,7 +21,8 @@
   ],
   "permissions": [
     "student-tracking.view",
-    "student-tracking.configure"
+    "student-tracking.configure",
+    "student-tracking.manage-risk"
   ],
   "capabilities": [
     "attendance-monitoring",
