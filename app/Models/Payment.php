@@ -50,11 +50,6 @@ class Payment extends Model
         return $this->belongsTo(Order::class);
     }
 
-    public function learnEarnExam(): BelongsTo
-    {
-        return $this->belongsTo(\Aloms\LearnEarn\LearnEarnExam::class, 'learn_earn_exam_id');
-    }
-
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by');
