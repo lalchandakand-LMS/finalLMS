@@ -34,7 +34,10 @@
     "scoped-assessment-and-assignment-outcomes",
     "branch-and-teacher-scoped-access",
     "guardian-approved-student-summary",
-    "at-risk-learning-indicators"
+    "at-risk-learning-indicators",
+    "overdue-assignment-risk",
+    "consecutive-absence-risk",
+    "declining-score-risk"
   ],
   "migrations": "migrations"
 }
