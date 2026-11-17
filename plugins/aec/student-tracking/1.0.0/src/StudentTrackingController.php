@@ -118,7 +118,7 @@ class StudentTrackingController extends Controller
         ];
 
         $students = $query->orderBy('users.name')->paginate(25)->withQueryString();
-        $students->getCollection()->transform(function (User $student) use ($riskRules): User {
+        $students->getCollection()->transform(function (User $student) use ($riskRules, $actor, $access): User {
             $student->setAttribute('attendance_rate', (int) $student->attendance_total > 0
                 ? round(((int) $student->attendance_attended / (int) $student->attendance_total) * 100, 1)
                 : null);
@@ -152,6 +152,7 @@ class StudentTrackingController extends Controller
                     'reason' => (int) $student->overdue_assignments_count.' published assignment(s) are overdue and have no submission',
                 ];
             }
+            $riskFlags = array_merge($riskFlags, $this->additionalRiskSignals($student, $actor, $access));
             $student->setAttribute('tracking_risk_flags', $riskFlags);
             $student->setAttribute('tracking_risk_reasons', array_column($riskFlags, 'reason'));
             $student->setAttribute('tracking_needs_attention', $riskFlags !== []);
@@ -506,6 +507,8 @@ class StudentTrackingController extends Controller
             ];
         }
 
+        $riskFlags = array_merge($riskFlags, $this->additionalRiskSignals($studentRecord, $actor, $access));
+
         $riskActions = collect();
         $dismissedRiskFlags = [];
         if (Schema::hasTable('student_tracking_risk_actions')) {
@@ -637,6 +640,104 @@ class StudentTrackingController extends Controller
         }
 
         $query->addSelect($aggregates);
+    }
+
+    /**
+     * @return list<array{code:string,reason:string}>
+     */
+    private function additionalRiskSignals(User $student, User $actor, PluginResourceAccess $access): array
+    {
+        $batchIds = $access->scopeQuery(Enrollment::query(), $actor)
+            ->where('user_id', $student->id)
+            ->whereNotNull('batch_id')
+            ->pluck('batch_id');
+
+        if ($batchIds->isEmpty()) {
+            return [];
+        }
+
+        $signals = [];
+        $recentStatuses = Attendance::query()
+            ->where('student_id', $student->id)
+            ->whereIn('batch_id', $batchIds)
+            ->orderByDesc('attendance_date')
+            ->orderByDesc('id')
+            ->limit(3)
+            ->pluck('status');
+
+        if ($recentStatuses->count() === 3 && $recentStatuses->every(fn ($status) => $status === 'absent')) {
+            $signals[] = [
+                'code' => 'consecutive_absences',
+                'reason' => 'The latest three recorded attendance sessions are all marked absent',
+            ];
+        }
+
+        $examScores = Schema::hasTable('exam_attempts') && Schema::hasTable('exam_questions')
+            ? ExamAttempt::query()
+                ->where('student_id', $student->id)
+                ->where('status', 'submitted')
+                ->whereNotNull('score')
+                ->whereHas('exam', fn (Builder $exams) => $exams->whereIn('batch_id', $batchIds))
+                ->with(['exam:id,batch_id', 'exam.questions:id,exam_id,marks'])
+                ->latest('submitted_at')
+                ->limit(3)
+                ->get()
+                ->map(function (ExamAttempt $attempt): ?array {
+                    $maximum = (int) ($attempt->exam?->questions?->sum('marks') ?? 0);
+                    if ($maximum < 1) {
+                        return null;
+                    }
+
+                    return [
+                        'at' => $attempt->submitted_at,
+                        'percent' => round(((float) $attempt->score / $maximum) * 100, 1),
+                    ];
+                })
+                ->filter()
+            : collect();
+
+        $assignmentScores = Schema::hasTable('assignment_submissions')
+            ? AssignmentSubmission::query()
+                ->where('student_id', $student->id)
+                ->where('status', 'graded')
+                ->whereNotNull('score')
+                ->whereHas('assignment', fn (Builder $assignments) => $assignments->whereIn('batch_id', $batchIds))
+                ->with('assignment:id,batch_id,max_marks')
+                ->latest('submitted_at')
+                ->limit(3)
+                ->get()
+                ->map(function (AssignmentSubmission $submission): ?array {
+                    $maximum = (int) ($submission->assignment?->max_marks ?? 0);
+                    if ($maximum < 1) {
+                        return null;
+                    }
+
+                    return [
+                        'at' => $submission->submitted_at,
+                        'percent' => round(((float) $submission->score / $maximum) * 100, 1),
+                    ];
+                })
+                ->filter()
+            : collect();
+
+        $recentScores = $examScores->concat($assignmentScores)
+            ->sortByDesc('at')
+            ->take(3)
+            ->sortBy('at')
+            ->values();
+
+        if ($recentScores->count() === 3) {
+            $first = (float) $recentScores->first()['percent'];
+            $latest = (float) $recentScores->last()['percent'];
+            if ($latest <= $first - 20) {
+                $signals[] = [
+                    'code' => 'declining_scores',
+                    'reason' => 'The latest three graded outcomes show a decline of at least 20 percentage points (from '.$first.'% to '.$latest.'%)',
+                ];
+            }
+        }
+
+        return $signals;
     }
 
     private function safeCsvCell(string $value): string
