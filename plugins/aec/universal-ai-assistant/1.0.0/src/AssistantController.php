@@ -80,16 +80,7 @@ final class AssistantController
 
         $message = $this->redactSensitiveText(trim($validated['message']));
         $settings = AssistantSettings::record();
-        $todayRequests = DB::table('ai_assistant_messages')
-            ->join('ai_assistant_conversations', 'ai_assistant_conversations.id', '=', 'ai_assistant_messages.conversation_id')
-            ->where('ai_assistant_conversations.user_id', $request->user()->id)
-            ->whereDate('ai_assistant_messages.created_at', today())
-            ->where('ai_assistant_messages.message_role', 'user')
-            ->count();
-        if ($todayRequests >= $settings['daily_request_limit']) {
-            return response()->json(['message' => __('Your daily AI request limit has been reached.')], 429);
-        }
-
+        $conversation = null;
         if (! empty($validated['conversation_id'])) {
             $conversation = DB::table('ai_assistant_conversations')
                 ->where('id', $validated['conversation_id'])
@@ -97,7 +88,13 @@ final class AssistantController
                 ->where('assistant_role', $role)
                 ->first();
             abort_unless($conversation, 404);
-        } else {
+        }
+
+        if (! AssistantRequestLimit::reserve((int) $request->user()->id, (int) $settings['daily_request_limit'])) {
+            return response()->json(['message' => __('Your daily AI request limit has been reached.')], 429);
+        }
+
+        if (! $conversation) {
             $conversationId = DB::table('ai_assistant_conversations')->insertGetId([
                 'user_id' => $request->user()->id,
                 'assistant_role' => $role,
