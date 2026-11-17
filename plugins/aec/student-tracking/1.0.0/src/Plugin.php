@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
 
 require_once __DIR__.'/StudentTrackingController.php';
+require_once __DIR__.'/StudentTrackingSettingsController.php';
 
 return new class implements PluginContract
 {
@@ -41,6 +42,20 @@ return new class implements PluginContract
                 ['icon' => '📊', 'permission' => 'student-tracking.view'],
             );
         }
+
+        $context->routesForPortal('admin', 'admin/student-tracking/settings', 'admin.student-tracking.settings.', function (): void {
+            Route::get('/', [StudentTrackingSettingsController::class, 'index'])->name('index');
+            Route::put('/', [StudentTrackingSettingsController::class, 'update'])
+                ->middleware('throttle:10,1')
+                ->name('update');
+        }, 'student-tracking.configure');
+
+        $context->registerPortalNavigation(
+            'admin',
+            'Tracking Risk Rules',
+            'admin.student-tracking.settings.index',
+            ['icon' => '⚙️', 'permission' => 'student-tracking.configure'],
+        );
     }
 
     public function boot(PluginContext $context): void
