@@ -206,8 +206,8 @@
                 <strong>{{ $attempt->exam?->title ?? __('Assessment') }}</strong>
                 <div class="muted" style="font-size:.82rem;">
                     {{ ucfirst($attempt->status) }}
-                    · Score: {{ $attempt->score === null ? __(__('Not graded')) : $attempt->score }}
-                    · {{ $attempt->submitted_at?->format('d M Y, H:i') ?? __(__('Not submitted')) }}
+                    · {{ __('Score: :score', ['score' => $attempt->score === null ? __('Not graded') : $attempt->score]) }}
+                    · {{ $attempt->submitted_at?->format('d M Y, H:i') ?? __('Not submitted') }}
                 </div>
             </div>
         @empty
@@ -221,8 +221,8 @@
                 <strong>{{ $submission->assignment?->title ?? __('Assignment') }}</strong>
                 <div class="muted" style="font-size:.82rem;">
                     {{ ucfirst($submission->status) }}
-                    · Score: {{ $submission->score === null ? __(__('Not graded')) : $submission->score }}
-                    · Submitted: {{ $submission->submitted_at?->format('d M Y, H:i') ?? __(__('Not submitted')) }}
+                    · {{ __('Score: :score', ['score' => $submission->score === null ? __('Not graded') : $submission->score]) }}
+                    · {{ __('Submitted: :time', ['time' => $submission->submitted_at?->format('d M Y, H:i') ?? __('Not submitted')]) }}
                 </div>
                 @if($submission->assignment?->due_at)
                     <div class="muted" style="font-size:.78rem;">{{ __('Due :time', ['time' => $submission->assignment->due_at->format('d M Y, H:i')]) }}</div>
