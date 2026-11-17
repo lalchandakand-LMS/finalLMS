@@ -26,8 +26,9 @@ final class AssistantTokenBudget
         $reservationId = (string) Str::uuid();
 
         return DB::transaction(function () use ($dailyBudget, $configuredLimit, $promptTokens, $date, $reservationId): ?array {
+            // Bound ledger storage even for requests abandoned before their expiry
+            // could be reclaimed by a later request on the same day.
             DB::table('ai_assistant_token_reservations')
-                ->whereIn('status', ['completed', 'released', 'expired'])
                 ->where('created_at', '<', now()->subDays(30))
                 ->delete();
 
