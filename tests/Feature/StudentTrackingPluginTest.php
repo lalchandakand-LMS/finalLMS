@@ -192,7 +192,7 @@ class StudentTrackingPluginTest extends TestCase
         $manager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $branch->id]);
         $student = User::factory()->create(['role' => 'student', 'branch_id' => $otherBranch->id]);
 
-        $this->expectException(\\Illuminate\\Database\\Eloquent\\ModelNotFoundException::class);
+        $this->expectException(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
         $this->riskActionFor($manager, $student->id, [
             'risk_code' => 'inactive_learning',
             'action' => 'dismiss',
