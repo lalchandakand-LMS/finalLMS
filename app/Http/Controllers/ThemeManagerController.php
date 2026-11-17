@@ -325,8 +325,14 @@ class ThemeManagerController extends Controller
         $currentVersion = (string) config('app.version', '1.0.0');
         $minimum = (string) ($theme->min_lms_version ?: '1.0.0');
         $maximum = $manifest['max_lms_version'] ?? null;
+        $versionPattern = '/^\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?$/';
+        if (! preg_match($versionPattern, $minimum)
+            || ($maximum !== null && (! is_string($maximum) || ! preg_match($versionPattern, $maximum)))
+            || ($maximum !== null && version_compare($minimum, $maximum, '>'))) {
+            throw new \RuntimeException(__('The installed theme has invalid LMS compatibility metadata.'));
+        }
         if (version_compare($currentVersion, $minimum, '<')
-            || (is_string($maximum) && preg_match('/^\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?$/', $maximum) && version_compare($currentVersion, $maximum, '>'))) {
+            || (is_string($maximum) && version_compare($currentVersion, $maximum, '>'))) {
             throw new \RuntimeException(__('This theme is not compatible with the current LMS version.'));
         }
 
