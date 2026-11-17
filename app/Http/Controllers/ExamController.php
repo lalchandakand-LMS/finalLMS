@@ -45,6 +45,7 @@ class ExamController extends Controller
             'questions.*.options.*' => ['required', 'string', 'max:500', 'distinct'],
             'questions.*.correct_option' => ['required', 'integer', 'between:0,3'],
             'questions.*.marks' => ['required', 'integer', 'min:1', 'max:100'],
+            'questions.*.negative_marks' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:100'],
         ]);
 
         $selectedQuestions = collect($validated['questions'] ?? []);
@@ -65,6 +66,7 @@ class ExamController extends Controller
                 'options' => $question->options,
                 'correct_option' => $question->correct_option,
                 'marks' => $question->marks,
+                'negative_marks' => $question->negative_marks,
             ]);
             $selectedQuestions = $selectedQuestions->concat($bankSelections)->values();
         }
@@ -143,6 +145,7 @@ class ExamController extends Controller
             'options.*' => ['required', 'string', 'max:500', 'distinct'],
             'correct_option' => ['required', 'integer', 'between:0,3'],
             'marks' => ['required', 'integer', 'min:1', 'max:100'],
+            'negative_marks' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:100'],
         ]);
 
         QuestionBankQuestion::create([...$validated, 'teacher_id' => $batch->teacher_id]);
@@ -164,6 +167,7 @@ class ExamController extends Controller
             'options.*' => ['required', 'string', 'max:500', 'distinct'],
             'correct_option' => ['required', 'integer', 'between:0,3'],
             'marks' => ['required', 'integer', 'min:1', 'max:100'],
+            'negative_marks' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:100'],
         ]);
         $question->update($validated);
 
@@ -325,7 +329,9 @@ class ExamController extends Controller
                 }
 
                 $correct = $selected === (int) $question->correct_option;
-                $awarded = $correct ? (int) $question->marks : 0;
+                $awarded = $correct
+                    ? (int) $question->marks
+                    : -1 * (int) ($question->negative_marks ?? 0);
                 $totalScore += $awarded;
 
                 $lockedAttempt->answers()->updateOrCreate(
@@ -336,11 +342,11 @@ class ExamController extends Controller
 
             $lockedAttempt->update([
                 'submitted_at' => now(),
-                'score' => $totalScore,
+                'score' => max(0, $totalScore),
                 'status' => 'submitted',
             ]);
 
-            return $totalScore;
+            return max(0, $totalScore);
         });
 
         return redirect()->route('student.exams.show', $attempt->exam)

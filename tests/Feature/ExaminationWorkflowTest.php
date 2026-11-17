@@ -53,6 +53,49 @@ class ExaminationWorkflowTest extends TestCase
         $this->assertDatabaseCount('exam_attempts', 1);
     }
 
+    public function test_exam_applies_per_question_negative_marks_and_floors_final_score_at_zero(): void
+    {
+        [$teacher, $student, $batch] = $this->makeBatchWithStudent();
+        $exam = Exam::create([
+            'batch_id' => $batch->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Negative marking test',
+            'starts_at' => now()->subMinute(),
+            'ends_at' => now()->addHour(),
+            'duration_minutes' => 30,
+            'pass_marks' => 1,
+            'status' => 'published',
+        ]);
+        $question = $exam->questions()->create([
+            'question' => 'Select the correct answer.',
+            'options' => ['Correct', 'Wrong A', 'Wrong B', 'Wrong C'],
+            'correct_option' => 0,
+            'marks' => 2,
+            'negative_marks' => 3,
+            'position' => 1,
+        ]);
+
+        $this->actingAs($student)->post(route('student.exams.start', $exam))
+            ->assertRedirect(route('student.exams.show', $exam));
+        $attempt = ExamAttempt::firstOrFail();
+
+        $this->post(route('student.exams.submit', $attempt), [
+            'answers' => [$question->id => 1],
+        ])->assertRedirect(route('student.exams.show', $exam));
+
+        $this->assertDatabaseHas('exam_answers', [
+            'exam_attempt_id' => $attempt->id,
+            'exam_question_id' => $question->id,
+            'is_correct' => false,
+            'marks_awarded' => -3,
+        ]);
+        $this->assertDatabaseHas('exam_attempts', [
+            'id' => $attempt->id,
+            'score' => 0,
+            'status' => 'submitted',
+        ]);
+    }
+
     public function test_student_cannot_access_exam_without_active_batch_enrollment(): void
     {
         [$teacher, $student, $batch] = $this->makeBatchWithStudent(false);

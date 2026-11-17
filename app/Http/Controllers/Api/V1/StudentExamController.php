@@ -217,13 +217,16 @@ class StudentExamController extends Controller
                     : ($savedAnswers[$question->id]->selected_option ?? null);
                 if ($selected === null) continue;
                 $correct = $selected === (int) $question->correct_option;
-                $marks = $correct ? (int) $question->marks : 0;
+                $marks = $correct
+                    ? (int) $question->marks
+                    : -1 * (int) ($question->negative_marks ?? 0);
                 $total += $marks;
                 $locked->answers()->updateOrCreate(
                     ['exam_question_id' => $question->id],
                     ['selected_option' => $selected, 'is_correct' => $correct, 'marks_awarded' => $marks]
                 );
             }
+            $total = max(0, $total);
             $locked->update(['submitted_at' => now(), 'score' => $total, 'status' => 'submitted']);
             return $total;
         });
@@ -281,6 +284,7 @@ class StudentExamController extends Controller
                 'question' => $question->question,
                 'options' => $question->options,
                 'marks' => $question->marks,
+                'negative_marks' => $question->negative_marks,
                 'position' => $item->position,
                 'selected_option' => $answers[$question->id]->selected_option ?? null,
             ];

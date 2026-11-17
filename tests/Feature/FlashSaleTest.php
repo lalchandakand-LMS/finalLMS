@@ -95,6 +95,21 @@ class FlashSaleTest extends TestCase
         $this->get('/')->assertOk()->assertDontSee('November Mega Sale');
     }
 
+    public function test_admin_can_disable_public_flash_sale_page_without_deleting_campaigns(): void
+    {
+        $course = $this->makeCourse();
+        $sale = $this->makeSale($course);
+
+        $this->get(route('flash-sales.public'))->assertOk()->assertSee('November Mega Sale');
+
+        Setting::setValue('flash_sale_page_enabled', '0');
+        $this->get(route('flash-sales.public'))->assertNotFound();
+        $this->get('/')->assertOk()->assertDontSee(route('flash-sales.public'));
+
+        $this->assertDatabaseHas('flash_sales', ['id' => $sale->id, 'status' => 'active']);
+        $this->assertDatabaseHas('flash_sale_course', ['flash_sale_id' => $sale->id, 'course_id' => $course->id]);
+    }
+
     public function test_manual_payment_uses_server_calculated_flash_sale_price_and_snapshots_campaign(): void
     {
         $student = User::factory()->create(['role' => 'student']);

@@ -59,6 +59,13 @@ The current main README lists a number of foundations as implemented: registrati
 - Student mobile API login now shares the approved-device registry: secure installation ID, SMS OTP, Admin approval for additional devices, device-bound bearer tokens and server-side token invalidation. Teacher API login remains password-based. Flutter client UI/secure-storage/polling and live SMS staging acceptance remain pending.
 - Exact-head CI status must be checked from GitHub before moving this snapshot to CI-verified. No merge, deployment, production data mutation or live-payment activation is authorized by this workstream.
 
+## New approved workstream — Learn & Earn + Flash Sale plugins (2026-11-16)
+
+- **Specification recorded:** `docs/LEARN_EARN_AND_FLASH_SALE_PLUGINS.md` and Decision Log D-018.
+- **Baseline audit:** Question Bank, batch exams, course question sets and Flash Sale already exist in core. Current question bank has positive marks/category; current batch exam does not yet meet the standalone free/paid Learn & Earn plus negative-marking contract. Flash Sale campaign CRUD/targeting exists, but global Flash Sale page enable/disable and independent plugin route/lifecycle ownership remain incomplete.
+- **Status:** Approved and scoped; implementation not complete. Next: extract/reuse the existing workflows behind signed plugin boundaries, add missing schema/access/scoring/page-toggle behavior and tests. Keep plugins inactive until exact-head CI/CodeQL, signed package verification and staging acceptance pass.
+- **Production:** No deployment or live data migration performed.
+
 ## Priority backlog
 
 ### P0 — release safety and current branch health
@@ -318,3 +325,10 @@ This section supersedes earlier plugin-platform implementation snapshots where t
 
 Production deployment remains blocked until staging, backup/restore, rollback and all applicable release gates pass.
 
+
+## Learn & Earn / Flash Sale implementation checkpoint (2026-11-16)
+
+- **Implemented in PR #277, pending exact-head CI:** per-question `negative_marks` storage in the reusable Question Bank and exam snapshot; teacher/admin question-bank form controls; server-side negative scoring in both web and mobile API exam submission paths; signed score storage and final score floor at zero; regression test for negative award and zero floor.
+- **Implemented in PR #277, pending exact-head CI:** Admin Settings toggle for the public Flash Sale page; disabled state returns 404, hides public navigation and homepage promotion; campaign and redemption records are preserved. Regression test added.
+- **Not yet implemented:** separate signed/installable `aec.learn-earn` and `aec.flash-sale` package entrypoints, standalone Learn & Earn exam catalogue/authoring and free/paid entitlement/payment workflow, full Admin-only MCQ authoring flow, and plugin-scoped route/permission/lifecycle integration. Existing batch exams and existing Flash Sale core workflows remain in place pending safe extraction.
+- **Release gates:** CI/CodeQL on exact head, MySQL and SQLite migration compatibility, package signing, backup/restore and staging acceptance. Keep PR Draft and do not deploy.

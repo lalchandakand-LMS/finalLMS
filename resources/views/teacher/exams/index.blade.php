@@ -27,7 +27,7 @@
             <div id="question-bank-area" hidden>
                 <label>{{ __('Number of random questions') }}<input type="number" name="random_question_count" min="1" max="100" value="10"></label>
                 @forelse($bankQuestions as $bankQuestion)
-                    <label style="display:block;"><input type="checkbox" name="question_bank_ids[]" value="{{ $bankQuestion->id }}"> {{ $bankQuestion->subject ?: 'General' }} — {{ Str::limit($bankQuestion->question, 120) }} ({{ $bankQuestion->marks }} marks)</label>
+                    <label style="display:block;"><input type="checkbox" name="question_bank_ids[]" value="{{ $bankQuestion->id }}"> {{ $bankQuestion->subject ?: 'General' }} — {{ Str::limit($bankQuestion->question, 120) }} ({{ $bankQuestion->marks }} positive / {{ $bankQuestion->negative_marks }} negative)</label>
                 @empty
                     <p class="muted">Question Bank is empty. <a href="{{ $isAdmin ? route('admin.batches.question-bank.index', $batch) : route('teacher.batches.question-bank.index', $batch) }}">Add questions</a>.</p>
                 @endforelse
@@ -45,7 +45,8 @@
                     </div>
                     <div class="grid grid-2">
                         <label>Correct option<select name="questions[0][correct_option]"><option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select></label>
-                        <label>Marks<input type="number" name="questions[0][marks]" min="1" max="100" value="1" required></label>
+                        <label>Positive marks<input type="number" name="questions[0][marks]" min="1" max="100" value="1" required></label>
+                        <label>Negative marks<input type="number" name="questions[0][negative_marks]" min="0" max="100" value="0"></label>
                     </div>
                 </div>
             </div>
@@ -137,7 +138,8 @@
             </div>
             <div class="grid grid-2">
                 <label>Correct option<select name="questions[${index}][correct_option]"><option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select></label>
-                <label>Marks<input type="number" name="questions[${index}][marks]" min="1" max="100" value="1" required></label>
+                <label>Positive marks<input type="number" name="questions[${index}][marks]" min="1" max="100" value="1" required></label>
+                <label>Negative marks<input type="number" name="questions[${index}][negative_marks]" min="0" max="100" value="0"></label>
             </div>
             <button type="button" class="btn secondary remove-question">Remove question</button>`;
         container.appendChild(card);

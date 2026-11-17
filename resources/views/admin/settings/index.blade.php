@@ -234,6 +234,19 @@
             <hr style="border: 0; border-top: 1px solid var(--border); margin: 28px 0;">
             <div style="margin-bottom: 18px;">
                 <span class="badge info">{{ __('Search and marketing') }}</span>
+
+            <hr style="border: 0; border-top: 1px solid var(--border); margin: 28px 0;">
+            <section style="margin-bottom: 18px;">
+                <span class="badge info">{{ __('Promotions') }}</span>
+                <h2 style="margin: 12px 0 6px;">{{ __('Flash Sale page') }}</h2>
+                <input type="hidden" name="flash_sale_page_enabled" value="0">
+                <label style="display:flex;align-items:center;gap:10px;">
+                    <input type="checkbox" name="flash_sale_page_enabled" value="1" style="width:auto;" @checked((bool) (int) old('flash_sale_page_enabled', $settings['flash_sale_page_enabled'] ?? '1'))>
+                    {{ __('Show Flash Sale tab and public page') }}
+                </label>
+                <p class="muted">{{ __('When disabled, the public Flash Sale page and navigation link are hidden. Existing campaigns and purchase records are preserved.') }}</p>
+            </section>
+                <span class="badge info">{{ __('Search and marketing') }}</span>
                 <h2 style="margin: 12px 0 6px;">{{ __('SEO and tracking') }}</h2>
                 <p class="muted" style="margin: 0;">{{ __('Tracking scripts load only after a visitor accepts marketing cookies. Use either direct Google Analytics or Tag Manager to avoid duplicate analytics.') }}</p>
             </div>

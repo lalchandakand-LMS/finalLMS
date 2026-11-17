@@ -21,7 +21,7 @@
         <div class="public-drawer-links">
             <a href="{{ route('landing') }}"><span class="menu-icon">⌂</span>{{ __('Home') }}</a>
             <a href="{{ route('courses.index') }}"><span class="menu-icon">▤</span>{{ __('Courses') }}</a>
-            @if(\Illuminate\Support\Facades\Schema::hasTable('flash_sales'))
+            @if(\Illuminate\Support\Facades\Schema::hasTable('flash_sales') && (bool) (int) \App\Models\Setting::value('flash_sale_page_enabled', '1'))
                 <a href="{{ route('flash-sales.public') }}"><span class="menu-icon">🔥</span>{{ __('Flash Sale') }}</a>
             @endif
             @if(\Illuminate\Support\Facades\Schema::hasTable('website_pages'))
