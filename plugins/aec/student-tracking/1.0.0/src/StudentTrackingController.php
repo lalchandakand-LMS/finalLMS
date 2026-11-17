@@ -8,6 +8,8 @@ use App\Models\Attendance;
 use App\Models\Branch;
 use App\Models\CourseContentProgress;
 use App\Models\Enrollment;
+use App\Models\ExamAttempt;
+use App\Models\AssignmentSubmission;
 use App\Models\Setting;
 use App\Models\LessonProgress;
 use App\Models\User;
@@ -329,6 +331,28 @@ class StudentTrackingController extends Controller
                 ->get()
             : collect();
 
+        $examAttempts = Schema::hasTable('exam_attempts')
+            ? ExamAttempt::query()
+                ->select(['id', 'exam_id', 'student_id', 'submitted_at', 'score', 'status'])
+                ->where('student_id', $studentRecord->id)
+                ->whereHas('exam', fn (Builder $exams) => $exams->whereIn('batch_id', $allowedBatchIds))
+                ->with(['exam:id,title,batch_id'])
+                ->latest('submitted_at')
+                ->limit(20)
+                ->get()
+            : collect();
+
+        $assignmentSubmissions = Schema::hasTable('assignment_submissions')
+            ? AssignmentSubmission::query()
+                ->select(['id', 'assignment_id', 'student_id', 'submitted_at', 'score', 'status'])
+                ->where('student_id', $studentRecord->id)
+                ->whereHas('assignment', fn (Builder $assignments) => $assignments->whereIn('batch_id', $allowedBatchIds))
+                ->with(['assignment:id,title,batch_id,due_at'])
+                ->latest('submitted_at')
+                ->limit(20)
+                ->get()
+            : collect();
+
         $attendanceTotal = $attendanceRecords->count();
         $attendedTotal = $attendanceRecords->whereIn('status', ['present', 'late'])->count();
         $attendanceRate = $attendanceTotal > 0 ? round(($attendedTotal / $attendanceTotal) * 100, 1) : null;
@@ -339,6 +363,8 @@ class StudentTrackingController extends Controller
             'attendanceRecords' => $attendanceRecords,
             'lessonProgress' => $lessonProgress,
             'contentProgress' => $contentProgress,
+            'examAttempts' => $examAttempts,
+            'assignmentSubmissions' => $assignmentSubmissions,
             'attendanceRate' => $attendanceRate,
             'portalTitle' => $this->portalTitle($actor),
         ]);
