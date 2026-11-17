@@ -439,7 +439,7 @@
                     @endif
                 @endif
             @endif
-            <div class="admin-sidebar-footer">{{ $institutionName }}<br>{{ $hasSettingsTable ? \App\Models\\Setting::value('institution_tagline', __('Learning Management System')) : __('Learning Management System') }}</div>
+            <div class="admin-sidebar-footer">{{ $institutionName }}<br>{{ $hasSettingsTable ? \App\Models\Setting::value('institution_tagline', __('Learning Management System')) : __('Learning Management System') }}</div>
         </aside>
     @endif
     <header class="topbar">
