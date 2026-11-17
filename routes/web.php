@@ -48,6 +48,7 @@ use App\Http\Controllers\WebsitePageController;
 use App\Http\Controllers\AdminWebsiteMenuController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\InstallController;
+use App\Http\Controllers\SetupWizardController;
 use App\Http\Controllers\QuizContestController;
 use App\Http\Controllers\FlashSaleController;
 use App\Http\Controllers\AdminCouponController;
