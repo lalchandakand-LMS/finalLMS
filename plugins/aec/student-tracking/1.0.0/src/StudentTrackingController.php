@@ -745,6 +745,10 @@ class StudentTrackingController extends Controller
      */
     private function additionalRiskSignals(User $student, User $actor, PluginResourceAccess $access, ModuleRegistry $modules): array
     {
+        if (! $modules->isEnabled('course_management') || ! $modules->isEnabled('batch_management')) {
+            return [];
+        }
+
         $batchIds = $access->scopeQuery(Enrollment::query(), $actor)
             ->where('user_id', $student->id)
             ->whereNotNull('batch_id')
