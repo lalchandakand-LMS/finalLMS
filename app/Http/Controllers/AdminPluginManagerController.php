@@ -95,6 +95,8 @@ class AdminPluginManagerController extends Controller
         string $key,
         PluginUploadInstaller $installer,
         PluginVersionHistoryRecorder $history,
+        PluginSignatureVerifier $signatureVerifier,
+        PluginIntegrityVerifier $integrityVerifier,
     ): RedirectResponse {
         $validated = $request->validate([
             'package' => ['required', 'file', 'max:51200'],
@@ -119,6 +121,11 @@ class AdminPluginManagerController extends Controller
             if ($dependent) {
                 throw new LogicException('An active plugin depends on this plugin: '.$dependent->plugin_key);
             }
+
+            if (! $signatureVerifier->verifyInstalledSignature($plugin)) {
+                throw new RuntimeException('The current plugin release signature cannot be re-verified; update was blocked.');
+            }
+            $integrityVerifier->verify($plugin);
 
             $previousVersion = (string) $plugin->version;
             $updated = $installer->update(
@@ -175,9 +182,16 @@ class AdminPluginManagerController extends Controller
                 throw new LogicException('No retained previous signed version is available for rollback.');
             }
 
+            if (! $signatureVerifier->verifyInstalledSignature($plugin)) {
+                throw new RuntimeException('The current plugin release signature cannot be re-verified; rollback was blocked.');
+            }
+            $integrityVerifier->verify($plugin);
+
             $previous = new PluginInstallation();
             $previous->forceFill(array_merge($snapshot, ['plugin_key' => $plugin->plugin_key]));
-            $signatureVerifier->verifyInstalledSignature($previous);
+            if (! $signatureVerifier->verifyInstalledSignature($previous)) {
+                throw new RuntimeException('The retained previous release signature cannot be re-verified; rollback was blocked.');
+            }
             $integrityVerifier->verify($previous);
 
             // Revert only this installed version's recorded migrations. Data-preserving
