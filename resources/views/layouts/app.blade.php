@@ -312,6 +312,30 @@
             .admin-toolbar-toggle { width:36px; height:36px; flex:0 0 36px; }
         }
         @media(prefers-reduced-motion:reduce) { .admin-shell .admin-sidebar,.admin-sidebar-backdrop,.admin-menu-group > summary:after { transition:none!important; } }
+
+        /* Shared visual language for core LMS screens and plugin-owned screens */
+        .admin-shell .page-header { padding:2px 0 18px; margin-bottom:22px; border-bottom:1px solid #e3e9f2; }
+        .admin-shell .page-header h1,.admin-shell main h1 { color:#172b4d; letter-spacing:-.025em; }
+        .admin-shell .panel,.admin-shell .card,.admin-shell .summary-box { border:1px solid #e2e8f1; border-radius:13px; box-shadow:0 3px 14px rgba(18,39,76,.045); }
+        .admin-shell .panel:hover,.admin-shell .card:hover,.admin-shell .summary-box:hover { transform:none; box-shadow:0 7px 22px rgba(18,39,76,.075); }
+        .admin-shell table { width:100%; border-collapse:separate; border-spacing:0; background:#fff; border:1px solid #e2e8f1; border-radius:12px; overflow:hidden; }
+        .admin-shell thead th { padding:13px 15px; color:#52627a; background:#f5f7fb; border-bottom:1px solid #e2e8f1; font-size:.78rem; font-weight:800; letter-spacing:.035em; text-align:left; }
+        .admin-shell tbody td { padding:13px 15px; border-bottom:1px solid #edf0f5; color:#27364d; vertical-align:middle; }
+        .admin-shell tbody tr:last-child td { border-bottom:0; }
+        .admin-shell tbody tr:hover td { background:#fafcff; }
+        .admin-shell input:not([type=checkbox]):not([type=radio]),.admin-shell select,.admin-shell textarea { border-color:#d7dfeb; border-radius:9px; box-shadow:none; }
+        .admin-shell input:focus,.admin-shell select:focus,.admin-shell textarea:focus { outline:0; border-color:#527bc4; box-shadow:0 0 0 3px rgba(50,103,190,.12); }
+        .admin-shell .btn { border-radius:9px; font-weight:700; }
+        .admin-shell .btn.primary { background:#17479d; }
+        .admin-shell .btn.secondary { border-color:#d7dfeb; color:#263a5a; background:#fff; }
+        .admin-shell .flash { border:1px solid transparent; border-radius:10px; }
+        .admin-shell .dash-summary { gap:14px; }
+        .admin-shell .summary-box strong { color:#173b7a; }
+        @media(max-width:760px) {
+            .admin-shell table { display:block; max-width:100%; overflow-x:auto; white-space:nowrap; }
+            .admin-shell .page-header { gap:10px; }
+            .admin-shell .panel { padding:16px; }
+        }
     </style>
 </head>
 <body class="{{ $isAdminLayout ? 'admin-shell' : '' }}">
