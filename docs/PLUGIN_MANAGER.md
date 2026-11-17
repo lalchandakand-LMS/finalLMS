@@ -1,27 +1,47 @@
 # Admin Plugin Manager
 
-The Admin Plugin Manager is the guarded web entry point for signed plugin
-installation. It is available only to the root admin role under the authenticated
-Admin workspace.
+The Admin Plugin Manager is a root-admin-only workspace in the authenticated Admin panel. It manages signed packages stored under the private application-root `plugins/` directory. A plugin is trusted application code, not sandboxed code; install only releases signed by a trusted release authority.
 
-## Install flow
+## Current package installation flow
 
-1. Admin uploads a ZIP archive (default maximum 50 MiB).
-2. Admin supplies the exact manifest JSON, trusted release key ID and detached
-   Base64 Ed25519 signature.
-3. The server validates the manifest, checks the private staging directory,
-   creates a registry record and advances it through discovered, validated and
-   staged.
-4. The signature verifier checks the configured trusted public key and binds the
-   manifest to the SHA-256 checksum of the exact uploaded ZIP bytes.
-5. The secure archive installer rechecks the checksum and safely extracts the
-   package into plugins/vendor/plugin/version.
-6. The registry is marked installed only after the atomic filesystem move.
-7. The staged ZIP is deleted. The action is written to the admin activity log. No plugin entrypoint or migration is executed during installation.
+1. The Admin uploads a ZIP (default maximum 50 MiB), the exact manifest JSON, a trusted release key ID and a detached Base64 Ed25519 signature.
+2. The server validates the manifest and private staging path, computes SHA-256 over the exact ZIP bytes, and verifies the signature against `PLUGIN_TRUSTED_PUBLIC_KEYS`.
+3. The archive installer rechecks the checksum and rejects unsafe paths, links/special files, duplicate/case-colliding paths, excessive entries, oversized files, excessive expansion/compression ratios and unsafe destinations.
+4. Files are streamed into private staging and moved atomically to `plugins/<vendor>/<plugin>/<version>`. Installed-file SHA-256 hashes are stored in the registry.
+5. The registry becomes `installed` only after the move succeeds. The staged ZIP is removed. Installation does not execute the entrypoint or run plugin migrations.
 
-A failed, not-yet-installed registry entry can be retried after correcting the
-package or signature. An existing installed version cannot be overwritten.
-In-place updates are not enabled yet. Signed plugin migrations are executed only during explicit activation preflight, after installed-file integrity verification; installing a package alone does not mutate application data.
+A failed pre-install record can be retried after correcting the package. An installed version cannot be overwritten in place.
+
+## Activation and deactivation
+
+Activation is available for `installed` or `inactive` packages. Before changing the registry to active, the controller:
+
+- rejects activation while Laravel routes are cached;
+- re-verifies the detached release signature and current trusted key;
+- validates manifest schema and registry identity;
+- checks PHP, Laravel and LMS version constraints;
+- checks declared dependencies and conflicts;
+- verifies the complete installed-file integrity manifest;
+- runs only the signed package's tracked migrations;
+- records lifecycle history and an Admin activity event.
+
+The runtime registers verified active plugin routes on the next request. Deactivation transitions the registry to `inactive`; plugin-active middleware blocks its routes on subsequent requests. Installed files and data are retained.
+
+Dependency and conflict declarations are enforced at activation. The current controller preflights these records, but the complete lifecycle still needs stronger concurrent-operation locking and a broader acceptance matrix before production use.
+
+## Health checks, permissions and uninstall
+
+- **Health check:** available for installed, inactive, active and failed packages. It rechecks signature trust, manifest/registry identity, dependencies/conflicts and installed-file integrity. A failed plugin can return to inactive only after a successful health check. A health check does not execute the entrypoint or migrations.
+- **Permission grants:** the Admin can grant only permissions declared in the signed manifest. Unchecked permissions are denied immediately. Plugin navigation is filtered by active state, declared portal and granted permission; every route must still enforce server-side authorization.
+- **Uninstall:** only installed, inactive or failed plugins can be uninstalled. Active dependants block uninstall. The executable package directory is removed, while LMS data and plugin migration records are retained. Uninstall does not imply destructive data cleanup or migration rollback.
+
+Lifecycle history records plugin key/version, checksum, signing key ID, action, actor and safe details for install, activation, deactivation, health checks and uninstall.
+
+## Not yet delivered
+
+The current Manager is not a public marketplace or remote package catalogue. Signed in-place package updates, multi-version side-by-side retention, automatic rollback/restore, backup-before-upgrade orchestration, branch-specific plugin lifecycle controls and a complete dependency-cycle planner are not yet exposed as a finished workflow. Do not describe these as available.
+
+A migration rollback method exists in the migration runner, but it is not a complete Admin-controlled backup/rollback release workflow. Do not use it as a substitute for a verified database/files backup and restore rehearsal.
 
 ## Example manifest
 
@@ -44,22 +64,11 @@ In-place updates are not enabled yet. Signed plugin migrations are executed only
       "capabilities": ["example"]
     }
 
-The detached signature must be generated over the exact canonical payload from
-PluginSignatureVerifier::payloadForSignature($manifest, $sha256). See
-PLUGIN_SIGNATURE_VERIFICATION.md for the trusted public key configuration and
-canonical signing rules.
-
-## Not yet enabled
-
-The Manager deliberately does not offer activate, deactivate, update or uninstall
-controls yet. The isolated runtime must first enforce plugin boundaries for web
-routes, API routes, queued jobs, schedules, events and portal navigation. A
-plugin being installed does not mean its PHP entrypoint is loaded or executed.
-Manifest permissions are stored for review and are not automatically granted.
+The manifest is declarative and cannot grant itself permissions. The detached signature is generated over the canonical payload from `PluginSignatureVerifier::payloadForSignature($manifest, $sha256)`. See `PLUGIN_SIGNATURE_VERIFICATION.md` for key provisioning and signing rules.
 
 ## Portal resource authorization
 
-Plugin controllers must protect every route that loads an individual LMS resource through route model binding. Add the resource middleware to the route after declaring the route parameter:
+A plugin route that loads an individual LMS resource must use the resource middleware after declaring its route parameter:
 
 ```php
 $context->routesForPortal('teacher', 'teacher/plugin-courses', 'teacher.plugin-courses.', function (): void {
@@ -69,11 +78,11 @@ $context->routesForPortal('teacher', 'teacher/plugin-courses', 'teacher.plugin-c
 }, 'course.read');
 ```
 
-The plugin manifest must declare `course.read` in its `permissions` list, and a root Admin must grant it in Plugin Manager. The portal group still applies the plugin-active, authenticated, verified and role checks; the resource middleware adds the per-record scope.
+The manifest must declare `course.read`, and a root Admin must grant it. The portal group adds plugin-active, authentication, verification and matching role middleware. The resource middleware adds per-record access checks.
 
-The middleware accepts only bound Eloquent models and currently supports `User` (student records), `Course`, `Batch` and `Enrollment`. Unknown model types and unauthorized records return 404. Root Admin can access supported resources; Branch Managers are restricted to their active branch; Teachers to assigned courses/batches and their enrolled students; Students to their own enrollments; Guardians to students connected by an approved active guardian link.
+The current resource helper supports User (student records), Course, Batch and Enrollment. Root Admin access is unrestricted for these supported models; Branch Managers are limited to their active branch; Teachers to assigned courses/batches and their enrolled students; Students to their own enrollments; Guardians to students connected through an approved active guardian link. Unknown models and unauthorized records return 404.
 
-For collection endpoints, apply the same policy before pagination or aggregation:
+For collections, scope the query before pagination, aggregation or export:
 
 ```php
 $courses = app(PluginResourceAccess::class)
@@ -81,14 +90,8 @@ $courses = app(PluginResourceAccess::class)
     ->paginate();
 ```
 
-`scopeQuery()` supports User (student records), Course, Batch and Enrollment queries. It returns only records visible to the current actor and denies unsupported roles by returning an empty result. Branch Managers see direct course enrollments only when the learner belongs to their active branch; batch enrollments must also belong to that branch. Admin access is unrestricted for these supported models.
+Reports, exports and nested relations must scope every underlying query. Never fetch an unrestricted collection and filter it only in the view or after serialization.
 
-The middleware protects individual bound resources; the query helper protects the collection query itself. Reports, exports and nested relations must scope every underlying query as well. Never fetch an unrestricted collection and filter it in the view or after serialization.
+## cPanel and release boundary
 
-## Plugin health and version history
-
-Plugin Manager provides an explicit health check for installed, active, inactive and failed packages. It validates the manifest and registry identity, checks the current trusted signing key, re-verifies the persisted detached release signature when available, checks dependencies/conflicts, and verifies every installed file hash before reporting healthy.
-
-If an active plugin fails runtime signature or integrity verification, the runtime transitions it to `failed` so its routes are blocked. A failed package can return to `inactive` only after an administrator runs a successful health check. A health check does not execute plugin entrypoints or migrations.
-
-Lifecycle history records the plugin key/version, package checksum, signing key ID, action, resulting status, actor and safe details for install, activate, deactivate, uninstall and health-check events. It does not yet implement package upgrades, multiple installed versions or rollback.
+The package format is designed for shared hosting: runtime installation does not run Composer or shell commands. Dynamic plugin routes are incompatible with Laravel route caching; clear route cache before activation. Exact-head CI and cPanel ZIP packaging do not replace staging installation, browser, provider, backup/restore or real-host acceptance. No production activation or deployment is implied by a successful code merge.
