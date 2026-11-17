@@ -15,6 +15,8 @@ class AssistantRequestLimitTest extends TestCase
         parent::setUp();
 
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantRequestLimit.php');
+        $assistantMigration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_15_180000_create_universal_ai_assistant_tables.php');
+        $assistantMigration->up();
         $migration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_17_100000_create_ai_assistant_user_daily_requests.php');
         $migration->up();
     }
