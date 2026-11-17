@@ -16,6 +16,7 @@ require_once __DIR__.'/AdminLearnEarnExamController.php';
 require_once __DIR__.'/LearnEarnExamAttempt.php';
 require_once __DIR__.'/LearnEarnAttemptQuestion.php';
 require_once __DIR__.'/LearnEarnExamAnswer.php';
+require_once __DIR__.'/LearnEarnExamEntitlement.php';
 require_once __DIR__.'/LearnEarnScorer.php';
 require_once __DIR__.'/StudentLearnEarnController.php';
 
@@ -46,6 +47,7 @@ return new class implements PluginContract
         $context->routesForPortal('student', 'student/learn-earn', 'student.learn-earn.', function (): void {
             Route::get('/exams', [StudentLearnEarnController::class, 'index'])->name('exams.index');
             Route::get('/exams/{exam:slug}', [StudentLearnEarnController::class, 'show'])->name('exams.show');
+            Route::post('/exams/{exam:slug}/checkout/bkash', [StudentLearnEarnController::class, 'checkoutBkash'])->middleware('throttle:5,1')->name('exams.checkout.bkash');
             Route::post('/exams/{exam:slug}/start', [StudentLearnEarnController::class, 'start'])->middleware('throttle:5,1')->name('exams.start');
             Route::get('/attempts/{attempt}', [StudentLearnEarnController::class, 'attempt'])->whereNumber('attempt')->name('attempts.show');
             Route::post('/attempts/{attempt}/submit', [StudentLearnEarnController::class, 'submit'])->whereNumber('attempt')->middleware('throttle:5,1')->name('attempts.submit');
