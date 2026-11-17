@@ -16,7 +16,12 @@ final class AssistantTokenBudget
     public static function reserve(int $dailyBudget, int $configuredLimit, array $messages): ?array
     {
         $payload = json_encode($messages, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
-        $promptTokens = max(1, (int) ceil(mb_strlen($payload) / 3));
+        preg_match_all('/[^\\x00-\\x7F]/u', $payload, $unicodeCharacters);
+        $unicodeCount = count($unicodeCharacters[0]);
+        $characterCount = mb_strlen($payload, 'UTF-8');
+        $asciiCount = max(0, $characterCount - $unicodeCount);
+        // Count non-ASCII code points individually and allow a compact 3:1 ratio only for ASCII.
+        $promptTokens = max(1, $unicodeCount + (int) ceil($asciiCount / 3) + (4 * count($messages)));
         $date = today()->toDateString();
         $reservationId = (string) Str::uuid();
 
