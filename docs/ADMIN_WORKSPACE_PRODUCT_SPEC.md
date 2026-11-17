@@ -92,3 +92,12 @@ Delivery phases: (A) shared shell/design system; (B) content, media, menus, appe
 ## Explicit exclusions
 
 No external CMS installation, external CMS database schema/runtime, compatibility layer or external CMS branding; no copying proprietary themes/plugins; no arbitrary code execution or unreviewed package upload; no weakening LMS permissions, branch isolation, privacy or release security to imitate a external CMS convenience feature. Implement relevant external CMS-like administration capabilities plus Alom's academy-specific workflows.
+
+## Brand and terminology lock
+
+- The only administrator-facing product identity is **Alom's LMS Admin** (with the academy's approved logo, colors and typography).
+- Do not display, mention, link to, or expose the name, logo, iconography, terminology, URLs, badges, credits, compatibility claims or attribution of any third-party CMS in the product UI, login screen, emails, notifications, help pages, installer, demo data, generated metadata or customer-facing documentation.
+- Do not use third-party CMS names in navigation labels, page titles, settings, plugin/theme screens, browser titles, source-map labels or public assets. Use Alom's own vocabulary throughout.
+- Reproduce the expected management workflows and level of capability with original Laravel code, original UI components and Alom-specific labels; do not copy proprietary code, themes, plugin assets or distinctive branded artwork.
+- Internal engineering comparisons, if ever needed, must remain in private engineering notes and must never leak into shipped artifacts. This product specification itself uses neutral capability descriptions.
+- Release acceptance includes a repository/build-asset scan for third-party CMS brand strings and a manual check of the full customer-facing journey. Any accidental appearance blocks release.
