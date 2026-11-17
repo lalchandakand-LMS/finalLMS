@@ -18,6 +18,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class BkashPaymentFlowTest extends TestCase
@@ -36,6 +37,19 @@ class BkashPaymentFlowTest extends TestCase
             'services.bkash.app_key' => 'sandbox-app-key',
             'services.bkash.app_secret' => 'sandbox-app-secret',
             'services.bkash.verify_ssl' => true,
+        ]);
+
+        DB::table('plugin_registry')->insert([
+            'plugin_key' => 'aec.flash-sale',
+            'name' => 'Flash Sale',
+            'version' => '1.0.0',
+            'type' => 'module',
+            'status' => 'active',
+            'manifest' => json_encode(['key' => 'aec.flash-sale', 'permissions' => []], JSON_THROW_ON_ERROR),
+            'health_status' => 'healthy',
+            'metadata' => json_encode(['granted_permissions' => []], JSON_THROW_ON_ERROR),
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
     }
 
