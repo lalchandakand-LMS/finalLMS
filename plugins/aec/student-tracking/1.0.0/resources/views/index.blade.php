@@ -93,7 +93,7 @@
                 <tr style="text-align:left;border-bottom:1px solid var(--border);">
                     <th style="padding:11px;">Student</th>
                     <th style="padding:11px;">Active courses</th>
-                    <th style="padding:11px;">Attendance (30 days)</th>
+                    <th style="padding:11px;">Attendance ({{ $filters['from_date'] }} – {{ $filters['to_date'] }})</th>
                     <th style="padding:11px;">Completed lessons</th>
                     <th style="padding:11px;">Last learning activity</th>
                     <th style="padding:11px;">Status</th>
@@ -148,5 +148,5 @@
     </div>
     <div style="margin-top:18px;">{{ $students->links() }}</div>
 </div>
-<p class="muted" style="font-size:.85rem;margin-top:12px;">Attendance and learning activity use the selected date range. A student is flagged below {{ $riskRules['low_attendance_percent'] }}% attendance after {{ $riskRules['minimum_attendance_records'] }} records, or after {{ $riskRules['inactive_days'] }} days without recorded learning activity. Flags are review signals, not automated disciplinary decisions. GPS or background location is not collected.</p>
+<p class="muted" style="font-size:.85rem;margin-top:12px;">Attendance and completion totals use the selected date range; learning inactivity uses the latest activity across all dates. A student is flagged below {{ $riskRules['low_attendance_percent'] }}% attendance after {{ $riskRules['minimum_attendance_records'] }} records, or after {{ $riskRules['inactive_days'] }} days without recorded learning activity. Flags are review signals, not automated disciplinary decisions. GPS or background location is not collected.</p>
 @endsection
