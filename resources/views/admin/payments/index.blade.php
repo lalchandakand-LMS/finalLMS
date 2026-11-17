@@ -17,7 +17,10 @@
                 <div class="meta-row">
                     <div>
                         <span class="badge {{ $payment->status === 'approved' ? 'success' : ($payment->status === 'pending' ? 'warning' : 'info') }}">{{ __(ucfirst($payment->status)) }}</span>
-                        <h2 style="margin: 10px 0 6px;">{{ $payment->courseCombo?->title ?? $payment->course?->title ?? __('Course unavailable') }}</h2>
+                        <h2 style="margin: 10px 0 6px;">{{ $payment->learnEarnExam?->title ?? $payment->courseCombo?->title ?? $payment->course?->title ?? __('Course unavailable') }}</h2>
+                        @if($payment->learnEarnExam)
+                            <div class="muted">{{ __('Paid exam access:') }} {{ __('granted only after server-side bKash verification.') }}</div>
+                        @endif
                         @if($payment->courseCombo)
                             <div class="muted">{{ __('Combo includes:') }} {{ $payment->comboCourses->pluck('course_title')->implode(', ') }}</div>
                         @endif
@@ -37,7 +40,9 @@
                     </div>
                 </div>
 
-                @if($payment->status === 'pending')
+                @if($payment->status === 'pending' && $payment->learn_earn_exam_id)
+                    <p class="muted">{{ __('This exam payment is not eligible for manual approval or rejection. The gateway callback controls entitlement.') }}</p>
+                @elseif($payment->status === 'pending')
                     <div class="grid grid-2" style="margin-top: 16px;">
                         <form method="POST" action="{{ route('admin.payments.approve', $payment) }}">
                             @csrf
