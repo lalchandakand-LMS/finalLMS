@@ -11,6 +11,8 @@ use App\Models\CourseContentProgress;
 use App\Models\Enrollment;
 use App\Models\ExamAttempt;
 use App\Models\AssignmentSubmission;
+use App\Models\DashboardAnnouncement;
+use App\Models\SupportTicket;
 use App\Models\Setting;
 use App\Models\LessonProgress;
 use App\Models\User;
@@ -408,6 +410,26 @@ class StudentTrackingController extends Controller
             ->get();
 
         $allowedCourseIds = $enrollments->pluck('course_id')->filter()->unique()->values();
+        $announcements = Schema::hasTable('dashboard_announcements')
+            ? DashboardAnnouncement::currentlyActive()
+                ->whereIn('audience', ['all', 'student'])
+                ->where(fn (Builder $query) => $query->whereNull('branch_id')->orWhere('branch_id', $studentRecord->branch_id))
+                ->where(fn (Builder $query) => $query->whereNull('course_id')->orWhereIn('course_id', $allowedCourseIds))
+                ->with(['course:id,title', 'reads' => fn (Builder $reads) => $reads->where('user_id', $studentRecord->id)])
+                ->orderByDesc('priority')
+                ->orderByDesc('created_at')
+                ->limit(30)
+                ->get(['id', 'title', 'body', 'course_id', 'branch_id', 'starts_at', 'ends_at', 'created_at'])
+            : collect();
+
+        $supportTickets = $actor->isAdmin() && Schema::hasTable('support_tickets')
+            ? SupportTicket::query()
+                ->where('user_id', $studentRecord->id)
+                ->with('branch:id,name')
+                ->latest('last_message_at')
+                ->limit(20)
+                ->get(['id', 'user_id', 'branch_id', 'subject', 'status', 'last_message_at', 'created_at'])
+            : collect();
         $allowedBatchIds = $enrollments->pluck('batch_id')->filter()->unique()->values();
 
         $attendanceRecords = Attendance::query()
@@ -547,6 +569,8 @@ class StudentTrackingController extends Controller
         return view('student-tracking::show', [
             'student' => $studentRecord,
             'enrollments' => $enrollments,
+            'announcements' => $announcements,
+            'supportTickets' => $supportTickets,
             'attendanceRecords' => $attendanceRecords,
             'lessonProgress' => $lessonProgress,
             'contentProgress' => $contentProgress,
