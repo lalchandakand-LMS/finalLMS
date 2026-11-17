@@ -51,56 +51,57 @@ class PublicPopupController extends Controller
             'event' => ['required', 'string', Rule::in(['impression', 'click', 'dismissal'])],
         ]);
 
-        $campaign = PopupCampaign::query()->currentlyEligible()->find($popup);
-        if (! $campaign) {
-            return response()->json(['recorded' => false], 404);
-        }
+        $event = $validated['event'];
+        $consentGranted = $request->cookie('marketing_consent') === 'accepted';
 
-        if (! $campaign->analytics_enabled) {
-            return response()->json(['recorded' => false, 'reason' => 'analytics_disabled'], 202);
-        }
+        // Serialize analytics writes per campaign. The campaign row lock makes the
+        // impression-cap check and counter update one critical section on MySQL/MariaDB.
+        // insertOrIgnore + the unique (popup_id, event_date) index prevents two first
+        // events on the same day from racing into duplicate aggregate rows.
+        $result = DB::transaction(function () use ($popup, $event, $consentGranted): array {
+            $campaign = PopupCampaign::query()->whereKey($popup)->lockForUpdate()->first();
 
-        if ($campaign->require_consent_for_analytics && $request->cookie('marketing_consent') !== 'accepted') {
-            return response()->json(['recorded' => false, 'reason' => 'consent_required'], 202);
-        }
+            if (! $campaign || ! $campaign->isCurrentlyPublished()) {
+                return ['status' => 404, 'body' => ['recorded' => false]];
+            }
 
-        if ($validated['event'] === 'impression' && $campaign->hasReachedImpressionCap()) {
-            return response()->json(['recorded' => false, 'reason' => 'impression_cap_reached'], 202);
-        }
+            if (! $campaign->analytics_enabled) {
+                return ['status' => 202, 'body' => ['recorded' => false, 'reason' => 'analytics_disabled']];
+            }
 
-        $column = match ($validated['event']) {
-            'impression' => 'impressions',
-            'click' => 'clicks',
-            'dismissal' => 'dismissals',
-        };
+            if ($campaign->require_consent_for_analytics && ! $consentGranted) {
+                return ['status' => 202, 'body' => ['recorded' => false, 'reason' => 'consent_required']];
+            }
 
-        $timezone = $campaign->timezone ?: config('app.timezone', 'UTC');
-        $eventDate = now($timezone)->toDateString();
+            if ($event === 'impression' && $campaign->hasReachedImpressionCap()) {
+                return ['status' => 202, 'body' => ['recorded' => false, 'reason' => 'impression_cap_reached']];
+            }
 
-        DB::transaction(function () use ($campaign, $eventDate, $column): void {
-            $existing = DB::table('popup_ad_events')
+            $column = match ($event) {
+                'impression' => 'impressions',
+                'click' => 'clicks',
+                'dismissal' => 'dismissals',
+            };
+            $eventDate = now($campaign->timezone ?: config('app.timezone', 'UTC'))->toDateString();
+
+            DB::table('popup_ad_events')->insertOrIgnore([
+                'popup_id' => $campaign->id,
+                'event_date' => $eventDate,
+                'impressions' => 0,
+                'clicks' => 0,
+                'dismissals' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            DB::table('popup_ad_events')
                 ->where('popup_id', $campaign->id)
                 ->where('event_date', $eventDate)
-                ->lockForUpdate()
-                ->first();
+                ->increment($column, 1, ['updated_at' => now()]);
 
-            if ($existing) {
-                DB::table('popup_ad_events')
-                    ->where('id', $existing->id)
-                    ->increment($column, 1, ['updated_at' => now()]);
-            } else {
-                DB::table('popup_ad_events')->insert([
-                    'popup_id' => $campaign->id,
-                    'event_date' => $eventDate,
-                    'impressions' => $column === 'impressions' ? 1 : 0,
-                    'clicks' => $column === 'clicks' ? 1 : 0,
-                    'dismissals' => $column === 'dismissals' ? 1 : 0,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
-        });
+            return ['status' => 200, 'body' => ['recorded' => true]];
+        }, 3);
 
-        return response()->json(['recorded' => true]);
+        return response()->json($result['body'], $result['status']);
     }
 }

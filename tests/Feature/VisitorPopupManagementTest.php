@@ -409,6 +409,13 @@ class VisitorPopupManagementTest extends TestCase
             ->assertOk()
             ->assertJson(['recorded' => true]);
 
+        // The daily unique aggregate row is reused for every event type, and a
+        // second impression is declined after the campaign reaches its cap.
+        $this->call('POST', $eventUrl, ['event' => 'impression'], ['marketing_consent' => 'accepted'])
+            ->assertStatus(202)
+            ->assertJson(['recorded' => false, 'reason' => 'impression_cap_reached']);
+
+        $this->assertDatabaseCount('popup_ad_events', 1);
         $this->assertFalse(Schema::hasColumn('popup_ad_events', 'ip_address'));
         $this->assertFalse(Schema::hasColumn('popup_ad_events', 'user_id'));
         $this->assertDatabaseHas('popup_ad_events', [
