@@ -3,8 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    @if($institutionFaviconUrl)<link rel="icon" href="{{ $institutionFaviconUrl }}">@endif
     @php
         $hasSettingsTable = \Illuminate\Support\Facades\Schema::hasTable('settings');
+        $institutionName = $hasSettingsTable ? \App\Models\Setting::value('institution_name', config('app.name')) : config('app.name');
+        $institutionShortName = $hasSettingsTable ? \App\Models\Setting::value('institution_short_name', '') : '';
+        $institutionLogoUrl = $hasSettingsTable ? \App\Models\Setting::value('institution_logo_url') : null;
+        $institutionFaviconUrl = $hasSettingsTable ? \App\Models\Setting::value('institution_favicon_url') : null;
         $seoTitle = $hasSettingsTable ? \App\Models\Setting::value('seo_title', config('app.name')) : config('app.name');
         $seoDescription = $hasSettingsTable ? \App\Models\Setting::value('seo_description', 'Learn with guided courses, track your progress, and grow your skills.') : 'Learn with guided courses, track your progress, and grow your skills.';
         $seoKeywords = $hasSettingsTable ? \App\Models\Setting::value('seo_keywords', 'online learning, courses, education') : 'online learning, courses, education';
@@ -44,7 +49,7 @@
     <meta property="og:description" content="{{ $pageSeoDescription }}">
     <meta property="og:type" content="@yield('og_type', 'website')">
     <meta property="og:url" content="@yield('canonical_url', request()->url())">
-    <meta property="og:site_name" content="{{ config('app.name') }}">
+    <meta property="og:site_name" content="{{ $institutionName }}">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="{{ $pageSeoTitle }}">
     <meta name="twitter:description" content="{{ $pageSeoDescription }}">
@@ -345,7 +350,7 @@
 
     @if($isAdminLayout)
         <aside class="admin-sidebar" aria-label="Admin navigation">
-            <a class="admin-sidebar-brand" href="{{ route('dashboard') }}"><span>📘</span><strong>Alom’s English Center<br><small style="font-weight:500;color:#a9bee0;">Admin workspace</small></strong></a>
+            <a class="admin-sidebar-brand" href="{{ route('dashboard') }}">@if($institutionLogoUrl)<img src="{{ $institutionLogoUrl }}" alt="{{ $institutionName }}" style="width:39px;height:39px;object-fit:contain;border-radius:10px;background:#fff;padding:3px;">@else<span>📘</span>@endif<strong>{{ $institutionName }}<br><small style="font-weight:500;color:#a9bee0;">{{ $institutionShortName ?: __('Admin workspace') }}</small></strong></a>
             <a class="{{ request()->routeIs('notices.*') ? 'active' : '' }}" href="{{ route('notices.index') }}"><span>🔔</span><span class="nav-text">Notice Board</span></a>
             @if(auth()->user()->isAdmin())
             <div class="admin-sidebar-label">Overview</div>
@@ -433,7 +438,7 @@
     @endif
     <header class="topbar">
         <nav class="nav">
-            <a href="/{{ auth()->check() ? 'dashboard' : '' }}" class="brand">{{ config('app.name') }}</a>
+            <a href="/{{ auth()->check() ? 'dashboard' : '' }}" class="brand">@if($institutionLogoUrl)<img src="{{ $institutionLogoUrl }}" alt="" style="height:32px;max-width:140px;object-fit:contain;vertical-align:middle;margin-right:8px;">@endif{{ $institutionName }}</a>
             @if($isAdminLayout)
             <div class="nav-links">
                 <button type="button" class="admin-toolbar-toggle" id="admin-sidebar-toggle" aria-label="Toggle admin navigation" aria-expanded="true">☰</button>
