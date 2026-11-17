@@ -140,6 +140,31 @@
                                     <button class="btn secondary" type="submit">{{ __('Deactivate') }}</button>
                                 </form>
                             @endif
+                            @if($plugin->status === 'inactive')
+                                <details style="margin-top:8px;">
+                                    <summary>{{ __('Update signed plugin') }}</summary>
+                                    <form method="POST" action="{{ route('admin.plugins.update', $plugin->plugin_key) }}" enctype="multipart/form-data" style="min-width:300px;margin-top:8px;">
+                                        @csrf
+                                        <label>{{ __('New version ZIP') }} <input type="file" name="package" accept=".zip,application/zip" required></label>
+                                        <label>{{ __('New signed manifest JSON') }} <textarea name="manifest" rows="6" required></textarea></label>
+                                        <label>{{ __('Detached signature (Base64)') }} <textarea name="signature" rows="2" required></textarea></label>
+                                        <label>{{ __('Trusted release key ID') }} <input type="text" name="key_id" maxlength="120" required></label>
+                                        <label style="display:block;margin:8px 0;"><input type="checkbox" name="backup_confirmed" value="1" required> {{ __('I created and verified a restorable full database and files backup.') }}</label>
+                                        <button class="btn primary" type="submit" onclick="return confirm('{{ __('Update the inactive plugin? The previous signed package will be retained for rollback.') }}')">{{ __('Verify and update') }}</button>
+                                    </form>
+                                </details>
+                            @endif
+                            @if(in_array($plugin->status, ['installed', 'inactive'], true) && is_array($plugin->metadata['previous_version_snapshot'] ?? null))
+                                <details style="margin-top:8px;">
+                                    <summary>{{ __('Rollback to previous version') }} (v{{ $plugin->metadata['previous_version_snapshot']['version'] ?? '?' }})</summary>
+                                    <form method="POST" action="{{ route('admin.plugins.rollback', $plugin->plugin_key) }}" style="margin-top:8px;">
+                                        @csrf
+                                        <label style="display:block;margin:8px 0;"><input type="checkbox" name="backup_confirmed" value="1" required> {{ __('I created and verified a restorable full database and files backup.') }}</label>
+                                        <label style="display:block;margin:8px 0;"><input type="checkbox" name="confirm_rollback" value="1" required> {{ __('I understand that rollback runs the new version migrations down methods; data-preserving guards may block rollback.') }}</label>
+                                        <button class="btn secondary" type="submit" onclick="return confirm('{{ __('Rollback this plugin to the previous signed version?') }}')">{{ __('Rollback version') }}</button>
+                                    </form>
+                                </details>
+                            @endif
                             @if(in_array($plugin->status, ['installed', 'inactive', 'failed'], true))
                                 <form method="POST" action="{{ route('admin.plugins.uninstall', $plugin->plugin_key) }}" style="display:inline;" onsubmit="return confirm('{{ __('Uninstall this plugin package? Conversation history, LMS data and migration records will be retained.') }}')">
                                     @csrf
