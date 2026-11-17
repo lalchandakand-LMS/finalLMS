@@ -6,6 +6,7 @@ use App\Http\Controllers\AdminPluginManagerController;
 use App\Http\Controllers\AdminPaymentGatewayController;
 use App\Http\Controllers\AiDeveloperController;
 use App\Http\Controllers\AdminSettingsController;
+use App\Http\Controllers\AdminSystemHealthController;
 use App\Http\Controllers\AdminVerificationController;
 use App\Http\Controllers\MarketingCenterController;
 use App\Http\Controllers\MetaAdsIntegrationController;
@@ -289,6 +290,8 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         ->name('courses.lessons.complete');
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
+        Route::get('/system-health', [AdminSystemHealthController::class, 'index'])->name('admin.system-health.index');
+        Route::post('/system-health/run', [AdminSystemHealthController::class, 'run'])->middleware('throttle:3,1')->name('admin.system-health.run');
         Route::get('/modules', [AdminModuleRegistryController::class, 'index'])->name('admin.modules.index');
         Route::patch('/modules/{key}', [AdminModuleRegistryController::class, 'update'])->where('key', '[a-z_]+')->middleware('throttle:20,1')->name('admin.modules.update');
         Route::get('/plugins', [AdminPluginManagerController::class, 'index'])->name('admin.plugins.index');
