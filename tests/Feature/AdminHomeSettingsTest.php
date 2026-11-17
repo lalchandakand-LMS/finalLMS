@@ -114,7 +114,7 @@ class AdminHomeSettingsTest extends TestCase
     public function test_admin_can_configure_custom_brand_loading_screen(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
-        $media = \\App\\Models\\MediaAsset::factory()->create(['mime_type' => 'image/png']);
+        $media = \\App\\Models\\MediaAsset::query()->create(['uploaded_by' => $admin->id, 'disk' => 'public', 'path' => 'brand/logo.png', 'original_name' => 'logo.png', 'mime_type' => 'image/png', 'size' => 1024]);
 
         $this->actingAs($admin)
             ->post(route('admin.settings.update'), [
@@ -131,7 +131,7 @@ class AdminHomeSettingsTest extends TestCase
         $this->assertDatabaseHas('settings', ['key' => 'loading_screen_logo_media_id', 'value' => (string) $media->id]);
         $this->assertDatabaseHas('settings', ['key' => 'loading_screen_style', 'value' => 'pulse']);
 
-        $this->get('/')->assertOk()->assertSee('aec-brand-loader')->assertSee('Please wait')->assertSee('data-style="pulse"', false);
+        $this->get(route('admin.settings.index'))->assertOk()->assertSee('aec-brand-loader')->assertSee('Please wait')->assertSee('data-style="pulse"', false);
     }
 
     public function test_invalid_custom_loading_screen_settings_are_rejected(): void
