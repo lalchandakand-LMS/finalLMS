@@ -13,6 +13,7 @@ use App\Models\Certificate;
 use App\Models\Course;
 use App\Models\DashboardAnnouncement;
 use App\Models\Enrollment;
+use App\Models\Setting;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
