@@ -13,6 +13,11 @@ require_once __DIR__.'/AdminLearnEarnController.php';
 require_once __DIR__.'/LearnEarnExam.php';
 require_once __DIR__.'/LearnEarnExamQuestion.php';
 require_once __DIR__.'/AdminLearnEarnExamController.php';
+require_once __DIR__.'/LearnEarnExamAttempt.php';
+require_once __DIR__.'/LearnEarnAttemptQuestion.php';
+require_once __DIR__.'/LearnEarnExamAnswer.php';
+require_once __DIR__.'/LearnEarnScorer.php';
+require_once __DIR__.'/StudentLearnEarnController.php';
 
 return new class implements PluginContract
 {
@@ -38,6 +43,21 @@ return new class implements PluginContract
             Route::patch('/categories/{category}/archive', [AdminLearnEarnController::class, 'archiveCategory'])->whereNumber('category')->name('categories.archive');
         }, 'learn-earn.manage');
 
+        $context->routesForPortal('student', 'student/learn-earn', 'student.learn-earn.', function (): void {
+            Route::get('/exams', [StudentLearnEarnController::class, 'index'])->name('exams.index');
+            Route::get('/exams/{exam:slug}', [StudentLearnEarnController::class, 'show'])->name('exams.show');
+            Route::post('/exams/{exam:slug}/start', [StudentLearnEarnController::class, 'start'])->middleware('throttle:5,1')->name('exams.start');
+            Route::get('/attempts/{attempt}', [StudentLearnEarnController::class, 'attempt'])->whereNumber('attempt')->name('attempts.show');
+            Route::post('/attempts/{attempt}/submit', [StudentLearnEarnController::class, 'submit'])->whereNumber('attempt')->middleware('throttle:5,1')->name('attempts.submit');
+            Route::get('/attempts/{attempt}/result', [StudentLearnEarnController::class, 'result'])->whereNumber('attempt')->name('attempts.result');
+            Route::get('/history', [StudentLearnEarnController::class, 'history'])->name('history');
+        }, 'learn-earn.take-exams');
+
+        $context->routesForPortal('public', 'learn-earn/exams', 'learn-earn.exams.', function (): void {
+            Route::get('/', [StudentLearnEarnController::class, 'publicIndex'])->name('index');
+            Route::get('/{exam:slug}', [StudentLearnEarnController::class, 'publicShow'])->name('show');
+        });
+
         $context->registerPortalNavigation('admin', 'Learn & Earn Questions', 'admin.learn-earn.questions.index', [
             'icon' => '📝',
             'permission' => 'learn-earn.manage',
@@ -45,6 +65,13 @@ return new class implements PluginContract
         $context->registerPortalNavigation('admin', 'Learn & Earn Exams', 'admin.learn-earn.exams.index', [
             'icon' => '🧪',
             'permission' => 'learn-earn.manage',
+        ]);
+        $context->registerPortalNavigation('student', 'Learn & Earn', 'student.learn-earn.exams.index', [
+            'icon' => '🧪',
+            'permission' => 'learn-earn.take-exams',
+        ]);
+        $context->registerPortalNavigation('public', 'Exams', 'learn-earn.exams.index', [
+            'icon' => '🧪',
         ]);
     }
 
