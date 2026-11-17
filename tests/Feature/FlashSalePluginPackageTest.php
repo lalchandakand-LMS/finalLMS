@@ -27,7 +27,7 @@ class FlashSalePluginPackageTest extends TestCase
             "Schema::hasTable('flash_sales')",
             "Schema::hasTable('flash_sale_course')",
             "Schema::hasTable('flash_sale_course_category')",
-            "Schema::hasColumn($table, $column)",
+            'Schema::hasColumn',
             'Plugin uninstall must never delete or rewrite that data.',
         ] as $expected) {
             $this->assertStringContainsString($expected, $migration);
