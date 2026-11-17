@@ -167,7 +167,7 @@ class StudentTrackingPluginTest extends TestCase
     {
         $student = User::factory()->create(['role' => 'student']);
 
-        $this->expectException(\\Symfony\\Component\\HttpKernel\\Exception\\HttpException::class);
+        $this->expectException(\\Symfony\Component\HttpKernel\Exception\HttpException::class);
         $this->riskActionFor($student, $student->id, [
             'risk_code' => 'inactive_learning',
             'action' => 'dismiss',
