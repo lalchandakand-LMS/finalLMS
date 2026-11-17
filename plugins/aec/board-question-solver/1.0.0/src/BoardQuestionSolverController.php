@@ -32,7 +32,7 @@ final class BoardQuestionSolverController extends Controller {
   $reservation=null;$settled=false;
   try{
    $key=AssistantSettings::apiKey();$base=rtrim((string)$ai['base_url'],'/');$options=app(AiDeveloperProviderEndpoint::class)->curlOptionsFor($base);
-   $budgetMessages=$messages;if($imageData!==null)$budgetMessages[]=['role'=>'user','content'=>'[One uploaded question image; reserve an additional vision-token allowance.] '.str_repeat('image ',1000)];
+   $budgetMessages=[['role'=>'system','content'=>$messages[0]['content']],['role'=>'user','content'=>$prompt.($imageData!==null?' [Attached image; reserve vision input tokens.] '.str_repeat('image ',1000):'')]];
    $reservation=AssistantTokenBudget::reserve((int)$ai['daily_token_budget'],min((int)$ai['max_tokens'],2400),$budgetMessages);
    if($reservation===null)return response()->json(['message'=>'Institution AI token budget is exhausted.'],429);
    $response=Http::withToken($key)->acceptJson()->timeout(60)->withOptions(array_merge(['allow_redirects'=>false,'stream'=>true],$options))->post($base.'/chat/completions',['model'=>$ai['model'],'temperature'=>0.2,'max_tokens'=>$reservation['max_tokens'],'messages'=>$messages]);
