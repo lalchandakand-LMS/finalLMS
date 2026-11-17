@@ -48,7 +48,7 @@
     <h2>{{ __('Data access policy') }}</h2>
     <p class="muted">{{ __('General Guidance Only remains the default. Enable read-only course and enrollment context separately for each role only after reviewing your institution privacy policy.') }}</p>
     <div class="grid grid-2">
-        @foreach($roles as $role)
+        @foreach($dataAccessRoles as $role)
             <label class="panel" style="display:flex;gap:10px;align-items:center;">
                 <input type="checkbox" name="role_data_access[{{ $role }}]" value="1" @checked(old('role_data_access.'.$role, $settings['role_data_access'][$role] ?? false))>
                 <span>{{ __(ucwords(str_replace('_', ' ', $role)).' read-only course context') }}</span>
