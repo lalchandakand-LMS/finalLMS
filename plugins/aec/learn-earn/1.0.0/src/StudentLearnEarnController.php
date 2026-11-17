@@ -3,10 +3,14 @@
 namespace Aloms\LearnEarn;
 
 use App\Http\Controllers\Controller;
+use App\Models\Payment;
+use App\Services\Payments\PaymentGatewayManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use Illuminate\Support\Str;
+use Throwable;
 
 class StudentLearnEarnController extends Controller
 {
@@ -50,18 +54,103 @@ class StudentLearnEarnController extends Controller
         return view('learn-earn::student.index', compact('exams', 'recentAttempts'));
     }
 
-    public function show(Request $request, LearnEarnExam $exam): View
+    public function show(Request $request, LearnEarnExam $exam, PaymentGatewayManager $gateways): View
     {
         abort_unless($request->user()?->isStudent(), 403);
         abort_unless($exam->status === 'published' && $exam->ends_at->gte(now()), 404);
 
+        $studentId = (int) $request->user()->id;
         $attempt = LearnEarnExamAttempt::query()
             ->where('exam_id', $exam->id)
-            ->where('student_id', $request->user()->id)
+            ->where('student_id', $studentId)
             ->latest('attempt_number')
             ->first();
+        $hasEntitlement = LearnEarnExamEntitlement::query()
+            ->where('exam_id', $exam->id)
+            ->where('student_id', $studentId)
+            ->where('status', 'active')
+            ->exists();
+        $pendingPayment = Payment::query()
+            ->where('learn_earn_exam_id', $exam->id)
+            ->where('user_id', $studentId)
+            ->where('status', 'pending')
+            ->latest('id')
+            ->first();
+        $bkashAvailable = $exam->access_type === 'paid' && $gateways->isAvailable('bkash');
 
-        return view('learn-earn::student.show', compact('exam', 'attempt'));
+        return view('learn-earn::student.show', compact(
+            'exam',
+            'attempt',
+            'hasEntitlement',
+            'pendingPayment',
+            'bkashAvailable'
+        ));
+    }
+
+    public function checkoutBkash(Request $request, LearnEarnExam $exam, PaymentGatewayManager $gateways): RedirectResponse
+    {
+        abort_unless($request->user()?->isStudent(), 403);
+        abort_unless($gateways->isAvailable('bkash'), 503, __('bKash checkout is not enabled or configured.'));
+
+        $student = $request->user();
+        $payment = DB::transaction(function () use ($exam, $student): Payment {
+            $lockedExam = LearnEarnExam::query()->lockForUpdate()->findOrFail($exam->id);
+            abort_unless(
+                $lockedExam->status === 'published'
+                    && $lockedExam->access_type === 'paid'
+                    && (float) $lockedExam->price > 0
+                    && strtoupper((string) $lockedExam->currency) === 'BDT'
+                    && $lockedExam->ends_at->gte(now()),
+                422,
+                __('This paid exam is not available for checkout.')
+            );
+
+            $owned = LearnEarnExamEntitlement::query()
+                ->where('exam_id', $lockedExam->id)
+                ->where('student_id', $student->id)
+                ->where('status', 'active')
+                ->exists();
+            abort_if($owned, 409, __('You already have access to this exam.'));
+
+            $pending = Payment::query()
+                ->where('learn_earn_exam_id', $lockedExam->id)
+                ->where('user_id', $student->id)
+                ->where('status', 'pending')
+                ->exists();
+            abort_if($pending, 409, __('A payment for this exam is already awaiting verification. Do not pay again.'));
+
+            return Payment::query()->create([
+                'user_id' => $student->id,
+                'course_id' => null,
+                'order_id' => null,
+                'learn_earn_exam_id' => $lockedExam->id,
+                'method' => 'bkash',
+                'gateway_provider' => 'bkash',
+                'amount' => number_format((float) $lockedExam->price, 2, '.', ''),
+                'currency' => 'BDT',
+                'transaction_reference' => 'LEARN-EARN-'.Str::upper(Str::random(24)),
+                'status' => 'pending',
+            ]);
+        });
+
+        try {
+            $checkout = $gateways->driver('bkash')->createCheckout(
+                $payment,
+                route('payments.bkash.callback'),
+                (string) $payment->user_id
+            );
+            $payment->update(['gateway_payment_id' => $checkout['payment_id']]);
+
+            return redirect()->away($checkout['checkout_url']);
+        } catch (Throwable) {
+            $payment->update([
+                'status' => 'rejected',
+                'admin_note' => 'bKash checkout could not be initialized for the paid Learn & Earn exam. The student may retry.',
+            ]);
+
+            return redirect()->route('student.learn-earn.exams.show', $exam)
+                ->with('error', __('bKash checkout could not be started. Please try again or contact the academy.'));
+        }
     }
 
     public function start(Request $request, LearnEarnExam $exam): RedirectResponse
@@ -77,8 +166,14 @@ class StudentLearnEarnController extends Controller
                 __('This exam is not currently available.')
             );
 
-            // Paid access is intentionally denied until a verified checkout and entitlement flow is installed.
-            abort_unless($lockedExam->access_type === 'free', 402, __('Payment verification is required before this paid exam can be started.'));
+            if ($lockedExam->access_type === 'paid') {
+                $hasEntitlement = LearnEarnExamEntitlement::query()
+                    ->where('exam_id', $lockedExam->id)
+                    ->where('student_id', $request->user()->id)
+                    ->where('status', 'active')
+                    ->exists();
+                abort_unless($hasEntitlement, 403, __('Verified payment is required before this paid exam can be started.'));
+            }
 
             $studentId = (int) $request->user()->id;
             $existing = LearnEarnExamAttempt::query()
