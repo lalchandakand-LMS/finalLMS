@@ -22,6 +22,19 @@ class AdminSettingsController extends Controller
     public function update(Request $request): RedirectResponse
     {
         $validated = $request->validate([
+            'institution_name' => ['sometimes', 'required', 'string', 'max:160'],
+            'institution_short_name' => ['nullable', 'string', 'max:60'],
+            'institution_tagline' => ['nullable', 'string', 'max:180'],
+            'institution_contact_email' => ['nullable', 'email', 'max:190'],
+            'institution_contact_phone' => ['nullable', 'string', 'max:40'],
+            'institution_address' => ['nullable', 'string', 'max:500'],
+            'institution_website' => ['nullable', 'url', 'max:255'],
+            'institution_logo_url' => ['nullable', 'url', 'max:500'],
+            'institution_favicon_url' => ['nullable', 'url', 'max:500'],
+            'site_primary_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'site_background_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'site_logo_media_id' => ['nullable', 'integer', 'min:1'],
+            'site_favicon_media_id' => ['nullable', 'integer', 'min:1'],
             'home_title' => ['nullable', 'string', 'max:255'],
             'home_subtitle' => ['nullable', 'string', 'max:500'],
             'home_cta_primary' => ['nullable', 'string', 'max:50'],
@@ -114,6 +127,13 @@ class AdminSettingsController extends Controller
             ];
         })->filter()->values()->all();
         unset($validated['payment_methods'], $validated['home_slides']);
+
+        foreach (['site_logo_media_id', 'site_favicon_media_id'] as $mediaSetting) {
+            $mediaId = $validated[$mediaSetting] ?? null;
+            if ($mediaId !== null && !MediaAsset::query()->whereKey($mediaId)->where('mime_type', 'like', 'image/%')->exists()) {
+                return back()->withErrors([$mediaSetting => 'Please select a valid image from the Media Library.'])->withInput();
+            }
+        }
 
         foreach ($validated as $key => $value) {
             Setting::setValue($key, $value ?? '');

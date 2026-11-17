@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Setting;
 use App\Services\FreshDatabaseInspector;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -140,6 +141,8 @@ class InstallController extends Controller
             if (Artisan::call('db:seed', ['--force' => true]) !== 0) {
                 throw new RuntimeException('Default application settings could not be created.');
             }
+
+            Setting::setValue('institution_name', $validated['site_name']);
 
             User::create([
                 'name' => $validated['admin_name'],

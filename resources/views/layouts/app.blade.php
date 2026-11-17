@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     @php
         $hasSettingsTable = \Illuminate\Support\Facades\Schema::hasTable('settings');
+        $institutionName = $hasSettingsTable ? \App\Models\Setting::value('institution_name', config('app.name')) : config('app.name');
+        $institutionShortName = $hasSettingsTable ? \App\Models\Setting::value('institution_short_name', '') : '';
+        $institutionLogoUrl = $hasSettingsTable ? \App\Models\Setting::value('institution_logo_url') : null;
+        $institutionFaviconUrl = $hasSettingsTable ? \App\Models\Setting::value('institution_favicon_url') : null;
+        $institutionLogoMediaId = $hasSettingsTable ? (int) \App\Models\Setting::value('site_logo_media_id', 0) : 0;
+        $institutionFaviconMediaId = $hasSettingsTable ? (int) \App\Models\Setting::value('site_favicon_media_id', 0) : 0;
+        $institutionLogoMedia = $institutionLogoMediaId ? \App\Models\MediaAsset::query()->whereKey($institutionLogoMediaId)->where('mime_type', 'like', 'image/%')->first() : null;
+        $institutionFaviconMedia = $institutionFaviconMediaId ? \App\Models\MediaAsset::query()->whereKey($institutionFaviconMediaId)->where('mime_type', 'like', 'image/%')->first() : null;
+        $institutionLogoUrl = $institutionLogoMedia?->url ?: $institutionLogoUrl;
+        $institutionFaviconUrl = $institutionFaviconMedia?->url ?: $institutionFaviconUrl;
         $seoTitle = $hasSettingsTable ? \App\Models\Setting::value('seo_title', config('app.name')) : config('app.name');
         $seoDescription = $hasSettingsTable ? \App\Models\Setting::value('seo_description', 'Learn with guided courses, track your progress, and grow your skills.') : 'Learn with guided courses, track your progress, and grow your skills.';
         $seoKeywords = $hasSettingsTable ? \App\Models\Setting::value('seo_keywords', 'online learning, courses, education') : 'online learning, courses, education';
@@ -19,8 +29,8 @@
         $websiteFooterTitle = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('footer_title', config('app.name')) : config('app.name');
         $websiteFooterText = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('footer_text', '') : '';
         $websiteFooterLinks = $isPublicLayout && $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('footer_links', '[]'), true) : [];
-        $themePrimary = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('site_primary_color', '#1546a8') : '#1546a8';
-        $themeBackground = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('site_background_color', '#f3f6fb') : '#f3f6fb';
+        $themePrimary = $hasSettingsTable ? \App\Models\Setting::value('site_primary_color', '#1546a8') : '#1546a8';
+        $themeBackground = $hasSettingsTable ? \App\Models\Setting::value('site_background_color', '#f3f6fb') : '#f3f6fb';
         if (!preg_match('/^#[0-9A-Fa-f]{6}$/', (string) $themePrimary)) $themePrimary = '#1546a8';
         if (!preg_match('/^#[0-9A-Fa-f]{6}$/', (string) $themeBackground)) $themeBackground = '#f3f6fb';
         $themeBackgroundStyle = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('site_background_style', 'soft-gradient') : 'soft-gradient';
@@ -36,6 +46,7 @@
         $pageSeoTitle = trim($__env->yieldContent('seo_title')) ?: (trim($__env->yieldContent('title')) ?: $seoTitle);
         $pageSeoDescription = trim($__env->yieldContent('seo_description')) ?: (trim($__env->yieldContent('meta_description')) ?: $seoDescription);
     @endphp
+    @if($institutionFaviconUrl)<link rel="icon" href="{{ $institutionFaviconUrl }}">@endif
     <title>@yield('title', $pageSeoTitle)</title>
     <meta name="description" content="{{ $pageSeoDescription }}">
     <meta name="keywords" content="{{ $seoKeywords }}">
@@ -44,7 +55,7 @@
     <meta property="og:description" content="{{ $pageSeoDescription }}">
     <meta property="og:type" content="@yield('og_type', 'website')">
     <meta property="og:url" content="@yield('canonical_url', request()->url())">
-    <meta property="og:site_name" content="{{ config('app.name') }}">
+    <meta property="og:site_name" content="{{ $institutionName }}">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="{{ $pageSeoTitle }}">
     <meta name="twitter:description" content="{{ $pageSeoDescription }}">
@@ -345,7 +356,7 @@
 
     @if($isAdminLayout)
         <aside class="admin-sidebar" aria-label="Admin navigation">
-            <a class="admin-sidebar-brand" href="{{ route('dashboard') }}"><span>📘</span><strong>Alom’s English Center<br><small style="font-weight:500;color:#a9bee0;">Admin workspace</small></strong></a>
+            <a class="admin-sidebar-brand" href="{{ route('dashboard') }}">@if($institutionLogoUrl)<img src="{{ $institutionLogoUrl }}" alt="{{ $institutionName }}" style="width:39px;height:39px;object-fit:contain;border-radius:10px;background:#fff;padding:3px;">@else<span>📘</span>@endif<strong>{{ $institutionName }}<br><small style="font-weight:500;color:#a9bee0;">{{ $institutionShortName ?: __('Admin workspace') }}</small></strong></a>
             <a class="{{ request()->routeIs('notices.*') ? 'active' : '' }}" href="{{ route('notices.index') }}"><span>🔔</span><span class="nav-text">Notice Board</span></a>
             @if(auth()->user()->isAdmin())
             <div class="admin-sidebar-label">Overview</div>
@@ -428,12 +439,12 @@
                     @endif
                 @endif
             @endif
-            <div class="admin-sidebar-footer">Alom’s English Center<br>Learning Management System</div>
+            <div class="admin-sidebar-footer">{{ $institutionName }}<br>{{ $hasSettingsTable ? \App\Models\Setting::value('institution_tagline', __('Learning Management System')) : __('Learning Management System') }}</div>
         </aside>
     @endif
     <header class="topbar">
         <nav class="nav">
-            <a href="/{{ auth()->check() ? 'dashboard' : '' }}" class="brand">{{ config('app.name') }}</a>
+            <a href="/{{ auth()->check() ? 'dashboard' : '' }}" class="brand">@if($institutionLogoUrl)<img src="{{ $institutionLogoUrl }}" alt="" style="height:32px;max-width:140px;object-fit:contain;vertical-align:middle;margin-right:8px;">@endif{{ $institutionName }}</a>
             @if($isAdminLayout)
             <div class="nav-links">
                 <button type="button" class="admin-toolbar-toggle" id="admin-sidebar-toggle" aria-label="Toggle admin navigation" aria-expanded="true">☰</button>

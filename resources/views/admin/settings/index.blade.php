@@ -1,12 +1,12 @@
 @extends('layouts.app')
 
-@section('title', __('Homepage Control') . ' | ' . config('app.name'))
+@section('title', __('Website & Institution Settings') . ' | ' . config('app.name'))
 
 @section('content')
     <div class="page-header">
         <div>
             <span class="badge info">Admin</span>
-            <h1 style="margin: 12px 0 0;">{{ __('Homepage control') }}</h1>
+            <h1 style="margin: 12px 0 0;">{{ __('Website & institution settings') }}</h1>
         </div>
         <a href="{{ route('dashboard') }}" class="btn secondary">{{ __('Back to dashboard') }}</a>
     </div>
@@ -14,6 +14,44 @@
     <div class="panel" style="max-width: 980px; margin: 0 auto;">
         <form method="POST" action="{{ route('admin.settings.update') }}">
             @csrf
+
+            <section class="panel" style="padding:20px;margin-bottom:24px;border:1px solid var(--border);">
+                <span class="badge info">{{ __('Institution identity') }}</span>
+                <h2 style="margin:12px 0 6px;">{{ __('Make this installation your own') }}</h2>
+                <p class="muted">{{ __('Set the identity shown to your students, staff and visitors. These details belong to this installation only.') }}</p>
+                <div class="grid grid-2">
+                    <div><label for="institution-name">{{ __('Institution name') }}</label><input id="institution-name" name="institution_name" required maxlength="160" value="{{ old('institution_name', $settings['institution_name'] ?? config('app.name')) }}"></div>
+                    <div><label for="institution-short-name">{{ __('Short name') }}</label><input id="institution-short-name" name="institution_short_name" maxlength="60" value="{{ old('institution_short_name', $settings['institution_short_name'] ?? '') }}"></div>
+                    <div><label for="institution-tagline">{{ __('Tagline') }}</label><input id="institution-tagline" name="institution_tagline" maxlength="180" value="{{ old('institution_tagline', $settings['institution_tagline'] ?? '') }}"></div>
+                    <div><label for="institution-contact-email">{{ __('Contact email') }}</label><input id="institution-contact-email" type="email" name="institution_contact_email" maxlength="190" value="{{ old('institution_contact_email', $settings['institution_contact_email'] ?? '') }}"></div>
+                    <div><label for="institution-contact-phone">{{ __('Contact phone') }}</label><input id="institution-contact-phone" name="institution_contact_phone" maxlength="40" value="{{ old('institution_contact_phone', $settings['institution_contact_phone'] ?? '') }}"></div>
+                    <div><label for="institution-website">{{ __('Website URL') }}</label><input id="institution-website" type="url" name="institution_website" maxlength="255" placeholder="https://example.edu" value="{{ old('institution_website', $settings['institution_website'] ?? '') }}"></div>
+                    <div><label for="institution-logo-url">{{ __('Logo URL') }}</label><input id="institution-logo-url" type="url" name="institution_logo_url" maxlength="500" placeholder="https://example.edu/logo.png" value="{{ old('institution_logo_url', $settings['institution_logo_url'] ?? '') }}"></div>
+                    <div><label for="institution-favicon-url">{{ __('Favicon URL') }}</label><input id="institution-favicon-url" type="url" name="institution_favicon_url" maxlength="500" placeholder="https://example.edu/favicon.ico" value="{{ old('institution_favicon_url', $settings['institution_favicon_url'] ?? '') }}"></div>
+                    <div>
+                        <label for="institution-logo-media">{{ __('Logo from Media Library') }}</label>
+                        <select id="institution-logo-media" name="site_logo_media_id">
+                            <option value="">{{ __('Use logo URL / no uploaded logo') }}</option>
+                            @foreach($mediaAssets as $asset)
+                                <option value="{{ $asset->id }}" @selected((string) old('site_logo_media_id', $settings['site_logo_media_id'] ?? '') === (string) $asset->id)>{{ $asset->original_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label for="institution-favicon-media">{{ __('Favicon from Media Library') }}</label>
+                        <select id="institution-favicon-media" name="site_favicon_media_id">
+                            <option value="">{{ __('Use favicon URL / no uploaded favicon') }}</option>
+                            @foreach($mediaAssets as $asset)
+                                <option value="{{ $asset->id }}" @selected((string) old('site_favicon_media_id', $settings['site_favicon_media_id'] ?? '') === (string) $asset->id)>{{ $asset->original_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div style="grid-column:1/-1;"><label for="institution-address">{{ __('Institution address') }}</label><textarea id="institution-address" name="institution_address" rows="2" maxlength="500">{{ old('institution_address', $settings['institution_address'] ?? '') }}</textarea></div>
+                    <div><label for="site-primary-color">{{ __('Primary brand color') }}</label><input id="site-primary-color" type="color" name="site_primary_color" value="{{ old('site_primary_color', $settings['site_primary_color'] ?? '#1546a8') }}"></div>
+                    <div><label for="site-background-color">{{ __('Website background color') }}</label><input id="site-background-color" type="color" name="site_background_color" value="{{ old('site_background_color', $settings['site_background_color'] ?? '#f3f6fb') }}"></div>
+                </div>
+                <small class="muted">{{ __('Use HTTPS image URLs. Direct Media Library upload and selection will be integrated into the complete identity editor.') }}</small>
+            </section>
             @php($savedSlides = json_decode((string) ($settings['home_slides'] ?? '[]'), true) ?: [])
 
             <div class="grid grid-2" style="margin-bottom: 18px;">
