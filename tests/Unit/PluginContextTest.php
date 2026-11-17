@@ -24,6 +24,7 @@ class PluginContextTest extends TestCase
 
         $route = collect(app('router')->getRoutes()->getRoutes())->first(fn ($candidate) => $candidate->uri() === 'test/support-ai/health');
         $this->assertNotNull($route);
+        $this->assertSame('test.support_ai.health', $route->getName());
         $this->assertContains('plugin.active:aec.support-staff-test', $route->middleware());
         $this->assertContains('role:accountant', $route->middleware());
         $this->assertContains('plugin.permission:aec.support-staff-test,support.test', $route->middleware());
