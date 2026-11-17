@@ -37,13 +37,27 @@ return new class extends Migration
 
     public function down(): void
     {
-        if (Schema::hasTable('learn_earn_exam_entitlements') && DB::table('learn_earn_exam_entitlements')->exists()) {
-            throw new \RuntimeException('Learn & Earn payment entitlements exist; preserve them during plugin migration rollback.');
+        // The newest migration guards the entire plugin data set. Migration
+        // rollback is sequential, so this prevents newer tables/columns being
+        // removed before an older migration discovers that exam content exists.
+        foreach ([
+            'learn_earn_exam_entitlements',
+            'learn_earn_exam_answers',
+            'learn_earn_attempt_questions',
+            'learn_earn_exam_attempts',
+            'learn_earn_exam_questions',
+            'learn_earn_exams',
+            'learn_earn_questions',
+            'learn_earn_categories',
+        ] as $table) {
+            if (Schema::hasTable($table) && DB::table($table)->exists()) {
+                throw new \\RuntimeException('Learn & Earn content or payment history exists; preserve the complete plugin schema during uninstall.');
+            }
         }
 
         if (Schema::hasTable('payments') && Schema::hasColumn('payments', 'learn_earn_exam_id')
             && DB::table('payments')->whereNotNull('learn_earn_exam_id')->exists()) {
-            throw new \RuntimeException('Learn & Earn payment records exist; preserve them during plugin migration rollback.');
+            throw new \\RuntimeException('Learn & Earn payment records exist; preserve them during plugin migration rollback.');
         }
 
         Schema::dropIfExists('learn_earn_exam_entitlements');
@@ -54,5 +68,4 @@ return new class extends Migration
                 $table->dropConstrainedForeignId('learn_earn_exam_id');
             });
         }
-    }
-};
+    }};
