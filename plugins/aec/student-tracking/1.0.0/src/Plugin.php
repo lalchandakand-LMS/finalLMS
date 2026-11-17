@@ -43,6 +43,19 @@ return new class implements PluginContract
             );
         }
 
+        foreach ([
+            'admin' => ['admin/student-tracking', 'admin.student-tracking.'],
+            'branch' => ['branch/student-tracking', 'branch.student-tracking.'],
+            'teacher' => ['teacher/student-tracking', 'teacher.student-tracking.'],
+        ] as $portal => [$prefix, $namePrefix]) {
+            $context->routesForPortal($portal, $prefix, $namePrefix, function (): void {
+                Route::post('/{student}/risk-actions', [StudentTrackingController::class, 'storeRiskAction'])
+                    ->whereNumber('student')
+                    ->middleware('throttle:10,1')
+                    ->name('risk-actions.store');
+            }, 'student-tracking.manage-risk');
+        }
+
         $context->routesForPortal('admin', 'admin/student-tracking/settings', 'admin.student-tracking.settings.', function (): void {
             Route::get('/', [StudentTrackingSettingsController::class, 'index'])->name('index');
             Route::put('/', [StudentTrackingSettingsController::class, 'update'])
