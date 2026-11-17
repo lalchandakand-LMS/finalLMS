@@ -129,7 +129,7 @@ final class PluginUploadInstaller
     {
         try {
             $manifest = json_decode($manifestJson, true, 64, JSON_THROW_ON_ERROR);
-        } catch (\\JsonException $exception) {
+        } catch (\JsonException $exception) {
             throw new InvalidArgumentException('The plugin manifest must be valid JSON.', previous: $exception);
         }
 
