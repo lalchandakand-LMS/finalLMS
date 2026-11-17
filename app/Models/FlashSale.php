@@ -20,7 +20,12 @@ class FlashSale extends Model
 
     public function isAvailableFor(?int $userId = null): bool
     {
-        if ($this->status !== 'active' || $this->starts_at->isFuture() || $this->ends_at->isPast()) return false;
+        if (! self::pluginIsActive()
+            || $this->status !== 'active'
+            || $this->starts_at->isFuture()
+            || $this->ends_at->isPast()) {
+            return false;
+        }
         $paidRedemptions = fn () => $this->payments()->whereIn('status', ['pending', 'approved']);
         $freeRedemptions = fn () => $this->enrollments()->whereIn('status', ['active', 'completed']);
         $redemptionCount = $paidRedemptions()->count() + $freeRedemptions()->count();
@@ -54,6 +59,10 @@ class FlashSale extends Model
 
     public static function activeForCourse(int $courseId, ?int $userId = null): ?self
     {
+        if (! self::pluginIsActive()) {
+            return null;
+        }
+
         return static::query()->where('status','active')->where('starts_at','<=',now())->where('ends_at','>=',now())
             ->where(function ($query) use ($courseId): void {
                 $query->whereHas('courses', fn ($courses) => $courses->where('courses.id', $courseId))
@@ -64,8 +73,20 @@ class FlashSale extends Model
             ->first(fn (self $sale) => $sale->isAvailableFor($userId));
     }
 
+    private static function pluginIsActive(): bool
+    {
+        return PluginInstallation::query()
+            ->where('plugin_key', 'aec.flash-sale')
+            ->where('status', 'active')
+            ->exists();
+    }
+
     public static function activeCampaigns(): \Illuminate\Support\Collection
     {
+        if (! self::pluginIsActive()) {
+            return collect();
+        }
+
         return static::query()->where('status','active')->where('starts_at','<=',now())->where('ends_at','>=',now())
             ->where(function ($query): void {
                 $query->whereHas('courses', fn ($courses) => $courses->where('courses.status', 'published'))
