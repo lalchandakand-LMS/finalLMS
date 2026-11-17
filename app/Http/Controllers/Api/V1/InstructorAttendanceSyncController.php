@@ -167,7 +167,7 @@ class InstructorAttendanceSyncController extends Controller
             }
 
             $attendanceDate = Carbon::createFromFormat('Y-m-d', $data['attendance_date']);
-            if ($attendanceDate->isFuture()) {
+            if ($attendanceDate->startOfDay()->isAfter(today())) {
                 return [
                     'idempotency_key' => $key,
                     'status' => 'failed',
