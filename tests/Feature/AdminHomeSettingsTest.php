@@ -111,4 +111,43 @@ class AdminHomeSettingsTest extends TestCase
             ->assertSee('123456789012345')
             ->assertSee('facebook.net', false);
     }
+    public function test_admin_can_configure_custom_brand_loading_screen(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $media = \\App\\Models\\MediaAsset::factory()->create(['mime_type' => 'image/png']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.settings.update'), [
+                'loading_screen_enabled' => '1',
+                'loading_screen_logo_media_id' => $media->id,
+                'loading_screen_style' => 'pulse',
+                'loading_screen_text' => 'Please wait',
+                'loading_screen_background' => '#f8fafc',
+                'loading_screen_speed' => '18',
+            ])
+            ->assertRedirect(route('admin.settings.index'));
+
+        $this->assertDatabaseHas('settings', ['key' => 'loading_screen_enabled', 'value' => '1']);
+        $this->assertDatabaseHas('settings', ['key' => 'loading_screen_logo_media_id', 'value' => (string) $media->id]);
+        $this->assertDatabaseHas('settings', ['key' => 'loading_screen_style', 'value' => 'pulse']);
+
+        $this->get('/')->assertOk()->assertSee('aec-brand-loader')->assertSee('Please wait')->assertSee('data-style="pulse"', false);
+    }
+
+    public function test_invalid_custom_loading_screen_settings_are_rejected(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->from(route('admin.settings.index'))
+            ->post(route('admin.settings.update'), [
+                'loading_screen_enabled' => '1',
+                'loading_screen_style' => 'comic-sans-spinner',
+                'loading_screen_background' => 'not-a-color',
+                'loading_screen_speed' => '99',
+            ])
+            ->assertRedirect(route('admin.settings.index'))
+            ->assertSessionHasErrors(['loading_screen_style', 'loading_screen_background', 'loading_screen_speed']);
+    }
+
 }
