@@ -24,7 +24,13 @@ return new class extends Migration
             return;
         }
 
-        if (DB::table('ai_assistant_settings')->whereNotNull('role_data_access')->exists()) {
+        $hasActiveGrant = DB::table('ai_assistant_settings')->pluck('role_data_access')->contains(
+            static function ($encoded): bool {
+                $grants = json_decode((string) $encoded, true);
+                return is_array($grants) && in_array(true, array_values($grants), true);
+            }
+        );
+        if ($hasActiveGrant) {
             throw new RuntimeException('Per-role AI data-access grants exist. Export or explicitly clear these settings before rolling back.');
         }
 
