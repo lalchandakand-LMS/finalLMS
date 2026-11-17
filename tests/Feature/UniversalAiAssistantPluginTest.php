@@ -475,7 +475,7 @@ class UniversalAiAssistantPluginTest extends TestCase
         ], 'test-secret-provider-key', false);
 
         $user = User::factory()->create(['role' => 'teacher']);
-        $conversationId = \\DB::table('ai_assistant_conversations')->insertGetId([
+        $conversationId = \DB::table('ai_assistant_conversations')->insertGetId([
             'user_id' => $user->id,
             'assistant_role' => 'teacher',
             'title' => 'Teacher-only context',
@@ -485,7 +485,7 @@ class UniversalAiAssistantPluginTest extends TestCase
 
         // A role change must not make a conversation created in the previous role visible.
         $user->forceFill(['role' => 'student'])->save();
-        Route::post('/__test-ai-assistant/cross-role-messages', [\\Aloms\\UniversalAiAssistant\\AssistantController::class, 'send']);
+        Route::post('/__test-ai-assistant/cross-role-messages', [\Aloms\UniversalAiAssistant\AssistantController::class, 'send']);
 
         $this->actingAs($user)->postJson('/__test-ai-assistant/cross-role-messages', [
             'message' => 'Continue this conversation',
