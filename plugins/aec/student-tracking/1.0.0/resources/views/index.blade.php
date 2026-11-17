@@ -24,12 +24,15 @@
 @endif
 
 <div class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin:0 0 20px;">
-    @foreach([
-        ['label' => __('Students in scope'), 'value' => $summary['students']],
-        ['label' => __('Active enrollments'), 'value' => $summary['active_enrollments']],
-        ['label' => __('Attendance records today'), 'value' => $summary['attendance_today']],
-        ['label' => __('Needs attention on this page'), 'value' => $summary['needs_attention']],
-    ] as $metric)
+    @php
+        $metrics = [
+            ['label' => __('Students in scope'), 'value' => $summary['students']],
+            ['label' => __('Needs attention on this page'), 'value' => $summary['needs_attention']],
+        ];
+        if ($courseTrackingAvailable) $metrics[] = ['label' => __('Active enrollments'), 'value' => $summary['active_enrollments']];
+        if ($attendanceTrackingAvailable) $metrics[] = ['label' => __('Attendance records today'), 'value' => $summary['attendance_today']];
+    @endphp
+    @foreach($metrics as $metric)
         <div class="panel" style="margin:0;">
             <div class="muted">{{ $metric['label'] }}</div>
             <div style="font-size:1.7rem;font-weight:800;margin-top:5px;">{{ number_format($metric['value']) }}</div>
@@ -52,6 +55,7 @@
                 </select>
             </label>
         @endif
+        @if($courseTrackingAvailable)
         <label>{{ __('Batch ID') }}
             <input type="number" min="1" name="batch_id" value="{{ $filters['batch_id'] }}" style="width:110px;">
         </label>
@@ -76,6 +80,7 @@
                 @endforeach
             </select>
         </label>
+        @endif
         <label>{{ __('Activity from') }}
             <input type="date" name="from_date" value="{{ $filters['from_date'] }}">
         </label>
@@ -92,10 +97,12 @@
             <thead>
                 <tr style="text-align:left;border-bottom:1px solid var(--border);">
                     <th style="padding:11px;">{{ __('Student') }}</th>
-                    <th style="padding:11px;">{{ __('Active courses') }}</th>
-                    <th style="padding:11px;">{{ __('Attendance (:from – :to)', ['from' => $filters['from_date'], 'to' => $filters['to_date']]) }}</th>
-                    <th style="padding:11px;">{{ __('Completed lessons') }}</th>
-                    <th style="padding:11px;">{{ __('Last learning activity') }}</th>
+                    @if($courseTrackingAvailable)<th style="padding:11px;">{{ __('Active courses') }}</th>@endif
+                    @if($attendanceTrackingAvailable)<th style="padding:11px;">{{ __('Attendance (:from – :to)', ['from' => $filters['from_date'], 'to' => $filters['to_date']]) }}</th>@endif
+                    @if($learningTrackingAvailable)
+                        <th style="padding:11px;">{{ __('Completed lessons') }}</th>
+                        <th style="padding:11px;">{{ __('Last learning activity') }}</th>
+                    @endif
                     <th style="padding:11px;">{{ __('Status') }}</th>
                     <th style="padding:11px;"></th>
                 </tr>
