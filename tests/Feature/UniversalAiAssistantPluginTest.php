@@ -462,4 +462,50 @@ class UniversalAiAssistantPluginTest extends TestCase
     }
 
 
+    public function test_assistant_conversations_are_isolated_between_roles_even_for_the_same_user(): void
+    {
+        AssistantSettings::save([
+            'model' => 'gpt-4o-mini', 'base_url' => 'https://api.openai.com/v1',
+            'temperature' => 0.4, 'max_tokens' => 800, 'global_enabled' => true,
+            'role_enabled' => array_replace(array_fill_keys(AssistantSettings::ROLES, false), [
+                'teacher' => true,
+                'student' => true,
+            ]),
+            'daily_request_limit' => 20, 'daily_token_budget' => 50000, 'retention_days' => 365,
+        ], 'test-secret-provider-key', false);
+
+        $user = User::factory()->create(['role' => 'teacher']);
+        $conversationId = \\DB::table('ai_assistant_conversations')->insertGetId([
+            'user_id' => $user->id,
+            'assistant_role' => 'teacher',
+            'title' => 'Teacher-only context',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // A role change must not make a conversation created in the previous role visible.
+        $user->forceFill(['role' => 'student'])->save();
+        Route::post('/__test-ai-assistant/cross-role-messages', [\\Aloms\\UniversalAiAssistant\\AssistantController::class, 'send']);
+
+        $this->actingAs($user)->postJson('/__test-ai-assistant/cross-role-messages', [
+            'message' => 'Continue this conversation',
+            'conversation_id' => $conversationId,
+        ])->assertNotFound();
+
+        $this->assertDatabaseCount('ai_assistant_messages', 0);
+    }
+
+    public function test_every_role_prompt_explicitly_denies_private_lms_data_and_consequential_actions(): void
+    {
+        foreach (AssistantSettings::ROLES as $role) {
+            $prompt = AssistantSettings::rolePrompt($role);
+
+            $this->assertStringContainsString('GENERAL GUIDANCE ONLY', $prompt);
+            $this->assertStringContainsString('no access to LMS databases', $prompt);
+            $this->assertStringContainsString('Never claim to have looked up', $prompt);
+            $this->assertStringContainsString('Do not perform consequential actions', $prompt);
+        }
+    }
+
+
 }
