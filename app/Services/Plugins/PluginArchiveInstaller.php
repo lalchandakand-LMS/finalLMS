@@ -361,11 +361,11 @@ final class PluginArchiveInstaller
 
     private function assertVerifiedRegistryRecord(PluginInstallation $plugin): void
     {
-        if ($plugin->status !== 'staged' || $plugin->signature_verified_at === null
+        if (! in_array($plugin->status, ['staged', 'update_staged'], true) || $plugin->signature_verified_at === null
             || ! is_array($plugin->manifest) || ! is_string($plugin->package_sha256)
             || preg_match('/^[a-f0-9]{64}$/D', $plugin->package_sha256) !== 1
             || ! is_string($plugin->signature_key_id) || trim($plugin->signature_key_id) === '') {
-            throw new RuntimeException('Only a staged plugin with verified signature metadata can be installed.');
+            throw new RuntimeException('Only a staged plugin update with verified signature metadata can be installed.');
         }
 
         if (! hash_equals((string) $plugin->plugin_key, (string) ($plugin->manifest['key'] ?? ''))
