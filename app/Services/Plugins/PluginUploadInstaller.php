@@ -4,6 +4,7 @@ namespace App\Services\Plugins;
 
 use App\Models\PluginInstallation;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use RuntimeException;
 use Throwable;
