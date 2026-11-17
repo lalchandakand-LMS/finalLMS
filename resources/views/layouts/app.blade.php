@@ -370,7 +370,7 @@
             <a class="{{ request()->routeIs('admin.course-content-posts.*') ? 'active' : '' }}" href="{{ route('admin.course-content-posts.index') }}"><span>📝</span><span class="nav-text">Course content studio</span></a>
             <a class="{{ request()->routeIs('admin.question-sets.*') ? 'active' : '' }}" href="{{ route('admin.question-sets.index') }}"><span>🧩</span><span class="nav-text">Question sets</span></a>
             <a class="{{ request()->routeIs('admin.coupons.*') ? 'active' : '' }}" href="{{ route('admin.coupons.index') }}"><span>🏷️</span><span class="nav-text">Coupons</span></a>
-            @if(\Illuminate\Support\Facades\Route::has('admin.flash-sales.index'))
+            @if(\Illuminate\Support\Facades\Route::has('admin.flash-sales.index') && \App\Models\FlashSale::isPluginActive())
                 <a href="{{ route('admin.flash-sales.index') }}"><span>🔥</span><span class="nav-text">Flash Sale</span></a>
             @endif
             <a href="{{ route('admin.users.index') }}"><span>👥</span><span class="nav-text">Students & teachers</span></a>
@@ -462,7 +462,7 @@
                 <a href="/">{{ __('Home') }}</a>
                 <a href="{{ route('courses.index') }}">{{ __('Courses') }}</a>
                 <a href="{{ route('ebooks.index') }}">eBooks</a>
-                @if(\Illuminate\Support\Facades\Route::has('flash-sales.public') && (bool) (int) \App\Models\Setting::value('flash_sale_page_enabled', '1') && \App\Models\FlashSale::activeCampaigns()->isNotEmpty())<a href="{{ route('landing') }}#flash-sale">🔥 {{ __('Flash Sale') }}</a>@endif
+                @if(\Illuminate\Support\Facades\Route::has('flash-sales.public') && \App\Models\FlashSale::isPluginActive() && (bool) (int) \App\Models\Setting::value('flash_sale_page_enabled', '1') && \App\Models\FlashSale::activeCampaigns()->isNotEmpty())<a href="{{ route('landing') }}#flash-sale">🔥 {{ __('Flash Sale') }}</a>@endif
                 <a href="{{ route('contests.index') }}">Quiz & prizes</a>
                 <a href="{{ route('pages.about') }}">{{ __('About') }}</a>
                 <a href="{{ route('pages.contact') }}">{{ __('Contact') }}</a>
@@ -499,7 +499,7 @@
                         <a href="{{ route('admin.news.index') }}">{{ __('Blog & News') }}</a>
                         <a href="{{ route('admin.users.index') }}">Users</a>
                         <a href="{{ route('admin.courses.index') }}">Courses</a>
-                        @if(\Illuminate\Support\Facades\Route::has('admin.flash-sales.index'))
+                        @if(\Illuminate\Support\Facades\Route::has('admin.flash-sales.index') && \App\Models\FlashSale::isPluginActive())
                             <a href="{{ route('admin.flash-sales.index') }}">Flash Sale</a>
                         @endif
                     @endif
