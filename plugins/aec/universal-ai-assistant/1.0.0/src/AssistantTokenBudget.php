@@ -1,9 +1,9 @@
 <?php
 
-namespace Aloms\\UniversalAiAssistant;
+namespace Aloms\UniversalAiAssistant;
 
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\Support\\Str;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 final class AssistantTokenBudget
 {
