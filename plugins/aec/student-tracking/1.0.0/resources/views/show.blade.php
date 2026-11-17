@@ -19,7 +19,7 @@
     <div>
         <a href="{{ route($baseRoute.'.index') }}" class="muted">← {{ __('Back to tracking') }}</a>
         <h1 style="margin-top:8px;">{{ $student->name }}</h1>
-        <p class="muted">{{ $student->email }} · {{ $student->phone_number ?: '{{ __('No phone on file') }}' }}</p>
+        <p class="muted">{{ $student->email }} · {{ $student->phone_number ?: __('No phone on file') }}</p>
     </div>
 </div>
 
@@ -106,7 +106,7 @@
     <h2>{{ __('Attendance history') }}</h2>
     <div style="overflow-x:auto;">
         <table style="width:100%;min-width:520px;border-collapse:collapse;">
-            <thead><tr style="text-align:left;"><th style="padding:9px;">{{ __('Date') }}</th><th style="padding:9px;">{{ __('Batch') }}</th><th style="padding:9px;">{{ __(__('Course')) }}</th><th style="padding:9px;">{{ __('Status') }}</th></tr></thead>
+            <thead><tr style="text-align:left;"><th style="padding:9px;">{{ __('Date') }}</th><th style="padding:9px;">{{ __('Batch') }}</th><th style="padding:9px;">{{ __('Course') }}</th><th style="padding:9px;">{{ __('Status') }}</th></tr></thead>
             <tbody>
             @forelse($attendanceRecords as $record)
                 <tr style="border-top:1px solid var(--border);">
@@ -140,7 +140,7 @@
         @forelse($contentProgress as $progress)
             <div style="padding:10px 0;border-bottom:1px solid var(--border);">
                 <strong>{{ $progress->curriculumItem?->post?->title ?? $progress->curriculumItem?->section_title ?? __('Course content') }}</strong>
-                <div class="muted" style="font-size:.82rem;">{{ $progress->curriculumItem?->course?->title ?? __('Course') }} · {{ $progress->completed_at ? 'Completed '.$progress->completed_at->diffForHumans() : __('In progress') }}</div>
+                <div class="muted" style="font-size:.82rem;">{{ $progress->curriculumItem?->course?->title ?? __('Course') }} · {{ $progress->completed_at ? __('Completed :time', ['time' => $progress->completed_at->diffForHumans()]) : __('In progress') }}</div>
             </div>
         @empty
             <p class="muted">{{ __('No Course Content Studio progress recorded.') }}</p>
@@ -225,7 +225,7 @@
                     · Submitted: {{ $submission->submitted_at?->format('d M Y, H:i') ?? __(__('Not submitted')) }}
                 </div>
                 @if($submission->assignment?->due_at)
-                    <div class="muted" style="font-size:.78rem;">Due {{ $submission->assignment->due_at->format('d M Y, H:i') }}</div>
+                    <div class="muted" style="font-size:.78rem;">{{ __('Due :time', ['time' => $submission->assignment->due_at->format('d M Y, H:i')]) }}</div>
                 @endif
             </div>
         @empty
