@@ -18,7 +18,7 @@
                     <div>
                         <span class="badge {{ $payment->status === 'approved' ? 'success' : ($payment->status === 'pending' ? 'warning' : 'info') }}">{{ __(ucfirst($payment->status)) }}</span>
                         <h2 style="margin: 10px 0 6px;">{{ $payment->learn_earn_exam_title ?? $payment->courseCombo?->title ?? $payment->course?->title ?? __('Course unavailable') }}</h2>
-                        @if($payment->learnEarnExam)
+                        @if($payment->learn_earn_exam_id)
                             <div class="muted">{{ __('Paid exam access:') }} {{ __('granted only after server-side bKash verification.') }}</div>
                         @endif
                         @if($payment->courseCombo)
