@@ -33,7 +33,14 @@
     <h2>Learning risk review</h2>
     @forelse($riskFlags as $flag)
         <div style="padding:10px 0;border-bottom:1px solid var(--border);">
-            <span class="badge warning">{{ $flag['code'] === 'low_attendance' ? 'Low attendance' : 'Learning inactivity' }}</span>
+            <span class="badge warning">{{ match($flag['code']) {
+                'low_attendance' => 'Low attendance',
+                'inactive_learning' => 'Learning inactivity',
+                'overdue_assignments' => 'Overdue assignments',
+                'consecutive_absences' => 'Consecutive absences',
+                'declining_scores' => 'Declining scores',
+                default => 'Learning review',
+            } }}</span>
             <p style="margin:8px 0;">{{ $flag['reason'] }}</p>
             @if($canManageRisk)
                 <form method="POST" action="{{ route($baseRoute.'.risk-actions.store', $student->id) }}" style="display:grid;gap:8px;">
@@ -139,6 +146,18 @@
             <p class="muted">No Course Content Studio progress recorded.</p>
         @endforelse
     </div>
+</div>
+
+<div class="panel">
+    <h2>Overdue assignments</h2>
+    @forelse($overdueAssignments as $assignment)
+        <div style="padding:10px 0;border-bottom:1px solid var(--border);">
+            <strong>{{ $assignment->title }}</strong>
+            <div class="muted" style="font-size:.82rem;">{{ $assignment->batch?->title ?? 'Assigned batch' }} · Due {{ $assignment->due_at?->format('d M Y, H:i') }}</div>
+        </div>
+    @empty
+        <p class="muted">No overdue assignments without a submission in your permitted batch scope.</p>
+    @endforelse
 </div>
 
 <div class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;">
