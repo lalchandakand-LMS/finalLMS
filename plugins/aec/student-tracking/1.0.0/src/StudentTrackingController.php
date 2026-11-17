@@ -12,6 +12,7 @@ use App\Models\Enrollment;
 use App\Models\ExamAttempt;
 use App\Models\AssignmentSubmission;
 use App\Models\DashboardAnnouncement;
+use App\Models\PluginInstallation;
 use App\Models\SupportTicket;
 use App\Models\Setting;
 use App\Models\LessonProgress;
@@ -213,6 +214,7 @@ class StudentTrackingController extends Controller
                 ? DB::table('academic_levels')->where('is_active', true)->orderBy('sort_order')->get(['id', 'name'])
                 : collect(),
             'riskRules' => $riskRules,
+            'canConfigureRisk' => $actor->isAdmin() && $this->hasGrantedPermission('student-tracking.configure'),
             'filters' => [
                 'q' => $search,
                 'branch_id' => $branchFilter ?: null,
@@ -574,6 +576,8 @@ class StudentTrackingController extends Controller
 
         return view('student-tracking::show', [
             'student' => $studentRecord,
+            'canManageRisk' => ($actor->isAdmin() || $actor->isBranchManager() || $actor->isTeacher())
+                && $this->hasGrantedPermission('student-tracking.manage-risk'),
             'enrollments' => $enrollments,
             'announcements' => $announcements,
             'noticeTrackingAvailable' => $noticeTrackingAvailable,
@@ -774,6 +778,19 @@ class StudentTrackingController extends Controller
         }
 
         return $signals;
+    }
+
+    private function hasGrantedPermission(string $permission): bool
+    {
+        $plugin = PluginInstallation::query()
+            ->where('plugin_key', 'aec.student-tracking')
+            ->where('status', 'active')
+            ->first();
+
+        $metadata = is_array($plugin?->metadata) ? $plugin->metadata : [];
+        $granted = $metadata['granted_permissions'] ?? [];
+
+        return is_array($granted) && in_array($permission, $granted, true);
     }
 
     private function safeCsvCell(string $value): string
