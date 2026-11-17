@@ -204,6 +204,36 @@ PHP;
         ]);
     }
 
+    public function test_uninstall_removes_all_retained_executable_versions_but_keeps_registry_history(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData())
+            ->assertRedirect(route('admin.plugins.index'));
+        $this->actingAs($admin)->post(route('admin.plugins.deactivate', 'aec.course-management'))
+            ->assertRedirect(route('admin.plugins.index'));
+
+        $this->manifest['version'] = '1.1.0';
+        $this->updatedPath = base_path('plugins/aec/course-management/1.1.0');
+        $this->actingAs($admin)->post(route('admin.plugins.update', 'aec.course-management'), $this->uploadData() + [
+            'backup_confirmed' => '1',
+        ])->assertRedirect(route('admin.plugins.index'));
+
+        $this->actingAs($admin)->post(route('admin.plugins.uninstall', 'aec.course-management'))
+            ->assertRedirect(route('admin.plugins.index'))->assertSessionHas('success');
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'status' => 'uninstalled',
+            'version' => '1.1.0',
+        ]);
+        $this->assertDirectoryDoesNotExist($this->finalPath);
+        $this->assertDirectoryDoesNotExist($this->updatedPath);
+        $this->assertDatabaseHas('plugin_version_history', [
+            'plugin_key' => 'aec.course-management',
+            'action' => 'uninstalled',
+        ]);
+    }
+
     public function test_invalid_signed_update_restores_the_previous_registry_and_package(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
