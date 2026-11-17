@@ -292,6 +292,40 @@ class UniversalAiAssistantPluginTest extends TestCase
         ]);
     }
 
+    public function test_abandoned_reservations_older_than_thirty_days_are_pruned(): void
+    {
+        $reservationId = (string) \Illuminate\Support\Str::uuid();
+        $oldDate = today()->subDays(31)->toDateString();
+
+        \DB::table('ai_assistant_daily_budgets')->insert([
+            'budget_date' => $oldDate,
+            'used_tokens' => 25,
+            'reserved_tokens' => 75,
+            'created_at' => now()->subDays(31),
+            'updated_at' => now()->subDays(31),
+        ]);
+        \DB::table('ai_assistant_token_reservations')->insert([
+            'id' => $reservationId,
+            'budget_date' => $oldDate,
+            'reserved_tokens' => 75,
+            'status' => 'reserved',
+            'expires_at' => now()->subDays(31),
+            'created_at' => now()->subDays(31),
+            'updated_at' => now()->subDays(31),
+        ]);
+
+        $replacement = AssistantTokenBudget::reserve(1000, 800, [
+            ['role' => 'user', 'content' => 'A new day, a new lesson.'],
+        ]);
+
+        $this->assertNotNull($replacement);
+        $this->assertDatabaseMissing('ai_assistant_token_reservations', ['id' => $reservationId]);
+        $this->assertDatabaseHas('ai_assistant_daily_budgets', [
+            'budget_date' => $oldDate,
+            'used_tokens' => 25,
+        ]);
+    }
+
     public function test_daily_request_limit_rejects_before_creating_a_conversation_or_calling_provider(): void
     {
         AssistantSettings::save([
