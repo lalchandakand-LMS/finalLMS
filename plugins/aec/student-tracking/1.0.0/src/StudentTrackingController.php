@@ -300,7 +300,7 @@ class StudentTrackingController extends Controller
 
         $this->addTrackingAggregates($query, $actor, $access, $modules, $fromDate, $toDate);
         $students = $query->orderBy('users.name')->limit(5000)->get();
-        $students->each(function (User $student): void {
+        $students->each(function (User $student) use ($modules): void {
             $total = (int) $student->attendance_total;
             $attended = (int) $student->attendance_attended;
             $student->setAttribute('attendance_rate', $total > 0 ? round(($attended / $total) * 100, 1) : null);
