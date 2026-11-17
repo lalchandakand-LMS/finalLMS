@@ -27,7 +27,9 @@ class StudentTrackingController extends Controller
             ->where('users.role', 'student')
             ->select('users.*')
             ->withCount([
-                'enrollments as active_enrollments_count' => fn (Builder $enrollments) => $enrollments->where('status', 'active'),
+                'enrollments as active_enrollments_count' => function (Builder $enrollments) use ($access, $actor): void {
+                    $access->scopeQuery($enrollments, $actor)->where('status', 'active');
+                },
             ]);
 
         $search = trim((string) $request->query('q', ''));
@@ -88,7 +90,15 @@ class StudentTrackingController extends Controller
             $lastActivity = $activityDates->first();
             $lowAttendance = (int) $student->attendance_total >= 5 && (float) $student->attendance_rate < 75;
             $inactive = ! $lastActivity || now()->diffInDays($lastActivity) >= 14;
-            $student->setAttribute('tracking_needs_attention', $lowAttendance || $inactive);
+            $riskReasons = [];
+            if ($lowAttendance) {
+                $riskReasons[] = 'Attendance below 75% across at least 5 recent records';
+            }
+            if ($inactive) {
+                $riskReasons[] = 'No recorded LMS learning activity in the last 14 days';
+            }
+            $student->setAttribute('tracking_risk_reasons', $riskReasons);
+            $student->setAttribute('tracking_needs_attention', $riskReasons !== []);
 
             return $student;
         });
