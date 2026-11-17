@@ -7,11 +7,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\View;
 use Tests\TestCase;
 class BoardQuestionSolverPluginTest extends TestCase {
  use RefreshDatabase;
  protected function setUp():void {
-  parent::setUp();\n  View::addNamespace('board-question-solver',base_path('plugins/aec/board-question-solver/1.0.0/resources/views'));
+  parent::setUp();
+  View::addNamespace('board-question-solver',base_path('plugins/aec/board-question-solver/1.0.0/resources/views'));
   require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantSettings.php');
   require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantTokenBudget.php');
   require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantRequestLimit.php');
