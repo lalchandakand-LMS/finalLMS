@@ -353,7 +353,7 @@ class UniversalAiAssistantPluginTest extends TestCase
             'user_id' => $owner->id, 'assistant_role' => 'student', 'title' => 'Private conversation',
             'created_at' => now(), 'updated_at' => now(),
         ]);
-        Route::post('/__test-ai-assistant/isolation-messages', [\Aloms\\UniversalAiAssistant\\AssistantController::class, 'send']);
+        Route::post('/__test-ai-assistant/isolation-messages', [\Aloms\UniversalAiAssistant\AssistantController::class, 'send']);
 
         $this->actingAs($otherStudent)->postJson('/__test-ai-assistant/isolation-messages', [
             'message' => 'Append to this conversation',
@@ -378,7 +378,7 @@ class UniversalAiAssistantPluginTest extends TestCase
         Http::fake(['api.openai.com/v1/chat/completions' => Http::response(['error' => 'provider unavailable'], 503)]);
 
         $user = User::factory()->create(['role' => 'student']);
-        Route::post('/__test-ai-assistant/failure-messages', [\Aloms\\UniversalAiAssistant\\AssistantController::class, 'send']);
+        Route::post('/__test-ai-assistant/failure-messages', [\Aloms\UniversalAiAssistant\AssistantController::class, 'send']);
 
         $this->actingAs($user)->postJson('/__test-ai-assistant/failure-messages', [
             'message' => 'Help me practise English.',
