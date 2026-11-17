@@ -12,14 +12,18 @@
   },
   "dependencies": [],
   "conflicts": [],
-  "portals": ["admin"],
-  "permissions": ["learn-earn.manage"],
+  "portals": ["admin", "student", "public"],
+  "permissions": ["learn-earn.manage", "learn-earn.take-exams"],
   "capabilities": [
     "reusable-mcq-authoring",
     "question-categories",
     "positive-negative-marking",
     "exam-builder",
-    "immutable-question-snapshots"
+    "immutable-question-snapshots",
+    "student-exam-catalogue",
+    "free-exam-attempts",
+    "server-side-scoring",
+    "attempt-history"
   ],
   "migrations": "migrations"
 }
