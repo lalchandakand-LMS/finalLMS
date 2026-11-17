@@ -148,7 +148,7 @@ class StudentLearnEarnController extends Controller
     {
         $this->assertOwner($request, $attempt);
         abort_unless($attempt->status === 'in_progress', 404);
-        if ($attempt->ends_at->lt(now())) {
+        if ($attempt->ends_at->lte(now())) {
             $this->finalize($attempt, [], true);
             return redirect()->route('student.learn-earn.attempts.result', $attempt);
         }
@@ -201,6 +201,12 @@ class StudentLearnEarnController extends Controller
             $locked = LearnEarnExamAttempt::query()->lockForUpdate()->findOrFail($attempt->id);
             abort_unless($locked->status === 'in_progress', 409, __('This attempt has already been finalized.'));
 
+            // A late submission must never receive marks for answers sent after the server deadline.
+            if ($locked->ends_at->lte(now())) {
+                $expired = true;
+                $submittedAnswers = [];
+            }
+
             if ($submittedAnswers !== []) {
                 $allowedIds = $locked->attemptQuestions()->pluck('exam_question_id')->map(fn ($id) => (string) $id)->all();
                 $submittedIds = array_map('strval', array_keys($submittedAnswers));
@@ -232,7 +238,7 @@ class StudentLearnEarnController extends Controller
             }
 
             $locked->update([
-                'status' => $expired || $locked->ends_at->lt(now()) ? 'expired' : 'submitted',
+                'status' => $expired || $locked->ends_at->lte(now()) ? 'expired' : 'submitted',
                 'submitted_at' => now(),
                 'score' => $score['score'],
                 'max_score' => $score['max_score'],
