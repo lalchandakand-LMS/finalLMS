@@ -19,6 +19,9 @@
         <p class="muted">Attendance, course participation and learning progress from the LMS records.</p>
     </div>
 </div>
+@if(auth()->user()->role === 'admin')
+    <p style="margin:0 0 16px;"><a class="btn secondary" href="{{ route('admin.student-tracking.settings.index') }}">Configure risk rules</a></p>
+@endif
 
 <div class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin:0 0 20px;">
     @foreach([
@@ -135,5 +138,5 @@
     </div>
     <div style="margin-top:18px;">{{ $students->links() }}</div>
 </div>
-<p class="muted" style="font-size:.85rem;margin-top:12px;">Attendance rate uses the last 30 days. “Needs attention” is a review signal, not an automated disciplinary decision. GPS or background location is not collected.</p>
+<p class="muted" style="font-size:.85rem;margin-top:12px;">Attendance and learning activity use the selected date range. A student is flagged below {{ $riskRules['low_attendance_percent'] }}% attendance after {{ $riskRules['minimum_attendance_records'] }} records, or after {{ $riskRules['inactive_days'] }} days without recorded learning activity. Flags are review signals, not automated disciplinary decisions. GPS or background location is not collected.</p>
 @endsection
