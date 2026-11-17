@@ -51,13 +51,13 @@ return new class extends Migration
             'learn_earn_categories',
         ] as $table) {
             if (Schema::hasTable($table) && DB::table($table)->exists()) {
-                throw new \\RuntimeException('Learn & Earn content or payment history exists; preserve the complete plugin schema during uninstall.');
+                throw new \RuntimeException('Learn & Earn content or payment history exists; preserve the complete plugin schema during uninstall.');
             }
         }
 
         if (Schema::hasTable('payments') && Schema::hasColumn('payments', 'learn_earn_exam_id')
             && DB::table('payments')->whereNotNull('learn_earn_exam_id')->exists()) {
-            throw new \\RuntimeException('Learn & Earn payment records exist; preserve them during plugin migration rollback.');
+            throw new \RuntimeException('Learn & Earn payment records exist; preserve them during plugin migration rollback.');
         }
 
         Schema::dropIfExists('learn_earn_exam_entitlements');
@@ -68,4 +68,5 @@ return new class extends Migration
                 $table->dropConstrainedForeignId('learn_earn_exam_id');
             });
         }
-    }};
+    }
+};
