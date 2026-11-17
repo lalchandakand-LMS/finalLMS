@@ -1182,7 +1182,7 @@ PHP;
             app(PluginLifecycle::class)->transition('test.conflict-b', 'active');
             $this->fail('A plugin must not activate while a declared conflicting plugin is active.');
         } catch (LogicException $exception) {
-            $this->assertStringContainsString('conflicting plugin is already active', $exception->getMessage());
+            $this->assertStringContainsString('A conflicting plugin is active: test.conflict-a', $exception->getMessage());
         }
 
         $this->assertDatabaseHas('plugin_registry', [
