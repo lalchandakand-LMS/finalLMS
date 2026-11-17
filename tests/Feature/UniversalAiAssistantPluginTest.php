@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Aloms\UniversalAiAssistant\AssistantSettings;
+use Aloms\UniversalAiAssistant\AssistantTokenBudget;
 use App\Models\PluginInstallation;
 use App\Models\User;
 use App\Services\AiDeveloperProviderEndpoint;
@@ -272,7 +273,7 @@ class UniversalAiAssistantPluginTest extends TestCase
         $reservation = AssistantTokenBudget::reserve(1000, 800, $messages);
         $this->assertNotNull($reservation);
 
-        \\DB::table('ai_assistant_token_reservations')
+        \DB::table('ai_assistant_token_reservations')
             ->where('id', $reservation['id'])
             ->update(['expires_at' => now()->subMinute()]);
 
@@ -300,7 +301,7 @@ class UniversalAiAssistantPluginTest extends TestCase
         Http::fake();
 
         $user = User::factory()->create(['role' => 'student']);
-        Route::post('/__test-ai-assistant/budget-messages', [\\Aloms\\UniversalAiAssistant\\AssistantController::class, 'send']);
+        Route::post('/__test-ai-assistant/budget-messages', [\Aloms\UniversalAiAssistant\AssistantController::class, 'send']);
 
         $this->actingAs($user)->postJson('/__test-ai-assistant/budget-messages', [
             'message' => 'Help me practise English.',
