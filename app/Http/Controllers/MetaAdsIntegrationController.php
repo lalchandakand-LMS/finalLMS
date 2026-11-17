@@ -10,6 +10,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
@@ -25,9 +26,11 @@ class MetaAdsIntegrationController extends Controller
         $boostNotices = DashboardAnnouncement::currentlyActive()
             ->where('audience', 'all')->whereNull('branch_id')->orderBy('title')
             ->get(['id', 'title', 'body', 'button_url']);
-        $boostOffers = FlashSale::query()->where('status', 'active')
-            ->where('starts_at', '<=', now())->where('ends_at', '>=', now())
-            ->orderBy('title')->get(['id', 'title', 'description', 'banner_path']);
+        $boostOffers = Route::has('flash-sales.public')
+            ? FlashSale::query()->where('status', 'active')
+                ->where('starts_at', '<=', now())->where('ends_at', '>=', now())
+                ->orderBy('title')->get(['id', 'title', 'description', 'banner_path'])
+            : collect();
 
         $token = $this->accessToken();
         $connected = filled($token);
@@ -270,6 +273,10 @@ class MetaAdsIntegrationController extends Controller
 
         if (filled($data['source_reference'] ?? null)) {
             [$sourceType, $sourceId] = explode(':', $data['source_reference'], 2);
+            if ($sourceType === 'offer') {
+                abort_unless(Route::has('flash-sales.public'), 404);
+            }
+
             $source = match ($sourceType) {
                 'course' => Course::query()->where('status', 'published')->findOrFail((int) $sourceId),
                 'notice' => DashboardAnnouncement::currentlyActive()->where('audience', 'all')->whereNull('branch_id')->findOrFail((int) $sourceId),
