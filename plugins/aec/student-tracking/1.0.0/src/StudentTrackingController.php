@@ -359,7 +359,12 @@ class StudentTrackingController extends Controller
     public function storeRiskAction(Request $request, int $student, PluginResourceAccess $access): RedirectResponse
     {
         $actor = $request->user();
-        abort_unless($actor instanceof User && ($actor->isAdmin() || $actor->isBranchManager() || $actor->isTeacher()), 403);
+        abort_unless(
+            $actor instanceof User
+                && ($actor->isAdmin() || $actor->isBranchManager() || $actor->isTeacher())
+                && $this->hasGrantedPermission('student-tracking.manage-risk'),
+            403
+        );
 
         $studentRecord = $access->scopeQuery(User::query(), $actor)
             ->where('users.role', 'student')
