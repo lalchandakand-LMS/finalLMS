@@ -31,6 +31,8 @@ class AdminSettingsController extends Controller
             'institution_website' => ['nullable', 'url', 'max:255'],
             'institution_logo_url' => ['nullable', 'url', 'max:500'],
             'institution_favicon_url' => ['nullable', 'url', 'max:500'],
+            'site_primary_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'site_background_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'site_logo_media_id' => ['nullable', 'integer', 'min:1'],
             'site_favicon_media_id' => ['nullable', 'integer', 'min:1'],
             'home_title' => ['nullable', 'string', 'max:255'],
