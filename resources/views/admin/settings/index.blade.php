@@ -1,12 +1,12 @@
 @extends('layouts.app')
 
-@section('title', __('Homepage Control') . ' | ' . config('app.name'))
+@section('title', __('Website & Institution Settings') . ' | ' . config('app.name'))
 
 @section('content')
     <div class="page-header">
         <div>
             <span class="badge info">Admin</span>
-            <h1 style="margin: 12px 0 0;">{{ __('Homepage control') }}</h1>
+            <h1 style="margin: 12px 0 0;">{{ __('Website & institution settings') }}</h1>
         </div>
         <a href="{{ route('dashboard') }}" class="btn secondary">{{ __('Back to dashboard') }}</a>
     </div>
