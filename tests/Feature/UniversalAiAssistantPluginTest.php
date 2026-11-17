@@ -525,14 +525,14 @@ class UniversalAiAssistantPluginTest extends TestCase
             'retention_days' => 365,
         ], 'retained-provider-secret', false);
 
-        $conversationId = \\DB::table('ai_assistant_conversations')->insertGetId([
+        $conversationId = \DB::table('ai_assistant_conversations')->insertGetId([
             'user_id' => $student->id,
             'assistant_role' => 'student',
             'title' => 'Preserve this conversation',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        $messageId = \\DB::table('ai_assistant_messages')->insertGetId([
+        $messageId = \DB::table('ai_assistant_messages')->insertGetId([
             'conversation_id' => $conversationId,
             'message_role' => 'assistant',
             'content' => 'Retained answer',
@@ -540,15 +540,15 @@ class UniversalAiAssistantPluginTest extends TestCase
             'model' => 'gpt-4o-mini',
             'created_at' => now(),
         ]);
-        \\DB::table('ai_assistant_daily_budgets')->insert([
+        \DB::table('ai_assistant_daily_budgets')->insert([
             'budget_date' => today()->toDateString(),
             'used_tokens' => 12,
             'reserved_tokens' => 0,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        $reservationId = (string) \\Illuminate\\Support\\Str::uuid();
-        \\DB::table('ai_assistant_token_reservations')->insert([
+        $reservationId = (string) \Illuminate\\Support\\Str::uuid();
+        \DB::table('ai_assistant_token_reservations')->insert([
             'id' => $reservationId,
             'budget_date' => today()->toDateString(),
             'reserved_tokens' => 0,
@@ -557,7 +557,7 @@ class UniversalAiAssistantPluginTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        \\DB::table('ai_assistant_user_daily_requests')->insert([
+        \DB::table('ai_assistant_user_daily_requests')->insert([
             'user_id' => $student->id,
             'request_date' => today()->toDateString(),
             'request_count' => 1,
@@ -567,7 +567,7 @@ class UniversalAiAssistantPluginTest extends TestCase
 
         $relative = 'plugins/test/ai-data-retention/1.0.0';
         $directory = base_path($relative);
-        \\Illuminate\\Support\\Facades\\File::ensureDirectoryExists($directory);
+        \Illuminate\\Support\\Facades\\File::ensureDirectoryExists($directory);
         file_put_contents($directory.'/entry.php', '<?php // test-only signed package');
 
         $plugin = new PluginInstallation();
@@ -581,7 +581,7 @@ class UniversalAiAssistantPluginTest extends TestCase
             'package_path' => $relative,
         ])->save();
 
-        \\DB::table('plugin_migrations')->insert([
+        \DB::table('plugin_migrations')->insert([
             'plugin_key' => 'test.ai-data-retention',
             'plugin_version' => '1.0.0',
             'migration' => '2026_11_15_000001_ai_assistant.php',
