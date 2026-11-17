@@ -148,7 +148,7 @@ class UniversalAiAssistantPluginTest extends TestCase
     public function test_non_boolean_database_grants_are_normalized_to_denied(): void
     {
         $this->saveScopedAssistantSettings(['student']);
-        \\DB::table('ai_assistant_settings')->where('id', 1)->update([
+        \DB::table('ai_assistant_settings')->where('id', 1)->update([
             'role_enabled' => json_encode(['student' => 'false']),
             'role_data_access' => json_encode(['student' => 'true']),
         ]);
