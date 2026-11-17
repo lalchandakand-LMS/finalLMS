@@ -22,7 +22,7 @@ class AdminSettingsController extends Controller
     public function update(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'institution_name' => ['required', 'string', 'max:160'],
+            'institution_name' => ['sometimes', 'required', 'string', 'max:160'],
             'institution_short_name' => ['nullable', 'string', 'max:60'],
             'institution_tagline' => ['nullable', 'string', 'max:180'],
             'institution_contact_email' => ['nullable', 'email', 'max:190'],
