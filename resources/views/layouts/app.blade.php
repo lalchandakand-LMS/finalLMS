@@ -39,8 +39,10 @@
         $themeFont = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('site_font_family', 'system') : 'system';
         $themeFonts = ['system' => 'Arial, Helvetica, sans-serif', 'inter' => 'Inter, Arial, sans-serif', 'nunito' => 'Nunito, Arial, sans-serif', 'poppins' => 'Poppins, Arial, sans-serif', 'georgia' => 'Georgia, serif'];
         $themeFontFamily = $themeFonts[$themeFont] ?? $themeFonts['system'];
-        $activeThemeSlug = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('active_theme_slug') : null;
-        $activeThemeVersion = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('active_theme_version') : null;
+        // Guard the shared layout during first-install and rolling migrations.
+        $hasThemesTable = \\Illuminate\\Support\\Facades\\Schema::hasTable('themes');
+        $activeThemeSlug = $isPublicLayout && $hasSettingsTable && $hasThemesTable ? \\App\\Models\\Setting::value('active_theme_slug') : null;
+        $activeThemeVersion = $isPublicLayout && $hasSettingsTable && $hasThemesTable ? \\App\\Models\\Setting::value('active_theme_version') : null;
         $themeHeadingScale = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('site_heading_scale', '1') : '1';
         $themeBodyScale = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('site_body_scale', '1') : '1';
         if (!in_array($themeHeadingScale, ['0.9', '1', '1.1', '1.2'], true)) $themeHeadingScale = '1';
