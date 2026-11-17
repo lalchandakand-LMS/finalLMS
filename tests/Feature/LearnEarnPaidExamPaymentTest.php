@@ -33,6 +33,14 @@ class LearnEarnPaidExamPaymentTest extends TestCase
             'services.bkash.verify_ssl' => true,
         ]);
 
+        // Plugin migrations create tables at runtime. MySQL implicitly commits DDL,
+        // so temporarily end RefreshDatabase's transaction and start a fresh one
+        // after the package schema is installed.
+        $connection = DB::connection();
+        while ($connection->transactionLevel() > 0) {
+            $connection->rollBack();
+        }
+
         foreach ([
             '2026_11_17_150000_create_learn_earn_question_tables.php',
             '2026_11_17_160000_create_learn_earn_exam_tables.php',
@@ -42,6 +50,8 @@ class LearnEarnPaidExamPaymentTest extends TestCase
             $migration = require base_path('plugins/aec/learn-earn/1.0.0/migrations/'.$migrationFile);
             $migration->up();
         }
+
+        $connection->beginTransaction();
 
         require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnExam.php');
         require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnExamEntitlement.php');
