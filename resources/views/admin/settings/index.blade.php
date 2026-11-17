@@ -8,7 +8,7 @@
             <span class="badge info">Admin</span>
             <h1 style="margin: 12px 0 0;">{{ __('Website & institution settings') }}</h1>
         </div>
-        <a href="{{ route('dashboard') }}" class="btn secondary">{{ __('Back to dashboard') }}</a>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;"><a href="{{ route('admin.setup-wizard.index') }}" class="btn secondary">{{ __('Initial setup wizard') }}</a><a href="{{ route('dashboard') }}" class="btn secondary">{{ __('Back to dashboard') }}</a></div>
     </div>
 
     <div class="panel" style="max-width: 980px; margin: 0 auto;">
