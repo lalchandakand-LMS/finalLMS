@@ -11,6 +11,7 @@ class Payment extends Model
         'user_id',
         'course_id',
         'order_id',
+        'learn_earn_exam_id',
         'course_combo_id',
         'flash_sale_id',
         'batch_id',
@@ -47,6 +48,11 @@ class Payment extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    public function learnEarnExam(): BelongsTo
+    {
+        return $this->belongsTo(\Aloms\LearnEarn\LearnEarnExam::class, 'learn_earn_exam_id');
     }
 
     public function reviewer(): BelongsTo
