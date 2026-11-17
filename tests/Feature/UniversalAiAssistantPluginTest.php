@@ -100,7 +100,7 @@ class UniversalAiAssistantPluginTest extends TestCase
                 'usage' => ['total_tokens' => 42],
             ], 200),
         ]);
-        Route::post('/__test-ai-assistant/scoped-context', [\\Aloms\\UniversalAiAssistant\\AssistantController::class, 'send']);
+        Route::post('/__test-ai-assistant/scoped-context', [\Aloms\UniversalAiAssistant\AssistantController::class, 'send']);
 
         $this->actingAs($student)->postJson('/__test-ai-assistant/scoped-context', [
             'message' => 'What course am I enrolled in?',
@@ -108,7 +108,7 @@ class UniversalAiAssistantPluginTest extends TestCase
 
         Http::assertSent(function ($request): bool {
             $messages = $request->data()['messages'] ?? [];
-            $combined = implode("\\n", array_map(static fn ($message) => (string) ($message['content'] ?? ''), $messages));
+            $combined = implode("\n", array_map(static fn ($message) => (string) ($message['content'] ?? ''), $messages));
             return str_contains($combined, 'Controller permitted course')
                 && ! str_contains($combined, 'Controller private course');
         });
