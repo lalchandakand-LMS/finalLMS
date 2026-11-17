@@ -296,6 +296,8 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::get('/themes', [ThemeManagerController::class, 'index'])->name('admin.themes.index');
         Route::post('/themes/install', [ThemeManagerController::class, 'install'])->middleware('throttle:3,10')->name('admin.themes.install');
         Route::get('/themes/{theme}/preview', [ThemeManagerController::class, 'preview'])->whereNumber('theme')->name('admin.themes.preview');
+        Route::get('/themes/{theme}/preview/frame', [ThemeManagerController::class, 'previewFrame'])->whereNumber('theme')->name('admin.themes.preview.frame');
+        Route::delete('/themes/{theme}', [ThemeManagerController::class, 'destroy'])->whereNumber('theme')->middleware('throttle:10,1')->name('admin.themes.destroy');
         Route::post('/themes/{theme}/activate', [ThemeManagerController::class, 'activate'])->whereNumber('theme')->middleware('throttle:10,1')->name('admin.themes.activate');
         Route::post('/themes/reset', [ThemeManagerController::class, 'reset'])->middleware('throttle:5,1')->name('admin.themes.reset');
         Route::get('/plugins', [AdminPluginManagerController::class, 'index'])->name('admin.plugins.index');
