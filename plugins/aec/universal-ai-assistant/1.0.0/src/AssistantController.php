@@ -170,13 +170,14 @@ final class AssistantController
 
             $answer = $this->redactSensitiveText(trim($answer));
             $tokens = max(0, (int) data_get($decoded, 'usage.total_tokens', 0));
-            AssistantTokenBudget::settle($reservationId, $tokens > 0 ? $tokens : $reservation['reserved_tokens']);
+            $accountedTokens = $tokens > 0 ? $tokens : $reservation['reserved_tokens'];
+            AssistantTokenBudget::settle($reservationId, $accountedTokens);
             $reservationSettled = true;
             DB::table('ai_assistant_messages')->insert([
                 'conversation_id' => $conversation->id,
                 'message_role' => 'assistant',
                 'content' => $answer,
-                'token_count' => $tokens,
+                'token_count' => $accountedTokens,
                 'model' => (string) $settings['model'],
                 'created_at' => now(),
             ]);
