@@ -12,8 +12,15 @@
   },
   "dependencies": [],
   "conflicts": [],
-  "portals": ["admin", "student", "public"],
-  "permissions": ["learn-earn.manage", "learn-earn.take-exams"],
+  "portals": [
+    "admin",
+    "student",
+    "public"
+  ],
+  "permissions": [
+    "learn-earn.manage",
+    "learn-earn.take-exams"
+  ],
   "capabilities": [
     "reusable-mcq-authoring",
     "question-categories",
@@ -23,7 +30,10 @@
     "student-exam-catalogue",
     "free-exam-attempts",
     "server-side-scoring",
-    "attempt-history"
+    "attempt-history",
+    "paid-exam-bkash-checkout",
+    "server-verified-payment-entitlements",
+    "idempotent-payment-callbacks"
   ],
   "migrations": "migrations"
 }
