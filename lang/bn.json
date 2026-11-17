@@ -1329,5 +1329,14 @@
     "submitted": "জমা দেওয়া",
     "closed": "বন্ধ",
     "open": "খোলা",
-    "Not recorded": "রেকর্ড নেই"
+    "Not recorded": "রেকর্ড নেই",
+    "dismiss": "বাতিল",
+    "note": "নোট",
+    "reopen": "পুনরায় চালু",
+    "draft": "খসড়া",
+    "published": "প্রকাশিত",
+    "in_progress": "চলমান",
+    "in_review": "পর্যালোচনায়",
+    "approved": "অনুমোদিত",
+    "rejected": "প্রত্যাখ্যাত"
 }
