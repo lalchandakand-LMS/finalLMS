@@ -1,10 +1,11 @@
 <?php
 
-namespace App\Http\Middleware;
+namespace App\\Http\\Middleware;
 
 use Closure;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\App;
+use Illuminate\\Http\\Request;
+use Illuminate\\Support\\Facades\\App;
+use Illuminate\\Support\\Facades\\Schema;
 
 class SetLocale
 {
@@ -15,9 +16,9 @@ class SetLocale
         $defaultLocale = 'en';
         $timezone = 'UTC';
 
-        if (\Illuminate\Support\Facades\Schema::hasTable('settings')) {
-            $defaultLocale = (string) \App\Models\Setting::value('institution_default_locale', 'en');
-            $timezone = (string) \App\Models\Setting::value('institution_timezone', 'UTC');
+        if (Schema::hasTable('settings')) {
+            $defaultLocale = (string) \\App\\Models\\Setting::value('institution_default_locale', 'en');
+            $timezone = (string) \\App\\Models\\Setting::value('institution_timezone', 'UTC');
         }
 
         if (! in_array($defaultLocale, self::SUPPORTED, true)) {
@@ -29,14 +30,24 @@ class SetLocale
         }
 
         $locale = $request->session()->get('locale', $defaultLocale);
-        date_default_timezone_set($timezone);
-
         if (! in_array($locale, self::SUPPORTED, true)) {
-            $locale = 'en';
+            $locale = $defaultLocale;
         }
 
-        App::setLocale($locale);
+        // Restore process-global state after the response. This prevents one
+        // institution's locale/timezone leaking into another request when the
+        // application runs under a long-lived worker such as Octane.
+        $previousLocale = App::getLocale();
+        $previousTimezone = date_default_timezone_get();
 
-        return $next($request);
+        App::setLocale($locale);
+        date_default_timezone_set($timezone);
+
+        try {
+            return $next($request);
+        } finally {
+            App::setLocale($previousLocale);
+            date_default_timezone_set($previousTimezone);
+        }
     }
 }
