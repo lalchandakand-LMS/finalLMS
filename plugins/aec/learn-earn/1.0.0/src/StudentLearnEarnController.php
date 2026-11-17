@@ -65,11 +65,7 @@ class StudentLearnEarnController extends Controller
             ->where('student_id', $studentId)
             ->latest('attempt_number')
             ->first();
-        $hasEntitlement = LearnEarnExamEntitlement::query()
-            ->where('exam_id', $exam->id)
-            ->where('student_id', $studentId)
-            ->where('status', 'active')
-            ->exists();
+        $hasEntitlement = $this->hasVerifiedEntitlement((int) $exam->id, $studentId);
         $pendingPayment = Payment::query()
             ->where('learn_earn_exam_id', $exam->id)
             ->where('user_id', $studentId)
@@ -167,11 +163,7 @@ class StudentLearnEarnController extends Controller
             );
 
             if ($lockedExam->access_type === 'paid') {
-                $hasEntitlement = LearnEarnExamEntitlement::query()
-                    ->where('exam_id', $lockedExam->id)
-                    ->where('student_id', $request->user()->id)
-                    ->where('status', 'active')
-                    ->exists();
+                $hasEntitlement = $this->hasVerifiedEntitlement((int) $lockedExam->id, (int) $request->user()->id);
                 abort_unless($hasEntitlement, 403, __('Verified payment is required before this paid exam can be started.'));
             }
 
@@ -288,6 +280,20 @@ class StudentLearnEarnController extends Controller
             ->paginate(20);
 
         return view('learn-earn::student.history', compact('attempts'));
+    }
+
+    private function hasVerifiedEntitlement(int $examId, int $studentId): bool
+    {
+        return LearnEarnExamEntitlement::query()
+            ->where('exam_id', $examId)
+            ->where('student_id', $studentId)
+            ->where('status', 'active')
+            ->whereHas('payment', fn ($query) => $query
+                ->where('learn_earn_exam_id', $examId)
+                ->where('status', 'approved')
+                ->where('currency', 'BDT')
+                ->where('gateway_provider', 'bkash'))
+            ->exists();
     }
 
     private function finalize(LearnEarnExamAttempt $attempt, array $submittedAnswers, bool $expired): void
