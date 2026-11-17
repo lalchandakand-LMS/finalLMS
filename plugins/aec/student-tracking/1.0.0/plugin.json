@@ -35,5 +35,6 @@
     "branch-and-teacher-scoped-access",
     "guardian-approved-student-summary",
     "at-risk-learning-indicators"
-  ]
+  ],
+  "migrations": "migrations"
 }
