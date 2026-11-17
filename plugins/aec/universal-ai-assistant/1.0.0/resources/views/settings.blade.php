@@ -46,8 +46,16 @@
     </div>
     <hr>
     <h2>{{ __('Data access policy') }}</h2>
-    <p><strong>{{ __('General Guidance Only') }}</strong></p>
-    <p class="muted">{{ __('Private LMS data access is disabled and cannot be enabled in this release. The assistant receives only the conversation text. Student records, grades, attendance, payments, guardian links, staff and branch data are never retrieved.') }}</p>
+    <p class="muted">{{ __('General Guidance Only remains the default. Enable read-only course and enrollment context separately for each role only after reviewing your institution privacy policy.') }}</p>
+    <div class="grid grid-2">
+        @foreach($dataAccessRoles as $role)
+            <label class="panel" style="display:flex;gap:10px;align-items:center;">
+                <input type="checkbox" name="role_data_access[{{ $role }}]" value="1" @checked(old('role_data_access.'.$role, $settings['role_data_access'][$role] ?? false))>
+                <span>{{ __(ucwords(str_replace('_', ' ', $role)).' read-only course context') }}</span>
+            </label>
+        @endforeach
+    </div>
+    <p class="muted">{{ __('When granted, the server may provide only course titles/status and role-scoped enrollment summaries. Student ownership, assigned teacher courses, active branch and approved guardian links are enforced on every request. No grades, attendance, payments, contact details, private messages, files or write actions are exposed.') }}</p>
     <button class="btn primary" type="submit">{{ __('Save AI settings') }}</button>
 </form>
 <script>

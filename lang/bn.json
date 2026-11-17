@@ -1216,5 +1216,12 @@
     "All retained popup campaigns and analytics were erased.": "সংরক্ষিত সব পপআপ ক্যাম্পেইন ও বিশ্লেষণ মুছে ফেলা হয়েছে।",
     "Type ERASE POPUP DATA exactly to confirm purging retained popup campaigns and analytics.": "সব পপআপ ডেটা ও বিশ্লেষণ মুছে ফেলতে হুবহু ERASE POPUP DATA লিখুন।",
     "Sanitized HTML content cannot be empty when using sanitized HTML mode.": "Sanitized rich HTML মোডে স্যানিটাইজড HTML কনটেন্ট খালি রাখা যাবে না।",
-    "The end date/time must be after or equal to the start date/time.": "শেষের তারিখ/সময় অবশ্যই শুরুর তারিখ/সময়ের সমান বা পরে হতে হবে।"
+    "The end date/time must be after or equal to the start date/time.": "শেষের তারিখ/সময় অবশ্যই শুরুর তারিখ/সময়ের সমান বা পরে হতে হবে।",
+    "General Guidance Only remains the default. Enable read-only course and enrollment context separately for each role only after reviewing your institution privacy policy.": "ডিফল্টভাবে শুধু সাধারণ নির্দেশনা চালু থাকবে। প্রতিষ্ঠানের গোপনীয়তা নীতি পর্যালোচনা করে প্রতিটি রোলের জন্য আলাদাভাবে শুধু-পঠনযোগ্য কোর্স ও এনরোলমেন্ট তথ্য চালু করুন।",
+    "Admin read-only course context": "অ্যাডমিনের শুধু-পঠনযোগ্য কোর্স তথ্য",
+    "Branch Manager read-only course context": "ব্রাঞ্চ ম্যানেজারের শুধু-পঠনযোগ্য কোর্স তথ্য",
+    "Teacher read-only course context": "শিক্ষকের শুধু-পঠনযোগ্য কোর্স তথ্য",
+    "Student read-only course context": "শিক্ষার্থীর শুধু-পঠনযোগ্য কোর্স তথ্য",
+    "Guardian read-only course context": "অভিভাবকের শুধু-পঠনযোগ্য কোর্স তথ্য",
+    "When granted, the server may provide only course titles/status and role-scoped enrollment summaries. Student ownership, assigned teacher courses, active branch and approved guardian links are enforced on every request. No grades, attendance, payments, contact details, private messages, files or write actions are exposed.": "অনুমতি দিলে সার্ভার শুধু কোর্সের নাম/অবস্থা এবং রোল-সীমাবদ্ধ এনরোলমেন্টের সারাংশ দিতে পারবে। প্রতিটি অনুরোধে শিক্ষার্থীর নিজস্বতা, শিক্ষকের নির্ধারিত কোর্স, সক্রিয় ব্রাঞ্চ এবং অনুমোদিত অভিভাবক-সংযোগ যাচাই করা হবে। নম্বর, উপস্থিতি, পেমেন্ট, যোগাযোগের তথ্য, ব্যক্তিগত বার্তা, ফাইল বা কোনো পরিবর্তন করার ক্ষমতা দেওয়া হবে না।"
 }

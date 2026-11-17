@@ -10,6 +10,6 @@
   "conflicts": [],
   "portals": ["admin", "branch", "teacher", "student", "guardian", "support_staff"],
   "permissions": ["ai-assistant.configure", "ai-assistant.use"],
-  "capabilities": ["role-assistants", "encrypted-provider-credentials", "general-guidance-only", "provider-model-discovery", "conversation-retention", "user-owned-conversation-history"],
+  "capabilities": ["role-assistants", "encrypted-provider-credentials", "general-guidance-only", "admin-granted-role-scoped-read-only-context", "provider-model-discovery", "conversation-retention", "user-owned-conversation-history"],
   "migrations": "migrations"
 }

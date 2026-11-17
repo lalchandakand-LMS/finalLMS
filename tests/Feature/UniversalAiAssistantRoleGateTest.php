@@ -35,6 +35,11 @@ class UniversalAiAssistantRoleGateTest extends TestCase
             $migration->up();
         }
 
+        if (Schema::hasTable('ai_assistant_settings') && ! Schema::hasColumn('ai_assistant_settings', 'role_data_access')) {
+            $migration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_17_110000_add_ai_assistant_role_data_access.php');
+            $migration->up();
+        }
+
         Route::post('/__test-ai-role-gate/messages', [\Aloms\UniversalAiAssistant\AssistantController::class, 'send']);
     }
 

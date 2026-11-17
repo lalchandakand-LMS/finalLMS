@@ -3,6 +3,12 @@
 namespace Tests\Feature;
 
 use Aloms\UniversalAiAssistant\AssistantSettings;
+use Aloms\UniversalAiAssistant\AssistantContextRetriever;
+use App\Models\Branch;
+use App\Models\Batch;
+use App\Models\Course;
+use App\Models\Enrollment;
+use App\Models\GuardianStudentLink;
 use Aloms\UniversalAiAssistant\AssistantTokenBudget;
 use App\Models\PluginInstallation;
 use App\Models\User;
@@ -23,6 +29,7 @@ class UniversalAiAssistantPluginTest extends TestCase
     {
         parent::setUp();
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantSettings.php');
+        require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantContextRetriever.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantTokenBudget.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantRequestLimit.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantController.php');
@@ -44,6 +51,180 @@ class UniversalAiAssistantPluginTest extends TestCase
             $requestMigration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_17_100000_create_ai_assistant_user_daily_requests.php');
             $requestMigration->up();
         }
+
+        if (Schema::hasTable('ai_assistant_settings') && ! Schema::hasColumn('ai_assistant_settings', 'role_data_access')) {
+            $dataAccessMigration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_17_110000_add_ai_assistant_role_data_access.php');
+            $dataAccessMigration->up();
+        }
+    }
+
+    private function saveScopedAssistantSettings(array $grantedRoles): void
+    {
+        $enabled = array_fill_keys(AssistantSettings::ROLES, false);
+        $grants = array_fill_keys(AssistantSettings::ROLES, false);
+        foreach ($grantedRoles as $role) {
+            $enabled[$role] = true;
+            $grants[$role] = true;
+        }
+
+        AssistantSettings::save([
+            'model' => 'gpt-4o-mini',
+            'base_url' => 'https://api.openai.com/v1',
+            'temperature' => 0.4,
+            'max_tokens' => 800,
+            'global_enabled' => true,
+            'role_enabled' => $enabled,
+            'role_data_access' => $grants,
+            'daily_request_limit' => 20,
+            'daily_token_budget' => 50000,
+            'retention_days' => 365,
+        ], 'test-secret-provider-key', false);
+    }
+
+    public function test_assistant_controller_sends_only_server_scoped_context_to_the_provider(): void
+    {
+        $this->saveScopedAssistantSettings(['student']);
+        $student = User::factory()->create(['role' => 'student']);
+        $otherStudent = User::factory()->create(['role' => 'student']);
+        $ownCourse = Course::factory()->create(['title' => 'Controller permitted course']);
+        $privateCourse = Course::factory()->create(['title' => 'Controller private course']);
+        Enrollment::query()->create(['user_id' => $student->id, 'course_id' => $ownCourse->id, 'status' => 'active']);
+        Enrollment::query()->create(['user_id' => $otherStudent->id, 'course_id' => $privateCourse->id, 'status' => 'active']);
+
+        app()->instance(AiDeveloperProviderEndpoint::class, new class extends AiDeveloperProviderEndpoint {
+            public function curlOptionsFor(string $url): array { return []; }
+        });
+        Http::fake([
+            'api.openai.com/v1/chat/completions' => Http::response([
+                'choices' => [['message' => ['content' => 'Your course is ready.']]],
+                'usage' => ['total_tokens' => 42],
+            ], 200),
+        ]);
+        Route::post('/__test-ai-assistant/scoped-context', [\Aloms\UniversalAiAssistant\AssistantController::class, 'send']);
+
+        $this->actingAs($student)->postJson('/__test-ai-assistant/scoped-context', [
+            'message' => 'What course am I enrolled in?',
+        ])->assertOk()->assertJson(['response' => 'Your course is ready.']);
+
+        Http::assertSent(function ($request): bool {
+            $messages = $request->data()['messages'] ?? [];
+            $combined = implode("\n", array_map(static fn ($message) => (string) ($message['content'] ?? ''), $messages));
+            return str_contains($combined, 'Controller permitted course')
+                && ! str_contains($combined, 'Controller private course');
+        });
+        $this->assertDatabaseHas('activity_logs', [
+            'user_id' => $student->id,
+            'event' => 'ai_assistant.scoped_context_retrieved',
+        ]);
+    }
+
+    public function test_scoped_context_is_default_deny_and_requires_an_explicit_role_grant(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $otherStudent = User::factory()->create(['role' => 'student']);
+        $ownCourse = Course::factory()->create(['title' => 'My permitted course']);
+        $otherCourse = Course::factory()->create(['title' => 'Other learner private course']);
+        Enrollment::query()->create(['user_id' => $student->id, 'course_id' => $ownCourse->id, 'status' => 'active']);
+        Enrollment::query()->create(['user_id' => $otherStudent->id, 'course_id' => $otherCourse->id, 'status' => 'active']);
+
+        $this->saveScopedAssistantSettings([]);
+        $retriever = app(AssistantContextRetriever::class);
+        $this->assertNull($retriever->retrieve($student, 'student'));
+        $this->assertDatabaseMissing('activity_logs', ['event' => 'ai_assistant.scoped_context_retrieved']);
+
+        $this->saveScopedAssistantSettings(['student']);
+        $context = $retriever->retrieve($student, 'student');
+
+        $this->assertIsString($context);
+        $this->assertStringContainsString('My permitted course', $context);
+        $this->assertStringNotContainsString('Other learner private course', $context);
+        $this->assertStringNotContainsString((string) $otherStudent->name, $context);
+        $this->assertDatabaseHas('activity_logs', [
+            'user_id' => $student->id,
+            'event' => 'ai_assistant.scoped_context_retrieved',
+        ]);
+    }
+
+    public function test_non_boolean_database_grants_are_normalized_to_denied(): void
+    {
+        $this->saveScopedAssistantSettings(['student']);
+        \DB::table('ai_assistant_settings')->where('id', 1)->update([
+            'role_enabled' => json_encode(['student' => 'false']),
+            'role_data_access' => json_encode(['student' => 'true']),
+        ]);
+
+        $settings = AssistantSettings::record();
+        $this->assertFalse($settings['role_enabled']['student']);
+        $this->assertFalse($settings['role_data_access']['student']);
+
+        $student = User::factory()->create(['role' => 'student']);
+        $this->assertNull(app(AssistantContextRetriever::class)->retrieve($student, 'student'));
+    }
+
+    public function test_guardian_context_contains_only_courses_of_student_approved_linked_children(): void
+    {
+        $this->saveScopedAssistantSettings(['guardian']);
+        $guardian = User::factory()->create(['role' => 'guardian']);
+        $linkedStudent = User::factory()->create(['role' => 'student']);
+        $unlinkedStudent = User::factory()->create(['role' => 'student']);
+        GuardianStudentLink::query()->create([
+            'guardian_id' => $guardian->id,
+            'student_id' => $linkedStudent->id,
+            'relationship' => 'parent',
+            'status' => 'active',
+            'requested_by' => $guardian->id,
+            'reviewed_by' => $linkedStudent->id,
+            'requested_at' => now()->subMinute(),
+            'reviewed_at' => now(),
+        ]);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $linkedCourse = Course::factory()->create(['teacher_id' => $teacher->id, 'title' => 'Linked child course']);
+        $privateCourse = Course::factory()->create(['teacher_id' => $teacher->id, 'title' => 'Unlinked child course']);
+        Enrollment::query()->create(['user_id' => $linkedStudent->id, 'course_id' => $linkedCourse->id, 'status' => 'active']);
+        Enrollment::query()->create(['user_id' => $unlinkedStudent->id, 'course_id' => $privateCourse->id, 'status' => 'active']);
+
+        $context = app(AssistantContextRetriever::class)->retrieve($guardian, 'guardian');
+
+        $this->assertIsString($context);
+        $this->assertStringContainsString('Linked child course', $context);
+        $this->assertStringNotContainsString('Unlinked child course', $context);
+        $this->assertStringNotContainsString((string) $unlinkedStudent->name, $context);
+    }
+
+    public function test_teacher_and_branch_manager_context_is_limited_to_assigned_courses_and_active_branch(): void
+    {
+        $this->saveScopedAssistantSettings(['teacher', 'branch_manager']);
+        $branchA = Branch::query()->create(['name' => 'AI Scope Branch A', 'slug' => 'ai-scope-a', 'is_active' => true]);
+        $branchB = Branch::query()->create(['name' => 'AI Scope Branch B', 'slug' => 'ai-scope-b', 'is_active' => true]);
+        $manager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $branchA->id]);
+        $teacherA = User::factory()->create(['role' => 'teacher']);
+        $teacherB = User::factory()->create(['role' => 'teacher']);
+        $studentA = User::factory()->create(['role' => 'student', 'branch_id' => $branchA->id]);
+        $studentB = User::factory()->create(['role' => 'student', 'branch_id' => $branchB->id]);
+        $courseA = Course::factory()->create(['teacher_id' => $teacherA->id, 'title' => 'Branch A assigned course']);
+        $courseB = Course::factory()->create(['teacher_id' => $teacherB->id, 'title' => 'Branch B private course']);
+        $batchA = Batch::query()->create([
+            'branch_id' => $branchA->id, 'course_id' => $courseA->id, 'teacher_id' => $teacherA->id,
+            'title' => 'AI Scope Batch A', 'capacity' => 20, 'starts_at' => now()->addDay(),
+            'ends_at' => now()->addMonths(2), 'fee' => 1000, 'status' => 'open',
+        ]);
+        $batchB = Batch::query()->create([
+            'branch_id' => $branchB->id, 'course_id' => $courseB->id, 'teacher_id' => $teacherB->id,
+            'title' => 'AI Scope Batch B', 'capacity' => 20, 'starts_at' => now()->addDay(),
+            'ends_at' => now()->addMonths(2), 'fee' => 1000, 'status' => 'open',
+        ]);
+        Enrollment::query()->create(['user_id' => $studentA->id, 'course_id' => $courseA->id, 'batch_id' => $batchA->id, 'status' => 'active']);
+        Enrollment::query()->create(['user_id' => $studentB->id, 'course_id' => $courseB->id, 'batch_id' => $batchB->id, 'status' => 'active']);
+
+        $retriever = app(AssistantContextRetriever::class);
+        $teacherContext = $retriever->retrieve($teacherA, 'teacher');
+        $managerContext = $retriever->retrieve($manager, 'branch_manager');
+
+        $this->assertStringContainsString('Branch A assigned course', (string) $teacherContext);
+        $this->assertStringNotContainsString('Branch B private course', (string) $teacherContext);
+        $this->assertStringContainsString('Branch A assigned course', (string) $managerContext);
+        $this->assertStringNotContainsString('Branch B private course', (string) $managerContext);
+        $this->assertStringNotContainsString((string) $studentB->name, (string) $managerContext);
     }
 
     public function test_assistant_settings_are_disabled_by_default_and_private_data_access_is_denied(): void

@@ -19,6 +19,7 @@ final class AdminSettingsController
         return view('universal-ai-assistant::settings', [
             'settings' => AssistantSettings::publicSettings(),
             'roles' => AssistantSettings::ROLES,
+            'dataAccessRoles' => AssistantSettings::DATA_ACCESS_ROLES,
             'modelsUrl' => route('admin.ai-assistant.models'),
         ]);
     }
@@ -83,6 +84,7 @@ final class AdminSettingsController
             'revoke_api_key' => ['nullable', 'boolean'],
         ];
         foreach (AssistantSettings::ROLES as $role) $rules['role_enabled.'.$role] = ['nullable', 'boolean'];
+        foreach (AssistantSettings::DATA_ACCESS_ROLES as $role) $rules['role_data_access.'.$role] = ['nullable', 'boolean'];
 
         $validated = Validator::make($request->all(), $rules)->validate();
         $host = strtolower((string) parse_url($validated['base_url'], PHP_URL_HOST));
@@ -98,6 +100,8 @@ final class AdminSettingsController
 
         $roles = [];
         foreach (AssistantSettings::ROLES as $role) $roles[$role] = (bool) ($validated['role_enabled'][$role] ?? false);
+        $roleDataAccess = [];
+        foreach (AssistantSettings::DATA_ACCESS_ROLES as $role) $roleDataAccess[$role] = (bool) ($validated['role_data_access'][$role] ?? false);
 
         AssistantSettings::save([
             'model' => $validated['model'],
@@ -106,6 +110,7 @@ final class AdminSettingsController
             'max_tokens' => (int) $validated['max_tokens'],
             'global_enabled' => (bool) ($validated['global_enabled'] ?? false),
             'role_enabled' => $roles,
+            'role_data_access' => $roleDataAccess,
             'daily_request_limit' => (int) $validated['daily_request_limit'],
             'daily_token_budget' => (int) $validated['daily_token_budget'],
             'retention_days' => (int) $validated['retention_days'],
