@@ -19,6 +19,7 @@ use App\Models\GuardianStudentLink;
 use App\Models\Setting;
 use App\Models\SupportTicket;
 use App\Models\User;
+use App\Services\Modules\ModuleRegistry;
 use App\Services\Plugins\PluginResourceAccess;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
@@ -65,7 +66,8 @@ class StudentTrackingPluginTest extends TestCase
         return app(StudentTrackingController::class)->show(
             $request,
             $studentId,
-            app(PluginResourceAccess::class)
+            app(PluginResourceAccess::class),
+            app(ModuleRegistry::class)
         );
     }
 
