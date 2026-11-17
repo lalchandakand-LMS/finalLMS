@@ -90,6 +90,120 @@ class AdminPluginManagerController extends Controller
             __('Plugin package verified and installed. Review its permissions before activation.'));
     }
 
+    public function update(
+        Request $request,
+        string $key,
+        PluginUploadInstaller $installer,
+        PluginVersionHistoryRecorder $history,
+    ): RedirectResponse {
+        $validated = $request->validate([
+            'package' => ['required', 'file', 'max:51200'],
+            'manifest' => ['required', 'string', 'max:32768'],
+            'signature' => ['required', 'string', 'max:512'],
+            'key_id' => ['required', 'string', 'max:120'],
+            'backup_confirmed' => ['required', 'accepted'],
+        ]);
+
+        try {
+            $plugin = PluginInstallation::query()->where('plugin_key', $key)->firstOrFail();
+            if ($plugin->status !== 'inactive') {
+                throw new LogicException('Deactivate the plugin before updating it.');
+            }
+
+            $dependent = PluginInstallation::query()->where('status', 'active')
+                ->where('plugin_key', '!=', $plugin->plugin_key)
+                ->get()
+                ->first(fn (PluginInstallation $candidate): bool =>
+                    in_array($plugin->plugin_key, $candidate->manifest['dependencies'] ?? [], true)
+                );
+            if ($dependent) {
+                throw new LogicException('An active plugin depends on this plugin: '.$dependent->plugin_key);
+            }
+
+            $previousVersion = (string) $plugin->version;
+            $updated = $installer->update(
+                $key,
+                $request->file('package'),
+                $validated['manifest'],
+                $validated['signature'],
+                $validated['key_id'],
+            );
+        } catch (InvalidArgumentException $exception) {
+            $this->recordFailure($request, 'admin.plugins.update_failed');
+            return back()->withInput($request->except('package'))->with('error', $exception->getMessage());
+        } catch (Throwable $exception) {
+            report($exception);
+            $this->recordFailure($request, 'admin.plugins.update_failed');
+            return back()->withInput($request->except('package'))->with('error',
+                __('Plugin update failed. The previous version was retained where staging had not completed; inspect server logs before retrying.'));
+        }
+
+        $history->record($updated, 'updated', $request->user(), [
+            'from_version' => $previousVersion,
+            'to_version' => $updated->version,
+            'backup_confirmed' => true,
+        ]);
+        $this->audit($request, 'admin.plugins.updated',
+            'Updated signed plugin '.$updated->plugin_key.' from '.$previousVersion.' to '.$updated->version.'; previous package retained and backup attested.');
+
+        return redirect()->route('admin.plugins.index')->with('success',
+            __('Signed update installed. The plugin remains inactive until its new migrations and health checks pass.'));
+    }
+
+    public function rollback(
+        Request $request,
+        string $key,
+        PluginUploadInstaller $installer,
+        PluginSignatureVerifier $signatureVerifier,
+        PluginIntegrityVerifier $integrityVerifier,
+        PluginMigrationRunner $migrationRunner,
+        PluginVersionHistoryRecorder $history,
+    ): RedirectResponse {
+        $request->validate([
+            'confirm_rollback' => ['required', 'accepted'],
+            'backup_confirmed' => ['required', 'accepted'],
+        ]);
+
+        try {
+            $plugin = PluginInstallation::query()->where('plugin_key', $key)->firstOrFail();
+            if (! in_array($plugin->status, ['installed', 'inactive'], true)) {
+                throw new LogicException('Deactivate the updated plugin before rolling it back.');
+            }
+
+            $snapshot = is_array($plugin->metadata) ? ($plugin->metadata['previous_version_snapshot'] ?? null) : null;
+            if (! is_array($snapshot)) {
+                throw new LogicException('No retained previous signed version is available for rollback.');
+            }
+
+            $previous = new PluginInstallation();
+            $previous->forceFill(array_merge($snapshot, ['plugin_key' => $plugin->plugin_key]));
+            $signatureVerifier->verifyInstalledSignature($previous);
+            $integrityVerifier->verify($previous);
+
+            // Revert only this installed version's recorded migrations. Data-preserving
+            // down() methods may refuse; in that case the current version remains inactive.
+            $currentVersion = (string) $plugin->version;
+            $migrationRunner->rollback($plugin);
+            $restored = $installer->restoreSnapshot($plugin, $snapshot);
+        } catch (Throwable $exception) {
+            report($exception);
+            $this->recordFailure($request, 'admin.plugins.rollback_failed');
+            return back()->with('error',
+                __('Rollback was blocked. The current plugin remains inactive; check retained data, migration guards, backup and server logs.'));
+        }
+
+        $history->record($restored, 'update_rolled_back', $request->user(), [
+            'from_version' => $currentVersion,
+            'to_version' => $restored->version,
+            'backup_confirmed' => true,
+        ]);
+        $this->audit($request, 'admin.plugins.update_rolled_back',
+            'Rolled back signed plugin '.$restored->plugin_key.' from '.$currentVersion.' to '.$restored->version.'; both package versions and application data were retained.');
+
+        return redirect()->route('admin.plugins.index')->with('success',
+            __('Plugin registry restored to the previous signed version. Review its health and activate it explicitly.'));
+    }
+
     public function activate(
         Request $request,
         string $key,
