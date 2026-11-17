@@ -21,7 +21,7 @@ final class AssistantTokenBudget
         $reservationId = (string) Str::uuid();
 
         return DB::transaction(function () use ($dailyBudget, $configuredLimit, $promptTokens, $date, $reservationId): ?array {
-            DB::table('ai_assistant_daily_budgets')->insertOrIgnore([
+            $created = DB::table('ai_assistant_daily_budgets')->insertOrIgnore([
                 'budget_date' => $date,
                 'used_tokens' => 0,
                 'reserved_tokens' => 0,
@@ -30,6 +30,19 @@ final class AssistantTokenBudget
             ]);
 
             $ledger = DB::table('ai_assistant_daily_budgets')->where('budget_date', $date)->lockForUpdate()->first();
+            if ($created > 0 && $ledger) {
+                $legacyUsage = (int) DB::table('ai_assistant_messages')
+                    ->where('message_role', 'assistant')
+                    ->whereDate('created_at', $date)
+                    ->sum('token_count');
+                if ($legacyUsage > 0) {
+                    DB::table('ai_assistant_daily_budgets')->where('id', $ledger->id)->update([
+                        'used_tokens' => $legacyUsage,
+                        'updated_at' => now(),
+                    ]);
+                    $ledger->used_tokens = $legacyUsage;
+                }
+            }
             if (! $ledger) return null;
 
             $expired = DB::table('ai_assistant_token_reservations')
@@ -77,11 +90,12 @@ final class AssistantTokenBudget
     public static function settle(string $reservationId, int $actualTokens): void
     {
         DB::transaction(function () use ($reservationId, $actualTokens): void {
-            $reservation = DB::table('ai_assistant_token_reservations')->where('id', $reservationId)->lockForUpdate()->first();
-            if (! $reservation || $reservation->status !== 'reserved') return;
+            $snapshot = DB::table('ai_assistant_token_reservations')->where('id', $reservationId)->first();
+            if (! $snapshot) return;
 
-            $ledger = DB::table('ai_assistant_daily_budgets')->where('budget_date', $reservation->budget_date)->lockForUpdate()->first();
-            if (! $ledger) return;
+            $ledger = DB::table('ai_assistant_daily_budgets')->where('budget_date', $snapshot->budget_date)->lockForUpdate()->first();
+            $reservation = DB::table('ai_assistant_token_reservations')->where('id', $reservationId)->lockForUpdate()->first();
+            if (! $reservation || $reservation->status !== 'reserved' || ! $ledger) return;
 
             DB::table('ai_assistant_daily_budgets')->where('id', $ledger->id)->update([
                 'reserved_tokens' => max(0, (int) $ledger->reserved_tokens - (int) $reservation->reserved_tokens),
@@ -98,10 +112,13 @@ final class AssistantTokenBudget
     public static function release(string $reservationId): void
     {
         DB::transaction(function () use ($reservationId): void {
+            $snapshot = DB::table('ai_assistant_token_reservations')->where('id', $reservationId)->first();
+            if (! $snapshot) return;
+
+            $ledger = DB::table('ai_assistant_daily_budgets')->where('budget_date', $snapshot->budget_date)->lockForUpdate()->first();
             $reservation = DB::table('ai_assistant_token_reservations')->where('id', $reservationId)->lockForUpdate()->first();
             if (! $reservation || $reservation->status !== 'reserved') return;
 
-            $ledger = DB::table('ai_assistant_daily_budgets')->where('budget_date', $reservation->budget_date)->lockForUpdate()->first();
             if ($ledger) {
                 DB::table('ai_assistant_daily_budgets')->where('id', $ledger->id)->update([
                     'reserved_tokens' => max(0, (int) $ledger->reserved_tokens - (int) $reservation->reserved_tokens),
