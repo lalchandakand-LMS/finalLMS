@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\DB;
 use Throwable;
 
 final class StudentTrackingSettingsController
@@ -34,20 +35,22 @@ final class StudentTrackingSettingsController
             'inactive_days' => ['required', 'integer', 'min:1', 'max:365'],
         ]);
 
-        Setting::setValue('student_tracking_low_attendance_percent', $values['low_attendance_percent']);
-        Setting::setValue('student_tracking_minimum_attendance_records', $values['minimum_attendance_records']);
-        Setting::setValue('student_tracking_inactive_days', $values['inactive_days']);
-
         try {
-            ActivityLog::query()->create([
+            DB::transaction(function () use ($actor, $values, $request): void {
+                Setting::setValue('student_tracking_low_attendance_percent', $values['low_attendance_percent']);
+                Setting::setValue('student_tracking_minimum_attendance_records', $values['minimum_attendance_records']);
+                Setting::setValue('student_tracking_inactive_days', $values['inactive_days']);
+
+                ActivityLog::query()->create([
                 'user_id' => $actor->id,
                 'event' => 'student_tracking.risk_rules_updated',
                 'description' => 'Student tracking risk thresholds updated; no student records were changed.',
                 'method' => 'PUT',
                 'route' => $request->route()?->getName() ?? 'admin.student-tracking.settings.update',
                 'ip_address' => $request->ip(),
-                'user_agent' => substr((string) $request->userAgent(), 0, 1000),
-            ]);
+                    'user_agent' => substr((string) $request->userAgent(), 0, 1000),
+                ]);
+            });
         } catch (Throwable $exception) {
             throw new \RuntimeException('Student tracking settings update could not be audited.', previous: $exception);
         }
