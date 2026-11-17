@@ -29,7 +29,7 @@ class InstitutionLocaleTimezoneTest extends TestCase
 
         $response = (new SetLocale())->handle($request, function () {
             $this->assertSame('bn', app()->getLocale());
-            $this->assertSame('Asia/Dhaka', date_default_timezone_get());
+            $this->assertSame('Asia/Dhaka', config('app.institution_timezone'));
 
             return response('ok');
         });
@@ -55,7 +55,7 @@ class InstitutionLocaleTimezoneTest extends TestCase
 
         (new SetLocale())->handle($request, function () {
             $this->assertSame('en', app()->getLocale());
-            $this->assertSame('Asia/Dhaka', date_default_timezone_get());
+            $this->assertSame('Asia/Dhaka', config('app.institution_timezone'));
 
             return response('ok');
         });
@@ -73,7 +73,7 @@ class InstitutionLocaleTimezoneTest extends TestCase
 
         (new SetLocale())->handle($request, function () {
             $this->assertSame('en', app()->getLocale());
-            $this->assertSame('Asia/Dhaka', date_default_timezone_get());
+            $this->assertSame('Asia/Dhaka', config('app.institution_timezone'));
 
             return response('ok');
         });
@@ -91,7 +91,7 @@ class InstitutionLocaleTimezoneTest extends TestCase
 
         (new SetLocale())->handle($request, function () {
             $this->assertSame('en', app()->getLocale());
-            $this->assertSame('Asia/Dhaka', date_default_timezone_get());
+            $this->assertSame('Asia/Dhaka', config('app.institution_timezone'));
 
             return response('ok');
         });
