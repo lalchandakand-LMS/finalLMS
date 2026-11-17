@@ -27,7 +27,7 @@ class SetupWizardTest extends TestCase
         $this->assertDatabaseHas('settings', ['key' => 'setup_wizard_step', 'value' => '2']);
 
         $this->actingAs($admin)->get(route('admin.setup-wizard.index'))
-            ->assertOk()->assertSee('Academic year');
+            ->assertOk()->assertSee('শিক্ষাবর্ষ');
     }
 
     public function test_admin_can_save_academic_year_and_complete_payment_step(): void
