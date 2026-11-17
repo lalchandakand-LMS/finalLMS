@@ -11,6 +11,8 @@ use App\Models\Enrollment;
 use App\Models\GuardianStudentLink;
 use Aloms\UniversalAiAssistant\AssistantTokenBudget;
 use App\Models\PluginInstallation;
+use App\Services\Plugins\PluginSignatureVerifier;
+use App\Services\Plugins\PluginIntegrityVerifier;
 use App\Models\User;
 use App\Services\AiDeveloperProviderEndpoint;
 use App\Services\Modules\ModuleRegistry;
@@ -814,6 +816,14 @@ class UniversalAiAssistantPluginTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+
+        $this->mock(PluginSignatureVerifier::class)
+            ->shouldReceive('verifyInstalledSignature')
+            ->once()
+            ->andReturnTrue();
+        $this->mock(PluginIntegrityVerifier::class)
+            ->shouldReceive('verify')
+            ->once();
 
         $this->actingAs($admin)
             ->post(route('admin.plugins.uninstall', 'test.ai-data-retention'), [
