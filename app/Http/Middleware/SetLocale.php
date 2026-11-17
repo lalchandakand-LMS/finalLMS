@@ -39,20 +39,19 @@ class SetLocale
             $locale = $defaultLocale;
         }
 
-        // Restore process-global state after the response. This prevents one
-        // institution's locale/timezone leaking into another request when the
-        // application runs under a long-lived worker such as Octane.
-        $previousLocale = App::getLocale();
-        $previousTimezone = date_default_timezone_get();
+        // Keep the installation timezone as metadata for date presenters and
+        // notification formatters. Do not mutate PHP's process timezone here:
+        // request payload dates are parsed by Laravel using the process timezone,
+        // and changing it mid-request would reinterpret UTC timestamps from forms.
+        config(['app.institution_timezone' => $timezone]);
 
+        $previousLocale = App::getLocale();
         App::setLocale($locale);
-        date_default_timezone_set($timezone);
 
         try {
             return $next($request);
         } finally {
             App::setLocale($previousLocale);
-            date_default_timezone_set($previousTimezone);
         }
     }
 }
