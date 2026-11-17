@@ -24,7 +24,7 @@ class AddonRegistryTest extends TestCase
         ]);
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
 
-        $this->actingAs($admin)->get(route('admin.addons.index'))
+        $this->withSession(['locale' => 'en'])->actingAs($admin)->get(route('admin.addons.index'))
             ->assertOk()
             ->assertSee('Allow-listed Add-on Registry')
             ->assertSee('bKash Tokenized Checkout')
@@ -139,7 +139,6 @@ class AddonRegistryTest extends TestCase
 
     public function test_addon_registry_is_available_in_bangla_locale(): void
     {
-        app()->setLocale('bn');
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
 
         $this->actingAs($admin)->get(route('admin.addons.index'))
