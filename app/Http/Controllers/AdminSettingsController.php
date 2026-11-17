@@ -22,6 +22,15 @@ class AdminSettingsController extends Controller
     public function update(Request $request): RedirectResponse
     {
         $validated = $request->validate([
+            'institution_name' => ['required', 'string', 'max:160'],
+            'institution_short_name' => ['nullable', 'string', 'max:60'],
+            'institution_tagline' => ['nullable', 'string', 'max:180'],
+            'institution_contact_email' => ['nullable', 'email', 'max:190'],
+            'institution_contact_phone' => ['nullable', 'string', 'max:40'],
+            'institution_address' => ['nullable', 'string', 'max:500'],
+            'institution_website' => ['nullable', 'url', 'max:255'],
+            'institution_logo_url' => ['nullable', 'url', 'max:500'],
+            'institution_favicon_url' => ['nullable', 'url', 'max:500'],
             'home_title' => ['nullable', 'string', 'max:255'],
             'home_subtitle' => ['nullable', 'string', 'max:500'],
             'home_cta_primary' => ['nullable', 'string', 'max:50'],
