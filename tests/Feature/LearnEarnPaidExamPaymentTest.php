@@ -180,6 +180,40 @@ class LearnEarnPaidExamPaymentTest extends TestCase
         ]);
     }
 
+    public function test_admin_payment_review_lists_exam_payments_but_cannot_manually_grant_or_reject_them(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $exam = $this->paidExam();
+        $payment = Payment::query()->create([
+            'user_id' => $student->id,
+            'course_id' => null,
+            'order_id' => null,
+            'learn_earn_exam_id' => $exam->id,
+            'method' => 'bkash',
+            'gateway_provider' => 'bkash',
+            'amount' => '350.00',
+            'currency' => 'BDT',
+            'transaction_reference' => 'LEARN-EARN-ADMIN-REVIEW',
+            'gateway_payment_id' => 'BKASH-LEARN-EARN-ADMIN-REVIEW',
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.payments.index'))
+            ->assertOk()
+            ->assertSee('Paid Grammar Exam');
+
+        $this->post(route('admin.payments.approve', $payment))->assertRedirect();
+        $this->post(route('admin.payments.reject', $payment), ['admin_note' => 'manual'])->assertRedirect();
+
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'pending']);
+        $this->assertDatabaseMissing('learn_earn_exam_entitlements', [
+            'exam_id' => $exam->id,
+            'student_id' => $student->id,
+        ]);
+    }
+
     private function paidExam(): LearnEarnExam
     {
         $id = DB::table('learn_earn_exams')->insertGetId([
