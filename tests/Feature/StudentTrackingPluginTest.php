@@ -112,6 +112,7 @@ class StudentTrackingPluginTest extends TestCase
     public function test_admin_can_configure_and_audit_student_tracking_risk_thresholds(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
+        $this->grantStudentTrackingPermissions(['student-tracking.view', 'student-tracking.configure']);
         $request = Request::create('/admin/student-tracking/settings', 'PUT', [
             'low_attendance_percent' => 68,
             'minimum_attendance_records' => 4,
@@ -216,6 +217,7 @@ class StudentTrackingPluginTest extends TestCase
         $otherBranch = Branch::create(['name' => 'Other branch', 'slug' => 'other-branch', 'is_active' => true]);
         $manager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $branch->id]);
         $student = User::factory()->create(['role' => 'student', 'branch_id' => $otherBranch->id]);
+        $this->grantStudentTrackingPermissions(['student-tracking.view', 'student-tracking.manage-risk']);
 
         $this->expectException(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
         $this->riskActionFor($manager, $student->id, [
