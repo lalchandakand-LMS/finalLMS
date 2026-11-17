@@ -1262,5 +1262,9 @@
     "Initial setup is complete. You can revisit these settings at any time.": "প্রাথমিক সেটআপ সম্পন্ন হয়েছে। যেকোনো সময় এই সেটিংসে ফিরে আসতে পারবেন।",
     "Your progress has been saved. You can continue later.": "আপনার অগ্রগতি সংরক্ষিত হয়েছে। পরে আবার চালিয়ে যেতে পারবেন।",
     "Setup wizard marked complete. Optional integrations can be configured later.": "সেটআপ উইজার্ড সম্পন্ন হিসেবে চিহ্নিত হয়েছে। ঐচ্ছিক ইন্টিগ্রেশন পরে কনফিগার করতে পারবেন।",
-    "This optional step was skipped. You can return to it later.": "এই ঐচ্ছিক ধাপটি বাদ দেওয়া হয়েছে। পরে আবার সম্পন্ন করতে পারবেন।"
+    "This optional step was skipped. You can return to it later.": "এই ঐচ্ছিক ধাপটি বাদ দেওয়া হয়েছে। পরে আবার সম্পন্ন করতে পারবেন।",
+    "Logo URL": "লোগোর URL",
+    "Favicon URL": "ফ্যাভিকনের URL",
+    "Bank transfer": "ব্যাংক ট্রান্সফার",
+    "Manual payment": "ম্যানুয়াল পেমেন্ট"
 }
