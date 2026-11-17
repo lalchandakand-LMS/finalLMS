@@ -13,6 +13,7 @@ use Illuminate\Http\Client\Request as ClientRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class LearnEarnPaidExamPaymentTest extends TestCase
@@ -222,6 +223,23 @@ class LearnEarnPaidExamPaymentTest extends TestCase
             'exam_id' => $exam->id,
             'student_id' => $student->id,
         ]);
+    }
+
+    public function test_plugin_uninstall_guard_preserves_all_schema_when_exam_content_exists(): void
+    {
+        $exam = $this->paidExam();
+        $migration = require base_path('plugins/aec/learn-earn/1.0.0/migrations/2026_11_17_180000_create_learn_earn_payment_entitlements.php');
+
+        try {
+            $migration->down();
+            $this->fail('The newest plugin migration must block partial rollback when exam content exists.');
+        } catch (\\RuntimeException $exception) {
+            $this->assertStringContainsString('preserve the complete plugin schema', $exception->getMessage());
+        }
+
+        $this->assertTrue(Schema::hasColumn('payments', 'learn_earn_exam_id'));
+        $this->assertTrue(Schema::hasTable('learn_earn_exam_entitlements'));
+        $this->assertDatabaseHas('learn_earn_exams', ['id' => $exam->id]);
     }
 
     private function paidExam(): LearnEarnExam
