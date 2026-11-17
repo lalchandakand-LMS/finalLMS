@@ -16,6 +16,7 @@ use App\Models\SupportTicket;
 use App\Models\Setting;
 use App\Models\LessonProgress;
 use App\Models\User;
+use App\Services\Modules\ModuleRegistry;
 use App\Services\Plugins\PluginResourceAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -396,7 +397,7 @@ class StudentTrackingController extends Controller
         return back()->with('success', __('Student tracking risk action saved.'));
     }
 
-    public function show(Request $request, int $student, PluginResourceAccess $access): View
+    public function show(Request $request, int $student, PluginResourceAccess $access, ModuleRegistry $modules): View
     {
         $actor = $request->user();
         abort_unless($actor instanceof User, 403);
@@ -413,7 +414,8 @@ class StudentTrackingController extends Controller
             ->get();
 
         $allowedCourseIds = $enrollments->pluck('course_id')->filter()->unique()->values();
-        $announcements = Schema::hasTable('dashboard_announcements')
+        $noticeTrackingAvailable = $modules->isEnabled('notice_board') && Schema::hasTable('dashboard_announcements');
+        $announcements = $noticeTrackingAvailable
             ? DashboardAnnouncement::currentlyActive()
                 ->whereIn('audience', ['all', 'student'])
                 ->where(fn (Builder $query) => $query->whereNull('branch_id')->orWhere('branch_id', $studentRecord->branch_id))
@@ -425,7 +427,8 @@ class StudentTrackingController extends Controller
                 ->get(['id', 'title', 'body', 'course_id', 'branch_id', 'starts_at', 'ends_at', 'created_at'])
             : collect();
 
-        $supportTickets = $actor->isAdmin() && Schema::hasTable('support_tickets')
+        $supportTrackingAvailable = $actor->isAdmin() && $modules->isEnabled('support_center') && Schema::hasTable('support_tickets');
+        $supportTickets = $supportTrackingAvailable
             ? SupportTicket::query()
                 ->where('user_id', $studentRecord->id)
                 ->with('branch:id,name')
@@ -573,7 +576,9 @@ class StudentTrackingController extends Controller
             'student' => $studentRecord,
             'enrollments' => $enrollments,
             'announcements' => $announcements,
+            'noticeTrackingAvailable' => $noticeTrackingAvailable,
             'supportTickets' => $supportTickets,
+            'supportTrackingAvailable' => $supportTrackingAvailable,
             'attendanceRecords' => $attendanceRecords,
             'lessonProgress' => $lessonProgress,
             'contentProgress' => $contentProgress,
