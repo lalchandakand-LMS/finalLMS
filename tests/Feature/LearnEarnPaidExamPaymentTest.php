@@ -1,0 +1,205 @@
+<?php
+
+namespace Tests\Feature;
+
+use Aloms\LearnEarn\LearnEarnExam;
+use Aloms\LearnEarn\LearnEarnExamEntitlement;
+use Aloms\LearnEarn\StudentLearnEarnController;
+use App\Models\Payment;
+use App\Models\User;
+use App\Services\Payments\PaymentGatewayManager;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request as ClientRequest;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Tests\TestCase;
+
+class LearnEarnPaidExamPaymentTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config([
+            'services.bkash.enabled' => true,
+            'services.bkash.base_url' => 'https://tokenized.sandbox.bka.sh/v1.2.0-beta',
+            'services.bkash.username' => 'sandbox-user',
+            'services.bkash.password' => 'sandbox-password',
+            'services.bkash.app_key' => 'sandbox-app-key',
+            'services.bkash.app_secret' => 'sandbox-app-secret',
+            'services.bkash.verify_ssl' => true,
+        ]);
+
+        foreach ([
+            '2026_11_17_150000_create_learn_earn_question_tables.php',
+            '2026_11_17_160000_create_learn_earn_exam_tables.php',
+            '2026_11_17_170000_create_learn_earn_attempt_tables.php',
+            '2026_11_17_180000_create_learn_earn_payment_entitlements.php',
+        ] as $migrationFile) {
+            $migration = require base_path('plugins/aec/learn-earn/1.0.0/migrations/'.$migrationFile);
+            $migration->up();
+        }
+
+        require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnExam.php');
+        require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnExamEntitlement.php');
+        require_once base_path('plugins/aec/learn-earn/1.0.0/src/StudentLearnEarnController.php');
+    }
+
+    public function test_paid_exam_entitlement_is_granted_only_after_bkash_server_verification(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $exam = $this->paidExam();
+
+        Http::fake([
+            '*/tokenized/checkout/token/grant' => Http::sequence()
+                ->push(['id_token' => 'checkout-token'])
+                ->push(['id_token' => 'verification-token']),
+            '*/tokenized/checkout/create' => Http::response([
+                'statusCode' => '0000',
+                'paymentID' => 'BKASH-LEARN-EARN-001',
+                'bkashURL' => 'https://tokenized.sandbox.bka.sh/checkout/pay/BKASH-LEARN-EARN-001',
+            ], 200),
+            '*/tokenized/checkout/execute' => Http::response([
+                'transactionStatus' => 'Completed',
+                'paymentID' => 'BKASH-LEARN-EARN-001',
+                'trxID' => 'BKASH-LEARN-EARN-TRX-001',
+                'amount' => '350.00',
+                'currency' => 'BDT',
+                'merchantInvoiceNumber' => 'LEARN-EARN-TEST-INVOICE',
+            ], 200),
+            '*/tokenized/checkout/payment/status' => Http::response([
+                'transactionStatus' => 'Completed',
+                'paymentID' => 'BKASH-LEARN-EARN-001',
+                'trxID' => 'BKASH-LEARN-EARN-TRX-001',
+                'amount' => '350.00',
+                'currency' => 'BDT',
+                'merchantInvoiceNumber' => 'LEARN-EARN-TEST-INVOICE',
+            ], 200),
+        ]);
+
+        $request = Request::create('/student/learn-earn/exams/'.$exam->slug.'/checkout/bkash', 'POST');
+        $request->setUserResolver(fn () => $student);
+
+        $response = app(StudentLearnEarnController::class)->checkoutBkash(
+            $request,
+            $exam,
+            app(PaymentGatewayManager::class),
+        );
+
+        $this->assertSame('https://tokenized.sandbox.bka.sh/checkout/pay/BKASH-LEARN-EARN-001', $response->getTargetUrl());
+
+        $payment = Payment::query()->where('gateway_payment_id', 'BKASH-LEARN-EARN-001')->firstOrFail();
+        $this->assertSame('pending', $payment->status);
+        $this->assertDatabaseMissing('learn_earn_exam_entitlements', [
+            'exam_id' => $exam->id,
+            'student_id' => $student->id,
+        ]);
+
+        $this->get(route('payments.bkash.callback', [
+            'paymentID' => 'BKASH-LEARN-EARN-001',
+            'status' => 'success',
+        ]))->assertRedirect('/student/learn-earn/exams');
+
+        $this->assertDatabaseHas('payments', [
+            'id' => $payment->id,
+            'status' => 'approved',
+            'gateway_transaction_id' => 'BKASH-LEARN-EARN-TRX-001',
+        ]);
+        $this->assertDatabaseHas('learn_earn_exam_entitlements', [
+            'exam_id' => $exam->id,
+            'student_id' => $student->id,
+            'payment_id' => $payment->id,
+            'status' => 'active',
+        ]);
+        $this->assertSame(1, LearnEarnExamEntitlement::query()
+            ->where('exam_id', $exam->id)
+            ->where('student_id', $student->id)
+            ->count());
+
+        Http::assertSent(fn (ClientRequest $clientRequest) =>
+            str_ends_with($clientRequest->url(), '/tokenized/checkout/payment/status')
+            && $clientRequest['paymentID'] === 'BKASH-LEARN-EARN-001'
+        );
+
+        Http::preventStrayRequests();
+        $this->get(route('payments.bkash.callback', ['paymentID' => 'BKASH-LEARN-EARN-001', 'status' => 'success']))
+            ->assertRedirect('/student/learn-earn/exams');
+        $this->assertDatabaseCount('learn_earn_exam_entitlements', 1);
+    }
+
+    public function test_paid_exam_callback_with_wrong_amount_or_invoice_never_grants_access(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $exam = $this->paidExam();
+        $payment = Payment::query()->create([
+            'user_id' => $student->id,
+            'course_id' => null,
+            'order_id' => null,
+            'learn_earn_exam_id' => $exam->id,
+            'method' => 'bkash',
+            'gateway_provider' => 'bkash',
+            'amount' => '350.00',
+            'currency' => 'BDT',
+            'transaction_reference' => 'LEARN-EARN-TEST-INVOICE-2',
+            'gateway_payment_id' => 'BKASH-LEARN-EARN-002',
+            'status' => 'pending',
+        ]);
+
+        Http::fake([
+            '*/tokenized/checkout/token/grant' => Http::response(['id_token' => 'verification-token'], 200),
+            '*/tokenized/checkout/execute' => Http::response([
+                'transactionStatus' => 'Completed',
+                'paymentID' => 'BKASH-LEARN-EARN-002',
+                'trxID' => 'BKASH-LEARN-EARN-TRX-002',
+                'amount' => '350.00',
+                'currency' => 'BDT',
+                'merchantInvoiceNumber' => 'WRONG-INVOICE',
+            ], 200),
+            '*/tokenized/checkout/payment/status' => Http::response([
+                'transactionStatus' => 'Completed',
+                'paymentID' => 'BKASH-LEARN-EARN-002',
+                'trxID' => 'BKASH-LEARN-EARN-TRX-002',
+                'amount' => '1.00',
+                'currency' => 'BDT',
+                'merchantInvoiceNumber' => 'WRONG-INVOICE',
+            ], 200),
+        ]);
+
+        $this->get(route('payments.bkash.callback', [
+            'paymentID' => 'BKASH-LEARN-EARN-002',
+            'status' => 'success',
+        ]))->assertRedirect('/student/learn-earn/exams');
+
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'pending']);
+        $this->assertDatabaseMissing('learn_earn_exam_entitlements', [
+            'exam_id' => $exam->id,
+            'student_id' => $student->id,
+        ]);
+    }
+
+    private function paidExam(): LearnEarnExam
+    {
+        $id = DB::table('learn_earn_exams')->insertGetId([
+            'title' => 'Paid Grammar Exam',
+            'slug' => 'paid-grammar-exam-'.uniqid(),
+            'starts_at' => now()->subMinute(),
+            'ends_at' => now()->addDay(),
+            'duration_minutes' => 30,
+            'pass_marks' => 1,
+            'max_attempts' => 1,
+            'randomize_questions' => true,
+            'access_type' => 'paid',
+            'price' => '350.00',
+            'currency' => 'BDT',
+            'status' => 'published',
+            'show_results' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return LearnEarnExam::query()->findOrFail($id);
+    }
+}
