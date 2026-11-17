@@ -16,9 +16,9 @@ final class PluginLifecycle
         'installed' => ['active', 'inactive', 'update_staged', 'failed', 'uninstalled'],
         'active' => ['inactive', 'update_staged', 'failed'],
         'inactive' => ['active', 'update_staged', 'uninstalled', 'failed'],
-        'update_staged' => ['active', 'inactive', 'failed'],
+        'update_staged' => ['staged', 'active', 'inactive', 'failed'],
         'failed' => ['inactive', 'uninstalled'],
-        'uninstalled' => [],
+        'uninstalled' => ['installed'],
     ];
 
     public function transition(string $pluginKey, string $target, array $attributes = []): PluginInstallation
@@ -33,6 +33,31 @@ final class PluginLifecycle
             if (! in_array($target, self::TRANSITIONS[$current] ?? [], true)) {
                 throw new LogicException("Invalid plugin lifecycle transition: {$current} -> {$target}.");
             }
+            if ($target === 'active') {
+                foreach (($plugin->manifest['dependencies'] ?? []) as $dependency) {
+                    $dependencyActive = PluginInstallation::query()
+                        ->where('plugin_key', $dependency)
+                        ->where('status', 'active')
+                        ->exists();
+                    if (! $dependencyActive) {
+                        throw new LogicException('A required plugin dependency is not active: '.$dependency);
+                    }
+                }
+            }
+
+            if (in_array($target, ['inactive', 'uninstalled'], true)) {
+                $dependent = PluginInstallation::query()
+                    ->where('status', 'active')
+                    ->where('plugin_key', '!=', $pluginKey)
+                    ->get()
+                    ->first(fn (PluginInstallation $candidate): bool =>
+                        in_array($pluginKey, $candidate->manifest['dependencies'] ?? [], true)
+                    );
+                if ($dependent) {
+                    throw new LogicException('An active plugin depends on this plugin: '.$dependent->plugin_key);
+                }
+            }
+
             if (in_array($target, ['installed', 'active'], true) && ! $this->hasVerifiedPackage($plugin, $attributes)) {
                 throw new LogicException('A plugin cannot be installed or activated without a verified signed package.');
             }

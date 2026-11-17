@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "key": "teacher_management",
+  "name": "Teacher Management",
+  "description": "Teacher profiles, onboarding, KYC and workload.",
+  "type": "first_party",
+  "status": "metadata_only",
+  "provider": null,
+  "dependencies": [
+    "core",
+    "identity",
+    "branch_management"
+  ],
+  "permissions": [],
+  "routes": [
+    "teacher.applications.*",
+    "admin.teacher-applications.*",
+    "admin.teachers.*",
+    "teacher.profile.*",
+    "teacher.apply",
+    "teacher.apply.*"
+  ],
+  "settings": [],
+  "events": [],
+  "directory": "plugins/teacher_management",
+  "safety": {
+    "trusted_code_only": true,
+    "execute_uploaded_code": false,
+    "disable_preserves_data": true
+  }
+}

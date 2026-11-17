@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "key": "fee_management",
+  "name": "Fees & Invoices",
+  "description": "Student fees, invoices, installments and collections.",
+  "type": "first_party",
+  "status": "metadata_only",
+  "provider": null,
+  "dependencies": [
+    "core",
+    "finance",
+    "student_management"
+  ],
+  "permissions": [],
+  "routes": [
+    "admin.finance.invoices.*",
+    "admin.invoices.*",
+    "student.invoices.*",
+    "admin.finance.invoice-payments.*",
+    "invoices.*",
+    "invoice-payments.*",
+    "accountant.invoices.*"
+  ],
+  "settings": [],
+  "events": [],
+  "directory": "plugins/fee_management",
+  "safety": {
+    "trusted_code_only": true,
+    "execute_uploaded_code": false,
+    "disable_preserves_data": true
+  }
+}

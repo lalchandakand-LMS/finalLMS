@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Batch;
+use App\Models\AcademicLevel;
 use App\Models\Exam;
 use App\Models\ExamAttempt;
 use App\Models\Enrollment;
@@ -194,18 +195,34 @@ class ExamController extends Controller
         return view('teacher.exams.results', compact('exam', 'attempts', 'isAdmin'));
     }
 
-    public function studentExams(): View
+    public function studentExams(Request $request): View
     {
         abort_unless(Auth::user()->isStudent(), 403);
-        $exams = Exam::with('batch.course')
+        $filters = $request->validate([
+            'academic_level_id' => ['nullable', 'integer', 'exists:academic_levels,id'],
+        ]);
+        $exams = Exam::with('batch.course.academicLevel')
             ->where('status', 'published')
             ->whereHas('batch.enrollments', fn ($query) => $query
                 ->where('user_id', Auth::id())
                 ->where('status', 'active'))
+            ->when($filters['academic_level_id'] ?? null, fn ($query, $levelId) => $query
+                ->whereHas('batch.course', fn ($courses) => $courses->where('academic_level_id', $levelId)))
             ->orderBy('starts_at')
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
+        $academicLevels = AcademicLevel::query()
+            ->where('is_active', true)
+            ->whereHas('courses.batches.exams', fn ($query) => $query
+                ->where('status', 'published')
+                ->whereHas('batch.enrollments', fn ($enrollments) => $enrollments
+                    ->where('user_id', Auth::id())
+                    ->where('status', 'active')))
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
 
-        return view('exams.index', compact('exams'));
+        return view('exams.index', compact('exams', 'academicLevels', 'filters'));
     }
 
     public function studentIndex(Exam $exam): View

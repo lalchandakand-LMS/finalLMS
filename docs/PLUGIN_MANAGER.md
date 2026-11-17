@@ -17,11 +17,10 @@ Admin workspace.
 5. The secure archive installer rechecks the checksum and safely extracts the
    package into plugins/vendor/plugin/version.
 6. The registry is marked installed only after the atomic filesystem move.
-7. The staged ZIP is deleted. The action is written to the admin activity log. No plugin entrypoint or migration is executed during installation.
+7. The staged ZIP is deleted. The action is written to the admin activity log. Plugin entrypoints are never executed during extraction. After installed-file hashes are recorded, the upload workflow runs only the signed migrations declared by the manifest; the plugin remains inactive until an Admin activates it.
 
 A failed, not-yet-installed registry entry can be retried after correcting the
-package or signature. An existing installed version cannot be overwritten.
-In-place updates are not enabled yet. Signed plugin migrations are executed only during explicit activation preflight, after installed-file integrity verification; installing a package alone does not mutate application data.
+package or signature. An existing installed version cannot be overwritten. Package updates are available only for an installed or inactive plugin; active plugins must be deactivated first. The update must retain the plugin key and type and use a strictly newer version. The current package signature and installed-file hashes are verified before update. The new ZIP is signature-verified and extracted to a new version directory; neither the previous version directory nor customer/plugin data is overwritten or deleted. Existing permission grants are intersected with the new manifest permissions so an update cannot silently grant new capabilities. A snapshot of the previous signed manifest, package path, checksum, signing key, and integrity metadata is recorded in version history before the registry switches to the new version. A migration failure leaves the new package failed/inactive and retains the previous package for recovery; database migrations may partially apply on MySQL/MariaDB and must be reviewed before retry or rollback. Package migration rollback verifies the current and retained packages, moves the registry into a non-activatable staging state before running down() migrations, and marks the plugin failed if rollback is interrupted.
 
 ## Example manifest
 
@@ -49,13 +48,69 @@ PluginSignatureVerifier::payloadForSignature($manifest, $sha256). See
 PLUGIN_SIGNATURE_VERIFICATION.md for the trusted public key configuration and
 canonical signing rules.
 
-## Not yet enabled
+## Available lifecycle controls
 
-The Manager deliberately does not offer activate, deactivate, update or uninstall
-controls yet. The isolated runtime must first enforce plugin boundaries for web
-routes, API routes, queued jobs, schedules, events and portal navigation. A
-plugin being installed does not mean its PHP entrypoint is loaded or executed.
-Manifest permissions are stored for review and are not automatically granted.
+The Admin Plugin Manager supports signed package installation, permission grants,
+activation, deactivation, health checks and uninstall. Activation verifies the
+trusted signature, manifest identity, declared dependencies/conflicts and every
+installed-file hash before running the signed migrations. The plugin remains
+inactive when installation or migration fails. Third-party entrypoints are not
+loaded directly by the core runtime; registered plugin routes remain subject to
+plugin-active, permission and resource-scope middleware.
+
+Deactivation blocks plugin routes immediately and retains package files and LMS
+data. Uninstall requires an explicit server-validated confirmation. Before the
+registry is marked uninstalled or any package file is removed, the manager
+re-verifies the detached release signature and every installed-file hash, then
+creates a ZIP recovery snapshot in the private
+`storage/app/private/plugin-recovery` directory. Package files are added and
+verified using streaming I/O so their contents are not loaded into PHP memory.
+The archive contains the exact package manifest, detached release signature,
+signing-key ID, package checksum, per-file SHA-256 hashes and plugin/version
+identity. Its metadata is authenticated with HMAC-SHA-256 using `APP_KEY`, and
+the archive is hashed before it is recorded in plugin version history. If
+signature, integrity, archive verification or history persistence fails,
+uninstall is blocked and the executable package remains in place.
+
+After a successful snapshot, the plugin is marked uninstalled and only its
+executable package directory is removed. Database records, encrypted settings,
+customer/LMS data and migration history are retained in the live database; the
+package archive is not a database backup. Keep normal database/files backups
+and protect `APP_KEY` as part of production recovery. If filesystem cleanup is
+interrupted, the Admin Manager exposes an idempotent "Retry package cleanup"
+action.
+
+For a package-only recovery, an Admin can use "Restore package" on the
+uninstalled plugin. The manager checks the recorded archive SHA-256, verifies
+the archive HMAC and plugin/version identity, streams each file into a private
+staging directory, checks every file hash, and atomically moves the verified
+package into its canonical directory. The detached release signature and
+installed-file integrity are then verified again. The plugin returns to the
+installed but inactive state; it is never automatically activated and its
+migrations are not rerun because the LMS data and migration history were
+retained. A missing, altered, untrusted or incomplete archive fails closed.
+Package updates retain immutable version directories and a signed registry
+snapshot.
+Package-version rollback is available for installed/inactive plugins only; it
+verifies both package signatures and installed-file hashes, reverses the current
+version's recorded migrations, restores the retained package, and leaves the
+plugin inactive. A failed or interrupted migration rollback marks the plugin
+failed so it cannot be activated until an administrator performs recovery.
+Take a database backup first: migration down() methods may be destructive or
+only partially reversible on MySQL/MariaDB.
+
+## Encrypted plugin settings
+
+Plugin Manager lets an Admin save a plugin-specific key/value setting. Values are
+encrypted using Laravel's application encryption key before persistence. The
+manager displays setting names and update timestamps only; it never renders or
+returns decrypted values, writes them to audit descriptions, or flashes them
+back into the session after validation errors. Plugin code retrieves a value through
+PluginSettingsManager::get($plugin, $key). Settings remain stored when a plugin
+is deactivated or uninstalled so reinstall/recovery does not silently discard
+credentials. Protect APP_KEY and include it in encrypted-backup recovery
+procedures; changing it without re-encrypting settings makes stored values
+unreadable. Migration rollback refuses to drop a non-empty settings table.
 
 ## Portal resource authorization
 
@@ -91,4 +146,4 @@ Plugin Manager provides an explicit health check for installed, active, inactive
 
 If an active plugin fails runtime signature or integrity verification, the runtime transitions it to `failed` so its routes are blocked. A failed package can return to `inactive` only after an administrator runs a successful health check. A health check does not execute plugin entrypoints or migrations.
 
-Lifecycle history records the plugin key/version, package checksum, signing key ID, action, resulting status, actor and safe details for install, activate, deactivate, uninstall and health-check events. It does not yet implement package upgrades, multiple installed versions or rollback.
+Lifecycle history records the plugin key/version, package checksum, signing key ID, action, resulting status, actor and safe details for install, update, activate, deactivate, uninstall, health checks and package rollback. Package updates retain the previous signed manifest, package path, checksum, signing key, signature timestamp and installed-file hashes before switching the registry. The previous immutable package directory is retained. Package rollback is available only while the current plugin is installed or inactive; it verifies both package signatures and installed-file hashes, reverses only the current version's recorded migrations, restores the previous registry snapshot, and leaves the plugin inactive. Take a database backup first: migration down() methods can be destructive or only partially reversible on MySQL/MariaDB. A failed rollback does not reactivate the plugin.

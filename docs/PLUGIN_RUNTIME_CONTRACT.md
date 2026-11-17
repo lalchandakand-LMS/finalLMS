@@ -12,12 +12,21 @@ methods. The runtime never loads a package from a public upload or arbitrary
 filesystem path; it resolves only the canonical private
 plugins/vendor/plugin/version directory.
 
-PluginContext exposes explicit container bindings and routesForPortal(). Route
-registration is permitted only for portals declared in the signed manifest.
-The route group automatically receives web and plugin-active middleware, plus
-auth, verified and the matching role middleware for non-public portals. The
-plugin-active middleware rechecks registry state on each request, so a plugin
-that is deactivated or marked failed stops serving its routes immediately.
+PluginContext exposes explicit container bindings and routesForPortal().
+Web route registration is permitted only for portals declared in the signed
+manifest. Authenticated web groups receive web, plugin-active, auth, verified,
+role and declared/granted permission middleware. Public web routes still receive
+plugin-active middleware.
+
+Mobile API routes use apiRoutesForPortal() and are currently limited to the
+student and teacher portals because the LMS mobile-token authenticator accepts
+only those roles and requires an approved device. These groups receive api,
+plugin-active, api.token, role, declared/granted permission and a default
+60-requests-per-minute throttle. Guardian, branch and admin API routes must not
+use this mobile-token helper until their own supported API authentication
+contract is implemented. The plugin-active middleware rechecks registry state
+on each request, so a plugin that is deactivated or marked failed stops serving
+its routes immediately.
 
 If integrity, signature trust, manifest identity, entrypoint contract or plugin
 boot fails, the plugin is marked failed and its routes are blocked. The LMS core

@@ -17,7 +17,7 @@ final class PluginIntegrityVerifier
      */
     public function verify(PluginInstallation $plugin): void
     {
-        if (! in_array($plugin->status, ['installed', 'active', 'inactive', 'failed'], true)
+        if (! in_array($plugin->status, ['installed', 'active', 'inactive', 'failed', 'update_staged'], true)
             || ! is_array($plugin->metadata)
             || ($plugin->metadata['integrity_version'] ?? null) !== 1) {
             throw new RuntimeException('The plugin has no supported installed-file integrity record.');

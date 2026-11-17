@@ -30,7 +30,19 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Lint GitHub Actions workflows
-        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+        shell: bash
+        run: |
+          for attempt in 1 2 3; do
+            if go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "actionlint dependency download failed; retrying ($attempt/3)..."
+              sleep 5
+            fi
+          done
+          echo "actionlint failed after three attempts."
+          exit 1
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'

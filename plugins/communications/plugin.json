@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "key": "communications",
+  "name": "Communications Core",
+  "description": "Shared notification dispatch and delivery tracking.",
+  "type": "first_party",
+  "status": "metadata_only",
+  "provider": null,
+  "dependencies": [
+    "core",
+    "identity"
+  ],
+  "permissions": [],
+  "routes": [],
+  "settings": [],
+  "events": [],
+  "directory": "plugins/communications",
+  "safety": {
+    "trusted_code_only": true,
+    "execute_uploaded_code": false,
+    "disable_preserves_data": true
+  }
+}

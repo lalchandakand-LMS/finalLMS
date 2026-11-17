@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "key": "lesson_management",
+  "name": "Lesson & Learning Content",
+  "description": "Lessons, learning materials, video and course content.",
+  "type": "first_party",
+  "status": "metadata_only",
+  "provider": null,
+  "dependencies": [
+    "core",
+    "course_management",
+    "storage"
+  ],
+  "permissions": [],
+  "routes": [
+    "courses.lessons.*",
+    "courses.content.*",
+    "admin.lessons.*",
+    "admin.courses.lessons.*"
+  ],
+  "settings": [],
+  "events": [],
+  "directory": "plugins/lesson_management",
+  "safety": {
+    "trusted_code_only": true,
+    "execute_uploaded_code": false,
+    "disable_preserves_data": true
+  }
+}

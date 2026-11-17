@@ -816,7 +816,9 @@ class UniversalAiAssistantPluginTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->post(route('admin.plugins.uninstall', 'test.ai-data-retention'))
+            ->post(route('admin.plugins.uninstall', 'test.ai-data-retention'), [
+                'confirm_uninstall' => '1',
+            ])
             ->assertRedirect(route('admin.plugins.index'))
             ->assertSessionHas('success');
 
