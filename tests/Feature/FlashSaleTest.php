@@ -9,14 +9,55 @@ use App\Models\CourseCurriculumItem;
 use App\Models\Enrollment;
 use App\Models\FlashSale;
 use App\Models\Payment;
+use App\Models\PluginInstallation;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use App\Services\Plugins\PluginContext;
+use App\Services\Plugins\PluginHookRegistry;
 use Tests\TestCase;
 
 class FlashSaleTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config(['plugins.trusted_public_keys' => ['flash-sale-test-key' => 'test-public-key']]);
+
+        $manifest = json_decode(
+            file_get_contents(base_path('plugins/aec/flash-sale/1.0.0/plugin.json')),
+            true,
+            512,
+            JSON_THROW_ON_ERROR
+        );
+
+        DB::table('plugin_registry')->insert([
+            'plugin_key' => 'aec.flash-sale',
+            'name' => 'Flash Sale',
+            'version' => '1.0.0',
+            'type' => 'module',
+            'status' => 'active',
+            'manifest' => json_encode($manifest, JSON_THROW_ON_ERROR),
+            'package_sha256' => str_repeat('a', 64),
+            'signature_key_id' => 'flash-sale-test-key',
+            'signature_verified_at' => now(),
+            'package_path' => 'plugins/aec/flash-sale/1.0.0',
+            'health_status' => 'healthy',
+            'metadata' => json_encode(['granted_permissions' => ['flash-sale.manage']], JSON_THROW_ON_ERROR),
+            'installed_at' => now(),
+            'activated_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $installation = PluginInstallation::query()->where('plugin_key', 'aec.flash-sale')->firstOrFail();
+        $plugin = require base_path('plugins/aec/flash-sale/1.0.0/src/Plugin.php');
+        $plugin->register(new PluginContext(app(), app('router'), $installation, app(PluginHookRegistry::class)));
+    }
 
     private function makeCourse(float $price = 1000): Course
     {
@@ -93,6 +134,24 @@ class FlashSaleTest extends TestCase
 
         $sale->update(['status' => 'paused']);
         $this->get('/')->assertOk()->assertDontSee('November Mega Sale');
+    }
+
+    public function test_deactivating_flash_sale_plugin_disables_routes_and_all_discount_pricing(): void
+    {
+        $course = $this->makeCourse();
+        $this->makeSale($course);
+
+        $this->assertNotNull(FlashSale::activeForCourse($course->id));
+        $this->assertNotEmpty(FlashSale::activeCampaigns());
+
+        DB::table('plugin_registry')->where('plugin_key', 'aec.flash-sale')->update([
+            'status' => 'inactive',
+            'updated_at' => now(),
+        ]);
+
+        $this->assertNull(FlashSale::activeForCourse($course->id));
+        $this->assertCount(0, FlashSale::activeCampaigns());
+        $this->get('/flash-sale')->assertNotFound();
     }
 
     public function test_admin_can_disable_public_flash_sale_page_without_deleting_campaigns(): void
