@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "key": "aec.student-tracking",
+  "name": "Student Tracking & Monitoring",
+  "version": "1.0.0",
+  "type": "module",
+  "entrypoint": "src/Plugin.php",
+  "requires": {
+    "php": "^8.3",
+    "laravel": "^12.0",
+    "lms": "^1.0"
+  },
+  "dependencies": [],
+  "conflicts": [],
+  "portals": [
+    "admin",
+    "branch",
+    "teacher",
+    "student",
+    "guardian"
+  ],
+  "permissions": [
+    "student-tracking.view",
+    "student-tracking.configure",
+    "student-tracking.manage-risk"
+  ],
+  "capabilities": [
+    "attendance-monitoring",
+    "course-learning-progress",
+    "student-activity-overview",
+    "scoped-audited-csv-export",
+    "configurable-risk-rules",
+    "risk-dismissal-and-note-audit-trail",
+    "scoped-assessment-and-assignment-outcomes",
+    "branch-and-teacher-scoped-access",
+    "guardian-approved-student-summary",
+    "at-risk-learning-indicators",
+    "overdue-assignment-risk",
+    "consecutive-absence-risk",
+    "declining-score-risk",
+    "scoped-student-notice-timeline",
+    "admin-support-engagement-timeline"
+  ],
+  "migrations": "migrations"
+}
