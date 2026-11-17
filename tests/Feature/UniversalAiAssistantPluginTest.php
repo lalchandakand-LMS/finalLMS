@@ -394,6 +394,35 @@ class UniversalAiAssistantPluginTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_unknown_or_scoped_data_access_mode_fails_closed_before_provider_or_database_retrieval(): void
+    {
+        AssistantSettings::save([
+            'model' => 'gpt-4o-mini',
+            'base_url' => 'https://api.openai.com/v1',
+            'temperature' => 0.4,
+            'max_tokens' => 800,
+            'global_enabled' => true,
+            'role_enabled' => array_replace(array_fill_keys(AssistantSettings::ROLES, false), ['student' => true]),
+            'daily_request_limit' => 20,
+            'daily_token_budget' => 50000,
+            'retention_days' => 365,
+        ], 'test-secret-provider-key', false);
+        \\DB::table('ai_assistant_settings')->where('id', 1)->update([
+            'data_access_mode' => 'branch_scoped',
+        ]);
+
+        Http::fake();
+        $student = User::factory()->create(['role' => 'student']);
+        Route::post('/__test-ai-assistant/unsupported-data-mode', [\\Aloms\\UniversalAiAssistant\\AssistantController::class, 'send']);
+
+        $this->actingAs($student)->postJson('/__test-ai-assistant/unsupported-data-mode', [
+            'message' => 'Show me my grades.',
+        ])->assertNotFound();
+
+        $this->assertDatabaseMissing('ai_assistant_conversations', ['user_id' => $student->id]);
+        Http::assertNothingSent();
+    }
+
     public function test_each_role_assistant_switch_is_independently_mapped_and_default_deny(): void
     {
         $roleMap = [
