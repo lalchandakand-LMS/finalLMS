@@ -141,7 +141,7 @@ class AddonRegistryTest extends TestCase
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
 
-        $this->withSession(['locale' => 'bn'])->actingAs($admin)->get(route('admin.addons.index'))
+        $this->actingAs($admin)->get(route('admin.addons.index'))
             ->assertOk()
             ->assertSee('অনুমোদিত অ্যাড-অন রেজিস্ট্রি')
             ->assertSee('বিকাশ টোকেনাইজড চেকআউট')
