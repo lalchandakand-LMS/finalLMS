@@ -29,11 +29,11 @@ class LearnEarnPluginPackageTest extends TestCase
         $this->assertStringContainsString("Schema::create('learn_earn_categories'", $questionMigration);
         $this->assertStringContainsString("Schema::create('learn_earn_questions'", $questionMigration);
         $this->assertStringContainsString("'negative_marks'", $questionMigration);
-        $this->assertStringContainsString('throw new RuntimeException', $questionMigration);
+        $this->assertStringContainsString('throw new \\RuntimeException', $questionMigration);
         $this->assertStringContainsString("Schema::create('learn_earn_exams'", $examMigration);
         $this->assertStringContainsString("Schema::create('learn_earn_exam_questions'", $examMigration);
         $this->assertStringContainsString("'source_question_id'", $examMigration);
-        $this->assertStringContainsString('throw new RuntimeException', $examMigration);
+        $this->assertStringContainsString('throw new \\RuntimeException', $examMigration);
         $this->assertStringContainsString("Schema::create('learn_earn_exam_attempts'", $attemptMigration);
         $this->assertStringContainsString("Schema::create('learn_earn_exam_answers'", $attemptMigration);
         $this->assertStringContainsString('preserve them during plugin migration rollback', $attemptMigration);
