@@ -33,6 +33,37 @@ class AdminHomeSettingsTest extends TestCase
         ]);
     }
 
+    public function test_admin_can_save_institution_default_locale_and_timezone_without_overwriting_identity(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        Setting::setValue('institution_name', 'My Learning Center');
+
+        $this->actingAs($admin)
+            ->post(route('admin.settings.update'), [
+                'institution_default_locale' => 'bn',
+                'institution_timezone' => 'Asia/Dhaka',
+            ])
+            ->assertRedirect(route('admin.settings.index'));
+
+        $this->assertDatabaseHas('settings', ['key' => 'institution_name', 'value' => 'My Learning Center']);
+        $this->assertDatabaseHas('settings', ['key' => 'institution_default_locale', 'value' => 'bn']);
+        $this->assertDatabaseHas('settings', ['key' => 'institution_timezone', 'value' => 'Asia/Dhaka']);
+    }
+
+    public function test_admin_cannot_save_unsupported_institution_locale_or_timezone(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->from(route('admin.settings.index'))
+            ->post(route('admin.settings.update'), [
+                'institution_default_locale' => 'fr',
+                'institution_timezone' => 'Mars/Phobos',
+            ])
+            ->assertRedirect(route('admin.settings.index'))
+            ->assertSessionHasErrors(['institution_default_locale', 'institution_timezone']);
+    }
+
     public function test_homepage_uses_admin_configured_values(): void
     {
         Setting::setValue('home_title', 'Future Skills Academy');
