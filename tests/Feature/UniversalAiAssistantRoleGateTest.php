@@ -26,6 +26,10 @@ class UniversalAiAssistantRoleGateTest extends TestCase
             $migration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_15_180000_create_universal_ai_assistant_tables.php');
             $migration->up();
         }
+        if (Schema::hasTable('ai_assistant_settings') && ! Schema::hasColumn('ai_assistant_settings', 'retention_days')) {
+            $migration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_15_190000_add_ai_assistant_conversation_retention.php');
+            $migration->up();
+        }
         if (! Schema::hasTable('ai_assistant_daily_budgets')) {
             $migration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_17_090000_create_ai_assistant_token_budget_tables.php');
             $migration->up();
