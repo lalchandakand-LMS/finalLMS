@@ -558,6 +558,66 @@ class StudentTrackingPluginTest extends TestCase
         ]);
     }
 
+    public function test_detail_flags_three_consecutive_absences_and_declining_normalized_scores(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $branch = Branch::create(['name' => 'Risk trends', 'slug' => 'risk-trends', 'is_active' => true]);
+        $student = User::factory()->create(['role' => 'student', 'branch_id' => $branch->id]);
+        $course = Course::factory()->create(['teacher_id' => $teacher->id]);
+        $batch = Batch::create([
+            'branch_id' => $branch->id,
+            'course_id' => $course->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Risk trends batch',
+            'capacity' => 20,
+            'starts_at' => now()->subMonth(),
+            'ends_at' => now()->addMonth(),
+            'status' => 'active',
+        ]);
+        Enrollment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'batch_id' => $batch->id,
+            'status' => 'active',
+        ]);
+
+        foreach ([2, 1, 0] as $daysAgo) {
+            Attendance::create([
+                'batch_id' => $batch->id,
+                'student_id' => $student->id,
+                'marked_by' => $teacher->id,
+                'attendance_date' => today()->subDays($daysAgo),
+                'status' => 'absent',
+            ]);
+        }
+
+        foreach ([['score' => 90, 'days' => 3], ['score' => 65, 'days' => 2], ['score' => 60, 'days' => 1]] as $position => $result) {
+            $assignment = Assignment::create([
+                'batch_id' => $batch->id,
+                'teacher_id' => $teacher->id,
+                'title' => 'Assessment '.($position + 1),
+                'instructions' => 'Complete assessment.',
+                'due_at' => now()->subDays(5),
+                'max_marks' => 100,
+                'status' => 'published',
+            ]);
+            AssignmentSubmission::create([
+                'assignment_id' => $assignment->id,
+                'student_id' => $student->id,
+                'answer' => 'Submitted work',
+                'submitted_at' => now()->subDays($result['days']),
+                'score' => $result['score'],
+                'status' => 'graded',
+            ]);
+        }
+
+        $detail = $this->showFor($teacher, $student->id);
+        $codes = array_column($detail->getData()['riskFlags'], 'code');
+
+        $this->assertContains('consecutive_absences', $codes);
+        $this->assertContains('declining_scores', $codes);
+    }
+
     public function test_guardian_loses_tracking_access_after_link_is_revoked(): void
     {
         $guardian = User::factory()->create(['role' => 'guardian']);
