@@ -91,7 +91,7 @@ class ThemeManagerTest extends TestCase
         Storage::fake('public');
         $admin = User::factory()->create(['role' => 'admin']);
         $path = 'themes/blue-academy/1.0.0/assets/theme.css';
-        Storage::disk('public')->put($path, '.theme-preview-shell { border-radius: 24px; }');
+        Storage::disk('public')->put($path, '.theme-preview-shell { --aec-theme-preview-marker: 24px; }');
         $themeId = DB::table('themes')->insertGetId([
             'slug' => 'blue-academy',
             'version' => '1.0.0',
@@ -101,7 +101,7 @@ class ThemeManagerTest extends TestCase
             'min_lms_version' => '1.0.0',
             'manifest' => json_encode([
                 'product_id' => 'aloms-lms-theme',
-                'assets' => ['assets/theme.css' => hash('sha256', '.theme-preview-shell { border-radius: 24px; }')],
+                'assets' => ['assets/theme.css' => hash('sha256', '.theme-preview-shell { --aec-theme-preview-marker: 24px; }')],
             ]),
             'assets' => json_encode(['assets/theme.css']),
             'preview_path' => null,
@@ -117,13 +117,13 @@ class ThemeManagerTest extends TestCase
             ->assertSee('Blue Academy')
             ->assertSee('sandbox', false)
             ->assertSee(route('admin.themes.preview.frame', $themeId))
-            ->assertDontSee('border-radius: 24px', false);
+            ->assertDontSee('--aec-theme-preview-marker: 24px', false);
 
         $this->actingAs($admin)->get(route('admin.themes.preview.frame', $themeId))
             ->assertOk()
             ->assertHeader('Content-Security-Policy')
             ->assertSee('.theme-preview-shell', false)
-            ->assertSee('border-radius: 24px', false);
+            ->assertSee('--aec-theme-preview-marker: 24px', false);
 
         $this->actingAs($admin)->post(route('admin.themes.activate', $themeId))
             ->assertRedirect(route('admin.themes.index'));
@@ -425,8 +425,8 @@ class ThemeManagerTest extends TestCase
     {
         Schema::partialMock()
             ->shouldReceive('hasTable')
-            ->with('themes')
-            ->andReturn(false);
+            ->andReturnUsing(fn (string $table): bool => $table !== 'themes'
+                && DB::connection()->getSchemaBuilder()->hasTable($table));
 
         $this->get(route('landing'))->assertOk();
     }
