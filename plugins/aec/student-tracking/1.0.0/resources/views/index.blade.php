@@ -19,7 +19,7 @@
         <p class="muted">Attendance, course participation and learning progress from the LMS records.</p>
     </div>
 </div>
-@if(auth()->user()->role === 'admin')
+@if($canConfigureRisk)
     <p style="margin:0 0 16px;"><a class="btn secondary" href="{{ route('admin.student-tracking.settings.index') }}">{{ __('Configure risk rules') }}</a></p>
 @endif
 
