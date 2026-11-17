@@ -49,6 +49,14 @@ class StudentTrackingPluginTest extends TestCase
         );
     }
 
+    private function exportFor(User $actor, array $query = [])
+    {
+        $request = Request::create('/student-tracking/export', 'GET', $query);
+        $request->setUserResolver(fn () => $actor);
+
+        return app(StudentTrackingController::class)->export($request, app(PluginResourceAccess::class));
+    }
+
     public function test_admin_can_view_all_students_and_tracking_metrics(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
@@ -284,6 +292,21 @@ class StudentTrackingPluginTest extends TestCase
             'No recorded LMS learning activity in the last 14 days',
             $trackedStudent->tracking_risk_reasons
         );
+
+        $export = $this->exportFor($teacher, [
+            'from_date' => today()->subDays(2)->toDateString(),
+            'to_date' => today()->toDateString(),
+        ]);
+        ob_start();
+        $export->sendContent();
+        $csv = (string) ob_get_clean();
+        $this->assertStringContainsString('student_id,student_name,attendance_rate_percent', $csv);
+        $this->assertStringContainsString(',50,2,1,1,0,0,', $csv);
+        $this->assertStringNotContainsString('Unassigned batch', $csv);
+        $this->assertDatabaseHas('activity_logs', [
+            'user_id' => $teacher->id,
+            'event' => 'student_tracking.exported',
+        ]);
     }
 
     public function test_guardian_loses_tracking_access_after_link_is_revoked(): void
