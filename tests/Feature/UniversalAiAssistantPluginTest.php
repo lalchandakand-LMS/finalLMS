@@ -313,6 +313,16 @@ class UniversalAiAssistantPluginTest extends TestCase
             'created_at' => now()->subDays(31),
             'updated_at' => now()->subDays(31),
         ]);
+        $completedReservationId = (string) \Illuminate\Support\Str::uuid();
+        \DB::table('ai_assistant_token_reservations')->insert([
+            'id' => $completedReservationId,
+            'budget_date' => $oldDate,
+            'reserved_tokens' => 20,
+            'status' => 'completed',
+            'expires_at' => now()->subDays(31),
+            'created_at' => now()->subDays(31),
+            'updated_at' => now()->subDays(31),
+        ]);
 
         $replacement = AssistantTokenBudget::reserve(1000, 800, [
             ['role' => 'user', 'content' => 'A new day, a new lesson.'],
@@ -323,6 +333,11 @@ class UniversalAiAssistantPluginTest extends TestCase
         $this->assertDatabaseHas('ai_assistant_daily_budgets', [
             'budget_date' => $oldDate,
             'used_tokens' => 25,
+            'reserved_tokens' => 0,
+        ]);
+        $this->assertDatabaseHas('ai_assistant_token_reservations', [
+            'id' => $completedReservationId,
+            'status' => 'completed',
         ]);
     }
 
