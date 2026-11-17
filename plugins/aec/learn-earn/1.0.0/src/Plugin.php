@@ -10,6 +10,9 @@ use Illuminate\Support\Facades\View;
 require_once __DIR__.'/LearnEarnCategory.php';
 require_once __DIR__.'/LearnEarnQuestion.php';
 require_once __DIR__.'/AdminLearnEarnController.php';
+require_once __DIR__.'/LearnEarnExam.php';
+require_once __DIR__.'/LearnEarnExamQuestion.php';
+require_once __DIR__.'/AdminLearnEarnExamController.php';
 
 return new class implements PluginContract
 {
@@ -25,13 +28,22 @@ return new class implements PluginContract
             Route::put('/questions/{question}', [AdminLearnEarnController::class, 'update'])->whereNumber('question')->middleware('throttle:30,1')->name('questions.update');
             Route::patch('/questions/{question}/archive', [AdminLearnEarnController::class, 'archive'])->whereNumber('question')->name('questions.archive');
 
+            Route::get('/exams', [AdminLearnEarnExamController::class, 'index'])->name('exams.index');
+            Route::get('/exams/create', [AdminLearnEarnExamController::class, 'create'])->name('exams.create');
+            Route::post('/exams', [AdminLearnEarnExamController::class, 'store'])->middleware('throttle:20,1')->name('exams.store');
+            Route::patch('/exams/{exam}/archive', [AdminLearnEarnExamController::class, 'archive'])->whereNumber('exam')->name('exams.archive');
+
             Route::post('/categories', [AdminLearnEarnController::class, 'storeCategory'])->middleware('throttle:20,1')->name('categories.store');
             Route::put('/categories/{category}', [AdminLearnEarnController::class, 'updateCategory'])->whereNumber('category')->middleware('throttle:20,1')->name('categories.update');
             Route::patch('/categories/{category}/archive', [AdminLearnEarnController::class, 'archiveCategory'])->whereNumber('category')->name('categories.archive');
         }, 'learn-earn.manage');
 
-        $context->registerPortalNavigation('admin', 'Learn & Earn', 'admin.learn-earn.questions.index', [
+        $context->registerPortalNavigation('admin', 'Learn & Earn Questions', 'admin.learn-earn.questions.index', [
             'icon' => '📝',
+            'permission' => 'learn-earn.manage',
+        ]);
+        $context->registerPortalNavigation('admin', 'Learn & Earn Exams', 'admin.learn-earn.exams.index', [
+            'icon' => '🧪',
             'permission' => 'learn-earn.manage',
         ]);
     }
