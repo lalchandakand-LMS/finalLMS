@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', __('Admin Dashboard') . ' | Alom’s English Center')
+@section('title', __('Admin Dashboard') . ' | ' . $institutionName)
 
 @section('content')
     @include('components.dashboard-announcement-slider')
@@ -48,12 +48,24 @@
         <div class="aec-admin">
             <section class="aec-hero">
                 <div>
-                    <span class="aec-eyebrow">Alom’s English Center · Learning Management System</span>
+                    <span class="aec-eyebrow">{{ $institutionName }} · {{ __('Learning Management System') }}</span>
                     <h1>{{ __('Welcome back,') }} {{ $user->name }}!</h1>
                     <p>{{ __('Manage your academy, courses, learners and daily operations from one place.') }}</p>
                 </div>
                 <div class="aec-hero-mark" aria-hidden="true">📘</div>
             </section>
+
+            @if($setupWizardPending)
+                <section class="aec-panel" style="margin-bottom:20px;border-color:#9bbdf5;background:#f5f9ff">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+                        <div>
+                            <strong>{{ __('Finish setting up your institution') }}</strong>
+                            <p class="muted" style="margin:5px 0 0">{{ __('Your setup is saved step by step. Complete the institution profile, academic year and payment methods when ready.') }}</p>
+                        </div>
+                        <a class="btn primary" href="{{ route('admin.setup-wizard.index') }}">{{ __('Continue setup') }}</a>
+                    </div>
+                </section>
+            @endif
 
             <div class="aec-heading">
                 <div><h2>{{ __('Analytics & academy overview') }}</h2><p>{{ __('Live totals from your current LMS records') }}</p></div>

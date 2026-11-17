@@ -48,6 +48,7 @@ use App\Http\Controllers\WebsitePageController;
 use App\Http\Controllers\AdminWebsiteMenuController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\InstallController;
+use App\Http\Controllers\SetupWizardController;
 use App\Http\Controllers\QuizContestController;
 use App\Http\Controllers\FlashSaleController;
 use App\Http\Controllers\AdminCouponController;
@@ -461,6 +462,9 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::post('/marketing/meta-ads/campaigns', [MetaAdsIntegrationController::class, 'createCampaign'])->middleware('throttle:5,1')->name('admin.marketing.meta-ads.campaigns.store');
         Route::post('/marketing/meta-ads/campaigns/{campaignId}/pause', [MetaAdsIntegrationController::class, 'pauseCampaign'])->middleware('throttle:10,1')->name('admin.marketing.meta-ads.campaigns.pause');
         Route::post('/marketing/meta-ads/campaigns/{campaignId}/resume', [MetaAdsIntegrationController::class, 'resumeCampaign'])->middleware('throttle:10,1')->name('admin.marketing.meta-ads.campaigns.resume');
+        Route::get('/setup-wizard', [SetupWizardController::class, 'index'])->name('admin.setup-wizard.index');
+        Route::post('/setup-wizard', [SetupWizardController::class, 'update'])->middleware('throttle:10,1')->name('admin.setup-wizard.update');
+        Route::post('/setup-wizard/skip', [SetupWizardController::class, 'skip'])->middleware('throttle:10,1')->name('admin.setup-wizard.skip');
         Route::get('/settings', [AdminSettingsController::class, 'index'])->name('admin.settings.index');
         Route::post('/settings', [AdminSettingsController::class, 'update'])->name('admin.settings.update');
 
