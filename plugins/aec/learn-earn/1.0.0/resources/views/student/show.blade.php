@@ -18,15 +18,30 @@
     @if($attempt && $attempt->status === 'in_progress')
         <p class="badge success">{{ __('You have an exam in progress.') }}</p>
         <a class="btn primary" href="{{ route('student.learn-earn.attempts.show', $attempt) }}">{{ __('Resume exam') }}</a>
-    @elseif($exam->access_type === 'paid')
-        <p class="badge warning">{{ __('Paid exam') }}</p>
-        <p class="muted">{{ __('Secure checkout and payment verification for paid exams are being prepared. This exam cannot be started until payment is verified.') }}</p>
     @elseif(now()->lt($exam->starts_at))
         <p class="badge info">{{ __('This exam has not started yet.') }}</p>
     @elseif(now()->gt($exam->ends_at))
         <p class="badge warning">{{ __('This exam has ended.') }}</p>
     @elseif($attempt && $attempt->attempt_number >= $exam->max_attempts)
         <p class="badge warning">{{ __('You have used all attempts for this exam.') }}</p>
+    @elseif($exam->access_type === 'paid' && $hasEntitlement)
+        <p class="badge success">{{ __('Payment verified — you have access to this exam.') }}</p>
+        <form method="POST" action="{{ route('student.learn-earn.exams.start', $exam) }}">
+            @csrf
+            <button class="btn primary" type="submit">{{ __('Start paid exam') }}</button>
+        </form>
+    @elseif($exam->access_type === 'paid' && $pendingPayment)
+        <p class="badge warning">{{ __('Payment awaiting verification') }}</p>
+        <p class="muted">{{ __('A bKash payment is already pending for this exam. Do not pay again. Access will be granted only after the server verifies the payment.') }}</p>
+    @elseif($exam->access_type === 'paid' && $bkashAvailable)
+        <p class="muted">{{ __('Pay securely with bKash. Exam access is granted only after server-side transaction verification.') }}</p>
+        <form method="POST" action="{{ route('student.learn-earn.exams.checkout.bkash', $exam) }}">
+            @csrf
+            <button class="btn primary" type="submit">{{ __('Pay with bKash') }} · ৳{{ number_format((float)$exam->price, 2) }}</button>
+        </form>
+    @elseif($exam->access_type === 'paid')
+        <p class="badge warning">{{ __('Online payment is not currently available.') }}</p>
+        <p class="muted">{{ __('Please contact the academy. Do not send payment outside the verified checkout.') }}</p>
     @else
         <form method="POST" action="{{ route('student.learn-earn.exams.start', $exam) }}">
             @csrf
