@@ -3,12 +3,14 @@
 namespace Tests\Feature;
 
 use Aloms\StudentTracking\StudentTrackingController;
+use Aloms\StudentTracking\StudentTrackingSettingsController;
 use App\Models\Attendance;
 use App\Models\Batch;
 use App\Models\Branch;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\GuardianStudentLink;
+use App\Models\Setting;
 use App\Models\User;
 use App\Services\Plugins\PluginResourceAccess;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -18,6 +20,7 @@ use Illuminate\Support\Facades\View;
 use Tests\TestCase;
 
 require_once dirname(__DIR__, 2).'/plugins/aec/student-tracking/1.0.0/src/StudentTrackingController.php';
+require_once dirname(__DIR__, 2).'/plugins/aec/student-tracking/1.0.0/src/StudentTrackingSettingsController.php';
 
 class StudentTrackingPluginTest extends TestCase
 {
@@ -55,6 +58,42 @@ class StudentTrackingPluginTest extends TestCase
         $request->setUserResolver(fn () => $actor);
 
         return app(StudentTrackingController::class)->export($request, app(PluginResourceAccess::class));
+    }
+
+    public function test_admin_can_configure_and_audit_student_tracking_risk_thresholds(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $request = Request::create('/admin/student-tracking/settings', 'PUT', [
+            'low_attendance_percent' => 68,
+            'minimum_attendance_records' => 4,
+            'inactive_days' => 21,
+        ]);
+        $request->setUserResolver(fn () => $admin);
+
+        $response = app(StudentTrackingSettingsController::class)->update($request);
+
+        $this->assertSame(68, (int) Setting::value('student_tracking_low_attendance_percent'));
+        $this->assertSame(4, (int) Setting::value('student_tracking_minimum_attendance_records'));
+        $this->assertSame(21, (int) Setting::value('student_tracking_inactive_days'));
+        $this->assertDatabaseHas('activity_logs', [
+            'user_id' => $admin->id,
+            'event' => 'student_tracking.risk_rules_updated',
+        ]);
+        $this->assertSame('Student tracking risk rules updated.', $response->getSession()->get('success'));
+    }
+
+    public function test_non_admin_cannot_change_student_tracking_risk_thresholds(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $request = Request::create('/admin/student-tracking/settings', 'PUT', [
+            'low_attendance_percent' => 50,
+            'minimum_attendance_records' => 2,
+            'inactive_days' => 7,
+        ]);
+        $request->setUserResolver(fn () => $teacher);
+
+        $this->expectException(\\Symfony\\Component\\HttpKernel\\Exception\\HttpException::class);
+        app(StudentTrackingSettingsController::class)->update($request);
     }
 
     public function test_admin_can_view_all_students_and_tracking_metrics(): void
