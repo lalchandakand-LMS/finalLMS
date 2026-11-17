@@ -28,7 +28,31 @@ final class AssistantTokenBudget
         return DB::transaction(function () use ($dailyBudget, $configuredLimit, $promptTokens, $date, $reservationId): ?array {
             // Bound ledger storage even for requests abandoned before their expiry
             // could be reclaimed by a later request on the same day.
+            $abandoned = DB::table('ai_assistant_token_reservations')
+                ->select('budget_date', DB::raw('SUM(reserved_tokens) as reserved_total'))
+                ->where('status', 'reserved')
+                ->where('created_at', '<', now()->subDays(30))
+                ->groupBy('budget_date')
+                ->get();
+
+            foreach ($abandoned as $group) {
+                $historicalBudget = DB::table('ai_assistant_daily_budgets')
+                    ->where('budget_date', $group->budget_date)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($historicalBudget) {
+                    DB::table('ai_assistant_daily_budgets')
+                        ->where('id', $historicalBudget->id)
+                        ->update([
+                            'reserved_tokens' => max(0, (int) $historicalBudget->reserved_tokens - (int) $group->reserved_total),
+                            'updated_at' => now(),
+                        ]);
+                }
+            }
+
             DB::table('ai_assistant_token_reservations')
+                ->where('status', 'reserved')
                 ->where('created_at', '<', now()->subDays(30))
                 ->delete();
 
