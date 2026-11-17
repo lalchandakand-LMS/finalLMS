@@ -51,6 +51,10 @@ class FlashSale extends Model
 
     public function discountedPrice(float $basePrice): float
     {
+        if (! self::pluginIsActive()) {
+            return round(max(0, $basePrice), 2);
+        }
+
         $price = $this->discount_type === 'percentage'
             ? $basePrice * (1 - ((float) $this->discount_value / 100))
             : min($basePrice, (float) $this->discount_value);
