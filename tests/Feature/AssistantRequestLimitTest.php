@@ -40,8 +40,8 @@ class AssistantRequestLimitTest extends TestCase
 
     public function test_first_reservation_imports_legacy_same_day_usage(): void
     {
-        $user = \\App\\Models\\User::factory()->create();
-        $conversationId = \\Illuminate\\Support\\Facades\\DB::table('ai_assistant_conversations')->insertGetId([
+        $user = \App\Models\User::factory()->create();
+        $conversationId = \Illuminate\Support\Facades\DB::table('ai_assistant_conversations')->insertGetId([
             'user_id' => $user->id,
             'assistant_role' => 'student',
             'title' => 'Existing conversation',
@@ -50,7 +50,7 @@ class AssistantRequestLimitTest extends TestCase
         ]);
 
         foreach (['first', 'second'] as $message) {
-            \\Illuminate\\Support\\Facades\\DB::table('ai_assistant_messages')->insert([
+            \Illuminate\Support\Facades\DB::table('ai_assistant_messages')->insert([
                 'conversation_id' => $conversationId,
                 'message_role' => 'user',
                 'content' => $message,
