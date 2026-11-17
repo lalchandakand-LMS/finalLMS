@@ -106,9 +106,9 @@ class StudentTrackingController extends Controller
         $studentIds = (clone $query)->select('users.id');
         $accessibleEnrollments = $access->scopeQuery(Enrollment::query(), $actor)
             ->whereIn('user_id', $studentIds);
-        $activeEnrollments = (clone $accessibleEnrollments)
-            ->where('status', 'active')
-            ->count();
+        $activeEnrollments = $modules->isEnabled('course_management')
+            ? (clone $accessibleEnrollments)->where('status', 'active')->count()
+            : 0;
         $attendanceToday = $modules->isEnabled('attendance')
             ? Attendance::query()
                 ->whereIn('student_id', (clone $query)->select('users.id'))
@@ -125,6 +125,9 @@ class StudentTrackingController extends Controller
 
         $students = $query->orderBy('users.name')->paginate(25)->withQueryString();
         $students->getCollection()->transform(function (User $student) use ($riskRules, $actor, $access, $modules): User {
+            if (! $modules->isEnabled('course_management')) {
+                $student->setAttribute('active_enrollments_count', 0);
+            }
             $student->setAttribute('attendance_rate', (int) $student->attendance_total > 0
                 ? round(((int) $student->attendance_attended / (int) $student->attendance_total) * 100, 1)
                 : null);
@@ -301,6 +304,9 @@ class StudentTrackingController extends Controller
             $total = (int) $student->attendance_total;
             $attended = (int) $student->attendance_attended;
             $student->setAttribute('attendance_rate', $total > 0 ? round(($attended / $total) * 100, 1) : null);
+            if (! $modules->isEnabled('course_management')) {
+                $student->setAttribute('active_enrollments_count', 0);
+            }
             $activityDates = collect([$student->last_lesson_activity, $student->last_content_activity])
                 ->filter()
                 ->sortDesc();
@@ -418,11 +424,20 @@ class StudentTrackingController extends Controller
             ->whereKey($student)
             ->firstOrFail();
 
-        $enrollments = $access->scopeQuery(Enrollment::query(), $actor)
-            ->where('user_id', $studentRecord->id)
-            ->with(['course:id,title,slug', 'batch:id,title,branch_id,teacher_id', 'batch.branch:id,name'])
-            ->latest()
-            ->get();
+        $courseTrackingAvailable = $modules->isEnabled('course_management');
+        $attendanceTrackingAvailable = $modules->isEnabled('attendance');
+        $lessonTrackingAvailable = $modules->isEnabled('lesson_management');
+        $contentTrackingAvailable = $modules->isEnabled('course_content_studio');
+        $examTrackingAvailable = $modules->isEnabled('exam_management');
+        $assignmentTrackingAvailable = $modules->isEnabled('assignment');
+
+        $enrollments = $courseTrackingAvailable
+            ? $access->scopeQuery(Enrollment::query(), $actor)
+                ->where('user_id', $studentRecord->id)
+                ->with(['course:id,title,slug', 'batch:id,title,branch_id,teacher_id', 'batch.branch:id,name'])
+                ->latest()
+                ->get()
+            : collect();
 
         $allowedCourseIds = $enrollments->pluck('course_id')->filter()->unique()->values();
         $noticeTrackingAvailable = $modules->isEnabled('notice_board') && Schema::hasTable('dashboard_announcements');
@@ -593,6 +608,12 @@ class StudentTrackingController extends Controller
 
         return view('student-tracking::show', [
             'student' => $studentRecord,
+            'courseTrackingAvailable' => $courseTrackingAvailable,
+            'attendanceTrackingAvailable' => $attendanceTrackingAvailable,
+            'lessonTrackingAvailable' => $lessonTrackingAvailable,
+            'contentTrackingAvailable' => $contentTrackingAvailable,
+            'examTrackingAvailable' => $examTrackingAvailable,
+            'assignmentTrackingAvailable' => $assignmentTrackingAvailable,
             'canManageRisk' => $canManageRisk,
             'enrollments' => $enrollments,
             'announcements' => $announcements,
