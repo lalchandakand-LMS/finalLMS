@@ -1,9 +1,9 @@
 <?php
 
-namespace App\\Services\\Plugins;
+namespace App\Services\Plugins;
 
-use App\\Models\\PluginInstallation;
-use Illuminate\\Support\\Facades\\File;
+use App\Models\PluginInstallation;
+use Illuminate\Support\Facades\File;
 use RuntimeException;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -67,7 +67,7 @@ final class PluginPackageRemover
             if (is_link($target)) {
                 throw new RuntimeException('Plugin uninstall stopped because a version path is a symbolic link.');
             }
-            if (preg_match('/^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$/D', $entry) !== 1) {
+            if (preg_match('/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/D', $entry) !== 1) {
                 continue;
             }
             if (! is_dir($target)) {
