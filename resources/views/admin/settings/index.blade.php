@@ -47,6 +47,8 @@
                         </select>
                     </div>
                     <div style="grid-column:1/-1;"><label for="institution-address">{{ __('Institution address') }}</label><textarea id="institution-address" name="institution_address" rows="2" maxlength="500">{{ old('institution_address', $settings['institution_address'] ?? '') }}</textarea></div>
+                    <div><label for="site-primary-color">{{ __('Primary brand color') }}</label><input id="site-primary-color" type="color" name="site_primary_color" value="{{ old('site_primary_color', $settings['site_primary_color'] ?? '#1546a8') }}"></div>
+                    <div><label for="site-background-color">{{ __('Website background color') }}</label><input id="site-background-color" type="color" name="site_background_color" value="{{ old('site_background_color', $settings['site_background_color'] ?? '#f3f6fb') }}"></div>
                 </div>
                 <small class="muted">{{ __('Use HTTPS image URLs. Direct Media Library upload and selection will be integrated into the complete identity editor.') }}</small>
             </section>
