@@ -14,7 +14,9 @@ class LearnEarnPluginPackageTest extends TestCase
 
         $this->assertSame('aec.learn-earn', $manifest['key']);
         $this->assertSame('src/Plugin.php', $manifest['entrypoint']);
-        $this->assertSame(['admin'], $manifest['portals']);
+        $this->assertSame(['admin', 'student', 'public'], $manifest['portals']);
+        $this->assertContains('learn-earn.manage', $manifest['permissions']);
+        $this->assertContains('learn-earn.take-exams', $manifest['permissions']);
         $this->assertTrue(app(PluginManifestValidator::class)->isValid($manifest));
     }
 
