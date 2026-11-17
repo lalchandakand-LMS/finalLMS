@@ -77,6 +77,47 @@ class BackupRestoreTest extends TestCase
         $this->actingAs($student)->get(route('admin.backups.index'))->assertForbidden();
     }
 
+    public function test_restore_reconciles_public_and_private_files_to_backup_snapshot(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        Storage::disk('public')->put('course-media/cover.jpg', 'original-public-cover');
+        Storage::disk('public')->put('course-media/remove.jpg', 'original-public-extra');
+        Storage::disk('local')->put('student-files/submission.pdf', 'original-private-file');
+        Storage::disk('local')->put('student-files/remove.pdf', 'original-private-extra');
+
+        $this->actingAs($admin)->post(route('admin.backups.create'))->assertRedirect();
+        $path = Storage::disk('local')->files('backups')[0];
+        $archive = Storage::disk('local')->get($path);
+
+        Storage::disk('public')->put('course-media/cover.jpg', 'changed-public-cover');
+        Storage::disk('public')->delete('course-media/remove.jpg');
+        Storage::disk('public')->put('course-media/new-after-backup.jpg', 'must-be-removed');
+        Storage::disk('local')->delete('student-files/submission.pdf');
+        Storage::disk('local')->delete('student-files/remove.pdf');
+        Storage::disk('local')->put('student-files/new-after-backup.pdf', 'must-be-removed');
+
+        $this->post(route('admin.backups.restore'), [
+            'backup_file' => UploadedFile::fake()->createWithContent('backup.json.gz', $archive),
+            'confirmation' => 'RESTORE',
+            'password' => 'password',
+        ])->assertRedirect(route('admin.backups.index'));
+
+        Storage::disk('public')->assertExists('course-media/cover.jpg');
+        Storage::disk('public')->assertExists('course-media/remove.jpg');
+        Storage::disk('public')->assertMissing('course-media/new-after-backup.jpg');
+        $this->assertSame('original-public-cover', Storage::disk('public')->get('course-media/cover.jpg'));
+        $this->assertSame('original-public-extra', Storage::disk('public')->get('course-media/remove.jpg'));
+
+        Storage::disk('local')->assertExists('student-files/submission.pdf');
+        Storage::disk('local')->assertExists('student-files/remove.pdf');
+        Storage::disk('local')->assertMissing('student-files/new-after-backup.pdf');
+        $this->assertSame('original-private-file', Storage::disk('local')->get('student-files/submission.pdf'));
+        $this->assertSame('original-private-extra', Storage::disk('local')->get('student-files/remove.pdf'));
+    }
+
     public function test_restore_rejects_a_tampered_backup_without_changing_database_rows(): void
     {
         Storage::fake('local');
