@@ -58,6 +58,16 @@
         <label>Course ID
             <input type="number" min="1" name="course_id" value="{{ $filters['course_id'] }}" style="width:110px;">
         </label>
+        @if($academicLevels->isNotEmpty())
+            <label>Academic Level
+                <select name="academic_level_id">
+                    <option value="">All levels</option>
+                    @foreach($academicLevels as $level)
+                        <option value="{{ $level->id }}" @selected((int) $filters['academic_level_id'] === (int) $level->id)>{{ $level->name }}</option>
+                    @endforeach
+                </select>
+            </label>
+        @endif
         <label>Enrollment status
             <select name="status">
                 <option value="">All statuses</option>
