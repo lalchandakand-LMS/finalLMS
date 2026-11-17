@@ -21,7 +21,9 @@ class DashboardController extends Controller
 {
     public function index(): View
     {
-        $user = Auth::user();\n        $institutionName = Setting::value('institution_name', config('app.name'));\n        $setupWizardPending = $user->isAdmin() && ! Setting::value('setup_wizard_completed_at');
+        $user = Auth::user();
+        $institutionName = Setting::value('institution_name', config('app.name'));
+        $setupWizardPending = $user->isAdmin() && ! Setting::value('setup_wizard_completed_at');
         $announcementSlides = DashboardAnnouncement::currentlyActive()
             ->whereIn('audience', ['all', $user->role])
             ->where(fn ($query) => $query->whereNull('branch_id')->orWhere('branch_id', $user->branch_id))
