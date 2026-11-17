@@ -4,7 +4,6 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use RuntimeException;
 
 return new class extends Migration
 {
@@ -60,7 +59,7 @@ return new class extends Migration
     {
         foreach (['learn_earn_exam_answers', 'learn_earn_attempt_questions', 'learn_earn_exam_attempts'] as $table) {
             if (Schema::hasTable($table) && DB::table($table)->exists()) {
-                throw new RuntimeException('Learn & Earn attempts or answers exist; preserve them during plugin migration rollback.');
+                throw new \RuntimeException('Learn & Earn attempts or answers exist; preserve them during plugin migration rollback.');
             }
         }
 
