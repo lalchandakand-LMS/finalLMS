@@ -134,7 +134,7 @@ class StudentTrackingController extends Controller
         ];
 
         $students = $query->orderBy('users.name')->paginate(25)->withQueryString();
-        $students->getCollection()->transform(function (User $student) use ($riskRules, $actor, $access, $modules): User {
+        $students->getCollection()->transform(function (User $student) use ($riskRules, $actor, $access, $modules, $courseTrackingEnabled, $lessonTrackingEnabled, $contentTrackingEnabled): User {
             if (! $courseTrackingEnabled) {
                 $student->setAttribute('active_enrollments_count', 0);
             }
