@@ -90,12 +90,6 @@ final class AssistantController
             return response()->json(['message' => __('Your daily AI request limit has been reached.')], 429);
         }
 
-        $usedTokens = (int) DB::table('ai_assistant_messages')->where('message_role', 'assistant')
-            ->whereDate('created_at', today())->sum('token_count');
-        if ($usedTokens >= $settings['daily_token_budget']) {
-            return response()->json(['message' => __('The institution daily AI token budget has been reached.')], 429);
-        }
-
         if (! empty($validated['conversation_id'])) {
             $conversation = DB::table('ai_assistant_conversations')
                 ->where('id', $validated['conversation_id'])
@@ -123,6 +117,8 @@ final class AssistantController
             'created_at' => now(),
         ]);
 
+        $reservationId = null;
+        $reservationSettled = false;
         try {
             $apiKey = AssistantSettings::apiKey();
             if (! $apiKey) return response()->json(['message' => __('The AI provider key has not been configured.')], 503);
@@ -135,13 +131,23 @@ final class AssistantController
             $messages = [['role' => 'system', 'content' => AssistantSettings::rolePrompt($role)]];
             foreach ($history as $item) $messages[] = ['role' => $item->message_role, 'content' => $item->content];
 
+            $reservation = AssistantTokenBudget::reserve(
+                (int) $settings['daily_token_budget'],
+                (int) $settings['max_tokens'],
+                $messages
+            );
+            if ($reservation === null) {
+                return response()->json(['message' => __('The institution daily AI token budget is exhausted or insufficient for this prompt.')], 429);
+            }
+            $reservationId = $reservation['id'];
+
             $response = Http::withToken($apiKey)->acceptJson()->timeout(40)->withOptions(array_merge([
                 'allow_redirects' => false,
                 'stream' => true,
             ], $curlOptions))->post($baseUrl.'/chat/completions', [
                 'model' => $settings['model'],
                 'temperature' => $settings['temperature'],
-                'max_tokens' => $settings['max_tokens'],
+                'max_tokens' => $reservation['max_tokens'],
                 'messages' => $messages,
             ]);
 
@@ -164,6 +170,8 @@ final class AssistantController
 
             $answer = $this->redactSensitiveText(trim($answer));
             $tokens = max(0, (int) data_get($decoded, 'usage.total_tokens', 0));
+            AssistantTokenBudget::settle($reservationId, $tokens > 0 ? $tokens : $reservation['reserved_tokens']);
+            $reservationSettled = true;
             DB::table('ai_assistant_messages')->insert([
                 'conversation_id' => $conversation->id,
                 'message_role' => 'assistant',
@@ -177,6 +185,10 @@ final class AssistantController
             return response()->json(['conversation_id' => $conversation->id, 'response' => $answer]);
         } catch (Throwable) {
             return response()->json(['message' => __('The AI request failed. Check provider settings and try again.')], 503);
+        } finally {
+            if ($reservationId !== null && ! $reservationSettled) {
+                AssistantTokenBudget::release($reservationId);
+            }
         }
     }
 
