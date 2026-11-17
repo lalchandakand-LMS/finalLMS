@@ -13,6 +13,7 @@
     };
     $completedLessonCount = $lessonProgress->whereNotNull('completed_at')->count();
     $completedContentCount = $contentProgress->whereNotNull('completed_at')->count();
+    $canManageRisk = in_array(auth()->user()->role, ['admin', 'branch_manager', 'teacher'], true);
 @endphp
 <div class="page-header">
     <div>
@@ -26,6 +27,59 @@
     <div class="panel" style="margin:0;"><div class="muted">Active enrollments</div><div style="font-size:1.6rem;font-weight:800;">{{ $enrollments->where('status','active')->count() }}</div></div>
     <div class="panel" style="margin:0;"><div class="muted">Attendance (latest 30)</div><div style="font-size:1.6rem;font-weight:800;">{{ $attendanceRate === null ? '—' : number_format($attendanceRate,1).'%' }}</div></div>
     <div class="panel" style="margin:0;"><div class="muted">Completed lessons</div><div style="font-size:1.6rem;font-weight:800;">{{ $completedLessonCount + $completedContentCount }}</div></div>
+</div>
+
+<div class="panel">
+    <h2>Learning risk review</h2>
+    @forelse($riskFlags as $flag)
+        <div style="padding:10px 0;border-bottom:1px solid var(--border);">
+            <span class="badge warning">{{ $flag['code'] === 'low_attendance' ? 'Low attendance' : 'Learning inactivity' }}</span>
+            <p style="margin:8px 0;">{{ $flag['reason'] }}</p>
+            @if($canManageRisk)
+                <form method="POST" action="{{ route($baseRoute.'.risk-actions.store', $student->id) }}" style="display:grid;gap:8px;">
+                    @csrf
+                    <input type="hidden" name="risk_code" value="{{ $flag['code'] }}">
+                    <label>Follow-up note
+                        <textarea name="note" rows="2" maxlength="1000" required placeholder="Record the follow-up reason or action"></textarea>
+                    </label>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <button class="btn secondary" type="submit" name="action" value="note">Save note</button>
+                        <button class="btn primary" type="submit" name="action" value="dismiss">Dismiss this flag</button>
+                    </div>
+                </form>
+            @endif
+        </div>
+    @empty
+        <p class="muted">No active risk flags in the current review window.</p>
+    @endforelse
+
+    @if($canManageRisk && count($dismissedRiskFlags))
+        <h3 style="margin-top:16px;">Dismissed flags</h3>
+        @foreach($dismissedRiskFlags as $flag)
+            <div style="padding:8px 0;border-bottom:1px solid var(--border);">
+                <span>{{ $flag['reason'] }}</span>
+                <form method="POST" action="{{ route($baseRoute.'.risk-actions.store', $student->id) }}" style="margin-top:8px;">
+                    @csrf
+                    <input type="hidden" name="risk_code" value="{{ $flag['code'] }}">
+                    <input type="hidden" name="action" value="reopen">
+                    <button class="btn secondary" type="submit">Reopen flag</button>
+                </form>
+            </div>
+        @endforeach
+    @endif
+
+    @if($canManageRisk && $riskActions->isNotEmpty())
+        <h3 style="margin-top:18px;">Risk action audit history</h3>
+        @foreach($riskActions as $action)
+            <div style="padding:8px 0;border-bottom:1px solid var(--border);">
+                <strong>{{ ucfirst($action->action) }} · {{ str_replace('_', ' ', $action->risk_code) }}</strong>
+                <div class="muted" style="font-size:.82rem;">{{ $action->actor_name }} · {{ \Illuminate\Support\Carbon::parse($action->created_at)->format('d M Y, H:i') }}</div>
+                @if($action->note)
+                    <p style="margin:6px 0;">{{ $action->note }}</p>
+                @endif
+            </div>
+        @endforeach
+    @endif
 </div>
 
 <div class="panel">
