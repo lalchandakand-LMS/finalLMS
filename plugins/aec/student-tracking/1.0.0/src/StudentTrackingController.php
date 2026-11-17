@@ -45,6 +45,28 @@ class StudentTrackingController extends Controller
             $query->where('users.branch_id', $branchFilter);
         }
 
+        $validatedDates = $request->validate([
+            'from_date' => ['nullable', 'date'],
+            'to_date' => ['nullable', 'date', 'after_or_equal:from_date'],
+        ]);
+        $fromDate = $validatedDates['from_date'] ?? now()->subDays(29)->toDateString();
+        $toDate = $validatedDates['to_date'] ?? today()->toDateString();
+
+        $statusFilter = trim((string) $request->query('status', ''));
+        $statusOptions = $access->scopeQuery(Enrollment::query(), $actor)
+            ->whereNotNull('status')
+            ->distinct()
+            ->orderBy('status')
+            ->pluck('status')
+            ->filter()
+            ->values();
+
+        if ($statusFilter !== '') {
+            $query->whereHas('enrollments', function (Builder $enrollments) use ($access, $actor, $statusFilter): void {
+                $access->scopeQuery($enrollments, $actor)->where('status', $statusFilter);
+            });
+        }
+
         $batchFilter = $request->integer('batch_id');
         if ($batchFilter > 0) {
             $query->whereHas('enrollments', function (Builder $enrollments) use ($access, $actor, $batchFilter): void {
@@ -60,7 +82,7 @@ class StudentTrackingController extends Controller
         }
 
         $since = now()->subDays(29)->startOfDay();
-        $this->addTrackingAggregates($query, $since, $actor, $access);
+        $this->addTrackingAggregates($query, $since, $actor, $access, $fromDate, $toDate);
 
         $totalStudents = (clone $query)->count('users.id');
         $studentIds = (clone $query)->select('users.id');
@@ -117,11 +139,15 @@ class StudentTrackingController extends Controller
                 'needs_attention' => $needsAttention,
             ],
             'branches' => $branches,
+            'statusOptions' => $statusOptions,
             'filters' => [
                 'q' => $search,
                 'branch_id' => $branchFilter ?: null,
                 'batch_id' => $batchFilter ?: null,
                 'course_id' => $courseFilter ?: null,
+                'status' => $statusFilter ?: null,
+                'from_date' => $fromDate,
+                'to_date' => $toDate,
             ],
             'portalTitle' => $this->portalTitle($actor),
         ]);
@@ -193,7 +219,9 @@ class StudentTrackingController extends Controller
         Builder $query,
         $since,
         User $actor,
-        PluginResourceAccess $access
+        PluginResourceAccess $access,
+        string $fromDate,
+        string $toDate
     ): void {
         $scopedBatchIds = fn () => $access->scopeQuery(
             Enrollment::query()
@@ -215,12 +243,14 @@ class StudentTrackingController extends Controller
                 ->selectRaw('COUNT(*)')
                 ->whereColumn('attendances.student_id', 'users.id')
                 ->whereIn('batch_id', $scopedBatchIds())
-                ->whereDate('attendance_date', '>=', $since->toDateString()),
+                ->whereDate('attendance_date', '>=', $fromDate)
+                ->whereDate('attendance_date', '<=', $toDate),
             'attendance_attended' => Attendance::query()
                 ->selectRaw('COUNT(*)')
                 ->whereColumn('attendances.student_id', 'users.id')
                 ->whereIn('batch_id', $scopedBatchIds())
-                ->whereDate('attendance_date', '>=', $since->toDateString())
+                ->whereDate('attendance_date', '>=', $fromDate)
+                ->whereDate('attendance_date', '<=', $toDate)
                 ->whereIn('status', ['present', 'late']),
             'completed_lessons' => DB::raw('0'),
             'completed_content' => DB::raw('0'),
@@ -233,11 +263,15 @@ class StudentTrackingController extends Controller
                 ->selectRaw('COUNT(*)')
                 ->whereColumn('lesson_progress.user_id', 'users.id')
                 ->whereHas('lesson', fn (Builder $lessons) => $lessons->whereIn('course_id', $scopedCourseIds()))
+                ->whereDate('updated_at', '>=', $fromDate)
+                ->whereDate('updated_at', '<=', $toDate)
                 ->whereNotNull('completed_at');
             $aggregates['last_lesson_activity'] = LessonProgress::query()
                 ->selectRaw('MAX(COALESCE(last_viewed_at, completed_at, updated_at))')
                 ->whereColumn('lesson_progress.user_id', 'users.id')
-                ->whereHas('lesson', fn (Builder $lessons) => $lessons->whereIn('course_id', $scopedCourseIds()));
+                ->whereHas('lesson', fn (Builder $lessons) => $lessons->whereIn('course_id', $scopedCourseIds()))
+                ->whereDate('updated_at', '>=', $fromDate)
+                ->whereDate('updated_at', '<=', $toDate);
         }
 
         if (Schema::hasTable('course_content_progress')) {
@@ -245,11 +279,15 @@ class StudentTrackingController extends Controller
                 ->selectRaw('COUNT(*)')
                 ->whereColumn('course_content_progress.user_id', 'users.id')
                 ->whereHas('curriculumItem', fn (Builder $items) => $items->whereIn('course_id', $scopedCourseIds()))
+                ->whereDate('updated_at', '>=', $fromDate)
+                ->whereDate('updated_at', '<=', $toDate)
                 ->whereNotNull('completed_at');
             $aggregates['last_content_activity'] = CourseContentProgress::query()
                 ->selectRaw('MAX(COALESCE(last_viewed_at, completed_at, updated_at))')
                 ->whereColumn('course_content_progress.user_id', 'users.id')
-                ->whereHas('curriculumItem', fn (Builder $items) => $items->whereIn('course_id', $scopedCourseIds()));
+                ->whereHas('curriculumItem', fn (Builder $items) => $items->whereIn('course_id', $scopedCourseIds()))
+                ->whereDate('updated_at', '>=', $fromDate)
+                ->whereDate('updated_at', '<=', $toDate);
         }
 
         $query->addSelect($aggregates);
