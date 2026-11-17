@@ -21,16 +21,20 @@ class PhoneticsPracticePluginTest extends TestCase {
  public function test_student_can_search_shared_and_enrolled_course_practice_entries_only(): void {
   $student=User::factory()->create(['role'=>'student']);
   $other=User::factory()->create(['role'=>'student']);
-  $course=Course::factory()->create();
-  $otherCourse=Course::factory()->create();
+  $course=Course::factory()->create(['price'=>0]);
+  $paidCourse=Course::factory()->create(['price'=>3000]);
+  $otherCourse=Course::factory()->create(['price'=>5000]);
   Enrollment::create(['user_id'=>$student->id,'course_id'=>$course->id,'status'=>'active']);
+  Enrollment::create(['user_id'=>$student->id,'course_id'=>$paidCourse->id,'status'=>'active']);
   Enrollment::create(['user_id'=>$other->id,'course_id'=>$otherCourse->id,'status'=>'active']);
   PhoneticsEntry::create(['course_id'=>null,'entry_type'=>'word','term'=>'water','translation'=>'পানি','status'=>'published']);
   PhoneticsEntry::create(['course_id'=>$course->id,'entry_type'=>'sentence','term'=>'Good morning','translation'=>'সুপ্রভাত','status'=>'published']);
+  PhoneticsEntry::create(['course_id'=>$paidCourse->id,'entry_type'=>'sentence','term'=>'I am ready','translation'=>'আমি প্রস্তুত','status'=>'published']);
   PhoneticsEntry::create(['course_id'=>$otherCourse->id,'entry_type'=>'word','term'=>'water','translation'=>'অন্য কোর্সের গোপন অর্থ','status'=>'published']);
   PhoneticsEntry::create(['course_id'=>null,'entry_type'=>'word','term'=>'draft word','translation'=>'খসড়া','status'=>'draft']);
   $this->actingAs($student)->getJson('/__test-phonetics/search?q=water')->assertOk()->assertJsonCount(1,'results')->assertJsonPath('results.0.translation','পানি');
   $this->actingAs($student)->getJson('/__test-phonetics/search?q=Good%20morning')->assertOk()->assertJsonPath('results.0.translation','সুপ্রভাত');
+  $this->actingAs($student)->getJson('/__test-phonetics/search?q=I%20am%20ready')->assertOk()->assertJsonPath('results.0.translation','আমি প্রস্তুত');
   $this->actingAs($student)->getJson('/__test-phonetics/search?q=draft%20word')->assertOk()->assertJsonCount(0,'results');
  }
  public function test_non_student_cannot_use_practice_search(): void {
