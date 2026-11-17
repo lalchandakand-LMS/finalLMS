@@ -70,6 +70,7 @@
             <input type="date" name="to_date" value="{{ $filters['to_date'] }}">
         </label>
         <button class="btn primary" type="submit">Apply filters</button>
+        <a class="btn secondary" href="{{ route($baseRoute.'.export', request()->query()) }}">Export CSV</a>
         <a class="btn secondary" href="{{ route($baseRoute.'.index') }}">Reset</a>
     </form>
 
