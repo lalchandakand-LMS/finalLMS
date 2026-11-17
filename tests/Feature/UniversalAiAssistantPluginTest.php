@@ -310,4 +310,87 @@ class UniversalAiAssistantPluginTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_each_role_assistant_switch_is_independently_mapped_and_default_deny(): void
+    {
+        $roleMap = [
+            'admin' => 'admin',
+            'branch_manager' => 'branch_manager',
+            'teacher' => 'teacher',
+            'student' => 'student',
+            'guardian' => 'guardian',
+            'accountant' => 'support_staff',
+        ];
+
+        foreach ($roleMap as $userRole => $assistantRole) {
+            $switches = array_fill_keys(AssistantSettings::ROLES, false);
+            $switches[$assistantRole] = true;
+            AssistantSettings::save([
+                'model' => 'gpt-4o-mini', 'base_url' => 'https://api.openai.com/v1',
+                'temperature' => 0.4, 'max_tokens' => 800, 'global_enabled' => true,
+                'role_enabled' => $switches, 'daily_request_limit' => 20,
+                'daily_token_budget' => 50000, 'retention_days' => 365,
+            ], null, false);
+
+            $this->assertSame($assistantRole, AssistantSettings::roleForUser($userRole));
+            foreach (AssistantSettings::ROLES as $candidate) {
+                $this->assertSame($candidate === $assistantRole, AssistantSettings::record()['role_enabled'][$candidate]);
+            }
+        }
+    }
+
+    public function test_student_cannot_append_to_another_students_conversation(): void
+    {
+        AssistantSettings::save([
+            'model' => 'gpt-4o-mini', 'base_url' => 'https://api.openai.com/v1',
+            'temperature' => 0.4, 'max_tokens' => 800, 'global_enabled' => true,
+            'role_enabled' => array_replace(array_fill_keys(AssistantSettings::ROLES, false), ['student' => true]),
+            'daily_request_limit' => 20, 'daily_token_budget' => 50000, 'retention_days' => 365,
+        ], 'test-secret-provider-key', false);
+
+        $owner = User::factory()->create(['role' => 'student']);
+        $otherStudent = User::factory()->create(['role' => 'student']);
+        $conversationId = \\DB::table('ai_assistant_conversations')->insertGetId([
+            'user_id' => $owner->id, 'assistant_role' => 'student', 'title' => 'Private conversation',
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        Route::post('/__test-ai-assistant/isolation-messages', [\\Aloms\\UniversalAiAssistant\\AssistantController::class, 'send']);
+
+        $this->actingAs($otherStudent)->postJson('/__test-ai-assistant/isolation-messages', [
+            'message' => 'Append to this conversation',
+            'conversation_id' => $conversationId,
+        ])->assertNotFound();
+
+        $this->assertDatabaseCount('ai_assistant_messages', 0);
+    }
+
+    public function test_provider_failure_releases_token_reservation_and_does_not_charge_usage(): void
+    {
+        AssistantSettings::save([
+            'model' => 'gpt-4o-mini', 'base_url' => 'https://api.openai.com/v1',
+            'temperature' => 0.4, 'max_tokens' => 800, 'global_enabled' => true,
+            'role_enabled' => array_replace(array_fill_keys(AssistantSettings::ROLES, false), ['student' => true]),
+            'daily_request_limit' => 20, 'daily_token_budget' => 50000, 'retention_days' => 365,
+        ], 'test-secret-provider-key', false);
+
+        app()->instance(AiDeveloperProviderEndpoint::class, new class extends AiDeveloperProviderEndpoint {
+            public function curlOptionsFor(string $url): array { return []; }
+        });
+        Http::fake(['api.openai.com/v1/chat/completions' => Http::response(['error' => 'provider unavailable'], 503)]);
+
+        $user = User::factory()->create(['role' => 'student']);
+        Route::post('/__test-ai-assistant/failure-messages', [\\Aloms\\UniversalAiAssistant\\AssistantController::class, 'send']);
+
+        $this->actingAs($user)->postJson('/__test-ai-assistant/failure-messages', [
+            'message' => 'Help me practise English.',
+        ])->assertStatus(502);
+
+        $this->assertDatabaseHas('ai_assistant_token_reservations', ['status' => 'released']);
+        $this->assertDatabaseHas('ai_assistant_daily_budgets', [
+            'budget_date' => today()->toDateString(),
+            'used_tokens' => 0,
+            'reserved_tokens' => 0,
+        ]);
+    }
+
+
 }
