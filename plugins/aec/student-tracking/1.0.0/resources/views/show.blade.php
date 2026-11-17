@@ -86,4 +86,40 @@
         @endforelse
     </div>
 </div>
+
+<div class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;">
+    <div class="panel">
+        <h2>Recent assessment results</h2>
+        @forelse($examAttempts as $attempt)
+            <div style="padding:10px 0;border-bottom:1px solid var(--border);">
+                <strong>{{ $attempt->exam?->title ?? 'Assessment' }}</strong>
+                <div class="muted" style="font-size:.82rem;">
+                    {{ ucfirst($attempt->status) }}
+                    · Score: {{ $attempt->score === null ? 'Not graded' : $attempt->score }}
+                    · {{ $attempt->submitted_at?->format('d M Y, H:i') ?? 'Not submitted' }}
+                </div>
+            </div>
+        @empty
+            <p class="muted">No assessment attempts in your permitted course scope.</p>
+        @endforelse
+    </div>
+    <div class="panel">
+        <h2>Assignment submissions</h2>
+        @forelse($assignmentSubmissions as $submission)
+            <div style="padding:10px 0;border-bottom:1px solid var(--border);">
+                <strong>{{ $submission->assignment?->title ?? 'Assignment' }}</strong>
+                <div class="muted" style="font-size:.82rem;">
+                    {{ ucfirst($submission->status) }}
+                    · Score: {{ $submission->score === null ? 'Not graded' : $submission->score }}
+                    · Submitted: {{ $submission->submitted_at?->format('d M Y, H:i') ?? 'Not submitted' }}
+                </div>
+                @if($submission->assignment?->due_at)
+                    <div class="muted" style="font-size:.78rem;">Due {{ $submission->assignment->due_at->format('d M Y, H:i') }}</div>
+                @endif
+            </div>
+        @empty
+            <p class="muted">No assignment submissions in your permitted batch scope.</p>
+        @endforelse
+    </div>
+</div>
 @endsection
