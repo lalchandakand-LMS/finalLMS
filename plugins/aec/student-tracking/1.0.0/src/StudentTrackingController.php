@@ -34,6 +34,13 @@ class StudentTrackingController extends Controller
         $actor = $request->user();
         abort_unless($actor instanceof User, 403);
 
+        $courseTrackingEnabled = $modules->isEnabled('course_management');
+        $attendanceTrackingEnabled = $courseTrackingEnabled && $modules->isEnabled('batch_management') && $modules->isEnabled('attendance');
+        $lessonTrackingEnabled = $courseTrackingEnabled && $modules->isEnabled('lesson_management');
+        $contentTrackingEnabled = $courseTrackingEnabled && $modules->isEnabled('course_content_studio');
+        $assignmentTrackingEnabled = $courseTrackingEnabled && $modules->isEnabled('batch_management') && $modules->isEnabled('assignment');
+        $examTrackingEnabled = $courseTrackingEnabled && $modules->isEnabled('batch_management') && $modules->isEnabled('exam_management');
+
         $query = $access->scopeQuery(User::query(), $actor)
             ->where('users.role', 'student')
             ->select('users.*')
@@ -64,36 +71,38 @@ class StudentTrackingController extends Controller
         $toDate = $validatedDates['to_date'] ?? today()->toDateString();
 
         $statusFilter = trim((string) $request->query('status', ''));
-        $statusOptions = $access->scopeQuery(Enrollment::query(), $actor)
-            ->whereNotNull('status')
-            ->distinct()
-            ->orderBy('status')
-            ->pluck('status')
-            ->filter()
-            ->values();
+        $statusOptions = $courseTrackingEnabled
+            ? $access->scopeQuery(Enrollment::query(), $actor)
+                ->whereNotNull('status')
+                ->distinct()
+                ->orderBy('status')
+                ->pluck('status')
+                ->filter()
+                ->values()
+            : collect();
 
-        if ($statusFilter !== '') {
+        if ($courseTrackingEnabled && $statusFilter !== '') {
             $query->whereHas('enrollments', function (Builder $enrollments) use ($access, $actor, $statusFilter): void {
                 $access->scopeQuery($enrollments, $actor)->where('status', $statusFilter);
             });
         }
 
         $batchFilter = $request->integer('batch_id');
-        if ($batchFilter > 0) {
+        if ($courseTrackingEnabled && $batchFilter > 0) {
             $query->whereHas('enrollments', function (Builder $enrollments) use ($access, $actor, $batchFilter): void {
                 $access->scopeQuery($enrollments, $actor)->where('batch_id', $batchFilter);
             });
         }
 
         $courseFilter = $request->integer('course_id');
-        if ($courseFilter > 0) {
+        if ($courseTrackingEnabled && $courseFilter > 0) {
             $query->whereHas('enrollments', function (Builder $enrollments) use ($access, $actor, $courseFilter): void {
                 $access->scopeQuery($enrollments, $actor)->where('course_id', $courseFilter);
             });
         }
 
         $academicLevelFilter = $request->integer('academic_level_id');
-        if ($academicLevelFilter > 0 && Schema::hasColumn('courses', 'academic_level_id')) {
+        if ($courseTrackingEnabled && $academicLevelFilter > 0 && Schema::hasColumn('courses', 'academic_level_id')) {
             $query->whereHas('enrollments', function (Builder $enrollments) use ($access, $actor, $academicLevelFilter): void {
                 $access->scopeQuery($enrollments, $actor)
                     ->whereHas('course', fn (Builder $courses) => $courses->where('academic_level_id', $academicLevelFilter));
@@ -104,12 +113,13 @@ class StudentTrackingController extends Controller
 
         $totalStudents = (clone $query)->count('users.id');
         $studentIds = (clone $query)->select('users.id');
-        $accessibleEnrollments = $access->scopeQuery(Enrollment::query(), $actor)
-            ->whereIn('user_id', $studentIds);
-        $activeEnrollments = $modules->isEnabled('course_management')
+        $accessibleEnrollments = $courseTrackingEnabled
+            ? $access->scopeQuery(Enrollment::query(), $actor)->whereIn('user_id', $studentIds)
+            : Enrollment::query()->whereRaw('1 = 0');
+        $activeEnrollments = $courseTrackingEnabled
             ? (clone $accessibleEnrollments)->where('status', 'active')->count()
             : 0;
-        $attendanceToday = $modules->isEnabled('attendance')
+        $attendanceToday = $attendanceTrackingEnabled
             ? Attendance::query()
                 ->whereIn('student_id', (clone $query)->select('users.id'))
                 ->whereIn('batch_id', (clone $accessibleEnrollments)->whereNotNull('batch_id')->select('batch_id'))
@@ -125,7 +135,7 @@ class StudentTrackingController extends Controller
 
         $students = $query->orderBy('users.name')->paginate(25)->withQueryString();
         $students->getCollection()->transform(function (User $student) use ($riskRules, $actor, $access, $modules): User {
-            if (! $modules->isEnabled('course_management')) {
+            if (! $courseTrackingEnabled) {
                 $student->setAttribute('active_enrollments_count', 0);
             }
             $student->setAttribute('attendance_rate', (int) $student->attendance_total > 0
@@ -141,7 +151,7 @@ class StudentTrackingController extends Controller
             $lastActivity = $activityDates->first();
             $lowAttendance = (int) $student->attendance_total >= $riskRules['minimum_attendance_records']
                 && (float) $student->attendance_rate < $riskRules['low_attendance_percent'];
-            $learningTrackingEnabled = $modules->isEnabled('lesson_management') || $modules->isEnabled('course_content_studio');
+            $learningTrackingEnabled = $lessonTrackingEnabled || $contentTrackingEnabled;
             $inactive = $learningTrackingEnabled
                 && (! $lastActivity || now()->diffInDays($lastActivity) >= $riskRules['inactive_days']);
             $riskFlags = [];
@@ -217,7 +227,7 @@ class StudentTrackingController extends Controller
             ],
             'branches' => $branches,
             'statusOptions' => $statusOptions,
-            'academicLevels' => Schema::hasTable('academic_levels')
+            'academicLevels' => $courseTrackingEnabled && Schema::hasTable('academic_levels')
                 ? DB::table('academic_levels')->where('is_active', true)->orderBy('sort_order')->get(['id', 'name'])
                 : collect(),
             'riskRules' => $riskRules,
@@ -425,11 +435,11 @@ class StudentTrackingController extends Controller
             ->firstOrFail();
 
         $courseTrackingAvailable = $modules->isEnabled('course_management');
-        $attendanceTrackingAvailable = $modules->isEnabled('attendance');
-        $lessonTrackingAvailable = $modules->isEnabled('lesson_management');
-        $contentTrackingAvailable = $modules->isEnabled('course_content_studio');
-        $examTrackingAvailable = $modules->isEnabled('exam_management');
-        $assignmentTrackingAvailable = $modules->isEnabled('assignment');
+        $attendanceTrackingAvailable = $courseTrackingAvailable && $modules->isEnabled('batch_management') && $modules->isEnabled('attendance');
+        $lessonTrackingAvailable = $courseTrackingAvailable && $modules->isEnabled('lesson_management');
+        $contentTrackingAvailable = $courseTrackingAvailable && $modules->isEnabled('course_content_studio');
+        $examTrackingAvailable = $courseTrackingAvailable && $modules->isEnabled('batch_management') && $modules->isEnabled('exam_management');
+        $assignmentTrackingAvailable = $courseTrackingAvailable && $modules->isEnabled('batch_management') && $modules->isEnabled('assignment');
 
         $enrollments = $courseTrackingAvailable
             ? $access->scopeQuery(Enrollment::query(), $actor)
@@ -657,8 +667,17 @@ class StudentTrackingController extends Controller
             $actor
         );
 
+        $attendanceTrackingEnabled = $modules->isEnabled('course_management')
+            && $modules->isEnabled('batch_management')
+            && $modules->isEnabled('attendance');
+        $assignmentTrackingEnabled = $modules->isEnabled('course_management')
+            && $modules->isEnabled('batch_management')
+            && $modules->isEnabled('assignment');
+        $lessonTrackingEnabled = $modules->isEnabled('course_management') && $modules->isEnabled('lesson_management');
+        $contentTrackingEnabled = $modules->isEnabled('course_management') && $modules->isEnabled('course_content_studio');
+
         $aggregates = [
-            'attendance_total' => $modules->isEnabled('attendance')
+            'attendance_total' => $attendanceTrackingEnabled
                 ? Attendance::query()
                     ->selectRaw('COUNT(*)')
                     ->whereColumn('attendances.student_id', 'users.id')
@@ -666,7 +685,7 @@ class StudentTrackingController extends Controller
                     ->whereDate('attendance_date', '>=', $fromDate)
                     ->whereDate('attendance_date', '<=', $toDate)
                 : DB::raw('0'),
-            'attendance_attended' => $modules->isEnabled('attendance')
+            'attendance_attended' => $attendanceTrackingEnabled
                 ? Attendance::query()
                     ->selectRaw('COUNT(*)')
                     ->whereColumn('attendances.student_id', 'users.id')
@@ -675,7 +694,7 @@ class StudentTrackingController extends Controller
                     ->whereDate('attendance_date', '<=', $toDate)
                     ->whereIn('status', ['present', 'late'])
                 : DB::raw('0'),
-            'overdue_assignments_count' => $modules->isEnabled('assignment') && Schema::hasTable('assignments') && Schema::hasTable('assignment_submissions')
+            'overdue_assignments_count' => $assignmentTrackingEnabled && Schema::hasTable('assignments') && Schema::hasTable('assignment_submissions')
                 ? Assignment::query()
                     ->selectRaw('COUNT(*)')
                     ->whereIn('batch_id', $scopedBatchIds())
@@ -689,7 +708,7 @@ class StudentTrackingController extends Controller
             'last_content_activity' => DB::raw('NULL'),
         ];
 
-        if ($modules->isEnabled('lesson_management') && Schema::hasTable('lesson_progress')) {
+        if ($lessonTrackingEnabled && Schema::hasTable('lesson_progress')) {
             $aggregates['completed_lessons'] = LessonProgress::query()
                 ->selectRaw('COUNT(*)')
                 ->whereColumn('lesson_progress.user_id', 'users.id')
@@ -703,7 +722,7 @@ class StudentTrackingController extends Controller
                 ->whereHas('lesson', fn (Builder $lessons) => $lessons->whereIn('course_id', $scopedCourseIds()));
         }
 
-        if ($modules->isEnabled('course_content_studio') && Schema::hasTable('course_content_progress')) {
+        if ($contentTrackingEnabled && Schema::hasTable('course_content_progress')) {
             $aggregates['completed_content'] = CourseContentProgress::query()
                 ->selectRaw('COUNT(*)')
                 ->whereColumn('course_content_progress.user_id', 'users.id')
@@ -735,7 +754,7 @@ class StudentTrackingController extends Controller
         }
 
         $signals = [];
-        $recentStatuses = $modules->isEnabled('attendance')
+        $recentStatuses = $modules->isEnabled('course_management') && $modules->isEnabled('batch_management') && $modules->isEnabled('attendance')
             ? Attendance::query()
                 ->where('student_id', $student->id)
                 ->whereIn('batch_id', $batchIds)
@@ -752,7 +771,8 @@ class StudentTrackingController extends Controller
             ];
         }
 
-        $examScores = $modules->isEnabled('exam_management') && Schema::hasTable('exam_attempts') && Schema::hasTable('exam_questions')
+        $examScores = $modules->isEnabled('course_management') && $modules->isEnabled('batch_management')
+            && $modules->isEnabled('exam_management') && Schema::hasTable('exam_attempts') && Schema::hasTable('exam_questions')
             ? ExamAttempt::query()
                 ->where('student_id', $student->id)
                 ->where('status', 'submitted')
@@ -777,7 +797,8 @@ class StudentTrackingController extends Controller
                 ->filter()
             : collect();
 
-        $assignmentScores = $modules->isEnabled('assignment') && Schema::hasTable('assignment_submissions')
+        $assignmentScores = $modules->isEnabled('course_management') && $modules->isEnabled('batch_management')
+            && $modules->isEnabled('assignment') && Schema::hasTable('assignment_submissions')
             ? AssignmentSubmission::query()
                 ->where('student_id', $student->id)
                 ->where('status', 'graded')
