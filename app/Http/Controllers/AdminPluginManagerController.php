@@ -182,6 +182,16 @@ class AdminPluginManagerController extends Controller
                 throw new LogicException('No retained previous signed version is available for rollback.');
             }
 
+            $dependent = PluginInstallation::query()->where('status', 'active')
+                ->where('plugin_key', '!=', $plugin->plugin_key)
+                ->get()
+                ->first(fn (PluginInstallation $candidate): bool =>
+                    in_array($plugin->plugin_key, $candidate->manifest['dependencies'] ?? [], true)
+                );
+            if ($dependent) {
+                throw new LogicException('An active plugin depends on this plugin: '.$dependent->plugin_key);
+            }
+
             if (! $signatureVerifier->verifyInstalledSignature($plugin)) {
                 throw new RuntimeException('The current plugin release signature cannot be re-verified; rollback was blocked.');
             }
