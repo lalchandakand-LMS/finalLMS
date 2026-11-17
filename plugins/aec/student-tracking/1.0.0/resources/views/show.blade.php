@@ -13,7 +13,6 @@
     };
     $completedLessonCount = $lessonProgress->whereNotNull('completed_at')->count();
     $completedContentCount = $contentProgress->whereNotNull('completed_at')->count();
-    $canManageRisk = in_array(auth()->user()->role, ['admin', 'branch_manager', 'teacher'], true);
 @endphp
 <div class="page-header">
     <div>
