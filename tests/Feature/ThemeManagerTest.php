@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 use ZipArchive;
 
@@ -350,6 +351,11 @@ class ThemeManagerTest extends TestCase
         Storage::disk('public')->assertMissing($cssPath);
         Storage::disk('public')->assertMissing($previewPath);
         Storage::disk('local')->assertMissing($packagePath);
+        $this->assertDatabaseHas('activity_logs', [
+            'user_id' => $admin->id,
+            'event' => 'theme.deleted',
+            'method' => 'DELETE',
+        ]);
     }
 
     public function test_theme_deletion_refuses_untrusted_asset_paths_without_removing_the_record(): void
@@ -376,6 +382,80 @@ class ThemeManagerTest extends TestCase
             ->assertSessionHasErrors('theme');
 
         $this->assertDatabaseHas('themes', ['id' => $themeId]);
+        $this->assertDatabaseMissing('theme_activations', ['action' => 'delete']);
+    }
+
+
+    public function test_theme_archive_entry_sizes_are_checked_before_contents_are_read(): void
+    {
+        if (! class_exists(ZipArchive::class)) {
+            $this->markTestSkipped('PHP ZIP extension is unavailable.');
+        }
+
+        $keyPair = openssl_pkey_new(['private_key_type' => OPENSSL_KEYTYPE_RSA, 'private_key_bits' => 2048]);
+        $details = openssl_pkey_get_details($keyPair);
+        config(['themes.public_key' => $details['key']]);
+
+        $zipPath = tempnam(sys_get_temp_dir(), 'aec-oversized-theme-');
+        $zip = new ZipArchive();
+        $zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+        $zip->addFromString('theme.json', '{}');
+        $zip->addFromString('theme.sig', 'not-a-signature');
+        $zip->addFromString('assets/', '');
+        $zip->addFromString('assets/oversized.css', str_repeat('a', 262145));
+        $zip->close();
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $upload = new UploadedFile($zipPath, 'oversized-theme.zip', 'application/zip', null, true);
+        $this->actingAs($admin)->post(route('admin.themes.install'), ['package' => $upload])
+            ->assertRedirect()
+            ->assertSessionHasErrors('package');
+
+        $this->assertDatabaseCount('themes', 0);
+        @unlink($zipPath);
+    }
+
+    public function test_shared_layout_renders_before_theme_manager_tables_exist(): void
+    {
+        Schema::dropIfExists('theme_activations');
+        Schema::dropIfExists('themes');
+        Schema::dropIfExists('theme_manager_locks');
+
+        $this->get(route('landing'))->assertOk();
+    }
+
+    public function test_theme_deletion_refuses_corrupted_preview_and_package_paths(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        foreach ([
+            ['slug' => 'bad-preview', 'preview_path' => 'uploads/keep.png', 'package_path' => 'themes/packages/123e4567-e89b-12d3-a456-426614174000.zip'],
+            ['slug' => 'bad-package', 'preview_path' => null, 'package_path' => 'private/keep.zip'],
+        ] as $case) {
+            $themeId = DB::table('themes')->insertGetId([
+                'slug' => $case['slug'],
+                'version' => '1.0.0',
+                'name' => 'Corrupted Metadata',
+                'min_lms_version' => '1.0.0',
+                'manifest' => json_encode(['product_id' => 'aloms-lms-theme', 'assets' => []]),
+                'assets' => json_encode([]),
+                'preview_path' => $case['preview_path'],
+                'package_path' => $case['package_path'],
+                'package_sha256' => str_repeat('d', 64),
+                'installed_by' => $admin->id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            $this->actingAs($admin)->delete(route('admin.themes.destroy', $themeId))
+                ->assertRedirect()
+                ->assertSessionHasErrors('theme');
+
+            $this->assertDatabaseHas('themes', ['id' => $themeId]);
+        }
+
         $this->assertDatabaseMissing('theme_activations', ['action' => 'delete']);
     }
 
