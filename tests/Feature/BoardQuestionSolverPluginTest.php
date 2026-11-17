@@ -1,13 +1,13 @@
 <?php
-namespace Tests\\Feature;
-use Aloms\\BoardQuestionSolver\\BoardQuestionSolverSettings;
-use Aloms\\BoardQuestionSolver\\BoardQuestionSolverController;
-use App\\Models\\User;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\Support\\Facades\\Route;
-use Illuminate\\Support\\Facades\\Schema;
-use Tests\\TestCase;
+namespace Tests\Feature;
+use Aloms\BoardQuestionSolver\BoardQuestionSolverSettings;
+use Aloms\BoardQuestionSolver\BoardQuestionSolverController;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
+use Tests\TestCase;
 class BoardQuestionSolverPluginTest extends TestCase {
  use RefreshDatabase;
  protected function setUp():void {
