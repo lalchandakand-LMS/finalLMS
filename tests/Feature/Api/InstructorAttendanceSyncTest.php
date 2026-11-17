@@ -138,6 +138,27 @@ class InstructorAttendanceSyncTest extends TestCase
         ]);
     }
 
+    public function test_sync_rejects_future_attendance_dates(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $student = User::factory()->create(['role' => 'student']);
+        $batch = $this->makeBatch($teacher, $student);
+        $payload = $this->payload($batch, $student);
+        $payload['attendance_date'] = now()->addDay()->toDateString();
+
+        $this->withoutMiddleware([
+            \\App\\Http\\Middleware\\AuthenticateApiToken::class,
+            \\App\\Http\\Middleware\\EnsureModuleEnabled::class,
+        ])
+            ->actingAs($teacher)
+            ->postJson('/api/v1/instructor/attendance/sync', ['records' => [$payload]])
+            ->assertOk()
+            ->assertJsonPath('results.0.status', 'failed')
+            ->assertJsonPath('results.0.message', 'Attendance cannot be recorded for a future date.');
+
+        $this->assertDatabaseCount('attendances', 0);
+    }
+
     public function test_sync_rejects_unassigned_batch_and_inactive_enrollment(): void
     {
         $teacher = User::factory()->create(['role' => 'teacher']);
