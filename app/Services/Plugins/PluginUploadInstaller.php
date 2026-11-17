@@ -169,6 +169,15 @@ final class PluginUploadInstaller
                 if ($existing->status !== 'inactive') {
                     throw new RuntimeException('Deactivate the installed plugin before applying an update.');
                 }
+                $dependent = PluginInstallation::query()->where('status', 'active')
+                    ->where('plugin_key', '!=', $existing->plugin_key)
+                    ->get()
+                    ->first(fn (PluginInstallation $candidate): bool =>
+                        in_array($existing->plugin_key, $candidate->manifest['dependencies'] ?? [], true)
+                    );
+                if ($dependent) {
+                    throw new RuntimeException('An active plugin depends on this plugin: '.$dependent->plugin_key);
+                }
                 if (! $this->signatureVerifier->verifyInstalledSignature($existing)) {
                     throw new RuntimeException('The existing plugin release signature cannot be re-verified; update was blocked.');
                 }
