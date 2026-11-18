@@ -25,6 +25,9 @@ class PluginMigrationRunner
                 if (! $lockedPlugin) {
                     throw new RuntimeException('The plugin installation record is missing; migration was stopped.');
                 }
+                if (! in_array($lockedPlugin->status, ['installed', 'inactive', 'update_staged'], true)) {
+                    throw new RuntimeException('Deactivate or stage the plugin before running its migrations.');
+                }
 
                 $record = DB::table('plugin_migrations')->where([
                     'plugin_key' => $plugin->plugin_key,
