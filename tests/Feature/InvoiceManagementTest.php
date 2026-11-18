@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Invoice;
 use App\Models\InvoicePayment;
 use App\Models\InvoiceRefund;
+use App\Services\Payments\BkashRefundService;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -523,5 +524,69 @@ class InvoiceManagementTest extends TestCase
             'Currency verification test'
         );
     }
+
+
+    public function test_stale_invoice_reconciliation_failure_cannot_overwrite_a_concurrently_completed_refund(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $invoice = Invoice::create([
+            'user_id' => $student->id,
+            'created_by' => $admin->id,
+            'invoice_number' => 'AEC-REFUND-RACE-001',
+            'title' => 'Race-condition tuition',
+            'amount' => 500,
+            'status' => 'paid',
+        ]);
+        $payment = InvoicePayment::create([
+            'invoice_id' => $invoice->id,
+            'received_by' => $admin->id,
+            'amount' => 500,
+            'method' => 'bkash',
+            'gateway_provider' => 'bkash',
+            'gateway_payment_id' => 'BKASH-RACE-PAYMENT',
+            'gateway_transaction_id' => 'BKASH-RACE-TRX',
+            'paid_at' => now(),
+        ]);
+        $refund = InvoiceRefund::create([
+            'invoice_id' => $invoice->id,
+            'invoice_payment_id' => $payment->id,
+            'requested_by' => $admin->id,
+            'approved_by' => $admin->id,
+            'amount' => 100,
+            'method' => 'bkash',
+            'reason' => 'Concurrent reconciliation test',
+            'status' => 'gateway_unknown',
+        ]);
+
+        $gateway = \\Mockery::mock(BkashRefundService::class);
+        $gateway->shouldReceive('verifyExisting')->once()->andReturnUsing(function () use ($refund): array {
+            $refund->update([
+                'status' => 'approved',
+                'gateway_refund_id' => 'BKASH-RACE-REFUND-VERIFIED',
+                'gateway_status' => 'Completed',
+                'processed_at' => now(),
+            ]);
+
+            throw new \\RuntimeException('Simulated stale request failure after concurrent completion.');
+        });
+        $this->app->instance(BkashRefundService::class, $gateway);
+
+        $this->actingAs($admin)->post(route('admin.refunds.reconcile', $refund))
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseHas('invoice_refunds', [
+            'id' => $refund->id,
+            'status' => 'approved',
+            'gateway_refund_id' => 'BKASH-RACE-REFUND-VERIFIED',
+            'gateway_status' => 'Completed',
+        ]);
+        $this->assertDatabaseMissing('payment_audit_events', [
+            'invoice_refund_id' => $refund->id,
+            'event' => 'gateway_refund_reconciliation_unconfirmed',
+        ]);
+    }
+
 
 }
