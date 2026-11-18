@@ -1,0 +1,1 @@
+Creates the plugin-owned phonetics_entries table. Uploaded audio uses Laravel private local storage and authenticated, enrollment-checked streaming routes. The migration refuses destructive rollback while authored learning content exists.
