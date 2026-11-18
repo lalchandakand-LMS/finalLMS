@@ -74,6 +74,23 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth', 'verified', 'activity.log'])->group(function () {
     Route::get('/live-classes', [LiveClassController::class, 'index'])->name('live-classes.index');
+    Route::get('/support', [\App\Http\Controllers\SupportTicketController::class, 'index'])->name('support.index');
+    Route::post('/support', [\App\Http\Controllers\SupportTicketController::class, 'store'])->middleware('throttle:5,1')->name('support.store');
+    Route::patch('/support/{ticket}', [\App\Http\Controllers\SupportTicketController::class, 'update'])->middleware('role:admin')->name('support.update');
+    Route::get('/community', [\App\Http\Controllers\CommunityController::class, 'index'])->name('community.index');
+    Route::get('/community/messages', [\App\Http\Controllers\DirectMessageController::class, 'index'])->name('community.messages.index');
+    Route::get('/community/messages/{user}', [\App\Http\Controllers\DirectMessageController::class, 'show'])->name('community.messages.show');
+    Route::post('/community/messages/{user}', [\App\Http\Controllers\DirectMessageController::class, 'store'])->middleware('throttle:20,1')->name('community.messages.store');
+    Route::get('/community/rooms', [\App\Http\Controllers\DiscussionRoomController::class, 'index'])->name('community.rooms.index');
+    Route::post('/community/rooms', [\App\Http\Controllers\DiscussionRoomController::class, 'store'])->middleware('throttle:5,1')->name('community.rooms.store');
+    Route::post('/community/rooms/{room}/join', [\App\Http\Controllers\DiscussionRoomController::class, 'join'])->middleware('throttle:20,1')->name('community.rooms.join');
+    Route::get('/community/rooms/{room}', [\App\Http\Controllers\DiscussionRoomController::class, 'show'])->name('community.rooms.show');
+    Route::post('/community/rooms/{room}/messages', [\App\Http\Controllers\DiscussionRoomController::class, 'message'])->middleware('throttle:20,1')->name('community.rooms.message');
+    Route::post('/community/posts', [\App\Http\Controllers\CommunityController::class, 'store'])->middleware('throttle:10,1')->name('community.posts.store');
+    Route::post('/community/posts/{post}/like', [\App\Http\Controllers\CommunityController::class, 'toggleLike'])->middleware('throttle:30,1')->name('community.posts.like');
+    Route::post('/community/posts/{post}/comments', [\App\Http\Controllers\CommunityController::class, 'comment'])->middleware('throttle:20,1')->name('community.posts.comment');
+    Route::post('/community/teachers/{teacherId}/follow', [\App\Http\Controllers\CommunityController::class, 'followTeacher'])->middleware('throttle:20,1')->name('community.teachers.follow');
+    Route::delete('/community/teachers/{teacherId}/follow', [\App\Http\Controllers\CommunityController::class, 'unfollowTeacher'])->middleware('throttle:20,1')->name('community.teachers.unfollow');
     Route::get('/invoice-payments/{payment}/receipt', [InvoiceController::class, 'receipt'])
         ->middleware('role:admin,accountant')
         ->name('invoice-payments.receipt');
