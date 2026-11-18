@@ -28,6 +28,13 @@ class PluginMigrationRunner
                 if (! in_array($lockedPlugin->status, ['installed', 'inactive', 'update_staged'], true)) {
                     throw new RuntimeException('Deactivate or stage the plugin before running its migrations.');
                 }
+                $unsettled = DB::table('plugin_migrations')->where([
+                    'plugin_key' => $plugin->plugin_key,
+                    'plugin_version' => $plugin->version,
+                ])->whereIn('status', ['running', 'rolling_back', 'failed', 'rollback_failed'])->exists();
+                if ($unsettled) {
+                    throw new RuntimeException('Another plugin migration is running or requires manual recovery.');
+                }
 
                 $record = DB::table('plugin_migrations')->where([
                     'plugin_key' => $plugin->plugin_key,
@@ -140,6 +147,13 @@ class PluginMigrationRunner
                 }
                 if (! in_array($lockedPlugin->status, ['installed', 'inactive', 'update_staged'], true)) {
                     throw new RuntimeException('Deactivate the plugin before rolling back its migrations.');
+                }
+                $unsettled = DB::table('plugin_migrations')->where([
+                    'plugin_key' => $plugin->plugin_key,
+                    'plugin_version' => $plugin->version,
+                ])->whereIn('status', ['running', 'rolling_back', 'failed', 'rollback_failed'])->exists();
+                if ($unsettled) {
+                    throw new RuntimeException('Another plugin migration is running or requires manual recovery.');
                 }
 
                 $current = DB::table('plugin_migrations')->where('id', $record->id)->lockForUpdate()->first();
