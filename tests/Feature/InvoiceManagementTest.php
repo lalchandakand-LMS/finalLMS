@@ -302,4 +302,57 @@ class InvoiceManagementTest extends TestCase
         $this->assertDatabaseHas('invoices', ['id' => $invoice->id, 'status' => 'paid']);
     }
 
+    public function test_uncertain_bkash_refund_can_be_reconciled_without_resubmitting_it(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $invoice = Invoice::create([
+            'user_id' => $student->id, 'created_by' => $admin->id,
+            'invoice_number' => 'AEC-REFUND-RECON-01', 'title' => 'Tuition',
+            'amount' => 500, 'status' => 'paid',
+        ]);
+        $payment = InvoicePayment::create([
+            'invoice_id' => $invoice->id, 'received_by' => $admin->id,
+            'amount' => 500, 'method' => 'bkash', 'gateway_provider' => 'bkash',
+            'gateway_payment_id' => 'BKASH-RECON-ORIGINAL',
+            'gateway_transaction_id' => 'BKASH-RECON-TRX',
+            'paid_at' => now(),
+        ]);
+        $refund = InvoiceRefund::create([
+            'invoice_id' => $invoice->id, 'invoice_payment_id' => $payment->id,
+            'requested_by' => $admin->id, 'approved_by' => $admin->id,
+            'amount' => 100, 'method' => 'bkash', 'reason' => 'Timeout during refund',
+            'status' => 'gateway_unknown', 'gateway_status' => 'verification_unknown',
+        ]);
+
+        config([
+            'services.bkash.enabled' => true,
+            'services.bkash.base_url' => 'https://tokenized.sandbox.bka.sh/v1.2.0-beta',
+            'services.bkash.username' => 'sandbox-user', 'services.bkash.password' => 'sandbox-password',
+            'services.bkash.app_key' => 'sandbox-app-key', 'services.bkash.app_secret' => 'sandbox-app-secret',
+            'services.bkash.verify_ssl' => true,
+        ]);
+        Http::fake([
+            '*/tokenized/checkout/token/grant' => Http::response(['id_token' => 'reconcile-refund-token'], 200),
+            '*/tokenized/checkout/payment/refund/status' => Http::response([
+                'statusCode' => '0000', 'originalTrxID' => 'BKASH-RECON-TRX',
+                'refundTrxID' => 'BKASH-RECON-REFUND', 'amount' => '100.00',
+                'currency' => 'BDT', 'transactionStatus' => 'Completed',
+            ], 200),
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.refunds.reconcile', $refund))
+            ->assertRedirect()->assertSessionHas('success');
+
+        $this->assertDatabaseHas('invoice_refunds', [
+            'id' => $refund->id, 'status' => 'approved',
+            'gateway_refund_id' => 'BKASH-RECON-REFUND',
+        ]);
+        $this->assertDatabaseHas('payment_audit_events', [
+            'invoice_refund_id' => $refund->id,
+            'event' => 'gateway_refund_reconciled',
+        ]);
+        $this->assertDatabaseHas('invoices', ['id' => $invoice->id, 'status' => 'partial']);
+    }
+
 }
