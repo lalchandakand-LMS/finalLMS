@@ -87,14 +87,14 @@ PHP);
         $file = $this->root.'/migrations/2026_11_15_000002_running_claim.php';
         file_put_contents($file, <<<'PHP'
 <?php
-return new class extends \\Illuminate\\Database\\Migrations\\Migration {
+return new class extends \Illuminate\Database\Migrations\Migration {
     public function up(): void {
-        \\Illuminate\\Support\\Facades\\Schema::create('plugin_running_claim_probe', function (\\Illuminate\\Database\\Schema\\Blueprint $table): void {
+        \Illuminate\Support\Facades\Schema::create('plugin_running_claim_probe', function (\Illuminate\Database\Schema\Blueprint $table): void {
             $table->id();
         });
     }
     public function down(): void {
-        \\Illuminate\\Support\\Facades\\Schema::dropIfExists('plugin_running_claim_probe');
+        \Illuminate\Support\Facades\Schema::dropIfExists('plugin_running_claim_probe');
     }
 };
 PHP);
@@ -114,7 +114,7 @@ PHP);
             ],
         ])->save();
 
-        \\DB::table('plugin_migrations')->insert([
+        \DB::table('plugin_migrations')->insert([
             'plugin_key' => $plugin->plugin_key,
             'plugin_version' => $plugin->version,
             'migration' => basename($file),
@@ -128,7 +128,7 @@ PHP);
         try {
             app(PluginMigrationRunner::class)->migrate($plugin);
             $this->fail('An interrupted migration claim must not be executed a second time.');
-        } catch (\\RuntimeException $exception) {
+        } catch (\RuntimeException $exception) {
             $this->assertStringContainsString('manual recovery', strtolower($exception->getMessage()));
         }
         $this->assertFalse(Schema::hasTable('plugin_running_claim_probe'));
@@ -139,14 +139,14 @@ PHP);
         $file = $this->root.'/migrations/2026_11_15_000003_failing_rollback.php';
         file_put_contents($file, <<<'PHP'
 <?php
-return new class extends \\Illuminate\\Database\\Migrations\\Migration {
+return new class extends \Illuminate\Database\Migrations\Migration {
     public function up(): void {
-        \\Illuminate\\Support\\Facades\\Schema::create('plugin_rollback_failure_probe', function (\\Illuminate\\Database\\Schema\\Blueprint $table): void {
+        \Illuminate\Support\Facades\Schema::create('plugin_rollback_failure_probe', function (\Illuminate\Database\Schema\Blueprint $table): void {
             $table->id();
         });
     }
     public function down(): void {
-        throw new \\RuntimeException('simulated partial rollback failure');
+        throw new \RuntimeException('simulated partial rollback failure');
     }
 };
 PHP);
@@ -173,7 +173,7 @@ PHP);
         try {
             $runner->rollback($plugin);
             $this->fail('A failing rollback must stop and require manual recovery.');
-        } catch (\\RuntimeException $exception) {
+        } catch (\RuntimeException $exception) {
             $this->assertStringContainsString('Manual database recovery', $exception->getMessage());
         }
 
@@ -187,7 +187,7 @@ PHP);
         try {
             $runner->rollback($plugin);
             $this->fail('A failed rollback must not be replayed automatically.');
-        } catch (\\RuntimeException $exception) {
+        } catch (\RuntimeException $exception) {
             $this->assertStringContainsString('manual database recovery', strtolower($exception->getMessage()));
         }
     }
