@@ -15,6 +15,17 @@
         $institutionFaviconMedia = $institutionFaviconMediaId ? \App\Models\MediaAsset::query()->whereKey($institutionFaviconMediaId)->where('mime_type', 'like', 'image/%')->first() : null;
         $institutionLogoUrl = $institutionLogoMedia?->url ?: $institutionLogoUrl;
         $institutionFaviconUrl = $institutionFaviconMedia?->url ?: $institutionFaviconUrl;
+        $loadingEnabled = $hasSettingsTable && \App\Models\Setting::value('loading_screen_enabled', '1') === '1';
+        $loadingLogoMediaId = $hasSettingsTable ? (int) \App\Models\Setting::value('loading_screen_logo_media_id', 0) : 0;
+        $loadingLogoMedia = $loadingLogoMediaId ? \App\Models\MediaAsset::query()->whereKey($loadingLogoMediaId)->where('mime_type', 'like', 'image/%')->first() : null;
+        $loadingLogoUrl = $loadingLogoMedia?->url ?: $institutionLogoUrl;
+        $loadingText = $hasSettingsTable ? \App\Models\Setting::value('loading_screen_text', 'Loading...') : 'Loading...';
+        $loadingBackground = $hasSettingsTable ? \App\Models\Setting::value('loading_screen_background', '#ffffff') : '#ffffff';
+        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', (string) $loadingBackground)) $loadingBackground = '#ffffff';
+        $loadingStyle = $hasSettingsTable ? \App\Models\Setting::value('loading_screen_style', 'orbit') : 'orbit';
+        if (!in_array($loadingStyle, ['orbit', 'pulse', 'ring'], true)) $loadingStyle = 'orbit';
+        $loadingSpeed = $hasSettingsTable ? (int) \App\Models\Setting::value('loading_screen_speed', 12) : 12;
+        $loadingSpeed = max(6, min(24, $loadingSpeed));
         $seoTitle = $hasSettingsTable ? \App\Models\Setting::value('seo_title', config('app.name')) : config('app.name');
         $seoDescription = $hasSettingsTable ? \App\Models\Setting::value('seo_description', 'Learn with guided courses, track your progress, and grow your skills.') : 'Learn with guided courses, track your progress, and grow your skills.';
         $seoKeywords = $hasSettingsTable ? \App\Models\Setting::value('seo_keywords', 'online learning, courses, education') : 'online learning, courses, education';
@@ -359,9 +370,38 @@
             .admin-shell .page-header { gap:10px; }
             .admin-shell .panel { padding:16px; }
         }
+        .aec-brand-loader { position:fixed; inset:0; z-index:99999; display:grid; place-items:center; background:var(--aec-loader-bg,#fff); opacity:1; visibility:visible; transition:opacity .22s ease,visibility .22s ease; }
+        .aec-brand-loader[hidden] { display:none; }
+        .aec-brand-loader.is-leaving { opacity:0; visibility:hidden; pointer-events:none; }
+        .aec-brand-loader-inner { display:flex; flex-direction:column; align-items:center; gap:18px; padding:24px; text-align:center; }
+        .aec-brand-loader-mark { position:relative; display:grid; place-items:center; width:104px; height:104px; }
+        .aec-brand-loader-mark img { position:relative; z-index:2; width:68px; height:68px; object-fit:contain; border-radius:14px; }
+        .aec-brand-loader-mark .aec-loader-orbit,.aec-brand-loader-mark .aec-loader-ring { position:absolute; inset:3px; border:3px solid transparent; border-top-color:var(--primary); border-right-color:var(--primary); border-radius:50%; animation:aec-loader-spin var(--aec-loader-speed,1s) linear infinite; }
+        .aec-brand-loader-mark .aec-loader-orbit:after { content:''; position:absolute; width:9px; height:9px; border-radius:50%; background:var(--primary); top:8px; left:8px; }
+        .aec-brand-loader-mark .aec-loader-ring { inset:10px; border-width:3px; border-right-color:transparent; border-bottom-color:var(--primary); }
+        .aec-brand-loader[data-style="pulse"] .aec-brand-loader-mark img { animation:aec-loader-pulse var(--aec-loader-speed,1s) ease-in-out infinite; }
+        .aec-brand-loader[data-style="pulse"] .aec-loader-orbit,.aec-brand-loader[data-style="pulse"] .aec-loader-ring { display:none; }
+        .aec-brand-loader[data-style="ring"] .aec-loader-orbit { display:none; }
+        .aec-brand-loader[data-style="ring"] .aec-loader-ring { display:block; }
+        .aec-brand-loader-text { color:#334155; font-size:.94rem; font-weight:700; letter-spacing:.02em; }
+        @keyframes aec-loader-spin { to { transform:rotate(360deg); } }
+        @keyframes aec-loader-pulse { 0%,100% { transform:scale(.9); opacity:.72; } 50% { transform:scale(1.06); opacity:1; } }
+        @media(prefers-reduced-motion:reduce) { .aec-brand-loader,.aec-brand-loader * { animation:none!important; transition:none!important; } }
     </style>
 </head>
 <body class="{{ $isAdminLayout ? 'admin-shell' : '' }}">
+    @if($loadingEnabled)
+        <div id="aec-brand-loader" class="aec-brand-loader" data-style="{{ $loadingStyle }}" style="--aec-loader-bg:{{ $loadingBackground }};--aec-loader-speed:{{ number_format(12 / $loadingSpeed, 2) }}s" role="status" aria-live="polite" aria-label="{{ $loadingText ?: __('Loading') }}">
+            <div class="aec-brand-loader-inner">
+                <div class="aec-brand-loader-mark">
+                    @if($loadingLogoUrl)<img src="{{ $loadingLogoUrl }}" alt="">@else<span style="font-size:2.8rem;font-weight:800;color:var(--primary);">{{ mb_substr($institutionName, 0, 1) }}</span>@endif
+                    <span class="aec-loader-orbit" aria-hidden="true"></span><span class="aec-loader-ring" aria-hidden="true"></span>
+                </div>
+                @if($loadingText)<span class="aec-brand-loader-text">{{ $loadingText }}</span>@endif
+            </div>
+        </div>
+    @endif
+
     @if($marketingConsent && $googleTagManagerId)
         <noscript><iframe src="https://www.googletagmanager.com/ns.html?id={{ urlencode($googleTagManagerId) }}" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     @endif
@@ -700,6 +740,37 @@
             });
         })();
     </script>
+    @if($loadingEnabled)
+        <script>
+            (() => {
+                const loader = document.getElementById('aec-brand-loader');
+                if (!loader) return;
+                let shownAt = Date.now();
+                const hide = () => {
+                    const wait = Math.max(0, 260 - (Date.now() - shownAt));
+                    window.setTimeout(() => { loader.classList.add('is-leaving'); window.setTimeout(() => loader.hidden = true, 240); }, wait);
+                };
+                const show = () => { shownAt = Date.now(); loader.hidden = false; loader.classList.remove('is-leaving'); };
+                if (document.readyState === 'complete') hide();
+                else window.addEventListener('load', hide, { once:true });
+                window.addEventListener('pageshow', hide);
+                document.addEventListener('submit', event => {
+                    const form = event.target;
+                    if (form instanceof HTMLFormElement && form.method.toLowerCase() !== 'dialog' && !form.hasAttribute('data-no-page-loader')) show();
+                }, true);
+                document.addEventListener('click', event => {
+                    const link = event.target.closest('a[href]');
+                    if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                    if (link.target && link.target !== '_self' || link.hasAttribute('download')) return;
+                    const url = new URL(link.href, window.location.href);
+                    if (url.origin !== window.location.origin || url.pathname === window.location.pathname && url.search === window.location.search && url.hash) return;
+                    if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+                    show();
+                }, true);
+                window.addEventListener('beforeunload', show);
+            })();
+        </script>
+    @endif
     @stack('scripts')
 </body>
 </html>
