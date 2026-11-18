@@ -69,7 +69,7 @@
                                 @if($refund->approver) · {{ __('Processed by') }} {{ $refund->approver->name }} @endif
                             </p>
                         </div>
-                        @if($isAdmin && $refund->status === 'gateway_unknown' && $refund->method === 'bkash')
+                        @if($isAdmin && in_array($refund->status, ['gateway_unknown', 'processing'], true) && $refund->method === 'bkash' && ($refund->status !== 'processing' || $refund->created_at?->lte(now()->subMinutes(5))))
                             <form method="POST" action="{{ route('admin.refunds.reconcile', $refund) }}">
                                 @csrf
                                 <button class="btn secondary" type="submit">{{ __('Reconcile gateway refund') }}</button>
