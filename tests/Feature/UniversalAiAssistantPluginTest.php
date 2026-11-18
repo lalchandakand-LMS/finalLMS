@@ -405,10 +405,10 @@ class UniversalAiAssistantPluginTest extends TestCase
         ]);
     }
 
-    public function test_expired_token_reservations_cannot_persist_prompts_or_settle_responses(): void
+    public function test_expired_reservations_become_uncertain_and_remain_charged_until_settlement(): void
     {
         $user = User::factory()->create(['role' => 'student']);
-        $conversationId = \DB::table('ai_assistant_conversations')->insertGetId([
+        $conversationId = \\DB::table('ai_assistant_conversations')->insertGetId([
             'user_id' => $user->id,
             'assistant_role' => 'student',
             'title' => 'Expired reservation test',
@@ -416,40 +416,35 @@ class UniversalAiAssistantPluginTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $promptReservation = AssistantTokenBudget::reserve(5000, 100, 1000, 20, 'student', 'openai-compatible', 'test-model', $user->id, $conversationId);
-        $this->assertNotNull($promptReservation);
-        \DB::table('ai_assistant_token_reservations')->where('id', $promptReservation['id'])
+        $reservation = AssistantTokenBudget::reserve(1100, 100, 1000, 20, 'student', 'openai-compatible', 'test-model', $user->id, $conversationId);
+        $this->assertNotNull($reservation);
+        \\DB::table('ai_assistant_token_reservations')->where('id', $reservation['id'])
             ->update(['expires_at' => now()->subSecond()]);
+
+        // A later request discovers the stale reservation. Its full prompt +
+        // completion allowance remains charged because provider acceptance is unknown.
+        $blocked = AssistantTokenBudget::reserve(1100, 100, 1000, 20, 'student', 'openai-compatible', 'test-model', $user->id, $conversationId);
+        $this->assertNull($blocked);
+        $this->assertDatabaseHas('ai_assistant_token_reservations', [
+            'id' => $reservation['id'],
+            'status' => 'uncertain',
+        ]);
 
         $promptPersisted = false;
-        try {
-            AssistantTokenBudget::persistPrompt($promptReservation['id'], function () use (&$promptPersisted): void {
-                $promptPersisted = true;
-            });
-            $this->fail('An expired reservation must not persist a prompt.');
-        } catch (\RuntimeException $exception) {
-            $this->assertStringContainsString('expired', $exception->getMessage());
-        }
-        $this->assertFalse($promptPersisted);
-
-        $responseReservation = AssistantTokenBudget::reserve(5000, 100, 1000, 20, 'student', 'openai-compatible', 'test-model', $user->id, $conversationId);
-        $this->assertNotNull($responseReservation);
-        \DB::table('ai_assistant_token_reservations')->where('id', $responseReservation['id'])
-            ->update(['expires_at' => now()->subSecond()]);
+        AssistantTokenBudget::persistPrompt($reservation['id'], function () use (&$promptPersisted): void {
+            $promptPersisted = true;
+        });
+        $this->assertTrue($promptPersisted);
 
         $responsePersisted = false;
-        try {
-            AssistantTokenBudget::settle($responseReservation['id'], 100, function () use (&$responsePersisted): void {
-                $responsePersisted = true;
-            });
-            $this->fail('An expired reservation must not settle a response.');
-        } catch (\RuntimeException $exception) {
-            $this->assertStringContainsString('expired', $exception->getMessage());
-        }
-        $this->assertFalse($responsePersisted);
+        AssistantTokenBudget::settle($reservation['id'], 100, function () use (&$responsePersisted): void {
+            $responsePersisted = true;
+        });
+        $this->assertTrue($responsePersisted);
         $this->assertDatabaseHas('ai_assistant_token_reservations', [
-            'id' => $responseReservation['id'],
-            'status' => 'pending',
+            'id' => $reservation['id'],
+            'status' => 'completed',
+            'actual_tokens' => 100,
         ]);
     }
 
@@ -710,4 +705,69 @@ class UniversalAiAssistantPluginTest extends TestCase
 
         $this->assertDatabaseHas('ai_assistant_conversations', ['id' => $conversationId, 'title' => 'Retained history']);
     }
+    public function test_provider_usage_above_reserved_ceiling_is_recorded_as_over_budget(): void
+    {
+        $user = User::factory()->create(['role' => 'student']);
+        $conversationId = \\DB::table('ai_assistant_conversations')->insertGetId([
+            'user_id' => $user->id,
+            'assistant_role' => 'student',
+            'title' => 'Over budget settlement test',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $reservation = AssistantTokenBudget::reserve(2000, 100, 500, 20, 'student', 'openai-compatible', 'test-model', $user->id, $conversationId);
+        $this->assertNotNull($reservation);
+        $persisted = false;
+
+        AssistantTokenBudget::settle($reservation['id'], 900, function () use (&$persisted): void {
+            $persisted = true;
+        });
+
+        $this->assertTrue($persisted);
+        $this->assertDatabaseHas('ai_assistant_token_reservations', [
+            'id' => $reservation['id'],
+            'status' => 'over_budget',
+            'actual_tokens' => 900,
+        ]);
+        $this->assertNull(AssistantTokenBudget::reserve(1000, 100, 500, 20, 'student', 'openai-compatible', 'test-model', $user->id, $conversationId));
+    }
+
+    public function test_prompt_estimator_applies_a_conservative_byte_multiplier_and_rejects_unbounded_context(): void
+    {
+        $messages = [['role' => 'user', 'content' => str_repeat('a', 1000)]];
+        $payload = json_encode($messages, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
+
+        $this->assertSame((int) ceil(strlen($payload) * 0.75), AssistantTokenBudget::estimatePromptTokens($messages));
+
+        $this->expectException(\\RuntimeException::class);
+        AssistantTokenBudget::estimatePromptTokens([['role' => 'user', 'content' => str_repeat('x', 524289)]]);
+    }
+
+    public function test_billable_completion_request_is_not_retried_after_an_ambiguous_server_error(): void
+    {
+        Http::fakeSequence()
+            ->push(['error' => 'temporary upstream failure'], 500)
+            ->push(['choices' => [['message' => ['content' => 'must not be requested twice']]]], 200);
+
+        $provider = new OpenAiCompatibleProvider(app(AiDeveloperProviderEndpoint::class));
+
+        try {
+            $provider->complete(
+                'test-api-key',
+                'https://api.openai.com/v1',
+                'gpt-4o-mini',
+                [['role' => 'user', 'content' => 'Hello']],
+                0.4,
+                100
+            );
+            $this->fail('An upstream 500 must not trigger a second billable generation request.');
+        } catch (\\RuntimeException $exception) {
+            $this->assertStringContainsString('provider request failed', strtolower($exception->getMessage()));
+        }
+
+        Http::assertSentCount(1);
+    }
+
+
 }
