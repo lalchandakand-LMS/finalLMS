@@ -408,7 +408,7 @@ class UniversalAiAssistantPluginTest extends TestCase
     public function test_expired_reservations_become_uncertain_and_remain_charged_until_settlement(): void
     {
         $user = User::factory()->create(['role' => 'student']);
-        $conversationId = \\DB::table('ai_assistant_conversations')->insertGetId([
+        $conversationId = \DB::table('ai_assistant_conversations')->insertGetId([
             'user_id' => $user->id,
             'assistant_role' => 'student',
             'title' => 'Expired reservation test',
@@ -418,7 +418,7 @@ class UniversalAiAssistantPluginTest extends TestCase
 
         $reservation = AssistantTokenBudget::reserve(1100, 100, 1000, 20, 'student', 'openai-compatible', 'test-model', $user->id, $conversationId);
         $this->assertNotNull($reservation);
-        \\DB::table('ai_assistant_token_reservations')->where('id', $reservation['id'])
+        \DB::table('ai_assistant_token_reservations')->where('id', $reservation['id'])
             ->update(['expires_at' => now()->subSecond()]);
 
         // A later request discovers the stale reservation. Its full prompt +
@@ -708,7 +708,7 @@ class UniversalAiAssistantPluginTest extends TestCase
     public function test_provider_usage_above_reserved_ceiling_is_recorded_as_over_budget(): void
     {
         $user = User::factory()->create(['role' => 'student']);
-        $conversationId = \\DB::table('ai_assistant_conversations')->insertGetId([
+        $conversationId = \DB::table('ai_assistant_conversations')->insertGetId([
             'user_id' => $user->id,
             'assistant_role' => 'student',
             'title' => 'Over budget settlement test',
@@ -740,7 +740,7 @@ class UniversalAiAssistantPluginTest extends TestCase
 
         $this->assertSame((int) ceil(strlen($payload) * 0.75), AssistantTokenBudget::estimatePromptTokens($messages));
 
-        $this->expectException(\\RuntimeException::class);
+        $this->expectException(\RuntimeException::class);
         AssistantTokenBudget::estimatePromptTokens([['role' => 'user', 'content' => str_repeat('x', 524289)]]);
     }
 
@@ -762,7 +762,7 @@ class UniversalAiAssistantPluginTest extends TestCase
                 100
             );
             $this->fail('An upstream 500 must not trigger a second billable generation request.');
-        } catch (\\RuntimeException $exception) {
+        } catch (\RuntimeException $exception) {
             $this->assertStringContainsString('provider request failed', strtolower($exception->getMessage()));
         }
 
