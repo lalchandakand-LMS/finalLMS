@@ -117,6 +117,13 @@ Route::get('/student/invoices/{invoice}/print', [StudentInvoiceController::class
 Route::get('/student/invoices/{invoice}/payments/{payment}/print', [StudentInvoiceController::class, 'printReceipt'])->middleware(['signed', 'throttle:30,1'])->name('student.invoices.receipts.print');
 
 Route::get('/flash-sale', [FlashSaleController::class, 'publicIndex'])->name('flash-sales.public');
+Route::get('/themes/{slug}/{version}/assets/{file}', [ThemeManagerController::class, 'asset'])
+    ->where([
+        'slug' => '[a-z0-9][a-z0-9-]{1,79}',
+        'version' => '\\d+\\.\\d+\\.\\d+(?:-[A-Za-z0-9.-]+)?',
+        'file' => '[A-Za-z0-9][A-Za-z0-9._-]{0,100}\\.css',
+    ])
+    ->name('themes.asset');
 Route::get('/contests', [QuizContestController::class, 'index'])->name('contests.index');
 Route::get('/contests/{contest}', [QuizContestController::class, 'show'])->name('contests.show');
 
