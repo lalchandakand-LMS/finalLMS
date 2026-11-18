@@ -56,7 +56,8 @@ class BkashRefundService
             || strtolower((string) ($verified['transactionStatus'] ?? '')) !== 'completed'
             || ($verified['refundTrxID'] ?? null) !== $refundId
             || ! isset($verified['originalTrxID']) || $verified['originalTrxID'] !== $transactionId
-            || round((float) ($verified['amount'] ?? -1), 2) !== round((float) $amount, 2)) {
+            || round((float) ($verified['amount'] ?? -1), 2) !== round((float) $amount, 2)
+            || strtoupper((string) ($verified['currency'] ?? '')) !== 'BDT') {
             throw new RuntimeException('bKash refund status could not be independently verified.');
         }
 
