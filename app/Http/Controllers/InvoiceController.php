@@ -152,6 +152,8 @@ class InvoiceController extends Controller
         $validated = $request->validate([
             'amount' => ['required', 'numeric', 'gt:0', 'max:99999999'],
             'method' => ['required', 'string', 'max:40'],
+            'gateway_payment_id' => ['nullable', 'string', 'max:120', 'required_if:method,bkash'],
+            'gateway_transaction_id' => ['nullable', 'string', 'max:120', 'required_if:method,bkash'],
             'reference' => ['nullable', 'string', 'max:120'],
             'note' => ['nullable', 'string', 'max:1000'],
             'paid_at' => ['required', 'date'],
@@ -180,6 +182,9 @@ class InvoiceController extends Controller
                 'received_by' => $request->user()->id,
                 'amount' => $amount,
                 'method' => $validated['method'],
+                'gateway_provider' => $validated['method'] === 'bkash' ? 'bkash' : null,
+                'gateway_payment_id' => $validated['gateway_payment_id'] ?? null,
+                'gateway_transaction_id' => $validated['gateway_transaction_id'] ?? null,
                 'reference' => $validated['reference'] ?? null,
                 'note' => $validated['note'] ?? null,
                 'paid_at' => $validated['paid_at'],
