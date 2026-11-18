@@ -236,9 +236,8 @@ class InvoiceManagementTest extends TestCase
         ]);
         Http::fake([
             '*/tokenized/checkout/token/grant' => Http::response(['id_token' => 'refund-token'], 200),
-            '*/tokenized/checkout/payment/refund' => Http::sequence()
-                ->push(['statusCode' => '0000', 'paymentID' => 'BKASH-ORIGINAL-PAYMENT', 'originalTrxID' => 'BKASH-ORIGINAL-TRX', 'refundTrxID' => 'BKASH-REFUND-TRX', 'amount' => '100.00', 'currency' => 'BDT', 'transactionStatus' => 'Completed'])
-                ->push(['statusCode' => '0000', 'paymentID' => 'BKASH-ORIGINAL-PAYMENT', 'trxID' => 'BKASH-REFUND-TRX', 'amount' => '100.00', 'currency' => 'BDT', 'transactionStatus' => 'Completed']),
+            '*/tokenized/checkout/payment/refund' => Http::response(['statusCode' => '0000', 'originalTrxID' => 'BKASH-ORIGINAL-TRX', 'refundTrxID' => 'BKASH-REFUND-TRX', 'amount' => '100.00', 'currency' => 'BDT', 'transactionStatus' => 'Completed']),
+            '*/tokenized/checkout/payment/refund/status' => Http::response(['statusCode' => '0000', 'originalTrxID' => 'BKASH-ORIGINAL-TRX', 'refundTrxID' => 'BKASH-REFUND-TRX', 'amount' => '100.00', 'currency' => 'BDT', 'transactionStatus' => 'Completed']),
         ]);
 
         $payload = [
@@ -286,9 +285,8 @@ class InvoiceManagementTest extends TestCase
         ]);
         Http::fake([
             '*/tokenized/checkout/token/grant' => Http::response(['id_token' => 'refund-token'], 200),
-            '*/tokenized/checkout/payment/refund' => Http::sequence()
-                ->push(['statusCode' => '0000', 'paymentID' => 'BKASH-ORIGINAL-PAYMENT-2', 'originalTrxID' => 'BKASH-ORIGINAL-TRX-2', 'refundTrxID' => 'BKASH-REFUND-TRX-2', 'amount' => '100.00', 'currency' => 'BDT'])
-                ->push(['statusCode' => '0000', 'paymentID' => 'BKASH-ORIGINAL-PAYMENT-2', 'trxID' => 'BKASH-REFUND-TRX-2', 'amount' => '100.00', 'currency' => 'BDT', 'transactionStatus' => 'Processing']),
+            '*/tokenized/checkout/payment/refund' => Http::response(['statusCode' => '0000', 'originalTrxID' => 'BKASH-ORIGINAL-TRX-2', 'refundTrxID' => 'BKASH-REFUND-TRX-2', 'amount' => '100.00', 'currency' => 'BDT']),
+            '*/tokenized/checkout/payment/refund/status' => Http::response(['statusCode' => '0000', 'originalTrxID' => 'BKASH-ORIGINAL-TRX-2', 'refundTrxID' => 'BKASH-REFUND-TRX-2', 'amount' => '100.00', 'currency' => 'BDT', 'transactionStatus' => 'Processing']),
         ]);
 
         $this->actingAs($admin)->post(route('admin.refunds.store'), [
