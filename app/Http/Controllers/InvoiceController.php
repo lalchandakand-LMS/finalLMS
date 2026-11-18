@@ -221,6 +221,38 @@ class InvoiceController extends Controller
                 return 'excess';
             }
 
+            $eventKey = 'bkash:payment:'.$validated['gateway_payment_id'].':'.$validated['gateway_transaction_id'];
+            $gatewayEvent = null;
+            if ($validated['method'] === 'bkash') {
+                $gatewayEvent = PaymentGatewayEvent::firstOrCreate(
+                    ['event_key' => $eventKey],
+                    [
+                        'provider' => 'bkash',
+                        'event_type' => 'invoice.payment.verified',
+                        'verification_status' => 'verified',
+                        'processing_status' => 'processing',
+                        'payload_hash' => hash('sha256', json_encode([
+                            'paymentID' => $validated['gateway_payment_id'],
+                            'trxID' => $validated['gateway_transaction_id'],
+                            'amount' => $validated['amount'],
+                            'invoice' => $lockedInvoice->invoice_number,
+                        ], JSON_THROW_ON_ERROR)),
+                        'verified_payload' => [
+                            'paymentID' => $validated['gateway_payment_id'],
+                            'trxID' => $validated['gateway_transaction_id'],
+                            'amount' => $validated['amount'],
+                            'merchantInvoiceNumber' => $lockedInvoice->invoice_number,
+                        ],
+                        'received_at' => now(),
+                        'verified_at' => now(),
+                    ]
+                );
+
+                if (! $gatewayEvent->wasRecentlyCreated || $gatewayEvent->payment_id) {
+                    return 'duplicate_gateway';
+                }
+            }
+
             $receipt = InvoicePayment::create([
                 'invoice_id' => $lockedInvoice->id,
                 'received_by' => $request->user()->id,
@@ -234,6 +266,14 @@ class InvoiceController extends Controller
 
                 'paid_at' => $validated['paid_at'],
             ]);
+
+            if ($gatewayEvent) {
+                $gatewayEvent->update([
+                    'invoice_payment_id' => $receipt->id,
+                    'processing_status' => 'processed',
+                    'processed_at' => now(),
+                ]);
+            }
 
             PaymentAuditEvent::create([
                 'invoice_payment_id' => $receipt->id,
