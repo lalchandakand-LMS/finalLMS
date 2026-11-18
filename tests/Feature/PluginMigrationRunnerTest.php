@@ -134,6 +134,82 @@ PHP);
         $this->assertFalse(Schema::hasTable('plugin_running_claim_probe'));
     }
 
+
+    public function test_an_in_flight_migration_blocks_claiming_a_different_migration_for_the_same_plugin_version(): void
+    {
+        $runningFile = $this->root.'/migrations/2026_11_15_000001_existing_running.php';
+        $nextFile = $this->root.'/migrations/2026_11_15_000002_next_migration.php';
+
+        file_put_contents($runningFile, <<<'PHP'
+<?php
+return new class extends \Illuminate\Database\Migrations\Migration {
+    public function up(): void {
+        \Illuminate\Support\Facades\Schema::create('plugin_existing_running_probe', function (\Illuminate\Database\Schema\Blueprint $table): void {
+            $table->id();
+        });
+    }
+    public function down(): void {
+        \Illuminate\Support\Facades\Schema::dropIfExists('plugin_existing_running_probe');
+    }
+};
+PHP);
+        file_put_contents($nextFile, <<<'PHP'
+<?php
+return new class extends \Illuminate\Database\Migrations\Migration {
+    public function up(): void {
+        \Illuminate\Support\Facades\Schema::create('plugin_next_migration_probe', function (\Illuminate\Database\Schema\Blueprint $table): void {
+            $table->id();
+        });
+    }
+    public function down(): void {
+        \Illuminate\Support\Facades\Schema::dropIfExists('plugin_next_migration_probe');
+    }
+};
+PHP);
+
+        $plugin = new PluginInstallation();
+        $plugin->forceFill([
+            'plugin_key' => 'test.migration-check',
+            'name' => 'Concurrent Migration Guard',
+            'version' => '1.0.0',
+            'type' => 'module',
+            'status' => 'installed',
+            'manifest' => ['migrations' => 'migrations'],
+            'package_path' => $this->relative,
+            'metadata' => [
+                'integrity_version' => 1,
+                'installed_file_hashes' => [
+                    'migrations/'.basename($runningFile) => hash_file('sha256', $runningFile),
+                    'migrations/'.basename($nextFile) => hash_file('sha256', $nextFile),
+                ],
+            ],
+        ])->save();
+
+        \DB::table('plugin_migrations')->insert([
+            'plugin_key' => $plugin->plugin_key,
+            'plugin_version' => $plugin->version,
+            'migration' => basename($runningFile),
+            'status' => 'running',
+            'started_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        try {
+            app(PluginMigrationRunner::class)->migrate($plugin);
+            $this->fail('A running migration must block a different migration from the same plugin version.');
+        } catch (\RuntimeException $exception) {
+            $this->assertStringContainsString('another plugin migration is running', strtolower($exception->getMessage()));
+        }
+
+        $this->assertFalse(Schema::hasTable('plugin_existing_running_probe'));
+        $this->assertFalse(Schema::hasTable('plugin_next_migration_probe'));
+        $this->assertDatabaseMissing('plugin_migrations', [
+            'plugin_key' => $plugin->plugin_key,
+            'migration' => basename($nextFile),
+        ]);
+    }
+
     public function test_failed_down_migration_is_marked_and_never_replayed_automatically(): void
     {
         $file = $this->root.'/migrations/2026_11_15_000003_failing_rollback.php';
