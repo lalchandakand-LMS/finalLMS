@@ -57,6 +57,11 @@ class LearnEarnPaidExamPaymentTest extends TestCase
         require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnExam.php');
         require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnExamEntitlement.php');
         require_once base_path('plugins/aec/learn-earn/1.0.0/src/StudentLearnEarnController.php');
+        require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnExamAttempt.php');
+        require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnAttemptQuestion.php');
+        require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnExamQuestion.php');
+        require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnExamAnswer.php');
+        require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnScorer.php');
     }
 
     public function test_paid_exam_entitlement_is_granted_only_after_bkash_server_verification(): void
@@ -303,6 +308,38 @@ class LearnEarnPaidExamPaymentTest extends TestCase
         $this->assertTrue(Schema::hasColumn('payments', 'learn_earn_exam_id'));
         $this->assertTrue(Schema::hasTable('learn_earn_exam_entitlements'));
         $this->assertDatabaseHas('learn_earn_exams', ['id' => $exam->id]);
+    }
+
+    public function test_expired_attempt_page_redirects_and_finalizes_without_a_view_return_type_error(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $exam = $this->paidExam();
+        $attempt = LearnEarnExamAttempt::query()->create([
+            'exam_id' => $exam->id,
+            'student_id' => $student->id,
+            'attempt_number' => 1,
+            'status' => 'in_progress',
+            'started_at' => now()->subHour(),
+            'ends_at' => now()->subMinute(),
+            'score' => 0,
+            'max_score' => 0,
+        ]);
+
+        if (! Route::has('student.learn-earn.attempts.result')) {
+            Route::get('/__test/learn-earn/attempts/{attempt}', static fn () => response()->noContent())
+                ->name('student.learn-earn.attempts.result');
+        }
+
+        $request = Request::create('/student/learn-earn/attempts/'.$attempt->id, 'GET');
+        $request->setUserResolver(fn () => $student);
+        $response = app(StudentLearnEarnController::class)->attempt($request, $attempt);
+
+        $this->assertInstanceOf(\\Illuminate\\Http\\RedirectResponse::class, $response);
+        $this->assertSame(route('student.learn-earn.attempts.result', $attempt), $response->getTargetUrl());
+        $this->assertDatabaseHas('learn_earn_exam_attempts', [
+            'id' => $attempt->id,
+            'status' => 'expired',
+        ]);
     }
 
     private function paidExam(): LearnEarnExam
