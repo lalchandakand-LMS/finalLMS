@@ -610,8 +610,8 @@ class InstructorAttendanceSyncTest extends TestCase
         $teacher->update(['branch_id' => $otherBranch->id]);
 
         $this->withoutMiddleware([
-            \\App\\Http\\Middleware\\AuthenticateApiToken::class,
-            \\App\\Http\\Middleware\\EnsureModuleEnabled::class,
+            \App\Http\Middleware\AuthenticateApiToken::class,
+            \App\Http\Middleware\EnsureModuleEnabled::class,
         ])->actingAs($teacher)
             ->postJson('/api/v1/instructor/attendance/sync', [
                 'records' => [$this->payload($batch, $student)],
@@ -630,7 +630,7 @@ class InstructorAttendanceSyncTest extends TestCase
         $teacher = User::factory()->create(['role' => 'teacher']);
         $student = User::factory()->create(['role' => 'student']);
         $batch = $this->makeBatch($teacher, $student);
-        $attendance = \\App\\Models\\Attendance::query()->create([
+        $attendance = \App\Models\Attendance::query()->create([
             'batch_id' => $batch->id,
             'student_id' => $student->id,
             'marked_by' => $teacher->id,
@@ -644,8 +644,8 @@ class InstructorAttendanceSyncTest extends TestCase
         $teacher->update(['branch_id' => $otherBranch->id]);
 
         $this->withoutMiddleware([
-            \\App\\Http\\Middleware\\AuthenticateApiToken::class,
-            \\App\\Http\\Middleware\\EnsureModuleEnabled::class,
+            \App\Http\Middleware\AuthenticateApiToken::class,
+            \App\Http\Middleware\EnsureModuleEnabled::class,
         ])->actingAs($teacher)
             ->patchJson('/api/v1/instructor/attendance/'.$attendance->id.'/resolve', [
                 'status' => 'present',
