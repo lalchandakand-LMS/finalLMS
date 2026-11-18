@@ -598,4 +598,67 @@ class InstructorAttendanceSyncTest extends TestCase
         $this->assertDatabaseCount('attendance_qr_sessions', 0);
     }
 
+    public function test_offline_sync_rejects_a_batch_outside_the_teachers_branch(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $student = User::factory()->create(['role' => 'student']);
+        $batch = $this->makeBatch($teacher, $student);
+        $otherBranch = Branch::create([
+            'name' => 'Different teacher branch',
+            'slug' => 'different-teacher-branch-'.$teacher->id,
+        ]);
+        $teacher->update(['branch_id' => $otherBranch->id]);
+
+        $this->withoutMiddleware([
+            \\App\\Http\\Middleware\\AuthenticateApiToken::class,
+            \\App\\Http\\Middleware\\EnsureModuleEnabled::class,
+        ])->actingAs($teacher)
+            ->postJson('/api/v1/instructor/attendance/sync', [
+                'records' => [$this->payload($batch, $student)],
+            ])
+            ->assertOk()
+            ->assertJsonPath('results.0.status', 'failed')
+            ->assertJsonPath('results.0.message', 'Batch is not assigned to this instructor.');
+
+        $this->assertDatabaseCount('attendances', 0);
+        $this->assertDatabaseCount('attendance_change_logs', 0);
+        $this->assertDatabaseCount('attendance_sync_reviews', 0);
+    }
+
+    public function test_conflict_resolution_rejects_a_batch_outside_the_teachers_branch_without_mutation(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $student = User::factory()->create(['role' => 'student']);
+        $batch = $this->makeBatch($teacher, $student);
+        $attendance = \\App\\Models\\Attendance::query()->create([
+            'batch_id' => $batch->id,
+            'student_id' => $student->id,
+            'marked_by' => $teacher->id,
+            'attendance_date' => now()->toDateString(),
+            'status' => 'absent',
+        ]);
+        $otherBranch = Branch::create([
+            'name' => 'Conflict resolution other branch',
+            'slug' => 'conflict-resolution-other-branch-'.$teacher->id,
+        ]);
+        $teacher->update(['branch_id' => $otherBranch->id]);
+
+        $this->withoutMiddleware([
+            \\App\\Http\\Middleware\\AuthenticateApiToken::class,
+            \\App\\Http\\Middleware\\EnsureModuleEnabled::class,
+        ])->actingAs($teacher)
+            ->patchJson('/api/v1/instructor/attendance/'.$attendance->id.'/resolve', [
+                'status' => 'present',
+                'reason' => 'Verified with the signed classroom register.',
+            ])
+            ->assertNotFound();
+
+        $this->assertDatabaseHas('attendances', [
+            'id' => $attendance->id,
+            'status' => 'absent',
+            'marked_by' => $teacher->id,
+        ]);
+        $this->assertDatabaseCount('attendance_change_logs', 0);
+    }
+
 }
