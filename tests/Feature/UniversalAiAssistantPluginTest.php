@@ -721,7 +721,7 @@ class UniversalAiAssistantPluginTest extends TestCase
         $persisted = false;
 
         AssistantTokenBudget::settle($reservation['id'], 900, function () use (&$persisted, $conversationId): void {
-            \\DB::table('ai_assistant_messages')->insert([
+            \DB::table('ai_assistant_messages')->insert([
                 'conversation_id' => $conversationId,
                 'message_role' => 'assistant',
                 'content' => 'Over-budget provider response',
