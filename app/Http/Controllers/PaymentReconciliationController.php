@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Payment;
+use App\Models\InvoicePayment;
 use App\Models\PaymentReconciliation;
 use App\Services\Payments\BkashReconciliationService;
 use Illuminate\Http\RedirectResponse;
@@ -18,7 +19,7 @@ class PaymentReconciliationController extends Controller
             'pending' => Payment::where('gateway_provider', 'bkash')
                 ->whereNotNull('gateway_payment_id')
                 ->whereIn('status', ['pending', 'approved', 'rejected'])
-                ->count(),
+                ->count() + InvoicePayment::where('gateway_provider', 'bkash')->whereNotNull('gateway_payment_id')->count(),
         ]);
     }
 
@@ -29,7 +30,18 @@ class PaymentReconciliationController extends Controller
         $validated = $request->validate([
             'payment_id' => ['nullable', 'integer', 'exists:payments,id'],
             'after_payment_id' => ['nullable', 'integer', 'min:0'],
+            'invoice_payment_id' => ['nullable', 'integer', 'exists:invoice_payments,id'],
         ]);
+
+        if (! empty($validated['invoice_payment_id'])) {
+            $invoicePayment = InvoicePayment::query()
+                ->whereKey($validated['invoice_payment_id'])
+                ->where('gateway_provider', 'bkash')
+                ->firstOrFail();
+            $reconciler->reconcileInvoicePayment($invoicePayment);
+
+            return back()->with('success', "Invoice payment #{$invoicePayment->id} checked. Review the reconciliation result below.");
+        }
 
         $query = Payment::query()
             ->where('gateway_provider', 'bkash')
