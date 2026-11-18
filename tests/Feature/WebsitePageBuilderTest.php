@@ -178,4 +178,75 @@ class WebsitePageBuilderTest extends TestCase
             ->assertStatus(422);
     }
 
+
+    public function test_page_edits_save_revision_and_admin_can_restore_it_without_losing_current_version(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $page = WebsitePage::create([
+            'title' => 'Original revision title',
+            'slug' => 'revision-page',
+            'template' => 'standard',
+            'sections' => [['type' => 'text', 'title' => 'Original section', 'enabled' => true]],
+            'status' => 'draft',
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->put(route('admin.website-pages.update', $page), [
+            'title' => 'Updated revision title',
+            'slug' => 'revision-page',
+            'template' => 'wide',
+            'status' => 'published',
+            'sections' => [['type' => 'text', 'title' => 'Updated section', 'enabled' => '1']],
+        ])->assertRedirect(route('admin.website-pages.index'));
+
+        $revision = $page->revisions()->firstOrFail();
+        $this->assertSame('Original revision title', $revision->snapshot['title']);
+        $this->assertSame('Original section', $revision->snapshot['sections'][0]['title']);
+
+        $this->get(route('admin.website-pages.revisions', $page))
+            ->assertOk()
+            ->assertSee('Revision history')
+            ->assertSee('Before update')
+            ->assertSee('Restore this version');
+
+        $this->post(route('admin.website-pages.revisions.restore', [$page, $revision]))
+            ->assertRedirect(route('admin.website-pages.revisions', $page));
+
+        $page->refresh();
+        $this->assertSame('Original revision title', $page->title);
+        $this->assertSame('draft', $page->status);
+        $this->assertSame('Original section', $page->sections[0]['title']);
+        $this->assertSame(2, $page->revisions()->count());
+        $this->assertSame('Updated revision title', $page->revisions()->latest('id')->first()->snapshot['title']);
+    }
+
+    public function test_page_revision_history_is_admin_only_and_cannot_restore_another_pages_revision(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $page = WebsitePage::create([
+            'title' => 'Page One',
+            'slug' => 'page-one',
+            'template' => 'standard',
+            'sections' => [],
+            'status' => 'draft',
+            'created_by' => $admin->id,
+        ]);
+        $otherPage = WebsitePage::create([
+            'title' => 'Page Two',
+            'slug' => 'page-two',
+            'template' => 'standard',
+            'sections' => [],
+            'status' => 'draft',
+            'created_by' => $admin->id,
+        ]);
+        $revision = $otherPage->revisions()->create([
+            'snapshot' => ['title' => 'Page Two', 'slug' => 'page-two'],
+            'created_by' => $admin->id,
+            'label' => 'Test revision',
+        ]);
+
+        $this->actingAs($student)->get(route('admin.website-pages.revisions', $page))->assertForbidden();
+        $this->actingAs($admin)->post(route('admin.website-pages.revisions.restore', [$page, $revision]))->assertNotFound();
+    }
 }
