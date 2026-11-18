@@ -39,7 +39,7 @@ return new class extends Migration
             $table->string('provider', 40)->nullable();
             $table->string('event', 80);
             $table->string('source', 40);
-            $table->string('correlation_id', 100)->nullable()->index();
+            $table->string('correlation_id', 100)->nullable()->unique();
             $table->json('before_state')->nullable();
             $table->json('after_state')->nullable();
             $table->string('ip_address', 45)->nullable();
