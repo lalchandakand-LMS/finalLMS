@@ -858,5 +858,17 @@
     "System": "System",
     "To roll back, preview and activate a previously installed theme, or reset to the built-in theme.": "To roll back, preview and activate a previously installed theme, or reset to the built-in theme.",
     "Activate": "Activate",
-    "Reset": "Reset"
+    "Reset": "Reset",
+    "Revision history": "Revision history",
+    "Restore an earlier saved page. Restoring creates a new revision and keeps the current content in history.": "Restore an earlier saved page. Restoring creates a new revision and keeps the current content in history.",
+    "Version :version": "Version :version",
+    "Untitled page": "Untitled page",
+    "Former administrator": "Former administrator",
+    "Restore this page revision? The current page will be retained as a new revision.": "Restore this page revision? The current page will be retained as a new revision.",
+    "Restore this version": "Restore this version",
+    "No saved revisions yet. A revision is created when this page is saved.": "No saved revisions yet. A revision is created when this page is saved.",
+    "The selected page revision is invalid and cannot be restored.": "The selected page revision is invalid and cannot be restored.",
+    "This revision references an academic level that no longer exists.": "This revision references an academic level that no longer exists.",
+    "This revision cannot be restored because its URL slug is now used by another page.": "This revision cannot be restored because its URL slug is now used by another page.",
+    "Page revision restored. The restored state was saved as a new revision.": "Page revision restored. The restored state was saved as a new revision."
 }
