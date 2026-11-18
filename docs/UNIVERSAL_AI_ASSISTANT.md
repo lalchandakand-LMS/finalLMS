@@ -22,12 +22,9 @@ is emitted to the browser. This avoids forwarding partial chunks that could spli
 long Bearer token across a redaction boundary. The browser appends text nodes rather than
 rendering provider HTML. A token reservation is acquired before the provider request;
 prompt persistence and reservation state are transactional; response persistence and
-settlement are atomic. Provider failures release the reservation. Provider-reported usage is
-preferred, with a conservative estimate when usage metadata is absent.
+settlement are atomic. A provider failure with ambiguous acceptance/billing marks the reservation `uncertain` and keeps its full reserved amount charged for that budget date; it is not silently released. A later completed response can still settle the reservation. Provider-reported usage is preferred, with a byte-bounded conservative estimate when usage metadata is absent. If actual provider usage exceeds the reservation ceiling, the response is persisted and the overrun is explicitly recorded and charged to daily usage.
 
-The prompt estimator is deliberately conservative but is not a provider tokenizer. Actual
-usage may differ from estimates. Institution-wide budgets and per-user daily request limits
-are enforced against reservations and stored usage.
+The prompt estimator counts each byte of the bounded UTF-8 JSON payload plus per-message framing overhead; prompts larger than 512 KiB are rejected before reservation. This is intentionally conservative but is not a provider tokenizer. Actual usage may differ from estimates. Institution-wide budgets and per-user daily request limits are enforced against reservations and stored usage. A billable completion POST is never automatically retried after an ambiguous connection/5xx response, avoiding duplicate provider charges; bounded retries are retained only for model-discovery GET requests.
 
 ## Role-scoped read-only context
 
@@ -46,7 +43,7 @@ The context is bounded and read-only. User-authored course and lesson titles are
 untrusted data. Retrieval events record the role, scope and source identifiers; completed
 responses and provider failures are recorded without storing prompt text or provider secrets.
 
-The provider adapter retries transient connection/5xx/429 failures before any stream bytes are emitted; it does not retry after a stream has begun. Successful model discovery is the Admin's provider availability check.
+The provider adapter does not automatically retry billable completion or streaming POST requests. Model-discovery GET requests retain bounded transient retries. Successful model discovery is the Admin's provider availability check.
 
 The context exposes no grades, marks, answer content or feedback. It intentionally does **not** expose attendance, payments,
 private staff records, full lesson bodies, assignment submission answers/attachments, exam questions/answers, grades/scores, or mutation
