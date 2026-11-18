@@ -308,7 +308,7 @@ class BkashPaymentController extends Controller
             );
 
             if ($event->event_type !== 'payment.completed' || $event->invoice_payment_id) {
-                throw new \\RuntimeException('This bKash transaction has already been recorded in the invoice ledger.');
+                throw new \RuntimeException('This bKash transaction has already been recorded in the invoice ledger.');
             }
 
             $result = DB::transaction(function () use ($payment, $transactionId): string {
