@@ -639,13 +639,13 @@ class BkashPaymentFlowTest extends TestCase
 
         $this->assertDatabaseHas('payment_reconciliations', [
             'payment_id' => $payment->id,
-            'result' => 'matched',
+            'result' => 'mismatch',
             'gateway_status' => 'completed',
         ]);
         $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'pending']);
         $this->assertDatabaseHas('payment_audit_events', [
             'payment_id' => $payment->id,
-            'event' => 'reconciliation_matched',
+            'event' => 'reconciliation_mismatch',
         ]);
     }
 
