@@ -38,7 +38,7 @@ class PaymentReconciliationController extends Controller
                 ->whereKey($validated['invoice_payment_id'])
                 ->where('gateway_provider', 'bkash')
                 ->firstOrFail();
-            $reconciler->reconcileInvoicePayment($invoicePayment);
+            $reconciler->reconcileInvoicePayment($invoicePayment, $request->user()->id);
 
             return back()->with('success', "Invoice payment #{$invoicePayment->id} checked. Review the reconciliation result below.");
         }
@@ -55,7 +55,7 @@ class PaymentReconciliationController extends Controller
         $lastId = (int) ($validated['after_payment_id'] ?? 0);
         foreach ($query->get() as $payment) {
             $lastId = $payment->id;
-            $reconciler->reconcile($payment);
+            $reconciler->reconcile($payment, $request->user()->id);
             $count++;
         }
 
