@@ -1,1 +1,9 @@
-<x-app-layout><div class="mx-auto max-w-5xl space-y-5 p-4 sm:p-6"><h1 class="text-2xl font-bold">My Solved Board Questions</h1>@forelse($history as $item)<article class="rounded-xl border bg-white p-4"><div class="text-xs text-gray-500">{{ $item->board ?: 'Board not set' }} · {{ $item->exam_year ?: 'Year not set' }} · {{ $item->class_level ?: 'Class not set' }} · {{ $item->subject }} · {{ $item->created_at }}</div><h2 class="mt-2 font-semibold">{{ $item->question }}</h2><details class="mt-3"><summary class="cursor-pointer font-medium text-blue-700">Show solution</summary><div class="mt-3 whitespace-pre-wrap text-sm leading-7">{{ $item->solution }}</div></details></article>@empty<p class="rounded border p-5 text-center text-gray-500">No solved questions yet.</p>@endforelse{{ $history->links() }}</div></x-app-layout>
+@extends('layouts.app')
+@section('title', __('My Solved Board Questions'))
+@section('content')
+<div class="page-header"><div><h1>{{ __('My Solved Board Questions') }}</h1><p class="muted">{{ __('Your private learning history.') }}</p></div><a class="btn secondary" href="{{ route('student.board-solver.index') }}">{{ __('Solve another question') }}</a></div>
+<div class="grid">
+@forelse($history as $item)<article class="panel"><div class="muted" style="font-size:.85rem">{{ $item->board ?: __('Board not set') }} · {{ $item->exam_year ?: __('Year not set') }} · {{ $item->class_level ?: __('Class not set') }} · {{ $item->subject }} · {{ $item->created_at }}</div><h2 style="margin-top:10px">{{ $item->question }}</h2><details style="margin-top:12px"><summary style="cursor:pointer;font-weight:700">{{ __('Show solution') }}</summary><div style="margin-top:12px;white-space:pre-wrap;line-height:1.8">{{ $item->solution }}</div></details></article>@empty<div class="panel muted" style="text-align:center">{{ __('No solved questions yet.') }}</div>@endforelse
+</div>
+<div style="margin-top:18px">{{ $history->links() }}</div>
+@endsection
