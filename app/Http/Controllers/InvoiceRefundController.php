@@ -262,7 +262,9 @@ class InvoiceRefundController extends Controller
     public function reconcile(InvoiceRefund $refund, Request $request, BkashRefundService $bkashRefunds): RedirectResponse
     {
         abort_unless($request->user()->isAdmin(), 403);
-        abort_unless($refund->status === 'gateway_unknown' && $refund->method === 'bkash', 409);
+        abort_unless(in_array($refund->status, ['gateway_unknown', 'processing'], true)
+            && $refund->method === 'bkash'
+            && ($refund->status !== 'processing' || $refund->created_at?->lte(now()->subMinutes(5))), 409);
 
         $payment = InvoicePayment::query()->findOrFail($refund->invoice_payment_id);
         abort_unless($payment->gateway_provider === 'bkash'
@@ -305,7 +307,11 @@ class InvoiceRefundController extends Controller
 
             return back()->with('success', 'Existing bKash refund independently verified and reconciled.');
         } catch (Throwable $exception) {
-            $refund->update(['failure_reason' => mb_substr($exception->getMessage(), 0, 2000)]);
+            $refund->update([
+                'status' => 'gateway_unknown',
+                'gateway_status' => 'verification_unknown',
+                'failure_reason' => mb_substr($exception->getMessage(), 0, 2000),
+            ]);
             PaymentAuditEvent::create([
                 'invoice_payment_id' => $refund->invoice_payment_id,
                 'invoice_refund_id' => $refund->id,
