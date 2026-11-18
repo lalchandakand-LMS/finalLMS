@@ -84,12 +84,12 @@ class BkashCheckoutService
             ])->throw()->json();
     }
 
-    public function queryRefund(string $token, string $paymentId, string $refundTransactionId): array
+    public function queryRefund(string $token, string $paymentId, string $originalTransactionId): array
     {
         return $this->request()->withToken($token)
             ->withHeader('X-APP-Key', (string) config('services.bkash.app_key'))
             ->post($this->baseUrl().'/tokenized/checkout/payment/refund/status', [
-                'paymentID' => $paymentId, 'trxID' => $refundTransactionId,
+                'paymentID' => $paymentId, 'trxID' => $originalTransactionId,
             ])->throw()->json();
     }
 
