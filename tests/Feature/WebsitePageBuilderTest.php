@@ -133,4 +133,18 @@ class WebsitePageBuilderTest extends TestCase
         $this->assertDatabaseMissing('website_pages', ['id' => $page->id]);
     }
 
+    public function test_page_section_editor_exposes_drag_reordering_and_accessible_move_controls(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->get(route('admin.website-pages.create'))
+            ->assertOk()
+            ->assertSee('draggable="true"', false)
+            ->assertSee('data-drag-handle', false)
+            ->assertSee('aria-label="Move section up"', false)
+            ->assertSee('aria-label="Move section down"', false)
+            ->assertSee('aria-live="polite"', false)
+            ->assertSee('page-section-status', false);
+    }
+
 }
