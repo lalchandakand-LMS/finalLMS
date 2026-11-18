@@ -26,6 +26,7 @@ class PluginContextTest extends TestCase
             ->first(fn ($candidate) => $candidate->uri() === 'api/v1/plugins/aec/mobile-test/health');
 
         $this->assertNotNull($route);
+        $this->assertSame('test.support_ai.health', $route->getName());
         $this->assertContains('api', $route->middleware());
         $this->assertContains('plugin.active:aec.mobile-test', $route->middleware());
         $this->assertContains('api.token', $route->middleware());
