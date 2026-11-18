@@ -324,4 +324,37 @@ class WebsitePageBuilderTest extends TestCase
     }
 
 
+    public function test_custom_page_revision_history_controls_render_in_bangla(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $page = WebsitePage::create([
+            'title' => 'Bangla revision page',
+            'slug' => 'bangla-revision-page',
+            'template' => 'standard',
+            'sections' => [],
+            'status' => 'draft',
+            'created_by' => $admin->id,
+        ]);
+        WebsitePageRevision::create([
+            'website_page_id' => $page->id,
+            'version' => 1,
+            'snapshot' => [
+                'title' => $page->title,
+                'slug' => $page->slug,
+                'template' => $page->template,
+                'sections' => [],
+                'status' => $page->status,
+            ],
+            'created_by' => $admin->id,
+        ]);
+
+        app()->setLocale('bn');
+
+        $this->actingAs($admin)->get(route('admin.website-pages.edit', $page))
+            ->assertOk()
+            ->assertSee('রিভিশন ইতিহাস')
+            ->assertSee('এই সংস্করণ ফিরিয়ে আনুন');
+    }
+
+
 }
