@@ -27,7 +27,7 @@ return new class extends Migration
             $table->timestamp('verified_at')->nullable();
             $table->timestamp('processed_at')->nullable();
             $table->timestamps();
-            $table->index(['provider', 'verification_status', 'received_at']);
+            $table->index(['provider', 'verification_status', 'received_at'], 'pge_provider_status_received_idx');
         });
 
         Schema::create('payment_audit_events', function (Blueprint $table) {
