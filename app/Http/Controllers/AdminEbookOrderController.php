@@ -156,7 +156,7 @@ class AdminEbookOrderController extends Controller
                 PaymentAuditEvent::create([
                     'payment_id' => $verifiedGatewayPayment->id,
                     'ebook_refund_id' => $refund->id,
-                    'actor_id => $request->user()->id,
+                    'actor_id' => $request->user()->id,
                     'provider' => 'bkash',
                     'event' => 'ebook_gateway_refund_submitted',
                     'source' => 'admin_ebook_refund',
