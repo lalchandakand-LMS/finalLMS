@@ -489,7 +489,7 @@ class BkashPaymentController extends Controller
                     'provider' => 'bkash',
                     'event' => 'gateway_callback_processed',
                     'source' => 'bkash_callback',
-                    'correlation_id' => $eventKey,
+                    'correlation_id' => hash('sha256', $eventKey),
                     'before_state' => ['status' => 'pending'],
                     'after_state' => ['status' => $payment->status, 'gateway_transaction_id' => $transactionId],
                 ]);
