@@ -82,11 +82,7 @@ final class OpenAiCompatibleProvider implements AiProvider
             $payload['temperature'] = $temperature;
         }
 
-        $response = Http::retry(2, 250, static function ($exception): bool {
-                return ! $exception instanceof RequestException
-                    || $exception->response->serverError()
-                    || $exception->response->status() === 429;
-            }, false)->withToken($apiKey)->acceptJson()->timeout(40)
+        $response = Http::withToken($apiKey)->acceptJson()->timeout(40)
             ->withOptions(array_merge(['allow_redirects' => false, 'stream' => true], $this->endpoint->curlOptionsFor($baseUrl)))
             ->post(rtrim($baseUrl, '/').'/chat/completions', $payload);
 
@@ -121,11 +117,7 @@ final class OpenAiCompatibleProvider implements AiProvider
             $payload['temperature'] = $temperature;
         }
 
-        $response = Http::retry(2, 250, static function ($exception): bool {
-                return ! $exception instanceof RequestException
-                    || $exception->response->serverError()
-                    || $exception->response->status() === 429;
-            }, false)->withToken($apiKey)->accept('text/event-stream')->timeout(120)
+        $response = Http::withToken($apiKey)->accept('text/event-stream')->timeout(120)
             ->withOptions(array_merge(['allow_redirects' => false, 'stream' => true], $this->endpoint->curlOptionsFor($baseUrl)))
             ->post(rtrim($baseUrl, '/').'/chat/completions', $payload);
         if (! $response->successful()) throw new RuntimeException('The AI provider request failed.');
