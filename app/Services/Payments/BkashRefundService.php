@@ -19,7 +19,7 @@ class BkashRefundService
         if (($verified['statusCode'] ?? null) !== '0000'
             || strtolower((string) ($verified['transactionStatus'] ?? '')) !== 'completed'
             || ! is_string($refundId) || $refundId === ''
-            || (isset($verified['originalTrxID']) && $verified['originalTrxID'] !== $transactionId)
+            || ! isset($verified['originalTrxID']) || $verified['originalTrxID'] !== $transactionId
             || round((float) ($verified['amount'] ?? -1), 2) !== round((float) $amount, 2)
             || strtoupper((string) ($verified['currency'] ?? '')) !== 'BDT') {
             throw new RuntimeException('bKash does not confirm a completed refund for this exact amount.');
@@ -45,7 +45,7 @@ class BkashRefundService
         $refundId = $response['refundTrxID'] ?? null;
         if (($response['statusCode'] ?? null) !== '0000'
             || ! is_string($refundId) || $refundId === ''
-            || strtoupper((string) ($response['currency'] ?? 'BDT')) !== 'BDT'
+            || ! isset($response['currency']) || strtoupper((string) $response['currency']) !== 'BDT'
             || round((float) ($response['amount'] ?? -1), 2) !== round((float) $amount, 2)
             || ! isset($response['originalTrxID']) || $response['originalTrxID'] !== $transactionId) {
             throw new RuntimeException('bKash did not confirm the requested refund. Manual gateway reconciliation is required.');
