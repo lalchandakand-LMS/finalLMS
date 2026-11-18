@@ -19,6 +19,8 @@ use App\Http\Controllers\LessonMediaController;
 use App\Http\Controllers\TeacherApplicationController;
 use App\Http\Controllers\BatchController;
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\AdminAttendanceSyncReviewController;
+use App\Http\Controllers\AdminAttendanceAuditController;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\CourseComboController;
@@ -177,6 +179,12 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
             Route::get('/students', [BatchController::class, 'branchManagerStudents'])->middleware('admin.permission:branch.students')->name('students.index');
             Route::post('/batches', [BatchController::class, 'branchManagerStore'])->middleware('admin.permission:branch.batches')->name('batches.store');
             Route::put('/batches/{batch}', [BatchController::class, 'branchManagerUpdate'])->middleware('admin.permission:branch.batches')->name('batches.update');
+            Route::get('/batches/{batch}/attendance', [AttendanceController::class, 'index'])
+                ->middleware(['admin.permission:branch.attendance', 'module.enabled:attendance'])
+                ->name('batches.attendance.index');
+            Route::post('/batches/{batch}/attendance', [AttendanceController::class, 'store'])
+                ->middleware(['admin.permission:branch.attendance', 'module.enabled:attendance'])
+                ->name('batches.attendance.store');
         });
 
     Route::middleware('role:accountant')
@@ -228,9 +236,12 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
     Route::middleware('role:teacher')->put('/teacher/courses/{course}/lessons/{lesson}', [CourseController::class, 'updateLesson'])->name('teacher.courses.lessons.update');
     Route::middleware('role:teacher')->delete('/teacher/courses/{course}/lessons/{lesson}', [CourseController::class, 'destroyLesson'])->name('teacher.courses.lessons.destroy');
     Route::middleware('role:student')->get('/my/attendance', [AttendanceController::class, 'studentIndex'])->name('student.attendance.index');
+    Route::middleware(['role:student', 'module.enabled:attendance'])->get('/my/attendance', [AttendanceController::class, 'studentIndex'])->name('student.attendance.index');
     Route::middleware('role:teacher')->group(function () {
         Route::get('/teacher/batches/{batch}/attendance', [AttendanceController::class, 'index'])->name('teacher.batches.attendance.index');
         Route::post('/teacher/batches/{batch}/attendance', [AttendanceController::class, 'store'])->name('teacher.batches.attendance.store');
+        Route::get('/teacher/batches/{batch}/attendance', [AttendanceController::class, 'index'])->middleware('module.enabled:attendance')->name('teacher.batches.attendance.index');
+        Route::post('/teacher/batches/{batch}/attendance', [AttendanceController::class, 'store'])->middleware('module.enabled:attendance')->name('teacher.batches.attendance.store');
         Route::get('/teacher/batches/{batch}/assignments', [AssignmentController::class, 'index'])->name('teacher.batches.assignments.index');
         Route::get('/teacher/batches/{batch}/exams', [ExamController::class, 'teacherIndex'])->name('teacher.batches.exams.index');
         Route::get('/teacher/batches/{batch}/question-bank', [ExamController::class, 'questionBank'])->name('teacher.batches.question-bank.index');
@@ -408,6 +419,8 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::post('/assignments/{assignment}/submissions/{submission}/grade', [AssignmentController::class, 'grade'])->middleware('throttle:30,1')->name('admin.assignments.grade');
         Route::get('/batches/{batch}/attendance', [AttendanceController::class, 'index'])->name('admin.batches.attendance.index');
         Route::post('/batches/{batch}/attendance', [AttendanceController::class, 'store'])->name('admin.batches.attendance.store');
+        Route::get('/batches/{batch}/attendance', [AttendanceController::class, 'index'])->middleware('module.enabled:attendance')->name('admin.batches.attendance.index');
+        Route::post('/batches/{batch}/attendance', [AttendanceController::class, 'store'])->middleware('module.enabled:attendance')->name('admin.batches.attendance.store');
         Route::post('/branches', [BatchController::class, 'storeBranch'])->name('admin.branches.store');
         Route::put('/branches/{branch}', [BatchController::class, 'updateBranch'])->name('admin.branches.update');
         Route::delete('/branches/{branch}', [BatchController::class, 'destroyBranch'])->name('admin.branches.destroy');
@@ -475,6 +488,10 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::post('/marketing/meta-ads/campaigns', [MetaAdsIntegrationController::class, 'createCampaign'])->middleware('throttle:5,1')->name('admin.marketing.meta-ads.campaigns.store');
         Route::post('/marketing/meta-ads/campaigns/{campaignId}/pause', [MetaAdsIntegrationController::class, 'pauseCampaign'])->middleware('throttle:10,1')->name('admin.marketing.meta-ads.campaigns.pause');
         Route::post('/marketing/meta-ads/campaigns/{campaignId}/resume', [MetaAdsIntegrationController::class, 'resumeCampaign'])->middleware('throttle:10,1')->name('admin.marketing.meta-ads.campaigns.resume');
+        Route::get('/attendance-audit', [AdminAttendanceAuditController::class, 'index'])->middleware('module.enabled:attendance')->name('admin.attendance-audit.index');
+        Route::get('/attendance-audit/export', [AdminAttendanceAuditController::class, 'export'])->middleware(['module.enabled:attendance', 'throttle:10,1'])->name('admin.attendance-audit.export');
+        Route::get('/attendance-sync-reviews', [AdminAttendanceSyncReviewController::class, 'index'])->middleware('module.enabled:attendance')->name('admin.attendance-sync-reviews.index');
+        Route::post('/attendance-sync-reviews/{review}/resolve', [AdminAttendanceSyncReviewController::class, 'resolve'])->middleware(['module.enabled:attendance', 'throttle:20,1'])->name('admin.attendance-sync-reviews.resolve');
         Route::get('/setup-wizard', [SetupWizardController::class, 'index'])->name('admin.setup-wizard.index');
         Route::post('/setup-wizard', [SetupWizardController::class, 'update'])->middleware('throttle:10,1')->name('admin.setup-wizard.update');
         Route::post('/setup-wizard/skip', [SetupWizardController::class, 'skip'])->middleware('throttle:10,1')->name('admin.setup-wizard.skip');

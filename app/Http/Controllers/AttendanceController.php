@@ -4,9 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Attendance;
 use App\Models\Batch;
+use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 
 class AttendanceController extends Controller
@@ -33,18 +36,44 @@ class AttendanceController extends Controller
             ->whereDate('attendance_date', request('date', now()->toDateString()))
             ->pluck('status', 'student_id');
 
-        return view('teacher.batches.attendance', compact('batch', 'students', 'attendance'));
+        $user = Auth::user();
+        $allowExcused = filter_var(Setting::value('attendance_allow_excused', '0'), FILTER_VALIDATE_BOOLEAN);
+        $attendanceStoreRoute = match (true) {
+            $user->isBranchManager() => 'admin.branch-workspace.batches.attendance.store',
+            $user->isAdmin() => 'admin.batches.attendance.store',
+            default => 'teacher.batches.attendance.store',
+        };
+        $attendanceBackRoute = match (true) {
+            $user->isBranchManager() => 'admin.branch-workspace.batches.index',
+            $user->isAdmin() => 'admin.batches.index',
+            default => 'teacher.batches.index',
+        };
+
+        return view('teacher.batches.attendance', compact(
+            'batch',
+            'students',
+            'attendance',
+            'attendanceStoreRoute',
+            'attendanceBackRoute',
+            'allowExcused'
+        ));
     }
 
     public function store(Batch $batch, Request $request): RedirectResponse
     {
         $this->authorizeBatch($batch);
 
+        $allowedStatuses = ['present', 'absent', 'late'];
+        if (filter_var(Setting::value('attendance_allow_excused', '0'), FILTER_VALIDATE_BOOLEAN)) {
+            $allowedStatuses[] = 'excused';
+        }
+
         $validated = $request->validate([
             'attendance_date' => ['required', 'date'],
             'records' => ['required', 'array', 'min:1'],
             'records.*.student_id' => ['required', 'integer', 'distinct'],
-            'records.*.status' => ['required', 'in:present,absent,late'],
+            'records.*.status' => ['required', 'in:'.implode(',', $allowedStatuses)],
+            'records.*.reason' => ['nullable', 'string', 'max:500'],
         ]);
 
         $enrolledStudentIds = $batch->enrollments()
@@ -52,21 +81,62 @@ class AttendanceController extends Controller
             ->pluck('user_id')
             ->all();
 
-        foreach ($validated['records'] as $record) {
-            abort_unless(in_array((int) $record['student_id'], $enrolledStudentIds, true), 403);
+        DB::transaction(function () use ($validated, $enrolledStudentIds, $batch): void {
+            foreach ($validated['records'] as $record) {
+                abort_unless(in_array((int) $record['student_id'], $enrolledStudentIds, true), 403);
 
-            Attendance::updateOrCreate(
-                [
-                    'batch_id' => $batch->id,
-                    'student_id' => $record['student_id'],
-                    'attendance_date' => $validated['attendance_date'],
-                ],
-                [
-                    'marked_by' => Auth::id(),
-                    'status' => $record['status'],
-                ]
-            );
-        }
+                $attendance = Attendance::query()
+                    ->where('batch_id', $batch->id)
+                    ->where('student_id', $record['student_id'])
+                    ->whereDate('attendance_date', $validated['attendance_date'])
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($attendance && $attendance->status !== $record['status']) {
+                    Validator::make($record, [
+                        'reason' => ['required', 'string', 'min:5', 'max:500'],
+                    ])->validate();
+
+                    $previousStatus = $attendance->status;
+                    $attendance->update([
+                        'marked_by' => Auth::id(),
+                        'status' => $record['status'],
+                    ]);
+
+                    DB::table('attendance_change_logs')->insert([
+                        'attendance_id' => $attendance->id,
+                        'actor_id' => Auth::id(),
+                        'previous_status' => $previousStatus,
+                        'new_status' => $record['status'],
+                        'reason' => trim($record['reason']),
+                        'source' => 'web',
+                        'created_at' => now(),
+                    ]);
+
+                    continue;
+                }
+
+                if (! $attendance) {
+                    $attendance = Attendance::query()->create([
+                        'batch_id' => $batch->id,
+                        'student_id' => $record['student_id'],
+                        'marked_by' => Auth::id(),
+                        'attendance_date' => $validated['attendance_date'],
+                        'status' => $record['status'],
+                    ]);
+
+                    DB::table('attendance_change_logs')->insert([
+                        'attendance_id' => $attendance->id,
+                        'actor_id' => Auth::id(),
+                        'previous_status' => null,
+                        'new_status' => $record['status'],
+                        'reason' => null,
+                        'source' => 'web',
+                        'created_at' => now(),
+                    ]);
+                }
+            }
+        });
 
         return redirect()->route('teacher.batches.attendance.index', ['batch' => $batch, 'date' => $validated['attendance_date']])
             ->with('success', 'Attendance saved successfully.');
@@ -76,6 +146,13 @@ class AttendanceController extends Controller
     {
         $user = Auth::user();
 
-        abort_unless($user->isAdmin() || ($user->isTeacher() && $batch->teacher_id === $user->id), 403);
+        abort_unless(
+            $user->isAdmin()
+            || ($user->isTeacher() && (int) $batch->teacher_id === (int) $user->id)
+            || ($user->isBranchManager()
+                && $user->hasAdminPermission('branch.attendance')
+                && (int) $batch->branch_id === (int) $user->branch_id),
+            403
+        );
     }
 }

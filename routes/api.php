@@ -3,6 +3,8 @@
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CourseController;
 use App\Http\Controllers\Api\V1\InstructorAssignmentController;
+use App\Http\Controllers\Api\V1\InstructorAttendanceSyncController;
+use App\Http\Controllers\Api\V1\AttendanceQrController;
 use App\Http\Controllers\Api\V1\InstructorAssessmentController;
 use App\Http\Controllers\Api\V1\InstructorLiveClassController;
 use App\Http\Controllers\Api\V1\InstructorLessonController;
@@ -60,6 +62,11 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/my/wishlist', [CourseController::class, 'wishlist']);
         Route::post('/courses/{course:slug}/wishlist', [CourseController::class, 'addToWishlist']);
         Route::delete('/courses/{course:slug}/wishlist', [CourseController::class, 'removeFromWishlist']);
+        Route::get('/instructor/attendance/policy', [InstructorAttendanceSyncController::class, 'policy'])->middleware(['throttle:60,1', 'module.enabled:attendance']);
+        Route::post('/instructor/attendance/sync', [InstructorAttendanceSyncController::class, 'sync'])->middleware(['throttle:30,1', 'module.enabled:attendance']);
+        Route::patch('/instructor/attendance/{attendance}/resolve', [InstructorAttendanceSyncController::class, 'resolveConflict'])->middleware(['throttle:20,1', 'module.enabled:attendance']);
+        Route::post('/instructor/batches/{batch}/attendance/qr', [AttendanceQrController::class, 'createSession'])->middleware(['throttle:10,1', 'module.enabled:attendance']);
+        Route::post('/attendance/qr/{session}/check-in', [AttendanceQrController::class, 'checkIn'])->middleware(['signed', 'throttle:10,1', 'module.enabled:attendance'])->name('api.v1.attendance.qr.checkin');
         Route::get('/instructor/batches', [InstructorAssignmentController::class, 'batches']);
         Route::get('/instructor/batches/{batch}', [InstructorAssignmentController::class, 'showBatch']);
         Route::get('/instructor/assignments', [InstructorAssignmentController::class, 'index']);
