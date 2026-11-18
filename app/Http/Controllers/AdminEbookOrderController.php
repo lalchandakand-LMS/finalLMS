@@ -268,7 +268,8 @@ class AdminEbookOrderController extends Controller
 
     public function reconcileRefund(Request $request, EbookRefund $refund, BkashRefundService $bkashRefunds): RedirectResponse
     {
-        abort_unless($refund->status === 'gateway_unknown', 409);
+        abort_unless(in_array($refund->status, ['gateway_unknown', 'processing'], true)
+            && ($refund->status !== 'processing' || $refund->created_at?->lte(now()->subMinutes(5))), 409);
         $order = Order::query()->with('payments')->findOrFail($refund->order_id);
         $payment = $order->payments->first(fn ($candidate) => $candidate->gateway_provider === 'bkash'
             && $candidate->status === 'approved'
@@ -312,7 +313,11 @@ class AdminEbookOrderController extends Controller
 
             return back()->with('success', __('Existing bKash refund verified and reconciled.'));
         } catch (Throwable $exception) {
-            $refund->update(['failure_reason' => mb_substr($exception->getMessage(), 0, 2000)]);
+            $refund->update([
+                'status' => 'gateway_unknown',
+                'gateway_status' => 'verification_unknown',
+                'failure_reason' => mb_substr($exception->getMessage(), 0, 2000),
+            ]);
             PaymentAuditEvent::create([
                 'ebook_refund_id' => $refund->id,
                 'actor_id' => $request->user()->id,
