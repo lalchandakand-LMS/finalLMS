@@ -117,7 +117,10 @@ class WebsitePageController extends Controller
             'label' => $label,
         ]);
 
-        $page->revisions()->latest('id')->skip(50)->take(1000)->delete();
+        $obsoleteIds = $page->revisions()->latest('id')->skip(50)->pluck('id');
+        if ($obsoleteIds->isNotEmpty()) {
+            WebsitePageRevision::query()->whereIn('id', $obsoleteIds)->delete();
+        }
     }
 
     public function duplicate(Request $request, WebsitePage $websitePage): RedirectResponse
