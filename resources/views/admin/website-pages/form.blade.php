@@ -19,7 +19,8 @@
         </div>
     </section>
     <section class="panel" style="margin-bottom:20px;">
-        <div class="page-header"><div><h2>Page sections</h2><p class="muted">Add up to 30 blocks. All text is safely escaped; scripts and arbitrary HTML are not allowed.</p></div><button class="btn secondary" type="button" id="add-page-section">+ Add section</button></div>
+        <div class="page-header"><div><h2>Page sections</h2><p class="muted">Add up to 30 blocks. Drag each section with its Drag handle, or use the Up and Down buttons. All text is safely escaped; scripts and arbitrary HTML are not allowed.</p></div><button class="btn secondary" type="button" id="add-page-section">+ Add section</button></div>
+        <p class="muted" id="page-section-status" role="status" aria-live="polite">Sections can be reordered with a mouse, keyboard-accessible buttons, or touch alternatives using the Up and Down controls.</p>
         <div id="page-section-list">
             @foreach(old('sections', $page->sections ?? []) as $i => $section)
                 @include('admin.website-pages.partials.section', ['i'=>$i, 'section'=>$section, 'media'=>$media])
@@ -40,16 +41,25 @@
     const list = document.getElementById('page-section-list');
     const template = document.getElementById('page-section-template');
     const add = document.getElementById('add-page-section');
-    const reindex = () => [...list.querySelectorAll('[data-page-section]')].forEach((card, index) => {
+    const status = document.getElementById('page-section-status');
+    if (!list || !template || !add) return;
+    let draggedCard = null;
+    const cards = () => [...list.querySelectorAll('[data-page-section]')];
+    const announce = message => { if (status) status.textContent = message; };
+    const reindex = () => cards().forEach((card, index) => {
         card.querySelectorAll('[name]').forEach(field => field.name = field.name.replace(/sections\[[^\]]+\]/, 'sections[' + index + ']'));
         const number = card.querySelector('[data-section-number]');
         if (number) number.textContent = String(index + 1);
     });
-    add?.addEventListener('click', () => {
-        const count = list.querySelectorAll('[data-page-section]').length;
-        if (count >= 30) return alert('Maximum 30 sections per page.');
+    add.addEventListener('click', () => {
+        const count = cards().length;
+        if (count >= 30) {
+            announce('Maximum 30 sections per page.');
+            return;
+        }
         list.insertAdjacentHTML('beforeend', template.innerHTML.replaceAll('__INDEX__', String(count)));
         reindex();
+        announce('Section ' + (count + 1) + ' added.');
     });
     list.addEventListener('click', event => {
         const move = event.target.closest('[data-move-section]');
@@ -58,11 +68,45 @@
             if (move.dataset.moveSection === 'up' && card.previousElementSibling) list.insertBefore(card, card.previousElementSibling);
             if (move.dataset.moveSection === 'down' && card.nextElementSibling) list.insertBefore(card.nextElementSibling, card);
             reindex();
+            announce('Section moved to position ' + (cards().indexOf(card) + 1) + '.');
             return;
         }
         const remove = event.target.closest('[data-remove-page-section]');
         if (!remove) return;
         remove.closest('[data-page-section]')?.remove();
+        reindex();
+        announce('Section removed.');
+    });
+    list.addEventListener('dragstart', event => {
+        const handle = event.target.closest('[data-drag-handle]');
+        const card = event.target.closest('[data-page-section]');
+        if (!handle || !card || !event.dataTransfer) {
+            event.preventDefault();
+            return;
+        }
+        draggedCard = card;
+        card.classList.add('is-dragging');
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', 'page-section');
+    });
+    list.addEventListener('dragover', event => {
+        if (!draggedCard) return;
+        const target = event.target.closest('[data-page-section]');
+        if (!target || target === draggedCard) return;
+        event.preventDefault();
+        const bounds = target.getBoundingClientRect();
+        const insertAfter = event.clientY > bounds.top + bounds.height / 2;
+        list.insertBefore(draggedCard, insertAfter ? target.nextElementSibling : target);
+    });
+    list.addEventListener('drop', event => {
+        if (!draggedCard) return;
+        event.preventDefault();
+        reindex();
+        announce('Section moved to position ' + (cards().indexOf(draggedCard) + 1) + '.');
+    });
+    list.addEventListener('dragend', () => {
+        draggedCard?.classList.remove('is-dragging');
+        draggedCard = null;
         reindex();
     });
     list.addEventListener('change', event => {
