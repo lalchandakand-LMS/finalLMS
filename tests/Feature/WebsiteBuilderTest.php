@@ -84,6 +84,45 @@ class WebsiteBuilderTest extends TestCase
         $this->get('/')->assertOk()->assertSee('Alom Learning')->assertSee('Learn with confidence.')->assertSee('Courses')->assertSee('Admissions')->assertDontSee('Unsafe menu');
     }
 
+    public function test_homepage_builder_exposes_editable_ctas_statistics_and_reason_heading(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->post(route('admin.website-builder.update'), [
+            'home_cta_primary' => 'Explore classes',
+            'home_cta_secondary' => 'Student login',
+            'home_reason_title' => 'Why choose Alom',
+            'home_metric_1_value' => '2500+',
+            'home_metric_1_label' => 'Students',
+            'home_metric_2_value' => '35+',
+            'home_metric_2_label' => 'Teachers',
+            'home_metric_3_value' => '98%',
+            'home_metric_3_label' => 'Success rate',
+        ])->assertRedirect(route('admin.website-builder.index'));
+
+        $this->assertDatabaseHas('settings', ['key' => 'home_cta_primary', 'value' => 'Explore classes']);
+        $this->assertDatabaseHas('settings', ['key' => 'home_metric_1_value', 'value' => '2500+']);
+        $this->assertDatabaseHas('settings', ['key' => 'home_reason_title', 'value' => 'Why choose Alom']);
+
+        Auth::logout();
+        $this->get('/')->assertOk()
+            ->assertSee('Explore classes')
+            ->assertSee('Why choose Alom')
+            ->assertSee('2500+')
+            ->assertSee('Success rate');
+    }
+
+    public function test_homepage_only_displays_published_courses(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        Course::factory()->create(['teacher_id' => $teacher->id, 'title' => 'Published course', 'status' => 'published']);
+        Course::factory()->create(['teacher_id' => $teacher->id, 'title' => 'Private draft course', 'status' => 'draft']);
+
+        $this->get('/')->assertOk()
+            ->assertSee('Published course')
+            ->assertDontSee('Private draft course');
+    }
+
     public function test_non_admin_cannot_access_website_builder(): void
     {
         $student = User::factory()->create(['role' => 'student']);
