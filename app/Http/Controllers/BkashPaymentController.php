@@ -499,6 +499,7 @@ class BkashPaymentController extends Controller
             });
 
             $event->update(['processing_status' => 'processed', 'processed_at' => now()]);
+            $payment->refresh();
             PaymentAuditEvent::firstOrCreate(
                 ['correlation_id' => hash('sha256', $eventKey)],
                 [
