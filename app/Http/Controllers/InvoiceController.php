@@ -6,6 +6,7 @@ use App\Models\Course;
 use App\Models\Invoice;
 use App\Models\InvoicePayment;
 use App\Models\Payment;
+use App\Models\PaymentGatewayEvent;
 use App\Models\PaymentAuditEvent;
 use App\Models\User;
 use App\Services\Payments\BkashCheckoutService;
