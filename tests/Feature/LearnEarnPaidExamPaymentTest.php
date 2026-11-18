@@ -64,32 +64,38 @@ class LearnEarnPaidExamPaymentTest extends TestCase
         $student = User::factory()->create(['role' => 'student']);
         $exam = $this->paidExam();
 
-        Http::fake([
-            '*/tokenized/checkout/token/grant' => Http::sequence()
-                ->push(['id_token' => 'checkout-token'])
-                ->push(['id_token' => 'verification-token']),
-            '*/tokenized/checkout/create' => Http::response([
-                'statusCode' => '0000',
-                'paymentID' => 'BKASH-LEARN-EARN-001',
-                'bkashURL' => 'https://tokenized.sandbox.bka.sh/checkout/pay/BKASH-LEARN-EARN-001',
-            ], 200),
-            '*/tokenized/checkout/execute' => Http::response([
-                'transactionStatus' => 'Completed',
-                'paymentID' => 'BKASH-LEARN-EARN-001',
-                'trxID' => 'BKASH-LEARN-EARN-TRX-001',
-                'amount' => '350.00',
-                'currency' => 'BDT',
-                'merchantInvoiceNumber' => 'LEARN-EARN-TEST-INVOICE',
-            ], 200),
-            '*/tokenized/checkout/payment/status' => Http::response([
-                'transactionStatus' => 'Completed',
-                'paymentID' => 'BKASH-LEARN-EARN-001',
-                'trxID' => 'BKASH-LEARN-EARN-TRX-001',
-                'amount' => '350.00',
-                'currency' => 'BDT',
-                'merchantInvoiceNumber' => 'LEARN-EARN-TEST-INVOICE',
-            ], 200),
-        ]);
+        Http::fake(function (ClientRequest $clientRequest) {
+            $url = $clientRequest->url();
+
+            if (str_ends_with($url, '/tokenized/checkout/token/grant')) {
+                return Http::response(['id_token' => 'verification-token'], 200);
+            }
+
+            if (str_ends_with($url, '/tokenized/checkout/create')) {
+                return Http::response([
+                    'statusCode' => '0000',
+                    'paymentID' => 'BKASH-LEARN-EARN-001',
+                    'bkashURL' => 'https://tokenized.sandbox.bka.sh/checkout/pay/BKASH-LEARN-EARN-001',
+                ], 200);
+            }
+
+            if (str_ends_with($url, '/tokenized/checkout/execute')
+                || str_ends_with($url, '/tokenized/checkout/payment/status')) {
+                $paymentId = (string) $clientRequest['paymentID'];
+                $payment = Payment::query()->where('gateway_payment_id', $paymentId)->first();
+
+                return Http::response([
+                    'transactionStatus' => 'Completed',
+                    'paymentID' => $paymentId,
+                    'trxID' => 'BKASH-LEARN-EARN-TRX-001',
+                    'amount' => '350.00',
+                    'currency' => 'BDT',
+                    'merchantInvoiceNumber' => $payment?->transaction_reference,
+                ], 200);
+            }
+
+            return Http::response(['message' => 'Unexpected bKash request.'], 404);
+        });
 
         $request = Request::create('/student/learn-earn/exams/'.$exam->slug.'/checkout/bkash', 'POST');
         $request->setUserResolver(fn () => $student);
@@ -104,25 +110,7 @@ class LearnEarnPaidExamPaymentTest extends TestCase
 
         $payment = Payment::query()->where('gateway_payment_id', 'BKASH-LEARN-EARN-001')->firstOrFail();
 
-        Http::fake([
-            '*/tokenized/checkout/token/grant' => Http::response(['id_token' => 'verification-token'], 200),
-            '*/tokenized/checkout/execute' => Http::response([
-                'transactionStatus' => 'Completed',
-                'paymentID' => 'BKASH-LEARN-EARN-001',
-                'trxID' => 'BKASH-LEARN-EARN-TRX-001',
-                'amount' => '350.00',
-                'currency' => 'BDT',
-                'merchantInvoiceNumber' => $payment->transaction_reference,
-            ], 200),
-            '*/tokenized/checkout/payment/status' => Http::response([
-                'transactionStatus' => 'Completed',
-                'paymentID' => 'BKASH-LEARN-EARN-001',
-                'trxID' => 'BKASH-LEARN-EARN-TRX-001',
-                'amount' => '350.00',
-                'currency' => 'BDT',
-                'merchantInvoiceNumber' => $payment->transaction_reference,
-            ], 200),
-        ]);
+
 
         $this->assertSame('pending', $payment->status);
         $this->assertDatabaseMissing('learn_earn_exam_entitlements', [
