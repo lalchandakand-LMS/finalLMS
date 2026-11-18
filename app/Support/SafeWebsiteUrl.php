@@ -1,6 +1,6 @@
 <?php
 
-namespace App\\Support;
+namespace App\Support;
 
 final class SafeWebsiteUrl
 {
@@ -13,7 +13,7 @@ final class SafeWebsiteUrl
         // Reject control/whitespace bytes, backslashes and encoded variants that
         // browsers or proxies may normalize differently.
         if (preg_match('/[\\x00-\\x20\\x7f]/', $value) === 1
-            || str_contains($value, '\\\\')
+            || str_contains($value, '\\')
             || preg_match('/%(?:0[0-9a-f]|1[0-9a-f]|7f|5c)/i', $value) === 1) {
             return null;
         }
