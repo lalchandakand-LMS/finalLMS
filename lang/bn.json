@@ -628,5 +628,15 @@
     "Go to slide": "স্লাইডে যান",
     "Course image": "কোর্সের ছবি",
     "JPG, PNG or WebP; maximum 5 MB. Leave empty to keep the current image.": "JPG, PNG অথবা WebP; সর্বোচ্চ ৫ এমবি। বর্তমান ছবি রাখতে খালি রাখুন।",
-    "This file is used by a homepage slider slide.": "এই ফাইলটি হোমপেজ স্লাইডারে ব্যবহৃত হচ্ছে।"
+    "This file is used by a homepage slider slide.": "এই ফাইলটি হোমপেজ স্লাইডারে ব্যবহৃত হচ্ছে।",
+    "Website identity & branding": "ওয়েবসাইটের পরিচয় ও ব্র্যান্ডিং",
+    "Homepage hero content": "হোমপেজের প্রধান কনটেন্ট",
+    "Homepage statistics & highlights": "হোমপেজের পরিসংখ্যান ও হাইলাইট",
+    "Primary button label": "প্রধান বাটনের লেখা",
+    "Secondary button label": "দ্বিতীয় বাটনের লেখা",
+    "Why learners stay heading": "শিক্ষার্থীরা কেন আমাদের সঙ্গে থাকে",
+    "Statistic": "পরিসংখ্যান",
+    "Statistic value": "পরিসংখ্যানের মান",
+    "Statistic label": "পরিসংখ্যানের শিরোনাম",
+    "Explore classes": "ক্লাস দেখুন"
 }
