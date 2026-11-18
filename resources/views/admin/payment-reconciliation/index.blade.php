@@ -15,8 +15,10 @@
         <p>{{ __('Eligible bKash payments') }}: <strong>{{ $pending }}</strong></p>
         <form method="POST" action="{{ route('admin.payment-reconciliation.run') }}">
             @csrf
-            <label for="payment_id">{{ __('Optional payment ID') }}</label>
-            <input id="payment_id" name="payment_id" type="number" min="1" placeholder="{{ __('One payment only') }}">
+            <label for="payment_id">{{ __('Online payment ID') }}</label>
+            <input id="payment_id" name="payment_id" type="number" min="1" placeholder="{{ __('Course / eBook payment ID') }}">
+            <label for="invoice_payment_id">{{ __('Invoice receipt ID') }}</label>
+            <input id="invoice_payment_id" name="invoice_payment_id" type="number" min="1" placeholder="{{ __('Invoice payment receipt ID') }}">
             <label for="after_payment_id">{{ __('Continue after payment ID') }}</label>
             <input id="after_payment_id" name="after_payment_id" type="number" min="0" value="{{ request('after_payment_id') }}" placeholder="{{ __('Blank starts at the first payment') }}">
             <button class="btn primary" type="submit">{{ __('Run reconciliation') }}</button>
@@ -27,12 +29,12 @@
         <h2>{{ __('Reconciliation history') }}</h2>
         <div class="table-wrap">
             <table>
-                <thead><tr><th>{{ __('Checked') }}</th><th>{{ __('Payment') }}</th><th>{{ __('Gateway ID') }}</th><th>{{ __('Local') }}</th><th>{{ __('Gateway') }}</th><th>{{ __('Amounts') }}</th><th>{{ __('Result') }}</th><th>{{ __('Details') }}</th></tr></thead>
+                <thead><tr><th>{{ __('Checked') }}</th><th>{{ __('Payment') }}</th><th>{{ __('Payment / gateway ID') }}</th><th>{{ __('Local') }}</th><th>{{ __('Gateway') }}</th><th>{{ __('Amounts') }}</th><th>{{ __('Result') }}</th><th>{{ __('Details') }}</th></tr></thead>
                 <tbody>
                 @forelse($records as $record)
                     <tr>
                         <td>{{ $record->checked_at?->format('d M Y H:i') }}</td>
-                        <td>#{{ $record->payment_id }}</td>
+                        <td>{{ $record->payment_id ? 'Payment #'.$record->payment_id : 'Invoice receipt #'.$record->invoice_payment_id }}</td>
                         <td>{{ $record->gateway_payment_id }}</td>
                         <td>{{ $record->local_status }}</td>
                         <td>{{ $record->gateway_status ?: '—' }}</td>
