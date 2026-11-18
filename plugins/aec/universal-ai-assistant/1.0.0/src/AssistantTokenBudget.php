@@ -16,8 +16,14 @@ final class AssistantTokenBudget
     {
         $payload = json_encode($messages, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
 
-        // Deliberately conservative estimate; provider tokenizers may differ.
-        return max(1, (int) ceil(strlen($payload) / 2));
+        // A byte-based upper estimate intentionally over-reserves for multilingual
+        // input and escaped JSON. Refuse unbounded context before reserving usage.
+        $bytes = strlen($payload);
+        if ($bytes > 524288) {
+            throw new RuntimeException('The AI prompt exceeded the configured size limit.');
+        }
+
+        return max(1, (int) ceil($bytes * 0.75));
     }
 
     public static function completionLimit(int $configuredLimit, int $remainingTokens, int $estimatedPromptTokens): int
@@ -61,6 +67,14 @@ final class AssistantTokenBudget
                 ->lockForUpdate()
                 ->first();
 
+            // An expired in-flight request may already have been accepted and billed
+            // by the provider. Keep its full reservation charged until reconciled.
+            DB::table('ai_assistant_token_reservations')
+                ->where('budget_date', $date)
+                ->where('status', 'pending')
+                ->where('expires_at', '<=', now())
+                ->update(['status' => 'uncertain', 'updated_at' => now()]);
+
             $todayRequests = (int) DB::table('ai_assistant_messages')
                 ->join('ai_assistant_conversations', 'ai_assistant_conversations.id', '=', 'ai_assistant_messages.conversation_id')
                 ->where('ai_assistant_conversations.user_id', $userId)
@@ -71,9 +85,8 @@ final class AssistantTokenBudget
             $pendingRequests = (int) DB::table('ai_assistant_token_reservations')
                 ->where('budget_date', $date)
                 ->where('user_id', $userId)
-                ->where('status', 'pending')
+                ->whereIn('status', ['pending', 'uncertain'])
                 ->where('prompt_persisted', false)
-                ->where('expires_at', '>', now())
                 ->count();
 
             if ($todayRequests + $pendingRequests + 1 > max(0, $dailyRequestLimit)) {
@@ -87,8 +100,7 @@ final class AssistantTokenBudget
 
             $pendingTokens = (int) DB::table('ai_assistant_token_reservations')
                 ->where('budget_date', $date)
-                ->where('status', 'pending')
-                ->where('expires_at', '>', now())
+                ->whereIn('status', ['pending', 'uncertain'])
                 ->sum(DB::raw('prompt_tokens + completion_limit'));
 
             $remaining = self::remaining($dailyBudget, $usedTokens + $pendingTokens);
@@ -134,8 +146,7 @@ final class AssistantTokenBudget
                 ->lockForUpdate()
                 ->first();
 
-            if (! $reservation || $reservation->status !== 'pending'
-                || now()->greaterThanOrEqualTo($reservation->expires_at)) {
+            if (! $reservation || ! in_array($reservation->status, ['pending', 'uncertain'], true)) {
                 return false;
             }
 
@@ -179,11 +190,13 @@ final class AssistantTokenBudget
 
             $persistResponse();
 
+            $actualTokens = max(0, $actualTokens);
+            $reservedCeiling = max(0, (int) $reservation->prompt_tokens) + max(0, (int) $reservation->completion_limit);
             DB::table('ai_assistant_token_reservations')
                 ->where('id', $reservationId)
                 ->update([
-                    'status' => 'completed',
-                    'actual_tokens' => max(0, $actualTokens),
+                    'status' => $actualTokens > $reservedCeiling ? 'over_budget' : 'completed',
+                    'actual_tokens' => $actualTokens,
                     'updated_at' => now(),
                 ]);
 
@@ -193,6 +206,35 @@ final class AssistantTokenBudget
         if (! $settled) {
             throw new RuntimeException('The AI token reservation is no longer active or has expired.');
         }
+    }
+
+    /**
+     * Preserve the full reservation when provider acceptance or billing is unknown.
+     */
+    public static function markUncertain(int $reservationId): void
+    {
+        DB::transaction(function () use ($reservationId): void {
+            $reservation = DB::table('ai_assistant_token_reservations')
+                ->where('id', $reservationId)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $reservation || ! in_array($reservation->status, ['pending', 'uncertain'], true)) {
+                return;
+            }
+
+            DB::table('ai_assistant_budget_days')
+                ->where('budget_date', $reservation->budget_date)
+                ->lockForUpdate()
+                ->first();
+
+            DB::table('ai_assistant_token_reservations')
+                ->where('id', $reservationId)
+                ->update([
+                    'status' => 'uncertain',
+                    'updated_at' => now(),
+                ]);
+        }, 3);
     }
 
     /**
@@ -206,7 +248,7 @@ final class AssistantTokenBudget
                 ->lockForUpdate()
                 ->first();
 
-            if (! $reservation || $reservation->status !== 'pending') {
+            if (! $reservation || ! in_array($reservation->status, ['pending', 'uncertain'], true)) {
                 return;
             }
 
