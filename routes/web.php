@@ -32,6 +32,7 @@ use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PaymentReconciliationController;
+use App\Http\Controllers\PaymentAuditController;
 use App\Http\Controllers\BkashPaymentController;
 use App\Http\Controllers\PhoneVerificationController;
 use App\Http\Controllers\SmsCampaignController;
@@ -454,6 +455,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
 
         Route::get('/payments', [PaymentController::class, 'index'])->name('admin.payments.index');
         Route::get('/payment-reconciliation', [PaymentReconciliationController::class, 'index'])->name('admin.payment-reconciliation.index');
+        Route::get('/payment-audit', [PaymentAuditController::class, 'index'])->name('admin.payment-audit.index');
         Route::post('/payment-reconciliation/run', [PaymentReconciliationController::class, 'run'])->middleware('throttle:3,1')->name('admin.payment-reconciliation.run');
         Route::post('/payments/{payment}/approve', [PaymentController::class, 'approve'])->name('admin.payments.approve');
         Route::post('/payments/{payment}/reject', [PaymentController::class, 'reject'])->name('admin.payments.reject');
