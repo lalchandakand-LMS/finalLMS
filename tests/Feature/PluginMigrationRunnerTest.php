@@ -192,4 +192,91 @@ PHP);
         }
     }
 
+    public function test_rollback_rechecks_plugin_status_after_locking_the_registry_row(): void
+    {
+        $file = $this->root.'/migrations/2026_11_15_000004_active_rollback_guard.php';
+        file_put_contents($file, <<<'PHP'
+<?php
+return new class extends \\Illuminate\\Database\\Migrations\\Migration {
+    public function up(): void {
+        \\Illuminate\\Support\\Facades\\Schema::create('plugin_active_rollback_probe', function (\\Illuminate\\Database\\Schema\\Blueprint $table): void {
+            $table->id();
+        });
+    }
+    public function down(): void {
+        \\Illuminate\\Support\\Facades\\Schema::dropIfExists('plugin_active_rollback_probe');
+    }
+};
+PHP);
+
+        $plugin = new PluginInstallation();
+        $plugin->forceFill([
+            'plugin_key' => 'test.migration-check',
+            'name' => 'Active Rollback Guard',
+            'version' => '1.0.0',
+            'type' => 'module',
+            'status' => 'installed',
+            'manifest' => ['migrations' => 'migrations'],
+            'package_path' => $this->relative,
+            'metadata' => [
+                'integrity_version' => 1,
+                'installed_file_hashes' => ['migrations/2026_11_15_000004_active_rollback_guard.php' => hash_file('sha256', $file)],
+            ],
+        ])->save();
+
+        $runner = app(PluginMigrationRunner::class);
+        $runner->migrate($plugin);
+        \\DB::table('plugin_installations')->where('id', $plugin->id)->update(['status' => 'active']);
+
+        try {
+            $runner->rollback($plugin);
+            $this->fail('Rollback must recheck the locked registry state and reject an active plugin.');
+        } catch (\\RuntimeException $exception) {
+            $this->assertStringContainsString('Deactivate the plugin', $exception->getMessage());
+        }
+
+        $this->assertTrue(Schema::hasTable('plugin_active_rollback_probe'));
+        $this->assertDatabaseHas('plugin_migrations', [
+            'plugin_key' => 'test.migration-check',
+            'migration' => basename($file),
+            'status' => 'completed',
+        ]);
+    }
+
+    public function test_plugin_lifecycle_cannot_change_state_while_a_migration_is_running(): void
+    {
+        $plugin = new PluginInstallation();
+        $plugin->forceFill([
+            'plugin_key' => 'test.migration-check',
+            'name' => 'Lifecycle Migration Guard',
+            'version' => '1.0.0',
+            'type' => 'module',
+            'status' => 'installed',
+            'manifest' => [],
+            'package_path' => $this->relative,
+        ])->save();
+
+        \\DB::table('plugin_migrations')->insert([
+            'plugin_key' => $plugin->plugin_key,
+            'plugin_version' => $plugin->version,
+            'migration' => '2026_11_15_000005_in_progress.php',
+            'status' => 'running',
+            'started_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        try {
+            app(\\App\\Services\\Plugins\\PluginLifecycle::class)->transition($plugin->plugin_key, 'uninstalled');
+            $this->fail('Lifecycle transitions must not race an in-flight plugin migration.');
+        } catch (\\LogicException $exception) {
+            $this->assertStringContainsString('migration is running', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('plugin_installations', [
+            'id' => $plugin->id,
+            'status' => 'installed',
+        ]);
+    }
+
 }
