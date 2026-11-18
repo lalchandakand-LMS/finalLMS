@@ -274,7 +274,7 @@ class BkashPaymentController extends Controller
                 ->exists();
 
             if ($invoiceReceiptExists) {
-                throw new \\RuntimeException('This bKash transaction is already recorded as an invoice receipt.');
+                throw new \RuntimeException('This bKash transaction is already recorded as an invoice receipt.');
             }
 
             $eventKey = 'bkash:payment:'.$paymentId.':'.$transactionId;
