@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Models\WebsitePage;
+use App\Models\WebsitePageRevision;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -146,5 +147,136 @@ class WebsitePageBuilderTest extends TestCase
             ->assertSee('aria-live="polite"', false)
             ->assertSee('page-section-status', false);
     }
+
+    public function test_admin_can_restore_a_custom_page_revision_without_losing_the_current_version(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->post(route('admin.website-pages.store'), [
+            'title' => 'First page version',
+            'slug' => 'first-page-version',
+            'template' => 'standard',
+            'status' => 'published',
+            'show_in_menu' => '1',
+            'sections' => [['type' => 'text', 'title' => 'Original content', 'body' => 'Original body', 'enabled' => '1']],
+        ])->assertRedirect(route('admin.website-pages.index'));
+
+        $page = WebsitePage::where('slug', 'first-page-version')->firstOrFail();
+        $firstRevision = $page->revisions()->firstOrFail();
+        $this->assertSame(1, $firstRevision->version);
+        $this->assertSame('First page version', $firstRevision->snapshot['title']);
+
+        $this->put(route('admin.website-pages.update', $page), [
+            'title' => 'Second page version',
+            'slug' => 'second-page-version',
+            'template' => 'wide',
+            'status' => 'draft',
+            'show_in_menu' => '0',
+            'sections' => [['type' => 'hero', 'title' => 'Changed content', 'body' => 'Changed body', 'enabled' => '1']],
+        ])->assertRedirect(route('admin.website-pages.index'));
+
+        $page->refresh();
+        $secondRevision = $page->revisions()->firstOrFail();
+        $this->assertSame(2, $secondRevision->version);
+        $this->assertSame('Second page version', $secondRevision->snapshot['title']);
+
+        $this->post(route('admin.website-pages.revisions.restore', [$page, $firstRevision]))
+            ->assertRedirect(route('admin.website-pages.edit', $page))
+            ->assertSessionHas('success');
+
+        $page->refresh();
+        $this->assertSame('First page version', $page->title);
+        $this->assertSame('first-page-version', $page->slug);
+        $this->assertSame('published', $page->status);
+        $this->assertSame('Original content', $page->sections[0]['title']);
+        $this->assertSame(3, $page->revisions()->count());
+        $this->assertSame(3, $page->revisions()->firstOrFail()->version);
+        $this->assertDatabaseHas('activity_logs', [
+            'event' => 'website_page.revision_restored',
+            'user_id' => $admin->id,
+        ]);
+    }
+
+    public function test_page_revision_restore_rejects_slug_collision_without_changing_the_page(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($admin)->post(route('admin.website-pages.store'), [
+            'title' => 'Original slug',
+            'slug' => 'revision-slug-collision',
+            'template' => 'standard',
+            'status' => 'draft',
+            'sections' => [['type' => 'text', 'title' => 'Original', 'enabled' => '1']],
+        ])->assertRedirect();
+
+        $page = WebsitePage::where('slug', 'revision-slug-collision')->firstOrFail();
+        $revision = $page->revisions()->firstOrFail();
+
+        $this->put(route('admin.website-pages.update', $page), [
+            'title' => 'Renamed page',
+            'slug' => 'renamed-page',
+            'template' => 'standard',
+            'status' => 'draft',
+            'sections' => [['type' => 'text', 'title' => 'Renamed', 'enabled' => '1']],
+        ])->assertRedirect();
+
+        WebsitePage::create([
+            'title' => 'Claimed slug',
+            'slug' => 'revision-slug-collision',
+            'template' => 'standard',
+            'sections' => [],
+            'status' => 'draft',
+            'created_by' => $admin->id,
+        ]);
+
+        $this->post(route('admin.website-pages.revisions.restore', [$page, $revision]))
+            ->assertSessionHasErrors('revision');
+
+        $this->assertDatabaseHas('website_pages', [
+            'id' => $page->id,
+            'title' => 'Renamed page',
+            'slug' => 'renamed-page',
+        ]);
+        $this->assertSame(2, $page->fresh()->revisions()->count());
+    }
+
+    public function test_page_revision_cannot_be_restored_to_a_different_page(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $first = WebsitePage::create([
+            'title' => 'First page',
+            'slug' => 'first-revision-owner',
+            'template' => 'standard',
+            'sections' => [],
+            'status' => 'draft',
+            'created_by' => $admin->id,
+        ]);
+        $second = WebsitePage::create([
+            'title' => 'Second page',
+            'slug' => 'second-revision-owner',
+            'template' => 'standard',
+            'sections' => [],
+            'status' => 'draft',
+            'created_by' => $admin->id,
+        ]);
+        $revision = WebsitePageRevision::create([
+            'website_page_id' => $first->id,
+            'version' => 1,
+            'snapshot' => [
+                'title' => 'First page',
+                'slug' => 'first-revision-owner',
+                'template' => 'standard',
+                'sections' => [],
+                'status' => 'draft',
+            ],
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.website-pages.revisions.restore', [$second, $revision]))
+            ->assertNotFound();
+
+        $this->assertSame('Second page', $second->fresh()->title);
+    }
+
 
 }
