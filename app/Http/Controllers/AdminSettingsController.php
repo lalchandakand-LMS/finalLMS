@@ -37,6 +37,12 @@ class AdminSettingsController extends Controller
             'institution_timezone' => ['sometimes', 'required', 'timezone'],
             'site_logo_media_id' => ['nullable', 'integer', 'min:1'],
             'site_favicon_media_id' => ['nullable', 'integer', 'min:1'],
+            'loading_screen_enabled' => ['nullable', 'boolean'],
+            'loading_screen_logo_media_id' => ['nullable', 'integer', 'min:1'],
+            'loading_screen_style' => ['nullable', 'in:orbit,pulse,ring'],
+            'loading_screen_text' => ['nullable', 'string', 'max:60'],
+            'loading_screen_background' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'loading_screen_speed' => ['nullable', 'integer', 'min:6', 'max:24'],
             'home_title' => ['nullable', 'string', 'max:255'],
             'home_subtitle' => ['nullable', 'string', 'max:500'],
             'home_cta_primary' => ['nullable', 'string', 'max:50'],
@@ -133,7 +139,7 @@ class AdminSettingsController extends Controller
         })->filter()->values()->all();
         unset($validated['payment_methods'], $validated['home_slides']);
 
-        foreach (['site_logo_media_id', 'site_favicon_media_id'] as $mediaSetting) {
+        foreach (['site_logo_media_id', 'site_favicon_media_id', 'loading_screen_logo_media_id'] as $mediaSetting) {
             $mediaId = $validated[$mediaSetting] ?? null;
             if ($mediaId !== null && !MediaAsset::query()->whereKey($mediaId)->where('mime_type', 'like', 'image/%')->exists()) {
                 return back()->withErrors([$mediaSetting => 'Please select a valid image from the Media Library.'])->withInput();
