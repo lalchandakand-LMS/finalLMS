@@ -16,7 +16,9 @@
         <form method="POST" action="{{ route('admin.payment-reconciliation.run') }}">
             @csrf
             <label for="payment_id">{{ __('Optional payment ID') }}</label>
-            <input id="payment_id" name="payment_id" type="number" min="1" placeholder="{{ __('Leave blank to check up to 100 payments') }}">
+            <input id="payment_id" name="payment_id" type="number" min="1" placeholder="{{ __('One payment only') }}">
+            <label for="after_payment_id">{{ __('Continue after payment ID') }}</label>
+            <input id="after_payment_id" name="after_payment_id" type="number" min="0" value="{{ request('after_payment_id') }}" placeholder="{{ __('Blank starts at the first payment') }}">
             <button class="btn primary" type="submit">{{ __('Run reconciliation') }}</button>
         </form>
     </section>
