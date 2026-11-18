@@ -44,7 +44,7 @@
                         <p>{{ __('Refund reference') }}: {{ $refund->refund_reference }} · {{ __('Processed by') }}: {{ $refund->processor?->name ?: '—' }}</p>
                         @if($refund->gateway_refund_id)<p>{{ __('Gateway refund ID') }}: {{ $refund->gateway_refund_id }} · {{ $refund->gateway_status }}</p>@endif
                         @if($refund->failure_reason)<p>{{ __('Gateway review required') }}: {{ $refund->failure_reason }}</p>@endif
-                        @if($refund->status === 'gateway_unknown')
+                        @if(in_array($refund->status, ['gateway_unknown', 'processing'], true) && ($refund->status !== 'processing' || $refund->created_at?->lte(now()->subMinutes(5))))
                             <form method="POST" action="{{ route('admin.ebooks.refunds.reconcile', $refund) }}">@csrf<button class="btn secondary" type="submit">{{ __('Reconcile existing gateway refund') }}</button></form>
                         @endif
                         <p>{{ $refund->reason }}</p>
