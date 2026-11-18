@@ -24,6 +24,24 @@
         <div><label for="home-featured-title">Featured courses heading</label><input id="home-featured-title" name="home_featured_title" maxlength="255" value="{{ old('home_featured_title', $settings['home_featured_title'] ?? '') }}"></div>
     </div>
     <label for="home-subtitle">Subtitle</label><textarea id="home-subtitle" name="home_subtitle" rows="3" maxlength="500">{{ old('home_subtitle', $settings['home_subtitle'] ?? '') }}</textarea>
+    <div class="grid grid-2">
+        <div><label for="home-cta-primary">Primary button label</label><input id="home-cta-primary" name="home_cta_primary" maxlength="80" value="{{ old('home_cta_primary', $settings['home_cta_primary'] ?? 'Browse courses') }}"></div>
+        <div><label for="home-cta-secondary">Secondary button label</label><input id="home-cta-secondary" name="home_cta_secondary" maxlength="80" value="{{ old('home_cta_secondary', $settings['home_cta_secondary'] ?? 'Login') }}"></div>
+    </div>
+</section>
+<section class="panel" style="margin-bottom:20px;">
+    <h2>Homepage statistics & highlights</h2>
+    <label for="home-reason-title">Why learners stay heading</label>
+    <input id="home-reason-title" name="home_reason_title" maxlength="255" value="{{ old('home_reason_title', $settings['home_reason_title'] ?? 'Built to keep you moving forward') }}">
+    <p class="muted">Edit the three statistic values and labels shown below the hero heading.</p>
+    <div class="grid grid-3">
+        @for($i = 1; $i <= 3; $i++)
+            <div class="card">
+                <label>Statistic {{ $i }} value<input name="home_metric_{{ $i }}_value" maxlength="40" value="{{ old('home_metric_'.$i.'_value', $settings['home_metric_'.$i.'_value'] ?? '') }}"></label>
+                <label>Statistic {{ $i }} label<input name="home_metric_{{ $i }}_label" maxlength="80" value="{{ old('home_metric_'.$i.'_label', $settings['home_metric_'.$i.'_label'] ?? '') }}"></label>
+            </div>
+        @endfor
+    </div>
 </section>
 <section class="panel" style="margin-bottom:20px;">
     <h2>Homepage slider</h2>
@@ -52,7 +70,7 @@
             <label>Heading<input name="sections[{{ $i }}][title]" maxlength="180" value="{{ $section['title'] ?? '' }}"></label>
             <label>Text<textarea name="sections[{{ $i }}][body]" rows="3" maxlength="3000">{{ $section['body'] ?? '' }}</textarea></label>
             <label>Image<select name="sections[{{ $i }}][image_id]"><option value="">No image</option>@foreach($media as $asset)<option value="{{ $asset->id }}" @selected(($section['image_id'] ?? '') == $asset->id)>{{ $asset->original_name }}</option>@endforeach</select></label>
-            <div class="grid grid-2"><div><label>Button label<input name="sections[{{ $i }}][button_label]" maxlength="60" value="{{ $section['button_label'] ?? '' }}"></label></div><div><label>Button URL<input name="sections[{{ $i }}][button_url]" type="url" maxlength="500" value="{{ $section['button_url'] ?? '' }}"></label></div></div>
+            <div class="grid grid-2"><div><label>Button label<input name="sections[{{ $i }}][button_label]" maxlength="60" value="{{ $section['button_label'] ?? '' }}"></label></div><div><label>Button URL<input name="sections[{{ $i }}][button_url]" type="text" inputmode="url" maxlength="500" value="{{ $section['button_url'] ?? '' }}"></label></div></div>
         </section>
     @endfor
     </div>
