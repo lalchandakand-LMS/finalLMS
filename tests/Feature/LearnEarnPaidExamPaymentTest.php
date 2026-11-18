@@ -68,11 +68,6 @@ class LearnEarnPaidExamPaymentTest extends TestCase
         require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnExamQuestion.php');
         require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnExamAnswer.php');
         require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnScorer.php');
-        require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnExamAttempt.php');
-        require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnAttemptQuestion.php');
-        require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnExamQuestion.php');
-        require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnExamAnswer.php');
-        require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnScorer.php');
     }
 
     public function test_paid_exam_entitlement_is_granted_only_after_bkash_server_verification(): void
