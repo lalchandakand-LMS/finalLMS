@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class WebsitePage extends Model
 {
@@ -17,6 +18,11 @@ class WebsitePage extends Model
         'show_in_menu' => 'boolean',
         'published_at' => 'datetime',
     ];
+
+    public function revisions(): HasMany
+    {
+        return $this->hasMany(WebsitePageRevision::class, 'website_page_id');
+    }
 
     public function academicLevel(): BelongsTo
     {
