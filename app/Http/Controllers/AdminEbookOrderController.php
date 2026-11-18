@@ -106,7 +106,7 @@ class AdminEbookOrderController extends Controller
         $validated = $request->validate([
             'refund_reference' => ['nullable', 'string', 'max:120', 'unique:ebook_refunds,refund_reference'],
             'reason' => ['required', 'string', 'max:2000'],
-            'confirm_refund' => ['nullable', 'accepted'],
+            'confirm_refund' => ['sometimes', 'accepted'],
         ]);
 
         $result = DB::transaction(function () use ($order, $request, $validated): array {
