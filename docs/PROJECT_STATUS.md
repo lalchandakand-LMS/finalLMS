@@ -35,7 +35,7 @@ This section supersedes older PR snapshots and historical notes below where they
 | [#328](https://github.com/lalchandakand-LMS/finalLMS/pull/328) | Custom Page revision history and safe rollback | Open Draft; head `301e3a4285db07e056185207d153942e3772c544`. Exact-head Laravel CI, MySQL tests, cPanel package and CodeQL passed. Branch still contains #327 preview commits; rebase/recreate from updated main after #327 merges so this PR contains only revision-history changes. Fresh review and staging rollback acceptance remain. |
 | [#329](https://github.com/lalchandakand-LMS/finalLMS/pull/329) | Keyboard-accessible website menu reordering | Open, Ready for Review; head `22022029a3e36dbbcb044e634c54d23129a14827`. Exact-head Laravel CI, cPanel package and CodeQL passed. Fresh review and manual keyboard-only/focus-retention/screen-reader acceptance remain. |
 
-The previous #285 offline-attendance PR is closed unmerged because a clean replacement was ported to #301; do not revive or merge the stale #285 branch. Re-check #301 before reporting the replacement's state.
+The previous #285 offline-attendance PR is closed unmerged. Its clean replacement, #301, merged to main as `f4e4ca4ed94a1a96d3832b7834806de85d405b74`; exact-head Laravel CI, CodeQL and both Flutter mobile workflows passed. Browser/device acceptance, QR permission/privacy review, offline replay/idempotency and staging API integration remain release gates. Do not revive or merge the stale #285 branch.
 
 No production deployment, live database migration or live payment-provider activation has been performed. CI/package success does not establish signed-release, provider, staging, browser or production acceptance.
 
