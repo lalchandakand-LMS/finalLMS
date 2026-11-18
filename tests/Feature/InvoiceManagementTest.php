@@ -489,4 +489,39 @@ class InvoiceManagementTest extends TestCase
         $this->assertDatabaseHas('invoices', ['id' => $invoice->id, 'status' => 'unpaid']);
     }
 
+    public function test_bkash_refund_verification_rejects_non_bdt_settlement_currency(): void
+    {
+        config([
+            'services.bkash.enabled' => true,
+            'services.bkash.base_url' => 'https://tokenized.sandbox.bka.sh/v1.2.0-beta',
+            'services.bkash.username' => 'sandbox-user',
+            'services.bkash.password' => 'sandbox-password',
+            'services.bkash.app_key' => 'sandbox-app-key',
+            'services.bkash.app_secret' => 'sandbox-app-secret',
+            'services.bkash.verify_ssl' => true,
+        ]);
+
+        Http::fake([
+            '*/tokenized/checkout/token/grant' => Http::response(['id_token' => 'refund-currency-token'], 200),
+            '*/tokenized/checkout/payment/refund' => Http::response([
+                'statusCode' => '0000', 'originalTrxID' => 'BKASH-CURRENCY-TRX',
+                'refundTrxID' => 'BKASH-CURRENCY-REFUND', 'amount' => '25.00', 'currency' => 'BDT',
+            ], 200),
+            '*/tokenized/checkout/payment/refund/status' => Http::response([
+                'statusCode' => '0000', 'originalTrxID' => 'BKASH-CURRENCY-TRX',
+                'refundTrxID' => 'BKASH-CURRENCY-REFUND', 'amount' => '25.00',
+                'currency' => 'USD', 'transactionStatus' => 'Completed',
+            ], 200),
+        ]);
+
+        $this->expectException(\\RuntimeException::class);
+
+        app(\\App\\Services\\Payments\\BkashRefundService::class)->refund(
+            'BKASH-CURRENCY-PAY',
+            'BKASH-CURRENCY-TRX',
+            '25.00',
+            'Currency verification test'
+        );
+    }
+
 }
