@@ -221,13 +221,15 @@ class InvoiceController extends Controller
                 return 'excess';
             }
 
-            $eventKey = 'bkash:payment:'.$validated['gateway_payment_id'].':'.$validated['gateway_transaction_id'];
             $gatewayEvent = null;
             if ($validated['method'] === 'bkash') {
+                $eventKey = 'bkash:payment:'.$validated['gateway_payment_id'].':'.$validated['gateway_transaction_id'];
                 $gatewayEvent = PaymentGatewayEvent::firstOrCreate(
                     ['event_key' => $eventKey],
                     [
                         'provider' => 'bkash',
+                        'gateway_payment_id' => $validated['gateway_payment_id'],
+                        'gateway_transaction_id' => $validated['gateway_transaction_id'],
                         'event_type' => 'invoice.payment.verified',
                         'verification_status' => 'verified',
                         'processing_status' => 'processing',
@@ -296,6 +298,9 @@ class InvoiceController extends Controller
             return 'recorded';
         });
 
+        if ($result === 'duplicate_gateway') {
+            return back()->withErrors(['gateway_payment_id' => 'This bKash transaction has already been recorded in the LMS.'])->withInput();
+        }
         if ($result === 'excess') {
             return back()->withErrors(['amount' => 'Payment cannot exceed the outstanding invoice balance.']);
         }
