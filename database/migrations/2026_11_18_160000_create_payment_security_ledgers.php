@@ -35,6 +35,7 @@ return new class extends Migration
             $table->foreignId('payment_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('invoice_payment_id')->nullable()->constrained('invoice_payments')->nullOnDelete();
             $table->foreignId('invoice_refund_id')->nullable()->constrained('invoice_refunds')->nullOnDelete();
+            $table->foreignId('ebook_refund_id')->nullable()->constrained('ebook_refunds')->nullOnDelete();
             $table->foreignId('actor_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('provider', 40)->nullable();
             $table->string('event', 80);
