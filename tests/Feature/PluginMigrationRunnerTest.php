@@ -226,7 +226,7 @@ PHP);
 
         $runner = app(PluginMigrationRunner::class);
         $runner->migrate($plugin);
-        \DB::table('plugin_installations')->where('id', $plugin->id)->update(['status' => 'active']);
+        \DB::table('plugin_registry')->where('id', $plugin->id)->update(['status' => 'active']);
 
         try {
             $runner->rollback($plugin);
