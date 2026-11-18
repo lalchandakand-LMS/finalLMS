@@ -286,7 +286,7 @@ class AdminEbookOrderController extends Controller
 
             DB::transaction(function () use ($refund, $gatewayResult, $request): void {
                 $lockedRefund = EbookRefund::query()->lockForUpdate()->findOrFail($refund->id);
-                if ($lockedRefund->status !== 'gateway_unknown') {
+                if (! in_array($lockedRefund->status, ['gateway_unknown', 'processing'], true)) {
                     return;
                 }
                 $lockedRefund->update([
