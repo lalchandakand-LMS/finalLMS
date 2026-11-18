@@ -180,7 +180,7 @@ class InvoiceController extends Controller
 
             try {
                 if (! config('services.bkash.enabled') || ! config('services.bkash.verify_ssl', true)) {
-                    throw new \\RuntimeException('bKash server-side verification is not enabled with verified TLS.');
+                    throw new \RuntimeException('bKash server-side verification is not enabled with verified TLS.');
                 }
 
                 $verified = $bkash->queryPayment($bkash->grantToken(), $validated['gateway_payment_id']);
