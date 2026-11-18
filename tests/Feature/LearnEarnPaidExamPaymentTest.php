@@ -334,6 +334,7 @@ class LearnEarnPaidExamPaymentTest extends TestCase
         if (! Route::has('student.learn-earn.attempts.result')) {
             Route::get('/__test/learn-earn/attempts/{attempt}', static fn () => response()->noContent())
                 ->name('student.learn-earn.attempts.result');
+            Route::getRoutes()->refreshNameLookups();
         }
 
         $request = Request::create('/student/learn-earn/attempts/'.$attempt->id, 'GET');
