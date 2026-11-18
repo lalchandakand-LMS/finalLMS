@@ -18,3 +18,6 @@ Universal AI Assistant must be installed and active, with the provider configure
 This is for exam preparation, not for answering an active/timed examination. It asks the model to provide hints only when the learner indicates a live assessment. Generated marking points are suggestions, not official board marking schemes. Students should verify important answers with their teachers and textbooks.
 
 Install and activate the signed plugin through Plugin Manager; grant board-solver.configure to Admin and board-solver.use to Students. Git source is not a signed production package.
+
+## Interface and response modes
+The plugin uses the LMS's shared responsive layout in both portals. Full solution mode provides a complete worked explanation; hints mode prioritizes progressive hints; concept mode focuses on the underlying topic. Student history is scoped to the signed-in student.
