@@ -21,11 +21,11 @@ class PrepQuestionBankPluginTest extends TestCase
         $migration->up();
         require_once base_path('plugins/aec/bcs-bank-admission-question-bank/1.0.0/src/PrepQuestionBankController.php');
 
-        Route::middleware('auth')->prefix('__test-prep-bank')->name('admin.prep-question-bank.')->group(function (): void {
-            Route::get('/', [\Aloms\PrepQuestionBank\PrepQuestionBankController::class, 'index'])->name('index');
-            Route::post('/questions', [\Aloms\PrepQuestionBank\PrepQuestionBankController::class, 'storeQuestion'])->name('questions.store');
-            Route::post('/sets', [\Aloms\PrepQuestionBank\PrepQuestionBankController::class, 'storeSet'])->name('sets.store');
-            Route::get('/sets/{set}', [\Aloms\PrepQuestionBank\PrepQuestionBankController::class, 'showSet'])->name('sets.show');
+        Route::middleware('auth')->group(function (): void {
+            Route::get('/__test-prep-bank', [\\Aloms\\PrepQuestionBank\\PrepQuestionBankController::class, 'index'])->name('admin.prep-question-bank.index');
+            Route::post('/__test-prep-bank/questions', [\\Aloms\\PrepQuestionBank\\PrepQuestionBankController::class, 'storeQuestion'])->name('admin.prep-question-bank.questions.store');
+            Route::post('/__test-prep-bank/sets', [\\Aloms\\PrepQuestionBank\\PrepQuestionBankController::class, 'storeSet'])->name('admin.prep-question-bank.sets.store');
+            Route::get('/__test-prep-bank/sets/{set}', [\\Aloms\\PrepQuestionBank\\PrepQuestionBankController::class, 'showSet'])->name('admin.prep-question-bank.sets.show');
         });
     }
 
