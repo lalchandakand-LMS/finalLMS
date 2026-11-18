@@ -42,7 +42,7 @@
         $flashSales = \Illuminate\Support\Facades\Schema::hasTable('flash_sales') ? \App\Models\FlashSale::activeCampaigns() : collect();
         $homeSlides = collect(is_array($storedSlides) ? $storedSlides : [])->filter(fn ($slide) => is_array($slide) && !empty($slide['enabled']) && !empty($slide['image_id']))->map(function ($slide) {
             $asset = \App\Models\MediaAsset::query()->whereKey($slide['image_id'])->where('mime_type', 'like', 'image/%')->first();
-            return $asset ? ['asset' => $asset, 'title' => $slide['title'] ?? '', 'subtitle' => $slide['subtitle'] ?? '', 'button_label' => $slide['button_label'] ?? '', 'button_url' => $slide['button_url'] ?? ''] : null;
+            return $asset ? ['asset' => $asset, 'title' => $slide['title'] ?? '', 'subtitle' => $slide['subtitle'] ?? '', 'button_label' => $slide['button_label'] ?? '', 'button_url' => \\App\\Support\\SafeWebsiteUrl::sanitize($slide['button_url'] ?? '') ?? ''] : null;
         })->filter()->values();
         $homepageTemplate = (string) ($hasSettingsTable ? \App\Models\Setting::value('homepage_template', 'redwans-method') : 'redwans-method');
         $homepageTemplate = array_key_exists($homepageTemplate, \App\Http\Controllers\WebsiteBuilderController::homepageTemplates()) ? $homepageTemplate : 'redwans-method';
@@ -328,7 +328,8 @@
                 $sectionGridStyle = $sectionLayout === 'centered' ? 'grid-template-columns:1fr;text-align:center;' : ($sectionLayout === 'reversed' ? 'direction:rtl;' : '');
                 $sectionHasTitle = trim((string) ($section['title'] ?? '')) !== '';
                 $sectionHasBody = trim((string) ($section['body'] ?? '')) !== '';
-                $sectionHasButton = ! empty($section['button_label']) && ! empty($section['button_url']);
+                $sectionButtonUrl = \\App\\Support\\SafeWebsiteUrl::sanitize($section['button_url'] ?? '');
+                $sectionHasButton = ! empty($section['button_label']) && $sectionButtonUrl !== null;
                 $sectionHasImage = $sectionImage && str_starts_with($sectionImage->mime_type, 'image/');
             @endphp
             <section class="panel" style="margin-top:28px;background-color:{{ $sectionBackground }};color:{{ $sectionTextColor }};padding:{{ $sectionSpacing }};">
@@ -341,7 +342,7 @@
                             <p style="white-space:pre-line;line-height:1.8;">{{ $section['body'] }}</p>
                         @endif
                         @if($sectionHasButton)
-                            <a class="btn primary" href="{{ $section['button_url'] }}" rel="nofollow noopener">{{ $section['button_label'] }}</a>
+                            <a class="btn primary" href="{{ $sectionButtonUrl }}" rel="nofollow noopener">{{ $section['button_label'] }}</a>
                         @endif
                     </div>
                     @if($sectionHasImage)
