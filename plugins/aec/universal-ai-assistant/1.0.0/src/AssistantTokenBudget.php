@@ -16,14 +16,16 @@ final class AssistantTokenBudget
     {
         $payload = json_encode($messages, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
 
-        // A byte-based upper estimate intentionally over-reserves for multilingual
-        // input and escaped JSON. Refuse unbounded context before reserving usage.
+        // Use one token per UTF-8 byte plus per-message framing overhead. This is
+        // deliberately stricter than a heuristic multiplier: provider tokenizers can
+        // split unusual or multilingual input into byte-level tokens. Refuse unbounded
+        // context before reserving usage.
         $bytes = strlen($payload);
         if ($bytes > 524288) {
             throw new RuntimeException('The AI prompt exceeded the configured size limit.');
         }
 
-        return max(1, (int) ceil($bytes * 0.75));
+        return max(1, $bytes + (count($messages) * 8));
     }
 
     public static function completionLimit(int $configuredLimit, int $remainingTokens, int $estimatedPromptTokens): int
