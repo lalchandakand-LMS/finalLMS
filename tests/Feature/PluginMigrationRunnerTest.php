@@ -197,10 +197,10 @@ PHP);
         $file = $this->root.'/migrations/2026_11_15_000004_active_rollback_guard.php';
         file_put_contents($file, <<<'PHP'
 <?php
-return new class extends \\Illuminate\\Database\\Migrations\\Migration {
+return new class extends \Illuminate\Database\Migrations\Migration {
     public function up(): void {}
     public function down(): void {
-        throw new \\RuntimeException('Rollback must not execute for an active plugin.');
+        throw new \RuntimeException('Rollback must not execute for an active plugin.');
     }
 };
 PHP);
@@ -220,7 +220,7 @@ PHP);
             ],
         ])->save();
 
-        \\DB::table('plugin_migrations')->insert([
+        \DB::table('plugin_migrations')->insert([
             'plugin_key' => $plugin->plugin_key,
             'plugin_version' => $plugin->version,
             'migration' => basename($file),
@@ -230,12 +230,12 @@ PHP);
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        \\DB::table('plugin_registry')->where('id', $plugin->id)->update(['status' => 'active']);
+        \DB::table('plugin_registry')->where('id', $plugin->id)->update(['status' => 'active']);
 
         try {
             app(PluginMigrationRunner::class)->rollback($plugin);
             $this->fail('Rollback must recheck the locked registry state and reject an active plugin.');
-        } catch (\\RuntimeException $exception) {
+        } catch (\RuntimeException $exception) {
             $this->assertStringContainsString('Deactivate the plugin', $exception->getMessage());
         }
 
