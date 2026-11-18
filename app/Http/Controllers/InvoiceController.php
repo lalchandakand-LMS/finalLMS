@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Course;
 use App\Models\Invoice;
 use App\Models\InvoicePayment;
+use App\Models\PaymentAuditEvent;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -177,7 +178,7 @@ class InvoiceController extends Controller
                 return 'excess';
             }
 
-            InvoicePayment::create([
+            $receipt = InvoicePayment::create([
                 'invoice_id' => $lockedInvoice->id,
                 'received_by' => $request->user()->id,
                 'amount' => $amount,
@@ -187,7 +188,23 @@ class InvoiceController extends Controller
                 'gateway_transaction_id' => $validated['gateway_transaction_id'] ?? null,
                 'reference' => $validated['reference'] ?? null,
                 'note' => $validated['note'] ?? null,
+
                 'paid_at' => $validated['paid_at'],
+            ]);
+
+            PaymentAuditEvent::create([
+                'invoice_payment_id' => $receipt->id,
+                'actor_id' => $request->user()->id,
+                'provider' => $receipt->gateway_provider,
+                'event' => 'invoice_payment_recorded',
+                'source' => 'admin_invoice',
+                'after_state' => [
+                    'amount' => $receipt->amount,
+                    'method' => $receipt->method,
+                    'gateway_payment_id' => $receipt->gateway_payment_id,
+                    'gateway_transaction_id' => $receipt->gateway_transaction_id,
+                ],
+                'ip_address' => $request->ip(),
             ]);
 
             $newPaid = $paid + $amount;
