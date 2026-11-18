@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -23,6 +24,11 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (DB::table('invoice_payments')->whereNotNull('gateway_payment_id')->orWhereNotNull('gateway_transaction_id')->exists()
+            || DB::table('invoice_refunds')->whereNotNull('gateway_refund_id')->exists()) {
+            throw new RuntimeException('Refusing to drop recorded gateway refund references; financial evidence must be preserved.');
+        }
+
         Schema::table('invoice_refunds', function (Blueprint $table) {
             $table->dropUnique(['gateway_refund_id']);
             $table->dropColumn(['gateway_refund_id', 'gateway_status', 'failure_reason']);
