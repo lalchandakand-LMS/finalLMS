@@ -72,7 +72,7 @@ class InvoiceRefundController extends Controller
             abort_unless($this->scopedInvoices($request)->whereKey($payment->invoice_id)->exists(), 404);
 
             $reserved = (float) InvoiceRefund::where('invoice_payment_id', $payment->id)
-                ->whereIn('status', ['pending', 'approved'])->sum('amount');
+                ->whereIn('status', ['pending', 'processing', 'gateway_unknown', 'approved'])->sum('amount');
             $available = round((float) $payment->amount - $reserved, 2);
             $amount = round((float) $validated['amount'], 2);
 
