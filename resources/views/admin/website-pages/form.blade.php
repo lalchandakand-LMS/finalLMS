@@ -31,22 +31,22 @@
     @if($page->exists)
     <section class="panel" style="margin-bottom:20px;">
         <div class="page-header">
-            <div><h2>Revision history</h2><p class="muted">Restore an earlier saved page. Restoring creates a new revision and keeps the current content in history.</p></div>
+            <div><h2>{{ __('Revision history') }}</h2><p class="muted">{{ __('Restore an earlier saved page. Restoring creates a new revision and keeps the current content in history.') }}</p></div>
         </div>
         @forelse($revisions as $revision)
             <div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:10px;">
                 <div>
-                    <strong>Version {{ $revision->version }}</strong>
-                    <div class="muted">{{ $revision->snapshot['title'] ?? 'Untitled page' }} · {{ $revision->creator?->name ?? 'Former administrator' }}</div>
+                    <strong>{{ __('Version :version', ['version' => $revision->version]) }}</strong>
+                    <div class="muted">{{ $revision->snapshot['title'] ?? __('Untitled page') }} · {{ $revision->creator?->name ?? __('Former administrator') }}</div>
                     <small class="muted">{{ $revision->created_at?->diffForHumans() }}</small>
                 </div>
-                <form method="POST" action="{{ route('admin.website-pages.revisions.restore', [$page, $revision]) }}" onsubmit="return confirm('Restore this page revision? The current page will be retained as a new revision.')">
+                <form method="POST" action="{{ route('admin.website-pages.revisions.restore', [$page, $revision]) }}" onsubmit="return confirm('{{ __('Restore this page revision? The current page will be retained as a new revision.') }}')">
                     @csrf
-                    <button class="btn secondary" type="submit">Restore this version</button>
+                    <button class="btn secondary" type="submit">{{ __('Restore this version') }}</button>
                 </form>
             </div>
         @empty
-            <p class="muted">No saved revisions yet. A revision is created when this page is saved.</p>
+            <p class="muted">{{ __('No saved revisions yet. A revision is created when this page is saved.') }}</p>
         @endforelse
     </section>
     @endif
