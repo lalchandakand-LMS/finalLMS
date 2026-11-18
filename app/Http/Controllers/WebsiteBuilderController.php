@@ -384,8 +384,8 @@ class WebsiteBuilderController extends Controller
 
         $headerLinks = collect($validated['header_links'] ?? [])->map(function (array $link): ?array {
             $label = trim($link['label'] ?? '');
-            $url = trim($link['url'] ?? '');
-            if ($label === '' || !preg_match('~^(https?://|/(?!/)|#)~i', $url)) {
+            $url = SafeWebsiteUrl::sanitize($link['url'] ?? '');
+            if ($label === '' || $url === null) {
                 return null;
             }
             return ['label' => $label, 'url' => $url];
