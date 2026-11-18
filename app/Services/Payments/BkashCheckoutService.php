@@ -74,6 +74,25 @@ class BkashCheckoutService
             ->json();
     }
 
+    public function refundPayment(string $token, string $paymentId, string $amount, string $transactionId, string $reason): array
+    {
+        return $this->request()->withToken($token)
+            ->withHeader('X-APP-Key', (string) config('services.bkash.app_key'))
+            ->post($this->baseUrl().'/tokenized/checkout/payment/refund', [
+                'paymentID' => $paymentId, 'amount' => $amount, 'trxID' => $transactionId,
+                'sku' => 'LMS-REFUND', 'reason' => mb_substr($reason, 0, 200),
+            ])->throw()->json();
+    }
+
+    public function queryRefund(string $token, string $paymentId, string $refundTransactionId): array
+    {
+        return $this->request()->withToken($token)
+            ->withHeader('X-APP-Key', (string) config('services.bkash.app_key'))
+            ->post($this->baseUrl().'/tokenized/checkout/payment/refund', [
+                'paymentID' => $paymentId, 'trxID' => $refundTransactionId,
+            ])->throw()->json();
+    }
+
     public function queryPayment(string $token, string $paymentId): array
     {
         return $this->request()
