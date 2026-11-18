@@ -146,17 +146,17 @@ class WebsitePageController extends Controller
             $page->save();
             $this->recordRevision($page, $request->user()->id);
             $restoredVersion = $target->version;
-        }, 3);
 
-        ActivityLog::query()->create([
-            'user_id' => $request->user()->id,
-            'event' => 'website_page.revision_restored',
-            'description' => 'Restored website page '.$websitePage->slug.' from revision '.$restoredVersion,
-            'method' => $request->method(),
-            'route' => optional($request->route())->getName(),
-            'ip_address' => $request->ip(),
-            'user_agent' => mb_substr((string) $request->userAgent(), 0, 1000),
-        ]);
+            ActivityLog::query()->create([
+                'user_id' => $request->user()->id,
+                'event' => 'website_page.revision_restored',
+                'description' => 'Restored website page '.$page->slug.' from revision '.$restoredVersion,
+                'method' => $request->method(),
+                'route' => optional($request->route())->getName(),
+                'ip_address' => $request->ip(),
+                'user_agent' => mb_substr((string) $request->userAgent(), 0, 1000),
+            ]);
+        }, 3);
 
         return redirect()->route('admin.website-pages.edit', $websitePage)
             ->with('success', 'Page revision restored. The restored state was saved as a new revision.');
