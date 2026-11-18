@@ -762,14 +762,14 @@ class UniversalAiAssistantPluginTest extends TestCase
         });
         Http::fake([
             'api.openai.com/v1/chat/completions' => Http::response(
-                "data: {\\"choices\\":[{\\"delta\\":{\\"content\\":\\"This response exceeded its token reservation.\\"}}]}\\n\\n".
-                "data: {\\"choices\\":[],\\"usage\\":{\\"total_tokens\\":5000}}\\n\\n".
-                "data: [DONE]\\n\\n",
+                "data: {\"choices\":[{\"delta\":{\"content\":\"This response exceeded its token reservation.\"}}]}\n\n".
+                "data: {\"choices\":[],\"usage\":{\"total_tokens\":5000}}\n\n".
+                "data: [DONE]\n\n",
                 200,
                 ['Content-Type' => 'text/event-stream']
             ),
         ]);
-        Route::post('/__test-ai-assistant/budget-overrun', [\\Aloms\\UniversalAiAssistant\\AssistantController::class, 'send']);
+        Route::post('/__test-ai-assistant/budget-overrun', [\Aloms\UniversalAiAssistant\AssistantController::class, 'send']);
 
         $response = $this->actingAs($user)->postJson('/__test-ai-assistant/budget-overrun', [
             'message' => 'Explain a grammar rule in Bangla.',
@@ -777,14 +777,14 @@ class UniversalAiAssistantPluginTest extends TestCase
         $response->assertOk();
         $response->streamedContent();
 
-        $reservation = \\DB::table('ai_assistant_token_reservations')
+        $reservation = \DB::table('ai_assistant_token_reservations')
             ->where('user_id', $user->id)
             ->first();
         $this->assertNotNull($reservation);
         $this->assertSame('over_budget', $reservation->status);
         $this->assertSame(5000, (int) $reservation->actual_tokens);
 
-        $audit = \\DB::table('ai_assistant_audit_events')
+        $audit = \DB::table('ai_assistant_audit_events')
             ->where('reservation_id', $reservation->id)
             ->where('event', 'budget_overrun')
             ->first();
@@ -803,7 +803,7 @@ class UniversalAiAssistantPluginTest extends TestCase
         ]);
     }
 
-    public function test_prompt_estimator_applies_a_conservative_byte_multiplier_and_rejects_unbounded_context(): void
+    public function test_prompt_estimator_uses_a_byte_bound_and_rejects_unbounded_context(): void
     {
         $messages = [['role' => 'user', 'content' => str_repeat('a', 1000)]];
         $payload = json_encode($messages, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
