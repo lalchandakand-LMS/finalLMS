@@ -7,6 +7,7 @@ use App\Http\Controllers\AcademicLevelController;
 use App\Http\Controllers\AdminPaymentGatewayController;
 use App\Http\Controllers\AiDeveloperController;
 use App\Http\Controllers\AdminSettingsController;
+use App\Http\Controllers\AdminSystemHealthController;
 use App\Http\Controllers\AdminVerificationController;
 use App\Http\Controllers\MarketingCenterController;
 use App\Http\Controllers\MetaAdsIntegrationController;
@@ -302,6 +303,8 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         ->name('courses.lessons.complete');
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
+        Route::get('/system-health', [AdminSystemHealthController::class, 'index'])->name('admin.system-health.index');
+        Route::post('/system-health/run', [AdminSystemHealthController::class, 'run'])->middleware('throttle:3,1')->name('admin.system-health.run');
         Route::get('/academic-levels', [AcademicLevelController::class, 'index'])->name('admin.academic-levels.index');
         Route::post('/academic-levels', [AcademicLevelController::class, 'store'])->name('admin.academic-levels.store');
         Route::get('/academic-levels/{academicLevel}', [AcademicLevelController::class, 'show'])->name('admin.academic-levels.show');
