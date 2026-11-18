@@ -7,7 +7,7 @@ Canonical application: Laravel 12, PHP 8.3+, MySQL/MariaDB
 
 ## 1. Purpose and how to use this document
 
-This is the durable handoff for any developer or AI coding agent, including AI coding assistant. It records the product decisions, known implementation context, open work, hosting constraints, quality rules and the process for continuing safely.
+This is the durable handoff for any developer or AI coding agent, including approved AI coding assistants. It records the product decisions, known implementation context, open work, hosting constraints, quality rules and the process for continuing safely.
 
 **Start here before changing code.** Then inspect the current repository, branches, pull requests, tests, migrations and deployment files. Documentation is context, not proof that code works. The actual current code and fresh test evidence are authoritative for implementation status.
 
