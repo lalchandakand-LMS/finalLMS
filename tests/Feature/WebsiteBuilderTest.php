@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Setting;
+use App\Models\Course;
 use App\Models\MediaAsset;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
