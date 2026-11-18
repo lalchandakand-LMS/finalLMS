@@ -165,6 +165,11 @@ class WebsitePageBuilderTest extends TestCase
         $firstRevision = $page->revisions()->firstOrFail();
         $this->assertSame(1, $firstRevision->version);
         $this->assertSame('First page version', $firstRevision->snapshot['title']);
+        $this->get(route('admin.website-pages.edit', $page))
+            ->assertOk()
+            ->assertSee('Revision history')
+            ->assertSee('Version 1')
+            ->assertSee('Restore this version');
 
         $this->put(route('admin.website-pages.update', $page), [
             'title' => 'Second page version',
@@ -276,6 +281,46 @@ class WebsitePageBuilderTest extends TestCase
             ->assertNotFound();
 
         $this->assertSame('Second page', $second->fresh()->title);
+    }
+
+
+    public function test_page_revision_migration_refuses_to_drop_saved_history(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $page = WebsitePage::create([
+            'title' => 'Retained history page',
+            'slug' => 'retained-history-page',
+            'template' => 'standard',
+            'sections' => [],
+            'status' => 'draft',
+            'created_by' => $admin->id,
+        ]);
+        WebsitePageRevision::create([
+            'website_page_id' => $page->id,
+            'version' => 1,
+            'snapshot' => [
+                'title' => $page->title,
+                'slug' => $page->slug,
+                'template' => $page->template,
+                'sections' => [],
+                'status' => $page->status,
+            ],
+            'created_by' => $admin->id,
+        ]);
+
+        $migration = require database_path('migrations/2026_11_18_120000_create_website_page_revisions_table.php');
+
+        try {
+            $migration->down();
+            $this->fail('Migration rollback must not erase saved page revision history.');
+        } catch (\RuntimeException $exception) {
+            $this->assertStringContainsString('preserve custom page revision history', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('website_page_revisions', [
+            'website_page_id' => $page->id,
+            'version' => 1,
+        ]);
     }
 
 
