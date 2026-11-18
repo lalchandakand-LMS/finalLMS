@@ -48,13 +48,14 @@ final class PluginLifecycle
                 throw (new ModelNotFoundException())->setModel(PluginInstallation::class, [$pluginKey]);
             }
 
-            $migrationInProgress = DB::table('plugin_migrations')
+            $unsettledMigration = DB::table('plugin_migrations')
                 ->where('plugin_key', $pluginKey)
                 ->where('plugin_version', $plugin->version)
-                ->whereIn('status', ['running', 'rolling_back'])
-                ->exists();
-            if ($migrationInProgress) {
-                throw new LogicException('Plugin lifecycle changes are blocked while a migration is running or rolling back.');
+                ->whereIn('status', ['running', 'rolling_back', 'failed', 'rollback_failed'])
+                ->value('status');
+            $canMarkFailed = $target === 'failed' && in_array($unsettledMigration, ['failed', 'rollback_failed'], true);
+            if ($unsettledMigration !== null && ! $canMarkFailed) {
+                throw new LogicException('Plugin lifecycle changes are blocked until the migration is recovered.');
             }
 
             $activeKeys = $plugins->where('status', 'active')->pluck('plugin_key')->all();
