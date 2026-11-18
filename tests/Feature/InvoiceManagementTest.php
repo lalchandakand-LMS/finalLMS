@@ -559,7 +559,7 @@ class InvoiceManagementTest extends TestCase
             'status' => 'gateway_unknown',
         ]);
 
-        $gateway = \\Mockery::mock(BkashRefundService::class);
+        $gateway = \Mockery::mock(BkashRefundService::class);
         $gateway->shouldReceive('verifyExisting')->once()->andReturnUsing(function () use ($refund): array {
             $refund->update([
                 'status' => 'approved',
@@ -568,7 +568,7 @@ class InvoiceManagementTest extends TestCase
                 'processed_at' => now(),
             ]);
 
-            throw new \\RuntimeException('Simulated stale request failure after concurrent completion.');
+            throw new \RuntimeException('Simulated stale request failure after concurrent completion.');
         });
         $this->app->instance(BkashRefundService::class, $gateway);
 
