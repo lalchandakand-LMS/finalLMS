@@ -57,7 +57,7 @@ final class PrepQuestionBankController extends Controller
         $data['created_by'] = $request->user()->id;
         $id = DB::table('aec_prep_questions')->insertGetId($data + ['created_at' => now(), 'updated_at' => now()]);
 
-        return redirect()->route('admin.prep-question-bank.index')->with('success', __('Question added to the preparation question bank.'));
+        return redirect('/admin/prep-question-bank')->with('success', __('Question added to the preparation question bank.'));
     }
 
     public function editQuestion(Request $request, int $question): View
@@ -75,7 +75,7 @@ final class PrepQuestionBankController extends Controller
         abort_unless(DB::table('aec_prep_questions')->where('id', $question)->exists(), 404);
         $data = $this->validatedQuestion($request);
         DB::table('aec_prep_questions')->where('id', $question)->update($data + ['updated_at' => now()]);
-        return redirect()->route('admin.prep-question-bank.index')->with('success', __('Question updated.'));
+        return redirect('/admin/prep-question-bank')->with('success', __('Question updated.'));
     }
 
     public function destroyQuestion(Request $request, int $question): RedirectResponse
@@ -162,7 +162,7 @@ final class PrepQuestionBankController extends Controller
             return $id;
         });
 
-        return redirect()->route('admin.prep-question-bank.sets.show', $setId)->with('success', __('Exam question paper created.'));
+        return redirect('/admin/prep-question-bank/sets/'.$setId)->with('success', __('Exam question paper created.'));
     }
 
     public function showSet(Request $request, int $set): View
@@ -183,7 +183,7 @@ final class PrepQuestionBankController extends Controller
             DB::table('aec_prep_question_set_items')->where('question_set_id', $set)->delete();
             DB::table('aec_prep_question_sets')->where('id', $set)->delete();
         });
-        return redirect()->route('admin.prep-question-bank.sets.index')->with('success', __('Question paper deleted.'));
+        return redirect('/admin/prep-question-bank/sets')->with('success', __('Question paper deleted.'));
     }
 
     private function ensureAdmin(Request $request): void
