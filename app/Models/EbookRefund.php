@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class EbookRefund extends Model
 {
     protected $fillable = [
-        'order_id', 'processed_by', 'amount', 'refund_reference', 'reason', 'processed_at',
+        'order_id', 'processed_by', 'amount', 'refund_reference', 'reason', 'status', 'gateway_refund_id', 'gateway_status', 'failure_reason', 'processed_at',
     ];
 
     protected $casts = [
