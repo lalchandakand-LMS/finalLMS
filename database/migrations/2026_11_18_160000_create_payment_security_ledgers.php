@@ -50,6 +50,7 @@ return new class extends Migration
         Schema::create('payment_reconciliations', function (Blueprint $table) {
             $table->id();
             $table->foreignId('payment_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('invoice_payment_id')->nullable()->constrained('invoice_payments')->nullOnDelete();
             $table->string('provider', 40);
             $table->string('gateway_payment_id')->nullable()->index();
             $table->string('gateway_transaction_id')->nullable()->index();
