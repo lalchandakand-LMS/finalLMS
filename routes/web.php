@@ -473,6 +473,8 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::get('/website-pages/create', [WebsitePageController::class, 'create'])->name('admin.website-pages.create');
         Route::post('/website-pages', [WebsitePageController::class, 'store'])->name('admin.website-pages.store');
         Route::get('/website-pages/{websitePage}/edit', [WebsitePageController::class, 'edit'])->name('admin.website-pages.edit');
+        Route::get('/website-pages/{websitePage}/revisions', [WebsitePageController::class, 'revisions'])->name('admin.website-pages.revisions');
+        Route::post('/website-pages/{websitePage}/revisions/{revision}/restore', [WebsitePageController::class, 'restoreRevision'])->middleware('throttle:10,1')->name('admin.website-pages.revisions.restore');
         Route::get('/website-pages/{websitePage}/preview', [WebsitePageController::class, 'preview'])->name('admin.website-pages.preview');
         Route::put('/website-pages/{websitePage}', [WebsitePageController::class, 'update'])->name('admin.website-pages.update');
         Route::post('/website-pages/{websitePage}/duplicate', [WebsitePageController::class, 'duplicate'])->name('admin.website-pages.duplicate');
