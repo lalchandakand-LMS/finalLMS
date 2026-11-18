@@ -4,6 +4,11 @@ namespace Tests\Feature;
 
 use Aloms\LearnEarn\LearnEarnExam;
 use Aloms\LearnEarn\LearnEarnExamEntitlement;
+use Aloms\LearnEarn\LearnEarnExamAttempt;
+use Aloms\LearnEarn\LearnEarnAttemptQuestion;
+use Aloms\LearnEarn\LearnEarnExamQuestion;
+use Aloms\LearnEarn\LearnEarnExamAnswer;
+use Aloms\LearnEarn\LearnEarnScorer;
 use Aloms\LearnEarn\StudentLearnEarnController;
 use App\Models\Payment;
 use App\Models\User;
@@ -14,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 class LearnEarnPaidExamPaymentTest extends TestCase
@@ -57,6 +63,11 @@ class LearnEarnPaidExamPaymentTest extends TestCase
         require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnExam.php');
         require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnExamEntitlement.php');
         require_once base_path('plugins/aec/learn-earn/1.0.0/src/StudentLearnEarnController.php');
+        require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnExamAttempt.php');
+        require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnAttemptQuestion.php');
+        require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnExamQuestion.php');
+        require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnExamAnswer.php');
+        require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnScorer.php');
         require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnExamAttempt.php');
         require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnAttemptQuestion.php');
         require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnExamQuestion.php');
@@ -334,7 +345,7 @@ class LearnEarnPaidExamPaymentTest extends TestCase
         $request->setUserResolver(fn () => $student);
         $response = app(StudentLearnEarnController::class)->attempt($request, $attempt);
 
-        $this->assertInstanceOf(\\Illuminate\\Http\\RedirectResponse::class, $response);
+        $this->assertInstanceOf(\Illuminate\Http\RedirectResponse::class, $response);
         $this->assertSame(route('student.learn-earn.attempts.result', $attempt), $response->getTargetUrl());
         $this->assertDatabaseHas('learn_earn_exam_attempts', [
             'id' => $attempt->id,
