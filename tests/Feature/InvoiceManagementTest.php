@@ -441,7 +441,7 @@ class InvoiceManagementTest extends TestCase
             'gateway_transaction_id' => 'BKASH-INVOICE-TRX-100',
         ]);
         $this->assertDatabaseHas('payment_gateway_events', [
-            'event_key' => 'bkash:payment:BKASH-INVOICE-PAY-100:BKASH-INVOICE-TRX-100',
+            'event_key' => hash('sha256', 'bkash:payment:BKASH-INVOICE-PAY-100:BKASH-INVOICE-TRX-100'),
             'invoice_payment_id' => InvoicePayment::firstOrFail()->id,
             'event_type' => 'invoice.payment.verified',
             'processing_status' => 'processed',
