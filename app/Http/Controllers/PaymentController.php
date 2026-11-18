@@ -14,6 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -303,17 +304,37 @@ class PaymentController extends Controller
 
     public function index(): View
     {
-        $payments = Payment::query()
-            ->where(fn ($query) => $query->whereNotNull('course_id')->orWhereNotNull('course_combo_id'))
-            ->with(['user', 'course', 'courseCombo', 'comboCourses', 'reviewer'])
-            ->latest()
-            ->paginate(20);
+        $hasExamPayments = Schema::hasTable('learn_earn_exams')
+            && Schema::hasColumn('payments', 'learn_earn_exam_id');
+
+        $query = Payment::query()
+            ->where(function ($query) use ($hasExamPayments): void {
+                $query->whereNotNull('payments.course_id')->orWhereNotNull('payments.course_combo_id');
+                if ($hasExamPayments) {
+                    $query->orWhereNotNull('payments.learn_earn_exam_id');
+                }
+            })
+            ->with(['user', 'course', 'courseCombo', 'comboCourses', 'reviewer']);
+
+        if ($hasExamPayments) {
+            // Use a left join rather than an Eloquent plugin-model relation so the
+            // admin payment page remains usable when the plugin is installed but inactive.
+            $query->leftJoin('learn_earn_exams', 'payments.learn_earn_exam_id', '=', 'learn_earn_exams.id')
+                ->addSelect('payments.*', 'learn_earn_exams.title as learn_earn_exam_title');
+        } else {
+            $query->select('payments.*');
+        }
+
+        $payments = $query->orderByDesc('payments.created_at')->paginate(20);
 
         return view('admin.payments.index', compact('payments'));
     }
 
     public function approve(Payment $payment): RedirectResponse
     {
+        if ($payment->learn_earn_exam_id) {
+            return back()->with('error', 'Paid exam payments are fulfilled only by a matching server-verified gateway callback.');
+        }
         if ($payment->order_id) {
             return back()->with('error', 'eBook order payments must be fulfilled through verified eBook checkout.');
         }
@@ -403,6 +424,9 @@ class PaymentController extends Controller
 
     public function reject(Payment $payment, Request $request): RedirectResponse
     {
+        if ($payment->learn_earn_exam_id) {
+            return back()->with('error', 'Paid exam gateway payments must be reconciled through server-side provider verification.');
+        }
         if (filled($payment->gateway_provider)) {
             return back()->with('error', 'Gateway payments must be reconciled through the payment provider.');
         }

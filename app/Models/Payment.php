@@ -11,6 +11,7 @@ class Payment extends Model
         'user_id',
         'course_id',
         'order_id',
+        'learn_earn_exam_id',
         'course_combo_id',
         'flash_sale_id',
         'batch_id',
