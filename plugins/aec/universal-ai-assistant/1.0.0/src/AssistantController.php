@@ -183,7 +183,7 @@ final class AssistantController
             });
 
             $userId = (int) $request->user()->id;
-            return response()->stream(function () use ($provider, $apiKey, $settings, $messages, $responseTokenLimit, $reservationId, $conversation, $role, $userId): void {
+            return response()->stream(function () use ($provider, $apiKey, $settings, $messages, $responseTokenLimit, $estimatedPromptTokens, $reservationId, $conversation, $role, $userId): void {
                 $emit = static function (array $event): void {
                     echo 'data: '.json_encode($event, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE)."\n\n";
                     if (ob_get_level() > 0) @ob_flush();
@@ -210,7 +210,7 @@ final class AssistantController
                         : AssistantTokenBudget::estimatePromptTokens(array_merge($messages, [
                             ['role' => 'assistant', 'content' => $answer],
                         ]));
-                    AssistantTokenBudget::settle($reservationId, $tokens, function () use ($conversation, $answer, $tokens, $settings, $reservationId, $role, $userId): void {
+                    AssistantTokenBudget::settle($reservationId, $tokens, function () use ($conversation, $answer, $tokens, $settings, $reservationId, $role, $userId, $estimatedPromptTokens, $responseTokenLimit): void {
                         DB::table('ai_assistant_messages')->insert([
                             'conversation_id' => $conversation->id,
                             'message_role' => 'assistant',
@@ -219,7 +219,15 @@ final class AssistantController
                             'model' => (string) $settings['model'],
                             'created_at' => now(),
                         ]);
-                        AssistantAudit::record('response_completed', $userId, (int) $conversation->id, (int) $reservationId, $role, (string) $settings['provider'], (string) $settings['model'], ['total_tokens' => $tokens]);
+                        $reservedCeiling = $estimatedPromptTokens + $responseTokenLimit;
+                        AssistantAudit::record('response_completed', $userId, (int) $conversation->id, (int) $reservationId, $role, (string) $settings['provider'], (string) $settings['model'], ['total_tokens' => $tokens, 'reserved_tokens' => $reservedCeiling]);
+                        if ($tokens > $reservedCeiling) {
+                            AssistantAudit::record('budget_overrun', $userId, (int) $conversation->id, (int) $reservationId, $role, (string) $settings['provider'], (string) $settings['model'], [
+                                'actual_tokens' => $tokens,
+                                'reserved_tokens' => $reservedCeiling,
+                                'overrun_tokens' => $tokens - $reservedCeiling,
+                            ]);
+                        }
                     });
                     DB::table('ai_assistant_conversations')->where('id', $conversation->id)->update(['updated_at' => now()]);
                     $emit(['type' => 'delta', 'content' => $answer]);
