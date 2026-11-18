@@ -41,6 +41,15 @@ class WebsiteBuilderController extends Controller
             'home_title' => ['nullable', 'string', 'max:255'],
             'home_subtitle' => ['nullable', 'string', 'max:500'],
             'home_featured_title' => ['nullable', 'string', 'max:255'],
+            'home_reason_title' => ['nullable', 'string', 'max:255'],
+            'home_cta_primary' => ['nullable', 'string', 'max:80'],
+            'home_cta_secondary' => ['nullable', 'string', 'max:80'],
+            'home_metric_1_value' => ['nullable', 'string', 'max:40'],
+            'home_metric_1_label' => ['nullable', 'string', 'max:80'],
+            'home_metric_2_value' => ['nullable', 'string', 'max:40'],
+            'home_metric_2_label' => ['nullable', 'string', 'max:80'],
+            'home_metric_3_value' => ['nullable', 'string', 'max:40'],
+            'home_metric_3_label' => ['nullable', 'string', 'max:80'],
             'home_slides' => ['nullable', 'array', 'max:3'],
             'home_slides.*.enabled' => ['nullable', 'boolean'],
             'home_slides.*.image_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
@@ -119,7 +128,7 @@ class WebsiteBuilderController extends Controller
             return ['label' => $label, 'url' => $url];
         })->filter()->take(6)->values()->all();
 
-        foreach (['site_name', 'site_logo_media_id', 'site_favicon_media_id', 'site_primary_color', 'home_title', 'home_subtitle', 'home_featured_title', 'footer_title', 'footer_text'] as $key) {
+        foreach (['site_name', 'site_logo_media_id', 'site_favicon_media_id', 'site_primary_color', 'home_title', 'home_subtitle', 'home_featured_title', 'home_reason_title', 'home_cta_primary', 'home_cta_secondary', 'home_metric_1_value', 'home_metric_1_label', 'home_metric_2_value', 'home_metric_2_label', 'home_metric_3_value', 'home_metric_3_label', 'footer_title', 'footer_text'] as $key) {
             if (array_key_exists($key, $validated)) {
                 Setting::setValue($key, $validated[$key] ?? '');
             }
