@@ -453,14 +453,17 @@ PHP);
 
     public function test_plugin_cannot_activate_between_sequential_migration_claims(): void
     {
-        $file = $this->root.'/migrations/2026_11_15_000009_activation_gap_guard.php';
-        file_put_contents($file, <<<'PHP'
+        $firstFile = $this->root.'/migrations/2026_11_15_000009_first_activation_gap_guard.php';
+        $secondFile = $this->root.'/migrations/2026_11_15_000010_second_activation_gap_guard.php';
+        $migrationSource = <<<'PHP'
 <?php
 return new class extends \Illuminate\Database\Migrations\Migration {
     public function up(): void {}
     public function down(): void {}
 };
-PHP);
+PHP;
+        file_put_contents($firstFile, $migrationSource);
+        file_put_contents($secondFile, $migrationSource);
 
         $plugin = new PluginInstallation();
         $plugin->forceFill([
@@ -476,13 +479,27 @@ PHP);
             'signature_verified_at' => now(),
             'metadata' => [
                 'integrity_version' => 1,
-                'installed_file_hashes' => ['migrations/2026_11_15_000009_activation_gap_guard.php' => hash_file('sha256', $file)],
+                'installed_file_hashes' => [
+                    'migrations/'.basename($firstFile) => hash_file('sha256', $firstFile),
+                    'migrations/'.basename($secondFile) => hash_file('sha256', $secondFile),
+                ],
             ],
         ])->save();
 
+        \DB::table('plugin_migrations')->insert([
+            'plugin_key' => $plugin->plugin_key,
+            'plugin_version' => $plugin->version,
+            'migration' => basename($firstFile),
+            'status' => 'completed',
+            'started_at' => now(),
+            'completed_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
         try {
             app(\App\Services\Plugins\PluginLifecycle::class)->transition($plugin->plugin_key, 'active');
-            $this->fail('A plugin must not activate while a declared migration is still pending.');
+            $this->fail('A plugin must not activate while a later declared migration remains pending.');
         } catch (\LogicException $exception) {
             $this->assertStringContainsString('all declared migrations', $exception->getMessage());
         }
@@ -495,7 +512,12 @@ PHP);
         $this->assertSame('active', $activated->status);
         $this->assertDatabaseHas('plugin_migrations', [
             'plugin_key' => $plugin->plugin_key,
-            'migration' => basename($file),
+            'migration' => basename($firstFile),
+            'status' => 'completed',
+        ]);
+        $this->assertDatabaseHas('plugin_migrations', [
+            'plugin_key' => $plugin->plugin_key,
+            'migration' => basename($secondFile),
             'status' => 'completed',
         ]);
     }
