@@ -271,6 +271,8 @@ class AdminEbookOrderController extends Controller
         abort_unless($refund->status === 'gateway_unknown', 409);
         $order = Order::query()->with('payments')->findOrFail($refund->order_id);
         $payment = $order->payments->first(fn ($candidate) => $candidate->gateway_provider === 'bkash'
+            && $candidate->status === 'approved'
+            && round((float) $candidate->amount, 2) === round((float) $refund->amount, 2)
             && filled($candidate->gateway_payment_id) && filled($candidate->gateway_transaction_id));
         abort_unless($payment, 422);
 
@@ -375,7 +377,10 @@ class AdminEbookOrderController extends Controller
 
         $productSales = DB::table('order_items')
             ->join('orders', 'orders.id', '=', 'order_items.order_id')
-            ->leftJoin('ebook_refunds', 'ebook_refunds.order_id', '=', 'orders.id')
+            ->leftJoin('ebook_refunds', function ($join) {
+                $join->on('ebook_refunds.order_id', '=', 'orders.id')
+                    ->where('ebook_refunds.status', 'refunded');
+            })
             ->where('order_items.product_type', 'ebook')
             ->whereIn('orders.status', ['completed', 'refunded'])
             ->where('orders.total', '>', 0)
