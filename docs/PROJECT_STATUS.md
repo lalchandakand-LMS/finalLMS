@@ -23,13 +23,14 @@ This snapshot supersedes older PR status notes below when they conflict. Re-fetc
 
 | PR | Workstream | Current verified state |
 |---|---|---|
-| [#277](https://github.com/lalchandakand-LMS/finalLMS/pull/277) | Flash Sale plugin + negative marking | Draft; exact-head Laravel CI, CodeQL and cPanel package validation passed on `78b366929486753803d5ea40be613d0fba31f5c7`. Reviewer changes-requested status remains unresolved pending re-review. Standalone signed plugin ZIP, trusted signing-key provisioning, staging lifecycle and browser checkout acceptance remain open. |
-| [#318](https://github.com/lalchandakand-LMS/finalLMS/pull/318) | Learn & Earn plugin | Draft; exact-head Laravel CI, CodeQL and cPanel package validation passed on `2aaa5c82d99bcbae0c0a75961f0ecb28db1e36bd`. Manual/offline payment review, autosave/recovery, standalone signed package, trusted key and staging/browser acceptance remain open. |
-| [#320](https://github.com/lalchandakand-LMS/finalLMS/pull/320) | Plugin migration claim/rollback safety | Draft; fixture table-name correction committed as `4d5cb75ce9c3f1cf0e33340a3022cc2721929bca`. Exact-head CodeQL passed; Laravel CI is running. |
-| [#323](https://github.com/lalchandakand-LMS/finalLMS/pull/323) | Remove external AI-builder branding references | Draft documentation PR; branch search found zero matches for `Google AI Studio` and `AI Studio`. Exact-head Laravel CI and CodeQL are running. |
+| [#319](https://github.com/lalchandakand-LMS/finalLMS/pull/319) | Signed Theme Manager | Merged to main as `bdd6b3db1e5dbc1c69589d54e67864b0fd94f1a7`; exact-head Laravel CI and CodeQL passed. |
+| [#322](https://github.com/lalchandakand-LMS/finalLMS/pull/322) | Universal AI Assistant atomic daily budget | Merged to main as `08c5456df67b818e60e337c1bf3bd677cd0d3f44`; exact-head Laravel CI and CodeQL passed. |
+| [#318](https://github.com/lalchandakand-LMS/finalLMS/pull/318) | Learn & Earn paid exam plugin | Merged to main as `0df6cfb9a27803c47f6a39802b6b40731931105d`; exact-head Laravel CI test/package and CodeQL passed. Manual/offline payment review, autosave/recovery, standalone signed package, trusted key and staging/browser acceptance remain open. |
+| [#277](https://github.com/lalchandakand-LMS/finalLMS/pull/277) | Flash Sale plugin + negative marking | Draft; current-main merge commit `c68c9d0c07caa821bac2dd712223fc66f058f6ff`, 0 commits behind main. Fresh exact-head Laravel CI/CodeQL are pending/in progress after moving Flash Sale routes fully into the plugin. Standalone signed plugin ZIP, trusted signing-key provisioning, staging lifecycle and browser checkout acceptance remain open. |
+| [#320](https://github.com/lalchandakand-LMS/finalLMS/pull/320) | Plugin migration claim/rollback safety | Draft; current-main merge commit `ad58fa9cc25c42e3c3aee9139eaf708091805b18`, 0 commits behind main. Fresh exact-head Laravel CI/CodeQL are queued/in progress after lifecycle activation was guarded until every declared migration completes. |
+| [#323](https://github.com/lalchandakand-LMS/finalLMS/pull/323) | Remove external AI-builder branding references | Draft documentation PR; rebased onto current main as `da96ee035363b13d8dd92d51cb418924b394b995`. Fresh exact-head CI/CodeQL are pending. |
 
-All four PRs are current with main at the time of this snapshot. None is merged or production-deployed. Do not infer staging, provider, signed-plugin or browser acceptance from CI/package success.
-
+No production deployment, live database migration or live payment-provider activation has been performed. Do not infer signed-plugin, provider, staging or browser acceptance from CI/package success.
 ## Architecture decision
 
 Five operational panels: Admin (one unified admin; no separate Super Admin), Branch (separate and branch-scoped), Teacher, Student, Guardian. This follows the owner's later explicit direction and Issue #40; older Issue #38's four-portal proposal must be reconciled. See `docs/DECISION_LOG.md`.
