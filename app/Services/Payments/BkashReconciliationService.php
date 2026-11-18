@@ -35,6 +35,7 @@ class BkashReconciliationService
         $matches = $error === null && $gatewayStatus === 'completed'
             && $gatewayId === $payment->gateway_payment_id
             && $gatewayTrx === $payment->gateway_transaction_id
+            && ($verified['merchantInvoiceNumber'] ?? null) === $payment->invoice?->invoice_number
             && $gatewayAmount !== null && $gatewayAmount === round((float) $payment->amount, 2)
             && $currency === 'BDT';
         $result = $error !== null ? 'error' : ($matches ? 'matched' : 'mismatch');
