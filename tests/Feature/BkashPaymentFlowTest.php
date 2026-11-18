@@ -86,7 +86,7 @@ class BkashPaymentFlowTest extends TestCase
             'gateway_transaction_id' => 'BKASH-TRX-001',
         ]);
         $this->assertDatabaseHas('payment_gateway_events', [
-            'event_key' => 'bkash:payment:BKASH-PAY-001:BKASH-TRX-001',
+            'event_key' => hash('sha256', 'bkash:payment:BKASH-PAY-001:BKASH-TRX-001'),
             'verification_status' => 'verified',
             'processing_status' => 'processed',
         ]);
