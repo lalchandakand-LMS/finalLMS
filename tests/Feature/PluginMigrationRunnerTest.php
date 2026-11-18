@@ -451,4 +451,53 @@ PHP);
         ]);
     }
 
+    public function test_plugin_cannot_activate_between_sequential_migration_claims(): void
+    {
+        $file = $this->root.'/migrations/2026_11_15_000009_activation_gap_guard.php';
+        file_put_contents($file, <<<'PHP'
+<?php
+return new class extends \Illuminate\Database\Migrations\Migration {
+    public function up(): void {}
+    public function down(): void {}
+};
+PHP);
+
+        $plugin = new PluginInstallation();
+        $plugin->forceFill([
+            'plugin_key' => 'test.migration-check',
+            'name' => 'Activation Gap Guard',
+            'version' => '1.0.0',
+            'type' => 'module',
+            'status' => 'installed',
+            'manifest' => ['migrations' => 'migrations'],
+            'package_path' => $this->relative,
+            'package_sha256' => str_repeat('a', 64),
+            'signature_key_id' => 'test-key',
+            'signature_verified_at' => now(),
+            'metadata' => [
+                'integrity_version' => 1,
+                'installed_file_hashes' => ['migrations/2026_11_15_000009_activation_gap_guard.php' => hash_file('sha256', $file)],
+            ],
+        ])->save();
+
+        try {
+            app(\App\Services\Plugins\PluginLifecycle::class)->transition($plugin->plugin_key, 'active');
+            $this->fail('A plugin must not activate while a declared migration is still pending.');
+        } catch (\LogicException $exception) {
+            $this->assertStringContainsString('all declared migrations', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('plugin_registry', ['id' => $plugin->id, 'status' => 'installed']);
+
+        app(PluginMigrationRunner::class)->migrate($plugin);
+        $activated = app(\App\Services\Plugins\PluginLifecycle::class)->transition($plugin->plugin_key, 'active');
+
+        $this->assertSame('active', $activated->status);
+        $this->assertDatabaseHas('plugin_migrations', [
+            'plugin_key' => $plugin->plugin_key,
+            'migration' => basename($file),
+            'status' => 'completed',
+        ]);
+    }
+
 }
