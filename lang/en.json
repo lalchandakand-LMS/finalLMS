@@ -848,5 +848,15 @@
     "All retained popup campaigns and analytics were erased.": "All retained popup campaigns and analytics were erased.",
     "Type ERASE POPUP DATA exactly to confirm purging retained popup campaigns and analytics.": "Type ERASE POPUP DATA exactly to confirm purging retained popup campaigns and analytics.",
     "Sanitized HTML content cannot be empty when using sanitized HTML mode.": "Sanitized HTML content cannot be empty when using sanitized HTML mode.",
-    "The end date/time must be after or equal to the start date/time.": "The end date/time must be after or equal to the start date/time."
+    "The end date/time must be after or equal to the start date/time.": "The end date/time must be after or equal to the start date/time.",
+    "Activation History": "Activation History",
+    "No theme changes have been recorded yet.": "No theme changes have been recorded yet.",
+    "Theme": "Theme",
+    "Previous theme": "Previous theme",
+    "Changed by": "Changed by",
+    "Built-in Alom LMS theme": "Built-in Alom LMS theme",
+    "System": "System",
+    "To roll back, preview and activate a previously installed theme, or reset to the built-in theme.": "To roll back, preview and activate a previously installed theme, or reset to the built-in theme.",
+    "Activate": "Activate",
+    "Reset": "Reset"
 }

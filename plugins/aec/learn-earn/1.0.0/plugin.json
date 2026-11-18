@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "key": "aec.learn-earn",
+  "name": "Learn & Earn",
+  "version": "1.0.0",
+  "type": "module",
+  "entrypoint": "src/Plugin.php",
+  "requires": {
+    "php": "^8.3",
+    "laravel": "^12.0",
+    "lms": "^1.0"
+  },
+  "dependencies": [],
+  "conflicts": [],
+  "portals": [
+    "admin",
+    "student",
+    "public"
+  ],
+  "permissions": [
+    "learn-earn.manage",
+    "learn-earn.take-exams"
+  ],
+  "capabilities": [
+    "reusable-mcq-authoring",
+    "question-categories",
+    "positive-negative-marking",
+    "exam-builder",
+    "immutable-question-snapshots",
+    "student-exam-catalogue",
+    "free-exam-attempts",
+    "server-side-scoring",
+    "attempt-history",
+    "paid-exam-bkash-checkout",
+    "server-verified-payment-entitlements",
+    "idempotent-payment-callbacks"
+  ],
+  "migrations": "migrations"
+}

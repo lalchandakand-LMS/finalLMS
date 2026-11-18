@@ -81,7 +81,9 @@ final class PluginContext
             throw new InvalidArgumentException('Public plugin routes cannot use authenticated permission grants.');
         }
 
-        Route::middleware($middleware)->prefix($prefix)->name($namePrefix)->group($routes);
+        $this->router->middleware($middleware)->prefix($prefix)->as($namePrefix)->group($routes);
+        // Refresh named-route lookups after plugin groups apply their route-name prefixes.
+        $this->router->getRoutes()->refreshNameLookups();
     }
     /**
      * Register mobile API routes for the roles supported by the LMS device-token

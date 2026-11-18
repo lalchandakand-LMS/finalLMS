@@ -220,6 +220,11 @@ class BkashPaymentController extends Controller
             ->firstOrFail();
 
         if ($payment->status === 'approved') {
+            if ($payment->learn_earn_exam_id) {
+                return redirect()->to('/student/learn-earn/exams')
+                    ->with('success', __('Your paid exam access is already verified.'));
+            }
+
             return $payment->order_id
                 ? redirect()->route('ebooks.orders')->with('success', __('Your eBook payment is already verified.'))
                 : redirect()->route('courses.show', $payment->course)->with('success', 'Your payment is already verified.');
@@ -249,7 +254,11 @@ class BkashPaymentController extends Controller
                 || ($invoice !== null && $invoice !== $payment->transaction_reference)
                 || ($payment->order_id && $invoice !== $payment->transaction_reference)
                 || ($payment->order_id && ! isset($verified['paymentID']))
-                || ($payment->order_id && (! isset($verified['currency']) || strtoupper((string) $verified['currency']) !== 'BDT'))) {
+                || ($payment->order_id && (! isset($verified['currency']) || strtoupper((string) $verified['currency']) !== 'BDT'))
+                || ($payment->learn_earn_exam_id && ($invoice !== $payment->transaction_reference
+                    || ! isset($verified['paymentID'])
+                    || ! isset($verified['currency'])
+                    || strtoupper((string) $verified['currency']) !== 'BDT'))) {
                 throw new \RuntimeException('bKash transaction verification did not match the local payment.');
             }
 
@@ -327,6 +336,81 @@ class BkashPaymentController extends Controller
                     return 'ebook_approved';
                 }
 
+                if ($lockedPayment->learn_earn_exam_id) {
+                    $exam = DB::table('learn_earn_exams')
+                        ->where('id', $lockedPayment->learn_earn_exam_id)
+                        ->where('status', 'published')
+                        ->where('ends_at', '>=', now())
+                        ->lockForUpdate()
+                        ->first();
+                    $studentRole = DB::table('users')->where('id', $lockedPayment->user_id)->value('role');
+
+                    if (! $exam
+                        || $exam->status !== 'published'
+                        || strtotime((string) $exam->ends_at) < now()->timestamp
+                        || $lockedPayment->course_id !== null
+                        || $lockedPayment->order_id !== null
+                        || $studentRole !== 'student'
+                        || $exam->access_type !== 'paid'
+                        || (float) $lockedPayment->amount <= 0
+                        || strtoupper((string) $lockedPayment->currency) !== 'BDT'
+                        || $lockedPayment->gateway_provider !== 'bkash') {
+                        $lockedPayment->update([
+                            'status' => 'rejected',
+                            'gateway_transaction_id' => $transactionId,
+                            'reviewed_at' => now(),
+                            'admin_note' => 'bKash payment succeeded but the paid exam entitlement could not be validated. Manual refund or review is required.',
+                        ]);
+
+                        return 'learn_earn_exam_unavailable';
+                    }
+
+                    $entitlement = DB::table('learn_earn_exam_entitlements')
+                        ->where('exam_id', $exam->id)
+                        ->where('student_id', $lockedPayment->user_id)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if ($entitlement && $entitlement->status === 'active') {
+                        $lockedPayment->update([
+                            'status' => 'rejected',
+                            'gateway_transaction_id' => $transactionId,
+                            'reviewed_at' => now(),
+                            'admin_note' => 'A paid exam entitlement already exists for this student. A duplicate successful payment requires manual refund.',
+                        ]);
+
+                        return 'learn_earn_exam_already_owned';
+                    }
+
+                    if ($entitlement) {
+                        DB::table('learn_earn_exam_entitlements')->where('id', $entitlement->id)->update([
+                            'payment_id' => $lockedPayment->id,
+                            'status' => 'active',
+                            'paid_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    } else {
+                        DB::table('learn_earn_exam_entitlements')->insert([
+                            'exam_id' => $exam->id,
+                            'student_id' => $lockedPayment->user_id,
+                            'payment_id' => $lockedPayment->id,
+                            'status' => 'active',
+                            'paid_at' => now(),
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
+
+                    $lockedPayment->update([
+                        'status' => 'approved',
+                        'gateway_transaction_id' => $transactionId,
+                        'reviewed_at' => now(),
+                        'admin_note' => null,
+                    ]);
+
+                    return 'learn_earn_exam_approved';
+                }
+
                 if ($lockedPayment->batch_id) {
                     $batch = Batch::query()->lockForUpdate()->findOrFail($lockedPayment->batch_id);
                     $enrollments = Enrollment::query()
@@ -365,6 +449,19 @@ class BkashPaymentController extends Controller
                 return 'approved';
             });
 
+            if ($payment->learn_earn_exam_id) {
+                return match ($result) {
+                    'learn_earn_exam_approved', 'already' => redirect()->to('/student/learn-earn/exams')
+                        ->with('success', __('bKash payment verified. Your paid exam access is now active.')),
+                    'learn_earn_exam_already_owned' => redirect()->to('/student/learn-earn/exams')
+                        ->with('error', __('An active entitlement already exists. The academy must review this duplicate payment for refund.')),
+                    'learn_earn_exam_unavailable' => redirect()->to('/student/learn-earn/exams')
+                        ->with('error', __('Payment succeeded but exam access could not be granted. The academy must review or refund this payment.')),
+                    default => redirect()->to('/student/learn-earn/exams')
+                        ->with('error', __('This paid exam payment is no longer eligible for automatic approval. Contact the academy.')),
+                };
+            }
+
             if ($payment->order_id) {
                 return match ($result) {
                     'ebook_approved', 'already' => redirect()->route('ebooks.orders')
@@ -388,7 +485,23 @@ class BkashPaymentController extends Controller
 
             return redirect()->route('courses.show', $payment->course)
                 ->with('success', 'bKash payment verified. Your course enrollment is now active.');
-        } catch (Throwable) {
+        } catch (Throwable $exception) {
+            report($exception);
+
+            // Keep diagnostics useful without recording callback query data, tokens,
+            // payer details, or provider credentials.
+            \Illuminate\Support\Facades\Log::warning('bKash callback verification failed.', [
+                'payment_record_id' => $payment->id,
+                'payment_intent' => $payment->learn_earn_exam_id ? 'learn_earn_exam' : ($payment->order_id ? 'ebook' : 'course'),
+                'exception_class' => get_class($exception),
+                'exception_message' => \Illuminate\Support\Str::limit($exception->getMessage(), 240),
+            ]);
+
+            if ($payment->learn_earn_exam_id) {
+                return redirect()->to('/student/learn-earn/exams')
+                    ->with('warning', __('Your bKash payment is awaiting server-side verification. Do not pay again; contact the academy if this message remains.'));
+            }
+
             return $payment->order_id
                 ? redirect()->route('ebooks.orders')->with('warning', __('Your bKash payment is awaiting server-side verification. Do not pay again; contact the academy if this message remains.'))
                 : redirect()->route('courses.show', $payment->course)->with('warning', __('Your bKash payment is awaiting server-side verification. Do not pay again; contact the academy if this message remains.'));
