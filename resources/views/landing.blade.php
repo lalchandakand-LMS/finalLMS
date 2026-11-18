@@ -27,7 +27,7 @@
         $courseCount = $hasCoursesTable ? \App\Models\Course::count() : 0;
         $studentCount = $hasUsersTable ? \App\Models\User::where('role', 'student')->count() : 0;
         $certificateCount = $hasCertificatesTable ? \App\Models\Certificate::count() : 0;
-        $featuredCourses = $hasCoursesTable ? \App\Models\Course::with('teacher')->withCount('lessons')->latest()->take(3)->get() : collect();
+        $featuredCourses = $hasCoursesTable ? \App\Models\Course::with('teacher')->withCount('lessons')->where('status', 'published')->latest()->take(3)->get() : collect();
         $storedSlides = $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('home_slides', '[]'), true) : [];
         $homeSlides = collect(is_array($storedSlides) ? $storedSlides : [])->filter(fn ($slide) => is_array($slide) && !empty($slide['enabled']) && !empty($slide['image_id']))->map(function ($slide) {
             $asset = \App\Models\MediaAsset::query()->whereKey($slide['image_id'])->where('mime_type', 'like', 'image/%')->first();
