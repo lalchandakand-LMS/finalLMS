@@ -11,7 +11,7 @@ use Throwable;
 
 class BkashReconciliationService
 {
-    public function reconcileInvoicePayment(InvoicePayment $payment): PaymentReconciliation
+    public function reconcileInvoicePayment(InvoicePayment $payment, ?int $actorId = null): PaymentReconciliation
     {
         $checkedAt = now();
         $verified = [];
@@ -39,7 +39,7 @@ class BkashReconciliationService
             && $currency === 'BDT';
         $result = $error !== null ? 'error' : ($matches ? 'matched' : 'mismatch');
 
-        return DB::transaction(function () use ($payment, $checkedAt, $gatewayStatus, $gatewayAmount, $gatewayTrx, $currency, $result, $error): PaymentReconciliation {
+        return DB::transaction(function () use ($payment, $checkedAt, $gatewayStatus, $gatewayAmount, $gatewayTrx, $currency, $result, $error, $actorId): PaymentReconciliation {
             $record = PaymentReconciliation::create([
                 'invoice_payment_id' => $payment->id,
                 'provider' => 'bkash',
@@ -56,6 +56,7 @@ class BkashReconciliationService
             ]);
             PaymentAuditEvent::create([
                 'invoice_payment_id' => $payment->id,
+                'actor_id' => $actorId,
                 'provider' => 'bkash',
                 'event' => 'invoice_reconciliation_'.$result,
                 'source' => 'admin_reconciliation',
@@ -71,7 +72,7 @@ class BkashReconciliationService
         });
     }
 
-    public function reconcile(Payment $payment): PaymentReconciliation
+    public function reconcile(Payment $payment, ?int $actorId = null): PaymentReconciliation
     {
         $checkedAt = now();
         $verified = [];
@@ -101,9 +102,9 @@ class BkashReconciliationService
             && ($payment->gateway_transaction_id === null || $payment->gateway_transaction_id === $gatewayTrx);
         $result = $error !== null ? 'error' : ($matches ? 'matched' : 'mismatch');
 
-        return DB::transaction(function () use ($payment, $checkedAt, $gatewayStatus, $gatewayAmount, $gatewayTrx, $currency, $result, $error): PaymentReconciliation {
+        return DB::transaction(function () use ($payment, $checkedAt, $gatewayStatus, $gatewayAmount, $gatewayTrx, $currency, $result, $error, $actorId): PaymentReconciliation {
             $record = PaymentReconciliation::create([
-                'payment_id' => $payment->id, 'provider' => 'bkash',
+                'payment_id' => $payment->id, 'actor_id' => $actorId, 'provider' => 'bkash',
                 'gateway_payment_id' => $payment->gateway_payment_id,
                 'gateway_transaction_id' => $gatewayTrx ?: $payment->gateway_transaction_id,
                 'result' => $result, 'local_status' => $payment->status,
