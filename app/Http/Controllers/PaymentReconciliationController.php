@@ -28,21 +28,25 @@ class PaymentReconciliationController extends Controller
 
         $validated = $request->validate([
             'payment_id' => ['nullable', 'integer', 'exists:payments,id'],
+            'after_payment_id' => ['nullable', 'integer', 'min:0'],
         ]);
 
         $query = Payment::query()
             ->where('gateway_provider', 'bkash')
             ->whereNotNull('gateway_payment_id')
             ->when($validated['payment_id'] ?? null, fn ($payments, $id) => $payments->whereKey($id))
+            ->when(! empty($validated['after_payment_id']), fn ($payments) => $payments->where('id', '>', $validated['after_payment_id']))
             ->orderBy('id')
             ->limit(100);
 
         $count = 0;
+        $lastId = (int) ($validated['after_payment_id'] ?? 0);
         foreach ($query->get() as $payment) {
+            $lastId = $payment->id;
             $reconciler->reconcile($payment);
             $count++;
         }
 
-        return back()->with('success', "{$count} bKash transaction(s) checked. Review matched, mismatched and error results below.");
+        return back()->with('success', "{$count} bKash transaction(s) checked through payment ID {$lastId}. Enter this ID in the next run to continue.");
     }
 }
