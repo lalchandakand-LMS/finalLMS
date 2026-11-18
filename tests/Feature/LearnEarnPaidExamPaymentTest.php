@@ -337,6 +337,9 @@ class LearnEarnPaidExamPaymentTest extends TestCase
             Route::getRoutes()->refreshNameLookups();
         }
 
+        // Keep the URL generator synchronized with routes registered by this isolated test.
+        app('url')->setRoutes(Route::getRoutes());
+
         $request = Request::create('/student/learn-earn/attempts/'.$attempt->id, 'GET');
         $request->setUserResolver(fn () => $student);
         $response = app(StudentLearnEarnController::class)->attempt($request, $attempt);
