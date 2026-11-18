@@ -130,7 +130,7 @@ class LearnEarnPaidExamPaymentTest extends TestCase
             'student_id' => $student->id,
         ]);
 
-        \\Illuminate\\Support\\Facades\\Log::spy();
+        \Illuminate\Support\Facades\Log::spy();
 
         $this->get(route('payments.bkash.callback', [
             'paymentID' => 'BKASH-LEARN-EARN-001',
@@ -138,7 +138,7 @@ class LearnEarnPaidExamPaymentTest extends TestCase
         ]))->assertRedirect('/student/learn-earn/exams');
 
         $callbackFailure = null;
-        \\Illuminate\\Support\\Facades\\Log::shouldHaveReceived('warning')->withArgs(
+        \Illuminate\Support\Facades\Log::shouldHaveReceived('warning')->withArgs(
             function ($message, $context) use (&$callbackFailure): bool {
                 if ($message !== 'bKash callback verification failed.') {
                     return false;
