@@ -417,6 +417,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::get('/refunds', [InvoiceRefundController::class, 'index'])->name('admin.refunds.index');
         Route::post('/refunds', [InvoiceRefundController::class, 'store'])->name('admin.refunds.store');
         Route::post('/refunds/{refund}/approve', [InvoiceRefundController::class, 'approve'])->name('admin.refunds.approve');
+        Route::post('/refunds/{refund}/reconcile', [InvoiceRefundController::class, 'reconcile'])->middleware('throttle:5,1')->name('admin.refunds.reconcile');
         Route::post('/refunds/{refund}/reject', [InvoiceRefundController::class, 'reject'])->name('admin.refunds.reject');
         Route::get('/finance-reports', [FinanceReportController::class, 'index'])->name('admin.finance-reports.index');
         Route::get('/expenses', [ExpenseController::class, 'index'])->name('admin.expenses.index');
