@@ -20,9 +20,13 @@ class CourseController extends Controller
             'q' => ['nullable', 'string', 'max:120'],
             'sort' => ['nullable', 'in:newest,oldest,price_low,price_high,title'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
+            'academic_level_id' => ['nullable', 'integer', 'exists:academic_levels,id'],
         ]);
 
-        $query = Course::query()->with('teacher:id,name')->where('status', 'published');
+        $query = Course::query()->with(['teacher:id,name', 'academicLevel:id,name,slug'])->where('status', 'published');
+        if (! empty($validated['academic_level_id'])) {
+            $query->where('academic_level_id', $validated['academic_level_id']);
+        }
         if (! empty($validated['q'])) {
             $term = $validated['q'];
             $query->where(fn ($builder) => $builder
@@ -60,7 +64,7 @@ class CourseController extends Controller
         $enrolled = $user && $user->isStudent()
             && $course->enrollments()->where('user_id', $user->id)->whereIn('status', ['active', 'completed'])->exists();
 
-        $course->load(['teacher:id,name', 'lessons']);
+        $course->load(['teacher:id,name', 'academicLevel:id,name,slug', 'lessons']);
         $lessons = $course->lessons
             ->filter(fn (Lesson $lesson) => $enrolled || $isInstructor || $lesson->is_preview)
             ->values();
@@ -92,7 +96,7 @@ class CourseController extends Controller
         $enrollments = $request->user()->enrollments()
             ->whereIn('status', ['active', 'completed'])
             ->whereHas('course', fn ($query) => $query->where('status', 'published'))
-            ->with(['course.teacher:id,name', 'course.lessons'])
+            ->with(['course.teacher:id,name', 'course.academicLevel:id,name,slug', 'course.lessons'])
             ->latest()
             ->paginate(20);
 

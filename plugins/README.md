@@ -18,3 +18,13 @@ this directory. Do not expose this directory through public storage or a
 symbolic link. First-party source packages in this repository are maintained
 as reviewed application code; distributable plugin archives still require an
 approved release signature before installation.
+
+## First-party module manifests
+
+Directories such as `plugins/course_management/` contain declarative
+`plugin.json` manifests that mirror the allow-listed module catalogue and
+route/dependency metadata. They are currently marked `metadata_only`: the
+Laravel implementation is still in the application and these manifests do not
+make the feature independently installable or execute code. Each module must
+be extracted behind a tested contract and signed package lifecycle before it
+can be treated as an independently installable plugin.

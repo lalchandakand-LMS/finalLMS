@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Batch;
+use App\Models\AcademicLevel;
 use App\Models\Branch;
 use App\Models\Course;
 use App\Models\Enrollment;
@@ -88,6 +89,65 @@ class ExaminationWorkflowTest extends TestCase
 
         $this->actingAs($student)->get(route('student.exams.index'))->assertOk()->assertSee('Enrolled exam');
         $this->actingAs($otherStudent)->get(route('student.exams.index'))->assertOk()->assertDontSee('Enrolled exam');
+    }
+
+    public function test_student_can_filter_active_batch_exams_by_academic_level_without_losing_enrollment_scope(): void
+    {
+        [$teacher, $student, $batch] = $this->makeBatchWithStudent();
+        $primary = AcademicLevel::create(['name' => 'Primary', 'slug' => 'primary', 'is_active' => true]);
+        $secondary = AcademicLevel::create(['name' => 'Secondary', 'slug' => 'secondary', 'is_active' => true]);
+        $batch->course()->update(['academic_level_id' => $primary->id]);
+
+        $otherCourse = Course::create([
+            'teacher_id' => $teacher->id,
+            'academic_level_id' => $secondary->id,
+            'title' => 'Secondary English',
+            'slug' => 'secondary-english-'.uniqid(),
+            'description' => 'Secondary course.',
+            'price' => 0,
+            'status' => 'published',
+        ]);
+        $otherBatch = Batch::create([
+            'branch_id' => $batch->branch_id,
+            'course_id' => $otherCourse->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Secondary Batch',
+            'capacity' => 25,
+            'starts_at' => now(),
+            'ends_at' => now()->addMonth(),
+            'fee' => 0,
+            'status' => 'open',
+        ]);
+        Enrollment::create([
+            'user_id' => $student->id,
+            'course_id' => $otherCourse->id,
+            'batch_id' => $otherBatch->id,
+            'status' => 'active',
+        ]);
+
+        foreach ([[$batch, 'Primary exam'], [$otherBatch, 'Secondary exam']] as [$examBatch, $title]) {
+            Exam::create([
+                'batch_id' => $examBatch->id,
+                'teacher_id' => $teacher->id,
+                'title' => $title,
+                'starts_at' => now()->addHour(),
+                'ends_at' => now()->addHours(2),
+                'duration_minutes' => 30,
+                'pass_marks' => 0,
+                'status' => 'published',
+            ]);
+        }
+
+        $this->actingAs($student)
+            ->get(route('student.exams.index', ['academic_level_id' => $primary->id]))
+            ->assertOk()
+            ->assertSee('Primary exam')
+            ->assertDontSee('Secondary exam');
+
+        $this->get(route('student.exams.index', ['academic_level_id' => $secondary->id]))
+            ->assertOk()
+            ->assertSee('Secondary exam')
+            ->assertDontSee('Primary exam');
     }
 
     public function test_other_teacher_cannot_create_exam_for_batch(): void

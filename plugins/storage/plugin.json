@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "key": "storage",
+  "name": "Storage & Backups",
+  "description": "Local/cloud storage, backups and media infrastructure.",
+  "type": "first_party",
+  "status": "metadata_only",
+  "provider": null,
+  "dependencies": [
+    "core"
+  ],
+  "permissions": [],
+  "routes": [
+    "admin.backups.*",
+    "admin.storage.*"
+  ],
+  "settings": [],
+  "events": [],
+  "directory": "plugins/storage",
+  "safety": {
+    "trusted_code_only": true,
+    "execute_uploaded_code": false,
+    "disable_preserves_data": true
+  }
+}

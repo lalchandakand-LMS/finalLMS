@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "key": "website_cms",
+  "name": "Website CMS",
+  "description": "Website builder, pages, blog and public content.",
+  "type": "first_party",
+  "status": "metadata_only",
+  "provider": null,
+  "dependencies": [
+    "core"
+  ],
+  "permissions": [],
+  "routes": [
+    "landing",
+    "pages.*",
+    "website-pages.*",
+    "page",
+    "admin.website.*",
+    "admin.website-menu.*",
+    "admin.pages.*",
+    "admin.comments.*"
+  ],
+  "settings": [],
+  "events": [],
+  "directory": "plugins/website_cms",
+  "safety": {
+    "trusted_code_only": true,
+    "execute_uploaded_code": false,
+    "disable_preserves_data": true
+  }
+}

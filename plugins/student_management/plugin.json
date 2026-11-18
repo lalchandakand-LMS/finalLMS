@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "key": "student_management",
+  "name": "Student Management",
+  "description": "Student profiles, enrollment, lifecycle and records.",
+  "type": "first_party",
+  "status": "metadata_only",
+  "provider": null,
+  "dependencies": [
+    "core",
+    "identity",
+    "branch_management"
+  ],
+  "permissions": [],
+  "routes": [
+    "admin.students.*",
+    "admin.student-applications.*",
+    "students.*",
+    "students.summary"
+  ],
+  "settings": [],
+  "events": [],
+  "directory": "plugins/student_management",
+  "safety": {
+    "trusted_code_only": true,
+    "execute_uploaded_code": false,
+    "disable_preserves_data": true
+  }
+}

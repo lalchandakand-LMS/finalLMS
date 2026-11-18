@@ -56,10 +56,20 @@ class PluginMigrationRunner
 
     public function rollback(PluginInstallation $plugin): void
     {
-        if (! in_array($plugin->status, ['installed', 'inactive'], true)) {
+        if (! in_array($plugin->status, ['installed', 'inactive', 'update_staged'], true)) {
             throw new RuntimeException('Deactivate the plugin before rolling back its migrations.');
         }
         $this->integrityVerifier->verify($plugin);
+
+        $unsettled = DB::table('plugin_migrations')->where([
+            'plugin_key' => $plugin->plugin_key,
+            'plugin_version' => $plugin->version,
+        ])->whereIn('status', ['failed', 'running'])->exists();
+
+        if ($unsettled) {
+            throw new RuntimeException('A failed or interrupted migration requires manual database recovery before package rollback.');
+        }
+
         $root = $this->migrationRoot($plugin);
         if ($root === null) return;
 
@@ -70,8 +80,15 @@ class PluginMigrationRunner
         ])->orderByDesc('id')->get();
 
         foreach ($records as $record) {
+            if (! is_string($record->migration)
+                || preg_match('/^[A-Za-z0-9_-]{1,180}\\.php$/D', $record->migration) !== 1) {
+                throw new RuntimeException('A recorded plugin migration name is unsafe; rollback was stopped.');
+            }
+
             $file = $root.DIRECTORY_SEPARATOR.$record->migration;
-            if (! is_file($file) || is_link($file)) {
+            $realFile = realpath($file);
+            if (! is_file($file) || is_link($file) || $realFile === false
+                || ! str_starts_with($realFile, rtrim($root, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR)) {
                 throw new RuntimeException('A recorded plugin migration file is missing or unsafe; rollback was stopped.');
             }
             $migration = require $file;

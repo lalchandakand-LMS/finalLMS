@@ -2,13 +2,20 @@
 
 namespace Tests\Feature;
 
+use App\Models\AcademicLevel;
 use App\Models\Course;
 use App\Models\CourseCategory;
 use App\Models\CourseContentPost;
 use App\Models\CourseCurriculumItem;
+use App\Models\DownloadPermission;
 use App\Models\Enrollment;
+use App\Models\MediaAsset;
+use App\Models\Order;
+use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class CourseContentStudioTest extends TestCase
@@ -215,6 +222,239 @@ class CourseContentStudioTest extends TestCase
         $this->assertDatabaseMissing('course_curriculum_items', [
             'course_id' => $course->id,
             'course_content_post_id' => $scheduled->id,
+        ]);
+    }
+
+    public function test_content_studio_uploads_thumbnail_and_private_pdf_and_creates_paid_store_product(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $level = AcademicLevel::create(['name' => 'Class 9', 'slug' => 'class-9', 'sort_order' => 1, 'is_active' => true]);
+
+        $this->actingAs($admin)->post(route('admin.course-content-posts.store'), [
+            'title' => 'Class 9 Physics PDF',
+            'long_description' => 'Download the full notes after purchase.',
+            'access_type' => 'paid',
+            'regular_price' => '500.00',
+            'sale_price' => '350.00',
+            'academic_level_id' => $level->id,
+            'status' => 'published',
+            'thumbnail' => UploadedFile::fake()->create('physics-cover.jpg', 30, 'image/jpeg'),
+            'content_file' => UploadedFile::fake()->create('physics-notes.pdf', 40, 'application/pdf'),
+        ])->assertRedirect(route('admin.course-content-posts.index'));
+
+        $post = CourseContentPost::where('slug', 'class-9-physics-pdf')->firstOrFail();
+        $product = Product::findOrFail($post->product_id);
+        $this->assertSame('paid', $post->access_type);
+        $this->assertSame($level->id, $post->academic_level_id);
+        $this->assertSame('350.00', $product->sale_price);
+        $this->assertSame('published', $product->status);
+        Storage::disk('public')->assertExists($post->thumbnail_path);
+        Storage::disk('local')->assertExists($post->content_file_path);
+        $this->assertSame($post->content_file_path, $product->download_path);
+        $this->assertStringStartsWith('private/course-content/', $post->content_file_path);
+    }
+
+    public function test_paid_product_uses_selected_media_library_thumbnail(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $media = MediaAsset::create([
+            'uploaded_by' => $admin->id,
+            'disk' => 'public',
+            'path' => 'media/2026/11/cover.jpg',
+            'original_name' => 'cover.jpg',
+            'mime_type' => 'image/jpeg',
+            'size' => 1024,
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.course-content-posts.store'), [
+            'title' => 'Paid Geography Notes',
+            'long_description' => 'Geography PDF',
+            'access_type' => 'paid',
+            'regular_price' => '125',
+            'thumbnail_media_id' => $media->id,
+            'status' => 'published',
+            'content_file' => UploadedFile::fake()->create('geography.pdf', 20, 'application/pdf'),
+        ])->assertRedirect();
+
+        $post = CourseContentPost::where('slug', 'paid-geography-notes')->firstOrFail();
+        $this->assertSame($media->id, $post->thumbnail_media_id);
+        $this->assertSame($media->path, $post->product->image_path);
+    }
+
+    public function test_content_studio_updates_paid_pdf_price_and_thumbnail_without_replacing_purchased_pdf(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($admin)->post(route('admin.course-content-posts.store'), [
+            'title' => 'Paid Algebra Notes',
+            'long_description' => 'Algebra PDF',
+            'access_type' => 'paid',
+            'regular_price' => '400',
+            'status' => 'published',
+            'thumbnail' => UploadedFile::fake()->create('algebra.jpg', 20, 'image/jpeg'),
+            'content_file' => UploadedFile::fake()->create('algebra.pdf', 20, 'application/pdf'),
+        ])->assertRedirect();
+
+        $post = CourseContentPost::where('slug', 'paid-algebra-notes')->firstOrFail();
+        $product = Product::findOrFail($post->product_id);
+        $student = User::factory()->create(['role' => 'student']);
+        $order = Order::create([
+            'order_number' => 'AEC-CONTENT-ORDER-001',
+            'user_id' => $student->id,
+            'status' => 'completed',
+            'payment_method' => 'manual',
+            'payment_reference' => 'CONTENT-PAY-001',
+            'currency' => 'BDT',
+            'subtotal' => 400,
+            'discount_total' => 0,
+            'total' => 400,
+            'paid_at' => now(),
+            'completed_at' => now(),
+        ]);
+        $item = $order->items()->create([
+            'product_id' => $product->id,
+            'product_type' => 'ebook',
+            'product_name' => $product->name,
+            'quantity' => 1,
+            'regular_price' => 400,
+            'line_total' => 400,
+        ]);
+        DownloadPermission::create([
+            'order_item_id' => $item->id,
+            'user_id' => $student->id,
+            'product_id' => $product->id,
+            'downloads_remaining' => 2,
+        ]);
+
+        $oldPdf = $post->content_file_path;
+        $this->actingAs($admin)->put(route('admin.course-content-posts.update', $post), [
+            'title' => $post->title,
+            'long_description' => $post->long_description,
+            'access_type' => 'paid',
+            'regular_price' => '450',
+            'sale_price' => '375',
+            'status' => 'published',
+            'thumbnail' => UploadedFile::fake()->create('algebra-new.jpg', 25, 'image/jpeg'),
+        ])->assertRedirect(route('admin.course-content-posts.index'));
+
+        $this->assertSame('450.00', $product->fresh()->regular_price);
+        $this->assertSame('375.00', $product->fresh()->sale_price);
+        $this->assertSame($oldPdf, $post->fresh()->content_file_path);
+        Storage::disk('local')->assertExists($oldPdf);
+
+        $this->actingAs($admin)->put(route('admin.course-content-posts.update', $post->fresh()), [
+            'title' => $post->title,
+            'long_description' => $post->long_description,
+            'access_type' => 'paid',
+            'regular_price' => '450',
+            'status' => 'published',
+            'content_file' => UploadedFile::fake()->create('replacement.pdf', 20, 'application/pdf'),
+        ])->assertStatus(422);
+    }
+
+    public function test_paid_course_content_requires_purchase_and_download_uses_existing_permission_limits(): void
+    {
+        Storage::fake('local');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $student = User::factory()->create(['role' => 'student']);
+        $course = Course::factory()->create(['teacher_id' => $teacher->id, 'status' => 'published']);
+        $this->actingAs($admin)->post(route('admin.course-content-posts.store'), [
+            'title' => 'Paid Biology Notes',
+            'long_description' => 'Biology notes content.',
+            'access_type' => 'paid',
+            'regular_price' => '200',
+            'status' => 'published',
+            'content_file' => UploadedFile::fake()->create('biology.pdf', 20, 'application/pdf'),
+        ])->assertRedirect();
+        $post = CourseContentPost::where('slug', 'paid-biology-notes')->firstOrFail();
+        CourseCurriculumItem::create([
+            'course_id' => $course->id,
+            'course_content_post_id' => $post->id,
+            'position' => 1,
+            'is_preview' => false,
+        ]);
+
+        $this->app['auth']->logout();
+        $this->get(route('courses.content.show', [$course, $post]))
+            ->assertRedirect(route('login', ['continue' => route('ebooks.show', $post->product->slug, false)]));
+
+        $order = Order::create([
+            'order_number' => 'AEC-CONTENT-ORDER-002',
+            'user_id' => $student->id,
+            'status' => 'completed',
+            'payment_method' => 'manual',
+            'payment_reference' => 'CONTENT-PAY-002',
+            'currency' => 'BDT',
+            'subtotal' => 200,
+            'discount_total' => 0,
+            'total' => 200,
+            'paid_at' => now(),
+            'completed_at' => now(),
+        ]);
+        $item = $order->items()->create([
+            'product_id' => $post->product_id,
+            'product_type' => 'ebook',
+            'product_name' => $post->title,
+            'quantity' => 1,
+            'regular_price' => 200,
+            'line_total' => 200,
+        ]);
+        $permission = DownloadPermission::create([
+            'order_item_id' => $item->id,
+            'user_id' => $student->id,
+            'product_id' => $post->product_id,
+            'downloads_remaining' => 1,
+        ]);
+
+        $this->actingAs($student)->get(route('courses.content.show', [$course, $post]))
+            ->assertOk()->assertSee('Biology notes content.');
+        $this->actingAs($student)->get(route('courses.content.file', [$course, $post]))->assertOk();
+        $this->assertDatabaseHas('download_permissions', [
+            'id' => $permission->id,
+            'downloads_remaining' => 0,
+            'download_count' => 1,
+        ]);
+        $this->actingAs($student)->get(route('courses.content.file', [$course, $post]))->assertGone();
+    }
+
+    public function test_course_builder_filters_new_content_to_the_courses_academic_level(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $classNine = AcademicLevel::create(['name' => 'Class 9', 'slug' => 'class-9', 'sort_order' => 1, 'is_active' => true]);
+        $classTen = AcademicLevel::create(['name' => 'Class 10', 'slug' => 'class-10', 'sort_order' => 2, 'is_active' => true]);
+        $course = Course::factory()->create([
+            'teacher_id' => $teacher->id,
+            'academic_level_id' => $classNine->id,
+            'status' => 'published',
+        ]);
+        $matching = $this->makePost($admin, null, 'Class 9 Algebra');
+        $matching->update(['academic_level_id' => $classNine->id]);
+        $unassigned = $this->makePost($admin, null, 'General Study Skills');
+        $otherLevel = $this->makePost($admin, null, 'Class 10 Chemistry');
+        $otherLevel->update(['academic_level_id' => $classTen->id]);
+
+        $this->actingAs($admin)->get(route('admin.course-builder.edit', $course))
+            ->assertOk()->assertSee('Class 9 Algebra')->assertSee('General Study Skills')
+            ->assertDontSee('Class 10 Chemistry');
+
+        $this->actingAs($admin)->from(route('admin.course-builder.edit', $course))
+            ->put(route('admin.course-builder.update', $course), [
+                'post_ids' => [$otherLevel->id],
+                'positions' => [$otherLevel->id => 10],
+            ])
+            ->assertRedirect(route('admin.course-builder.edit', $course))
+            ->assertSessionHasErrors('post_ids.0');
+
+        $this->assertDatabaseMissing('course_curriculum_items', [
+            'course_id' => $course->id,
+            'course_content_post_id' => $otherLevel->id,
         ]);
     }
 

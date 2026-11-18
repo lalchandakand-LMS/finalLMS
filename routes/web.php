@@ -3,6 +3,7 @@
 use App\Http\Controllers\AddonRegistryController;
 use App\Http\Controllers\AdminModuleRegistryController;
 use App\Http\Controllers\AdminPluginManagerController;
+use App\Http\Controllers\AcademicLevelController;
 use App\Http\Controllers\AdminPaymentGatewayController;
 use App\Http\Controllers\AiDeveloperController;
 use App\Http\Controllers\AdminSettingsController;
@@ -123,6 +124,7 @@ Route::get('/course-combos', [CourseComboController::class, 'publicIndex'])->nam
 Route::get('/course-combos/{courseCombo:slug}', [CourseComboController::class, 'show'])->name('course-combos.show');
 Route::get('/courses/{course}', [CourseController::class, 'show'])->name('courses.show');
 Route::get('/courses/{course}/content/{post:slug}', [CourseContentController::class, 'show'])->name('courses.content.show');
+Route::get('/courses/{course}/content/{post:slug}/file', [CourseContentController::class, 'file'])->middleware('throttle:60,1')->name('courses.content.file');
 Route::get('/courses/{course}/lessons/{lesson}', [CourseController::class, 'showLesson'])->name('courses.lessons.show');
 Route::get('/courses/{course}/lessons/{lesson}/video', [CourseController::class, 'streamLessonVideo'])->name('courses.lessons.video');
 Route::get('/courses/{course}/lessons/{lesson}/media/{type}', [LessonMediaController::class, 'show'])->middleware('throttle:120,1')->name('courses.lessons.media');
@@ -289,15 +291,26 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         ->name('courses.lessons.complete');
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
+        Route::get('/academic-levels', [AcademicLevelController::class, 'index'])->name('admin.academic-levels.index');
+        Route::post('/academic-levels', [AcademicLevelController::class, 'store'])->name('admin.academic-levels.store');
+        Route::get('/academic-levels/{academicLevel}', [AcademicLevelController::class, 'show'])->name('admin.academic-levels.show');
+        Route::put('/academic-levels/{academicLevel}', [AcademicLevelController::class, 'update'])->name('admin.academic-levels.update');
+        Route::delete('/academic-levels/{academicLevel}', [AcademicLevelController::class, 'destroy'])->name('admin.academic-levels.destroy');
         Route::get('/modules', [AdminModuleRegistryController::class, 'index'])->name('admin.modules.index');
         Route::patch('/modules/{key}', [AdminModuleRegistryController::class, 'update'])->where('key', '[a-z_]+')->middleware('throttle:20,1')->name('admin.modules.update');
         Route::get('/plugins', [AdminPluginManagerController::class, 'index'])->name('admin.plugins.index');
         Route::post('/plugins/install', [AdminPluginManagerController::class, 'install'])->middleware('throttle:3,10')->name('admin.plugins.install');
+        Route::post('/plugins/{key}/update-package', [AdminPluginManagerController::class, 'updatePackage'])->where('key', '[a-z0-9.-]+')->middleware('throttle:3,10')->name('admin.plugins.update-package');
+        Route::post('/plugins/{key}/rollback-migrations', [AdminPluginManagerController::class, 'rollbackMigrations'])->where('key', '[a-z0-9.-]+')->middleware('throttle:2,10')->name('admin.plugins.rollback-migrations');
+        Route::post('/plugins/{key}/rollback-package', [AdminPluginManagerController::class, 'rollbackPackage'])->where('key', '[a-z0-9.-]+')->middleware('throttle:2,10')->name('admin.plugins.rollback-package');
         Route::put('/plugins/{key}/permissions', [AdminPluginManagerController::class, 'updatePermissions'])->where('key', '[a-z0-9.-]+')->middleware('throttle:10,1')->name('admin.plugins.permissions');
+        Route::post('/plugins/{key}/settings', [AdminPluginManagerController::class, 'storeSetting'])->where('key', '[a-z0-9.-]+')->middleware('throttle:10,1')->name('admin.plugins.settings.store');
+        Route::delete('/plugins/{key}/settings/{settingKey}', [AdminPluginManagerController::class, 'deleteSetting'])->where(['key' => '[a-z0-9.-]+', 'settingKey' => '[a-z][a-z0-9_.-]{0,119}'])->middleware('throttle:10,1')->name('admin.plugins.settings.delete');
         Route::post('/plugins/{key}/health-check', [AdminPluginManagerController::class, 'healthCheck'])->where('key', '[a-z0-9.-]+')->middleware('throttle:10,1')->name('admin.plugins.health-check');
         Route::post('/plugins/{key}/activate', [AdminPluginManagerController::class, 'activate'])->where('key', '[a-z0-9.-]+')->middleware('throttle:5,1')->name('admin.plugins.activate');
         Route::post('/plugins/{key}/deactivate', [AdminPluginManagerController::class, 'deactivate'])->where('key', '[a-z0-9.-]+')->middleware('throttle:5,1')->name('admin.plugins.deactivate');
         Route::post('/plugins/{key}/uninstall', [AdminPluginManagerController::class, 'uninstall'])->where('key', '[a-z0-9.-]+')->middleware('throttle:3,10')->name('admin.plugins.uninstall');
+        Route::post('/plugins/{key}/restore-package', [AdminPluginManagerController::class, 'restorePackage'])->where('key', '[a-z0-9.-]+')->middleware('throttle:3,10')->name('admin.plugins.restore-package');
         Route::get('/support-tickets', [AdminSupportTicketController::class, 'index'])->name('admin.support-tickets.index');
         Route::get('/support-tickets/{ticket}', [AdminSupportTicketController::class, 'show'])->name('admin.support-tickets.show');
         Route::post('/support-tickets/{ticket}/messages', [AdminSupportTicketController::class, 'reply'])->middleware('throttle:10,1')->name('admin.support-tickets.reply');

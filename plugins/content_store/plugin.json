@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "key": "content_store",
+  "name": "eBook & Digital Store",
+  "description": "Digital products, eBooks and orders.",
+  "type": "first_party",
+  "status": "metadata_only",
+  "provider": null,
+  "dependencies": [
+    "core",
+    "payments",
+    "storage"
+  ],
+  "permissions": [],
+  "routes": [
+    "ebooks.*",
+    "admin.ebooks.*",
+    "admin.ebook-orders.*"
+  ],
+  "settings": [],
+  "events": [],
+  "directory": "plugins/content_store",
+  "safety": {
+    "trusted_code_only": true,
+    "execute_uploaded_code": false,
+    "disable_preserves_data": true
+  }
+}
