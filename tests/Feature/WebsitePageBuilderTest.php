@@ -357,4 +357,40 @@ class WebsitePageBuilderTest extends TestCase
     }
 
 
+    public function test_non_admin_cannot_restore_a_custom_page_revision(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $page = WebsitePage::create([
+            'title' => 'Protected revision page',
+            'slug' => 'protected-revision-page',
+            'template' => 'standard',
+            'sections' => [],
+            'status' => 'draft',
+            'created_by' => $admin->id,
+        ]);
+        $revision = WebsitePageRevision::create([
+            'website_page_id' => $page->id,
+            'version' => 1,
+            'snapshot' => [
+                'title' => $page->title,
+                'slug' => $page->slug,
+                'template' => $page->template,
+                'sections' => [],
+                'status' => 'draft',
+            ],
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($student)
+            ->post(route('admin.website-pages.revisions.restore', [$page, $revision]))
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('website_page_revisions', [
+            'id' => $revision->id,
+            'version' => 1,
+        ]);
+    }
+
+
 }
