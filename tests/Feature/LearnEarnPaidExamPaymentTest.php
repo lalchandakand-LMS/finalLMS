@@ -131,16 +131,36 @@ class LearnEarnPaidExamPaymentTest extends TestCase
         ]);
 
 
+        \\Illuminate\\Support\\Facades\\Log::spy();
+        $callbackFailure = 'No callback warning was logged.';
+
         $this->get(route('payments.bkash.callback', [
             'paymentID' => 'BKASH-LEARN-EARN-001',
             'status' => 'success',
         ]))->assertRedirect('/student/learn-earn/exams');
 
+        \\Illuminate\\Support\\Facades\\Log::shouldHaveReceived('warning')->withArgs(
+            function ($message, $context) use (&$callbackFailure): bool {
+                if ($message !== 'bKash callback verification failed.') {
+                    return false;
+                }
+                $callbackFailure = $context['exception_message'] ?? 'Unknown callback failure';
+
+                return true;
+            }
+        )->zero();
+
+        $this->assertSame(
+            'approved',
+            $payment->fresh()->status,
+            'bKash callback did not approve the payment: '.$callbackFailure
+        );
+
         $this->assertDatabaseHas('payments', [
             'id' => $payment->id,
             'status' => 'approved',
             'gateway_transaction_id' => 'BKASH-LEARN-EARN-TRX-001',
-        ]);
+        ], null);
         $this->assertDatabaseHas('learn_earn_exam_entitlements', [
             'exam_id' => $exam->id,
             'student_id' => $student->id,
