@@ -41,7 +41,7 @@ The customer must be able to replace all Alom demo/default institution details w
 - Include a preflight check, version manifest, package checksum, migrations, safe defaults and a post-install health check.
 - Updates must be versioned and signed, verify compatibility, create and verify a restorable backup, apply reversible migrations where possible, and support rollback. Never overwrite customer uploads, environment secrets or institution settings.
 - Provide a documented export/backup process so the customer can migrate hosting without losing records or private files.
-- No runtime dependency on a developer workstation, Google AI Studio, external CMS, or central licensing API for core LMS operation.
+- No runtime dependency on a developer workstation, external CMS, or central licensing API for core LMS operation.
 - If a commercial license/activation mechanism is introduced, its policy (per installation/domain, term, transfer, renewal, offline grace and support entitlement) must be explicitly approved and documented before enforcement. Do not invent a license price or unexpectedly disable a customer's running LMS.
 
 ## Security and privacy boundaries
