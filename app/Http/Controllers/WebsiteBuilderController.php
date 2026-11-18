@@ -115,6 +115,7 @@ class WebsiteBuilderController extends Controller
             'sections.*.enabled' => ['nullable', 'boolean'],
         ])->validate();
 
+        $draft = $this->sanitizeHomepageUrls($draft);
         Setting::setValue('homepage_draft', json_encode($draft, JSON_THROW_ON_ERROR));
         Setting::setValue('homepage_draft_updated_at', now()->toIso8601String());
         Setting::setValue('homepage_draft_updated_by', (string) $request->user()->id);
@@ -248,6 +249,32 @@ class WebsiteBuilderController extends Controller
     }
 
     /** @return list<string> */
+    private function sanitizeHomepageUrls(array $data): array
+    {
+        foreach (['header_links', 'footer_links'] as $key) {
+            if (! is_array($data[$key] ?? null)) continue;
+
+            $data[$key] = collect($data[$key])->map(function ($link): ?array {
+                if (! is_array($link)) return null;
+                $label = trim((string) ($link['label'] ?? ''));
+                $url = SafeWebsiteUrl::sanitize($link['url'] ?? null);
+                return $label !== '' && $url !== null ? ['label' => $label, 'url' => $url] : null;
+            })->filter()->take(20)->values()->all();
+        }
+
+        foreach (['home_slides', 'sections'] as $key) {
+            if (! is_array($data[$key] ?? null)) continue;
+
+            $data[$key] = collect($data[$key])->map(function ($item): array {
+                if (! is_array($item)) return [];
+                $item['button_url'] = SafeWebsiteUrl::sanitize($item['button_url'] ?? null) ?? '';
+                return $item;
+            })->values()->all();
+        }
+
+        return $data;
+    }
+
     private static function homepageSettingKeys(): array
     {
         return [
