@@ -223,7 +223,7 @@ class InvoiceController extends Controller
 
             $gatewayEvent = null;
             if ($validated['method'] === 'bkash') {
-                $eventKey = 'bkash:payment:'.$validated['gateway_payment_id'].':'.$validated['gateway_transaction_id'];
+                $eventKey = hash('sha256', 'bkash:payment:'.$validated['gateway_payment_id'].':'.$validated['gateway_transaction_id']);
                 $gatewayEvent = PaymentGatewayEvent::firstOrCreate(
                     ['event_key' => $eventKey],
                     [
