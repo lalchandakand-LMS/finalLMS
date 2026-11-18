@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Course;
 use App\Models\Invoice;
 use App\Models\InvoicePayment;
+use App\Models\Payment;
 use App\Models\PaymentAuditEvent;
 use App\Models\User;
 use App\Services\Payments\BkashCheckoutService;
@@ -155,14 +156,28 @@ class InvoiceController extends Controller
         $validated = $request->validate([
             'amount' => ['required', 'numeric', 'gt:0', 'max:99999999'],
             'method' => ['required', 'string', 'max:40'],
-            'gateway_payment_id' => ['nullable', 'string', 'max:120', 'required_if:method,bkash'],
-            'gateway_transaction_id' => ['nullable', 'string', 'max:120', 'required_if:method,bkash'],
+            'gateway_payment_id' => ['nullable', 'string', 'max:120', 'required_if:method,bkash', 'unique:invoice_payments,gateway_payment_id'],
+            'gateway_transaction_id' => ['nullable', 'string', 'max:120', 'required_if:method,bkash', 'unique:invoice_payments,gateway_transaction_id'],
             'reference' => ['nullable', 'string', 'max:120'],
             'note' => ['nullable', 'string', 'max:1000'],
             'paid_at' => ['required', 'date'],
         ]);
 
         if ($validated['method'] === 'bkash') {
+            $alreadyRecorded = Payment::query()
+                ->where('gateway_provider', 'bkash')
+                ->where(function ($query) use ($validated): void {
+                    $query->where('gateway_payment_id', $validated['gateway_payment_id'])
+                        ->orWhere('gateway_transaction_id', $validated['gateway_transaction_id']);
+                })
+                ->exists();
+
+            if ($alreadyRecorded) {
+                return back()->withErrors([
+                    'gateway_payment_id' => 'This bKash transaction is already recorded against another LMS payment.',
+                ])->withInput();
+            }
+
             try {
                 if (! config('services.bkash.enabled') || ! config('services.bkash.verify_ssl', true)) {
                     throw new \\RuntimeException('bKash server-side verification is not enabled with verified TLS.');
