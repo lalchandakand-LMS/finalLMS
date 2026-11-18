@@ -20,6 +20,11 @@ class PaymentGatewayEvent extends Model
         'processed_at' => 'datetime',
     ];
 
+    public function invoicePayment(): BelongsTo
+    {
+        return $this->belongsTo(InvoicePayment::class);
+    }
+
     public function payment(): BelongsTo
     {
         return $this->belongsTo(Payment::class);
