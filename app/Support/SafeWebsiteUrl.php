@@ -31,7 +31,8 @@ final class SafeWebsiteUrl
 
             $parts = parse_url($value);
             if (! is_array($parts)
-                || isset($parts['scheme'], $parts['host'])
+                || isset($parts['scheme'])
+                || isset($parts['host'])
                 || isset($parts['user'])
                 || isset($parts['pass'])) {
                 return null;
