@@ -197,14 +197,10 @@ PHP);
         $file = $this->root.'/migrations/2026_11_15_000004_active_rollback_guard.php';
         file_put_contents($file, <<<'PHP'
 <?php
-return new class extends \Illuminate\Database\Migrations\Migration {
-    public function up(): void {
-        \Illuminate\Support\Facades\Schema::create('plugin_active_rollback_probe', function (\Illuminate\Database\Schema\Blueprint $table): void {
-            $table->id();
-        });
-    }
+return new class extends \\Illuminate\\Database\\Migrations\\Migration {
+    public function up(): void {}
     public function down(): void {
-        \Illuminate\Support\Facades\Schema::dropIfExists('plugin_active_rollback_probe');
+        throw new \\RuntimeException('Rollback must not execute for an active plugin.');
     }
 };
 PHP);
@@ -224,18 +220,25 @@ PHP);
             ],
         ])->save();
 
-        $runner = app(PluginMigrationRunner::class);
-        $runner->migrate($plugin);
-        \DB::table('plugin_registry')->where('id', $plugin->id)->update(['status' => 'active']);
+        \\DB::table('plugin_migrations')->insert([
+            'plugin_key' => $plugin->plugin_key,
+            'plugin_version' => $plugin->version,
+            'migration' => basename($file),
+            'status' => 'completed',
+            'started_at' => now(),
+            'completed_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        \\DB::table('plugin_registry')->where('id', $plugin->id)->update(['status' => 'active']);
 
         try {
-            $runner->rollback($plugin);
+            app(PluginMigrationRunner::class)->rollback($plugin);
             $this->fail('Rollback must recheck the locked registry state and reject an active plugin.');
-        } catch (\RuntimeException $exception) {
+        } catch (\\RuntimeException $exception) {
             $this->assertStringContainsString('Deactivate the plugin', $exception->getMessage());
         }
 
-        $this->assertTrue(Schema::hasTable('plugin_active_rollback_probe'));
         $this->assertDatabaseHas('plugin_migrations', [
             'plugin_key' => 'test.migration-check',
             'migration' => basename($file),
