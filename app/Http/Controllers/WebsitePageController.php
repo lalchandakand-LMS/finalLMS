@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\MediaAsset;
 use App\Models\AcademicLevel;
 use App\Models\WebsitePage;
+use App\Support\SafeWebsiteUrl;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -131,8 +132,7 @@ class WebsitePageController extends Controller
         ]);
 
         $data['sections'] = collect($data['sections'] ?? [])->map(function (array $section): array {
-            $url = trim($section['button_url'] ?? '');
-            if ($url !== '' && !preg_match('~^(https?://|/(?!/)|#)~i', $url)) $url = '';
+            $url = SafeWebsiteUrl::sanitize($section['button_url'] ?? '') ?? '';
             return [
                 'type' => $section['type'],
                 'title' => trim($section['title'] ?? ''),
