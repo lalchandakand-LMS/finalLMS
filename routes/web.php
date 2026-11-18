@@ -361,6 +361,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::post('/ebook-orders/{order}/approve', [AdminEbookOrderController::class, 'approve'])->name('admin.ebooks.orders.approve');
         Route::post('/ebook-orders/{order}/reject', [AdminEbookOrderController::class, 'reject'])->name('admin.ebooks.orders.reject');
         Route::post('/ebook-orders/{order}/refund', [AdminEbookOrderController::class, 'refund'])->middleware('throttle:10,1')->name('admin.ebooks.orders.refund');
+        Route::post('/ebook-refunds/{refund}/reconcile', [AdminEbookOrderController::class, 'reconcileRefund'])->middleware('throttle:5,1')->name('admin.ebooks.refunds.reconcile');
         Route::post('/ebook-download-permissions/{permission}/revoke', [AdminEbookOrderController::class, 'revokePermission'])->middleware('throttle:20,1')->name('admin.ebooks.permissions.revoke');
         Route::get('/analytics', [AdminAnalyticsController::class, 'index'])->name('admin.analytics.index');
         Route::get('/dashboard-announcements', [AdminDashboardAnnouncementController::class, 'index'])->name('admin.dashboard-announcements.index');
