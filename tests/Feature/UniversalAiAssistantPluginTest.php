@@ -720,7 +720,15 @@ class UniversalAiAssistantPluginTest extends TestCase
         $this->assertNotNull($reservation);
         $persisted = false;
 
-        AssistantTokenBudget::settle($reservation['id'], 900, function () use (&$persisted): void {
+        AssistantTokenBudget::settle($reservation['id'], 900, function () use (&$persisted, $conversationId): void {
+            \\DB::table('ai_assistant_messages')->insert([
+                'conversation_id' => $conversationId,
+                'message_role' => 'assistant',
+                'content' => 'Over-budget provider response',
+                'token_count' => 900,
+                'model' => 'test-model',
+                'created_at' => now(),
+            ]);
             $persisted = true;
         });
 
