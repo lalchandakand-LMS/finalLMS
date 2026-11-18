@@ -20,17 +20,62 @@ class PluginMigrationRunner
 
         foreach ($this->migrationFiles($root) as $file) {
             $name = basename($file);
-            $existing = DB::table('plugin_migrations')->where([
-                'plugin_key' => $plugin->plugin_key,
-                'plugin_version' => $plugin->version,
-                'migration' => $name,
-            ])->first();
-            if ($existing?->status === 'completed') continue;
+            $claim = DB::transaction(function () use ($plugin, $name): string {
+                $lockedPlugin = PluginInstallation::query()->whereKey($plugin->getKey())->lockForUpdate()->first();
+                if (! $lockedPlugin) {
+                    throw new RuntimeException('The plugin installation record is missing; migration was stopped.');
+                }
+                if ($lockedPlugin->version !== $plugin->version
+                    || $lockedPlugin->package_path !== $plugin->package_path
+                    || $lockedPlugin->package_sha256 !== $plugin->package_sha256) {
+                    throw new RuntimeException('The installed plugin package changed while migration was being prepared; reload the package before retrying.');
+                }
+                if (! in_array($lockedPlugin->status, ['installed', 'inactive', 'update_staged'], true)) {
+                    throw new RuntimeException('Deactivate or stage the plugin before running its migrations.');
+                }
+                $unsettled = DB::table('plugin_migrations')->where([
+                    'plugin_key' => $plugin->plugin_key,
+                    'plugin_version' => $plugin->version,
+                ])->whereIn('status', ['running', 'rolling_back', 'failed', 'rollback_failed'])->exists();
+                if ($unsettled) {
+                    throw new RuntimeException('Another plugin migration is running or requires manual recovery.');
+                }
 
-            DB::table('plugin_migrations')->updateOrInsert(
-                ['plugin_key' => $plugin->plugin_key, 'plugin_version' => $plugin->version, 'migration' => $name],
-                ['status' => 'running', 'started_at' => now(), 'completed_at' => null, 'error_message' => null, 'updated_at' => now(), 'created_at' => now()]
-            );
+                $record = DB::table('plugin_migrations')->where([
+                    'plugin_key' => $plugin->plugin_key,
+                    'plugin_version' => $plugin->version,
+                    'migration' => $name,
+                ])->lockForUpdate()->first();
+
+                if ($record?->status === 'completed') return 'completed';
+                if ($record && $record->status !== 'rolled_back') {
+                    throw new RuntimeException('A plugin migration is already running or requires manual recovery.');
+                }
+
+                $values = [
+                    'status' => 'running',
+                    'started_at' => now(),
+                    'completed_at' => null,
+                    'error_message' => null,
+                    'updated_at' => now(),
+                ];
+
+                if ($record) {
+                    DB::table('plugin_migrations')->where('id', $record->id)->update($values);
+                } else {
+                    DB::table('plugin_migrations')->insert([
+                        'plugin_key' => $plugin->plugin_key,
+                        'plugin_version' => $plugin->version,
+                        'migration' => $name,
+                        ...$values,
+                        'created_at' => now(),
+                    ]);
+                }
+
+                return 'claimed';
+            }, 3);
+
+            if ($claim === 'completed') continue;
 
             try {
                 $migration = require $file;
@@ -38,17 +83,25 @@ class PluginMigrationRunner
                     throw new RuntimeException('A plugin migration must return a Laravel Migration instance.');
                 }
                 $migration->up();
-                DB::table('plugin_migrations')->where([
+
+                $updated = DB::table('plugin_migrations')->where([
                     'plugin_key' => $plugin->plugin_key,
                     'plugin_version' => $plugin->version,
                     'migration' => $name,
+                    'status' => 'running',
                 ])->update(['status' => 'completed', 'completed_at' => now(), 'error_message' => null, 'updated_at' => now()]);
+
+                if ($updated !== 1) {
+                    throw new RuntimeException('The plugin migration claim was lost before completion was recorded.');
+                }
             } catch (Throwable $exception) {
                 DB::table('plugin_migrations')->where([
                     'plugin_key' => $plugin->plugin_key,
                     'plugin_version' => $plugin->version,
                     'migration' => $name,
+                    'status' => 'running',
                 ])->update(['status' => 'failed', 'error_message' => 'Migration failed; inspect server logs.', 'updated_at' => now()]);
+
                 throw new RuntimeException('A signed plugin migration failed. The plugin remains inactive.', previous: $exception);
             }
         }
@@ -64,7 +117,7 @@ class PluginMigrationRunner
         $unsettled = DB::table('plugin_migrations')->where([
             'plugin_key' => $plugin->plugin_key,
             'plugin_version' => $plugin->version,
-        ])->whereIn('status', ['failed', 'running'])->exists();
+        ])->whereIn('status', ['failed', 'running', 'rolling_back', 'rollback_failed'])->exists();
 
         if ($unsettled) {
             throw new RuntimeException('A failed or interrupted migration requires manual database recovery before package rollback.');
@@ -91,15 +144,91 @@ class PluginMigrationRunner
                 || ! str_starts_with($realFile, rtrim($root, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR)) {
                 throw new RuntimeException('A recorded plugin migration file is missing or unsafe; rollback was stopped.');
             }
-            $migration = require $file;
-            if (! $migration instanceof Migration) {
-                throw new RuntimeException('A plugin rollback file did not return a Laravel Migration instance.');
+
+            $claimed = DB::transaction(function () use ($plugin, $record): bool {
+                $lockedPlugin = PluginInstallation::query()->whereKey($plugin->getKey())->lockForUpdate()->first();
+                if (! $lockedPlugin) {
+                    throw new RuntimeException('The plugin installation record is missing; rollback was stopped.');
+                }
+                if ($lockedPlugin->version !== $plugin->version
+                    || $lockedPlugin->package_path !== $plugin->package_path
+                    || $lockedPlugin->package_sha256 !== $plugin->package_sha256) {
+                    throw new RuntimeException('The installed plugin package changed while rollback was being prepared; reload the package before retrying.');
+                }
+                if (! in_array($lockedPlugin->status, ['installed', 'inactive', 'update_staged'], true)) {
+                    throw new RuntimeException('Deactivate the plugin before rolling back its migrations.');
+                }
+                $unsettled = DB::table('plugin_migrations')->where([
+                    'plugin_key' => $plugin->plugin_key,
+                    'plugin_version' => $plugin->version,
+                ])->whereIn('status', ['running', 'rolling_back', 'failed', 'rollback_failed'])->exists();
+                if ($unsettled) {
+                    throw new RuntimeException('Another plugin migration is running or requires manual recovery.');
+                }
+
+                $current = DB::table('plugin_migrations')->where('id', $record->id)->lockForUpdate()->first();
+                if (! $current || $current->status !== 'completed') return false;
+
+                DB::table('plugin_migrations')->where('id', $record->id)->update([
+                    'status' => 'rolling_back',
+                    'updated_at' => now(),
+                ]);
+
+                return true;
+            }, 3);
+
+            if (! $claimed) {
+                throw new RuntimeException('The plugin migration state changed before rollback could be claimed.');
             }
-            $migration->down();
-            DB::table('plugin_migrations')->where('id', $record->id)->update([
-                'status' => 'rolled_back', 'updated_at' => now(),
-            ]);
+
+            try {
+                $migration = require $file;
+                if (! $migration instanceof Migration) {
+                    throw new RuntimeException('A plugin rollback file did not return a Laravel Migration instance.');
+                }
+                $migration->down();
+
+                DB::table('plugin_migrations')->where('id', $record->id)->where('status', 'rolling_back')->update([
+                    'status' => 'rolled_back',
+                    'updated_at' => now(),
+                ]);
+            } catch (Throwable $exception) {
+                DB::table('plugin_migrations')->where('id', $record->id)->where('status', 'rolling_back')->update([
+                    'status' => 'rollback_failed',
+                    'error_message' => 'Rollback failed; inspect server logs and recover the database manually.',
+                    'updated_at' => now(),
+                ]);
+
+                throw new RuntimeException('A plugin migration rollback failed. Manual database recovery is required.', previous: $exception);
+            }
         }
+    }
+
+    /**
+     * Return true while any declared migration has not completed successfully.
+     * Lifecycle activation uses this to close the gap between sequential migration claims.
+     */
+    public function hasPendingMigrations(PluginInstallation $plugin): bool
+    {
+        $root = $this->migrationRoot($plugin);
+        if ($root === null) {
+            return false;
+        }
+
+        foreach ($this->migrationFiles($root) as $file) {
+            $completed = DB::table('plugin_migrations')
+                ->where('plugin_key', $plugin->plugin_key)
+                ->where('plugin_version', $plugin->version)
+                ->where('migration', basename($file))
+                ->where('status', 'completed')
+                ->exists();
+
+            if (! $completed) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function migrationRoot(PluginInstallation $plugin): ?string
