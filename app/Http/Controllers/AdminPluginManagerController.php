@@ -322,7 +322,7 @@ class AdminPluginManagerController extends Controller
         } catch (Throwable $exception) {
             report($exception);
             $current = PluginInstallation::query()->where('plugin_key', $key)->first();
-            if ($current?->status === 'update_staged') {
+            if ($current && in_array($current->status, ['installed', 'inactive', 'update_staged'], true)) {
                 try {
                     $lifecycle->transition($key, 'failed', [
                         'health_status' => 'failed',

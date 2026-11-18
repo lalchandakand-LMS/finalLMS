@@ -10,6 +10,8 @@ use LogicException;
 
 final class PluginLifecycle
 {
+    public function __construct(private readonly PluginMigrationRunner $migrationRunner) {}
+
     private const TRANSITIONS = [
         'discovered' => ['validated', 'failed'],
         'validated' => ['staged', 'failed'],
@@ -48,9 +50,27 @@ final class PluginLifecycle
                 throw (new ModelNotFoundException())->setModel(PluginInstallation::class, [$pluginKey]);
             }
 
+            $unsettledMigrations = DB::table('plugin_migrations')
+                ->where('plugin_key', $pluginKey)
+                ->where('plugin_version', $plugin->version)
+                ->whereIn('status', ['running', 'rolling_back', 'failed', 'rollback_failed'])
+                ->pluck('status')
+                ->all();
+            $hasActiveMigration = array_intersect($unsettledMigrations, ['running', 'rolling_back']) !== [];
+            $canMarkFailed = $target === 'failed'
+                && ! $hasActiveMigration
+                && $unsettledMigrations !== [];
+            if ($unsettledMigrations !== [] && ! $canMarkFailed) {
+                throw new LogicException('Plugin lifecycle changes are blocked until the migration is recovered.');
+            }
+
             $activeKeys = $plugins->where('status', 'active')->pluck('plugin_key')->all();
 
             if ($target === 'active') {
+                if ($this->migrationRunner->hasPendingMigrations($plugin)) {
+                    throw new LogicException('A plugin cannot be activated until all declared migrations have completed successfully.');
+                }
+
                 foreach (($plugin->manifest['dependencies'] ?? []) as $dependency) {
                     if (! in_array($dependency, $activeKeys, true)) {
                         throw new LogicException('A required plugin dependency is not active: '.$dependency);
