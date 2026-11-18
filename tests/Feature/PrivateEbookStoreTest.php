@@ -320,6 +320,7 @@ class PrivateEbookStoreTest extends TestCase
             'user_id' => $student->id, 'order_id' => $order->id,
             'gateway_provider' => 'bkash', 'gateway_payment_id' => 'BKASH-EBOOK-PAY',
             'gateway_transaction_id' => 'BKASH-EBOOK-TRX',
+            'transaction_reference' => 'BKASH-EBOOK-TRX',
             'method' => 'bkash', 'amount' => 350, 'currency' => 'BDT',
             'status' => 'approved',
         ]);
@@ -371,6 +372,7 @@ class PrivateEbookStoreTest extends TestCase
             'user_id' => $student->id, 'order_id' => $order->id,
             'gateway_provider' => 'bkash', 'gateway_payment_id' => 'BKASH-EBOOK-PAY-2',
             'gateway_transaction_id' => 'BKASH-EBOOK-TRX-2',
+            'transaction_reference' => 'BKASH-EBOOK-TRX-2',
             'method' => 'bkash', 'amount' => 350, 'currency' => 'BDT',
             'status' => 'approved',
         ]);
