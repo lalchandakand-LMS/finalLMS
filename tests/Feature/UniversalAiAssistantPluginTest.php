@@ -741,12 +741,74 @@ class UniversalAiAssistantPluginTest extends TestCase
         $this->assertNull(AssistantTokenBudget::reserve(1000, 100, 500, 20, 'student', 'openai-compatible', 'test-model', $user->id, $conversationId));
     }
 
+    public function test_over_budget_provider_response_is_audited_and_kept_in_daily_usage(): void
+    {
+        $user = User::factory()->create(['role' => 'student', 'email_verified_at' => now()]);
+        AssistantSettings::save([
+            'model' => 'gpt-4o-mini',
+            'base_url' => 'https://api.openai.com/v1',
+            'temperature' => 0.4,
+            'max_tokens' => 100,
+            'global_enabled' => true,
+            'role_enabled' => array_replace(array_fill_keys(AssistantSettings::ROLES, false), ['student' => true]),
+            'role_data_access' => array_fill_keys(AssistantSettings::ROLES, false),
+            'daily_request_limit' => 20,
+            'daily_token_budget' => 20000,
+            'retention_days' => 365,
+        ], 'test-secret-provider-key', false);
+
+        app()->instance(AiDeveloperProviderEndpoint::class, new class extends AiDeveloperProviderEndpoint {
+            public function curlOptionsFor(string $url): array { return []; }
+        });
+        Http::fake([
+            'api.openai.com/v1/chat/completions' => Http::response(
+                "data: {\\"choices\\":[{\\"delta\\":{\\"content\\":\\"This response exceeded its token reservation.\\"}}]}\\n\\n".
+                "data: {\\"choices\\":[],\\"usage\\":{\\"total_tokens\\":5000}}\\n\\n".
+                "data: [DONE]\\n\\n",
+                200,
+                ['Content-Type' => 'text/event-stream']
+            ),
+        ]);
+        Route::post('/__test-ai-assistant/budget-overrun', [\\Aloms\\UniversalAiAssistant\\AssistantController::class, 'send']);
+
+        $response = $this->actingAs($user)->postJson('/__test-ai-assistant/budget-overrun', [
+            'message' => 'Explain a grammar rule in Bangla.',
+        ]);
+        $response->assertOk();
+        $response->streamedContent();
+
+        $reservation = \\DB::table('ai_assistant_token_reservations')
+            ->where('user_id', $user->id)
+            ->first();
+        $this->assertNotNull($reservation);
+        $this->assertSame('over_budget', $reservation->status);
+        $this->assertSame(5000, (int) $reservation->actual_tokens);
+
+        $audit = \\DB::table('ai_assistant_audit_events')
+            ->where('reservation_id', $reservation->id)
+            ->where('event', 'budget_overrun')
+            ->first();
+        $this->assertNotNull($audit);
+        $metadata = json_decode($audit->metadata, true);
+        $this->assertSame(5000, $metadata['actual_tokens']);
+        $this->assertGreaterThan($metadata['reserved_tokens'], $metadata['actual_tokens']);
+        $this->assertSame(
+            $metadata['actual_tokens'] - $metadata['reserved_tokens'],
+            $metadata['overrun_tokens']
+        );
+        $this->assertDatabaseHas('ai_assistant_messages', [
+            'conversation_id' => $reservation->conversation_id,
+            'message_role' => 'assistant',
+            'token_count' => 5000,
+        ]);
+    }
+
     public function test_prompt_estimator_applies_a_conservative_byte_multiplier_and_rejects_unbounded_context(): void
     {
         $messages = [['role' => 'user', 'content' => str_repeat('a', 1000)]];
         $payload = json_encode($messages, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
 
-        $this->assertSame((int) ceil(strlen($payload) * 0.75), AssistantTokenBudget::estimatePromptTokens($messages));
+        $this->assertSame(strlen($payload) + (count($messages) * 8), AssistantTokenBudget::estimatePromptTokens($messages));
 
         $this->expectException(\RuntimeException::class);
         AssistantTokenBudget::estimatePromptTokens([['role' => 'user', 'content' => str_repeat('x', 524289)]]);
