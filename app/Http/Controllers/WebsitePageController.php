@@ -5,6 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\MediaAsset;
 use App\Models\AcademicLevel;
 use App\Models\WebsitePage;
+use App\Models\WebsitePageRevision;
+use App\Models\ActivityLog;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -29,6 +33,7 @@ class WebsitePageController extends Controller
             'page' => new WebsitePage(['template' => 'standard', 'sections' => [], 'academic_level_id' => $request->integer('academic_level_id') ?: null]),
             'media' => MediaAsset::query()->where('mime_type', 'like', 'image/%')->latest()->limit(200)->get(),
             'academicLevels' => AcademicLevel::query()->where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(),
+            'revisions' => collect(),
         ]);
     }
 
@@ -38,7 +43,11 @@ class WebsitePageController extends Controller
         $data['created_by'] = $request->user()->id;
         $data['slug'] = $this->uniqueSlug(!empty($data['slug']) ? $data['slug'] : $data['title']);
         $data['published_at'] = $data['status'] === 'published' ? ($data['published_at'] ?? now()) : null;
-        WebsitePage::create($data);
+        DB::transaction(function () use ($data, $request): void {
+            $page = WebsitePage::create($data);
+            $this->recordRevision($page, $request->user()->id);
+        }, 3);
+
         return redirect()->route('admin.website-pages.index')->with('success', 'Website page created.');
     }
 
@@ -48,6 +57,7 @@ class WebsitePageController extends Controller
             'page' => $websitePage,
             'media' => MediaAsset::query()->where('mime_type', 'like', 'image/%')->latest()->limit(200)->get(),
             'academicLevels' => AcademicLevel::query()->where('is_active', true)->orWhere('id', $websitePage->academic_level_id)->orderBy('sort_order')->orderBy('name')->get(),
+            'revisions' => $websitePage->revisions()->with('creator')->limit(20)->get(),
         ]);
     }
 
@@ -56,7 +66,12 @@ class WebsitePageController extends Controller
         $data = $this->validated($request, $websitePage);
         $data['slug'] = $this->uniqueSlug(!empty($data['slug']) ? $data['slug'] : $data['title'], $websitePage->id);
         $data['published_at'] = $data['status'] === 'published' ? ($data['published_at'] ?? $websitePage->published_at ?? now()) : null;
-        $websitePage->update($data);
+        DB::transaction(function () use ($websitePage, $data, $request): void {
+            $page = WebsitePage::query()->whereKey($websitePage->id)->lockForUpdate()->firstOrFail();
+            $page->update($data);
+            $this->recordRevision($page, $request->user()->id);
+        }, 3);
+
         return redirect()->route('admin.website-pages.index')->with('success', 'Website page updated.');
     }
 
@@ -70,8 +85,108 @@ class WebsitePageController extends Controller
         $copy->status = 'draft';
         $copy->published_at = null;
         $copy->created_by = $request->user()->id;
-        $copy->save();
+        DB::transaction(function () use ($copy, $request): void {
+            $copy->save();
+            $this->recordRevision($copy, $request->user()->id);
+        }, 3);
         return redirect()->route('admin.website-pages.edit', $copy)->with('success', 'Page duplicated as a draft.');
+    }
+
+    public function restoreRevision(
+        Request $request,
+        WebsitePage $websitePage,
+        WebsitePageRevision $revision,
+    ): RedirectResponse {
+        $restoredVersion = null;
+
+        DB::transaction(function () use ($request, $websitePage, $revision, &$restoredVersion): void {
+            $page = WebsitePage::query()->whereKey($websitePage->id)->lockForUpdate()->firstOrFail();
+            $target = WebsitePageRevision::query()
+                ->whereKey($revision->id)
+                ->where('website_page_id', $page->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $snapshot = $target->snapshot;
+            $required = ['title', 'slug', 'template', 'sections', 'status'];
+            if (! is_array($snapshot)
+                || collect($required)->contains(fn (string $key): bool => ! array_key_exists($key, $snapshot))
+                || ! is_string($snapshot['title']) || ! is_string($snapshot['slug'])
+                || ! preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $snapshot['slug'])
+                || ! in_array($snapshot['template'], ['standard', 'wide', 'centered', 'split'], true)
+                || ! in_array($snapshot['status'], ['draft', 'published'], true)
+                || ! is_array($snapshot['sections'])) {
+                throw new \RuntimeException('The selected page revision is invalid and cannot be restored.');
+            }
+
+            $slugInUse = WebsitePage::query()
+                ->where('slug', $snapshot['slug'])
+                ->whereKeyNot($page->id)
+                ->exists();
+            if ($slugInUse) {
+                throw ValidationException::withMessages([
+                    'revision' => 'This revision cannot be restored because its URL slug is now used by another page.',
+                ]);
+            }
+
+            $page->fill([
+                'title' => $snapshot['title'],
+                'slug' => $snapshot['slug'],
+                'menu_label' => $snapshot['menu_label'] ?? null,
+                'template' => $snapshot['template'],
+                'sections' => $snapshot['sections'],
+                'seo_title' => $snapshot['seo_title'] ?? null,
+                'seo_description' => $snapshot['seo_description'] ?? null,
+                'show_in_menu' => (bool) ($snapshot['show_in_menu'] ?? false),
+                'menu_order' => (int) ($snapshot['menu_order'] ?? 0),
+                'status' => $snapshot['status'],
+                'published_at' => $snapshot['published_at'] ?? null,
+                'academic_level_id' => $snapshot['academic_level_id'] ?? null,
+            ]);
+            $page->save();
+            $this->recordRevision($page, $request->user()->id);
+            $restoredVersion = $target->version;
+        }, 3);
+
+        ActivityLog::query()->create([
+            'user_id' => $request->user()->id,
+            'event' => 'website_page.revision_restored',
+            'description' => 'Restored website page '.$websitePage->slug.' from revision '.$restoredVersion,
+            'method' => $request->method(),
+            'route' => optional($request->route())->getName(),
+            'ip_address' => $request->ip(),
+            'user_agent' => mb_substr((string) $request->userAgent(), 0, 1000),
+        ]);
+
+        return redirect()->route('admin.website-pages.edit', $websitePage)
+            ->with('success', 'Page revision restored. The restored state was saved as a new revision.');
+    }
+
+    private function recordRevision(WebsitePage $page, int $userId): WebsitePageRevision
+    {
+        $nextVersion = (int) WebsitePageRevision::query()
+            ->where('website_page_id', $page->id)
+            ->max('version') + 1;
+
+        return WebsitePageRevision::query()->create([
+            'website_page_id' => $page->id,
+            'version' => $nextVersion,
+            'snapshot' => [
+                'title' => $page->title,
+                'slug' => $page->slug,
+                'menu_label' => $page->menu_label,
+                'template' => $page->template,
+                'sections' => $page->sections ?? [],
+                'seo_title' => $page->seo_title,
+                'seo_description' => $page->seo_description,
+                'show_in_menu' => (bool) $page->show_in_menu,
+                'menu_order' => (int) $page->menu_order,
+                'status' => $page->status,
+                'published_at' => $page->published_at?->toISOString(),
+                'academic_level_id' => $page->academic_level_id,
+            ],
+            'created_by' => $userId,
+        ]);
     }
 
     public function destroy(WebsitePage $websitePage): RedirectResponse
