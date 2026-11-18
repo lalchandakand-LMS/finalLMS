@@ -70,7 +70,7 @@ This file records decisions that should not be casually reversed by a developer 
 - Never call a feature complete based only on UI/menu/table/syntax; require complete user workflow, authorization, automated tests and relevant staging/provider acceptance.
 
 ## D-011 — AI handoff and project memory
-- Keep README, AI_STUDIO_HANDOFF, PROJECT_STATUS and this decision log aligned.
+- Keep README, PROJECT_HANDOFF, PROJECT_STATUS and this decision log aligned.
 - Every meaningful change must record: date, branch, PR, commit SHA, files/modules touched, behavior changed, tests run/results, known limitations, next task and merge/deployment status.
 - AI agents must read these files and inspect actual source before coding. They must not invent implementation or CI status.
 - Preserve a dated history; do not erase previous decisions without recording why they changed.

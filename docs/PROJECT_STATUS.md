@@ -1,6 +1,6 @@
 # Project Status — Alom's English Center LMS
 
-Last consolidated: 2026-11-14
+Last consolidated: 2026-11-18
 Repository: https://github.com/lalchandakand-LMS/finalLMS
 Production domain: https://alomsenglishcenter.com
 
@@ -17,6 +17,21 @@ Production domain: https://alomsenglishcenter.com
 
 Never promote a feature from one status to another without evidence.
 
+## Live GitHub workstream snapshot — 2026-11-18
+
+This snapshot supersedes older PR status notes below when they conflict. Re-fetch exact heads and checks before any merge decision.
+
+| PR | Workstream | Current verified state |
+|---|---|---|
+| [#319](https://github.com/lalchandakand-LMS/finalLMS/pull/319) | Signed Theme Manager | Merged to main as `bdd6b3db1e5dbc1c69589d54e67864b0fd94f1a7`; exact-head Laravel CI and CodeQL passed. |
+| [#322](https://github.com/lalchandakand-LMS/finalLMS/pull/322) | Universal AI Assistant atomic daily budget | Merged to main as `08c5456df67b818e60e337c1bf3bd677cd0d3f44`; exact-head Laravel CI and CodeQL passed. |
+| [#318](https://github.com/lalchandakand-LMS/finalLMS/pull/318) | Learn & Earn paid exam plugin | Merged to main as `0df6cfb9a27803c47f6a39802b6b40731931105d`; exact-head Laravel CI test/package and CodeQL passed. Manual/offline payment review, autosave/recovery, standalone signed package, trusted key and staging/browser acceptance remain open. |
+| [#277](https://github.com/lalchandakand-LMS/finalLMS/pull/277) | Flash Sale plugin + negative marking | Open Draft; current head `7cf89f4bc03100761f45c8e752eab89956fac678`. Exact-head CodeQL passed (run 44279527062); Laravel CI is running (run 44279526912). Earlier changes-requested review still requires fresh reviewer approval. Standalone signed plugin ZIP, trusted signing-key provisioning, staging lifecycle and browser checkout acceptance remain open. |
+| [#320](https://github.com/lalchandakand-LMS/finalLMS/pull/320) | Plugin migration claim/rollback safety | Merged to main as `b30b660f0c67f136377988d5740874cf1e42b397` on 2026-11-18; exact-head Laravel CI, cPanel package and CodeQL passed. Real MySQL/MariaDB staging concurrency and rollback acceptance remain release gates. |
+| [#323](https://github.com/lalchandakand-LMS/finalLMS/pull/323) | Remove external AI-builder branding references | Open Draft; current head `7c96c698c8a11e62d6b97c3f804eee445d6af215`. Exact-head Laravel CI and cPanel package passed (run 44278650612); CodeQL passed (run 44278650621). No reviewer approval recorded yet. |
+| [#324](https://github.com/lalchandakand-LMS/finalLMS/pull/324) | Visual Page Builder drag-and-drop sections | Open Draft; current head `774d818eed2403bb5f5874e170d34e9aa0fdc517`. Laravel CI is running (run 44279918840); CodeQL passed (run 44279918795). Device preview and page revision/rollback remain follow-up work. |
+
+No production deployment, live database migration or live payment-provider activation has been performed. Do not infer signed-plugin, provider, staging or browser acceptance from CI/package success.
 ## Architecture decision
 
 Five operational panels: Admin (one unified admin; no separate Super Admin), Branch (separate and branch-scoped), Teacher, Student, Guardian. This follows the owner's later explicit direction and Issue #40; older Issue #38's four-portal proposal must be reconciled. See `docs/DECISION_LOG.md`.
@@ -320,3 +335,13 @@ This section supersedes earlier plugin-platform implementation snapshots where t
 
 Production deployment remains blocked until staging, backup/restore, rollback and all applicable release gates pass.
 
+## Current status correction — 2026-11-18 (supersedes older snapshots)
+
+- PR #319 Theme Manager: merged to main as `bdd6b3db1e5dbc1c69589d54e67864b0fd94f1a7`; exact-head Laravel CI and CodeQL passed. Trusted signing-key provisioning and cPanel staging/backup/restore acceptance remain release gates.
+- PR #320 plugin migration/rollback security: merged to main as `b30b660f0c67f136377988d5740874cf1e42b397`; exact-head Laravel CI, package and CodeQL passed. Real MySQL/MariaDB concurrency and rollback rehearsal remain release gates.
+- PR #318 Learn & Earn: merged to main as `0df6cfb9a27803c47f6a39802b6b40731931105d`; exact-head Laravel CI test/package and CodeQL passed. Payment sandbox callback, manual/offline review and staging acceptance remain open.
+- PR #322 Universal AI Assistant: merged to main as `08c5456df67b818e60e337c1bf3bd677cd0d3f44`; exact-head Laravel CI test/package and CodeQL passed. Provider configuration and real staging acceptance remain separate.
+- PR #277 Flash Sale/negative marking: current head `7cf89f4bc03100761f45c8e752eab89956fac678`; CodeQL passed, Laravel CI is running. Earlier changes-requested review remains a blocker until fresh approval. Standalone signed package and staging lifecycle/browser acceptance remain open.
+- PR #323 documentation branding cleanup: branch `docs/remove-external-ai-builder-branding`; the canonical Project Handoff replaces the duplicated legacy content, while `docs/AI_STUDIO_HANDOFF.md` remains only as a short compatibility pointer for older links. A source audit of the affected docs and Board Question Solver README found no external builder branding references. Latest recorded source commit before this status correction: `e0b59ddc7c12ee5f554d402d97185cee25422397`; exact-head Laravel CI and CodeQL are running.
+- PR #324 Visual Page Builder increment: current head `774d818eed2403bb5f5874e170d34e9aa0fdc517`; CodeQL passed and Laravel CI is running. Scope is accessible custom-page section drag-and-drop; device preview and page revision/rollback are not yet implemented.
+- No production deployment or live database/payment-provider changes have been performed. Do not infer staging or production acceptance from CI/package success.

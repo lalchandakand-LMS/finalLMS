@@ -56,9 +56,9 @@ This remains an actively developed LMS and is not yet a fully validated commerci
 
 ## AI developer handoff and project memory
 
-To continue this repository in ChatGPT, Google AI Studio, or with another developer, read these project records first:
+To continue this repository in ChatGPT or another approved developer/AI coding assistant, read these project records first:
 
-1. [AI Studio Handoff](docs/AI_STUDIO_HANDOFF.md) — complete product context, technical architecture, module scope, security rules and copy/paste continuation instructions.
+1. [Project Handoff](docs/PROJECT_HANDOFF.md) — complete product context, technical architecture, module scope, security rules and copy/paste continuation instructions.
 2. [Project Status](docs/PROJECT_STATUS.md) — current known workstreams, priorities, blockers and release status.
 3. [Owner Decision Log](docs/DECISION_LOG.md) — approved product decisions and architecture rules.
 
