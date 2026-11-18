@@ -14,6 +14,7 @@ return new class extends Migration
             $table->string('provider', 40);
             $table->string('event_key', 190)->unique();
             $table->foreignId('payment_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('invoice_payment_id')->nullable()->constrained('invoice_payments')->nullOnDelete();
             $table->string('gateway_payment_id')->nullable()->index();
             $table->string('gateway_transaction_id')->nullable()->index();
             $table->string('event_type', 80);
