@@ -225,7 +225,10 @@ final class AssistantController
                     $emit(['type' => 'delta', 'content' => $answer]);
                     $emit(['type' => 'done', 'conversation_id' => $conversation->id]);
                 } catch (Throwable) {
-                    try { AssistantTokenBudget::release($reservationId); } catch (Throwable) {}
+                    // The provider may have accepted and billed the request before
+                    // the stream failed or the client disconnected. Keep the reservation
+                    // charged until reconciliation rather than freeing capacity blindly.
+                    try { AssistantTokenBudget::markUncertain($reservationId); } catch (Throwable) {}
                     try { AssistantAudit::record('provider_failed', $userId, (int) $conversation->id, (int) $reservationId, $role, (string) $settings['provider'], (string) $settings['model']); } catch (Throwable) {}
                     $emit(['type' => 'error', 'message' => __('The AI stream failed. Retry after checking provider health.')]);
                 }
