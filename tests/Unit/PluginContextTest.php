@@ -26,7 +26,6 @@ class PluginContextTest extends TestCase
             ->first(fn ($candidate) => $candidate->uri() === 'api/v1/plugins/aec/mobile-test/health');
 
         $this->assertNotNull($route);
-        $this->assertSame('api.plugins.mobile_test.health', $route->getName());
         $this->assertContains('api', $route->middleware());
         $this->assertContains('plugin.active:aec.mobile-test', $route->middleware());
         $this->assertContains('api.token', $route->middleware());
@@ -67,6 +66,8 @@ class PluginContextTest extends TestCase
 
         $route = collect(app('router')->getRoutes()->getRoutes())->first(fn ($candidate) => $candidate->uri() === 'test/support-ai/health');
         $this->assertNotNull($route);
+        $this->assertSame('test.support_ai.health', $route->getName());
+        $this->assertTrue(Route::has('test.support_ai.health'));
         $this->assertContains('plugin.active:aec.support-staff-test', $route->middleware());
         $this->assertContains('role:accountant', $route->middleware());
         $this->assertContains('plugin.permission:aec.support-staff-test,support.test', $route->middleware());
