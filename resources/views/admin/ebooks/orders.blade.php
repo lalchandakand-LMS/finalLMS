@@ -40,8 +40,13 @@
             @if($order->refunds->isNotEmpty())
                 @foreach($order->refunds as $refund)
                     <div class="flash warning" style="margin-top:10px">
-                        <strong>{{ __('Refund recorded') }} · ৳{{ number_format((float)$refund->amount,2) }}</strong>
+                        <strong>{{ __('Refund') }} · ৳{{ number_format((float)$refund->amount,2) }} · {{ __(ucfirst($refund->status)) }}</strong>
                         <p>{{ __('Refund reference') }}: {{ $refund->refund_reference }} · {{ __('Processed by') }}: {{ $refund->processor?->name ?: '—' }}</p>
+                        @if($refund->gateway_refund_id)<p>{{ __('Gateway refund ID') }}: {{ $refund->gateway_refund_id }} · {{ $refund->gateway_status }}</p>@endif
+                        @if($refund->failure_reason)<p>{{ __('Gateway review required') }}: {{ $refund->failure_reason }}</p>@endif
+                        @if($refund->status === 'gateway_unknown')
+                            <form method="POST" action="{{ route('admin.ebooks.refunds.reconcile', $refund) }}">@csrf<button class="btn secondary" type="submit">{{ __('Reconcile existing gateway refund') }}</button></form>
+                        @endif
                         <p>{{ $refund->reason }}</p>
                         <small>{{ $refund->processed_at?->format('d M Y, h:i A') }}</small>
                     </div>
@@ -62,10 +67,15 @@
                 <form method="POST" action="{{ route('admin.ebooks.orders.refund',$order) }}" class="panel" style="margin-top:12px;background:var(--surface-muted)">
                     @csrf
                     <h3>{{ __('Record full refund') }}</h3>
-                    <p class="muted">{{ __('Only submit after the money has been returned outside the LMS. This records the refund and revokes all eBook access for this order.') }}</p>
-                    <label>{{ __('External refund transaction/reference') }}<input type="text" name="refund_reference" maxlength="120" required></label>
+                    @php($isBkashGatewayOrder = $order->payments->contains(fn ($payment) => $payment->gateway_provider === 'bkash' && filled($payment->gateway_payment_id) && filled($payment->gateway_transaction_id)))
+                    @if($isBkashGatewayOrder)
+                        <p class="muted">{{ __('The LMS will submit the refund to bKash and verify the refund status before revoking eBook access.') }}</p>
+                    @else
+                        <p class="muted">{{ __('Only submit after the money has been returned outside the LMS. This records the refund and revokes all eBook access for this order.') }}</p>
+                        <label>{{ __('External refund transaction/reference') }}<input type="text" name="refund_reference" maxlength="120" required></label>
+                        <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" name="confirm_refund" value="1" required style="width:auto">{{ __('I confirm the refund has already been sent to the customer.') }}</label>
+                    @endif
                     <label>{{ __('Refund reason') }}<textarea name="reason" rows="2" maxlength="2000" required></textarea></label>
-                    <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" name="confirm_refund" value="1" required style="width:auto">{{ __('I confirm the refund has already been sent to the customer.') }}</label>
                     <button class="btn secondary" type="submit">{{ __('Record refund and revoke access') }}</button>
                 </form>
             @endif
