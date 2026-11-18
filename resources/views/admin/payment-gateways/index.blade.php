@@ -17,6 +17,11 @@
     <p class="muted" style="margin-bottom:0;">{{ __('Enabling a gateway only makes an installed and configured adapter available. It does not activate live merchant payments. Checkout callbacks must be independently verified by the provider API before a course or order is fulfilled.') }}</p>
 </div>
 
+<div class="panel" style="margin-bottom:20px;display:flex;gap:12px;flex-wrap:wrap;">
+    <a class="btn secondary" href="{{ route('admin.payment-reconciliation.index') }}">{{ __('Payment reconciliation') }}</a>
+    <a class="btn secondary" href="{{ route('admin.payment-audit.index') }}">{{ __('Payment audit trail') }}</a>
+</div>
+
 <div class="grid grid-2">
 @forelse($gateways as $key => $gateway)
     <section class="panel">
