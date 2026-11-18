@@ -80,7 +80,7 @@ class InvoiceRefundController extends Controller
                 return 'excess';
             }
 
-            InvoiceRefund::create([
+            $refund = InvoiceRefund::create([
                 'invoice_id' => $payment->invoice_id,
                 'invoice_payment_id' => $payment->id,
                 'requested_by' => $request->user()->id,
@@ -89,6 +89,17 @@ class InvoiceRefundController extends Controller
                 'reference' => $validated['reference'] ?? null,
                 'reason' => $validated['reason'],
                 'status' => 'pending',
+            ]);
+
+            PaymentAuditEvent::create([
+                'invoice_payment_id' => $payment->id,
+                'invoice_refund_id' => $refund->id,
+                'actor_id' => $request->user()->id,
+                'provider' => $payment->gateway_provider,
+                'event' => 'refund_requested',
+                'source' => 'admin_refund',
+                'after_state' => ['status' => 'pending', 'amount' => $refund->amount, 'method' => $refund->method],
+                'ip_address' => $request->ip(),
             ]);
 
             return 'created';
@@ -261,6 +272,16 @@ class InvoiceRefundController extends Controller
                 'status' => 'rejected',
                 'approved_by' => $request->user()->id,
                 'processed_at' => now(),
+            ]);
+            PaymentAuditEvent::create([
+                'invoice_payment_id' => $locked->invoice_payment_id,
+                'invoice_refund_id' => $locked->id,
+                'actor_id' => $request->user()->id,
+                'event' => 'refund_rejected',
+                'source' => 'admin_refund',
+                'before_state' => ['status' => 'pending'],
+                'after_state' => ['status' => 'rejected'],
+                'ip_address' => $request->ip(),
             ]);
 
             return true;
