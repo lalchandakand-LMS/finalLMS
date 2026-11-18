@@ -335,3 +335,13 @@ This section supersedes earlier plugin-platform implementation snapshots where t
 
 Production deployment remains blocked until staging, backup/restore, rollback and all applicable release gates pass.
 
+## Current status correction — 2026-11-18 (supersedes older snapshots)
+
+- PR #319 Theme Manager: merged to main as `bdd6b3db1e5dbc1c69589d54e67864b0fd94f1a7`; exact-head Laravel CI and CodeQL passed. Trusted signing-key provisioning and cPanel staging/backup/restore acceptance remain release gates.
+- PR #320 plugin migration/rollback security: merged to main as `b30b660f0c67f136377988d5740874cf1e42b397`; exact-head Laravel CI, package and CodeQL passed. Real MySQL/MariaDB concurrency and rollback rehearsal remain release gates.
+- PR #318 Learn & Earn: merged to main as `0df6cfb9a27803c47f6a39802b6b40731931105d`; exact-head Laravel CI test/package and CodeQL passed. Payment sandbox callback, manual/offline review and staging acceptance remain open.
+- PR #322 Universal AI Assistant: merged to main as `08c5456df67b818e60e337c1bf3bd677cd0d3f44`; exact-head Laravel CI test/package and CodeQL passed. Provider configuration and real staging acceptance remain separate.
+- PR #277 Flash Sale/negative marking: current head `7cf89f4bc03100761f45c8e752eab89956fac678`; CodeQL passed, Laravel CI is running. Earlier changes-requested review remains a blocker until fresh approval. Standalone signed package and staging lifecycle/browser acceptance remain open.
+- PR #323 documentation branding cleanup: current head `76decf738e91e2c0cebae84028a36b2d243d82ff`; the branch removes the obsolete handoff document and references. A source audit of README, Decision Log, Project Handoff, Customer Installation/White Label, Board Question Solver README and Project Status found no occurrences of the strings `Google AI Studio`, `AI Studio` or `AI_STUDIO`. Fresh exact-head Laravel CI and CodeQL are running after the status update.
+- PR #324 Visual Page Builder increment: current head `774d818eed2403bb5f5874e170d34e9aa0fdc517`; CodeQL passed and Laravel CI is running. Scope is accessible custom-page section drag-and-drop; device preview and page revision/rollback are not yet implemented.
+- No production deployment or live database/payment-provider changes have been performed. Do not infer staging or production acceptance from CI/package success.
