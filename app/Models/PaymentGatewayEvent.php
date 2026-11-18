@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class PaymentGatewayEvent extends Model
 {
     protected $fillable = [
-        'provider', 'event_key', 'payment_id', 'gateway_payment_id', 'gateway_transaction_id',
+        'provider', 'event_key', 'payment_id', 'invoice_payment_id', 'gateway_payment_id', 'gateway_transaction_id',
         'event_type', 'verification_status', 'processing_status', 'payload_hash',
         'verified_payload', 'failure_reason', 'received_at', 'verified_at', 'processed_at',
     ];
