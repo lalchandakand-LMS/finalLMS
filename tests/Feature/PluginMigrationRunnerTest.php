@@ -522,4 +522,59 @@ PHP;
         ]);
     }
 
+    public function test_stale_plugin_model_cannot_migrate_after_registry_package_version_changes(): void
+    {
+        $file = $this->root.'/migrations/2026_11_15_000011_stale_package_guard.php';
+        file_put_contents($file, <<<'PHP'
+<?php
+return new class extends \Illuminate\Database\Migrations\Migration {
+    public function up(): void {
+        \Illuminate\Support\Facades\Schema::create('plugin_stale_package_probe', function (\Illuminate\Database\Schema\Blueprint $table): void {
+            $table->id();
+        });
+    }
+    public function down(): void {
+        \Illuminate\Support\Facades\Schema::dropIfExists('plugin_stale_package_probe');
+    }
+};
+PHP);
+
+        $plugin = new PluginInstallation();
+        $plugin->forceFill([
+            'plugin_key' => 'test.migration-check',
+            'name' => 'Stale Package Guard',
+            'version' => '1.0.0',
+            'type' => 'module',
+            'status' => 'installed',
+            'manifest' => ['migrations' => 'migrations'],
+            'package_path' => $this->relative,
+            'package_sha256' => str_repeat('a', 64),
+            'signature_key_id' => 'test-key',
+            'signature_verified_at' => now(),
+            'metadata' => [
+                'integrity_version' => 1,
+                'installed_file_hashes' => ['migrations/'.basename($file) => hash_file('sha256', $file)],
+            ],
+        ])->save();
+
+        \DB::table('plugin_registry')->where('id', $plugin->id)->update([
+            'version' => '2.0.0',
+            'package_path' => 'plugins/test/migration-check/2.0.0',
+            'package_sha256' => str_repeat('b', 64),
+        ]);
+
+        try {
+            app(PluginMigrationRunner::class)->migrate($plugin);
+            $this->fail('A stale package snapshot must not execute migrations after the registry points to another version.');
+        } catch (\RuntimeException $exception) {
+            $this->assertStringContainsString('package changed while migration was being prepared', $exception->getMessage());
+        }
+
+        $this->assertFalse(Schema::hasTable('plugin_stale_package_probe'));
+        $this->assertDatabaseMissing('plugin_migrations', [
+            'plugin_key' => $plugin->plugin_key,
+            'migration' => basename($file),
+        ]);
+    }
+
 }
