@@ -31,7 +31,8 @@ class BkashReconciliationService
         $gatewayId = (string) ($verified['paymentID'] ?? '');
         $gatewayTrx = (string) ($verified['trxID'] ?? '');
         $currency = strtoupper((string) ($verified['currency'] ?? ''));
-        $matches = $error === null && $gatewayStatus === 'completed'
+        $matches = $error === null && $payment->status === 'approved' && $gatewayStatus === 'completed'
+            && $gatewayTrx !== ''
             && $gatewayId === $payment->gateway_payment_id
             && $gatewayAmount !== null && $gatewayAmount === round((float) $payment->amount, 2)
             && $currency === strtoupper((string) $payment->currency)
