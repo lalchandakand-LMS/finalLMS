@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "key": "aec.board-question-solver",
+  "name": "Board Question Solver",
+  "version": "1.0.0",
+  "type": "ai",
+  "entrypoint": "src/Plugin.php",
+  "requires": {"php":"^8.3","laravel":"^12.0","lms":"^1.0"},
+  "dependencies": ["aec.universal-ai-assistant"],
+  "conflicts": [],
+  "portals": ["admin","student"],
+  "permissions": ["board-solver.configure","board-solver.use"],
+  "capabilities": ["bangladesh-education-boards","ssc-hsc-question-solving","step-by-step-solutions","bangla-english-explanations","image-question-ocr","hints-and-marking-guidance","private-student-solution-history","shared-ai-provider-and-token-budget"],
+  "migrations": "migrations"
+}
