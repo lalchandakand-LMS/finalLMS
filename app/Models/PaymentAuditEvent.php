@@ -15,7 +15,7 @@ class PaymentAuditEvent extends Model
     }
 
     protected $fillable = [
-        'payment_id', 'invoice_payment_id', 'invoice_refund_id', 'actor_id', 'provider',
+        'payment_id', 'invoice_payment_id', 'invoice_refund_id', 'ebook_refund_id', 'actor_id', 'provider',
         'event', 'source', 'correlation_id', 'before_state', 'after_state', 'ip_address',
     ];
 
@@ -24,6 +24,11 @@ class PaymentAuditEvent extends Model
     public function payment(): BelongsTo
     {
         return $this->belongsTo(Payment::class);
+    }
+
+    public function ebookRefund(): BelongsTo
+    {
+        return $this->belongsTo(EbookRefund::class, 'ebook_refund_id');
     }
 
     public function invoiceRefund(): BelongsTo
