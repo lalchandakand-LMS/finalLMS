@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\MediaAsset;
 use App\Models\Setting;
+use App\Support\SafeWebsiteUrl;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -139,10 +140,7 @@ class WebsiteBuilderController extends Controller
             'layout' => ['nullable', Rule::in(['standard', 'reversed', 'centered'])],
         ]);
 
-        $url = trim($validated['button_url'] ?? '');
-        if ($url !== '' && !preg_match('~^(https?://|/(?!/)|#)~i', $url)) {
-            $url = '';
-        }
+        $url = SafeWebsiteUrl::sanitize($validated['button_url'] ?? '') ?? '';
 
         $blocks = json_decode((string) Setting::value('homepage_custom_blocks', '[]'), true);
         $blocks = is_array($blocks) ? $blocks : [];
@@ -185,7 +183,7 @@ class WebsiteBuilderController extends Controller
             ->filter()->unique()->values();
         $media = MediaAsset::query()->whereIn('id', $imageIds)->where('mime_type', 'like', 'image/%')->get()->keyBy('id');
 
-        $isSafeUrl = fn ($url): bool => is_string($url) && (bool) preg_match('~^(https?://|/(?!/)|#)~i', trim($url));
+        $isSafeUrl = fn ($url): bool => SafeWebsiteUrl::sanitize($url) !== null;
         $draft['header_links'] = collect($draft['header_links'] ?? [])->filter(fn ($link) => is_array($link) && $isSafeUrl($link['url'] ?? null))->values()->all();
         $draft['footer_links'] = collect($draft['footer_links'] ?? [])->filter(fn ($link) => is_array($link) && $isSafeUrl($link['url'] ?? null))->values()->all();
         $draft['home_slides'] = collect($draft['home_slides'] ?? [])->map(function ($slide) use ($isSafeUrl) {
@@ -346,9 +344,7 @@ class WebsiteBuilderController extends Controller
                 'body' => trim($section['body'] ?? ''),
                 'image_id' => $section['image_id'] ?? null,
                 'button_label' => trim($section['button_label'] ?? ''),
-                'button_url' => preg_match('~^(https?://|/(?!/)|#)~i', trim($section['button_url'] ?? ''))
-                    ? trim($section['button_url'])
-                    : '',
+                'button_url' => SafeWebsiteUrl::sanitize($section['button_url'] ?? '') ?? '',
                 'background_color' => preg_match('/^#[0-9A-Fa-f]{6}$/', $section['background_color'] ?? '') ? $section['background_color'] : '#ffffff',
                 'text_color' => preg_match('/^#[0-9A-Fa-f]{6}$/', $section['text_color'] ?? '') ? $section['text_color'] : '#18212f',
                 'spacing' => in_array($section['spacing'] ?? 'normal', ['compact', 'normal', 'airy'], true) ? ($section['spacing'] ?? 'normal') : 'normal',
@@ -365,10 +361,7 @@ class WebsiteBuilderController extends Controller
                 return null;
             }
 
-            $buttonUrl = trim($slide['button_url'] ?? '');
-            if ($buttonUrl !== '' && !preg_match('~^(https?://|/(?!/)|#)~i', $buttonUrl)) {
-                $buttonUrl = '';
-            }
+            $buttonUrl = SafeWebsiteUrl::sanitize($slide['button_url'] ?? '') ?? '';
 
             return [
                 'image_id' => $image->id,
@@ -382,8 +375,8 @@ class WebsiteBuilderController extends Controller
 
         $footerLinks = collect($validated['footer_links'] ?? [])->map(function (array $link): ?array {
             $label = trim($link['label'] ?? '');
-            $url = trim($link['url'] ?? '');
-            if ($label === '' || !preg_match('~^(https?://|/(?!/)|#)~i', $url)) {
+            $url = SafeWebsiteUrl::sanitize($link['url'] ?? '');
+            if ($label === '' || $url === null) {
                 return null;
             }
             return ['label' => $label, 'url' => $url];
