@@ -328,4 +328,51 @@ PHP);
         ]);
     }
 
+    public function test_failed_lifecycle_transition_is_blocked_while_any_migration_is_still_running(): void
+    {
+        $plugin = new PluginInstallation();
+        $plugin->forceFill([
+            'plugin_key' => 'test.migration-check',
+            'name' => 'Mixed Migration States',
+            'version' => '1.0.0',
+            'type' => 'module',
+            'status' => 'installed',
+            'manifest' => [],
+            'package_path' => $this->relative,
+        ])->save();
+
+        \DB::table('plugin_migrations')->insert([
+            [
+                'plugin_key' => $plugin->plugin_key,
+                'plugin_version' => $plugin->version,
+                'migration' => '2026_11_15_000007_failed.php',
+                'status' => 'failed',
+                'started_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'plugin_key' => $plugin->plugin_key,
+                'plugin_version' => $plugin->version,
+                'migration' => '2026_11_15_000008_still_running.php',
+                'status' => 'running',
+                'started_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        try {
+            app(\App\Services\Plugins\PluginLifecycle::class)->transition($plugin->plugin_key, 'failed');
+            $this->fail('A failed migration must not mask another migration that is still running.');
+        } catch (\LogicException $exception) {
+            $this->assertStringContainsString('until the migration is recovered', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('plugin_installations', [
+            'id' => $plugin->id,
+            'status' => 'installed',
+        ]);
+    }
+
 }
