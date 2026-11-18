@@ -1,10 +1,10 @@
 <?php
 
-namespace App\\Http\\Controllers;
+namespace App\Http\Controllers;
 
-use App\\Models\\PaymentAuditEvent;
-use Illuminate\\Http\\Request;
-use Illuminate\\View\\View;
+use App\Models\PaymentAuditEvent;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 class PaymentAuditController extends Controller
 {
