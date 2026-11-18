@@ -82,4 +82,114 @@ PHP);
             'status' => 'rolled_back',
         ]);
     }
+    public function test_interrupted_running_claim_blocks_a_second_migration_execution(): void
+    {
+        $file = $this->root.'/migrations/2026_11_15_000002_running_claim.php';
+        file_put_contents($file, <<<'PHP'
+<?php
+return new class extends \\Illuminate\\Database\\Migrations\\Migration {
+    public function up(): void {
+        \\Illuminate\\Support\\Facades\\Schema::create('plugin_running_claim_probe', function (\\Illuminate\\Database\\Schema\\Blueprint $table): void {
+            $table->id();
+        });
+    }
+    public function down(): void {
+        \\Illuminate\\Support\\Facades\\Schema::dropIfExists('plugin_running_claim_probe');
+    }
+};
+PHP);
+
+        $plugin = new PluginInstallation();
+        $plugin->forceFill([
+            'plugin_key' => 'test.running-claim',
+            'name' => 'Running Claim',
+            'version' => '1.0.0',
+            'type' => 'module',
+            'status' => 'installed',
+            'manifest' => ['migrations' => 'migrations'],
+            'package_path' => $this->relative,
+            'metadata' => [
+                'integrity_version' => 1,
+                'installed_file_hashes' => ['migrations/2026_11_15_000002_running_claim.php' => hash_file('sha256', $file)],
+            ],
+        ])->save();
+
+        \\DB::table('plugin_migrations')->insert([
+            'plugin_key' => $plugin->plugin_key,
+            'plugin_version' => $plugin->version,
+            'migration' => basename($file),
+            'status' => 'running',
+            'started_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->assertFalse(Schema::hasTable('plugin_running_claim_probe'));
+        try {
+            app(PluginMigrationRunner::class)->migrate($plugin);
+            $this->fail('An interrupted migration claim must not be executed a second time.');
+        } catch (\\RuntimeException $exception) {
+            $this->assertStringContainsString('manual recovery', strtolower($exception->getMessage()));
+        }
+        $this->assertFalse(Schema::hasTable('plugin_running_claim_probe'));
+    }
+
+    public function test_failed_down_migration_is_marked_and_never_replayed_automatically(): void
+    {
+        $file = $this->root.'/migrations/2026_11_15_000003_failing_rollback.php';
+        file_put_contents($file, <<<'PHP'
+<?php
+return new class extends \\Illuminate\\Database\\Migrations\\Migration {
+    public function up(): void {
+        \\Illuminate\\Support\\Facades\\Schema::create('plugin_rollback_failure_probe', function (\\Illuminate\\Database\\Schema\\Blueprint $table): void {
+            $table->id();
+        });
+    }
+    public function down(): void {
+        throw new \\RuntimeException('simulated partial rollback failure');
+    }
+};
+PHP);
+
+        $plugin = new PluginInstallation();
+        $plugin->forceFill([
+            'plugin_key' => 'test.rollback-failure',
+            'name' => 'Rollback Failure',
+            'version' => '1.0.0',
+            'type' => 'module',
+            'status' => 'installed',
+            'manifest' => ['migrations' => 'migrations'],
+            'package_path' => $this->relative,
+            'metadata' => [
+                'integrity_version' => 1,
+                'installed_file_hashes' => ['migrations/2026_11_15_000003_failing_rollback.php' => hash_file('sha256', $file)],
+            ],
+        ])->save();
+
+        $runner = app(PluginMigrationRunner::class);
+        $runner->migrate($plugin);
+        $this->assertTrue(Schema::hasTable('plugin_rollback_failure_probe'));
+
+        try {
+            $runner->rollback($plugin);
+            $this->fail('A failing rollback must stop and require manual recovery.');
+        } catch (\\RuntimeException $exception) {
+            $this->assertStringContainsString('Manual database recovery', $exception->getMessage());
+        }
+
+        $this->assertTrue(Schema::hasTable('plugin_rollback_failure_probe'));
+        $this->assertDatabaseHas('plugin_migrations', [
+            'plugin_key' => $plugin->plugin_key,
+            'migration' => basename($file),
+            'status' => 'rollback_failed',
+        ]);
+
+        try {
+            $runner->rollback($plugin);
+            $this->fail('A failed rollback must not be replayed automatically.');
+        } catch (\\RuntimeException $exception) {
+            $this->assertStringContainsString('manual database recovery', strtolower($exception->getMessage()));
+        }
+    }
+
 }
