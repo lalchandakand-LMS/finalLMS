@@ -101,7 +101,7 @@ PHP);
 
         $plugin = new PluginInstallation();
         $plugin->forceFill([
-            'plugin_key' => 'test.running-claim',
+            'plugin_key' => 'test.migration-check',
             'name' => 'Running Claim',
             'version' => '1.0.0',
             'type' => 'module',
@@ -153,7 +153,7 @@ PHP);
 
         $plugin = new PluginInstallation();
         $plugin->forceFill([
-            'plugin_key' => 'test.rollback-failure',
+            'plugin_key' => 'test.migration-check',
             'name' => 'Rollback Failure',
             'version' => '1.0.0',
             'type' => 'module',
