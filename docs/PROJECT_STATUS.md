@@ -17,6 +17,19 @@ Production domain: https://alomsenglishcenter.com
 
 Never promote a feature from one status to another without evidence.
 
+## Live GitHub workstream snapshot — 2026-11-18
+
+This snapshot supersedes older PR status notes below when they conflict. Re-fetch exact heads and checks before any merge decision.
+
+| PR | Workstream | Current verified state |
+|---|---|---|
+| [#277](https://github.com/lalchandakand-LMS/finalLMS/pull/277) | Flash Sale plugin + negative marking | Draft; exact-head Laravel CI, CodeQL and cPanel package validation passed on `78b366929486753803d5ea40be613d0fba31f5c7`. Reviewer changes-requested status remains unresolved pending re-review. Standalone signed plugin ZIP, trusted signing-key provisioning, staging lifecycle and browser checkout acceptance remain open. |
+| [#318](https://github.com/lalchandakand-LMS/finalLMS/pull/318) | Learn & Earn plugin | Draft; exact-head Laravel CI, CodeQL and cPanel package validation passed on `2aaa5c82d99bcbae0c0a75961f0ecb28db1e36bd`. Manual/offline payment review, autosave/recovery, standalone signed package, trusted key and staging/browser acceptance remain open. |
+| [#320](https://github.com/lalchandakand-LMS/finalLMS/pull/320) | Plugin migration claim/rollback safety | Draft; fixture table-name correction committed as `4d5cb75ce9c3f1cf0e33340a3022cc2721929bca`. Exact-head CodeQL passed; Laravel CI is running. |
+| [#323](https://github.com/lalchandakand-LMS/finalLMS/pull/323) | Remove external AI-builder branding references | Draft documentation PR; branch search found zero matches for `Google AI Studio` and `AI Studio`. Exact-head Laravel CI and CodeQL are running. |
+
+All four PRs are current with main at the time of this snapshot. None is merged or production-deployed. Do not infer staging, provider, signed-plugin or browser acceptance from CI/package success.
+
 ## Architecture decision
 
 Five operational panels: Admin (one unified admin; no separate Super Admin), Branch (separate and branch-scoped), Teacher, Student, Guardian. This follows the owner's later explicit direction and Issue #40; older Issue #38's four-portal proposal must be reconciled. See `docs/DECISION_LOG.md`.
