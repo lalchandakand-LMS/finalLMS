@@ -153,7 +153,7 @@ class InvoiceManagementTest extends TestCase
         $payload = [
             'invoice_payment_id' => $payment->id,
             'amount' => 600,
-            'method' => 'bkash',
+            'method' => 'cash',
             'reason' => 'Duplicate payment',
         ];
 
