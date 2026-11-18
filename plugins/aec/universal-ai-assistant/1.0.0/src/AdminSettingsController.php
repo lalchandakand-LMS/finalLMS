@@ -2,12 +2,11 @@
 
 namespace Aloms\UniversalAiAssistant;
 
+use App\Contracts\Ai\AiProvider;
 use App\Models\ActivityLog;
-use App\Services\AiDeveloperProviderEndpoint;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 use Throwable;
@@ -19,12 +18,11 @@ final class AdminSettingsController
         return view('universal-ai-assistant::settings', [
             'settings' => AssistantSettings::publicSettings(),
             'roles' => AssistantSettings::ROLES,
-            'dataAccessRoles' => AssistantSettings::DATA_ACCESS_ROLES,
             'modelsUrl' => route('admin.ai-assistant.models'),
         ]);
     }
 
-    public function models(): JsonResponse
+    public function models(AiProvider $provider): JsonResponse
     {
         try {
             $apiKey = AssistantSettings::apiKey();
@@ -33,37 +31,7 @@ final class AdminSettingsController
             }
 
             $baseUrl = rtrim((string) AssistantSettings::record()['base_url'], '/');
-            $curlOptions = app(AiDeveloperProviderEndpoint::class)->curlOptionsFor($baseUrl);
-            $response = Http::withToken($apiKey)->acceptJson()->timeout(20)
-                ->withOptions(array_merge(['allow_redirects' => false, 'stream' => true], $curlOptions))
-                ->get($baseUrl.'/models');
-
-            if (! $response->successful()) {
-                return response()->json(['message' => __('The provider could not return its available models.')], 502);
-            }
-
-            $maxBytes = 524288;
-            $contentLength = $response->header('Content-Length');
-            if (is_numeric($contentLength) && (int) $contentLength > $maxBytes) {
-                return response()->json(['message' => __('The provider model list exceeded the configured response size limit.')], 502);
-            }
-            $body = $response->toPsrResponse()->getBody();
-            $raw = '';
-            while (! $body->eof()) {
-                $raw .= $body->read(min(8192, $maxBytes + 1 - strlen($raw)));
-                if (strlen($raw) > $maxBytes) {
-                    return response()->json(['message' => __('The provider model list exceeded the configured response size limit.')], 502);
-                }
-            }
-            $payload = json_decode($raw, true);
-            $models = collect(is_array($payload['data'] ?? null) ? $payload['data'] : [])
-                ->map(static fn ($item) => is_array($item) ? ($item['id'] ?? null) : null)
-                ->filter(static fn ($id) => is_string($id) && $id !== '' && strlen($id) <= 120)
-                ->unique()
-                ->sort()
-                ->values();
-
-            return response()->json(['models' => $models]);
+            return response()->json(['models' => $provider->discoverModels($apiKey, $baseUrl)]);
         } catch (Throwable) {
             return response()->json(['message' => __('Model discovery is temporarily unavailable. Check the saved provider settings.')], 503);
         }
@@ -83,10 +51,25 @@ final class AdminSettingsController
             'retention_days' => ['required', 'integer', 'min:1', 'max:3650'],
             'revoke_api_key' => ['nullable', 'boolean'],
         ];
-        foreach (AssistantSettings::ROLES as $role) $rules['role_enabled.'.$role] = ['nullable', 'boolean'];
-        foreach (AssistantSettings::DATA_ACCESS_ROLES as $role) $rules['role_data_access.'.$role] = ['nullable', 'boolean'];
+        foreach (AssistantSettings::ROLES as $role) {
+            $rules['role_enabled.'.$role] = ['nullable', 'boolean'];
+            $rules['role_data_access.'.$role] = ['nullable', 'boolean'];
+        }
 
         $validated = Validator::make($request->all(), $rules)->validate();
+        $provider = app(AiProvider::class);
+        $capabilities = $provider->capabilities($validated['model']);
+        if ($capabilities === null) {
+            return back()->withInput($request->except('api_key'))->withErrors([
+                'model' => __('This model has no verified capability profile and cannot be enabled yet.'),
+            ]);
+        }
+        if ((int) $validated['max_tokens'] > $capabilities['max_output_tokens']) {
+            return back()->withInput($request->except('api_key'))->withErrors([
+                'max_tokens' => __('The output token limit exceeds the selected model maximum of :limit.', ['limit' => $capabilities['max_output_tokens']]),
+            ]);
+        }
+
         $host = strtolower((string) parse_url($validated['base_url'], PHP_URL_HOST));
         $allowedHosts = config('services.ai_developer.allowed_hosts', ['api.openai.com']);
         if (is_string($allowedHosts)) $allowedHosts = explode(',', $allowedHosts);
@@ -99,9 +82,11 @@ final class AdminSettingsController
         }
 
         $roles = [];
-        foreach (AssistantSettings::ROLES as $role) $roles[$role] = (bool) ($validated['role_enabled'][$role] ?? false);
         $roleDataAccess = [];
-        foreach (AssistantSettings::DATA_ACCESS_ROLES as $role) $roleDataAccess[$role] = (bool) ($validated['role_data_access'][$role] ?? false);
+        foreach (AssistantSettings::ROLES as $role) {
+            $roles[$role] = (bool) ($validated['role_enabled'][$role] ?? false);
+            $roleDataAccess[$role] = (bool) ($validated['role_data_access'][$role] ?? false);
+        }
 
         AssistantSettings::save([
             'model' => $validated['model'],

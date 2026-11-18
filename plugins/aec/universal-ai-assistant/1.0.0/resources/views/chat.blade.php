@@ -56,44 +56,80 @@
         const message = input.value.trim();
         if (!message) return;
         submit.disabled = true;
-        status.textContent = @json(__('Sending…'));
+        status.textContent = @json(__('Connecting…'));
+        const addLine = (label, content = '') => {
+            const line = document.createElement('p');
+            const strong = document.createElement('strong');
+            strong.textContent = label + ': ';
+            line.style.whiteSpace = 'pre-wrap';
+            const text = document.createTextNode(content);
+            line.append(strong, text);
+            history.appendChild(line);
+            return text;
+        };
         try {
             const response = await fetch(endpoint, {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': form.querySelector('input[name="_token"]').value},
+                headers: {'Content-Type': 'application/json', 'Accept': 'text/event-stream', 'X-CSRF-TOKEN': form.querySelector('input[name="_token"]').value},
                 body: JSON.stringify({message, conversation_id: conversation.value || null})
             });
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.message || 'Request failed');
-            const isNewConversation = !conversation.value;
-            conversation.value = data.conversation_id;
-            const addLine = (label, content) => {
-                const line = document.createElement('p');
-                const strong = document.createElement('strong');
-                strong.textContent = label + ': ';
-                line.style.whiteSpace = 'pre-wrap';
-                line.append(strong, document.createTextNode(content));
-                history.appendChild(line);
-            };
-            addLine('You', message);
-            addLine('AI', data.response);
-            if (isNewConversation && conversationList) {
-                const link = document.createElement('a');
-                const target = new URL(indexUrl, window.location.origin);
-                target.searchParams.set('conversation_id', String(data.conversation_id));
-                link.href = target.toString();
-                link.textContent = message.slice(0, 100);
-                link.style.display = 'block';
-                link.style.padding = '9px 6px';
-                conversationList.prepend(link);
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.message || 'Request failed');
             }
+            if (!response.body) throw new Error('Streaming is not supported by this browser.');
+            addLine(@json(__('You')), message);
+            const assistantText = addLine('AI');
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let completed = false;
+            const handleLine = (line) => {
+                if (!line.startsWith('data:')) return;
+                const raw = line.slice(5).trim();
+                if (!raw) return;
+                const event = JSON.parse(raw);
+                if (event.type === 'delta') {
+                    assistantText.appendData(event.content || '');
+                    history.scrollTop = history.scrollHeight;
+                } else if (event.type === 'done') {
+                    const isNewConversation = !conversation.value;
+                    conversation.value = event.conversation_id;
+                    if (isNewConversation && conversationList) {
+                        const link = document.createElement('a');
+                        const target = new URL(indexUrl, window.location.origin);
+                        target.searchParams.set('conversation_id', String(event.conversation_id));
+                        link.href = target.toString();
+                        link.textContent = message.slice(0, 100);
+                        link.style.display = 'block';
+                        link.style.padding = '9px 6px';
+                        conversationList.prepend(link);
+                    }
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('conversation_id', String(event.conversation_id));
+                    window.history.replaceState({}, '', url);
+                    completed = true;
+                } else if (event.type === 'error') {
+                    throw new Error(event.message || 'The AI stream failed.');
+                }
+            };
+            while (true) {
+                const {value, done} = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, {stream: true});
+                let newline;
+                while ((newline = buffer.indexOf('\n')) !== -1) {
+                    const line = buffer.slice(0, newline).replace(/\r$/, '');
+                    buffer = buffer.slice(newline + 1);
+                    handleLine(line);
+                }
+            }
+            if (buffer.trim()) handleLine(buffer.trim());
+            if (!completed) throw new Error('The AI stream ended before completion.');
             input.value = '';
             status.textContent = '';
-            const url = new URL(window.location.href);
-            url.searchParams.set('conversation_id', String(data.conversation_id));
-            window.history.replaceState({}, '', url);
         } catch (error) {
-            status.textContent = error.message;
+            status.textContent = error.message || 'Request failed';
         } finally {
             submit.disabled = false;
             history.scrollTop = history.scrollHeight;
