@@ -48,7 +48,42 @@ class WebsitePageController extends Controller
             'page' => $websitePage,
             'media' => MediaAsset::query()->where('mime_type', 'like', 'image/%')->latest()->limit(200)->get(),
             'academicLevels' => AcademicLevel::query()->where('is_active', true)->orWhere('id', $websitePage->academic_level_id)->orderBy('sort_order')->orderBy('name')->get(),
+            'revisionCount' => $websitePage->revisions()->count(),
         ]);
+    }
+
+    public function revisions(WebsitePage $websitePage): View
+    {
+        $revisions = $websitePage->revisions()->with('creator')->latest()->paginate(25);
+
+        return view('admin.website-pages.revisions', compact('websitePage', 'revisions'));
+    }
+
+    public function restoreRevision(Request $request, WebsitePage $websitePage, WebsitePageRevision $revision): RedirectResponse
+    {
+        abort_unless($revision->website_page_id === $websitePage->id, 404);
+
+        DB::transaction(function () use ($request, $websitePage, $revision): void {
+            $page = WebsitePage::query()->lockForUpdate()->findOrFail($websitePage->id);
+            $snapshot = $revision->snapshot;
+            $slug = (string) ($snapshot['slug'] ?? '');
+
+            if ($slug === '' || WebsitePage::query()->where('slug', $slug)->whereKeyNot($page->id)->exists()) {
+                throw ValidationException::withMessages([
+                    'revision' => 'This revision cannot be restored because its URL slug is now used by another page. Rename that page first.',
+                ]);
+            }
+
+            $this->recordRevision($page, $request->user()->id, 'Before restore');
+            $page->fill(collect($snapshot)->only([
+                'title', 'slug', 'menu_label', 'template', 'sections', 'seo_title',
+                'seo_description', 'show_in_menu', 'menu_order', 'status', 'published_at', 'academic_level_id',
+            ])->all());
+            $page->save();
+        });
+
+        return redirect()->route('admin.website-pages.revisions', $websitePage)
+            ->with('success', 'Selected page revision restored. The previous version was saved in history.');
     }
 
     public function update(Request $request, WebsitePage $websitePage): RedirectResponse
@@ -56,8 +91,30 @@ class WebsitePageController extends Controller
         $data = $this->validated($request, $websitePage);
         $data['slug'] = $this->uniqueSlug(!empty($data['slug']) ? $data['slug'] : $data['title'], $websitePage->id);
         $data['published_at'] = $data['status'] === 'published' ? ($data['published_at'] ?? $websitePage->published_at ?? now()) : null;
-        $websitePage->update($data);
-        return redirect()->route('admin.website-pages.index')->with('success', 'Website page updated.');
+
+        DB::transaction(function () use ($request, $websitePage, $data): void {
+            $page = WebsitePage::query()->lockForUpdate()->findOrFail($websitePage->id);
+            $this->recordRevision($page, $request->user()->id, 'Before update');
+            $page->update($data);
+        });
+
+        return redirect()->route('admin.website-pages.index')->with('success', 'Website page updated. A previous version was saved in revision history.');
+    }
+
+    /** Save a bounded, restorable snapshot of all editable page fields. */
+    private function recordRevision(WebsitePage $page, ?int $userId, string $label): void
+    {
+        WebsitePageRevision::query()->create([
+            'website_page_id' => $page->id,
+            'snapshot' => $page->only([
+                'title', 'slug', 'menu_label', 'template', 'sections', 'seo_title',
+                'seo_description', 'show_in_menu', 'menu_order', 'status', 'published_at', 'academic_level_id',
+            ]),
+            'created_by' => $userId,
+            'label' => $label,
+        ]);
+
+        $page->revisions()->latest('id')->skip(50)->take(1000)->delete();
     }
 
     public function duplicate(Request $request, WebsitePage $websitePage): RedirectResponse
