@@ -413,6 +413,7 @@ class PrivateEbookStoreTest extends TestCase
             'ebook_refund_id' => $refund->id,
             'event' => 'ebook_gateway_refund_reconciled',
         ]);
+        Http::assertSentCount(5);
     }
 
     public function test_admin_can_revoke_access_without_refunding_and_cannot_refund_pending_orders(): void
