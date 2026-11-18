@@ -148,7 +148,7 @@ class LearnEarnPaidExamPaymentTest extends TestCase
 
                 return true;
             }
-        )->atMost()->once();
+        )->atMost()->times(1);
 
         $this->assertSame(
             'approved',
