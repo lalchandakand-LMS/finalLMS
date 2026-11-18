@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -22,6 +23,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (Schema::hasTable('website_page_revisions') && DB::table('website_page_revisions')->exists()) {
+            throw new RuntimeException('Export or explicitly preserve custom page revision history before rolling back this migration.');
+        }
+
         Schema::dropIfExists('website_page_revisions');
     }
 };
