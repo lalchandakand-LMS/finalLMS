@@ -173,20 +173,24 @@ final class AssistantTokenBudget
     public static function settle(int $reservationId, int $actualTokens, callable $persistResponse): void
     {
         $settled = DB::transaction(function () use ($reservationId, $actualTokens, $persistResponse): bool {
+            $budgetDate = DB::table('ai_assistant_token_reservations')
+                ->where('id', $reservationId)
+                ->value('budget_date');
+            if (! $budgetDate) return false;
+
+            DB::table('ai_assistant_budget_days')
+                ->where('budget_date', $budgetDate)
+                ->lockForUpdate()
+                ->first();
+
             $reservation = DB::table('ai_assistant_token_reservations')
                 ->where('id', $reservationId)
                 ->lockForUpdate()
                 ->first();
 
-            if (! $reservation || $reservation->status !== 'pending'
-                || now()->greaterThanOrEqualTo($reservation->expires_at)) {
+            if (! $reservation || ! in_array($reservation->status, ['pending', 'uncertain'], true)) {
                 return false;
             }
-
-            DB::table('ai_assistant_budget_days')
-                ->where('budget_date', $reservation->budget_date)
-                ->lockForUpdate()
-                ->first();
 
             $persistResponse();
 
@@ -214,6 +218,16 @@ final class AssistantTokenBudget
     public static function markUncertain(int $reservationId): void
     {
         DB::transaction(function () use ($reservationId): void {
+            $budgetDate = DB::table('ai_assistant_token_reservations')
+                ->where('id', $reservationId)
+                ->value('budget_date');
+            if (! $budgetDate) return;
+
+            DB::table('ai_assistant_budget_days')
+                ->where('budget_date', $budgetDate)
+                ->lockForUpdate()
+                ->first();
+
             $reservation = DB::table('ai_assistant_token_reservations')
                 ->where('id', $reservationId)
                 ->lockForUpdate()
@@ -222,11 +236,6 @@ final class AssistantTokenBudget
             if (! $reservation || ! in_array($reservation->status, ['pending', 'uncertain'], true)) {
                 return;
             }
-
-            DB::table('ai_assistant_budget_days')
-                ->where('budget_date', $reservation->budget_date)
-                ->lockForUpdate()
-                ->first();
 
             DB::table('ai_assistant_token_reservations')
                 ->where('id', $reservationId)
@@ -243,6 +252,16 @@ final class AssistantTokenBudget
     public static function release(int $reservationId): void
     {
         DB::transaction(function () use ($reservationId): void {
+            $budgetDate = DB::table('ai_assistant_token_reservations')
+                ->where('id', $reservationId)
+                ->value('budget_date');
+            if (! $budgetDate) return;
+
+            DB::table('ai_assistant_budget_days')
+                ->where('budget_date', $budgetDate)
+                ->lockForUpdate()
+                ->first();
+
             $reservation = DB::table('ai_assistant_token_reservations')
                 ->where('id', $reservationId)
                 ->lockForUpdate()
@@ -251,11 +270,6 @@ final class AssistantTokenBudget
             if (! $reservation || ! in_array($reservation->status, ['pending', 'uncertain'], true)) {
                 return;
             }
-
-            DB::table('ai_assistant_budget_days')
-                ->where('budget_date', $reservation->budget_date)
-                ->lockForUpdate()
-                ->first();
 
             DB::table('ai_assistant_token_reservations')
                 ->where('id', $reservationId)
