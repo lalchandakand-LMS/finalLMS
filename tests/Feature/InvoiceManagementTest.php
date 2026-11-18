@@ -386,6 +386,7 @@ class InvoiceManagementTest extends TestCase
                 'trxID' => 'BKASH-INVOICE-TRX',
                 'amount' => '500.00',
                 'currency' => 'BDT',
+                'merchantInvoiceNumber' => 'AEC-INVOICE-RECON-01',
             ], 200),
         ]);
 
