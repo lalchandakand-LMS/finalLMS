@@ -88,7 +88,7 @@ class BkashCheckoutService
     {
         return $this->request()->withToken($token)
             ->withHeader('X-APP-Key', (string) config('services.bkash.app_key'))
-            ->post($this->baseUrl().'/tokenized/checkout/payment/refund', [
+            ->post($this->baseUrl().'/tokenized/checkout/payment/refund/status', [
                 'paymentID' => $paymentId, 'trxID' => $refundTransactionId,
             ])->throw()->json();
     }
