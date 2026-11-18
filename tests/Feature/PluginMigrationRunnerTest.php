@@ -276,7 +276,7 @@ PHP);
             $this->assertStringContainsString('migration is recovered', $exception->getMessage());
         }
 
-        $this->assertDatabaseHas('plugin_installations', [
+        $this->assertDatabaseHas('plugin_registry', [
             'id' => $plugin->id,
             'status' => 'installed',
         ]);
