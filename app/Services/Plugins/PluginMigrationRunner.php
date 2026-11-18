@@ -194,6 +194,33 @@ class PluginMigrationRunner
         }
     }
 
+    /**
+     * Return true while any declared migration has not completed successfully.
+     * Lifecycle activation uses this to close the gap between sequential migration claims.
+     */
+    public function hasPendingMigrations(PluginInstallation $plugin): bool
+    {
+        $root = $this->migrationRoot($plugin);
+        if ($root === null) {
+            return false;
+        }
+
+        foreach ($this->migrationFiles($root) as $file) {
+            $completed = DB::table('plugin_migrations')
+                ->where('plugin_key', $plugin->plugin_key)
+                ->where('plugin_version', $plugin->version)
+                ->where('migration', basename($file))
+                ->where('status', 'completed')
+                ->exists();
+
+            if (! $completed) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private function migrationRoot(PluginInstallation $plugin): ?string
     {
         $relative = $plugin->manifest['migrations'] ?? null;
