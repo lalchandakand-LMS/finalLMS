@@ -69,6 +69,12 @@
                                 @if($refund->approver) · {{ __('Processed by') }} {{ $refund->approver->name }} @endif
                             </p>
                         </div>
+                        @if($isAdmin && $refund->status === 'gateway_unknown' && $refund->method === 'bkash')
+                            <form method="POST" action="{{ route('admin.refunds.reconcile', $refund) }}">
+                                @csrf
+                                <button class="btn secondary" type="submit">{{ __('Reconcile gateway refund') }}</button>
+                            </form>
+                        @endif
                         @if($isAdmin && $refund->status === 'pending')
                             <div style="display:flex;gap:8px;align-items:center;">
                                 <form method="POST" action="{{ route('admin.refunds.approve', $refund) }}">
