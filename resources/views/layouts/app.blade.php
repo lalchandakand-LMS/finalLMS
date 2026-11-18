@@ -41,13 +41,25 @@
         $studentTrackingAvailable = $studentTrackingPlugin
             && in_array('student-tracking.view', $studentTrackingPlugin->metadata['granted_permissions'] ?? [], true);
         $isPublicLayout = ! $isAdminLayout;
-        $websiteHeaderLinks = $isPublicLayout && $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('header_links', '[]'), true) : [];
+        $websiteHeaderLinksRaw = $isPublicLayout && $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('header_links', '[]'), true) : [];
+        $websiteHeaderLinks = collect(is_array($websiteHeaderLinksRaw) ? $websiteHeaderLinksRaw : [])->map(function ($link) {
+            if (! is_array($link)) return null;
+            $label = trim((string) ($link['label'] ?? ''));
+            $url = \App\Support\SafeWebsiteUrl::sanitize($link['url'] ?? null);
+            return $label !== '' && $url !== null ? ['label' => $label, 'url' => $url] : null;
+        })->filter()->values()->all();
         $websitePageLinks = $isPublicLayout && \Illuminate\Support\Facades\Schema::hasTable('website_pages')
             ? \App\Models\WebsitePage::query()->where('status', 'published')->where('show_in_menu', true)->orderBy('menu_order')->orderBy('title')->get(['title', 'slug', 'menu_label'])
             : collect();
         $websiteFooterTitle = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('footer_title', config('app.name')) : config('app.name');
         $websiteFooterText = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('footer_text', '') : '';
-        $websiteFooterLinks = $isPublicLayout && $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('footer_links', '[]'), true) : [];
+        $websiteFooterLinksRaw = $isPublicLayout && $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('footer_links', '[]'), true) : [];
+        $websiteFooterLinks = collect(is_array($websiteFooterLinksRaw) ? $websiteFooterLinksRaw : [])->map(function ($link) {
+            if (! is_array($link)) return null;
+            $label = trim((string) ($link['label'] ?? ''));
+            $url = \App\Support\SafeWebsiteUrl::sanitize($link['url'] ?? null);
+            return $label !== '' && $url !== null ? ['label' => $label, 'url' => $url] : null;
+        })->filter()->values()->all();
         $themePrimary = $hasSettingsTable ? \App\Models\Setting::value('site_primary_color', '#1546a8') : '#1546a8';
         $themeBackground = $hasSettingsTable ? \App\Models\Setting::value('site_background_color', '#f3f6fb') : '#f3f6fb';
         if (!preg_match('/^#[0-9A-Fa-f]{6}$/', (string) $themePrimary)) $themePrimary = '#1546a8';
