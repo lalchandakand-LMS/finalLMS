@@ -270,7 +270,7 @@ PHP);
             app(\App\Services\Plugins\PluginLifecycle::class)->transition($plugin->plugin_key, 'uninstalled');
             $this->fail('Lifecycle transitions must not race an in-flight plugin migration.');
         } catch (\LogicException $exception) {
-            $this->assertStringContainsString('migration is running', $exception->getMessage());
+            $this->assertStringContainsString('migration is recovered', $exception->getMessage());
         }
 
         $this->assertDatabaseHas('plugin_installations', [
