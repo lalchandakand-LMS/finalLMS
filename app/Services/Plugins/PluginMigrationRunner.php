@@ -25,6 +25,11 @@ class PluginMigrationRunner
                 if (! $lockedPlugin) {
                     throw new RuntimeException('The plugin installation record is missing; migration was stopped.');
                 }
+                if ($lockedPlugin->version !== $plugin->version
+                    || $lockedPlugin->package_path !== $plugin->package_path
+                    || $lockedPlugin->package_sha256 !== $plugin->package_sha256) {
+                    throw new RuntimeException('The installed plugin package changed while migration was being prepared; reload the package before retrying.');
+                }
                 if (! in_array($lockedPlugin->status, ['installed', 'inactive', 'update_staged'], true)) {
                     throw new RuntimeException('Deactivate or stage the plugin before running its migrations.');
                 }
@@ -144,6 +149,11 @@ class PluginMigrationRunner
                 $lockedPlugin = PluginInstallation::query()->whereKey($plugin->getKey())->lockForUpdate()->first();
                 if (! $lockedPlugin) {
                     throw new RuntimeException('The plugin installation record is missing; rollback was stopped.');
+                }
+                if ($lockedPlugin->version !== $plugin->version
+                    || $lockedPlugin->package_path !== $plugin->package_path
+                    || $lockedPlugin->package_sha256 !== $plugin->package_sha256) {
+                    throw new RuntimeException('The installed plugin package changed while rollback was being prepared; reload the package before retrying.');
                 }
                 if (! in_array($lockedPlugin->status, ['installed', 'inactive', 'update_staged'], true)) {
                     throw new RuntimeException('Deactivate the plugin before rolling back its migrations.');
