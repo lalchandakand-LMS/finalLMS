@@ -116,7 +116,7 @@ class WebsitePageController extends Controller
                 || ! in_array($snapshot['template'], ['standard', 'wide', 'centered', 'split'], true)
                 || ! in_array($snapshot['status'], ['draft', 'published'], true)
                 || ! is_array($snapshot['sections'])) {
-                throw new \RuntimeException('The selected page revision is invalid and cannot be restored.');
+                throw new \RuntimeException(__('The selected page revision is invalid and cannot be restored.'));
             }
 
             $academicLevelId = $snapshot['academic_level_id'] ?? null;
