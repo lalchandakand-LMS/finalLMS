@@ -8,11 +8,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class PaymentReconciliation extends Model
 {
     protected $fillable = [
-        'payment_id', 'provider', 'gateway_payment_id', 'gateway_transaction_id', 'result',
+        'payment_id', 'invoice_payment_id', 'provider', 'gateway_payment_id', 'gateway_transaction_id', 'result',
         'local_status', 'gateway_status', 'local_amount', 'gateway_amount', 'currency', 'details', 'checked_at',
     ];
 
     protected $casts = ['local_amount' => 'decimal:2', 'gateway_amount' => 'decimal:2', 'checked_at' => 'datetime'];
+
+    public function invoicePayment(): BelongsTo
+    {
+        return $this->belongsTo(InvoicePayment::class);
+    }
 
     public function payment(): BelongsTo
     {
