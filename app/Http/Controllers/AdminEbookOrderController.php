@@ -150,11 +150,13 @@ class AdminEbookOrderController extends Controller
                     'reason' => $validated['reason'],
                     'status' => 'processing',
                     'gateway_status' => 'refund_submitted',
+                    'processed_at' => now(),
                 ]);
 
                 PaymentAuditEvent::create([
                     'payment_id' => $verifiedGatewayPayment->id,
-                    'actor_id' => $request->user()->id,
+                    'ebook_refund_id' => $refund->id,
+                    'actor_id => $request->user()->id,
                     'provider' => 'bkash',
                     'event' => 'ebook_gateway_refund_submitted',
                     'source' => 'admin_ebook_refund',
@@ -182,6 +184,7 @@ class AdminEbookOrderController extends Controller
             $locked->update(['status' => 'refunded']);
             $this->revokeEbookAccess($locked, $request->user()->id, $validated['reason']);
             PaymentAuditEvent::create([
+                'ebook_refund_id' => $refund->id,
                 'actor_id' => $request->user()->id,
                 'event' => 'ebook_manual_refund_confirmed',
                 'source' => 'admin_ebook_refund',
@@ -221,6 +224,7 @@ class AdminEbookOrderController extends Controller
                     $lockedOrder->update(['status' => 'refunded']);
                     $this->revokeEbookAccess($lockedOrder, $request->user()->id, (string) $lockedRefund->reason);
                     PaymentAuditEvent::create([
+                        'ebook_refund_id' => $lockedRefund->id,
                         'actor_id' => $request->user()->id,
                         'provider' => 'bkash',
                         'event' => 'ebook_gateway_refund_verified',
@@ -239,6 +243,7 @@ class AdminEbookOrderController extends Controller
                 ]);
                 PaymentAuditEvent::create([
                     'payment_id' => $payment->id,
+                    'ebook_refund_id' => $refund->id,
                     'actor_id' => $request->user()->id,
                     'provider' => 'bkash',
                     'event' => 'ebook_gateway_refund_unverified',
@@ -293,6 +298,7 @@ class AdminEbookOrderController extends Controller
                 $lockedOrder->update(['status' => 'refunded']);
                 $this->revokeEbookAccess($lockedOrder, $request->user()->id, (string) $lockedRefund->reason);
                 PaymentAuditEvent::create([
+                    'ebook_refund_id' => $lockedRefund->id,
                     'actor_id' => $request->user()->id,
                     'provider' => 'bkash',
                     'event' => 'ebook_gateway_refund_reconciled',
@@ -306,6 +312,7 @@ class AdminEbookOrderController extends Controller
         } catch (Throwable $exception) {
             $refund->update(['failure_reason' => mb_substr($exception->getMessage(), 0, 2000)]);
             PaymentAuditEvent::create([
+                'ebook_refund_id' => $refund->id,
                 'actor_id' => $request->user()->id,
                 'provider' => 'bkash',
                 'event' => 'ebook_gateway_refund_reconciliation_unconfirmed',
@@ -354,7 +361,7 @@ class AdminEbookOrderController extends Controller
         $orderCount = (clone $paidOrders)->count();
         $grossSales = (float) (clone $paidOrders)->sum('total');
 
-        $refundQuery = EbookRefund::query()->whereHas('order', function ($query) use ($filters) {
+        $refundQuery = EbookRefund::query()->where('status', 'refunded')->whereHas('order', function ($query) use ($filters) {
             $query->whereHas('items', fn ($items) => $items->where('product_type', 'ebook'));
             if (! empty($filters['from'])) {
                 $query->whereDate('created_at', '>=', $filters['from']);
