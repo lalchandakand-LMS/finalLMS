@@ -119,6 +119,13 @@ class WebsitePageController extends Controller
                 throw new \RuntimeException('The selected page revision is invalid and cannot be restored.');
             }
 
+            $academicLevelId = $snapshot['academic_level_id'] ?? null;
+            if ($academicLevelId !== null && ! AcademicLevel::query()->whereKey($academicLevelId)->exists()) {
+                throw ValidationException::withMessages([
+                    'revision' => 'This revision references an academic level that no longer exists.',
+                ]);
+            }
+
             $slugInUse = WebsitePage::query()
                 ->where('slug', $snapshot['slug'])
                 ->whereKeyNot($page->id)
