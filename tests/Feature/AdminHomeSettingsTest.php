@@ -14,37 +14,23 @@ class AdminHomeSettingsTest extends TestCase
 
     public function test_admin_can_update_homepage_settings(): void
     {
-        $admin = User::factory()->create([
-            'role' => 'admin',
-        ]);
-
-        $this->actingAs($admin)
-            ->post(route('admin.settings.update'), [
-                'home_title' => 'Future Skills Academy',
-                'home_subtitle' => 'Learn the skills that open tomorrow.',
-                'home_cta_primary' => 'Explore programs',
-                'home_cta_secondary' => 'Book a demo',
-            ])
-            ->assertRedirect(route('admin.settings.index'));
-
-        $this->assertDatabaseHas('settings', [
-            'key' => 'home_title',
-            'value' => 'Future Skills Academy',
-        ]);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($admin)->post(route('admin.settings.update'), [
+            'home_title' => 'Future Skills Academy',
+            'home_subtitle' => 'Learn the skills that open tomorrow.',
+            'home_cta_primary' => 'Explore programs',
+            'home_cta_secondary' => 'Book a demo',
+        ])->assertRedirect(route('admin.settings.index'));
+        $this->assertDatabaseHas('settings', ['key' => 'home_title', 'value' => 'Future Skills Academy']);
     }
 
     public function test_admin_can_save_institution_default_locale_and_timezone_without_overwriting_identity(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
         Setting::setValue('institution_name', 'My Learning Center');
-
-        $this->actingAs($admin)
-            ->post(route('admin.settings.update'), [
-                'institution_default_locale' => 'bn',
-                'institution_timezone' => 'Asia/Dhaka',
-            ])
-            ->assertRedirect(route('admin.settings.index'));
-
+        $this->actingAs($admin)->post(route('admin.settings.update'), [
+            'institution_default_locale' => 'bn', 'institution_timezone' => 'Asia/Dhaka',
+        ])->assertRedirect(route('admin.settings.index'));
         $this->assertDatabaseHas('settings', ['key' => 'institution_name', 'value' => 'My Learning Center']);
         $this->assertDatabaseHas('settings', ['key' => 'institution_default_locale', 'value' => 'bn']);
         $this->assertDatabaseHas('settings', ['key' => 'institution_timezone', 'value' => 'Asia/Dhaka']);
@@ -53,15 +39,9 @@ class AdminHomeSettingsTest extends TestCase
     public function test_admin_cannot_save_unsupported_institution_locale_or_timezone(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
-
-        $this->actingAs($admin)
-            ->from(route('admin.settings.index'))
-            ->post(route('admin.settings.update'), [
-                'institution_default_locale' => 'fr',
-                'institution_timezone' => 'Mars/Phobos',
-            ])
-            ->assertRedirect(route('admin.settings.index'))
-            ->assertSessionHasErrors(['institution_default_locale', 'institution_timezone']);
+        $this->actingAs($admin)->from(route('admin.settings.index'))->post(route('admin.settings.update'), [
+            'institution_default_locale' => 'fr', 'institution_timezone' => 'Mars/Phobos',
+        ])->assertRedirect(route('admin.settings.index'))->assertSessionHasErrors(['institution_default_locale', 'institution_timezone']);
     }
 
     public function test_homepage_uses_admin_configured_values(): void
@@ -70,84 +50,48 @@ class AdminHomeSettingsTest extends TestCase
         Setting::setValue('home_subtitle', 'Learn the skills that open tomorrow.');
         Setting::setValue('home_cta_primary', 'Explore programs');
         Setting::setValue('home_cta_secondary', 'Book a demo');
-
-        $response = $this->get('/');
-
-        $response->assertOk()->assertSee('Future Skills Academy')->assertSee('Explore programs');
+        $this->get('/')->assertOk()->assertSee('Future Skills Academy')->assertSee('Explore programs');
     }
 
     public function test_admin_can_configure_seo_and_consent_gated_marketing_tags(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
-
-        $this->actingAs($admin)
-            ->post(route('admin.settings.update'), [
-                'seo_title' => 'Aloms English Courses',
-                'seo_description' => 'Learn English online with Aloms.',
-                'seo_keywords' => 'English, speaking, learning',
-                'google_analytics_id' => 'G-ABC12345',
-                'google_tag_manager_id' => 'GTM-ABC1234',
-                'facebook_pixel_id' => '123456789012345',
-            ])
-            ->assertRedirect(route('admin.settings.index'));
-
-        $this->assertDatabaseHas('settings', [
-            'key' => 'google_analytics_id',
-            'value' => 'G-ABC12345',
-        ]);
-
+        $this->actingAs($admin)->post(route('admin.settings.update'), [
+            'seo_title' => 'Aloms English Courses', 'seo_description' => 'Learn English online with Aloms.',
+            'seo_keywords' => 'English, speaking, learning', 'google_analytics_id' => 'G-ABC12345',
+            'google_tag_manager_id' => 'GTM-ABC1234', 'facebook_pixel_id' => '123456789012345',
+        ])->assertRedirect(route('admin.settings.index'));
+        $this->assertDatabaseHas('settings', ['key' => 'google_analytics_id', 'value' => 'G-ABC12345']);
         Auth::logout();
-
-        $this->get('/')
-            ->assertOk()
-            ->assertSee('Learn English online with Aloms.')
-            ->assertSee('Cookie preferences')
-            ->assertDontSee('G-ABC12345');
-
-        $this->withUnencryptedCookie('marketing_consent', 'accepted')
-            ->get('/')
-            ->assertSee('G-ABC12345')
-            ->assertSee('GTM-ABC1234')
-            ->assertSee('123456789012345')
-            ->assertSee('facebook.net', false);
+        $this->get('/')->assertOk()->assertSee('Learn English online with Aloms.')->assertSee('Cookie preferences')->assertDontSee('G-ABC12345');
+        $this->withUnencryptedCookie('marketing_consent', 'accepted')->get('/')
+            ->assertSee('G-ABC12345')->assertSee('GTM-ABC1234')->assertSee('123456789012345')->assertSee('facebook.net', false);
     }
+
     public function test_admin_can_configure_custom_brand_loading_screen(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
-        $media = \\App\\Models\\MediaAsset::query()->create(['uploaded_by' => $admin->id, 'disk' => 'public', 'path' => 'brand/logo.png', 'original_name' => 'logo.png', 'mime_type' => 'image/png', 'size' => 1024]);
-
-        $this->actingAs($admin)
-            ->post(route('admin.settings.update'), [
-                'loading_screen_enabled' => '1',
-                'loading_screen_logo_media_id' => $media->id,
-                'loading_screen_style' => 'pulse',
-                'loading_screen_text' => 'Please wait',
-                'loading_screen_background' => '#f8fafc',
-                'loading_screen_speed' => '18',
-            ])
-            ->assertRedirect(route('admin.settings.index'));
-
+        $media = \App\Models\MediaAsset::query()->create([
+            'uploaded_by' => $admin->id, 'disk' => 'public', 'path' => 'brand/logo.png',
+            'original_name' => 'logo.png', 'mime_type' => 'image/png', 'size' => 1024,
+        ]);
+        $this->actingAs($admin)->post(route('admin.settings.update'), [
+            'loading_screen_enabled' => '1', 'loading_screen_logo_media_id' => $media->id,
+            'loading_screen_style' => 'pulse', 'loading_screen_text' => 'Please wait',
+            'loading_screen_background' => '#f8fafc', 'loading_screen_speed' => '18',
+        ])->assertRedirect(route('admin.settings.index'));
         $this->assertDatabaseHas('settings', ['key' => 'loading_screen_enabled', 'value' => '1']);
         $this->assertDatabaseHas('settings', ['key' => 'loading_screen_logo_media_id', 'value' => (string) $media->id]);
         $this->assertDatabaseHas('settings', ['key' => 'loading_screen_style', 'value' => 'pulse']);
-
         $this->get(route('admin.settings.index'))->assertOk()->assertSee('aec-brand-loader')->assertSee('Please wait')->assertSee('data-style="pulse"', false);
     }
 
     public function test_invalid_custom_loading_screen_settings_are_rejected(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
-
-        $this->actingAs($admin)
-            ->from(route('admin.settings.index'))
-            ->post(route('admin.settings.update'), [
-                'loading_screen_enabled' => '1',
-                'loading_screen_style' => 'comic-sans-spinner',
-                'loading_screen_background' => 'not-a-color',
-                'loading_screen_speed' => '99',
-            ])
-            ->assertRedirect(route('admin.settings.index'))
-            ->assertSessionHasErrors(['loading_screen_style', 'loading_screen_background', 'loading_screen_speed']);
+        $this->actingAs($admin)->from(route('admin.settings.index'))->post(route('admin.settings.update'), [
+            'loading_screen_enabled' => '1', 'loading_screen_style' => 'comic-sans-spinner',
+            'loading_screen_background' => 'not-a-color', 'loading_screen_speed' => '99',
+        ])->assertRedirect(route('admin.settings.index'))->assertSessionHasErrors(['loading_screen_style', 'loading_screen_background', 'loading_screen_speed']);
     }
-
 }
