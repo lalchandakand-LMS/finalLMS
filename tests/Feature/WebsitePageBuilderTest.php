@@ -147,4 +147,35 @@ class WebsitePageBuilderTest extends TestCase
             ->assertSee('page-section-status', false);
     }
 
+
+    public function test_admin_can_preview_custom_pages_at_desktop_tablet_and_mobile_widths(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $page = WebsitePage::create([
+            'title' => 'Responsive preview page',
+            'slug' => 'responsive-preview-page',
+            'template' => 'standard',
+            'sections' => [['type' => 'text', 'title' => 'Preview content', 'enabled' => true]],
+            'status' => 'draft',
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.website-pages.preview', ['websitePage' => $page->id, 'device' => 'mobile']))
+            ->assertOk()
+            ->assertSee('Responsive page preview')
+            ->assertSee('Mobile')
+            ->assertSee('Tablet')
+            ->assertSee('Desktop')
+            ->assertSee('frame=1', false)
+            ->assertSee('width:390px', false);
+
+        $this->get(route('admin.website-pages.preview', ['websitePage' => $page->id, 'device' => 'tablet', 'frame' => 1]))
+            ->assertOk()
+            ->assertSee('Preview content');
+
+        $this->get(route('admin.website-pages.preview', ['websitePage' => $page->id, 'device' => 'phone']))
+            ->assertStatus(422);
+    }
+
 }
