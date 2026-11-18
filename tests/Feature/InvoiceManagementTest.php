@@ -355,4 +355,53 @@ class InvoiceManagementTest extends TestCase
         $this->assertDatabaseHas('invoices', ['id' => $invoice->id, 'status' => 'partial']);
     }
 
+    public function test_invoice_bkash_receipt_can_be_reconciled_against_gateway(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $invoice = Invoice::create([
+            'user_id' => $student->id, 'created_by' => $admin->id,
+            'invoice_number' => 'AEC-INVOICE-RECON-01', 'title' => 'Tuition',
+            'amount' => 500, 'status' => 'paid',
+        ]);
+        $receipt = InvoicePayment::create([
+            'invoice_id' => $invoice->id, 'received_by' => $admin->id,
+            'amount' => 500, 'method' => 'bkash', 'gateway_provider' => 'bkash',
+            'gateway_payment_id' => 'BKASH-INVOICE-PAY',
+            'gateway_transaction_id' => 'BKASH-INVOICE-TRX',
+            'paid_at' => now(),
+        ]);
+        config([
+            'services.bkash.enabled' => true,
+            'services.bkash.base_url' => 'https://tokenized.sandbox.bka.sh/v1.2.0-beta',
+            'services.bkash.username' => 'sandbox-user', 'services.bkash.password' => 'sandbox-password',
+            'services.bkash.app_key' => 'sandbox-app-key', 'services.bkash.app_secret' => 'sandbox-app-secret',
+            'services.bkash.verify_ssl' => true,
+        ]);
+        Http::fake([
+            '*/tokenized/checkout/token/grant' => Http::response(['id_token' => 'invoice-reconcile-token'], 200),
+            '*/tokenized/checkout/payment/status' => Http::response([
+                'transactionStatus' => 'Completed',
+                'paymentID' => 'BKASH-INVOICE-PAY',
+                'trxID' => 'BKASH-INVOICE-TRX',
+                'amount' => '500.00',
+                'currency' => 'BDT',
+            ], 200),
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.payment-reconciliation.run'), [
+            'invoice_payment_id' => $receipt->id,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('payment_reconciliations', [
+            'invoice_payment_id' => $receipt->id,
+            'result' => 'matched',
+            'gateway_status' => 'completed',
+        ]);
+        $this->assertDatabaseHas('payment_audit_events', [
+            'invoice_payment_id' => $receipt->id,
+            'event' => 'invoice_reconciliation_matched',
+        ]);
+    }
+
 }
