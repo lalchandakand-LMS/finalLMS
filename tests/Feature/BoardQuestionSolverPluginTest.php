@@ -21,6 +21,7 @@ class BoardQuestionSolverPluginTest extends TestCase {
   require_once base_path('plugins/aec/board-question-solver/1.0.0/src/BoardQuestionSolverController.php');
   if(!Schema::hasTable('board_question_solver_settings')){$migration=require base_path('plugins/aec/board-question-solver/1.0.0/migrations/2026_11_18_020000_create_board_question_solver_tables.php');$migration->up();}
   Route::get('/__test-board-solver/history',[BoardQuestionSolverController::class,'history']);
+  Route::get('/__test-board-solver/index',[BoardQuestionSolverController::class,'index'])->name('student.board-solver.index');
   Route::post('/__test-board-solver/solve',[BoardQuestionSolverController::class,'solve']);
  }
  public function test_students_can_only_see_their_own_board_question_history():void {
