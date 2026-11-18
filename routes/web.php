@@ -12,6 +12,7 @@ use App\Http\Controllers\MarketingCenterController;
 use App\Http\Controllers\MetaAdsIntegrationController;
 use App\Http\Controllers\MetaBoostCampaignController;
 use App\Http\Controllers\SeoController;
+use App\Http\Controllers\ThemeManagerController;
 use App\Http\Controllers\AdminUpdateController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\StudentDeviceAccessController;
@@ -82,6 +83,7 @@ Route::post('/install', [InstallController::class, 'install'])->middleware('thro
 
 Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('seo.sitemap');
 Route::get('/robots.txt', [SeoController::class, 'robots'])->name('seo.robots');
+Route::get('/themes/{slug}/{version}/{file}', [ThemeManagerController::class, 'asset'])->where(['slug' => '[a-z0-9][a-z0-9-]{1,79}', 'version' => '[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)?', 'file' => '[A-Za-z0-9][A-Za-z0-9._-]{0,100}\\.css'])->name('themes.asset');
 
 Route::get('/', function () {
     return auth()->check() ? redirect('/dashboard') : view('landing');
@@ -309,6 +311,13 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::delete('/academic-levels/{academicLevel}', [AcademicLevelController::class, 'destroy'])->name('admin.academic-levels.destroy');
         Route::get('/modules', [AdminModuleRegistryController::class, 'index'])->name('admin.modules.index');
         Route::patch('/modules/{key}', [AdminModuleRegistryController::class, 'update'])->where('key', '[a-z_]+')->middleware('throttle:20,1')->name('admin.modules.update');
+        Route::get('/themes', [ThemeManagerController::class, 'index'])->name('admin.themes.index');
+        Route::post('/themes/install', [ThemeManagerController::class, 'install'])->middleware('throttle:3,10')->name('admin.themes.install');
+        Route::get('/themes/{theme}/preview', [ThemeManagerController::class, 'preview'])->whereNumber('theme')->name('admin.themes.preview');
+        Route::get('/themes/{theme}/preview/frame', [ThemeManagerController::class, 'previewFrame'])->whereNumber('theme')->name('admin.themes.preview.frame');
+        Route::delete('/themes/{theme}', [ThemeManagerController::class, 'destroy'])->whereNumber('theme')->middleware('throttle:10,1')->name('admin.themes.destroy');
+        Route::post('/themes/{theme}/activate', [ThemeManagerController::class, 'activate'])->whereNumber('theme')->middleware('throttle:10,1')->name('admin.themes.activate');
+        Route::post('/themes/reset', [ThemeManagerController::class, 'reset'])->middleware('throttle:5,1')->name('admin.themes.reset');
         Route::get('/plugins', [AdminPluginManagerController::class, 'index'])->name('admin.plugins.index');
         Route::post('/plugins/install', [AdminPluginManagerController::class, 'install'])->middleware('throttle:3,10')->name('admin.plugins.install');
         Route::post('/plugins/{key}/update-package', [AdminPluginManagerController::class, 'updatePackage'])->where('key', '[a-z0-9.-]+')->middleware('throttle:3,10')->name('admin.plugins.update-package');
