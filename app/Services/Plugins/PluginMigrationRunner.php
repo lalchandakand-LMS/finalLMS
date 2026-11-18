@@ -135,6 +135,9 @@ class PluginMigrationRunner
                 if (! $lockedPlugin) {
                     throw new RuntimeException('The plugin installation record is missing; rollback was stopped.');
                 }
+                if (! in_array($lockedPlugin->status, ['installed', 'inactive', 'update_staged'], true)) {
+                    throw new RuntimeException('Deactivate the plugin before rolling back its migrations.');
+                }
 
                 $current = DB::table('plugin_migrations')->where('id', $record->id)->lockForUpdate()->first();
                 if (! $current || $current->status !== 'completed') return false;
