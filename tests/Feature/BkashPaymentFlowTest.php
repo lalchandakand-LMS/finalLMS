@@ -94,6 +94,12 @@ class BkashPaymentFlowTest extends TestCase
             'payment_id' => $payment->id,
             'event' => 'gateway_callback_processed',
         ]);
+        $this->get(route('payments.bkash.callback', [
+            'paymentID' => 'BKASH-PAY-001',
+            'status' => 'success',
+        ]))->assertRedirect(route('courses.show', $course));
+        $this->assertDatabaseCount('payment_gateway_events', 1);
+        $this->assertDatabaseCount('payment_audit_events', 1);
         $this->assertDatabaseHas('enrollments', [
             'user_id' => $student->id,
             'course_id' => $course->id,
