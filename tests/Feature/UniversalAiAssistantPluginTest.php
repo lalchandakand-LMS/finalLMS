@@ -778,4 +778,47 @@ class UniversalAiAssistantPluginTest extends TestCase
     }
 
 
+    public function test_ambiguous_provider_failure_keeps_the_daily_reservation_uncertain(): void
+    {
+        AssistantSettings::save([
+            'model' => 'gpt-4o-mini',
+            'base_url' => 'https://api.openai.com/v1',
+            'temperature' => 0.4,
+            'max_tokens' => 800,
+            'global_enabled' => true,
+            'role_enabled' => array_replace(array_fill_keys(AssistantSettings::ROLES, false), ['student' => true]),
+            'daily_request_limit' => 20,
+            'daily_token_budget' => 50000,
+            'retention_days' => 365,
+        ], 'test-secret-provider-key', false);
+
+        app()->instance(AiDeveloperProviderEndpoint::class, new class extends AiDeveloperProviderEndpoint {
+            public function curlOptionsFor(string $url): array { return []; }
+        });
+        Http::fake([
+            'api.openai.com/v1/chat/completions' => Http::response(['error' => 'upstream timeout after dispatch'], 500),
+        ]);
+
+        $user = User::factory()->create(['role' => 'student', 'email_verified_at' => now()]);
+        Route::post('/__test-ai-assistant/provider-failure', [\Aloms\UniversalAiAssistant\AssistantController::class, 'send']);
+
+        $response = $this->actingAs($user)->postJson('/__test-ai-assistant/provider-failure', [
+            'message' => 'Please explain this grammar point.',
+        ]);
+        $response->assertOk();
+        $streamed = $response->streamedContent();
+
+        $this->assertStringContainsString('error', $streamed);
+        $this->assertDatabaseHas('ai_assistant_token_reservations', [
+            'user_id' => $user->id,
+            'status' => 'uncertain',
+        ]);
+        $this->assertDatabaseMissing('ai_assistant_token_reservations', [
+            'user_id' => $user->id,
+            'status' => 'released',
+        ]);
+        Http::assertSentCount(1);
+    }
+
+
 }
