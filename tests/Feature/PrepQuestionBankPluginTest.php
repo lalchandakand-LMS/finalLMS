@@ -38,13 +38,13 @@ class PrepQuestionBankPluginTest extends TestCase
             'source_name' => 'BCS Preliminary', 'type' => 'mcq', 'difficulty' => 'medium',
             'question' => 'বাংলা ভাষার আদি নিদর্শন কোনটি?', 'options' => ['চর্যাপদ', 'শ্রীকৃষ্ণকীর্তন', 'মঙ্গলকাব্য', 'গীতাঞ্জলি'],
             'correct_option' => 0, 'marks' => 1,
-        ])->assertRedirect('/__test-prep-bank');
+        ])->assertRedirect('/admin/prep-question-bank');
 
         $this->actingAs($admin)->post('/__test-prep-bank/questions', [
             'track' => 'bank_job', 'subject' => 'English', 'topic' => 'Composition', 'type' => 'written',
             'difficulty' => 'hard', 'question' => 'Write a short note on financial inclusion.',
             'correct_answer' => 'A model answer', 'explanation' => 'Expected key points', 'marks' => 5,
-        ])->assertRedirect('/__test-prep-bank');
+        ])->assertRedirect('/admin/prep-question-bank');
 
         $this->assertDatabaseHas('aec_prep_questions', ['track' => 'bcs', 'type' => 'mcq', 'source_year' => 2025]);
         $this->assertDatabaseHas('aec_prep_questions', ['track' => 'bank_job', 'type' => 'written']);
@@ -81,7 +81,7 @@ class PrepQuestionBankPluginTest extends TestCase
         ]);
         $setId = (int) DB::table('aec_prep_question_sets')->value('id');
 
-        $response->assertRedirect('/__test-prep-bank/sets/'.$setId);
+        $response->assertRedirect('/admin/prep-question-bank/sets/'.$setId);
         $this->assertSame(2, DB::table('aec_prep_question_set_items')->where('question_set_id', $setId)->count());
 
         DB::table('aec_prep_questions')->where('id', $ids[0])->update(['question' => 'Changed source question']);
