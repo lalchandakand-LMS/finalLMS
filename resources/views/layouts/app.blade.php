@@ -11,17 +11,6 @@
         $institutionFaviconUrl = $hasSettingsTable ? \App\Models\Setting::value('institution_favicon_url') : null;
         $institutionLogoMediaId = $hasSettingsTable ? (int) \App\Models\Setting::value('site_logo_media_id', 0) : 0;
         $institutionFaviconMediaId = $hasSettingsTable ? (int) \App\Models\Setting::value('site_favicon_media_id', 0) : 0;
-        $loadingEnabled = $hasSettingsTable && \App\Models\Setting::value('loading_screen_enabled', '1') === '1';
-        $loadingLogoMediaId = $hasSettingsTable ? (int) \App\Models\Setting::value('loading_screen_logo_media_id', 0) : 0;
-        $loadingLogoMedia = $loadingLogoMediaId ? \App\Models\MediaAsset::query()->whereKey($loadingLogoMediaId)->where('mime_type', 'like', 'image/%')->first() : null;
-        $loadingLogoUrl = $loadingLogoMedia?->url ?: $institutionLogoUrl;
-        $loadingText = $hasSettingsTable ? \App\Models\Setting::value('loading_screen_text', 'Loading...') : 'Loading...';
-        $loadingBackground = $hasSettingsTable ? \App\Models\Setting::value('loading_screen_background', '#ffffff') : '#ffffff';
-        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', (string) $loadingBackground)) $loadingBackground = '#ffffff';
-        $loadingStyle = $hasSettingsTable ? \App\Models\Setting::value('loading_screen_style', 'orbit') : 'orbit';
-        if (!in_array($loadingStyle, ['orbit', 'pulse', 'ring'], true)) $loadingStyle = 'orbit';
-        $loadingSpeed = $hasSettingsTable ? (int) \App\Models\Setting::value('loading_screen_speed', 12) : 12;
-        $loadingSpeed = max(6, min(24, $loadingSpeed));
         $institutionLogoMedia = $institutionLogoMediaId ? \App\Models\MediaAsset::query()->whereKey($institutionLogoMediaId)->where('mime_type', 'like', 'image/%')->first() : null;
         $institutionFaviconMedia = $institutionFaviconMediaId ? \App\Models\MediaAsset::query()->whereKey($institutionFaviconMediaId)->where('mime_type', 'like', 'image/%')->first() : null;
         $institutionLogoUrl = $institutionLogoMedia?->url ?: $institutionLogoUrl;
@@ -35,16 +24,8 @@
         $googleSearchConsoleVerification = $hasSettingsTable ? \App\Models\Setting::value('google_search_console_verification') : null;
         $marketingConsent = request()->cookie('marketing_consent') === 'accepted';
         $isAdminLayout = auth()->check() && (auth()->user()->isAdmin() || auth()->user()->isBranchManager() || auth()->user()->isAccountant());
-        $studentTrackingPlugin = auth()->check() && \Illuminate\Support\Facades\Schema::hasTable('plugin_registry')
-            ? \App\Models\PluginInstallation::query()->where('plugin_key', 'aec.student-tracking')->where('status', 'active')->first()
-            : null;
-        $studentTrackingAvailable = $studentTrackingPlugin
-            && in_array('student-tracking.view', $studentTrackingPlugin->metadata['granted_permissions'] ?? [], true);
         $isPublicLayout = ! $isAdminLayout;
         $websiteHeaderLinks = $isPublicLayout && $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('header_links', '[]'), true) : [];
-        $websitePageLinks = $isPublicLayout && \Illuminate\Support\Facades\Schema::hasTable('website_pages')
-            ? \App\Models\WebsitePage::query()->where('status', 'published')->where('show_in_menu', true)->orderBy('menu_order')->orderBy('title')->get(['title', 'slug', 'menu_label'])
-            : collect();
         $websiteFooterTitle = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('footer_title', config('app.name')) : config('app.name');
         $websiteFooterText = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('footer_text', '') : '';
         $websiteFooterLinks = $isPublicLayout && $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('footer_links', '[]'), true) : [];
@@ -58,6 +39,10 @@
         $themeFont = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('site_font_family', 'system') : 'system';
         $themeFonts = ['system' => 'Arial, Helvetica, sans-serif', 'inter' => 'Inter, Arial, sans-serif', 'nunito' => 'Nunito, Arial, sans-serif', 'poppins' => 'Poppins, Arial, sans-serif', 'georgia' => 'Georgia, serif'];
         $themeFontFamily = $themeFonts[$themeFont] ?? $themeFonts['system'];
+        // Guard the shared layout during first-install and rolling migrations.
+        $hasThemesTable = \Illuminate\Support\Facades\Schema::hasTable('themes');
+        $activeThemeSlug = $isPublicLayout && $hasSettingsTable && $hasThemesTable ? \App\Models\Setting::value('active_theme_slug') : null;
+        $activeThemeVersion = $isPublicLayout && $hasSettingsTable && $hasThemesTable ? \App\Models\Setting::value('active_theme_version') : null;
         $themeHeadingScale = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('site_heading_scale', '1') : '1';
         $themeBodyScale = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('site_body_scale', '1') : '1';
         if (!in_array($themeHeadingScale, ['0.9', '1', '1.1', '1.2'], true)) $themeHeadingScale = '1';
@@ -66,6 +51,14 @@
         $pageSeoDescription = trim($__env->yieldContent('seo_description')) ?: (trim($__env->yieldContent('meta_description')) ?: $seoDescription);
     @endphp
     @if($institutionFaviconUrl)<link rel="icon" href="{{ $institutionFaviconUrl }}">@endif
+    @if($activeThemeSlug && $activeThemeVersion)
+        @php $activeThemeRecord = \Illuminate\Support\Facades\DB::table('themes')->where('slug', $activeThemeSlug)->where('version', $activeThemeVersion)->first(); $activeThemeAssets = $activeThemeRecord ? json_decode($activeThemeRecord->assets, true) : []; @endphp
+        @foreach(is_array($activeThemeAssets) ? $activeThemeAssets : [] as $activeThemeAsset)
+            @if(is_string($activeThemeAsset) && preg_match('/^assets\/[a-z0-9][a-z0-9._-]*\.css$/i', $activeThemeAsset))
+                <link rel="stylesheet" href="{{ route('themes.asset', ['slug' => $activeThemeSlug, 'version' => $activeThemeVersion, 'file' => basename($activeThemeAsset)]) }}">
+            @endif
+        @endforeach
+    @endif
     <title>@yield('title', $pageSeoTitle)</title>
     <meta name="description" content="{{ $pageSeoDescription }}">
     <meta name="keywords" content="{{ $seoKeywords }}">
@@ -366,37 +359,9 @@
             .admin-shell .page-header { gap:10px; }
             .admin-shell .panel { padding:16px; }
         }
-        .aec-brand-loader { position:fixed; inset:0; z-index:99999; display:grid; place-items:center; background:var(--aec-loader-bg,#fff); opacity:1; visibility:visible; transition:opacity .22s ease,visibility .22s ease; }
-        .aec-brand-loader[hidden] { display:none; }
-        .aec-brand-loader.is-leaving { opacity:0; visibility:hidden; pointer-events:none; }
-        .aec-brand-loader-inner { display:flex; flex-direction:column; align-items:center; gap:18px; padding:24px; text-align:center; }
-        .aec-brand-loader-mark { position:relative; display:grid; place-items:center; width:104px; height:104px; }
-        .aec-brand-loader-mark img { position:relative; z-index:2; width:68px; height:68px; object-fit:contain; border-radius:14px; }
-        .aec-brand-loader-mark .aec-loader-orbit,.aec-brand-loader-mark .aec-loader-ring { position:absolute; inset:3px; border:3px solid transparent; border-top-color:var(--primary); border-right-color:var(--primary); border-radius:50%; animation:aec-loader-spin var(--aec-loader-speed,1s) linear infinite; }
-        .aec-brand-loader-mark .aec-loader-orbit:after { content:''; position:absolute; width:9px; height:9px; border-radius:50%; background:var(--primary); top:8px; left:8px; }
-        .aec-brand-loader-mark .aec-loader-ring { inset:10px; border-width:3px; border-right-color:transparent; border-bottom-color:var(--primary); }
-        .aec-brand-loader[data-style="pulse"] .aec-brand-loader-mark img { animation:aec-loader-pulse var(--aec-loader-speed,1s) ease-in-out infinite; }
-        .aec-brand-loader[data-style="pulse"] .aec-loader-orbit,.aec-brand-loader[data-style="pulse"] .aec-loader-ring { display:none; }
-        .aec-brand-loader[data-style="ring"] .aec-loader-orbit { display:none; }
-        .aec-brand-loader[data-style="ring"] .aec-loader-ring { display:block; }
-        .aec-brand-loader-text { color:#334155; font-size:.94rem; font-weight:700; letter-spacing:.02em; }
-        @keyframes aec-loader-spin { to { transform:rotate(360deg); } }
-        @keyframes aec-loader-pulse { 0%,100% { transform:scale(.9); opacity:.72; } 50% { transform:scale(1.06); opacity:1; } }
-        @media(prefers-reduced-motion:reduce) { .aec-brand-loader,.aec-brand-loader * { animation:none!important; transition:none!important; } }
     </style>
 </head>
 <body class="{{ $isAdminLayout ? 'admin-shell' : '' }}">
-    @if($loadingEnabled)
-        <div id="aec-brand-loader" class="aec-brand-loader" data-style="{{ $loadingStyle }}" style="--aec-loader-bg:{{ $loadingBackground }};--aec-loader-speed:{{ number_format(12 / $loadingSpeed, 2) }}s" role="status" aria-live="polite" aria-label="{{ $loadingText ?: __('Loading') }}">
-            <div class="aec-brand-loader-inner">
-                <div class="aec-brand-loader-mark">
-                    @if($loadingLogoUrl)<img src="{{ $loadingLogoUrl }}" alt="">@else<span style="font-size:2.8rem;font-weight:800;color:var(--primary);">{{ mb_substr($institutionName, 0, 1) }}</span>@endif
-                    <span class="aec-loader-orbit" aria-hidden="true"></span><span class="aec-loader-ring" aria-hidden="true"></span>
-                </div>
-                @if($loadingText)<span class="aec-brand-loader-text">{{ $loadingText }}</span>@endif
-            </div>
-        </div>
-    @endif
     @if($marketingConsent && $googleTagManagerId)
         <noscript><iframe src="https://www.googletagmanager.com/ns.html?id={{ urlencode($googleTagManagerId) }}" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     @endif
@@ -409,7 +374,6 @@
             <div class="admin-sidebar-label">Overview</div>
             <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><span>▦</span><span class="nav-text">Dashboard</span></a>
             <div class="admin-sidebar-label">Academy</div>
-            <a href="{{ route('admin.academic-levels.index') }}"><span>🎓</span><span class="nav-text">Academic levels</span></a>
             <a href="{{ route('admin.courses.index') }}"><span>📚</span><span class="nav-text">Courses & lessons</span></a>
             <a class="{{ request()->routeIs('admin.ebooks.*') ? 'active' : '' }}" href="{{ route('admin.ebooks.index') }}"><span>📕</span><span class="nav-text">eBook management</span></a>
             <a class="{{ request()->routeIs('admin.ebooks.orders.*') ? 'active' : '' }}" href="{{ route('admin.ebooks.orders.index') }}"><span>🧾</span><span class="nav-text">eBook orders</span></a>
@@ -420,9 +384,6 @@
             <a class="{{ request()->routeIs('admin.coupons.*') ? 'active' : '' }}" href="{{ route('admin.coupons.index') }}"><span>🏷️</span><span class="nav-text">Coupons</span></a>
             <a href="{{ route('admin.flash-sales.index') }}"><span>🔥</span><span class="nav-text">Flash Sale</span></a>
             <a href="{{ route('admin.users.index') }}"><span>👥</span><span class="nav-text">Students & teachers</span></a>
-            @if($studentTrackingAvailable && \Illuminate\Support\Facades\Route::has('admin.student-tracking.index'))
-                <a class="{{ request()->routeIs('admin.student-tracking.*') ? 'active' : '' }}" href="{{ route('admin.student-tracking.index') }}"><span>📊</span><span class="nav-text">Student Tracking</span></a>
-            @endif
             <a class="{{ request()->routeIs('admin.teacher-applications.*') ? 'active' : '' }}" href="{{ route('admin.teacher-applications.index') }}"><span>🪪</span><span class="nav-text">Teacher KYC review</span></a>
             <a class="{{ request()->routeIs('admin.student-devices.*') ? 'active' : '' }}" href="{{ route('admin.student-devices.index') }}"><span>📱</span><span class="nav-text">Device approvals</span></a>
             <a class="{{ request()->routeIs('admin.verification-center.*') ? 'active' : '' }}" href="{{ route('admin.verification-center.index') }}"><span>✅</span><span class="nav-text">Verification center</span></a>
@@ -441,6 +402,7 @@
             <div class="admin-sidebar-label">Website & tools</div>
             <a class="{{ request()->routeIs('admin.modules.*') ? 'active' : '' }}" href="{{ route('admin.modules.index') }}"><span>🧩</span><span class="nav-text">Module Manager</span></a>
             <a class="{{ request()->routeIs('admin.plugins.*') ? 'active' : '' }}" href="{{ route('admin.plugins.index') }}"><span>🧰</span><span class="nav-text">Plugin Manager</span></a>
+            <a class="{{ request()->routeIs('admin.themes.*') ? 'active' : '' }}" href="{{ route('admin.themes.index') }}"><span>🎨</span><span class="nav-text">Theme Manager</span></a>
             <a href="{{ route('admin.website-builder.index') }}"><span>🖥️</span><span class="nav-text">Website builder</span></a>
             <a href="{{ route('admin.website-pages.index') }}"><span>📄</span><span class="nav-text">Custom pages</span></a>
             <a href="{{ route('admin.media.index') }}"><span>🖼️</span><span class="nav-text">Media library</span></a>
@@ -469,9 +431,6 @@
                     @endif
                     @if(auth()->user()->hasAdminPermission('branch.students'))
                         <a class="{{ request()->routeIs('admin.branch-workspace.students.*') ? 'active' : '' }}" href="{{ route('admin.branch-workspace.students.index') }}"><span>👥</span><span class="nav-text">Branch students</span></a>
-                    @endif
-                    @if($studentTrackingAvailable && \Illuminate\Support\Facades\Route::has('branch.student-tracking.index'))
-                        <a class="{{ request()->routeIs('branch.student-tracking.*') ? 'active' : '' }}" href="{{ route('branch.student-tracking.index') }}"><span>📊</span><span class="nav-text">Student Tracking</span></a>
                     @endif
                 @endif
             @elseif(auth()->user()->isAccountant())
@@ -527,10 +486,7 @@
                         @endif
                     @endforeach
                 @auth
-                    <a href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a>                    @foreach($websitePageLinks as $websitePageLink)
-                        <a href="{{ route('website-pages.show', $websitePageLink->slug) }}">{{ $websitePageLink->menu_label ?: $websitePageLink->title }}</a>
-                    @endforeach
-
+                    <a href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a>
                     <a href="{{ route('notices.index') }}">{{ __('Notice Board') }}</a>
                     <a href="{{ route('profile.edit') }}">{{ __('Profile') }}</a>
                     <a href="{{ route('live-classes.index') }}">{{ __('Live classes') }}</a>
@@ -558,23 +514,14 @@
                     @endif
                     @if(auth()->user()->isTeacher())
                         <a href="{{ route('teacher.batches.index') }}">My batches</a>
-                        @if($studentTrackingAvailable && \Illuminate\Support\Facades\Route::has('teacher.student-tracking.index'))
-                            <a href="{{ route('teacher.student-tracking.index') }}">My Students</a>
-                        @endif
                     @endif
                     @if(auth()->user()->isGuardian())
                         <a href="{{ route('guardian.dashboard') }}">{{ __('Guardian portal') }}</a>
-                        @if($studentTrackingAvailable && \Illuminate\Support\Facades\Route::has('guardian.student-tracking.index'))
-                            <a href="{{ route('guardian.student-tracking.index') }}">Children Tracking</a>
-                        @endif
                     @endif
                     @if(auth()->user()->isStudent())
                         <a href="{{ route('student.guardian-requests.page') }}">{{ __('Guardian requests') }}</a>
                         <a href="{{ route('student.wishlist.index') }}">Wishlist</a>
                         <a href="{{ route('student.attendance.index') }}">Attendance</a>
-                        @if($studentTrackingAvailable && \Illuminate\Support\Facades\Route::has('student.tracking.index'))
-                            <a href="{{ route('student.tracking.index') }}">My Learning Tracking</a>
-                        @endif
                     <a href="{{ route('student.exams.index') }}">Exams</a>
                         <a href="{{ route('student.invoices.index') }}">My fees</a>
                     @endif
@@ -753,37 +700,6 @@
             });
         })();
     </script>
-    @if($loadingEnabled)
-        <script>
-            (() => {
-                const loader = document.getElementById('aec-brand-loader');
-                if (!loader) return;
-                let shownAt = Date.now();
-                const hide = () => {
-                    const wait = Math.max(0, 260 - (Date.now() - shownAt));
-                    window.setTimeout(() => { loader.classList.add('is-leaving'); window.setTimeout(() => loader.hidden = true, 240); }, wait);
-                };
-                const show = () => { shownAt = Date.now(); loader.hidden = false; loader.classList.remove('is-leaving'); };
-                if (document.readyState === 'complete') hide();
-                else window.addEventListener('load', hide, { once:true });
-                window.addEventListener('pageshow', hide);
-                document.addEventListener('submit', event => {
-                    const form = event.target;
-                    if (form instanceof HTMLFormElement && form.method.toLowerCase() !== 'dialog' && !form.hasAttribute('data-no-page-loader')) show();
-                }, true);
-                document.addEventListener('click', event => {
-                    const link = event.target.closest('a[href]');
-                    if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-                    if (link.target && link.target !== '_self' || link.hasAttribute('download')) return;
-                    const url = new URL(link.href, window.location.href);
-                    if (url.origin !== window.location.origin || url.pathname === window.location.pathname && url.search === window.location.search && url.hash) return;
-                    if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
-                    show();
-                }, true);
-                window.addEventListener('beforeunload', show);
-            })();
-        </script>
-    @endif
     @stack('scripts')
 </body>
 </html>

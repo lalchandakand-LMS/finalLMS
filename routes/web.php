@@ -3,7 +3,6 @@
 use App\Http\Controllers\AddonRegistryController;
 use App\Http\Controllers\AdminModuleRegistryController;
 use App\Http\Controllers\AdminPluginManagerController;
-use App\Http\Controllers\AcademicLevelController;
 use App\Http\Controllers\AdminPaymentGatewayController;
 use App\Http\Controllers\AiDeveloperController;
 use App\Http\Controllers\AdminSettingsController;
@@ -13,14 +12,13 @@ use App\Http\Controllers\MetaAdsIntegrationController;
 use App\Http\Controllers\MetaBoostCampaignController;
 use App\Http\Controllers\SeoController;
 use App\Http\Controllers\AdminUpdateController;
+use App\Http\Controllers\ThemeManagerController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\StudentDeviceAccessController;
 use App\Http\Controllers\LessonMediaController;
 use App\Http\Controllers\TeacherApplicationController;
 use App\Http\Controllers\BatchController;
 use App\Http\Controllers\AttendanceController;
-use App\Http\Controllers\AdminAttendanceSyncReviewController;
-use App\Http\Controllers\AdminAttendanceAuditController;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\CourseComboController;
@@ -82,6 +80,7 @@ Route::post('/install', [InstallController::class, 'install'])->middleware('thro
 
 Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('seo.sitemap');
 Route::get('/robots.txt', [SeoController::class, 'robots'])->name('seo.robots');
+Route::get('/themes/{slug}/{version}/{file}', [ThemeManagerController::class, 'asset'])->where(['slug' => '[a-z0-9][a-z0-9-]{1,79}', 'version' => '[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?', 'file' => '[A-Za-z0-9][A-Za-z0-9._-]{0,100}\.css'])->name('themes.asset');
 
 Route::get('/', function () {
     return auth()->check() ? redirect('/dashboard') : view('landing');
@@ -126,7 +125,6 @@ Route::get('/course-combos', [CourseComboController::class, 'publicIndex'])->nam
 Route::get('/course-combos/{courseCombo:slug}', [CourseComboController::class, 'show'])->name('course-combos.show');
 Route::get('/courses/{course}', [CourseController::class, 'show'])->name('courses.show');
 Route::get('/courses/{course}/content/{post:slug}', [CourseContentController::class, 'show'])->name('courses.content.show');
-Route::get('/courses/{course}/content/{post:slug}/file', [CourseContentController::class, 'file'])->middleware('throttle:60,1')->name('courses.content.file');
 Route::get('/courses/{course}/lessons/{lesson}', [CourseController::class, 'showLesson'])->name('courses.lessons.show');
 Route::get('/courses/{course}/lessons/{lesson}/video', [CourseController::class, 'streamLessonVideo'])->name('courses.lessons.video');
 Route::get('/courses/{course}/lessons/{lesson}/media/{type}', [LessonMediaController::class, 'show'])->middleware('throttle:120,1')->name('courses.lessons.media');
@@ -179,12 +177,6 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
             Route::get('/students', [BatchController::class, 'branchManagerStudents'])->middleware('admin.permission:branch.students')->name('students.index');
             Route::post('/batches', [BatchController::class, 'branchManagerStore'])->middleware('admin.permission:branch.batches')->name('batches.store');
             Route::put('/batches/{batch}', [BatchController::class, 'branchManagerUpdate'])->middleware('admin.permission:branch.batches')->name('batches.update');
-            Route::get('/batches/{batch}/attendance', [AttendanceController::class, 'index'])
-                ->middleware(['admin.permission:branch.attendance', 'module.enabled:attendance'])
-                ->name('batches.attendance.index');
-            Route::post('/batches/{batch}/attendance', [AttendanceController::class, 'store'])
-                ->middleware(['admin.permission:branch.attendance', 'module.enabled:attendance'])
-                ->name('batches.attendance.store');
         });
 
     Route::middleware('role:accountant')
@@ -236,12 +228,9 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
     Route::middleware('role:teacher')->put('/teacher/courses/{course}/lessons/{lesson}', [CourseController::class, 'updateLesson'])->name('teacher.courses.lessons.update');
     Route::middleware('role:teacher')->delete('/teacher/courses/{course}/lessons/{lesson}', [CourseController::class, 'destroyLesson'])->name('teacher.courses.lessons.destroy');
     Route::middleware('role:student')->get('/my/attendance', [AttendanceController::class, 'studentIndex'])->name('student.attendance.index');
-    Route::middleware(['role:student', 'module.enabled:attendance'])->get('/my/attendance', [AttendanceController::class, 'studentIndex'])->name('student.attendance.index');
     Route::middleware('role:teacher')->group(function () {
         Route::get('/teacher/batches/{batch}/attendance', [AttendanceController::class, 'index'])->name('teacher.batches.attendance.index');
         Route::post('/teacher/batches/{batch}/attendance', [AttendanceController::class, 'store'])->name('teacher.batches.attendance.store');
-        Route::get('/teacher/batches/{batch}/attendance', [AttendanceController::class, 'index'])->middleware('module.enabled:attendance')->name('teacher.batches.attendance.index');
-        Route::post('/teacher/batches/{batch}/attendance', [AttendanceController::class, 'store'])->middleware('module.enabled:attendance')->name('teacher.batches.attendance.store');
         Route::get('/teacher/batches/{batch}/assignments', [AssignmentController::class, 'index'])->name('teacher.batches.assignments.index');
         Route::get('/teacher/batches/{batch}/exams', [ExamController::class, 'teacherIndex'])->name('teacher.batches.exams.index');
         Route::get('/teacher/batches/{batch}/question-bank', [ExamController::class, 'questionBank'])->name('teacher.batches.question-bank.index');
@@ -302,26 +291,22 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         ->name('courses.lessons.complete');
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
-        Route::get('/academic-levels', [AcademicLevelController::class, 'index'])->name('admin.academic-levels.index');
-        Route::post('/academic-levels', [AcademicLevelController::class, 'store'])->name('admin.academic-levels.store');
-        Route::get('/academic-levels/{academicLevel}', [AcademicLevelController::class, 'show'])->name('admin.academic-levels.show');
-        Route::put('/academic-levels/{academicLevel}', [AcademicLevelController::class, 'update'])->name('admin.academic-levels.update');
-        Route::delete('/academic-levels/{academicLevel}', [AcademicLevelController::class, 'destroy'])->name('admin.academic-levels.destroy');
         Route::get('/modules', [AdminModuleRegistryController::class, 'index'])->name('admin.modules.index');
         Route::patch('/modules/{key}', [AdminModuleRegistryController::class, 'update'])->where('key', '[a-z_]+')->middleware('throttle:20,1')->name('admin.modules.update');
+        Route::get('/themes', [ThemeManagerController::class, 'index'])->name('admin.themes.index');
+        Route::post('/themes/install', [ThemeManagerController::class, 'install'])->middleware('throttle:3,10')->name('admin.themes.install');
+        Route::get('/themes/{theme}/preview', [ThemeManagerController::class, 'preview'])->whereNumber('theme')->name('admin.themes.preview');
+        Route::get('/themes/{theme}/preview/frame', [ThemeManagerController::class, 'previewFrame'])->whereNumber('theme')->name('admin.themes.preview.frame');
+        Route::delete('/themes/{theme}', [ThemeManagerController::class, 'destroy'])->whereNumber('theme')->middleware('throttle:10,1')->name('admin.themes.destroy');
+        Route::post('/themes/{theme}/activate', [ThemeManagerController::class, 'activate'])->whereNumber('theme')->middleware('throttle:10,1')->name('admin.themes.activate');
+        Route::post('/themes/reset', [ThemeManagerController::class, 'reset'])->middleware('throttle:5,1')->name('admin.themes.reset');
         Route::get('/plugins', [AdminPluginManagerController::class, 'index'])->name('admin.plugins.index');
         Route::post('/plugins/install', [AdminPluginManagerController::class, 'install'])->middleware('throttle:3,10')->name('admin.plugins.install');
-        Route::post('/plugins/{key}/update-package', [AdminPluginManagerController::class, 'updatePackage'])->where('key', '[a-z0-9.-]+')->middleware('throttle:3,10')->name('admin.plugins.update-package');
-        Route::post('/plugins/{key}/rollback-migrations', [AdminPluginManagerController::class, 'rollbackMigrations'])->where('key', '[a-z0-9.-]+')->middleware('throttle:2,10')->name('admin.plugins.rollback-migrations');
-        Route::post('/plugins/{key}/rollback-package', [AdminPluginManagerController::class, 'rollbackPackage'])->where('key', '[a-z0-9.-]+')->middleware('throttle:2,10')->name('admin.plugins.rollback-package');
         Route::put('/plugins/{key}/permissions', [AdminPluginManagerController::class, 'updatePermissions'])->where('key', '[a-z0-9.-]+')->middleware('throttle:10,1')->name('admin.plugins.permissions');
-        Route::post('/plugins/{key}/settings', [AdminPluginManagerController::class, 'storeSetting'])->where('key', '[a-z0-9.-]+')->middleware('throttle:10,1')->name('admin.plugins.settings.store');
-        Route::delete('/plugins/{key}/settings/{settingKey}', [AdminPluginManagerController::class, 'deleteSetting'])->where(['key' => '[a-z0-9.-]+', 'settingKey' => '[a-z][a-z0-9_.-]{0,119}'])->middleware('throttle:10,1')->name('admin.plugins.settings.delete');
         Route::post('/plugins/{key}/health-check', [AdminPluginManagerController::class, 'healthCheck'])->where('key', '[a-z0-9.-]+')->middleware('throttle:10,1')->name('admin.plugins.health-check');
         Route::post('/plugins/{key}/activate', [AdminPluginManagerController::class, 'activate'])->where('key', '[a-z0-9.-]+')->middleware('throttle:5,1')->name('admin.plugins.activate');
         Route::post('/plugins/{key}/deactivate', [AdminPluginManagerController::class, 'deactivate'])->where('key', '[a-z0-9.-]+')->middleware('throttle:5,1')->name('admin.plugins.deactivate');
         Route::post('/plugins/{key}/uninstall', [AdminPluginManagerController::class, 'uninstall'])->where('key', '[a-z0-9.-]+')->middleware('throttle:3,10')->name('admin.plugins.uninstall');
-        Route::post('/plugins/{key}/restore-package', [AdminPluginManagerController::class, 'restorePackage'])->where('key', '[a-z0-9.-]+')->middleware('throttle:3,10')->name('admin.plugins.restore-package');
         Route::get('/support-tickets', [AdminSupportTicketController::class, 'index'])->name('admin.support-tickets.index');
         Route::get('/support-tickets/{ticket}', [AdminSupportTicketController::class, 'show'])->name('admin.support-tickets.show');
         Route::post('/support-tickets/{ticket}/messages', [AdminSupportTicketController::class, 'reply'])->middleware('throttle:10,1')->name('admin.support-tickets.reply');
@@ -419,8 +404,6 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::post('/assignments/{assignment}/submissions/{submission}/grade', [AssignmentController::class, 'grade'])->middleware('throttle:30,1')->name('admin.assignments.grade');
         Route::get('/batches/{batch}/attendance', [AttendanceController::class, 'index'])->name('admin.batches.attendance.index');
         Route::post('/batches/{batch}/attendance', [AttendanceController::class, 'store'])->name('admin.batches.attendance.store');
-        Route::get('/batches/{batch}/attendance', [AttendanceController::class, 'index'])->middleware('module.enabled:attendance')->name('admin.batches.attendance.index');
-        Route::post('/batches/{batch}/attendance', [AttendanceController::class, 'store'])->middleware('module.enabled:attendance')->name('admin.batches.attendance.store');
         Route::post('/branches', [BatchController::class, 'storeBranch'])->name('admin.branches.store');
         Route::put('/branches/{branch}', [BatchController::class, 'updateBranch'])->name('admin.branches.update');
         Route::delete('/branches/{branch}', [BatchController::class, 'destroyBranch'])->name('admin.branches.destroy');
@@ -488,10 +471,6 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::post('/marketing/meta-ads/campaigns', [MetaAdsIntegrationController::class, 'createCampaign'])->middleware('throttle:5,1')->name('admin.marketing.meta-ads.campaigns.store');
         Route::post('/marketing/meta-ads/campaigns/{campaignId}/pause', [MetaAdsIntegrationController::class, 'pauseCampaign'])->middleware('throttle:10,1')->name('admin.marketing.meta-ads.campaigns.pause');
         Route::post('/marketing/meta-ads/campaigns/{campaignId}/resume', [MetaAdsIntegrationController::class, 'resumeCampaign'])->middleware('throttle:10,1')->name('admin.marketing.meta-ads.campaigns.resume');
-        Route::get('/attendance-audit', [AdminAttendanceAuditController::class, 'index'])->middleware('module.enabled:attendance')->name('admin.attendance-audit.index');
-        Route::get('/attendance-audit/export', [AdminAttendanceAuditController::class, 'export'])->middleware(['module.enabled:attendance', 'throttle:10,1'])->name('admin.attendance-audit.export');
-        Route::get('/attendance-sync-reviews', [AdminAttendanceSyncReviewController::class, 'index'])->middleware('module.enabled:attendance')->name('admin.attendance-sync-reviews.index');
-        Route::post('/attendance-sync-reviews/{review}/resolve', [AdminAttendanceSyncReviewController::class, 'resolve'])->middleware(['module.enabled:attendance', 'throttle:20,1'])->name('admin.attendance-sync-reviews.resolve');
         Route::get('/setup-wizard', [SetupWizardController::class, 'index'])->name('admin.setup-wizard.index');
         Route::post('/setup-wizard', [SetupWizardController::class, 'update'])->middleware('throttle:10,1')->name('admin.setup-wizard.update');
         Route::post('/setup-wizard/skip', [SetupWizardController::class, 'skip'])->middleware('throttle:10,1')->name('admin.setup-wizard.skip');
