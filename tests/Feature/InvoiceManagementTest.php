@@ -514,9 +514,9 @@ class InvoiceManagementTest extends TestCase
             ], 200),
         ]);
 
-        $this->expectException(\\RuntimeException::class);
+        $this->expectException(\RuntimeException::class);
 
-        app(\\App\\Services\\Payments\\BkashRefundService::class)->refund(
+        app(\App\Services\Payments\BkashRefundService::class)->refund(
             'BKASH-CURRENCY-PAY',
             'BKASH-CURRENCY-TRX',
             '25.00',
