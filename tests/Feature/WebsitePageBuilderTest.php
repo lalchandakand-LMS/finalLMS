@@ -348,9 +348,7 @@ class WebsitePageBuilderTest extends TestCase
             'created_by' => $admin->id,
         ]);
 
-        app()->setLocale('bn');
-
-        $this->actingAs($admin)->get(route('admin.website-pages.edit', $page))
+        $this->withSession(['locale' => 'bn'])->actingAs($admin)->get(route('admin.website-pages.edit', $page))
             ->assertOk()
             ->assertSee('রিভিশন ইতিহাস')
             ->assertSee('এই সংস্করণ ফিরিয়ে আনুন');
