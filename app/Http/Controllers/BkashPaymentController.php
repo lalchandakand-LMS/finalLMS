@@ -499,18 +499,17 @@ class BkashPaymentController extends Controller
             });
 
             $event->update(['processing_status' => 'processed', 'processed_at' => now()]);
-            if ($event->wasRecentlyCreated) {
-                $payment->refresh();
-                PaymentAuditEvent::create([
+            PaymentAuditEvent::firstOrCreate(
+                ['correlation_id' => hash('sha256', $eventKey)],
+                [
                     'payment_id' => $payment->id,
                     'provider' => 'bkash',
                     'event' => 'gateway_callback_processed',
                     'source' => 'bkash_callback',
-                    'correlation_id' => hash('sha256', $eventKey),
                     'before_state' => ['status' => 'pending'],
                     'after_state' => ['status' => $payment->status, 'gateway_transaction_id' => $transactionId],
-                ]);
-            }
+                ]
+            );
 
             if ($payment->learn_earn_exam_id) {
                 return match ($result) {
