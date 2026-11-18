@@ -1,11 +1,11 @@
 <?php
 
-namespace App\\Services\\Payments;
+namespace App\Services\Payments;
 
-use App\\Models\\Payment;
-use App\\Models\\PaymentAuditEvent;
-use App\\Models\\PaymentReconciliation;
-use Illuminate\\Support\\Facades\\DB;
+use App\Models\Payment;
+use App\Models\PaymentAuditEvent;
+use App\Models\PaymentReconciliation;
+use Illuminate\Support\Facades\DB;
 use Throwable;
 
 class BkashReconciliationService
@@ -18,7 +18,7 @@ class BkashReconciliationService
 
         try {
             if ($payment->gateway_provider !== 'bkash' || ! $payment->gateway_payment_id) {
-                throw new \\RuntimeException('Payment has no bKash gateway payment ID.');
+                throw new \RuntimeException('Payment has no bKash gateway payment ID.');
             }
             $client = app(BkashCheckoutService::class);
             $verified = $client->queryPayment($client->grantToken(), $payment->gateway_payment_id);
