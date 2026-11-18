@@ -47,7 +47,7 @@ class BkashRefundService
             || ! is_string($refundId) || $refundId === ''
             || strtoupper((string) ($response['currency'] ?? 'BDT')) !== 'BDT'
             || round((float) ($response['amount'] ?? -1), 2) !== round((float) $amount, 2)
-            || (isset($response['originalTrxID']) && $response['originalTrxID'] !== $transactionId)) {
+            || ! isset($response['originalTrxID']) || $response['originalTrxID'] !== $transactionId) {
             throw new RuntimeException('bKash did not confirm the requested refund. Manual gateway reconciliation is required.');
         }
 
@@ -55,9 +55,8 @@ class BkashRefundService
         if (($verified['statusCode'] ?? null) !== '0000'
             || strtolower((string) ($verified['transactionStatus'] ?? '')) !== 'completed'
             || ($verified['refundTrxID'] ?? null) !== $refundId
-            || (isset($verified['originalTrxID']) && $verified['originalTrxID'] !== $transactionId)
-            || round((float) ($verified['amount'] ?? -1), 2) !== round((float) $amount, 2)
-            || (isset($verified['originalTrxID']) && $verified['originalTrxID'] !== $transactionId)) {
+            || ! isset($verified['originalTrxID']) || $verified['originalTrxID'] !== $transactionId
+            || round((float) ($verified['amount'] ?? -1), 2) !== round((float) $amount, 2)) {
             throw new RuntimeException('bKash refund status could not be independently verified.');
         }
 
