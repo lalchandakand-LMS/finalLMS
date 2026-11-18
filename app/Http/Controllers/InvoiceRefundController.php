@@ -279,7 +279,7 @@ class InvoiceRefundController extends Controller
 
             DB::transaction(function () use ($refund, $gatewayResult, $request): void {
                 $locked = InvoiceRefund::query()->lockForUpdate()->findOrFail($refund->id);
-                if ($locked->status !== 'gateway_unknown') {
+                if (! in_array($locked->status, ['gateway_unknown', 'processing'], true)) {
                     return;
                 }
                 $locked->update([
