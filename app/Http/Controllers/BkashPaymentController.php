@@ -6,6 +6,8 @@ use App\Models\Batch;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\Payment;
+use App\Models\PaymentGatewayEvent;
+use App\Models\PaymentAuditEvent;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -262,6 +264,36 @@ class BkashPaymentController extends Controller
                 throw new \RuntimeException('bKash transaction verification did not match the local payment.');
             }
 
+            $eventKey = 'bkash:payment:'.$paymentId.':'.$transactionId;
+            $event = PaymentGatewayEvent::firstOrCreate(
+                ['event_key' => $eventKey],
+                [
+                    'provider' => 'bkash',
+                    'payment_id' => $payment->id,
+                    'gateway_payment_id' => $paymentId,
+                    'gateway_transaction_id' => $transactionId,
+                    'event_type' => 'payment.completed',
+                    'verification_status' => 'verified',
+                    'processing_status' => 'processing',
+                    'payload_hash' => hash('sha256', json_encode([
+                        'paymentID' => $verifiedPaymentId,
+                        'trxID' => $transactionId,
+                        'amount' => $verifiedAmount,
+                        'currency' => $verified['currency'] ?? null,
+                        'merchantInvoiceNumber' => $invoice,
+                    ], JSON_THROW_ON_ERROR)),
+                    'verified_payload' => [
+                        'paymentID' => $verifiedPaymentId,
+                        'trxID' => $transactionId,
+                        'amount' => $verifiedAmount,
+                        'currency' => $verified['currency'] ?? null,
+                        'merchantInvoiceNumber' => $invoice,
+                    ],
+                    'received_at' => now(),
+                    'verified_at' => now(),
+                ]
+            );
+
             $result = DB::transaction(function () use ($payment, $transactionId): string {
                 $lockedPayment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
 
@@ -448,6 +480,20 @@ class BkashPaymentController extends Controller
 
                 return 'approved';
             });
+
+            $event->update(['processing_status' => 'processed', 'processed_at' => now()]);
+            if ($event->wasRecentlyCreated) {
+                $payment->refresh();
+                PaymentAuditEvent::create([
+                    'payment_id' => $payment->id,
+                    'provider' => 'bkash',
+                    'event' => 'gateway_callback_processed',
+                    'source' => 'bkash_callback',
+                    'correlation_id' => $eventKey,
+                    'before_state' => ['status' => 'pending'],
+                    'after_state' => ['status' => $payment->status, 'gateway_transaction_id' => $transactionId],
+                ]);
+            }
 
             if ($payment->learn_earn_exam_id) {
                 return match ($result) {
