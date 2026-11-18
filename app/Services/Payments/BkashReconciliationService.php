@@ -19,7 +19,7 @@ class BkashReconciliationService
 
         try {
             if ($payment->gateway_provider !== 'bkash' || ! $payment->gateway_payment_id || ! $payment->gateway_transaction_id) {
-                throw new \\RuntimeException('Invoice payment has incomplete bKash gateway references.');
+                throw new \RuntimeException('Invoice payment has incomplete bKash gateway references.');
             }
             $client = app(BkashCheckoutService::class);
             $verified = $client->queryPayment($client->grantToken(), $payment->gateway_payment_id);
