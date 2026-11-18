@@ -94,7 +94,14 @@ class WebsitePageController extends Controller
 
     private function renderPage(WebsitePage $page, bool $isPreview): View
     {
-        $imageIds = collect($page->sections ?? [])->pluck('image_id')->filter()->unique();
+        $sections = collect($page->sections ?? [])->map(function ($section): array {
+            if (! is_array($section)) return [];
+            $section['button_url'] = SafeWebsiteUrl::sanitize($section['button_url'] ?? '') ?? '';
+            return $section;
+        })->values()->all();
+        $page->setAttribute('sections', $sections);
+
+        $imageIds = collect($sections)->pluck('image_id')->filter()->unique();
         $media = MediaAsset::query()->whereIn('id', $imageIds)->where('mime_type', 'like', 'image/%')->get()->keyBy('id');
         return view('website-pages.show', compact('page', 'media', 'isPreview'));
     }
