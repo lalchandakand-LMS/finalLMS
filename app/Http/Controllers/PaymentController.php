@@ -8,6 +8,7 @@ use App\Models\PaymentComboCourse;
 use App\Models\Batch;
 use App\Models\Enrollment;
 use App\Models\Payment;
+use App\Models\PaymentAuditEvent;
 use App\Models\FlashSale;
 use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
@@ -401,6 +402,14 @@ class PaymentController extends Controller
                 'reviewed_by' => auth()->id(),
                 'reviewed_at' => now(),
             ]);
+            PaymentAuditEvent::create([
+                'payment_id' => $payment->id,
+                'actor_id' => auth()->id(),
+                'event' => 'manual_payment_approved',
+                'source' => 'admin_payment',
+                'before_state' => ['status' => 'pending'],
+                'after_state' => ['status' => 'approved', 'amount' => $payment->amount],
+            ]);
             DB::table('coupon_redemptions')->where('payment_id', $payment->id)
                 ->where('status', 'reserved')->update(['status' => 'redeemed', 'redeemed_at' => now(), 'updated_at' => now()]);
 
@@ -449,6 +458,14 @@ class PaymentController extends Controller
                 'admin_note' => $validated['admin_note'] ?? null,
                 'reviewed_by' => auth()->id(),
                 'reviewed_at' => now(),
+            ]);
+            PaymentAuditEvent::create([
+                'payment_id' => $locked->id,
+                'actor_id' => auth()->id(),
+                'event' => 'manual_payment_rejected',
+                'source' => 'admin_payment',
+                'before_state' => ['status' => 'pending'],
+                'after_state' => ['status' => 'rejected', 'admin_note' => $validated['admin_note'] ?? null],
             ]);
             DB::table('coupon_redemptions')->where('payment_id', $locked->id)
                 ->where('status', 'reserved')->update(['status' => 'released', 'updated_at' => now()]);

@@ -85,6 +85,21 @@ class BkashPaymentFlowTest extends TestCase
             'status' => 'approved',
             'gateway_transaction_id' => 'BKASH-TRX-001',
         ]);
+        $this->assertDatabaseHas('payment_gateway_events', [
+            'event_key' => hash('sha256', 'bkash:payment:BKASH-PAY-001:BKASH-TRX-001'),
+            'verification_status' => 'verified',
+            'processing_status' => 'processed',
+        ]);
+        $this->assertDatabaseHas('payment_audit_events', [
+            'payment_id' => $payment->id,
+            'event' => 'gateway_callback_processed',
+        ]);
+        $this->get(route('payments.bkash.callback', [
+            'paymentID' => 'BKASH-PAY-001',
+            'status' => 'success',
+        ]))->assertRedirect(route('courses.show', $course));
+        $this->assertDatabaseCount('payment_gateway_events', 1);
+        $this->assertDatabaseCount('payment_audit_events', 1);
         $this->assertDatabaseHas('enrollments', [
             'user_id' => $student->id,
             'course_id' => $course->id,
@@ -598,4 +613,46 @@ class BkashPaymentFlowTest extends TestCase
             'status' => 'published',
         ]);
     }
+    public function test_admin_reconciliation_compares_gateway_without_mutating_payment_status(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $course = $this->paidCourse();
+        $payment = Payment::create([
+            'user_id' => $student->id, 'course_id' => $course->id,
+            'method' => 'bkash', 'gateway_provider' => 'bkash',
+            'amount' => '1500.00', 'currency' => 'BDT',
+            'transaction_reference' => 'BKASH-RECON-REF',
+            'gateway_payment_id' => 'BKASH-RECON-PAY',
+            'status' => 'pending',
+        ]);
+
+        Http::fake([
+            '*/tokenized/checkout/token/grant' => Http::response(['id_token' => 'reconcile-token'], 200),
+            '*/tokenized/checkout/payment/status' => Http::response([
+                'transactionStatus' => 'Completed',
+                'paymentID' => 'BKASH-RECON-PAY',
+                'trxID' => 'BKASH-RECON-TRX',
+                'amount' => '1500.00',
+                'currency' => 'BDT',
+                'merchantInvoiceNumber' => 'BKASH-RECON-REF',
+            ], 200),
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.payment-reconciliation.run'), [
+            'payment_id' => $payment->id,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('payment_reconciliations', [
+            'payment_id' => $payment->id,
+            'result' => 'mismatch',
+            'gateway_status' => 'completed',
+        ]);
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'pending']);
+        $this->assertDatabaseHas('payment_audit_events', [
+            'payment_id' => $payment->id,
+            'event' => 'reconciliation_mismatch',
+        ]);
+    }
+
 }

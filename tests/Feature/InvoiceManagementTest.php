@@ -7,6 +7,7 @@ use App\Models\InvoicePayment;
 use App\Models\InvoiceRefund;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class InvoiceManagementTest extends TestCase
@@ -152,7 +153,7 @@ class InvoiceManagementTest extends TestCase
         $payload = [
             'invoice_payment_id' => $payment->id,
             'amount' => 600,
-            'method' => 'bkash',
+            'method' => 'cash',
             'reason' => 'Duplicate payment',
         ];
 
@@ -205,6 +206,322 @@ class InvoiceManagementTest extends TestCase
 
         $this->actingAs($teacher)->post(route('admin.refunds.approve', $refund))->assertForbidden();
         $this->assertDatabaseHas('invoice_refunds', ['id' => $refund->id, 'status' => 'pending']);
+    }
+
+    public function test_bkash_refund_is_not_accounted_until_gateway_confirms_it(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $invoice = Invoice::create([
+            'user_id' => $student->id, 'created_by' => $admin->id,
+            'invoice_number' => 'AEC-REFUND-BKASH-01', 'title' => 'Tuition',
+            'amount' => 500, 'status' => 'paid',
+        ]);
+        $payment = InvoicePayment::create([
+            'invoice_id' => $invoice->id, 'received_by' => $admin->id,
+            'amount' => 500, 'method' => 'bkash', 'gateway_provider' => 'bkash',
+            'gateway_payment_id' => 'BKASH-ORIGINAL-PAYMENT',
+            'gateway_transaction_id' => 'BKASH-ORIGINAL-TRX',
+            'paid_at' => now(),
+        ]);
+
+        config([
+            'services.bkash.enabled' => true,
+            'services.bkash.base_url' => 'https://tokenized.sandbox.bka.sh/v1.2.0-beta',
+            'services.bkash.username' => 'sandbox-user',
+            'services.bkash.password' => 'sandbox-password',
+            'services.bkash.app_key' => 'sandbox-app-key',
+            'services.bkash.app_secret' => 'sandbox-app-secret',
+            'services.bkash.verify_ssl' => true,
+        ]);
+        Http::fake([
+            '*/tokenized/checkout/token/grant' => Http::response(['id_token' => 'refund-token'], 200),
+            '*/tokenized/checkout/payment/refund' => Http::response(['statusCode' => '0000', 'originalTrxID' => 'BKASH-ORIGINAL-TRX', 'refundTrxID' => 'BKASH-REFUND-TRX', 'amount' => '100.00', 'currency' => 'BDT', 'transactionStatus' => 'Completed']),
+            '*/tokenized/checkout/payment/refund/status' => Http::response(['statusCode' => '0000', 'originalTrxID' => 'BKASH-ORIGINAL-TRX', 'refundTrxID' => 'BKASH-REFUND-TRX', 'amount' => '100.00', 'currency' => 'BDT', 'transactionStatus' => 'Completed']),
+        ]);
+
+        $payload = [
+            'invoice_payment_id' => $payment->id, 'amount' => 100,
+            'method' => 'bkash', 'reason' => 'Duplicate payment',
+        ];
+        $this->actingAs($admin)->post(route('admin.refunds.store'), $payload)->assertRedirect();
+        $refund = InvoiceRefund::firstOrFail();
+
+        $this->post(route('admin.refunds.approve', $refund))->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('invoice_refunds', [
+            'id' => $refund->id, 'status' => 'approved',
+            'gateway_refund_id' => 'BKASH-REFUND-TRX',
+            'gateway_status' => 'Completed',
+        ]);
+        $this->assertDatabaseHas('payment_audit_events', [
+            'invoice_refund_id' => $refund->id,
+            'event' => 'gateway_refund_verified',
+        ]);
+    }
+
+    public function test_unverified_bkash_refund_stays_reserved_and_does_not_reduce_invoice_balance(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $invoice = Invoice::create([
+            'user_id' => $student->id, 'created_by' => $admin->id,
+            'invoice_number' => 'AEC-REFUND-BKASH-02', 'title' => 'Tuition',
+            'amount' => 500, 'status' => 'paid',
+        ]);
+        $payment = InvoicePayment::create([
+            'invoice_id' => $invoice->id, 'received_by' => $admin->id,
+            'amount' => 500, 'method' => 'bkash', 'gateway_provider' => 'bkash',
+            'gateway_payment_id' => 'BKASH-ORIGINAL-PAYMENT-2',
+            'gateway_transaction_id' => 'BKASH-ORIGINAL-TRX-2', 'paid_at' => now(),
+        ]);
+        config([
+            'services.bkash.enabled' => true,
+            'services.bkash.base_url' => 'https://tokenized.sandbox.bka.sh/v1.2.0-beta',
+            'services.bkash.username' => 'sandbox-user', 'services.bkash.password' => 'sandbox-password',
+            'services.bkash.app_key' => 'sandbox-app-key', 'services.bkash.app_secret' => 'sandbox-app-secret',
+            'services.bkash.verify_ssl' => true,
+        ]);
+        Http::fake([
+            '*/tokenized/checkout/token/grant' => Http::response(['id_token' => 'refund-token'], 200),
+            '*/tokenized/checkout/payment/refund' => Http::response(['statusCode' => '0000', 'originalTrxID' => 'BKASH-ORIGINAL-TRX-2', 'refundTrxID' => 'BKASH-REFUND-TRX-2', 'amount' => '100.00', 'currency' => 'BDT']),
+            '*/tokenized/checkout/payment/refund/status' => Http::response(['statusCode' => '0000', 'originalTrxID' => 'BKASH-ORIGINAL-TRX-2', 'refundTrxID' => 'BKASH-REFUND-TRX-2', 'amount' => '100.00', 'currency' => 'BDT', 'transactionStatus' => 'Processing']),
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.refunds.store'), [
+            'invoice_payment_id' => $payment->id, 'amount' => 100,
+            'method' => 'bkash', 'reason' => 'Gateway verification test',
+        ])->assertRedirect();
+        $refund = InvoiceRefund::firstOrFail();
+        $this->post(route('admin.refunds.approve', $refund))->assertRedirect()->assertSessionHas('error');
+
+        $this->assertDatabaseHas('invoice_refunds', [
+            'id' => $refund->id, 'status' => 'gateway_unknown',
+        ]);
+        $this->assertDatabaseHas('invoices', ['id' => $invoice->id, 'status' => 'paid']);
+    }
+
+    public function test_uncertain_bkash_refund_can_be_reconciled_without_resubmitting_it(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $invoice = Invoice::create([
+            'user_id' => $student->id, 'created_by' => $admin->id,
+            'invoice_number' => 'AEC-REFUND-RECON-01', 'title' => 'Tuition',
+            'amount' => 500, 'status' => 'paid',
+        ]);
+        $payment = InvoicePayment::create([
+            'invoice_id' => $invoice->id, 'received_by' => $admin->id,
+            'amount' => 500, 'method' => 'bkash', 'gateway_provider' => 'bkash',
+            'gateway_payment_id' => 'BKASH-RECON-ORIGINAL',
+            'gateway_transaction_id' => 'BKASH-RECON-TRX',
+            'paid_at' => now(),
+        ]);
+        $refund = InvoiceRefund::create([
+            'invoice_id' => $invoice->id, 'invoice_payment_id' => $payment->id,
+            'requested_by' => $admin->id, 'approved_by' => $admin->id,
+            'amount' => 100, 'method' => 'bkash', 'reason' => 'Timeout during refund',
+            'status' => 'gateway_unknown', 'gateway_status' => 'verification_unknown',
+        ]);
+
+        config([
+            'services.bkash.enabled' => true,
+            'services.bkash.base_url' => 'https://tokenized.sandbox.bka.sh/v1.2.0-beta',
+            'services.bkash.username' => 'sandbox-user', 'services.bkash.password' => 'sandbox-password',
+            'services.bkash.app_key' => 'sandbox-app-key', 'services.bkash.app_secret' => 'sandbox-app-secret',
+            'services.bkash.verify_ssl' => true,
+        ]);
+        Http::fake([
+            '*/tokenized/checkout/token/grant' => Http::response(['id_token' => 'reconcile-refund-token'], 200),
+            '*/tokenized/checkout/payment/refund/status' => Http::response([
+                'statusCode' => '0000', 'originalTrxID' => 'BKASH-RECON-TRX',
+                'refundTrxID' => 'BKASH-RECON-REFUND', 'amount' => '100.00',
+                'currency' => 'BDT', 'transactionStatus' => 'Completed',
+            ], 200),
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.refunds.reconcile', $refund))
+            ->assertRedirect()->assertSessionHas('success');
+
+        $this->assertDatabaseHas('invoice_refunds', [
+            'id' => $refund->id, 'status' => 'approved',
+            'gateway_refund_id' => 'BKASH-RECON-REFUND',
+        ]);
+        $this->assertDatabaseHas('payment_audit_events', [
+            'invoice_refund_id' => $refund->id,
+            'event' => 'gateway_refund_reconciled',
+        ]);
+        $this->assertDatabaseHas('invoices', ['id' => $invoice->id, 'status' => 'partial']);
+    }
+
+    public function test_invoice_bkash_receipt_can_be_reconciled_against_gateway(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $invoice = Invoice::create([
+            'user_id' => $student->id, 'created_by' => $admin->id,
+            'invoice_number' => 'AEC-INVOICE-RECON-01', 'title' => 'Tuition',
+            'amount' => 500, 'status' => 'paid',
+        ]);
+        $receipt = InvoicePayment::create([
+            'invoice_id' => $invoice->id, 'received_by' => $admin->id,
+            'amount' => 500, 'method' => 'bkash', 'gateway_provider' => 'bkash',
+            'gateway_payment_id' => 'BKASH-INVOICE-PAY',
+            'gateway_transaction_id' => 'BKASH-INVOICE-TRX',
+            'paid_at' => now(),
+        ]);
+        config([
+            'services.bkash.enabled' => true,
+            'services.bkash.base_url' => 'https://tokenized.sandbox.bka.sh/v1.2.0-beta',
+            'services.bkash.username' => 'sandbox-user', 'services.bkash.password' => 'sandbox-password',
+            'services.bkash.app_key' => 'sandbox-app-key', 'services.bkash.app_secret' => 'sandbox-app-secret',
+            'services.bkash.verify_ssl' => true,
+        ]);
+        Http::fake([
+            '*/tokenized/checkout/token/grant' => Http::response(['id_token' => 'invoice-reconcile-token'], 200),
+            '*/tokenized/checkout/payment/status' => Http::response([
+                'transactionStatus' => 'Completed',
+                'paymentID' => 'BKASH-INVOICE-PAY',
+                'trxID' => 'BKASH-INVOICE-TRX',
+                'amount' => '500.00',
+                'currency' => 'BDT',
+                'merchantInvoiceNumber' => 'AEC-INVOICE-RECON-01',
+            ], 200),
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.payment-reconciliation.run'), [
+            'invoice_payment_id' => $receipt->id,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('payment_reconciliations', [
+            'invoice_payment_id' => $receipt->id,
+            'result' => 'matched',
+            'gateway_status' => 'completed',
+        ]);
+        $this->assertDatabaseHas('payment_audit_events', [
+            'invoice_payment_id' => $receipt->id,
+            'event' => 'invoice_reconciliation_matched',
+        ]);
+    }
+
+    public function test_bkash_invoice_receipt_is_recorded_only_after_exact_gateway_verification(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $invoice = Invoice::create([
+            'user_id' => $student->id, 'created_by' => $admin->id,
+            'invoice_number' => 'AEC-BKASH-INV-100', 'title' => 'Tuition',
+            'amount' => 500, 'status' => 'unpaid',
+        ]);
+        config([
+            'services.bkash.enabled' => true,
+            'services.bkash.base_url' => 'https://tokenized.sandbox.bka.sh/v1.2.0-beta',
+            'services.bkash.username' => 'sandbox-user', 'services.bkash.password' => 'sandbox-password',
+            'services.bkash.app_key' => 'sandbox-app-key', 'services.bkash.app_secret' => 'sandbox-app-secret',
+            'services.bkash.verify_ssl' => true,
+        ]);
+        Http::fake([
+            '*/tokenized/checkout/token/grant' => Http::response(['id_token' => 'invoice-payment-token'], 200),
+            '*/tokenized/checkout/payment/status' => Http::response([
+                'transactionStatus' => 'Completed', 'paymentID' => 'BKASH-INVOICE-PAY-100',
+                'trxID' => 'BKASH-INVOICE-TRX-100', 'amount' => '500.00',
+                'currency' => 'BDT', 'merchantInvoiceNumber' => 'AEC-BKASH-INV-100',
+            ], 200),
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.invoices.payments.store', $invoice), [
+            'amount' => 500, 'method' => 'bkash',
+            'gateway_payment_id' => 'BKASH-INVOICE-PAY-100',
+            'gateway_transaction_id' => 'BKASH-INVOICE-TRX-100',
+            'reference' => 'BKASH-INVOICE-TRX-100', 'paid_at' => now()->toDateString(),
+        ])->assertRedirect()->assertSessionHas('success');
+
+        $this->assertDatabaseHas('invoice_payments', [
+            'invoice_id' => $invoice->id, 'gateway_payment_id' => 'BKASH-INVOICE-PAY-100',
+            'gateway_transaction_id' => 'BKASH-INVOICE-TRX-100',
+        ]);
+        $this->assertDatabaseHas('payment_gateway_events', [
+            'event_key' => hash('sha256', 'bkash:payment:BKASH-INVOICE-PAY-100:BKASH-INVOICE-TRX-100'),
+            'invoice_payment_id' => InvoicePayment::firstOrFail()->id,
+            'event_type' => 'invoice.payment.verified',
+            'processing_status' => 'processed',
+        ]);
+        $this->assertDatabaseHas('invoices', ['id' => $invoice->id, 'status' => 'paid']);
+        $this->assertDatabaseHas('payment_audit_events', [
+            'event' => 'invoice_payment_recorded',
+        ]);
+    }
+
+    public function test_bkash_invoice_receipt_rejects_gateway_invoice_or_amount_mismatch(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $invoice = Invoice::create([
+            'user_id' => $student->id, 'created_by' => $admin->id,
+            'invoice_number' => 'AEC-BKASH-INV-101', 'title' => 'Tuition',
+            'amount' => 500, 'status' => 'unpaid',
+        ]);
+        config([
+            'services.bkash.enabled' => true,
+            'services.bkash.base_url' => 'https://tokenized.sandbox.bka.sh/v1.2.0-beta',
+            'services.bkash.username' => 'sandbox-user', 'services.bkash.password' => 'sandbox-password',
+            'services.bkash.app_key' => 'sandbox-app-key', 'services.bkash.app_secret' => 'sandbox-app-secret',
+            'services.bkash.verify_ssl' => true,
+        ]);
+        Http::fake([
+            '*/tokenized/checkout/token/grant' => Http::response(['id_token' => 'invoice-payment-token'], 200),
+            '*/tokenized/checkout/payment/status' => Http::response([
+                'transactionStatus' => 'Completed', 'paymentID' => 'BKASH-INVOICE-PAY-101',
+                'trxID' => 'BKASH-INVOICE-TRX-101', 'amount' => '500.00',
+                'currency' => 'BDT', 'merchantInvoiceNumber' => 'ANOTHER-INVOICE',
+            ], 200),
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.invoices.payments.store', $invoice), [
+            'amount' => 500, 'method' => 'bkash',
+            'gateway_payment_id' => 'BKASH-INVOICE-PAY-101',
+            'gateway_transaction_id' => 'BKASH-INVOICE-TRX-101',
+            'paid_at' => now()->toDateString(),
+        ])->assertRedirect()->assertSessionHasErrors('gateway_payment_id');
+
+        $this->assertDatabaseMissing('invoice_payments', ['gateway_payment_id' => 'BKASH-INVOICE-PAY-101']);
+        $this->assertDatabaseHas('invoices', ['id' => $invoice->id, 'status' => 'unpaid']);
+    }
+
+    public function test_bkash_refund_verification_rejects_non_bdt_settlement_currency(): void
+    {
+        config([
+            'services.bkash.enabled' => true,
+            'services.bkash.base_url' => 'https://tokenized.sandbox.bka.sh/v1.2.0-beta',
+            'services.bkash.username' => 'sandbox-user',
+            'services.bkash.password' => 'sandbox-password',
+            'services.bkash.app_key' => 'sandbox-app-key',
+            'services.bkash.app_secret' => 'sandbox-app-secret',
+            'services.bkash.verify_ssl' => true,
+        ]);
+
+        Http::fake([
+            '*/tokenized/checkout/token/grant' => Http::response(['id_token' => 'refund-currency-token'], 200),
+            '*/tokenized/checkout/payment/refund' => Http::response([
+                'statusCode' => '0000', 'originalTrxID' => 'BKASH-CURRENCY-TRX',
+                'refundTrxID' => 'BKASH-CURRENCY-REFUND', 'amount' => '25.00', 'currency' => 'BDT',
+            ], 200),
+            '*/tokenized/checkout/payment/refund/status' => Http::response([
+                'statusCode' => '0000', 'originalTrxID' => 'BKASH-CURRENCY-TRX',
+                'refundTrxID' => 'BKASH-CURRENCY-REFUND', 'amount' => '25.00',
+                'currency' => 'USD', 'transactionStatus' => 'Completed',
+            ], 200),
+        ]);
+
+        $this->expectException(\RuntimeException::class);
+
+        app(\App\Services\Payments\BkashRefundService::class)->refund(
+            'BKASH-CURRENCY-PAY',
+            'BKASH-CURRENCY-TRX',
+            '25.00',
+            'Currency verification test'
+        );
     }
 
 }

@@ -31,6 +31,8 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\PaymentReconciliationController;
+use App\Http\Controllers\PaymentAuditController;
 use App\Http\Controllers\BkashPaymentController;
 use App\Http\Controllers\PhoneVerificationController;
 use App\Http\Controllers\SmsCampaignController;
@@ -359,6 +361,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::post('/ebook-orders/{order}/approve', [AdminEbookOrderController::class, 'approve'])->name('admin.ebooks.orders.approve');
         Route::post('/ebook-orders/{order}/reject', [AdminEbookOrderController::class, 'reject'])->name('admin.ebooks.orders.reject');
         Route::post('/ebook-orders/{order}/refund', [AdminEbookOrderController::class, 'refund'])->middleware('throttle:10,1')->name('admin.ebooks.orders.refund');
+        Route::post('/ebook-refunds/{refund}/reconcile', [AdminEbookOrderController::class, 'reconcileRefund'])->middleware('throttle:5,1')->name('admin.ebooks.refunds.reconcile');
         Route::post('/ebook-download-permissions/{permission}/revoke', [AdminEbookOrderController::class, 'revokePermission'])->middleware('throttle:20,1')->name('admin.ebooks.permissions.revoke');
         Route::get('/analytics', [AdminAnalyticsController::class, 'index'])->name('admin.analytics.index');
         Route::get('/dashboard-announcements', [AdminDashboardAnnouncementController::class, 'index'])->name('admin.dashboard-announcements.index');
@@ -415,6 +418,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::get('/refunds', [InvoiceRefundController::class, 'index'])->name('admin.refunds.index');
         Route::post('/refunds', [InvoiceRefundController::class, 'store'])->name('admin.refunds.store');
         Route::post('/refunds/{refund}/approve', [InvoiceRefundController::class, 'approve'])->name('admin.refunds.approve');
+        Route::post('/refunds/{refund}/reconcile', [InvoiceRefundController::class, 'reconcile'])->middleware('throttle:5,1')->name('admin.refunds.reconcile');
         Route::post('/refunds/{refund}/reject', [InvoiceRefundController::class, 'reject'])->name('admin.refunds.reject');
         Route::get('/finance-reports', [FinanceReportController::class, 'index'])->name('admin.finance-reports.index');
         Route::get('/expenses', [ExpenseController::class, 'index'])->name('admin.expenses.index');
@@ -452,6 +456,9 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
             ->name('admin.sms-campaigns.store');
 
         Route::get('/payments', [PaymentController::class, 'index'])->name('admin.payments.index');
+        Route::get('/payment-reconciliation', [PaymentReconciliationController::class, 'index'])->name('admin.payment-reconciliation.index');
+        Route::get('/payment-audit', [PaymentAuditController::class, 'index'])->name('admin.payment-audit.index');
+        Route::post('/payment-reconciliation/run', [PaymentReconciliationController::class, 'run'])->middleware('throttle:3,1')->name('admin.payment-reconciliation.run');
         Route::post('/payments/{payment}/approve', [PaymentController::class, 'approve'])->name('admin.payments.approve');
         Route::post('/payments/{payment}/reject', [PaymentController::class, 'reject'])->name('admin.payments.reject');
         Route::get('/payments/{payment}/proof', [PaymentController::class, 'proof'])->name('admin.payments.proof');

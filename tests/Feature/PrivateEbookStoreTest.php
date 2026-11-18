@@ -5,12 +5,14 @@ namespace Tests\Feature;
 use App\Models\DownloadPermission;
 use App\Models\EbookRefund;
 use App\Models\Order;
+use App\Models\Payment;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\Commerce\EbookOrderFulfillmentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class PrivateEbookStoreTest extends TestCase
@@ -304,6 +306,116 @@ class PrivateEbookStoreTest extends TestCase
             ->assertSee('REFUND-TRANSFER-001');
         $refund = EbookRefund::firstOrFail();
         $this->assertSame('350.00', $refund->amount);
+    }
+
+
+    public function test_bkash_ebook_refund_requires_gateway_verification_before_access_revocation(): void
+    {
+        Storage::fake('local');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $product = $this->ebook($admin);
+        [$order, $item, $permission] = $this->completedEbookOrder($student, $product);
+        Payment::create([
+            'user_id' => $student->id, 'order_id' => $order->id,
+            'gateway_provider' => 'bkash', 'gateway_payment_id' => 'BKASH-EBOOK-PAY',
+            'gateway_transaction_id' => 'BKASH-EBOOK-TRX',
+            'transaction_reference' => 'BKASH-EBOOK-TRX',
+            'method' => 'bkash', 'amount' => 350, 'currency' => 'BDT',
+            'status' => 'approved',
+        ]);
+        config([
+            'services.bkash.enabled' => true,
+            'services.bkash.base_url' => 'https://tokenized.sandbox.bka.sh/v1.2.0-beta',
+            'services.bkash.username' => 'sandbox-user', 'services.bkash.password' => 'sandbox-password',
+            'services.bkash.app_key' => 'sandbox-app-key', 'services.bkash.app_secret' => 'sandbox-app-secret',
+            'services.bkash.verify_ssl' => true,
+        ]);
+        Http::fake([
+            '*/tokenized/checkout/token/grant' => Http::response(['id_token' => 'ebook-refund-token'], 200),
+            '*/tokenized/checkout/payment/refund' => Http::response([
+                'statusCode' => '0000', 'originalTrxID' => 'BKASH-EBOOK-TRX',
+                'refundTrxID' => 'BKASH-EBOOK-REFUND', 'amount' => '350.00',
+                'currency' => 'BDT', 'transactionStatus' => 'Completed',
+            ], 200),
+            '*/tokenized/checkout/payment/refund/status' => Http::response([
+                'statusCode' => '0000', 'originalTrxID' => 'BKASH-EBOOK-TRX',
+                'refundTrxID' => 'BKASH-EBOOK-REFUND', 'amount' => '350.00',
+                'currency' => 'BDT', 'transactionStatus' => 'Completed',
+            ], 200),
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.ebooks.orders.refund', $order), [
+            'reason' => 'Customer requested a refund.',
+        ])->assertRedirect()->assertSessionHas('success');
+
+        $this->assertSame('refunded', $order->fresh()->status);
+        $this->assertDatabaseHas('ebook_refunds', [
+            'order_id' => $order->id, 'status' => 'refunded',
+            'gateway_refund_id' => 'BKASH-EBOOK-REFUND',
+        ]);
+        $this->assertNotNull($permission->fresh()->revoked_at);
+        $this->assertDatabaseHas('payment_audit_events', [
+            'ebook_refund_id' => EbookRefund::firstOrFail()->id,
+            'event' => 'ebook_gateway_refund_verified',
+        ]);
+    }
+
+    public function test_uncertain_bkash_ebook_refund_stays_reserved_until_reconciled_without_resubmission(): void
+    {
+        Storage::fake('local');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $product = $this->ebook($admin);
+        [$order, $item, $permission] = $this->completedEbookOrder($student, $product);
+        Payment::create([
+            'user_id' => $student->id, 'order_id' => $order->id,
+            'gateway_provider' => 'bkash', 'gateway_payment_id' => 'BKASH-EBOOK-PAY-2',
+            'gateway_transaction_id' => 'BKASH-EBOOK-TRX-2',
+            'transaction_reference' => 'BKASH-EBOOK-TRX-2',
+            'method' => 'bkash', 'amount' => 350, 'currency' => 'BDT',
+            'status' => 'approved',
+        ]);
+        config([
+            'services.bkash.enabled' => true,
+            'services.bkash.base_url' => 'https://tokenized.sandbox.bka.sh/v1.2.0-beta',
+            'services.bkash.username' => 'sandbox-user', 'services.bkash.password' => 'sandbox-password',
+            'services.bkash.app_key' => 'sandbox-app-key', 'services.bkash.app_secret' => 'sandbox-app-secret',
+            'services.bkash.verify_ssl' => true,
+        ]);
+        Http::fake([
+            '*/tokenized/checkout/token/grant' => Http::sequence()
+                ->push(['id_token' => 'ebook-refund-token-1'])
+                ->push(['id_token' => 'ebook-refund-token-2']),
+            '*/tokenized/checkout/payment/refund' => Http::response([
+                'statusCode' => '0000', 'originalTrxID' => 'BKASH-EBOOK-TRX-2',
+                'refundTrxID' => 'BKASH-EBOOK-REFUND-2', 'amount' => '350.00', 'currency' => 'BDT',
+            ], 200),
+            '*/tokenized/checkout/payment/refund/status' => Http::sequence()
+                ->push(['statusCode' => '0000', 'originalTrxID' => 'BKASH-EBOOK-TRX-2', 'refundTrxID' => 'BKASH-EBOOK-REFUND-2', 'amount' => '350.00', 'currency' => 'BDT', 'transactionStatus' => 'Processing'])
+                ->push(['statusCode' => '0000', 'originalTrxID' => 'BKASH-EBOOK-TRX-2', 'refundTrxID' => 'BKASH-EBOOK-REFUND-2', 'amount' => '350.00', 'currency' => 'BDT', 'transactionStatus' => 'Completed']),
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.ebooks.orders.refund', $order), [
+            'reason' => 'Gateway response timed out.',
+        ])->assertRedirect()->assertSessionHas('error');
+
+        $refund = EbookRefund::firstOrFail();
+        $this->assertSame('gateway_unknown', $refund->status);
+        $this->assertSame('completed', $order->fresh()->status);
+        $this->assertNull($permission->fresh()->revoked_at);
+
+        $this->post(route('admin.ebooks.refunds.reconcile', $refund))
+            ->assertRedirect()->assertSessionHas('success');
+
+        $this->assertSame('refunded', $refund->fresh()->status);
+        $this->assertSame('refunded', $order->fresh()->status);
+        $this->assertNotNull($permission->fresh()->revoked_at);
+        $this->assertDatabaseHas('payment_audit_events', [
+            'ebook_refund_id' => $refund->id,
+            'event' => 'ebook_gateway_refund_reconciled',
+        ]);
+        Http::assertSentCount(5);
     }
 
     public function test_admin_can_revoke_access_without_refunding_and_cannot_refund_pending_orders(): void
