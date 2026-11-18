@@ -277,7 +277,7 @@ class BkashPaymentController extends Controller
                 throw new \RuntimeException('This bKash transaction is already recorded as an invoice receipt.');
             }
 
-            $eventKey = 'bkash:payment:'.$paymentId.':'.$transactionId;
+            $eventKey = hash('sha256', 'bkash:payment:'.$paymentId.':'.$transactionId);
             $event = PaymentGatewayEvent::firstOrCreate(
                 ['event_key' => $eventKey],
                 [
