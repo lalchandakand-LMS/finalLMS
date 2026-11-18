@@ -7,12 +7,14 @@ use App\Models\Invoice;
 use App\Models\InvoicePayment;
 use App\Models\PaymentAuditEvent;
 use App\Models\User;
+use App\Services\Payments\BkashCheckoutService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Throwable;
 
 class InvoiceController extends Controller
 {
@@ -139,7 +141,7 @@ class InvoiceController extends Controller
         return back()->with('success', 'Invoice created successfully.');
     }
 
-    public function receivePayment(Invoice $invoice, Request $request): RedirectResponse
+    public function receivePayment(Invoice $invoice, Request $request, BkashCheckoutService $bkash): RedirectResponse
     {
         $isAccountant = $request->user()->isAccountant();
         $branchId = $request->user()->branch_id;
@@ -159,6 +161,32 @@ class InvoiceController extends Controller
             'note' => ['nullable', 'string', 'max:1000'],
             'paid_at' => ['required', 'date'],
         ]);
+
+        if ($validated['method'] === 'bkash') {
+            try {
+                if (! config('services.bkash.enabled') || ! config('services.bkash.verify_ssl', true)) {
+                    throw new \\RuntimeException('bKash server-side verification is not enabled with verified TLS.');
+                }
+
+                $verified = $bkash->queryPayment($bkash->grantToken(), $validated['gateway_payment_id']);
+                $matches = strtolower((string) ($verified['transactionStatus'] ?? '')) === 'completed'
+                    && ($verified['paymentID'] ?? null) === $validated['gateway_payment_id']
+                    && ($verified['trxID'] ?? null) === $validated['gateway_transaction_id']
+                    && round((float) ($verified['amount'] ?? -1), 2) === round((float) $validated['amount'], 2)
+                    && strtoupper((string) ($verified['currency'] ?? '')) === 'BDT'
+                    && ($verified['merchantInvoiceNumber'] ?? null) === $invoice->invoice_number;
+
+                if (! $matches) {
+                    return back()->withErrors([
+                        'gateway_payment_id' => 'bKash payment verification did not match this invoice, amount, currency or transaction ID.',
+                    ])->withInput();
+                }
+            } catch (Throwable) {
+                return back()->withErrors([
+                    'gateway_payment_id' => 'bKash could not independently verify this transaction. No invoice payment was recorded.',
+                ])->withInput();
+            }
+        }
 
         $result = DB::transaction(function () use ($invoice, $validated, $request, $isAccountant, $branchId): string {
             $lockedInvoice = Invoice::query()->lockForUpdate()->findOrFail($invoice->id);
