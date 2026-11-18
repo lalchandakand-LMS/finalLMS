@@ -6,6 +6,7 @@ use App\Models\Batch;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\Payment;
+use App\Models\InvoicePayment;
 use App\Models\PaymentGatewayEvent;
 use App\Models\PaymentAuditEvent;
 use App\Models\Order;
@@ -262,6 +263,18 @@ class BkashPaymentController extends Controller
                     || ! isset($verified['currency'])
                     || strtoupper((string) $verified['currency']) !== 'BDT'))) {
                 throw new \RuntimeException('bKash transaction verification did not match the local payment.');
+            }
+
+            $invoiceReceiptExists = InvoicePayment::query()
+                ->where('gateway_provider', 'bkash')
+                ->where(function ($query) use ($paymentId, $transactionId): void {
+                    $query->where('gateway_payment_id', $paymentId)
+                        ->orWhere('gateway_transaction_id', $transactionId);
+                })
+                ->exists();
+
+            if ($invoiceReceiptExists) {
+                throw new \\RuntimeException('This bKash transaction is already recorded as an invoice receipt.');
             }
 
             $eventKey = 'bkash:payment:'.$paymentId.':'.$transactionId;
