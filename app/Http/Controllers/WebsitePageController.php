@@ -122,7 +122,7 @@ class WebsitePageController extends Controller
             $academicLevelId = $snapshot['academic_level_id'] ?? null;
             if ($academicLevelId !== null && ! AcademicLevel::query()->whereKey($academicLevelId)->exists()) {
                 throw ValidationException::withMessages([
-                    'revision' => 'This revision references an academic level that no longer exists.',
+                    'revision' => __('This revision references an academic level that no longer exists.'),
                 ]);
             }
 
@@ -132,7 +132,7 @@ class WebsitePageController extends Controller
                 ->exists();
             if ($slugInUse) {
                 throw ValidationException::withMessages([
-                    'revision' => 'This revision cannot be restored because its URL slug is now used by another page.',
+                    'revision' => __('This revision cannot be restored because its URL slug is now used by another page.'),
                 ]);
             }
 
@@ -166,7 +166,7 @@ class WebsitePageController extends Controller
         }, 3);
 
         return redirect()->route('admin.website-pages.edit', $websitePage)
-            ->with('success', 'Page revision restored. The restored state was saved as a new revision.');
+            ->with('success', __('Page revision restored. The restored state was saved as a new revision.'));
     }
 
     private function recordRevision(WebsitePage $page, int $userId): WebsitePageRevision
