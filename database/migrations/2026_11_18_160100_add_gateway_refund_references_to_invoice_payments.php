@@ -24,6 +24,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('invoice_refunds', function (Blueprint $table) {
+            $table->dropUnique(['gateway_refund_id']);
             $table->dropColumn(['gateway_refund_id', 'gateway_status', 'failure_reason']);
         });
         Schema::table('invoice_payments', function (Blueprint $table) {
