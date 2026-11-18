@@ -249,4 +249,48 @@ class WebsitePageBuilderTest extends TestCase
         $this->actingAs($student)->get(route('admin.website-pages.revisions', $page))->assertForbidden();
         $this->actingAs($admin)->post(route('admin.website-pages.revisions.restore', [$page, $revision]))->assertNotFound();
     }
+
+    public function test_revision_restore_refuses_to_take_a_slug_owned_by_another_page(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $page = WebsitePage::create([
+            'title' => 'Original title',
+            'slug' => 'shared-history-slug',
+            'template' => 'standard',
+            'sections' => [],
+            'status' => 'draft',
+            'created_by' => $admin->id,
+        ]);
+        $revision = $page->revisions()->create([
+            'snapshot' => [
+                'title' => 'Original title',
+                'slug' => 'shared-history-slug',
+                'template' => 'standard',
+                'sections' => [],
+                'status' => 'draft',
+                'show_in_menu' => false,
+                'menu_order' => 0,
+            ],
+            'created_by' => $admin->id,
+            'label' => 'Before slug change',
+        ]);
+
+        $page->update(['slug' => 'renamed-history-page']);
+        WebsitePage::create([
+            'title' => 'New owner',
+            'slug' => 'shared-history-slug',
+            'template' => 'standard',
+            'sections' => [],
+            'status' => 'draft',
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->from(route('admin.website-pages.revisions', $page))
+            ->post(route('admin.website-pages.revisions.restore', [$page, $revision]))
+            ->assertRedirect(route('admin.website-pages.revisions', $page))
+            ->assertSessionHasErrors('revision');
+
+        $this->assertSame('renamed-history-page', $page->fresh()->slug);
+    }
 }
