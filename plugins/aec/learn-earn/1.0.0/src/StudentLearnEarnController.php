@@ -231,7 +231,7 @@ class StudentLearnEarnController extends Controller
         return redirect()->route('student.learn-earn.attempts.show', $attempt);
     }
 
-    public function attempt(Request $request, LearnEarnExamAttempt $attempt): View
+    public function attempt(Request $request, LearnEarnExamAttempt $attempt): View|RedirectResponse
     {
         $this->assertOwner($request, $attempt);
         abort_unless($attempt->status === 'in_progress', 404);
