@@ -47,7 +47,7 @@ class BoardQuestionSolverPluginTest extends TestCase {
  }
  public function test_full_solution_mode_builds_a_complete_step_by_step_prompt():void {
   $controller=app(BoardQuestionSolverController::class);
-  $method=new \\ReflectionMethod(BoardQuestionSolverController::class,'prompt');
+  $method=new \ReflectionMethod(BoardQuestionSolverController::class,'prompt');
   $prompt=$method->invoke($controller,['language'=>'en','mode'=>'full','board'=>'Dhaka','exam_year'=>2025,'class_level'=>'SSC','subject'=>'Mathematics','question_type'=>'math','question'=>'Solve 2x = 10']);
   $this->assertStringContainsString('complete, step-by-step worked solution',$prompt);
  }
