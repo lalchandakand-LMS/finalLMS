@@ -136,7 +136,7 @@ class PluginMigrationRunner
 
         foreach ($records as $record) {
             if (! is_string($record->migration)
-                || preg_match('/^[A-Za-z0-9_-]{1,180}\\.php$/D', $record->migration) !== 1) {
+                || preg_match('/^[A-Za-z0-9_-]{1,180}\.php$/D', $record->migration) !== 1) {
                 throw new RuntimeException('A recorded plugin migration name is unsafe; rollback was stopped.');
             }
 
