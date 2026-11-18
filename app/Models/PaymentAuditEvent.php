@@ -14,6 +14,11 @@ class PaymentAuditEvent extends Model
 
     protected $casts = ['before_state' => 'array', 'after_state' => 'array'];
 
+    public function payment(): BelongsTo
+    {
+        return $this->belongsTo(Payment::class);
+    }
+
     public function invoiceRefund(): BelongsTo
     {
         return $this->belongsTo(InvoiceRefund::class, 'invoice_refund_id');
