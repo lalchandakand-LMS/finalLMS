@@ -279,4 +279,50 @@ PHP);
         ]);
     }
 
+    public function test_active_plugin_cannot_execute_migrations(): void
+    {
+        $file = $this->root.'/migrations/2026_11_15_000006_active_migration_guard.php';
+        file_put_contents($file, <<<'PHP'
+<?php
+return new class extends \Illuminate\Database\Migrations\Migration {
+    public function up(): void {
+        \Illuminate\Support\Facades\Schema::create('plugin_active_migration_probe', function (\Illuminate\Database\Schema\Blueprint $table): void {
+            $table->id();
+        });
+    }
+    public function down(): void {
+        \Illuminate\Support\Facades\Schema::dropIfExists('plugin_active_migration_probe');
+    }
+};
+PHP);
+
+        $plugin = new PluginInstallation();
+        $plugin->forceFill([
+            'plugin_key' => 'test.migration-check',
+            'name' => 'Active Migration Guard',
+            'version' => '1.0.0',
+            'type' => 'module',
+            'status' => 'active',
+            'manifest' => ['migrations' => 'migrations'],
+            'package_path' => $this->relative,
+            'metadata' => [
+                'integrity_version' => 1,
+                'installed_file_hashes' => ['migrations/2026_11_15_000006_active_migration_guard.php' => hash_file('sha256', $file)],
+            ],
+        ])->save();
+
+        try {
+            app(PluginMigrationRunner::class)->migrate($plugin);
+            $this->fail('An active plugin must not execute schema migrations.');
+        } catch (\RuntimeException $exception) {
+            $this->assertStringContainsString('Deactivate or stage', $exception->getMessage());
+        }
+
+        $this->assertFalse(Schema::hasTable('plugin_active_migration_probe'));
+        $this->assertDatabaseMissing('plugin_migrations', [
+            'plugin_key' => 'test.migration-check',
+            'migration' => basename($file),
+        ]);
+    }
+
 }
