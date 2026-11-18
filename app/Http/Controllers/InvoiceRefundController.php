@@ -259,6 +259,68 @@ class InvoiceRefundController extends Controller
         return back()->with('success', 'Manual refund payout confirmed and recorded.');
     }
 
+    public function reconcile(InvoiceRefund $refund, Request $request, BkashRefundService $bkashRefunds): RedirectResponse
+    {
+        abort_unless($request->user()->isAdmin(), 403);
+        abort_unless($refund->status === 'gateway_unknown' && $refund->method === 'bkash', 409);
+
+        $payment = InvoicePayment::query()->findOrFail($refund->invoice_payment_id);
+        abort_unless($payment->gateway_provider === 'bkash'
+            && $payment->gateway_payment_id && $payment->gateway_transaction_id, 422);
+
+        try {
+            $gatewayResult = $bkashRefunds->verifyExisting(
+                $payment->gateway_payment_id,
+                $payment->gateway_transaction_id,
+                number_format((float) $refund->amount, 2, '.', '')
+            );
+
+            DB::transaction(function () use ($refund, $gatewayResult, $request): void {
+                $locked = InvoiceRefund::query()->lockForUpdate()->findOrFail($refund->id);
+                if ($locked->status !== 'gateway_unknown') {
+                    return;
+                }
+                $locked->update([
+                    'status' => 'approved',
+                    'gateway_refund_id' => $gatewayResult['refund_id'],
+                    'gateway_status' => $gatewayResult['status'],
+                    'processed_at' => now(),
+                    'failure_reason' => null,
+                ]);
+                $netPaid = (float) InvoicePayment::where('invoice_id', $locked->invoice_id)->sum('amount')
+                    - (float) InvoiceRefund::where('invoice_id', $locked->invoice_id)->where('status', 'approved')->sum('amount');
+                $invoice = Invoice::query()->lockForUpdate()->findOrFail($locked->invoice_id);
+                $invoice->update(['status' => $netPaid >= (float) $invoice->amount ? 'paid' : ($netPaid > 0 ? 'partial' : 'unpaid')]);
+                PaymentAuditEvent::create([
+                    'invoice_payment_id' => $locked->invoice_payment_id,
+                    'invoice_refund_id' => $locked->id,
+                    'actor_id' => $request->user()->id,
+                    'provider' => 'bkash',
+                    'event' => 'gateway_refund_reconciled',
+                    'source' => 'admin_refund_reconciliation',
+                    'after_state' => ['status' => 'approved', 'gateway_refund_id' => $gatewayResult['refund_id']],
+                    'ip_address' => $request->ip(),
+                ]);
+            });
+
+            return back()->with('success', 'Existing bKash refund independently verified and reconciled.');
+        } catch (Throwable $exception) {
+            $refund->update(['failure_reason' => mb_substr($exception->getMessage(), 0, 2000)]);
+            PaymentAuditEvent::create([
+                'invoice_payment_id' => $refund->invoice_payment_id,
+                'invoice_refund_id' => $refund->id,
+                'actor_id' => $request->user()->id,
+                'provider' => 'bkash',
+                'event' => 'gateway_refund_reconciliation_unconfirmed',
+                'source' => 'admin_refund_reconciliation',
+                'after_state' => ['status' => 'gateway_unknown'],
+                'ip_address' => $request->ip(),
+            ]);
+
+            return back()->with('error', 'Gateway still does not confirm this refund. The reserved amount remains unchanged.');
+        }
+    }
+
     public function reject(InvoiceRefund $refund, Request $request): RedirectResponse
     {
         abort_unless($request->user()->isAdmin(), 403);
