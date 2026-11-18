@@ -10,6 +10,8 @@ use LogicException;
 
 final class PluginLifecycle
 {
+    public function __construct(private readonly PluginMigrationRunner $migrationRunner) {}
+
     private const TRANSITIONS = [
         'discovered' => ['validated', 'failed'],
         'validated' => ['staged', 'failed'],
@@ -65,6 +67,10 @@ final class PluginLifecycle
             $activeKeys = $plugins->where('status', 'active')->pluck('plugin_key')->all();
 
             if ($target === 'active') {
+                if ($this->migrationRunner->hasPendingMigrations($plugin)) {
+                    throw new LogicException('A plugin cannot be activated until all declared migrations have completed successfully.');
+                }
+
                 foreach (($plugin->manifest['dependencies'] ?? []) as $dependency) {
                     if (! in_array($dependency, $activeKeys, true)) {
                         throw new LogicException('A required plugin dependency is not active: '.$dependency);
