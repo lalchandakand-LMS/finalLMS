@@ -152,11 +152,13 @@ class InstructorAttendanceSyncController extends Controller
                 ];
             }
 
-            $batch = Batch::query()
+            $batchQuery = Batch::query()
                 ->whereKey($data['batch_id'])
-                ->where('teacher_id', $teacher->id)
-                ->lockForUpdate()
-                ->first();
+                ->where('teacher_id', $teacher->id);
+            if ($teacher->branch_id !== null) {
+                $batchQuery->where('branch_id', $teacher->branch_id);
+            }
+            $batch = $batchQuery->lockForUpdate()->first();
 
             if (! $batch) {
                 return [
@@ -286,7 +288,13 @@ class InstructorAttendanceSyncController extends Controller
     {
         $teacher = $request->user();
         abort_unless($teacher instanceof User && $teacher->isTeacher(), 403);
-        abort_unless((int) $attendance->batch()->value('teacher_id') === (int) $teacher->id, 404);
+        $accessibleBatch = Batch::query()
+            ->whereKey($attendance->batch_id)
+            ->where('teacher_id', $teacher->id);
+        if ($teacher->branch_id !== null) {
+            $accessibleBatch->where('branch_id', $teacher->branch_id);
+        }
+        abort_unless($accessibleBatch->exists(), 404);
 
         $allowedStatuses = ['present', 'absent', 'late'];
         if (filter_var(Setting::value('attendance_allow_excused', '0'), FILTER_VALIDATE_BOOLEAN)) {
@@ -299,8 +307,13 @@ class InstructorAttendanceSyncController extends Controller
 
         $updated = DB::transaction(function () use ($teacher, $attendance, $validated): Attendance {
             $locked = Attendance::query()->lockForUpdate()->findOrFail($attendance->id);
-            $batch = Batch::query()->whereKey($locked->batch_id)->lockForUpdate()->firstOrFail();
-            abort_unless((int) $batch->teacher_id === (int) $teacher->id, 404);
+            $batchQuery = Batch::query()
+                ->whereKey($locked->batch_id)
+                ->where('teacher_id', $teacher->id);
+            if ($teacher->branch_id !== null) {
+                $batchQuery->where('branch_id', $teacher->branch_id);
+            }
+            $batch = $batchQuery->lockForUpdate()->firstOrFail();
 
             $previousStatus = $locked->status;
             $locked->update([
