@@ -41,7 +41,7 @@ class FirstPartyPluginManifestTest extends TestCase
         $files = glob(base_path('plugins/aec/*/*/plugin.json')) ?: [];
         $this->assertNotEmpty($files, 'Expected executable first-party packages under plugins/aec/.');
 
-        $validator = app(\\App\\Services\\Plugins\\PluginManifestValidator::class);
+        $validator = app(\App\Services\Plugins\PluginManifestValidator::class);
         $manifests = [];
 
         foreach ($files as $file) {
