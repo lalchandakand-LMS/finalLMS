@@ -112,6 +112,7 @@ class AllRoleDeviceSecurityTest extends TestCase
         $this->assertCount(8, $recoveryCodes);
         $dashboard = $this->get('/dashboard')->assertOk();
         $dashboard->assertSee($recoveryCodes[0]);
+        $this->assertStringContainsString('no-store', (string) $dashboard->headers->get('Cache-Control'));
         $this->assertAuthenticatedAs($admin);
         $fresh = $admin->fresh();
         $this->assertNotNull($fresh->admin_totp_enabled_at);
