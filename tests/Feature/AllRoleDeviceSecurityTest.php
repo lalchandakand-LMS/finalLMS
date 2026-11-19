@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\DeviceSession;
 use App\Models\StudentDevice;
 use App\Models\User;
+use App\Services\Security\AdminTotpService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -60,7 +61,7 @@ class AllRoleDeviceSecurityTest extends TestCase
         }
     }
 
-    public function test_admin_login_is_registered_for_session_management_without_student_mfa_gate(): void
+    public function test_admin_password_alone_does_not_authenticate_and_first_login_requires_totp_enrollment(): void
     {
         Http::fake();
         $admin = User::factory()->create([
@@ -70,15 +71,109 @@ class AllRoleDeviceSecurityTest extends TestCase
         ]);
 
         $this->post(route('login.post'), ['email' => $admin->email, 'password' => 'password'])
+            ->assertRedirect(route('admin.mfa.setup'));
+
+        $this->assertGuest();
+        $this->assertSame($admin->id, session('pending_admin_mfa_user_id'));
+        $secret = session('admin_mfa_setup_secret');
+        $this->assertIsString($secret);
+
+        $this->get(route('admin.mfa.setup'))
+            ->assertOk()
+            ->assertSee($admin->email)
+            ->assertSee($secret);
+
+        $code = app(AdminTotpService::class)->codeForTesting($secret);
+        $this->post(route('admin.mfa.setup.confirm'), ['code' => $code])
             ->assertRedirect('/dashboard');
 
         $this->assertAuthenticatedAs($admin);
+        $fresh = $admin->fresh();
+        $this->assertNotNull($fresh->admin_totp_enabled_at);
+        $this->assertNotEmpty($fresh->admin_totp_secret);
+        $this->assertCount(8, $fresh->admin_totp_recovery_codes);
         $this->assertDatabaseHas('device_sessions', [
             'user_id' => $admin->id,
             'student_device_id' => null,
             'revoked_at' => null,
         ]);
+        $this->assertSessionHas('admin_mfa_recovery_codes');
         Http::assertNothingSent();
+    }
+
+    public function test_existing_admin_login_requires_totp_and_rejects_replayed_codes(): void
+    {
+        $secret = app(AdminTotpService::class)->generateSecret();
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'email_verified_at' => now(),
+            'admin_totp_secret' => $secret,
+            'admin_totp_enabled_at' => now()->subMinute(),
+            'admin_totp_last_used_step' => null,
+            'admin_totp_recovery_codes' => [],
+        ]);
+
+        $this->post(route('login.post'), ['email' => $admin->email, 'password' => 'password'])
+            ->assertRedirect(route('admin.mfa.challenge'));
+        $this->assertGuest();
+
+        $code = app(AdminTotpService::class)->codeForTesting($secret);
+        $this->post(route('admin.mfa.verify'), ['code' => $code])
+            ->assertRedirect('/dashboard');
+        $this->assertAuthenticatedAs($admin);
+        $usedStep = $admin->fresh()->admin_totp_last_used_step;
+        $this->assertNotNull($usedStep);
+
+        $this->post(route('logout'));
+        $this->post(route('login.post'), ['email' => $admin->email, 'password' => 'password'])
+            ->assertRedirect(route('admin.mfa.challenge'));
+        $this->post(route('admin.mfa.verify'), ['code' => $code])
+            ->assertSessionHasErrors('code');
+        $this->assertGuest();
+        $this->assertSame($usedStep, $admin->fresh()->admin_totp_last_used_step);
+    }
+
+    public function test_admin_recovery_codes_are_single_use(): void
+    {
+        $secret = app(AdminTotpService::class)->generateSecret();
+        $recoveryCode = 'A1B2-C3D4-E5F6';
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'email_verified_at' => now(),
+            'admin_totp_secret' => $secret,
+            'admin_totp_enabled_at' => now()->subMinute(),
+            'admin_totp_recovery_codes' => [app(AdminTotpService::class)->recoveryCodeHash($recoveryCode)],
+        ]);
+
+        $this->post(route('login.post'), ['email' => $admin->email, 'password' => 'password'])
+            ->assertRedirect(route('admin.mfa.challenge'));
+        $this->post(route('admin.mfa.verify'), ['recovery_code' => $recoveryCode])
+            ->assertRedirect('/dashboard');
+        $this->assertAuthenticatedAs($admin);
+        $this->assertSame([], $admin->fresh()->admin_totp_recovery_codes);
+
+        $this->post(route('logout'));
+        $this->post(route('login.post'), ['email' => $admin->email, 'password' => 'password'])
+            ->assertRedirect(route('admin.mfa.challenge'));
+        $this->post(route('admin.mfa.verify'), ['recovery_code' => $recoveryCode])
+            ->assertSessionHasErrors('code');
+        $this->assertGuest();
+    }
+
+    public function test_admin_without_a_completed_mfa_session_is_logged_out_of_protected_routes(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'email_verified_at' => now(),
+            'admin_totp_secret' => null,
+            'admin_totp_enabled_at' => null,
+        ]);
+
+        $this->actingAsAdminWithoutMfa($admin)
+            ->get('/dashboard')
+            ->assertRedirect(route('login'));
+
+        $this->assertGuest();
     }
 
     public function test_admin_can_review_and_revoke_a_specific_device_session(): void
