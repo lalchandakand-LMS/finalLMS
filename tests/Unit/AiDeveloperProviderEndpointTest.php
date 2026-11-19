@@ -51,4 +51,41 @@ class AiDeveloperProviderEndpointTest extends TestCase
         $this->expectException(RuntimeException::class);
         $endpoint->curlOptionsFor('https://ai.example.test/v1');
     }
+
+    public function test_non_default_https_ports_are_rejected_before_dns_resolution(): void
+    {
+        $resolved = false;
+        $endpoint = new AiDeveloperProviderEndpoint(static function (string $host) use (&$resolved): array {
+            $resolved = true;
+            return [['type' => 'A', 'ip' => '93.184.216.34']];
+        });
+
+        $this->expectException(RuntimeException::class);
+        try {
+            $endpoint->curlOptionsFor('https://ai.example.test:8443/v1');
+        } finally {
+            $this->assertFalse($resolved, 'DNS must not be resolved for a URL whose port is not pinned.');
+        }
+    }
+
+    public function test_provider_urls_with_userinfo_query_or_fragment_are_rejected(): void
+    {
+        $endpoint = new AiDeveloperProviderEndpoint(static fn (string $host): array => [
+            ['type' => 'A', 'ip' => '93.184.216.34'],
+        ]);
+
+        foreach ([
+            'https://user:secret@ai.example.test/v1',
+            'https://ai.example.test/v1?redirect=1',
+            'https://ai.example.test/v1#fragment',
+        ] as $url) {
+            try {
+                $endpoint->curlOptionsFor($url);
+                $this->fail('Unsafe provider URL was accepted: '.$url);
+            } catch (RuntimeException) {
+                $this->assertTrue(true);
+            }
+        }
+    }
+
 }
