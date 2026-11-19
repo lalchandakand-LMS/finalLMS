@@ -305,6 +305,28 @@ class UniversalAiAssistantPluginTest extends TestCase
         ]);
     }
 
+    public function test_stream_redactor_handles_all_supported_credentials_split_across_chunks(): void
+    {
+        $redactor = new \\Aloms\\UniversalAiAssistant\\AssistantStreamRedactor();
+        $output = $redactor->push('Start BEARER my-long-bearer-token');
+        $output .= $redactor->push(' then sk-1234567890');
+        $output .= $redactor->push('abcdef then ghp_abcdefghij');
+        $output .= $redactor->push('klmnopqrst then xoxb-12345');
+        $output .= $redactor->push('67890 then AKIA12345678');
+        $output .= $redactor->push('90ABCDEFGH end');
+        $output .= $redactor->finish();
+
+        $this->assertSame(
+            'Start BEARER [REDACTED] then [REDACTED_SECRET] then [REDACTED_SECRET] then [REDACTED_SECRET] then [REDACTED_SECRET] end',
+            $output
+        );
+        $this->assertStringNotContainsString('my-long-bearer-token', $output);
+        $this->assertStringNotContainsString('1234567890abcdef', $output);
+        $this->assertStringNotContainsString('abcdefghijklmnopqrst', $output);
+        $this->assertStringNotContainsString('1234567890', $output);
+        $this->assertStringNotContainsString('AKIA1234567890ABCDEFGH', $output);
+    }
+
     public function test_provider_streams_deltas_and_uses_model_specific_parameters(): void
     {
         Http::fake([
