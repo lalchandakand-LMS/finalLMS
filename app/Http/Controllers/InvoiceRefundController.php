@@ -307,21 +307,28 @@ class InvoiceRefundController extends Controller
 
             return back()->with('success', 'Existing bKash refund independently verified and reconciled.');
         } catch (Throwable $exception) {
-            $refund->update([
-                'status' => 'gateway_unknown',
-                'gateway_status' => 'verification_unknown',
-                'failure_reason' => mb_substr($exception->getMessage(), 0, 2000),
-            ]);
-            PaymentAuditEvent::create([
-                'invoice_payment_id' => $refund->invoice_payment_id,
-                'invoice_refund_id' => $refund->id,
-                'actor_id' => $request->user()->id,
-                'provider' => 'bkash',
-                'event' => 'gateway_refund_reconciliation_unconfirmed',
-                'source' => 'admin_refund_reconciliation',
-                'after_state' => ['status' => 'gateway_unknown'],
-                'ip_address' => $request->ip(),
-            ]);
+            DB::transaction(function () use ($refund, $request, $exception): void {
+                $locked = InvoiceRefund::query()->lockForUpdate()->findOrFail($refund->id);
+                if (! in_array($locked->status, ['gateway_unknown', 'processing'], true)) {
+                    return;
+                }
+
+                $locked->update([
+                    'status' => 'gateway_unknown',
+                    'gateway_status' => 'verification_unknown',
+                    'failure_reason' => mb_substr($exception->getMessage(), 0, 2000),
+                ]);
+                PaymentAuditEvent::create([
+                    'invoice_payment_id' => $locked->invoice_payment_id,
+                    'invoice_refund_id' => $locked->id,
+                    'actor_id' => $request->user()->id,
+                    'provider' => 'bkash',
+                    'event' => 'gateway_refund_reconciliation_unconfirmed',
+                    'source' => 'admin_refund_reconciliation',
+                    'after_state' => ['status' => 'gateway_unknown'],
+                    'ip_address' => $request->ip(),
+                ]);
+            });
 
             return back()->with('error', 'Gateway still does not confirm this refund. The reserved amount remains unchanged.');
         }
