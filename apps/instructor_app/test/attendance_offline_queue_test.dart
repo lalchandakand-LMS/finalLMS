@@ -18,6 +18,45 @@ class MemoryQueueStorage implements AttendanceQueueStorage {
   Future<void> delete(String key) async {
     values.remove(key);
   }
+
+  test('keeps offline attendance isolated between instructor accounts on one device', () async {
+    final firstAccountQueue = AttendanceOfflineQueue(ownerId: 101, storage: storage);
+    final secondAccountQueue = AttendanceOfflineQueue(ownerId: 202, storage: storage);
+
+    final firstEntry = await firstAccountQueue.enqueue(
+      batchId: 12,
+      studentId: 34,
+      attendanceDate: DateTime.now().toIso8601String().substring(0, 10),
+      status: 'present',
+      latitude: 23.8103,
+      longitude: 90.4125,
+      accuracyMeters: 12.5,
+      capturedAt: DateTime.now().toUtc(),
+    );
+
+    expect((await firstAccountQueue.all()).map((entry) => entry.idempotencyKey),
+        [firstEntry.idempotencyKey]);
+    expect(await secondAccountQueue.all(), isEmpty);
+
+    await secondAccountQueue.enqueue(
+      batchId: 99,
+      studentId: 88,
+      attendanceDate: DateTime.now().toIso8601String().substring(0, 10),
+      status: 'late',
+      latitude: 23.8103,
+      longitude: 90.4125,
+      accuracyMeters: 12.5,
+      capturedAt: DateTime.now().toUtc(),
+    );
+
+    expect((await firstAccountQueue.all()).single.studentId, 34);
+    expect((await secondAccountQueue.all()).single.studentId, 88);
+    expect(storage.values.keys.toSet(), {
+      'instructor_attendance_offline_queue_v1_user_101',
+      'instructor_attendance_offline_queue_v1_user_202',
+    });
+  });
+
 }
 
 void main() {
@@ -26,7 +65,7 @@ void main() {
 
   setUp(() {
     storage = MemoryQueueStorage();
-    queue = AttendanceOfflineQueue(storage: storage);
+    queue = AttendanceOfflineQueue(ownerId: 101, storage: storage);
   });
 
   Future<dynamic> addRecord({String status = 'present'}) => queue.enqueue(
