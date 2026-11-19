@@ -315,4 +315,31 @@ class AllRoleDeviceSecurityTest extends TestCase
         $this->assertNull(session('pending_admin_mfa_user_id'));
     }
 
+
+    public function test_new_admin_login_cannot_reuse_another_admins_pending_email_verification(): void
+    {
+        Notification::fake();
+        $firstAdmin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $secondAdmin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+
+        $this->post(route('login.post'), ['email' => $firstAdmin->email, 'password' => 'password'])
+            ->assertRedirect(route('admin.mfa.bootstrap'));
+        $firstCode = null;
+        Notification::assertSentOnDemand(AdminMfaBootstrapCodeNotification::class, function ($notification) use (&$firstCode): bool {
+            $firstCode = $notification->code;
+            return true;
+        });
+        $this->post(route('admin.mfa.bootstrap.verify'), ['code' => $firstCode])
+            ->assertRedirect(route('admin.mfa.setup'));
+        $this->assertNotNull(session('admin_mfa_bootstrap_verified_at'));
+
+        $this->post(route('login.post'), ['email' => $secondAdmin->email, 'password' => 'password'])
+            ->assertRedirect(route('admin.mfa.bootstrap'));
+
+        $this->assertGuest();
+        $this->assertSame($secondAdmin->id, session('pending_admin_mfa_user_id'));
+        $this->assertNull(session('admin_mfa_bootstrap_verified_at'));
+        $this->get(route('admin.mfa.bootstrap'))->assertOk();
+    }
+
 }
