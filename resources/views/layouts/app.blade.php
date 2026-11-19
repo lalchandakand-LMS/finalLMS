@@ -588,6 +588,17 @@
         @if(session('info'))
             <div class="flash info">{{ session('info') }}</div>
         @endif
+        @if(session()->has('admin_mfa_recovery_codes'))
+            <section class="flash warning" role="alert" aria-live="assertive">
+                <h2>{{ __('Save your administrator recovery codes') }}</h2>
+                <p>{{ __('These codes are shown only once. Store them somewhere private and secure. Each code can be used once.') }}</p>
+                <ul>
+                    @foreach(session('admin_mfa_recovery_codes', []) as $recoveryCode)
+                        <li><code>{{ $recoveryCode }}</code></li>
+                    @endforeach
+                </ul>
+            </section>
+        @endif
         @if(session('error'))
             <div class="flash error">{{ session('error') }}</div>
         @endif
