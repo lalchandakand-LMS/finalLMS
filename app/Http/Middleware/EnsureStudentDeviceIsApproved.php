@@ -37,6 +37,15 @@ class EnsureStudentDeviceIsApproved
             return $next($request);
         }
 
+        if ($request->session()->has('admin_mfa_verified_at')) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login')
+                ->with('warning', 'Your account role changed. Please sign in again using the verification method for your current role.');
+        }
+
         // Legacy non-admin sessions remain valid until sign-out/expiry. New
         // non-admin logins always attach an approved trusted-device ID.
         if (! $deviceId) {
