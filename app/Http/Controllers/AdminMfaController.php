@@ -97,6 +97,7 @@ class AdminMfaController extends Controller
         }
 
         RateLimiter::clear($key);
+        $admin->refresh();
         Auth::login($admin);
         $request->session()->regenerate();
         $request->session()->put('admin_mfa_verified_at', now()->timestamp);
