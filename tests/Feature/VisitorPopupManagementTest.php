@@ -455,4 +455,26 @@ class VisitorPopupManagementTest extends TestCase
         $this->assertDatabaseCount('visitor_popups', 0);
         $this->assertDatabaseCount('popup_ad_events', 0);
     }
+
+    public function test_every_visit_frequency_is_supported_and_daily_frequency_uses_campaign_timezone(): void
+    {
+        $this->activatePopupAdsPlugin();
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+
+        $this->actingAs($admin)->post(route('admin.visitor-popups.store'), [
+            'title' => 'Every visit notice',
+            'popup_type' => 'announcement',
+            'audience' => 'all',
+            'frequency' => 'every_visit',
+            'delay_seconds' => 0,
+            'timezone' => 'Asia/Dhaka',
+            'status' => 'active',
+        ])->assertRedirect(route('admin.visitor-popups.index'));
+
+        $campaign = PopupCampaign::query()->firstOrFail();
+        $this->assertSame('every_visit', $campaign->frequency);
+        $this->assertSame('Asia/Dhaka', $campaign->toPublicPayload(null, false)['timezone']);
+        $this->assertContains('every_visit', PopupCampaign::FREQUENCIES);
+    }
+
 }

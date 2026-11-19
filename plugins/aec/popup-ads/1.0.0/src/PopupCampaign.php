@@ -27,7 +27,7 @@ class PopupCampaign extends Model
 
     public const PLACEMENTS = ['center', 'bottom_right', 'bottom_left', 'top', 'bottom'];
 
-    public const FREQUENCIES = ['every_page', 'once_per_session', 'once_per_day', 'once_per_browser'];
+    public const FREQUENCIES = ['every_page', 'every_visit', 'once_per_session', 'once_per_day', 'once_per_browser'];
 
     public const FONT_SCALES = ['compact', 'normal', 'large'];
 
@@ -364,6 +364,7 @@ class PopupCampaign extends Model
             'button_url' => $buttonUrl,
             'button_external' => $isExternal,
             'frequency' => $this->frequency,
+            'timezone' => $this->timezone ?: config('app.timezone', 'UTC'),
             'delay_seconds' => (int) $this->delay_seconds,
             'scroll_trigger_percent' => (int) ($this->scroll_trigger_percent ?? 0),
             'cooldown_hours' => (int) ($this->cooldown_hours ?? 0),
