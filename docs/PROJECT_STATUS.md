@@ -43,6 +43,7 @@ Never promote a feature from one status to another without evidence.
 |---|---|---|
 | #341 — Administrator TOTP MFA | Merged into main (`58925acc`); CI/CodeQL passed before merge | Code is merged. Verify bootstrap, TOTP, recovery, replay rejection and old-session invalidation on isolated staging before production. |
 | #277 — Flash Sale package extraction | Open, ready for review; head `af9cebbd8edf031ed19a2e58917e68f61faff938`; exact-head Laravel CI + cPanel package + CodeQL passed; merge blocked by outstanding write-access `CHANGES_REQUESTED` review | Obtain fresh exact-head reviewer approval; then complete signed package/key provisioning and cPanel staging install/upgrade/deactivate/uninstall/rollback. No production deployment. |
+| #347 — Student Tracking migration rollback data preservation | Open; CodeQL passed, Laravel CI running on head `1d0828c26231f175b78092e55e50102bb3881457` | Merge after exact-head Laravel CI passes; then retain this as a required data-preservation invariant for future plugin migrations. |
 
 ### Related open security issue
 
