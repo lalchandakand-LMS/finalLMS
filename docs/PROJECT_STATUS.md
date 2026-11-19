@@ -1,6 +1,6 @@
 # Project Status — Alom's English Center LMS
 
-Last consolidated: 2026-11-18
+Last consolidated: 2026-11-19
 Repository: https://github.com/lalchandakand-LMS/finalLMS
 Production domain: https://alomsenglishcenter.com
 
@@ -17,21 +17,45 @@ Production domain: https://alomsenglishcenter.com
 
 Never promote a feature from one status to another without evidence.
 
-## Live GitHub workstream snapshot — 2026-11-18
+## Live GitHub workstream snapshot — 2026-11-19 (supersedes earlier snapshots)
 
-This snapshot supersedes older PR status notes below when they conflict. Re-fetch exact heads and checks before any merge decision.
+**Current main:** 5b5796f5e9059246d5815224929007c4ad28a3fc  
+**Production deployment:** blocked; no isolated staging subdomain/database was available in the last owner update.  
+**Full review:** see [PLUGIN_AUDIT_2026-11-19.md](PLUGIN_AUDIT_2026-11-19.md).
 
-| PR | Workstream | Current verified state |
+### Recently merged and verified
+
+| PR | Result |
+|---|---|
+| #327 | Merged — responsive Admin UI preview fixes |
+| #332 | Merged — refund reconciliation race guard and fixture correction |
+| #333 | Merged — Guardian plugin current-branch scope enforcement |
+| #334 | Merged — Teacher API trusted-device documentation/test contract |
+| #336 | Merged — Guardian pending-link identity privacy and stale active-link filtering |
+| #337 | Merged — plugin dependency integrity preflight and dependency-topological loading |
+| #338 | Merged — BCS Question Bank manifest type correction and executable-manifest validation |
+| #339 | Merged — AI provider HTTPS port/DNS pinning hardening |
+| #340 | Merged — live-class role isolation and Guardian recording-only access |
+
+### Open pull requests and release gates
+
+| PR | Current state | Required next action |
 |---|---|---|
-| [#319](https://github.com/lalchandakand-LMS/finalLMS/pull/319) | Signed Theme Manager | Merged to main as `bdd6b3db1e5dbc1c69589d54e67864b0fd94f1a7`; exact-head Laravel CI and CodeQL passed. |
-| [#322](https://github.com/lalchandakand-LMS/finalLMS/pull/322) | Universal AI Assistant atomic daily budget | Merged to main as `08c5456df67b818e60e337c1bf3bd677cd0d3f44`; exact-head Laravel CI and CodeQL passed. |
-| [#318](https://github.com/lalchandakand-LMS/finalLMS/pull/318) | Learn & Earn paid exam plugin | Merged to main as `0df6cfb9a27803c47f6a39802b6b40731931105d`; exact-head Laravel CI test/package and CodeQL passed. Manual/offline payment review, autosave/recovery, standalone signed package, trusted key and staging/browser acceptance remain open. |
-| [#277](https://github.com/lalchandakand-LMS/finalLMS/pull/277) | Flash Sale plugin + negative marking | Open Draft; current head `7cf89f4bc03100761f45c8e752eab89956fac678`. Exact-head CodeQL passed (run 44279527062); Laravel CI is running (run 44279526912). Earlier changes-requested review still requires fresh reviewer approval. Standalone signed plugin ZIP, trusted signing-key provisioning, staging lifecycle and browser checkout acceptance remain open. |
-| [#320](https://github.com/lalchandakand-LMS/finalLMS/pull/320) | Plugin migration claim/rollback safety | Merged to main as `b30b660f0c67f136377988d5740874cf1e42b397` on 2026-11-18; exact-head Laravel CI, cPanel package and CodeQL passed. Real MySQL/MariaDB staging concurrency and rollback acceptance remain release gates. |
-| [#323](https://github.com/lalchandakand-LMS/finalLMS/pull/323) | Remove external AI-builder branding references | Open Draft; current head `7c96c698c8a11e62d6b97c3f804eee445d6af215`. Exact-head Laravel CI and cPanel package passed (run 44278650612); CodeQL passed (run 44278650621). No reviewer approval recorded yet. |
-| [#324](https://github.com/lalchandakand-LMS/finalLMS/pull/324) | Visual Page Builder drag-and-drop sections | Open Draft; current head `774d818eed2403bb5f5874e170d34e9aa0fdc517`. Laravel CI is running (run 44279918840); CodeQL passed (run 44279918795). Device preview and page revision/rollback remain follow-up work. |
+| #341 — Administrator TOTP MFA | Open draft; CodeQL passed, Laravel CI running on head 2443688a420b0baacbb561d684dd5b306a5055b4 | Wait for exact-head CI; then review verified-email bootstrap, TOTP setup/login, replay protection, recovery codes and old-session invalidation. Rehearse on staging before production. |
+| #277 — Flash Sale package extraction | Open draft; exact-head Laravel CI and CodeQL passed, but branch is behind main and GitHub reports a merge conflict | Rebase/reconcile against current main; provide a standalone signed package and complete cPanel staging install/upgrade/deactivate/uninstall/rollback. Do not merge until review and staging acceptance. |
 
-No production deployment, live database migration or live payment-provider activation has been performed. Do not infer signed-plugin, provider, staging or browser acceptance from CI/package success.
+### Related open security issue
+
+- **#335 — Admin password-only login bypasses MFA:** addressed in PR #341, but the issue must remain open until that PR merges and staging acceptance is complete.
+
+### Current architecture and launch reality
+
+- The plugin platform has **7 executable first-party packages** under plugins/aec/.
+- **56 other top-level module directories are metadata_only catalogue entries**, not independently installable plugins. Their executable Laravel code remains in the application. The extraction roadmap is documented in PLUGIN_AUDIT_2026-11-19.md.
+- Plugin PHP is trusted application code, not sandboxed. Signed packages protect provenance/integrity; they do not provide process isolation.
+- No production migration, live payment activation, plugin activation or hosting-file deployment was performed in this review.
+- Keep production deployment disabled until admin MFA, Flash Sale signing/staging, isolated database restore/rollback, payment sandbox, email/SMS delivery, live-class privacy and the module/plugin release lifecycle have been accepted on staging.
+
 ## Architecture decision
 
 Five operational panels: Admin (one unified admin; no separate Super Admin), Branch (separate and branch-scoped), Teacher, Student, Guardian. This follows the owner's later explicit direction and Issue #40; older Issue #38's four-portal proposal must be reconciled. See `docs/DECISION_LOG.md`.
