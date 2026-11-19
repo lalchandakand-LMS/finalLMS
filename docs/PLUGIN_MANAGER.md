@@ -37,6 +37,19 @@ Dependency and conflict declarations are enforced at activation. The current con
 
 Lifecycle history records plugin key/version, checksum, signing key ID, action, actor and safe details for install, activation, deactivation, health checks and uninstall.
 
+
+## Signed package update, rollback and restore
+
+The Admin Manager supports a manual signed-package update workflow:
+
+1. Admin uploads a newer ZIP, manifest, detached signature and trusted key ID.
+2. The installer validates the new release and retains a version-history snapshot of the currently installed package.
+3. The new package is installed in its versioned directory and remains inactive; migrations are deferred until explicit activation.
+4. Admin can manually roll back to a retained previous package. The Manager verifies signatures and installed-file integrity for both versions, runs the current version's recorded migration `down()` methods, then restores the previous package as inactive.
+5. Uninstall creates a verified private recovery snapshot before removing executable files. Admin can restore that package; restored packages remain inactive until explicitly activated.
+
+This is a guarded, manual package lifecycle—not an automatic transactional rollback of arbitrary database DDL. A migration may intentionally refuse `down()` when user data would be lost. Failed/interrupted migrations require manual database recovery before retrying. Test these flows on disposable MySQL/MariaDB staging databases before production use.
+
 ## Not yet delivered
 
 The current Manager is not a public marketplace or remote package catalogue. It supports signed package updates while retaining prior version directories and a manual Admin-triggered package rollback after signature/integrity verification. It also supports a pre-uninstall recovery snapshot and package restore. These actions are not an automatic database/filesystem release rollback: migration `down()` methods may refuse when data exists, and a failed migration requires manual recovery. There is no integrated database backup-before-upgrade orchestration, branch-specific plugin lifecycle control, or dependency-cycle planning UI. Concurrent update/uninstall stress testing and cPanel staging acceptance remain outstanding.
