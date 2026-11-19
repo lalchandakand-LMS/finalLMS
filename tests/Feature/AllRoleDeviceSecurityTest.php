@@ -78,6 +78,8 @@ class AllRoleDeviceSecurityTest extends TestCase
         $this->assertGuest();
         $this->assertSame($admin->id, session('pending_admin_mfa_user_id'));
         $this->assertNotNull(session('admin_mfa_bootstrap_code_hash'));
+        $this->assertSame(hash('sha256', strtolower($admin->email)), session('admin_mfa_bootstrap_email_hash'));
+        $this->assertNull(session('admin_mfa_setup_secret'), 'TOTP setup must not begin before the email bootstrap factor is verified.');
         $bootstrapCode = null;
         Notification::assertSentOnDemand(AdminMfaBootstrapCodeNotification::class, function ($notification) use (&$bootstrapCode): bool {
             $bootstrapCode = $notification->code;
@@ -93,6 +95,7 @@ class AllRoleDeviceSecurityTest extends TestCase
 
         $this->get(route('admin.mfa.setup'))
             ->assertOk()
+            ->assertHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private')
             ->assertSee($admin->email)
             ->assertSee($secret);
 
