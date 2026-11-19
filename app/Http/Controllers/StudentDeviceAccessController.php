@@ -6,6 +6,7 @@ use App\Models\DeviceSession;
 use App\Models\StudentDevice;
 use App\Models\User;
 use App\Services\SmsGateway;
+use App\Services\Security\AdminTotpService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -54,6 +55,10 @@ class StudentDeviceAccessController extends Controller
         }
 
         $user = $device->user;
+        if (! $user || $user->isAdmin()) {
+            return redirect()->route('login')->with('error', 'Administrator accounts must use authenticator-based MFA.');
+        }
+
         $result = DB::transaction(function () use ($device, $user, $validated): string {
             User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
             $lockedDevice = StudentDevice::query()->whereKey($device->id)->lockForUpdate()->firstOrFail();
@@ -262,13 +267,21 @@ class StudentDeviceAccessController extends Controller
         }
 
         if ($user->isAdmin()) {
-            if (Auth::attempt(['email' => $validated['email'], 'password' => $validated['password']])) {
-                $request->session()->regenerate();
-                DeviceSession::register($request, $user);
-                return redirect()->intended('/dashboard');
+            if ($user->admin_totp_enabled_at && ! $user->admin_totp_secret) {
+                return back()->withErrors(['email' => 'Administrator MFA needs secure account recovery. Contact the system owner.'])->onlyInput('email');
             }
 
-            return back()->withErrors(['email' => 'The provided credentials do not match our records.'])->onlyInput('email');
+            $request->session()->regenerate();
+            $request->session()->put('pending_admin_mfa_user_id', $user->id);
+            $request->session()->put('pending_admin_mfa_started_at', now()->timestamp);
+
+            if ($user->admin_totp_enabled_at && $user->admin_totp_secret) {
+                return redirect()->route('admin.mfa.challenge');
+            }
+
+            $request->session()->put('admin_mfa_setup_secret', app(AdminTotpService::class)->generateSecret());
+
+            return redirect()->route('admin.mfa.setup');
         }
 
         if (! $user->phone_number) {
