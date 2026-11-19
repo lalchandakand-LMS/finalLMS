@@ -296,4 +296,23 @@ class AllRoleDeviceSecurityTest extends TestCase
         $this->assertGuest();
     }
 
+
+    public function test_email_change_invalidates_pending_admin_mfa_bootstrap(): void
+    {
+        Notification::fake();
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'email_verified_at' => now(),
+        ]);
+
+        $this->post(route('login.post'), ['email' => $admin->email, 'password' => 'password'])
+            ->assertRedirect(route('admin.mfa.bootstrap'));
+
+        $admin->forceFill(['email' => 'changed-admin@example.test'])->save();
+
+        $this->get(route('admin.mfa.bootstrap'))->assertRedirect(route('login'));
+        $this->assertGuest();
+        $this->assertNull(session('pending_admin_mfa_user_id'));
+    }
+
 }
