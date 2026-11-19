@@ -34,7 +34,10 @@ class EnsureStudentDeviceIsApproved
                     ->with('warning', 'Administrator two-factor verification is required. Please sign in again.');
             }
 
-            return $next($request);
+            $response = $next($request);
+            $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+
+            return $response;
         }
 
         if ($request->session()->has('admin_mfa_verified_at')) {
