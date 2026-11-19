@@ -37,6 +37,8 @@
                     @elseif($liveClass->student_has_active_enrollment)
                         <span class="muted">The secure join link becomes available 15 minutes before class and closes when the session ends.</span>
                     @endif
+                @elseif(auth()->user()->isGuardian())
+                    <span class="muted">{{ __('Guardians can watch recordings after the teacher publishes them. Live meeting links are private to enrolled students and teaching staff.') }}</span>
                 @else
                     <a class="btn secondary" href="{{ $liveClass->meeting_url }}" target="_blank" rel="noopener noreferrer">{{ __('Open meeting link') }}</a>
                 @endif
