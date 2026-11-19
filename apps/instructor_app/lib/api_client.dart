@@ -34,6 +34,16 @@ class MobileApi {
 
   Future<String?> readToken() => storage.read(key: _tokenKey);
 
+  /// Resolve the current authenticated account from the API, not from a
+  /// client-supplied or stale local identity value.
+  Future<int> currentAccountId() async {
+    final response = await get('/auth/me');
+    final user = response['user'];
+    final id = user is Map ? user['id'] : null;
+    if (id is num && id.toInt() > 0) return id.toInt();
+    throw const FormatException('The authenticated account identity is unavailable.');
+  }
+
   Future<String> _deviceId() async {
     final saved = await storage.read(key: _deviceIdKey);
     if (saved != null && RegExp(r'^[a-f0-9]{64}$').hasMatch(saved)) {

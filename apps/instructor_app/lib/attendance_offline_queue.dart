@@ -135,10 +135,16 @@ class SecureAttendanceQueueStorage implements AttendanceQueueStorage {
 /// Access tokens are never persisted in the queue; the authenticated API client
 /// must attach its current token at request time.
 class AttendanceOfflineQueue {
-  AttendanceOfflineQueue({AttendanceQueueStorage? storage})
-      : _storage = storage ?? SecureAttendanceQueueStorage();
+  AttendanceOfflineQueue({required int ownerId, AttendanceQueueStorage? storage})
+      : assert(ownerId > 0),
+        _ownerId = ownerId,
+        _storage = storage ?? SecureAttendanceQueueStorage();
 
-  static const _storageKey = 'instructor_attendance_offline_queue_v1';
+  // Each instructor account gets a separate encrypted queue. A second person
+  // signing in on the same device must never inherit another account's pending
+  // attendance or upload it using their own bearer token.
+  final int _ownerId;
+  String get _storageKey => 'instructor_attendance_offline_queue_v1_user_$_ownerId';
   static const maxQueuedRecords = 100;
   static const maxSyncBatch = 50;
 
