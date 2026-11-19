@@ -36,8 +36,12 @@ This snapshot records verified repository state at the time of this update. Alwa
 | [#332](https://github.com/lalchandakand-LMS/finalLMS/pull/332) | Prevent stale refund reconciliation overwrites | Merged as `bf338dd1e93b376f302058b2bb59e2cb4726b1dd`; CodeQL passed and main Laravel CI was running at snapshot time. |
 | [#327](https://github.com/lalchandakand-LMS/finalLMS/pull/327) | Responsive device preview for custom pages | Merged to main as `b79fd25a2fdea732c790d3e547bb7d5fd221595a`; exact-head Laravel CI, package and CodeQL passed. |
 | [#277](https://github.com/lalchandakand-LMS/finalLMS/pull/277) | Flash Sale plugin and negative marking | Open Draft; head `aa732a4c4bee5eaf3e476c58c028b4266c4cc93e`. Exact-head CI, package and CodeQL had passed on the prior base. The branch is behind/diverged from current main, a prior changes-requested review remains, and fresh integration checks/reviewer approval plus staging acceptance are required. Migration rollback explicitly refuses to proceed while negative awarded marks exist. |
-| [#334](https://github.com/lalchandakand-LMS/finalLMS/pull/334) | Separate teacher password auth from student device approval | Open Draft; latest head `e2fce4f9ce78060efb48516be52cf43bcc3021bb`; Laravel CI and CodeQL running. |
-| [#336](https://github.com/lalchandakand-LMS/finalLMS/pull/336) | Protect student identity in pending guardian links | Open Draft; head `2cac5dc007ea7f7226a1a392a25436bb01302981`; CodeQL passed and Laravel CI running. |
+| [#334](https://github.com/lalchandakand-LMS/finalLMS/pull/334) | Separate teacher password auth from student device approval | Open Draft; latest head `27f698b4f5c7512a7c7b862a777eeca46fec4a83`; Laravel CI and CodeQL running. |
+| [#336](https://github.com/lalchandakand-LMS/finalLMS/pull/336) | Protect student identity in pending guardian links | Open Draft; head `95e2b77c4859c3ae349b4360a3e0162a73257e1e`; CodeQL passed and Laravel CI running. |
+
+| [#337](https://github.com/lalchandakand-LMS/finalLMS/pull/337) | Preflight plugin dependencies before PHP execution | Open Draft; head `535b6ece63a465afc8dae3fae04ced4ae18189c1`; exact-head CI is running. |
+| [#338](https://github.com/lalchandakand-LMS/finalLMS/pull/338) | Validate executable first-party plugin manifests | Open Draft; head `1508d99f3e3dbc9c66e705b95278f105c552b2a6`; exact-head CI is running. |
+| [#339](https://github.com/lalchandakand-LMS/finalLMS/pull/339) | Pin AI provider DNS and restrict HTTPS port | Open Draft; head `02e6d816e8e1d9b251dd959447f0d3e1d1f5f778`; exact-head Laravel CI is running and CodeQL passed. |
 
 Security issue [#335](https://github.com/lalchandakand-LMS/finalLMS/issues/335) tracks the high-risk finding that administrator sign-in currently bypasses MFA. This is not fixed by teacher/student mobile authentication changes.
 
