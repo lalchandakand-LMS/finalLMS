@@ -38,17 +38,12 @@ class AuthenticateApiToken
             return response()->json(['message' => 'This account role cannot use the mobile applications. Sign in again.'], 401);
         }
 
-        // Student tokens must always be bound to an approved device. Teacher
-        // tokens are password-authenticated and intentionally have no device row.
-        $deviceApproved = $token->user->isTeacher() && $token->student_device_id === null;
-
-        if (! $deviceApproved && $token->student_device_id !== null) {
-            $deviceApproved = \App\Models\StudentDevice::query()
+        $deviceApproved = $token->student_device_id !== null
+            && \App\Models\StudentDevice::query()
                 ->whereKey($token->student_device_id)
                 ->where('user_id', $token->user_id)
                 ->where('status', 'approved')
                 ->exists();
-        }
 
         if (! $deviceApproved) {
             $token->forceFill(['revoked_at' => now()])->save();
