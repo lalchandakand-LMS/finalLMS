@@ -77,6 +77,15 @@ class PluginGuardianCurrentBranchScopeTest extends TestCase
         $this->assertSame([], $access->scopeQuery(Enrollment::query(), $guardian)->pluck('id')->all());
 
         $student->update(['branch_id' => $branchA->id]);
+        $student->update(['role' => 'teacher']);
+        $this->assertFalse($access->allows($guardian, $course));
+        $this->assertFalse($access->allows($guardian, $batch));
+        $this->assertFalse($access->allows($guardian, $enrollment));
+        $this->assertSame([], $access->scopeQuery(Course::query(), $guardian)->pluck('id')->all());
+        $this->assertSame([], $access->scopeQuery(Batch::query(), $guardian)->pluck('id')->all());
+        $this->assertSame([], $access->scopeQuery(Enrollment::query(), $guardian)->pluck('id')->all());
+        $student->update(['role' => 'student']);
+
         $branchA->update(['is_active' => false]);
         $this->assertFalse($access->allows($guardian, $student));
         $this->assertFalse($access->allows($guardian, $course));
