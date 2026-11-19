@@ -169,7 +169,19 @@ class LiveClassAccessTest extends TestCase
         ]);
 
         Enrollment::create(['user_id' => $linkedStudent->id, 'course_id' => $course->id, 'batch_id' => $batch->id, 'status' => 'active']);
-        Enrollment::create(['user_id' => $unlinkedStudent->id, 'course_id' => $course->id, 'batch_id' => $batch->id, 'status' => 'active']);
+        [$otherTeacher, $otherBatch] = $this->makeBatch();
+        $unlinkedStudent->update(['branch_id' => $otherBatch->branch_id]);
+        Enrollment::create(['user_id' => $unlinkedStudent->id, 'course_id' => $otherBatch->course_id, 'batch_id' => $otherBatch->id, 'status' => 'active']);
+
+        LiveClass::create([
+            'batch_id' => $otherBatch->id,
+            'title' => 'Unlinked student private live class',
+            'meeting_url' => 'https://meet.example.com/unlinked-private-meeting',
+            'starts_at' => now()->addMinutes(10),
+            'ends_at' => now()->addHour(),
+            'status' => 'scheduled',
+            'created_by' => $otherTeacher->id,
+        ]);
 
         LiveClass::create([
             'batch_id' => $batch->id,
@@ -184,6 +196,8 @@ class LiveClassAccessTest extends TestCase
         $this->actingAs($guardian)->get(route('live-classes.index'))
             ->assertOk()
             ->assertSee('Linked student live class')
+            ->assertDontSee('Unlinked student private live class')
+            ->assertDontSee('https://meet.example.com/unlinked-private-meeting')
             ->assertDontSee('https://meet.example.com/guardian-private-meeting');
     }
 
@@ -206,7 +220,21 @@ class LiveClassAccessTest extends TestCase
         ]);
 
         Enrollment::create(['user_id' => $linkedStudent->id, 'course_id' => $course->id, 'batch_id' => $batch->id, 'status' => 'completed', 'completed_at' => now()->subDay()]);
-        Enrollment::create(['user_id' => $unlinkedStudent->id, 'course_id' => $course->id, 'batch_id' => $batch->id, 'status' => 'completed', 'completed_at' => now()->subDay()]);
+        [$otherTeacher, $otherBatch] = $this->makeBatch();
+        $unlinkedStudent->update(['branch_id' => $otherBatch->branch_id]);
+        Enrollment::create(['user_id' => $unlinkedStudent->id, 'course_id' => $otherBatch->course_id, 'batch_id' => $otherBatch->id, 'status' => 'completed', 'completed_at' => now()->subDay()]);
+
+        LiveClass::create([
+            'batch_id' => $otherBatch->id,
+            'title' => 'Unlinked student private recording',
+            'meeting_url' => 'https://meet.example.com/unlinked-recording-meeting',
+            'recording_url' => 'https://youtu.be/zzzzzzzzzzz',
+            'recording_published_at' => now()->subMinute(),
+            'starts_at' => now()->subDays(2),
+            'ends_at' => now()->subDays(2)->addHour(),
+            'status' => 'completed',
+            'created_by' => $otherTeacher->id,
+        ]);
 
         LiveClass::create([
             'batch_id' => $batch->id,
@@ -224,6 +252,9 @@ class LiveClassAccessTest extends TestCase
             ->assertOk()
             ->assertSee('Linked student published recording')
             ->assertSee('https://www.youtube-nocookie.com/embed/abcdefghijk', false)
+            ->assertDontSee('Unlinked student private recording')
+            ->assertDontSee('https://www.youtube-nocookie.com/embed/zzzzzzzzzzz', false)
+            ->assertDontSee('https://meet.example.com/unlinked-recording-meeting')
             ->assertDontSee('https://meet.example.com/guardian-recording-meeting');
     }
 
