@@ -2,9 +2,14 @@
 namespace Tests\Feature;
 use Aloms\BoardQuestionSolver\BoardQuestionSolverSettings;
 use Aloms\BoardQuestionSolver\BoardQuestionSolverController;
+use Aloms\UniversalAiAssistant\AssistantSettings;
+use Aloms\UniversalAiAssistant\OpenAiCompatibleProvider;
+use App\Contracts\Ai\AiProvider;
+use App\Services\AiDeveloperProviderEndpoint;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
@@ -69,7 +74,7 @@ class BoardQuestionSolverPluginTest extends TestCase {
    'role_data_access'=>array_fill_keys(AssistantSettings::ROLES,false),
    'daily_request_limit'=>20,'daily_token_budget'=>50000,'retention_days'=>365,
   ],'test-secret-provider-key',false);
-  $provider=\\Mockery::mock(AiProvider::class);
+  $provider=\Mockery::mock(AiProvider::class);
   $provider->shouldReceive('complete')->once()->withArgs(function($key,$base,$model,$messages,$temperature,$maxTokens){
    return $key==='test-secret-provider-key'
     && $base==='https://api.openai.com/v1'
