@@ -39,6 +39,7 @@ class AdminMfaController extends Controller
 
         return view('auth.admin-mfa-setup', [
             'secret' => $secret,
+            'email' => $admin->email,
             'provisioningUri' => $totp->provisioningUri($secret, $admin->email),
         ]);
     }
