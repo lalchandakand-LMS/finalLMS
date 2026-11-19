@@ -268,6 +268,16 @@ class ThemeManagerTest extends TestCase
         $this->assertDatabaseHas('themes', ['slug' => 'signed-blue', 'version' => '1.0.0']);
         $this->assertSame('0', (string) Setting::value('active_theme_id', 0));
         Storage::disk('public')->assertExists('themes/signed-blue/1.0.0/assets/theme.css');
+
+        // A duplicate package must be rejected before it can overwrite the
+        // existing version's shared asset path or remove the installed theme.
+        $duplicateUpload = new UploadedFile($zipPath, 'signed-theme-duplicate.zip', 'application/zip', null, true);
+        $this->actingAs($admin)->post(route('admin.themes.install'), ['package' => $duplicateUpload])
+            ->assertRedirect()
+            ->assertSessionHasErrors('package');
+        $this->assertDatabaseCount('themes', 1);
+        Storage::disk('public')->assertExists('themes/signed-blue/1.0.0/assets/theme.css');
+        Storage::disk('local')->assertExists(DB::table('themes')->value('package_path'));
         @unlink($zipPath);
     }
 
