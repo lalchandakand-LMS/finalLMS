@@ -25,7 +25,9 @@ class AdminMfaController extends Controller
             return redirect()->route('admin.mfa.challenge');
         }
 
-        if ($admin->admin_totp_enabled_at && ! $admin->admin_totp_secret) {
+        $hasEnabledAt = $admin->admin_totp_enabled_at !== null;
+        $hasSecret = is_string($admin->admin_totp_secret) && $admin->admin_totp_secret !== '';
+        if ($hasEnabledAt !== $hasSecret) {
             $this->forgetPending($request);
 
             return redirect()->route('login')->with('error', 'Administrator MFA needs secure account recovery. Contact the system owner.');
@@ -37,11 +39,11 @@ class AdminMfaController extends Controller
             $request->session()->put('admin_mfa_setup_secret', $secret);
         }
 
-        return view('auth.admin-mfa-setup', [
+        return response()->view('auth.admin-mfa-setup', [
             'secret' => $secret,
             'email' => $admin->email,
             'provisioningUri' => $totp->provisioningUri($secret, $admin->email),
-        ]);
+        ])->header('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     }
 
     public function confirmSetup(Request $request, AdminTotpService $totp): RedirectResponse
@@ -116,7 +118,8 @@ class AdminMfaController extends Controller
             return redirect()->route('admin.mfa.setup');
         }
 
-        return view('auth.admin-mfa-challenge', ['email' => $admin->email]);
+        return response()->view('auth.admin-mfa-challenge', ['email' => $admin->email])
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     }
 
     public function verify(Request $request, AdminTotpService $totp): RedirectResponse
