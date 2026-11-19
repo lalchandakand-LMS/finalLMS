@@ -52,6 +52,10 @@ final class PluginUploadInstaller
         $finalAbsolutePath = base_path($finalPath);
         $existing = PluginInstallation::query()->where('plugin_key', $pluginKey)->first();
 
+        if ($existing?->status === 'uninstalled') {
+            throw new RuntimeException('This plugin has a retained recovery snapshot. Restore the package first, then use the signed package update action.');
+        }
+
         if ($existing) {
             $retryableState = (
                 in_array($existing->status, ['discovered', 'validated', 'staged', 'failed'], true)
