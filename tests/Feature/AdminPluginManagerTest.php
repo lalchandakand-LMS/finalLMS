@@ -261,6 +261,67 @@ PHP;
         ]);
     }
 
+    public function test_invalid_reinstall_does_not_delete_uninstalled_plugin_recovery_record(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+
+        $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData())
+            ->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+
+        $this->actingAs($admin)->post(route('admin.plugins.uninstall', 'aec.course-management'), [
+            'confirm_uninstall' => '1',
+        ])->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'status' => 'uninstalled',
+        ]);
+
+        $snapshot = DB::table('plugin_version_history')
+            ->where('plugin_key', 'aec.course-management')
+            ->where('action', 'pre_uninstall_snapshot')
+            ->latest('created_at')
+            ->first();
+        $this->assertNotNull($snapshot);
+        $snapshotDetails = json_decode($snapshot->details, true);
+        $this->assertIsString($snapshotDetails['recovery_path'] ?? null);
+
+        $invalidPackage = $this->uploadData(
+            signature: base64_encode(random_bytes(SODIUM_CRYPTO_SIGN_BYTES)),
+        );
+        $this->actingAs($admin)->post(route('admin.plugins.install'), $invalidPackage)
+            ->assertRedirect()
+            ->assertSessionHas('error', 'This plugin has a retained recovery snapshot. Restore the package first, then use the signed package update action.');
+
+        // A failed reinstall attempt must not erase the only registry reference
+        // needed by the signed package restore workflow.
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'status' => 'uninstalled',
+        ]);
+        $this->assertDatabaseHas('plugin_version_history', [
+            'plugin_key' => 'aec.course-management',
+            'action' => 'pre_uninstall_snapshot',
+            'id' => $snapshot->id,
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.plugins.restore-package', 'aec.course-management'), [
+            'confirm_restore' => '1',
+        ])->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'status' => 'installed',
+        ]);
+        $this->assertFileExists($this->finalPath.'/src/Plugin.php');
+
+        app(\App\Services\Plugins\PluginPackageRecovery::class)
+            ->deleteSnapshot($snapshotDetails['recovery_path']);
+    }
+
     public function test_package_rollback_is_blocked_when_current_version_has_failed_migrations(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
