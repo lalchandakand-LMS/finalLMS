@@ -91,7 +91,7 @@ class AdminMfaController extends Controller
             return redirect()->route('admin.mfa.challenge');
         }
 
-        if (! $this->hasFreshBootstrapVerification($request)) {
+        if (! $admin->email_verified_at || ! $this->hasFreshBootstrapVerification($request)) {
             return redirect()->route('admin.mfa.bootstrap');
         }
 
