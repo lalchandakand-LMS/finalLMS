@@ -87,7 +87,7 @@ class MobileStudentCourseQuizTest extends TestCase
             ->postJson('/api/v1/courses/'.$course->slug.'/question-sets/'.$set->id.'/start')
             ->assertForbidden();
 
-        $this->withToken($this->token($teacher))->getJson('/api/v1/my/quizzes')->assertUnauthorized();
+        $this->withToken($this->token($teacher))->getJson('/api/v1/my/quizzes')->assertForbidden();
         $this->withHeaders(['Authorization' => ''])->getJson('/api/v1/my/quizzes')->assertUnauthorized();
 
         $this->assertDatabaseCount('question_set_attempts', 0);
@@ -205,7 +205,7 @@ class MobileStudentCourseQuizTest extends TestCase
     {
         $plain = Str::random(80);
         $device = null;
-        if ($user->isStudent()) {
+        if ($user->isStudent() || $user->isTeacher()) {
             $device = StudentDevice::create([
                 'user_id' => $user->id,
                 'device_hash' => hash('sha256', Str::random(64)),
