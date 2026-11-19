@@ -31,6 +31,19 @@ abstract class TestCase extends BaseTestCase
             }
 
             $this->withSession(['admin_mfa_verified_at' => now()->timestamp]);
+        } elseif ($user instanceof User) {
+            // Switching identities in one test must not carry an administrator
+            // MFA marker into a non-admin session; production login clears it too.
+            $this->app['session.store']->forget([
+                'admin_mfa_verified_at',
+                'pending_admin_mfa_user_id',
+                'pending_admin_mfa_started_at',
+                'admin_mfa_setup_secret',
+                'admin_mfa_bootstrap_code_hash',
+                'admin_mfa_bootstrap_expires_at',
+                'admin_mfa_bootstrap_email_hash',
+                'admin_mfa_bootstrap_verified_at',
+            ]);
         }
 
         return $this;
