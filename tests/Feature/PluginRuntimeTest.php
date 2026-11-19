@@ -32,9 +32,21 @@ class PluginRuntimeTest extends TestCase
 
     protected function tearDown(): void
     {
-        if (isset($this->absolutePath) && is_dir($this->absolutePath) && ! is_link($this->absolutePath)) {
-            File::deleteDirectory($this->absolutePath);
+        foreach ([
+            $this->absolutePath ?? null,
+            base_path('plugins/test/z-dependency'),
+            base_path('plugins/test/a-dependent'),
+        ] as $directory) {
+            if (is_string($directory) && is_dir($directory) && ! is_link($directory)) {
+                File::deleteDirectory($directory);
+            }
         }
+
+        $marker = storage_path('plugin-dependency-tampered-executed');
+        if (is_file($marker) && ! is_link($marker)) {
+            @unlink($marker);
+        }
+
         parent::tearDown();
     }
 
