@@ -278,6 +278,7 @@ class StudentDeviceAccessController extends Controller
         $request->session()->forget([
             'pending_admin_mfa_user_id',
             'pending_admin_mfa_started_at',
+            'pending_admin_mfa_password_hash',
             'admin_mfa_setup_secret',
             'admin_mfa_bootstrap_code_hash',
             'admin_mfa_bootstrap_expires_at',
@@ -300,6 +301,7 @@ class StudentDeviceAccessController extends Controller
             $request->session()->regenerate();
             $request->session()->put('pending_admin_mfa_user_id', $user->id);
             $request->session()->put('pending_admin_mfa_started_at', now()->timestamp);
+            $request->session()->put('pending_admin_mfa_password_hash', $user->password);
 
             if ($hasEnabledAt && $hasSecret) {
                 return redirect()->route('admin.mfa.challenge');
