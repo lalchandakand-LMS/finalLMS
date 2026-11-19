@@ -18,8 +18,8 @@ class InvoiceManagementTest extends TestCase
     public function test_admin_can_create_an_invoice_and_student_can_only_see_their_own(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
-        $student = User::factory()->create(['role' => 'student']);
-        $otherStudent = User::factory()->create(['role' => 'student']);
+        $student = User::factory()->create(['role' => 'student', 'email_verified_at' => now()]);
+        $otherStudent = User::factory()->create(['role' => 'student', 'email_verified_at' => now()]);
 
         $this->actingAs($admin)->post(route('admin.invoices.store'), [
             'user_id' => $student->id,
