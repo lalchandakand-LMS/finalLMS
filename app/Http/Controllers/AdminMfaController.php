@@ -25,7 +25,8 @@ class AdminMfaController extends Controller
 
         $expiresAt = $request->session()->get('admin_mfa_bootstrap_expires_at');
         $emailHash = $request->session()->get('admin_mfa_bootstrap_email_hash');
-        if (! is_string($request->session()->get('admin_mfa_bootstrap_code_hash'))
+        if (! $admin->email_verified_at
+            || ! is_string($request->session()->get('admin_mfa_bootstrap_code_hash'))
             || ! is_string($emailHash)
             || ! hash_equals($emailHash, hash('sha256', strtolower($admin->email)))
             || ! is_numeric($expiresAt)
@@ -49,7 +50,8 @@ class AdminMfaController extends Controller
         $expiresAt = $request->session()->get('admin_mfa_bootstrap_expires_at');
         $codeHash = $request->session()->get('admin_mfa_bootstrap_code_hash');
         $emailHash = $request->session()->get('admin_mfa_bootstrap_email_hash');
-        if (! is_string($codeHash)
+        if (! $admin->email_verified_at
+            || ! is_string($codeHash)
             || ! is_string($emailHash)
             || ! hash_equals($emailHash, hash('sha256', strtolower($admin->email)))
             || ! is_numeric($expiresAt)
