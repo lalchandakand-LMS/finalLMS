@@ -7,6 +7,8 @@ use App\Models\StudentDevice;
 use App\Models\User;
 use App\Services\SmsGateway;
 use App\Services\Security\AdminTotpService;
+use App\Notifications\AdminMfaBootstrapCodeNotification;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -288,9 +290,36 @@ class StudentDeviceAccessController extends Controller
                 return redirect()->route('admin.mfa.challenge');
             }
 
-            $request->session()->put('admin_mfa_setup_secret', app(AdminTotpService::class)->generateSecret());
+            if (! $user->email_verified_at) {
+                $request->session()->forget([
+                    'pending_admin_mfa_user_id',
+                    'pending_admin_mfa_started_at',
+                    'admin_mfa_setup_secret',
+                ]);
 
-            return redirect()->route('admin.mfa.setup');
+                return back()->withErrors(['email' => 'Verify the administrator email address before enabling authenticator MFA.'])->onlyInput('email');
+            }
+
+            $bootstrapCode = (string) random_int(100000, 999999);
+            $request->session()->put('admin_mfa_bootstrap_code_hash', Hash::make($bootstrapCode));
+            $request->session()->put('admin_mfa_bootstrap_expires_at', now()->addMinutes(10)->timestamp);
+
+            try {
+                Notification::route('mail', $user->email)->notify(new AdminMfaBootstrapCodeNotification($bootstrapCode));
+            } catch (Throwable $exception) {
+                report($exception);
+                $request->session()->forget([
+                    'pending_admin_mfa_user_id',
+                    'pending_admin_mfa_started_at',
+                    'admin_mfa_bootstrap_code_hash',
+                    'admin_mfa_bootstrap_expires_at',
+                    'admin_mfa_setup_secret',
+                ]);
+
+                return back()->withErrors(['email' => 'The administrator verification email could not be sent. Contact the system owner.'])->onlyInput('email');
+            }
+
+            return redirect()->route('admin.mfa.bootstrap');
         }
 
         if (! $user->phone_number) {
