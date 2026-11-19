@@ -311,6 +311,7 @@ class StudentDeviceAccessController extends Controller
                 $request->session()->forget([
                     'pending_admin_mfa_user_id',
                     'pending_admin_mfa_started_at',
+                    'pending_admin_mfa_password_hash',
                     'admin_mfa_setup_secret',
                 ]);
 
@@ -322,6 +323,7 @@ class StudentDeviceAccessController extends Controller
                 $request->session()->forget([
                     'pending_admin_mfa_user_id',
                     'pending_admin_mfa_started_at',
+                    'pending_admin_mfa_password_hash',
                 ]);
 
                 return back()->withErrors(['email' => 'Administrator verification email is temporarily rate limited. Try again later.'])->onlyInput('email');
