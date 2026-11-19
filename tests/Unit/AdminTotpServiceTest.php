@@ -30,6 +30,18 @@ class AdminTotpServiceTest extends TestCase
         $this->assertSame(1, $service->verify($secret, '287082', 59));
     }
 
+
+    public function test_generated_recovery_codes_have_96_bits_of_entropy_and_are_unique(): void
+    {
+        $codes = app(AdminTotpService::class)->generateRecoveryCodes();
+
+        $this->assertCount(8, $codes);
+        $this->assertCount(8, array_unique($codes));
+        foreach ($codes as $code) {
+            $this->assertMatchesRegularExpression('/^[A-F0-9]{6}(?:-[A-F0-9]{6}){3}$/', $code);
+        }
+    }
+
     public function test_recovery_code_hash_is_case_and_separator_insensitive(): void
     {
         $service = app(AdminTotpService::class);
