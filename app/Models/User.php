@@ -17,7 +17,7 @@ use Illuminate\Notifications\Notifiable;
 #[Hidden(['password', 'remember_token', 'phone_verification_code', 'admin_permissions'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
-    protected $hidden = ['password', 'remember_token', 'phone_verification_code', 'admin_permissions'];
+    protected $hidden = ['password', 'remember_token', 'phone_verification_code', 'admin_permissions', 'admin_totp_secret', 'admin_totp_recovery_codes'];
 
     use HasFactory, MustVerifyEmailTrait, Notifiable;
 
@@ -118,6 +118,10 @@ class User extends Authenticatable implements MustVerifyEmail
             'password' => 'hashed',
             'role' => 'string',
             'admin_permissions' => 'array',
+            'admin_totp_secret' => 'encrypted',
+            'admin_totp_enabled_at' => 'datetime',
+            'admin_totp_recovery_codes' => 'array',
+            'admin_totp_last_used_step' => 'integer',
         ];
     }
 }
