@@ -87,7 +87,7 @@ class MobileStudentCourseQuizTest extends TestCase
             ->postJson('/api/v1/courses/'.$course->slug.'/question-sets/'.$set->id.'/start')
             ->assertForbidden();
 
-        $this->withToken($this->token($teacher))->getJson('/api/v1/my/quizzes')->assertForbidden();
+        $this->withToken($this->token($teacher))->getJson('/api/v1/my/quizzes')->assertUnauthorized();
         $this->withHeaders(['Authorization' => ''])->getJson('/api/v1/my/quizzes')->assertUnauthorized();
 
         $this->assertDatabaseCount('question_set_attempts', 0);
