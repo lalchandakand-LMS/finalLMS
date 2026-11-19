@@ -108,6 +108,7 @@ final class AdminTotpService
                 $bits -= 5;
                 $output .= self::BASE32_ALPHABET[($buffer >> $bits) & 31];
             }
+            $buffer &= (1 << $bits) - 1;
         }
 
         if ($bits > 0) {
@@ -140,6 +141,7 @@ final class AdminTotpService
                 $bits -= 8;
                 $output .= chr(($buffer >> $bits) & 0xff);
             }
+            $buffer &= (1 << $bits) - 1;
         }
 
         return $output;
