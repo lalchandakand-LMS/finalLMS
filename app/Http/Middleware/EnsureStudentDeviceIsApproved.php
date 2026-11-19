@@ -15,9 +15,43 @@ class EnsureStudentDeviceIsApproved
         $user = $request->user();
         $deviceId = $request->session()->get('student_device_id');
 
-        // Legacy sessions created before trusted-device tracking remain valid
-        // until sign-out/expiry. New non-admin logins always attach a device ID.
-        if (! $user || $user->isAdmin() || ! $deviceId) {
+        if (! $user) {
+            return $next($request);
+        }
+
+        if ($user->isAdmin()) {
+            $enabledAt = $user->admin_totp_enabled_at?->timestamp;
+            $verifiedAt = $request->session()->get('admin_mfa_verified_at');
+            if (! $user->admin_totp_secret
+                || ! $enabledAt
+                || ! is_numeric($verifiedAt)
+                || (int) $verifiedAt < $enabledAt) {
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                return redirect()->route('login')
+                    ->with('warning', 'Administrator two-factor verification is required. Please sign in again.');
+            }
+
+            $response = $next($request);
+            $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+
+            return $response;
+        }
+
+        if ($request->session()->has('admin_mfa_verified_at')) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login')
+                ->with('warning', 'Your account role changed. Please sign in again using the verification method for your current role.');
+        }
+
+        // Legacy non-admin sessions remain valid until sign-out/expiry. New
+        // non-admin logins always attach an approved trusted-device ID.
+        if (! $deviceId) {
             return $next($request);
         }
 

@@ -67,7 +67,7 @@
                 <button type="submit" class="btn primary auth-login-submit">{{ __('Login securely') }} →</button>
             </form>
 
-            <p class="auth-login-foot">{{ __('For student accounts, a new device must pass mobile-number verification. Additional devices require institution administrator approval.') }}</p>
+            <p class="auth-login-foot">{{ __('Student and staff accounts verify new devices by mobile OTP. Administrators must enroll an authenticator app and verify a second factor before any admin session starts.') }}</p>
             <p class="auth-login-foot" style="margin-top:12px;">{{ __('New to') }} {{ config('app.name') }}? <a href="{{ route('register') }}">{{ __('Create a student account') }}</a></p>
         </section>
     </div>

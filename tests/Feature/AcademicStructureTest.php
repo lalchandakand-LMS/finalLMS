@@ -15,7 +15,7 @@ class AcademicStructureTest extends TestCase
 
     public function test_student_enrollment_is_recorded_against_the_selected_batch(): void
     {
-        $teacher = User::factory()->create(['role' => 'teacher']);
+        $teacher = User::factory()->create(['role' => 'teacher', 'email_verified_at' => now()]);
         $student = User::factory()->create(['role' => 'student']);
         $course = Course::create([
             'teacher_id' => $teacher->id,
@@ -52,8 +52,8 @@ class AcademicStructureTest extends TestCase
     public function test_admin_can_create_branch_and_batch_and_teacher_only_sees_assigned_batches(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
-        $teacher = User::factory()->create(['role' => 'teacher']);
-        $otherTeacher = User::factory()->create(['role' => 'teacher']);
+        $teacher = User::factory()->create(['role' => 'teacher', 'email_verified_at' => now()]);
+        $otherTeacher = User::factory()->create(['role' => 'teacher', 'email_verified_at' => now()]);
         $course = Course::create([
             'teacher_id' => $teacher->id,
             'title' => 'English Foundations',

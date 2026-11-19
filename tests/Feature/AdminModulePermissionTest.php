@@ -15,7 +15,7 @@ class AdminModulePermissionTest extends TestCase
     {
         $admin = User::factory()->create(['role' => 'admin']);
         $branch = Branch::create(['name' => 'Permission Branch', 'slug' => 'permission-branch', 'is_active' => true]);
-        $manager = User::factory()->create(['role' => 'student']);
+        $manager = User::factory()->create(['role' => 'student', 'email_verified_at' => now()]);
 
         $this->actingAs($admin)->post(route('admin.users.updateRole', $manager), [
             'role' => 'branch_manager',
@@ -44,7 +44,7 @@ class AdminModulePermissionTest extends TestCase
     {
         $admin = User::factory()->create(['role' => 'admin']);
         $branch = Branch::create(['name' => 'Finance Permission Branch', 'slug' => 'finance-permission-branch', 'is_active' => true]);
-        $accountant = User::factory()->create(['role' => 'student']);
+        $accountant = User::factory()->create(['role' => 'student', 'email_verified_at' => now()]);
 
         $this->actingAs($admin)->post(route('admin.users.updateRole', $accountant), [
             'role' => 'accountant',

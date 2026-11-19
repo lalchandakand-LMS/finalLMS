@@ -6,6 +6,8 @@ use App\Models\DeviceSession;
 use App\Models\StudentDevice;
 use App\Models\User;
 use App\Services\SmsGateway;
+use App\Notifications\AdminMfaBootstrapCodeNotification;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -54,6 +56,10 @@ class StudentDeviceAccessController extends Controller
         }
 
         $user = $device->user;
+        if (! $user || $user->isAdmin()) {
+            return redirect()->route('login')->with('error', 'Administrator accounts must use authenticator-based MFA.');
+        }
+
         $result = DB::transaction(function () use ($device, $user, $validated): string {
             User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
             $lockedDevice = StudentDevice::query()->whereKey($device->id)->lockForUpdate()->firstOrFail();
@@ -261,14 +267,92 @@ class StudentDeviceAccessController extends Controller
             return back()->withErrors(['email' => 'The provided credentials do not match our records.'])->onlyInput('email');
         }
 
+        if (Auth::check()) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
+
+        // Never carry a pending MFA or device-verification challenge from a
+        // previous identity into a new successful password-authentication flow.
+        $request->session()->forget([
+            'pending_admin_mfa_user_id',
+            'pending_admin_mfa_started_at',
+            'pending_admin_mfa_password_hash',
+            'admin_mfa_setup_secret',
+            'admin_mfa_bootstrap_code_hash',
+            'admin_mfa_bootstrap_expires_at',
+            'admin_mfa_bootstrap_email_hash',
+            'admin_mfa_bootstrap_verified_at',
+            'admin_mfa_verified_at',
+            'student_device_request_id',
+            'student_device_id',
+            'device_session_hash',
+        ]);
+
         if ($user->isAdmin()) {
-            if (Auth::attempt(['email' => $validated['email'], 'password' => $validated['password']])) {
-                $request->session()->regenerate();
-                DeviceSession::register($request, $user);
-                return redirect()->intended('/dashboard');
+
+            $hasEnabledAt = $user->admin_totp_enabled_at !== null;
+            $hasSecret = is_string($user->admin_totp_secret) && $user->admin_totp_secret !== '';
+            if ($hasEnabledAt !== $hasSecret) {
+                return back()->withErrors(['email' => 'Administrator MFA needs secure account recovery. Contact the system owner.'])->onlyInput('email');
             }
 
-            return back()->withErrors(['email' => 'The provided credentials do not match our records.'])->onlyInput('email');
+            $request->session()->regenerate();
+            $request->session()->put('pending_admin_mfa_user_id', $user->id);
+            $request->session()->put('pending_admin_mfa_started_at', now()->timestamp);
+            $request->session()->put('pending_admin_mfa_password_hash', $user->password);
+
+            if ($hasEnabledAt && $hasSecret) {
+                return redirect()->route('admin.mfa.challenge');
+            }
+
+            if (! $user->email_verified_at) {
+                $request->session()->forget([
+                    'pending_admin_mfa_user_id',
+                    'pending_admin_mfa_started_at',
+                    'pending_admin_mfa_password_hash',
+                    'admin_mfa_setup_secret',
+                ]);
+
+                return back()->withErrors(['email' => 'Verify the administrator email address before enabling authenticator MFA.'])->onlyInput('email');
+            }
+
+            $sendKey = 'admin-mfa-bootstrap-send:'.$user->id;
+            if (RateLimiter::tooManyAttempts($sendKey, 3)) {
+                $request->session()->forget([
+                    'pending_admin_mfa_user_id',
+                    'pending_admin_mfa_started_at',
+                    'pending_admin_mfa_password_hash',
+                ]);
+
+                return back()->withErrors(['email' => 'Administrator verification email is temporarily rate limited. Try again later.'])->onlyInput('email');
+            }
+            RateLimiter::hit($sendKey, 600);
+
+            $bootstrapCode = (string) random_int(100000, 999999);
+            $request->session()->put('admin_mfa_bootstrap_code_hash', Hash::make($bootstrapCode));
+            $request->session()->put('admin_mfa_bootstrap_email_hash', hash('sha256', strtolower($user->email)));
+            $request->session()->put('admin_mfa_bootstrap_expires_at', now()->addMinutes(10)->timestamp);
+
+            try {
+                Notification::route('mail', $user->email)->notify(new AdminMfaBootstrapCodeNotification($bootstrapCode));
+            } catch (Throwable $exception) {
+                report($exception);
+                $request->session()->forget([
+                    'pending_admin_mfa_user_id',
+                    'pending_admin_mfa_started_at',
+                    'pending_admin_mfa_password_hash',
+                    'admin_mfa_bootstrap_code_hash',
+                    'admin_mfa_bootstrap_expires_at',
+                    'admin_mfa_bootstrap_email_hash',
+                    'admin_mfa_setup_secret',
+                ]);
+
+                return back()->withErrors(['email' => 'The administrator verification email could not be sent. Contact the system owner.'])->onlyInput('email');
+            }
+
+            return redirect()->route('admin.mfa.bootstrap');
         }
 
         if (! $user->phone_number) {

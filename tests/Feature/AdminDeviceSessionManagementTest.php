@@ -116,12 +116,10 @@ class AdminDeviceSessionManagementTest extends TestCase
             'email_verified_at' => now(),
         ]);
 
-        $this->post(route('login.post'), [
-            'email' => $admin->email,
-            'password' => 'password',
-        ])->assertRedirect('/dashboard');
-
-        $session = DeviceSession::where('user_id', $admin->id)->firstOrFail();
+        $this->actingAs($admin);
+        $request = \Illuminate\Http\Request::create('/admin/device-sessions', 'GET');
+        $request->setLaravelSession($this->app['session.store']);
+        $session = DeviceSession::register($request, $admin);
 
         $this->patch(route('admin.security.sessions.revoke', $session))
             ->assertStatus(422);
