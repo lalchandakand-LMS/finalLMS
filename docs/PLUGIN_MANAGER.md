@@ -39,7 +39,7 @@ Lifecycle history records plugin key/version, checksum, signing key ID, action, 
 
 ## Not yet delivered
 
-The current Manager is not a public marketplace or remote package catalogue. Signed in-place package updates, multi-version side-by-side retention, automatic rollback/restore, backup-before-upgrade orchestration, branch-specific plugin lifecycle controls and a complete dependency-cycle planner are not yet exposed as a finished workflow. Do not describe these as available.
+The current Manager is not a public marketplace or remote package catalogue. It supports signed package updates while retaining prior version directories and a manual Admin-triggered package rollback after signature/integrity verification. It also supports a pre-uninstall recovery snapshot and package restore. These actions are not an automatic database/filesystem release rollback: migration `down()` methods may refuse when data exists, and a failed migration requires manual recovery. There is no integrated database backup-before-upgrade orchestration, branch-specific plugin lifecycle control, or dependency-cycle planning UI. Concurrent update/uninstall stress testing and cPanel staging acceptance remain outstanding.
 
 A migration rollback method exists in the migration runner, but it is not a complete Admin-controlled backup/rollback release workflow. Do not use it as a substitute for a verified database/files backup and restore rehearsal.
 
