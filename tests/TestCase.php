@@ -17,6 +17,10 @@ abstract class TestCase extends BaseTestCase
     {
         parent::actingAs($user, $guard);
 
+        if ($user instanceof User && $user->email_verified_at === null) {
+            $user->forceFill(['email_verified_at' => now()])->save();
+        }
+
         if ($user instanceof User && $user->isAdmin()) {
             if (! $user->admin_totp_enabled_at || ! $user->admin_totp_secret) {
                 $user->forceFill([
