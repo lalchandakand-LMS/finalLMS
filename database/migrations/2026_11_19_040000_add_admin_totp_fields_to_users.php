@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -26,6 +27,20 @@ return new class extends Migration
 
     public function down(): void
     {
+        $hasEnabledAt = Schema::hasColumn('users', 'admin_totp_enabled_at');
+        $hasSecret = Schema::hasColumn('users', 'admin_totp_secret');
+        $hasRecoveryCodes = Schema::hasColumn('users', 'admin_totp_recovery_codes');
+
+        $configuredAdminExists = ($hasEnabledAt && DB::table('users')->where('role', 'admin')->whereNotNull('admin_totp_enabled_at')->exists())
+            || ($hasSecret && DB::table('users')->where('role', 'admin')->whereNotNull('admin_totp_secret')->exists())
+            || ($hasRecoveryCodes && DB::table('users')->where('role', 'admin')->whereNotNull('admin_totp_recovery_codes')->exists());
+
+        if ($configuredAdminExists) {
+            throw new RuntimeException(
+                'Cannot roll back administrator MFA fields while an administrator has an authenticator or recovery codes configured. Preserve the MFA data and deploy a compatible application rollback.'
+            );
+        }
+
         Schema::table('users', function (Blueprint $table): void {
             $columns = array_filter([
                 Schema::hasColumn('users', 'admin_totp_secret') ? 'admin_totp_secret' : null,
