@@ -293,7 +293,7 @@ PHP;
         );
         $this->actingAs($admin)->post(route('admin.plugins.install'), $invalidPackage)
             ->assertRedirect()
-            ->assertSessionHas('error');
+            ->assertSessionHas('error', 'This plugin has a retained recovery snapshot. Restore the package first, then use the signed package update action.');
 
         // A failed reinstall attempt must not erase the only registry reference
         // needed by the signed package restore workflow.
