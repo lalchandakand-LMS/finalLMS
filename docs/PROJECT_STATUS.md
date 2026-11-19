@@ -41,9 +41,8 @@ Never promote a feature from one status to another without evidence.
 
 | PR | Current state | Required next action |
 |---|---|---|
-| #341 — Administrator TOTP MFA | Open draft; CodeQL passed, Laravel CI running on head 4f144c07cf51c960b14828ac38d31f5b3eb256d3 | Wait for exact-head CI; then review verified-email bootstrap, TOTP setup/login, replay protection, recovery codes and old-session invalidation. Rehearse on staging before production. |
+| #341 — Administrator TOTP MFA | Open draft; CodeQL passed, Laravel CI running on head 2443688a420b0baacbb561d684dd5b306a5055b4 | Wait for exact-head CI; then review verified-email bootstrap, TOTP setup/login, replay protection, recovery codes and old-session invalidation. Rehearse on staging before production. |
 | #277 — Flash Sale package extraction | Open draft; exact-head Laravel CI and CodeQL passed, but branch is behind main and GitHub reports a merge conflict | Rebase/reconcile against current main; provide a standalone signed package and complete cPanel staging install/upgrade/deactivate/uninstall/rollback. Do not merge until review and staging acceptance. |
-| #330 — Project status and plugin audit docs | Open documentation PR; CI/CodeQL running on head 349eccfe247c0dcf3fb04b013ff34326660f5b70 | Merge after exact-head checks pass. |
 
 ### Related open security issue
 
