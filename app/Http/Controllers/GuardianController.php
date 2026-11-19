@@ -16,7 +16,6 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class GuardianController extends Controller
 {
@@ -29,7 +28,6 @@ class GuardianController extends Controller
         $links = GuardianStudentLink::query()
             ->where('guardian_id', $guardian->id)
             ->whereIn('status', ['pending', 'active'])
-            ->with('student:id,name,email,branch_id')
             ->latest('requested_at')
             ->get();
 
@@ -61,11 +59,21 @@ class GuardianController extends Controller
         $rows = GuardianStudentLink::query()
             ->where('guardian_id', $guardian->id)
             ->whereIn('status', ['pending', 'active'])
-            ->with('student:id,name,email,branch_id')
             ->latest('requested_at')
             ->get(['id', 'guardian_id', 'student_id', 'relationship', 'status', 'requested_at', 'reviewed_at']);
 
-        return response()->json(['data' => $rows]);
+        return response()->json([
+            'data' => $rows->map(fn (GuardianStudentLink $link): array => [
+                'id' => $link->id,
+                'relationship' => $link->relationship,
+                'status' => $link->status,
+                'requested_at' => $link->requested_at,
+                'reviewed_at' => $link->reviewed_at,
+                'student' => $link->status === 'active'
+                    ? $link->student?->only(['id', 'name', 'email'])
+                    : null,
+            ]),
+        ]);
     }
 
     public function requestLink(Request $request): JsonResponse
@@ -85,13 +93,16 @@ class GuardianController extends Controller
             ->whereNotNull('email_verified_at')
             ->first();
 
-        if (! $student) {
-            throw ValidationException::withMessages([
-                'student_email' => 'A verified student account with that email was not found.',
-            ]);
-        }
+        // Do not disclose whether an email belongs to a verified student or
+        // whether that student is in another branch. Pending links reveal no
+        // student identity until the student explicitly approves the request.
+        $genericResponse = fn () => response()->json([
+            'message' => 'If a verified student account matches that email, a request has been sent.',
+        ], 202);
 
-        $this->sameBranch($guardian, $student);
+        if (! $student || ! $this->canLinkSameBranch($guardian, $student)) {
+            return $genericResponse();
+        }
 
         $link = DB::transaction(function () use ($request, $guardian, $student, $data): GuardianStudentLink {
             User::query()->whereKey($guardian->id)->lockForUpdate()->firstOrFail();
@@ -103,7 +114,7 @@ class GuardianController extends Controller
                 ->first();
 
             if ($existing && in_array($existing->status, ['pending', 'active'], true)) {
-                abort(409, 'A pending or active request already exists.');
+                return $existing;
             }
 
             $link = $existing ?: new GuardianStudentLink();
@@ -123,10 +134,7 @@ class GuardianController extends Controller
             return $link;
         });
 
-        return response()->json([
-            'data' => ['id' => $link->id, 'status' => $link->status],
-            'message' => 'Request sent. The student must accept it before any records are shared.',
-        ], 201);
+        return $genericResponse();
     }
 
     public function incomingRequests(Request $request): JsonResponse
@@ -234,6 +242,17 @@ class GuardianController extends Controller
         if ($user->branch_id !== null && ! Branch::query()->whereKey($user->branch_id)->where('is_active', true)->exists()) {
             abort(403, 'The assigned branch is inactive.');
         }
+    }
+
+    private function canLinkSameBranch(User $guardian, User $student): bool
+    {
+        if (($guardian->branch_id === null) !== ($student->branch_id === null)
+            || ($guardian->branch_id !== null && (int) $guardian->branch_id !== (int) $student->branch_id)) {
+            return false;
+        }
+
+        return $student->branch_id === null
+            || Branch::query()->whereKey($student->branch_id)->where('is_active', true)->exists();
     }
 
     private function sameBranch(User $guardian, User $student): void
