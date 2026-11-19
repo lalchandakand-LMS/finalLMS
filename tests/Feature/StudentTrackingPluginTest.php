@@ -24,6 +24,7 @@ use App\Services\Modules\ModuleRegistry;
 use App\Services\Plugins\PluginResourceAccess;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
 use Tests\TestCase;
