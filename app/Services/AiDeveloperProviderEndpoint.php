@@ -28,8 +28,19 @@ class AiDeveloperProviderEndpoint
         }
 
         $parts = parse_url($url);
+        if (! is_array($parts)) {
+            throw new RuntimeException('Secure provider connection is unavailable.');
+        }
+
         $host = strtolower((string) ($parts['host'] ?? ''));
-        if (!is_array($parts) || $host === '' || strtolower((string) ($parts['scheme'] ?? '')) !== 'https') {
+        $port = $parts['port'] ?? 443;
+        if ($host === ''
+            || strtolower((string) ($parts['scheme'] ?? '')) !== 'https'
+            || $port !== 443
+            || isset($parts['user'])
+            || isset($parts['pass'])
+            || isset($parts['query'])
+            || isset($parts['fragment'])) {
             throw new RuntimeException('Secure provider connection is unavailable.');
         }
 
