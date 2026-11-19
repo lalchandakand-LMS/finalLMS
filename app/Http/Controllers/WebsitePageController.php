@@ -202,9 +202,12 @@ class WebsitePageController extends Controller
         return back()->with('success', 'Website page deleted.');
     }
 
-    public function preview(WebsitePage $websitePage): View
+    public function preview(Request $request, WebsitePage $websitePage): View
     {
-        return $this->renderPage($websitePage, true);
+        $device = $request->query('device', 'desktop');
+        abort_unless(in_array($device, ['desktop', 'tablet', 'mobile'], true), 422);
+
+        return $this->renderPage($websitePage, true, $device, $request->boolean('frame'));
     }
 
     public function show(string $slug): View
@@ -213,11 +216,11 @@ class WebsitePageController extends Controller
         return $this->renderPage($page, false);
     }
 
-    private function renderPage(WebsitePage $page, bool $isPreview): View
+    private function renderPage(WebsitePage $page, bool $isPreview, string $previewDevice = 'desktop', bool $previewFrame = false): View
     {
         $imageIds = collect($page->sections ?? [])->pluck('image_id')->filter()->unique();
         $media = MediaAsset::query()->whereIn('id', $imageIds)->where('mime_type', 'like', 'image/%')->get()->keyBy('id');
-        return view('website-pages.show', compact('page', 'media', 'isPreview'));
+        return view('website-pages.show', compact('page', 'media', 'isPreview', 'previewDevice', 'previewFrame'));
     }
 
     private function validated(Request $request, ?WebsitePage $page = null): array
