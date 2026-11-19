@@ -870,7 +870,7 @@ class StudentTrackingPluginTest extends TestCase
         try {
             $migration->down();
             $this->fail('The migration must refuse to remove existing student tracking audit records.');
-        } catch (\\RuntimeException $exception) {
+        } catch (\RuntimeException $exception) {
             $this->assertStringContainsString('risk-action audit records exist', $exception->getMessage());
         }
 
