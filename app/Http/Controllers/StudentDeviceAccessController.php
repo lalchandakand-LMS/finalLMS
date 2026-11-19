@@ -6,7 +6,6 @@ use App\Models\DeviceSession;
 use App\Models\StudentDevice;
 use App\Models\User;
 use App\Services\SmsGateway;
-use App\Services\Security\AdminTotpService;
 use App\Notifications\AdminMfaBootstrapCodeNotification;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Http\RedirectResponse;
@@ -299,6 +298,17 @@ class StudentDeviceAccessController extends Controller
 
                 return back()->withErrors(['email' => 'Verify the administrator email address before enabling authenticator MFA.'])->onlyInput('email');
             }
+
+            $sendKey = 'admin-mfa-bootstrap-send:'.$user->id;
+            if (RateLimiter::tooManyAttempts($sendKey, 3)) {
+                $request->session()->forget([
+                    'pending_admin_mfa_user_id',
+                    'pending_admin_mfa_started_at',
+                ]);
+
+                return back()->withErrors(['email' => 'Administrator verification email is temporarily rate limited. Try again later.'])->onlyInput('email');
+            }
+            RateLimiter::hit($sendKey, 600);
 
             $bootstrapCode = (string) random_int(100000, 999999);
             $request->session()->put('admin_mfa_bootstrap_code_hash', Hash::make($bootstrapCode));
