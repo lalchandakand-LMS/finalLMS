@@ -52,7 +52,7 @@ class AcademicStructureTest extends TestCase
     public function test_admin_can_create_branch_and_batch_and_teacher_only_sees_assigned_batches(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
-        $teacher = User::factory()->create(['role' => 'teacher']);
+        $teacher = User::factory()->create(['role' => 'teacher', 'email_verified_at' => now()]);
         $otherTeacher = User::factory()->create(['role' => 'teacher', 'email_verified_at' => now()]);
         $course = Course::create([
             'teacher_id' => $teacher->id,
