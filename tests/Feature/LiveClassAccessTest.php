@@ -6,6 +6,7 @@ use App\Models\Batch;
 use App\Models\Branch;
 use App\Models\Course;
 use App\Models\Enrollment;
+use App\Models\GuardianStudentLink;
 use App\Models\LiveClass;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
