@@ -79,9 +79,9 @@ class MobileApiTeacherAuthenticationTest extends TestCase
             ->getJson('/api/v1/auth/me')
             ->assertUnauthorized();
 
-        $this->assertDatabaseHas('api_tokens', [
-            'user_id' => $student->id,
-            'revoked_at' => now(),
-        ]);
+        $revokedToken = ApiToken::query()
+            ->where('token_hash', hash('sha256', $plainToken))
+            ->firstOrFail();
+        $this->assertNotNull($revokedToken->revoked_at);
     }
 }
