@@ -93,8 +93,12 @@ class AllRoleDeviceSecurityTest extends TestCase
 
         $setupPage = $this->get(route('admin.mfa.setup'))
             ->assertOk()
-            ->assertHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private')
             ->assertSee($admin->email);
+        $cacheControl = (string) $setupPage->headers->get('Cache-Control');
+        $this->assertStringContainsString('no-store', $cacheControl);
+        $this->assertStringContainsString('no-cache', $cacheControl);
+        $this->assertStringContainsString('must-revalidate', $cacheControl);
+        $this->assertStringContainsString('private', $cacheControl);
         $secret = session('admin_mfa_setup_secret');
         $this->assertIsString($secret);
         $setupPage->assertSee($secret);
