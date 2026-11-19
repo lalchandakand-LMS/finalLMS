@@ -5,7 +5,25 @@
 @php
     $pageWidth = $page->template === 'wide' ? 'min(1180px, 100%)' : ($page->template === 'centered' ? 'min(820px, 100%)' : ($page->template === 'split' ? 'min(1080px, 100%)' : 'min(980px, 100%)'));
 @endphp
-@if($isPreview)<div class="flash info">Unpublished administrator preview — visitors cannot see this draft.</div>@endif
+@if($isPreview && !$previewFrame)
+    <div class="panel" style="margin:18px auto;max-width:1180px;">
+        <div class="page-header" style="align-items:center;gap:12px;flex-wrap:wrap;">
+            <div><strong>Responsive page preview</strong><p class="muted" style="margin:4px 0 0;">Preview the page at common device widths. This does not change the published page.</p></div>
+            <div class="cta-row" role="group" aria-label="Preview device size">
+                @foreach(['desktop'=>'Desktop','tablet'=>'Tablet','mobile'=>'Mobile'] as $device=>$label)
+                    <a class="btn {{ $previewDevice === $device ? 'primary' : 'secondary' }}" href="{{ route('admin.website-pages.preview', ['websitePage'=>$page->id, 'device'=>$device]) }}" aria-current="{{ $previewDevice === $device ? 'page' : 'false' }}">{{ $label }}</a>
+                @endforeach
+            </div>
+        </div>
+        <div class="flash info">Unpublished administrator preview — visitors cannot see this draft.</div>
+        <div style="display:flex;justify-content:center;overflow:auto;padding:14px;background:var(--surface-muted,#eef2f7);border-radius:14px;">
+            <div style="width:{{ $previewDevice === 'mobile' ? '390px' : ($previewDevice === 'tablet' ? '768px' : '100%') }};max-width:100%;min-width:{{ $previewDevice === 'mobile' ? '320px' : '0' }};border:1px solid #cbd5e1;border-radius:{{ $previewDevice === 'mobile' ? '28px' : '12px' }};padding:{{ $previewDevice === 'mobile' ? '8px' : '0' }};background:#fff;box-shadow:0 8px 28px rgba(15,23,42,.12);">
+                <iframe title="{{ ucfirst($previewDevice) }} preview of {{ $page->title }}" src="{{ route('admin.website-pages.preview', ['websitePage'=>$page->id, 'device'=>$previewDevice, 'frame'=>1]) }}" style="display:block;width:100%;height:780px;border:0;border-radius:{{ $previewDevice === 'mobile' ? '20px' : '10px' }};background:#fff;" loading="lazy"></iframe>
+            </div>
+        </div>
+    </div>
+@endif
+@if($isPreview && $previewFrame)<div class="flash info">Administrator preview</div>@endif
 <article class="website-page website-page--{{ $page->template }}" style="max-width:{{ $pageWidth }};margin:24px auto 48px;">
     <header style="padding:clamp(24px,5vw,56px);border-radius:22px;background:linear-gradient(135deg,var(--primary),#0c315e);color:#fff;margin-bottom:22px;">
         <h1 style="color:#fff;margin:0 0 12px;font-size:clamp(30px,5vw,48px);">{{ $page->title }}</h1>
