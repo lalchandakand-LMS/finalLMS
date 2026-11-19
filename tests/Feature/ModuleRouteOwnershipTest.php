@@ -47,6 +47,17 @@ class ModuleRouteOwnershipTest extends TestCase
         $this->get('/_test/owned-website-menu')->assertNotFound();
     }
 
+    public function test_audit_log_route_remains_available_when_finance_module_is_disabled(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'email_verified_at' => now(),
+        ]);
+        Setting::setValue('module_registry', json_encode(['finance' => false], JSON_THROW_ON_ERROR));
+
+        $this->actingAs($admin)->get(route('admin.activity-logs.index'))->assertOk();
+    }
+
     public function test_enabled_named_route_remains_available(): void
     {
         Route::middleware('web')->get('/_test/owned-slider-enabled', fn () => response('slider'))
