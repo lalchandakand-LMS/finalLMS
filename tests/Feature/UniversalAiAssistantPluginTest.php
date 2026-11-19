@@ -293,9 +293,13 @@ class UniversalAiAssistantPluginTest extends TestCase
         $events = array_map(static fn (string $event): array => json_decode($event, true), $matches[1]);
         $deltas = array_values(array_filter($events, static fn (array $event): bool => ($event['type'] ?? null) === 'delta'));
         $this->assertGreaterThanOrEqual(2, count($deltas), 'The browser should receive multiple incremental delta events.');
-        $this->assertStringNotContainsString('abcdefghijklmnopqrstuvwxyz1234567890', $streamed);
-        $this->assertStringContainsString('Bearer [REDACTED]', $streamed);
-        $this->assertStringContainsString('The remaining explanation arrives in a later chunk.', $streamed);
+        $combinedDelta = implode('', array_map(
+            static fn (array $event): string => (string) ($event['content'] ?? ''),
+            $deltas
+        ));
+        $this->assertStringNotContainsString('abcdefghijklmnopqrstuvwxyz1234567890', $combinedDelta);
+        $this->assertStringContainsString('Bearer [REDACTED]', $combinedDelta);
+        $this->assertStringContainsString('The remaining explanation arrives in a later chunk.', $combinedDelta);
         $this->assertStringContainsString('"type":"done"', $streamed);
         $this->assertDatabaseHas('ai_assistant_messages', [
             'conversation_id' => \DB::table('ai_assistant_conversations')->where('user_id', $user->id)->value('id'),
