@@ -23,7 +23,7 @@ class AdminMfaController extends Controller
             return redirect()->route('login')->with('error', 'The administrator verification session expired. Please sign in again.');
         }
 
-        if ($this->hasFreshBootstrapVerification($request)) {
+        if ($this->hasFreshBootstrapVerification($request, $admin)) {
             return redirect()->route('admin.mfa.setup');
         }
 
@@ -78,7 +78,7 @@ class AdminMfaController extends Controller
         }
 
         RateLimiter::clear($key);
-        $request->session()->forget(['admin_mfa_bootstrap_code_hash', 'admin_mfa_bootstrap_expires_at', 'admin_mfa_bootstrap_email_hash']);
+        $request->session()->forget(['admin_mfa_bootstrap_code_hash', 'admin_mfa_bootstrap_expires_at']);
         $request->session()->put('admin_mfa_bootstrap_verified_at', now()->timestamp);
 
         return redirect()->route('admin.mfa.setup');
@@ -95,7 +95,7 @@ class AdminMfaController extends Controller
             return redirect()->route('admin.mfa.challenge');
         }
 
-        if (! $admin->email_verified_at || ! $this->hasFreshBootstrapVerification($request)) {
+        if (! $admin->email_verified_at || ! $this->hasFreshBootstrapVerification($request, $admin)) {
             return redirect()->route('admin.mfa.bootstrap');
         }
 
@@ -301,12 +301,15 @@ class AdminMfaController extends Controller
         return $admin;
     }
 
-    private function hasFreshBootstrapVerification(Request $request): bool
+    private function hasFreshBootstrapVerification(Request $request, User $admin): bool
     {
         $verifiedAt = $request->session()->get('admin_mfa_bootstrap_verified_at');
+        $emailHash = $request->session()->get('admin_mfa_bootstrap_email_hash');
 
         return is_numeric($verifiedAt)
-            && (int) $verifiedAt >= now()->subMinutes(10)->timestamp;
+            && (int) $verifiedAt >= now()->subMinutes(10)->timestamp
+            && is_string($emailHash)
+            && hash_equals($emailHash, hash('sha256', strtolower($admin->email)));
     }
 
     private function forgetPending(Request $request): void
