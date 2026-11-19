@@ -141,4 +141,61 @@ class GuardianPendingLinkPrivacyTest extends TestCase
             ->assertJsonPath('data.0.student.id', $student->id)
             ->assertJsonPath('data.0.student.name', $student->name);
     }
+
+    public function test_active_link_identity_disappears_after_student_branch_or_role_changes(): void
+    {
+        $branchA = Branch::query()->create([
+            'name' => 'Active Link Branch A',
+            'slug' => 'active-link-branch-a',
+            'is_active' => true,
+        ]);
+        $branchB = Branch::query()->create([
+            'name' => 'Active Link Branch B',
+            'slug' => 'active-link-branch-b',
+            'is_active' => true,
+        ]);
+        $guardian = User::factory()->create([
+            'role' => 'guardian',
+            'branch_id' => $branchA->id,
+        ]);
+        $student = User::factory()->create([
+            'role' => 'student',
+            'branch_id' => $branchA->id,
+            'name' => 'Former Linked Learner',
+            'email' => 'former.linked@example.test',
+        ]);
+        GuardianStudentLink::query()->create([
+            'guardian_id' => $guardian->id,
+            'student_id' => $student->id,
+            'relationship' => 'Parent',
+            'status' => 'active',
+            'requested_by' => $guardian->id,
+            'reviewed_by' => $student->id,
+            'requested_at' => now()->subMinute(),
+            'reviewed_at' => now(),
+        ]);
+
+        $this->actingAs($guardian)
+            ->getJson('/guardian/links')
+            ->assertOk()
+            ->assertJsonPath('data.0.student.name', $student->name);
+
+        $student->update(['branch_id' => $branchB->id]);
+        $this->actingAs($guardian)
+            ->getJson('/guardian/links')
+            ->assertOk()
+            ->assertExactJson(['data' => []]);
+        $this->actingAs($guardian)
+            ->get('/guardian/dashboard')
+            ->assertOk()
+            ->assertDontSee($student->name)
+            ->assertDontSee($student->email);
+
+        $student->update(['branch_id' => $branchA->id, 'role' => 'teacher']);
+        $this->actingAs($guardian)
+            ->getJson('/guardian/links')
+            ->assertOk()
+            ->assertExactJson(['data' => []]);
+    }
+
 }
