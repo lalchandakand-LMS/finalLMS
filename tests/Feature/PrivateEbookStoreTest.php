@@ -722,6 +722,7 @@ class PrivateEbookStoreTest extends TestCase
             'refund_reference' => 'BKASH-EBOOK-RACE-REFUND-REF',
             'reason' => 'Concurrent reconciliation test',
             'status' => 'gateway_unknown',
+            'processed_at' => now(),
         ]);
 
         $gateway = \Mockery::mock(BkashRefundService::class);
