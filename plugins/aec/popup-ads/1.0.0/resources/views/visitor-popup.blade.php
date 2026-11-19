@@ -143,6 +143,7 @@
      aria-describedby="visitor-promo-description"
      data-popup-id="{{ $p['id'] ?? '' }}"
      data-frequency="{{ $p['frequency'] ?? 'once_per_session' }}"
+     data-timezone="{{ $p['timezone'] ?? 'UTC' }}"
      data-delay="{{ (int) ($p['delay_seconds'] ?? 0) }}"
      data-scroll-percent="{{ (int) ($p['scroll_trigger_percent'] ?? 0) }}"
      data-cooldown-hours="{{ (int) ($p['cooldown_hours'] ?? 0) }}"
@@ -206,6 +207,21 @@
         const isPreview = overlay.dataset.preview === '1';
         const id = overlay.dataset.popupId;
         const frequency = overlay.dataset.frequency || 'once_per_session';
+        const campaignTimezone = overlay.dataset.timezone || 'UTC';
+        const getCampaignDayKey = () => {
+            try {
+                const parts = new Intl.DateTimeFormat('en-US', {
+                    timeZone: campaignTimezone,
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                }).formatToParts(new Date());
+                const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+                return `${values.year}-${values.month}-${values.day}`;
+            } catch (e) {
+                return new Date().toISOString().slice(0, 10);
+            }
+        };
         const delayMs = Math.max(0, Math.min(60, Number(overlay.dataset.delay || 0))) * 1000;
         const scrollPct = Math.max(0, Math.min(100, Number(overlay.dataset.scrollPercent || 0)));
         const cooldownHours = Math.max(0, Number(overlay.dataset.cooldownHours || 0));
@@ -239,18 +255,17 @@
             try {
                 if (cooldownHours > 0 && Number(localStorage.getItem(cooldownKey) || 0) > now) shouldShow = false;
                 if (frequency === 'once_per_session' && sessionStorage.getItem(key)) shouldShow = false;
-                if (frequency === 'once_per_day' && Number(localStorage.getItem(key) || 0) > now) shouldShow = false;
                 if (frequency === 'once_per_browser' && localStorage.getItem(key)) shouldShow = false;
             } catch (e) {}
             if (!shouldShow) return;
         }
 
         let shown = false;
-        const markShown = () => {
+        const markShown = (campaignDayKey = null) => {
             if (isPreview) return;
             try {
                 if (frequency === 'once_per_session') sessionStorage.setItem(key, '1');
-                if (frequency === 'once_per_day') localStorage.setItem(key, String(now + 86400000));
+                if (frequency === 'once_per_day' && campaignDayKey) localStorage.setItem(key, campaignDayKey);
                 if (frequency === 'once_per_browser') localStorage.setItem(key, '1');
             } catch (e) {}
         };
@@ -267,11 +282,23 @@
 
         const open = () => {
             if (shown) return;
+            if (!isPreview && cooldownHours > 0) {
+                try {
+                    if (Number(localStorage.getItem(cooldownKey) || 0) > Date.now()) return;
+                } catch (e) {}
+            }
+            let campaignDayKey = null;
+            if (!isPreview && frequency === 'once_per_day') {
+                campaignDayKey = getCampaignDayKey();
+                try {
+                    if (localStorage.getItem(key) === campaignDayKey) return;
+                } catch (e) {}
+            }
             shown = true;
             overlay.hidden = false;
             overlay.style.display = isModal ? 'flex' : (overlay.dataset.layout === 'corner_card' ? 'block' : 'flex');
             if (isModal) document.body.style.overflow = 'hidden';
-            markShown();
+            markShown(campaignDayKey);
             sendEvent('impression');
         };
 
