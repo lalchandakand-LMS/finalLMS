@@ -15,7 +15,7 @@ class GuardianStudentRelationshipTest extends TestCase {
  public function test_guardian_cannot_request_student_from_another_branch(): void {
   $a=Branch::create(['name'=>'Branch A','slug'=>'branch-a','is_active'=>true]); $b=Branch::create(['name'=>'Branch B','slug'=>'branch-b','is_active'=>true]);
   $g=User::factory()->create(['role'=>'guardian','branch_id'=>$a->id,'email_verified_at'=>now()]); $s=User::factory()->create(['role'=>'student','branch_id'=>$b->id,'email_verified_at'=>now()]);
-  $this->actingAs($g)->postJson(route('guardian.links.store'),['student_email'=>$s->email])->assertStatus(202); $this->assertDatabaseCount('guardian_student_links',0);
+  $this->actingAs($g)->postJson(route('guardian.links.store'),['student_email'=>$s->email])->assertForbidden(); $this->assertDatabaseCount('guardian_student_links',0);
  }
  public function test_only_linked_student_can_respond_and_either_party_can_revoke(): void {
   $g=User::factory()->create(['role'=>'guardian','email_verified_at'=>now()]); $s=User::factory()->create(['role'=>'student','email_verified_at'=>now()]);
@@ -32,7 +32,7 @@ class GuardianStudentRelationshipTest extends TestCase {
   $this->actingAs($g)->postJson(route('guardian.links.store'),['student_email'=>$s->email])->assertStatus(202);
   $this->actingAs($g)->postJson(route('guardian.links.store'),['student_email'=>$s->email])->assertStatus(202); $link=GuardianStudentLink::firstOrFail();
   $this->actingAs($s)->postJson(route('student.guardian-requests.respond',$link),['decision'=>'reject'])->assertOk();
-  $this->actingAs($g)->postJson(route('guardian.links.store'),['student_email'=>$s->email])->assertStatus(202)->assertJsonPath('data.status','pending');
+  $this->actingAs($g)->postJson(route('guardian.links.store'),['student_email'=>$s->email])->assertStatus(202)->assertExactJson(['message'=>'If a verified student account matches that email, a request has been sent.']);
   $this->assertDatabaseCount('guardian_student_links',1); $this->assertDatabaseHas('guardian_student_links',['id'=>$link->id,'status'=>'pending','reviewed_by'=>null,'reviewed_at'=>null]);
  }
  public function test_guardian_relationships_are_unique_and_role_validated(): void {
