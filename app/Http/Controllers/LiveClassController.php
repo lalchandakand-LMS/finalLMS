@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Batch;
 use App\Models\LiveClass;
+use App\Models\User;
+use App\Services\Plugins\PluginResourceAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
