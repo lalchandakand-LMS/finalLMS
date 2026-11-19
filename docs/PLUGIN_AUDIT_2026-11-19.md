@@ -68,7 +68,7 @@ Do not generate empty wrapper packages and label them complete. A module becomes
 | Branch Manager access | Reviewed batch/students/attendance paths use branch scope and teacher assignment checks. Existing tests intentionally permit a student with an enrollment in a branch batch to appear in that branch's workspace; confirm this matches transfer policy and keep guardian access tied to current approved links. |
 | Payments/refunds | bKash callback flow verifies provider state/amount server-side, uses event/payment locking and idempotent reconciliation. Refund stale-state overwrite guard merged in PR #332. Official merchant sandbox and live callbacks remain unverified. |
 | Private eBook access | Download path checks user ownership, completed order, revocation, expiry and remaining downloads under a locked permission record. Private proof/file delivery is not public catalog access. Complete staging tests for expiry, revocation, concurrency and storage permissions. |
-| Installer/updater | Source review found private staging, archive path/symlink/size controls and signed release checks. The Update Center is not yet a production-safe one-click updater: signed release-key provisioning, backup/restore, atomic activation, migration orchestration, health checks and tested rollback still require staging completion. |
+| Installer/updater | Source review found private staging, archive path/symlink/size controls and signed release checks. AdminUpdateController currently supports signed manifest checks, package download, private extraction, activation preflight and pre-activation backup, but has no release activation or release rollback endpoint. BackupController separately supports HMAC-verified backup restore under an exclusive operation lock with a retained pre-restore safety snapshot; that is not an automated release rollback. Implement atomic release activation, migration orchestration, health checks and rollback before calling the Update Center complete. |
 | Sessions/device revocation | Device sessions are tracked and revocation is checked on protected requests. PR #341 additionally forces old admin password-only sessions to reauthenticate; legacy non-admin sessions retain the existing grace behavior until sign-out/expiry. |
 
 ## Open release gates
@@ -77,7 +77,7 @@ Do not generate empty wrapper packages and label them complete. A module becomes
 - [ ] Complete PR #277 signed package and staging lifecycle gates; do not merge based on CI alone.
 - [ ] Create isolated HTTPS staging subdomain and separate database. The last owner update reported neither was available.
 - [ ] Test MySQL/MariaDB migration/rollback, cPanel package install/upgrade, private storage, queue/cron, SMS/email delivery, bKash sandbox, live class join/recording and browser/mobile accessibility.
-- [ ] Add step-up MFA for high-risk admin actions (refunds, plugin install/activation/uninstall, backup restore and updater rollback).
+- [ ] Add recent step-up MFA for high-risk admin actions (refunds, plugin install/activation/uninstall, backup restore and updater rollback). Backup restore currently requires password confirmation and a safety snapshot, but not a fresh MFA challenge.
 - [ ] Begin the 56-module extraction program with an explicit dependency/contract inventory; do not mark catalogue manifests as installable plugins.
 - [ ] Perform a separate staging penetration test after the above changes. No production penetration test has been performed in this audit.
 
