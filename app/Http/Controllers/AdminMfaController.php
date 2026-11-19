@@ -52,7 +52,7 @@ class AdminMfaController extends Controller
         }
 
         $validated = $request->validate(['code' => ['required', 'digits:6']]);
-        $key = 'admin-mfa-setup:'.$admin->id.':'.$request->ip();
+        $key = 'admin-mfa-setup:'.$admin->id;
         if (RateLimiter::tooManyAttempts($key, 5)) {
             return back()->withErrors(['code' => 'Too many attempts. Please sign in again later.']);
         }
@@ -136,7 +136,7 @@ class AdminMfaController extends Controller
             return back()->withErrors(['code' => 'Enter either an authenticator code or one recovery code.']);
         }
 
-        $key = 'admin-mfa-challenge:'.$admin->id.':'.$request->ip();
+        $key = 'admin-mfa-challenge:'.$admin->id;
         if (RateLimiter::tooManyAttempts($key, 5)) {
             return back()->withErrors(['code' => 'Too many attempts. Please sign in again later.']);
         }
