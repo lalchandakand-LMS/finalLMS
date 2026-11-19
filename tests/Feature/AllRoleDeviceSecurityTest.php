@@ -265,4 +265,31 @@ class AllRoleDeviceSecurityTest extends TestCase
         $this->assertGuest();
     }
 
+
+    public function test_first_admin_enrollment_requires_verified_email_and_expiring_email_code(): void
+    {
+        Notification::fake();
+        $unverified = User::factory()->create([
+            'role' => 'admin',
+            'email_verified_at' => null,
+        ]);
+
+        $this->post(route('login.post'), ['email' => $unverified->email, 'password' => 'password'])
+            ->assertSessionHasErrors('email');
+        $this->assertGuest();
+        Notification::assertNothingSent();
+
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'email_verified_at' => now(),
+        ]);
+        $this->post(route('login.post'), ['email' => $admin->email, 'password' => 'password'])
+            ->assertRedirect(route('admin.mfa.bootstrap'));
+
+        $this->withSession(['admin_mfa_bootstrap_expires_at' => now()->subMinute()->timestamp]);
+        $this->post(route('admin.mfa.bootstrap.verify'), ['code' => '123456'])
+            ->assertRedirect(route('login'));
+        $this->assertGuest();
+    }
+
 }
