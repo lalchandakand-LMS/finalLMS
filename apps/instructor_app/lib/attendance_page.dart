@@ -19,7 +19,8 @@ class InstructorAttendancePage extends StatefulWidget {
 
 class _InstructorAttendancePageState extends State<InstructorAttendancePage>
     with WidgetsBindingObserver {
-  final AttendanceOfflineQueue queue = AttendanceOfflineQueue();
+  late AttendanceOfflineQueue queue;
+  bool queueReady = false;
   List<dynamic> batches = [];
   List<dynamic> students = [];
   List<AttendanceQueueEntry> records = [];
@@ -64,6 +65,12 @@ class _InstructorAttendancePageState extends State<InstructorAttendancePage>
   Future<void> load() async {
     setState(() { loading = true; error = null; });
     try {
+      // Resolve the authenticated account from the server before opening its
+      // encrypted queue. Never trust a locally cached user ID for queue ownership.
+      final ownerId = await widget.api.currentAccountId();
+      if (!mounted) return;
+      queue = AttendanceOfflineQueue(ownerId: ownerId);
+      queueReady = true;
       final response = await widget.api.get('/instructor/batches');
       final policy = await widget.api.get('/instructor/attendance/policy');
       final values = response['data'] as List<dynamic>? ?? [];
@@ -86,6 +93,7 @@ class _InstructorAttendancePageState extends State<InstructorAttendancePage>
   }
 
   Future<void> refreshQueue() async {
+    if (!queueReady) return;
     try {
       final values = await queue.all();
       if (mounted) setState(() => records = values);
@@ -163,7 +171,7 @@ class _InstructorAttendancePageState extends State<InstructorAttendancePage>
   }
 
   Future<void> syncQueue() async {
-    if (syncing || !mounted) return;
+    if (!queueReady || syncing || !mounted) return;
     setState(() { syncing = true; error = null; });
     try {
       await widget.api.syncAttendanceQueue(queue);
