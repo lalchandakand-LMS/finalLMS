@@ -24,7 +24,7 @@ return [
     'batch_management' => ['teacher.batches.*', 'admin.batches.*', 'batches.*', 'branch-manager.batches.*'],
     'academic_levels' => ['admin.academic-levels.*'],
     'course_management' => ['courses.*', 'course-combos.*', 'teacher.courses.*', 'admin.courses.*', 'admin.course-categories.*', 'courses.comments.*', 'admin.course-combos.*'],
-    'finance' => ['admin.finance.*', 'accountant.*', 'admin.activity-logs.*'],
+    'finance' => ['admin.finance.*', 'accountant.*'],
     'refund_management' => ['admin.finance.refunds.*', 'admin.refunds.*', 'refunds.*', 'accountant.refunds.*'],
     'expense_management' => ['admin.finance.expenses.*', 'admin.expenses.*', 'expenses.*', 'accountant.expenses.*'],
     'fee_management' => ['admin.finance.invoices.*', 'admin.invoices.*', 'student.invoices.*', 'admin.finance.invoice-payments.*', 'invoices.*', 'invoice-payments.*', 'accountant.invoices.*'],
@@ -61,5 +61,5 @@ return [
     'instructor_mobile_app' => ['api.v1.instructor.*', 'api.v1.teacher.*'],
     'mobile_api' => ['api.v1.*'],
     'integrations' => ['admin.addons.*', 'admin.integrations.*', 'admin.updates.*'],
-    'identity' => ['login', 'login.post', 'logout', 'register', 'register.store', 'verification.*', 'profile.*', 'locale.update', 'dashboard', 'admin.security.*', 'admin.settings.*'],
+    'identity' => ['login', 'login.post', 'logout', 'register', 'register.store', 'verification.*', 'profile.*', 'locale.update', 'dashboard', 'admin.security.*', 'admin.settings.*', 'admin.activity-logs.*'],
 ];
