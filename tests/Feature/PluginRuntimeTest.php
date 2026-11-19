@@ -229,4 +229,110 @@ PHP;
         $this->assertSame('failed', $plugin->fresh()->status);
         $this->assertFalse(app()->bound('plugin.runtime.registered'));
     }
+
+    public function test_dependent_plugin_cannot_execute_unverified_dependency_php_before_integrity_preflight(): void
+    {
+        $createSignedPlugin = function (string $pluginKey, string $packagePath, array $files, array $dependencies = []): PluginInstallation {
+            $hashes = [];
+            foreach ($files as $relative => $contents) {
+                $absolute = base_path($packagePath.'/'.$relative);
+                if (! is_dir(dirname($absolute))) {
+                    mkdir(dirname($absolute), 0750, true);
+                }
+                file_put_contents($absolute, $contents);
+                $hashes[$relative] = hash_file('sha256', $absolute);
+            }
+
+            $manifest = [
+                'schema_version' => 1,
+                'key' => $pluginKey,
+                'name' => 'Test '.ucfirst(str_replace(['.', '-'], ' ', $pluginKey)),
+                'version' => '1.0.0',
+                'type' => 'module',
+                'entrypoint' => 'src/Plugin.php',
+                'requires' => ['php' => '^8.3', 'laravel' => '^12.0', 'lms' => '^1.0'],
+                'dependencies' => $dependencies,
+                'conflicts' => [],
+                'portals' => ['admin'],
+                'permissions' => ['runtime.check'],
+                'capabilities' => [],
+            ];
+
+            $checksum = hash('sha256', 'signed archive:'.$pluginKey);
+            $signature = base64_encode(sodium_crypto_sign_detached(
+                PluginSignatureVerifier::payloadForSignature($manifest, $checksum),
+                sodium_crypto_sign_secretkey($this->keyPair),
+            ));
+
+            $plugin = new PluginInstallation();
+            $plugin->forceFill([
+                'plugin_key' => $pluginKey,
+                'name' => $manifest['name'],
+                'version' => $manifest['version'],
+                'type' => $manifest['type'],
+                'status' => 'active',
+                'manifest' => $manifest,
+                'package_sha256' => $checksum,
+                'signature_key_id' => 'test-release-key',
+                'signature_verified_at' => now(),
+                'package_path' => $packagePath,
+                'metadata' => [
+                    'granted_permissions' => ['runtime.check'],
+                    'integrity_version' => 1,
+                    'release_signature' => $signature,
+                    'signature_record_version' => 1,
+                    'installed_file_hashes' => $hashes,
+                ],
+            ])->save();
+
+            return $plugin;
+        };
+
+        $dependencyPlugin = $createSignedPlugin(
+            'test.z-dependency',
+            'plugins/test/z-dependency/1.0.0',
+            [
+                'src/Plugin.php' => <<<'PHP'
+<?php
+require_once __DIR__.'/Dependency.php';
+return new class implements \App\Contracts\Plugins\PluginContract {
+    public function register(\App\Services\Plugins\PluginContext $context): void {}
+    public function boot(\App\Services\Plugins\PluginContext $context): void {}
+};
+PHP,
+                'src/Dependency.php' => "<?php\n// Signed, harmless dependency source.\n",
+            ],
+        );
+
+        $dependentPlugin = $createSignedPlugin(
+            'test.a-dependent',
+            'plugins/test/a-dependent/1.0.0',
+            [
+                'src/Plugin.php' => <<<'PHP'
+<?php
+require_once base_path('plugins/test/z-dependency/1.0.0/src/Dependency.php');
+return new class implements \App\Contracts\Plugins\PluginContract {
+    public function register(\App\Services\Plugins\PluginContext $context): void {}
+    public function boot(\App\Services\Plugins\PluginContext $context): void {}
+};
+PHP,
+            ],
+            ['test.z-dependency'],
+        );
+
+        // Simulate a dependency file being modified after installation. Its own
+        // entrypoint is still intact, so only a full dependency preflight prevents
+        // the earlier-sorting dependent from requiring this file first.
+        file_put_contents(
+            base_path('plugins/test/z-dependency/1.0.0/src/Dependency.php'),
+            "<?php file_put_contents(storage_path('plugin-dependency-tampered-executed'), 'yes');\n",
+        );
+
+        app(PluginRuntime::class)->registerActivePlugins();
+
+        $this->assertSame('failed', $dependencyPlugin->fresh()->status);
+        $this->assertSame('failed', $dependentPlugin->fresh()->status);
+        $this->assertFileDoesNotExist(storage_path('plugin-dependency-tampered-executed'));
+    }
+
 }
