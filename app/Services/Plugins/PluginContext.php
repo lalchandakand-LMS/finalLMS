@@ -129,6 +129,8 @@ final class PluginContext
             'plugin.permission:'.$this->plugin->plugin_key.','.$permission,
             'throttle:60,1',
         ])->prefix($prefix)->name($namePrefix)->group($routes);
+        // Dynamic API routes need the same named-route lookup refresh as web plugin routes.
+        $this->router->getRoutes()->refreshNameLookups();
     }
 
     public function registerHook(string $hook, callable $callback, int $priority = 10): void
