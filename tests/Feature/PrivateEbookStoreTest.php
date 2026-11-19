@@ -719,6 +719,7 @@ class PrivateEbookStoreTest extends TestCase
             'order_id' => $order->id,
             'processed_by' => $admin->id,
             'amount' => 350,
+            'refund_reference' => 'BKASH-EBOOK-RACE-REFUND-REF',
             'reason' => 'Concurrent reconciliation test',
             'status' => 'gateway_unknown',
         ]);
