@@ -298,7 +298,7 @@ class UniversalAiAssistantPluginTest extends TestCase
         $this->assertStringContainsString('The remaining explanation arrives in a later chunk.', $streamed);
         $this->assertStringContainsString('"type":"done"', $streamed);
         $this->assertDatabaseHas('ai_assistant_messages', [
-            'conversation_id' => \\DB::table('ai_assistant_conversations')->where('user_id', $user->id)->value('id'),
+            'conversation_id' => \DB::table('ai_assistant_conversations')->where('user_id', $user->id)->value('id'),
             'message_role' => 'assistant',
             'content' => str_repeat('A useful streamed explanation. ', 3)
                 .' Bearer [REDACTED] The remaining explanation arrives in a later chunk.',
