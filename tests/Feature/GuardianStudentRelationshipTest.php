@@ -5,7 +5,7 @@ class GuardianStudentRelationshipTest extends TestCase {
  use RefreshDatabase;
  public function test_student_consent_is_required_before_guardian_can_view_any_student_summary(): void {
   $g=User::factory()->create(['role'=>'guardian','email_verified_at'=>now()]); $s=User::factory()->create(['role'=>'student','email_verified_at'=>now()]);
-  $this->actingAs($g)->postJson(route('guardian.links.store'),['student_email'=>$s->email,'relationship'=>'Parent'])->assertStatus(202)->assertJsonPath('data.status','pending');
+  $this->actingAs($g)->postJson(route('guardian.links.store'),['student_email'=>$s->email,'relationship'=>'Parent'])->assertAccepted();
   $link=GuardianStudentLink::firstOrFail(); $this->actingAs($g)->getJson(route('guardian.students.summary',$s))->assertNotFound();
   $this->actingAs($s)->getJson(route('student.guardian-requests.index'))->assertOk()->assertJsonPath('data.0.guardian.id',$g->id);
   $this->actingAs($s)->postJson(route('student.guardian-requests.respond',$link),['decision'=>'accept'])->assertOk()->assertJsonPath('data.status','active');
