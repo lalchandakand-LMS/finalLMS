@@ -38,6 +38,7 @@ abstract class TestCase extends BaseTestCase
                 'admin_mfa_verified_at',
                 'pending_admin_mfa_user_id',
                 'pending_admin_mfa_started_at',
+                'pending_admin_mfa_password_hash',
                 'admin_mfa_setup_secret',
                 'admin_mfa_bootstrap_code_hash',
                 'admin_mfa_bootstrap_expires_at',
