@@ -106,7 +106,7 @@ final class PluginResourceAccess
 
             if ($actor->isGuardian()) {
                 return $query->whereHas('enrollments', fn ($enrollments) =>
-                    $enrollments->whereIn('user_id', $actor->linkedStudents()->select('users.id'))
+                    $enrollments->whereIn('user_id', $this->guardianStudentQuery($actor)->select('users.id'))
                 );
             }
 
@@ -130,7 +130,7 @@ final class PluginResourceAccess
 
             if ($actor->isGuardian()) {
                 return $query->whereHas('enrollments', fn ($enrollments) =>
-                    $enrollments->whereIn('user_id', $actor->linkedStudents()->select('users.id'))
+                    $enrollments->whereIn('user_id', $this->guardianStudentQuery($actor)->select('users.id'))
                 );
             }
 
@@ -142,7 +142,7 @@ final class PluginResourceAccess
         }
 
         if ($actor->isGuardian()) {
-            return $query->whereIn('user_id', $actor->linkedStudents()->select('users.id'));
+            return $query->whereIn('user_id', $this->guardianStudentQuery($actor)->select('users.id'));
         }
 
         if ($actor->isBranchManager()) {
@@ -234,7 +234,7 @@ final class PluginResourceAccess
         if ($actor->isGuardian()) {
             return Enrollment::query()
                 ->where('course_id', $course->id)
-                ->whereIn('user_id', $actor->linkedStudents()->select('users.id'))
+                ->whereIn('user_id', $this->guardianStudentQuery($actor)->select('users.id'))
                 ->exists();
         }
 
@@ -260,7 +260,7 @@ final class PluginResourceAccess
         if ($actor->isGuardian()) {
             return Enrollment::query()
                 ->where('batch_id', $batch->id)
-                ->whereIn('user_id', $actor->linkedStudents()->select('users.id'))
+                ->whereIn('user_id', $this->guardianStudentQuery($actor)->select('users.id'))
                 ->exists();
         }
 
