@@ -24,7 +24,10 @@ class AdminMfaController extends Controller
         }
 
         $expiresAt = $request->session()->get('admin_mfa_bootstrap_expires_at');
+        $emailHash = $request->session()->get('admin_mfa_bootstrap_email_hash');
         if (! is_string($request->session()->get('admin_mfa_bootstrap_code_hash'))
+            || ! is_string($emailHash)
+            || ! hash_equals($emailHash, hash('sha256', strtolower($admin->email)))
             || ! is_numeric($expiresAt)
             || (int) $expiresAt < now()->timestamp) {
             $this->forgetPending($request);
@@ -45,7 +48,12 @@ class AdminMfaController extends Controller
 
         $expiresAt = $request->session()->get('admin_mfa_bootstrap_expires_at');
         $codeHash = $request->session()->get('admin_mfa_bootstrap_code_hash');
-        if (! is_string($codeHash) || ! is_numeric($expiresAt) || (int) $expiresAt < now()->timestamp) {
+        $emailHash = $request->session()->get('admin_mfa_bootstrap_email_hash');
+        if (! is_string($codeHash)
+            || ! is_string($emailHash)
+            || ! hash_equals($emailHash, hash('sha256', strtolower($admin->email)))
+            || ! is_numeric($expiresAt)
+            || (int) $expiresAt < now()->timestamp) {
             $this->forgetPending($request);
 
             return redirect()->route('login')->with('error', 'The email verification code expired. Please sign in again.');
@@ -64,7 +72,7 @@ class AdminMfaController extends Controller
         }
 
         RateLimiter::clear($key);
-        $request->session()->forget(['admin_mfa_bootstrap_code_hash', 'admin_mfa_bootstrap_expires_at']);
+        $request->session()->forget(['admin_mfa_bootstrap_code_hash', 'admin_mfa_bootstrap_expires_at', 'admin_mfa_bootstrap_email_hash']);
         $request->session()->put('admin_mfa_bootstrap_verified_at', now()->timestamp);
 
         return redirect()->route('admin.mfa.setup');
@@ -258,6 +266,7 @@ class AdminMfaController extends Controller
         }
 
         RateLimiter::clear($key);
+        $admin->refresh();
         Auth::login($admin);
         $request->session()->regenerate();
         $request->session()->put('admin_mfa_verified_at', now()->timestamp);
@@ -302,6 +311,7 @@ class AdminMfaController extends Controller
             'admin_mfa_setup_secret',
             'admin_mfa_bootstrap_code_hash',
             'admin_mfa_bootstrap_expires_at',
+            'admin_mfa_bootstrap_email_hash',
             'admin_mfa_bootstrap_verified_at',
         ]);
     }
