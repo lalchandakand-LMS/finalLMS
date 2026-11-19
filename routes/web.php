@@ -99,6 +99,8 @@ Route::middleware('guest')->group(function () {
     Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1')->name('register.store');
 });
 Route::post('/login', [StudentDeviceAccessController::class, 'beginLogin'])->middleware('throttle:5,1')->name('login.post');
+Route::get('/admin/mfa/bootstrap', [AdminMfaController::class, 'bootstrap'])->middleware('throttle:10,1')->name('admin.mfa.bootstrap');
+Route::post('/admin/mfa/bootstrap/verify', [AdminMfaController::class, 'verifyBootstrap'])->middleware('throttle:5,1')->name('admin.mfa.bootstrap.verify');
 Route::get('/admin/mfa/setup', [AdminMfaController::class, 'setup'])->middleware('throttle:10,1')->name('admin.mfa.setup');
 Route::post('/admin/mfa/setup/confirm', [AdminMfaController::class, 'confirmSetup'])->middleware('throttle:5,1')->name('admin.mfa.setup.confirm');
 Route::get('/admin/mfa/challenge', [AdminMfaController::class, 'challenge'])->middleware('throttle:10,1')->name('admin.mfa.challenge');
