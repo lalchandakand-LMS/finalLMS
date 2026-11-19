@@ -2,22 +2,19 @@
 
 namespace App\Notifications;
 
-use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 class AdminMfaBootstrapCodeNotification extends Notification
 {
-    use Queueable;
-
     public function __construct(public readonly string $code) {}
 
-    public function via(object $notifiable): array
+    public function via($notifiable): array
     {
         return ['mail'];
     }
 
-    public function toMail(object $notifiable): MailMessage
+    public function toMail($notifiable): MailMessage
     {
         return (new MailMessage)
             ->subject('Administrator sign-in security verification')
