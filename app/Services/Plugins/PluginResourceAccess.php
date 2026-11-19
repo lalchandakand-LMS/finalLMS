@@ -303,7 +303,7 @@ final class PluginResourceAccess
      */
     private function guardianStudentQuery(User $guardian): BelongsToMany
     {
-        $students = $guardian->linkedStudents();
+        $students = $guardian->linkedStudents()->where('users.role', 'student');
 
         if ($guardian->branch_id === null) {
             return $students->whereNull('users.branch_id');
