@@ -17,35 +17,45 @@ Production domain: https://alomsenglishcenter.com
 
 Never promote a feature from one status to another without evidence.
 
-## Live GitHub workstream snapshot — 2026-11-19
+## Live GitHub workstream snapshot — 2026-11-19 (supersedes earlier snapshots)
 
-This snapshot records verified repository state at the time of this update. Always re-fetch exact heads, required checks, reviews and mergeability before merging.
+**Current main:** 5b5796f5e9059246d5815224929007c4ad28a3fc  
+**Production deployment:** blocked; no isolated staging subdomain/database was available in the last owner update.  
+**Full review:** see [PLUGIN_AUDIT_2026-11-19.md](PLUGIN_AUDIT_2026-11-19.md).
 
-| PR | Workstream | Current verified state |
+### Recently merged and verified
+
+| PR | Result |
+|---|---|
+| #327 | Merged — responsive Admin UI preview fixes |
+| #332 | Merged — refund reconciliation race guard and fixture correction |
+| #333 | Merged — Guardian plugin current-branch scope enforcement |
+| #334 | Merged — Teacher API trusted-device documentation/test contract |
+| #336 | Merged — Guardian pending-link identity privacy and stale active-link filtering |
+| #337 | Merged — plugin dependency integrity preflight and dependency-topological loading |
+| #338 | Merged — BCS Question Bank manifest type correction and executable-manifest validation |
+| #339 | Merged — AI provider HTTPS port/DNS pinning hardening |
+| #340 | Merged — live-class role isolation and Guardian recording-only access |
+
+### Open pull requests and release gates
+
+| PR | Current state | Required next action |
 |---|---|---|
-| [#319](https://github.com/lalchandakand-LMS/finalLMS/pull/319) | Signed Theme Manager | Merged to main as `bdd6b3db1e5dbc1c69589d54e67864b0fd94f1a7`; exact-head Laravel CI and CodeQL passed. Trusted signing-key provisioning and staging acceptance remain release gates. |
-| [#320](https://github.com/lalchandakand-LMS/finalLMS/pull/320) | Plugin migration claim/rollback safety | Merged as `b30b660f0c67f136377988d5740874cf1e42b397`; exact-head Laravel CI, cPanel package and CodeQL passed. MySQL/MariaDB staging concurrency and rollback rehearsal remain. |
-| [#318](https://github.com/lalchandakand-LMS/finalLMS/pull/318) | Learn & Earn paid exam plugin | Merged as `0df6cfb9a27803c47f6a39802b6b40731931105d`; provider sandbox, manual/offline payment review, standalone signed package, trusted key and staging acceptance remain. |
-| [#322](https://github.com/lalchandakand-LMS/finalLMS/pull/322) | Universal AI Assistant | Merged as `08c5456df67b818e60e337c1bf3bd677cd0d3f44`; provider configuration, budget concurrency and role-isolation staging acceptance remain. |
-| [#326](https://github.com/lalchandakand-LMS/finalLMS/pull/326) | Payment security and reconciliation | Merged as `c789ad3e0057388d1495ba3085aa5ee54cf5391d`; live bKash merchant sandbox and production enablement remain blocked pending merchant credentials and acceptance. |
-| [#311](https://github.com/lalchandakand-LMS/finalLMS/pull/311) | British/American phonetics practice plugin | Merged as `68c23a23b4c51c70baa6f45e903101781fcfe59a`; provider/device/browser acceptance and signed plugin lifecycle checks remain. |
-| [#323](https://github.com/lalchandakand-LMS/finalLMS/pull/323) | Remove external AI-builder branding references | Merged as `ae360fb9616499087a9ecb23d7f3d1f80f38eb26`; the scan covered specified docs and README files, not the whole repository. |
-| [#324](https://github.com/lalchandakand-LMS/finalLMS/pull/324) | Visual Page Builder drag-and-drop | Merged as `b731c4d0bcb0f2453422423bd7a7fe405ac17bb9`; manual browser and keyboard/screen-reader acceptance remain. |
-| [#325](https://github.com/lalchandakand-LMS/finalLMS/pull/325) | Page Builder revision history and safe restore | Merged as `f2d50d5ed31503898f92b05c48e5a323b4923e35`; exact-head Laravel CI and CodeQL passed. |
-| [#329](https://github.com/lalchandakand-LMS/finalLMS/pull/329) | Keyboard-accessible website menu reordering | Merged as `3ac95cf7654084066302e4bd1d508845fc8db564`; exact-head Laravel CI and CodeQL passed. |
-| [#332](https://github.com/lalchandakand-LMS/finalLMS/pull/332) | Prevent stale refund reconciliation overwrites | Merged as `bf338dd1e93b376f302058b2bb59e2cb4726b1dd`; CodeQL passed and main Laravel CI was running at snapshot time. |
-| [#327](https://github.com/lalchandakand-LMS/finalLMS/pull/327) | Responsive device preview for custom pages | Merged to main as `b79fd25a2fdea732c790d3e547bb7d5fd221595a`; exact-head Laravel CI, package and CodeQL passed. |
-| [#277](https://github.com/lalchandakand-LMS/finalLMS/pull/277) | Flash Sale plugin and negative marking | Open Draft; head `aa732a4c4bee5eaf3e476c58c028b4266c4cc93e`. Exact-head CI, package and CodeQL had passed on the prior base. The branch is behind/diverged from current main, a prior changes-requested review remains, and fresh integration checks/reviewer approval plus staging acceptance are required. Migration rollback explicitly refuses to proceed while negative awarded marks exist. |
-| [#334](https://github.com/lalchandakand-LMS/finalLMS/pull/334) | Separate teacher password auth from student device approval | Open Draft; latest head `27f698b4f5c7512a7c7b862a777eeca46fec4a83`; Laravel CI and CodeQL running. |
-| [#336](https://github.com/lalchandakand-LMS/finalLMS/pull/336) | Protect student identity in pending guardian links | Open Draft; head `95e2b77c4859c3ae349b4360a3e0162a73257e1e`; CodeQL passed and Laravel CI running. |
+| #341 — Administrator TOTP MFA | Open draft; CodeQL passed, Laravel CI running on head 4f144c07cf51c960b14828ac38d31f5b3eb256d3 | Wait for exact-head CI; then review verified-email bootstrap, TOTP setup/login, replay protection, recovery codes and old-session invalidation. Rehearse on staging before production. |
+| #277 — Flash Sale package extraction | Open draft; exact-head Laravel CI and CodeQL passed, but branch is behind main and GitHub reports a merge conflict | Rebase/reconcile against current main; provide a standalone signed package and complete cPanel staging install/upgrade/deactivate/uninstall/rollback. Do not merge until review and staging acceptance. |
+| #330 — Project status and plugin audit docs | Open documentation PR; CI/CodeQL running on head 349eccfe247c0dcf3fb04b013ff34326660f5b70 | Merge after exact-head checks pass. |
 
-| [#337](https://github.com/lalchandakand-LMS/finalLMS/pull/337) | Preflight plugin dependencies before PHP execution | Open Draft; head `535b6ece63a465afc8dae3fae04ced4ae18189c1`; exact-head CI is running. |
-| [#338](https://github.com/lalchandakand-LMS/finalLMS/pull/338) | Validate executable first-party plugin manifests | Open Draft; head `1508d99f3e3dbc9c66e705b95278f105c552b2a6`; exact-head CI is running. |
-| [#339](https://github.com/lalchandakand-LMS/finalLMS/pull/339) | Pin AI provider DNS and restrict HTTPS port | Open Draft; head `02e6d816e8e1d9b251dd959447f0d3e1d1f5f778`; exact-head Laravel CI is running and CodeQL passed. |
+### Related open security issue
 
-Security issue [#335](https://github.com/lalchandakand-LMS/finalLMS/issues/335) tracks the high-risk finding that administrator sign-in currently bypasses MFA. This is not fixed by teacher/student mobile authentication changes.
+- **#335 — Admin password-only login bypasses MFA:** addressed in PR #341, but the issue must remain open until that PR merges and staging acceptance is complete.
 
-No production deployment, live database migration or live payment-provider activation has been performed. CI/package success does not establish provider, staging, browser or production acceptance.
+### Current architecture and launch reality
+
+- The plugin platform has **7 executable first-party packages** under plugins/aec/.
+- **56 other top-level module directories are metadata_only catalogue entries**, not independently installable plugins. Their executable Laravel code remains in the application. The extraction roadmap is documented in PLUGIN_AUDIT_2026-11-19.md.
+- Plugin PHP is trusted application code, not sandboxed. Signed packages protect provenance/integrity; they do not provide process isolation.
+- No production migration, live payment activation, plugin activation or hosting-file deployment was performed in this review.
+- Keep production deployment disabled until admin MFA, Flash Sale signing/staging, isolated database restore/rollback, payment sandbox, email/SMS delivery, live-class privacy and the module/plugin release lifecycle have been accepted on staging.
 
 ## Architecture decision
 
