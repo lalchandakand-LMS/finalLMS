@@ -53,7 +53,7 @@ final class PluginUploadInstaller
         $existing = PluginInstallation::query()->where('plugin_key', $pluginKey)->first();
 
         if ($existing?->status === 'uninstalled') {
-            throw new RuntimeException('This plugin has a retained recovery snapshot. Restore the package first, then use the signed package update action.');
+            throw new InvalidArgumentException('This plugin has a retained recovery snapshot. Restore the package first, then use the signed package update action.');
         }
 
         if ($existing) {
