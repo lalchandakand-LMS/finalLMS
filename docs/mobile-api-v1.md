@@ -4,7 +4,7 @@ Base path: `/api/v1`
 
 All responses are JSON. Protected endpoints require `Authorization: Bearer <access_token>`. Tokens are opaque random values; only SHA-256 hashes are stored. A token expires after 30 days and can be revoked independently or all at once.
 
-## Authentication and student device approval
+## Authentication and trusted-device approval
 
 Mobile clients must generate a cryptographically random 32-byte installation identifier, encode it as 64 lowercase hexadecimal characters, and keep it in the platform secure store (Android Keystore / iOS Keychain). Send the same identifier on later logins from that installation. Do not use an advertising ID, IMEI, phone number, or a user-editable device label as the identifier.
 
@@ -13,9 +13,9 @@ Mobile clients must generate a cryptographically random 32-byte installation ide
 Body:
 - `email`, `password`
 - `device_name` (2–100 characters)
-- `device_id` (required for students; 64 lowercase hexadecimal characters; omitted for teachers)
+- `device_id` (required for both students and teachers; 64 lowercase hexadecimal characters)
 
-Teachers with valid credentials receive a bearer token as before and do not need a device ID. Student accounts must send the secure installation ID and have a registered mobile number:
+Student and Teacher accounts must send the secure installation ID and have a registered mobile number. Both roles use the SMS OTP and trusted-device approval workflow:
 - A previously approved installation receives a device-bound token.
 - A new, unknown, or revoked installation receives HTTP 202 with `status=phone_verification_required`, a one-time `challenge_token`, and `expires_in=600`. No API bearer token is issued at this stage. A six-digit OTP is sent to the phone number registered by the academy.
 - If SMS is not configured or sending fails, the endpoint returns HTTP 503 and issues no token.
@@ -24,8 +24,8 @@ Teachers with valid credentials receive a bearer token as before and do not need
 
 Body: `challenge_token`, `code` (six digits).
 
-- First-ever student installation: successful OTP verification approves the device and returns the bearer token.
-- Additional or previously approved/revoked installation: successful OTP verification returns HTTP 202 with `status=pending_admin_approval`. It does not issue a token. The request must be approved in Admin → Student Devices.
+- First-ever Student or Teacher installation: successful OTP verification approves the device and returns the bearer token.
+- Additional or previously approved/revoked Student or Teacher installation: successful OTP verification returns HTTP 202 with `status=pending_admin_approval`. It does not issue a token. The request must be approved in Admin → Student Devices.
 - Invalid/expired challenge: HTTP 410. Invalid OTP: HTTP 422. Too many attempts: HTTP 429.
 
 ### POST `/auth/device-status`
@@ -110,10 +110,10 @@ Course ownership is checked server-side. The API does not accept a client-suppli
 
 - Login and OTP verification are rate-limited to 5 requests/minute; device-status polling is limited to 30 requests/minute.
 - Catalog routes are rate-limited to 60 requests/minute; authenticated API routes are rate-limited to 120 requests/minute.
-- Student API tokens must reference a currently approved `student_devices` record owned by that student. Legacy student tokens without an approved device binding are rejected and revoked on use.
-- Admin approval of a new device revokes the student's previous approved device and all existing mobile bearer tokens. Admin revocation also invalidates tokens bound to that device.
-- Student web sessions and mobile API tokens share the same approved-device registry, enforcing one active student device across the web and app. A revoked device's web session is ended on its next protected web request; its mobile token is rejected on its next API request.
-- Teacher API login remains password-based and is not subject to the student SMS device policy.
+- Student and Teacher API tokens must reference a currently approved `student_devices` record owned by that account. Legacy mobile tokens without an approved device binding are rejected and revoked on use.
+- Admin approval of a new device revokes the account's previous approved device and all existing mobile bearer tokens. Admin revocation also invalidates tokens bound to that device.
+- Student web sessions and Student/Teacher mobile API tokens share the approved-device registry. This enforces one active trusted Student device across web and app, and one approved mobile device per Teacher account. A revoked device's web session is ended on its next protected web request; its mobile token is rejected on its next API request.
+- Teacher API login is subject to the same SMS OTP and trusted-device approval flow as the Student App. Every mobile bearer token must remain bound to an approved, account-owned device.
 - Token hashes, not bearer values, are persisted. Expired and revoked tokens are rejected.
 - The Student Flutter app now implements secure installation-ID and bearer-token storage, OTP entry, Admin-approval waiting UI, 15-second approval polling, session restoration and server-side logout. Flutter analyze/tests must pass for each release; real SMS and end-to-end approval still require isolated staging acceptance.
 - Mobile course checkout now supports batch selection, server-priced Flash Sale discounts, manual payment submission, bKash checkout initiation and private payment history. Persistent cart, coupon validation, and manual single-/multi-course cart checkout are implemented in the current development branch; printable invoices/receipts, reviews, notices and support remain separate deliverables. Mobile exam and text-assignment screens are implemented; assignment attachment upload remains pending.

@@ -18,7 +18,11 @@
     @forelse($links as $link)
         <article class="panel" style="padding:20px">
             <div style="display:flex;justify-content:space-between;gap:10px;align-items:start">
-                <div><h3 style="margin:0 0 4px">{{ $link->student?->name ?? __('Student account') }}</h3><p class="muted" style="margin:0">{{ $link->student?->email }}</p></div>
+                @if($link->status === 'active')
+                    <div><h3 style="margin:0 0 4px">{{ $link->student?->name ?? __('Student account') }}</h3><p class="muted" style="margin:0">{{ $link->student?->email }}</p></div>
+                @else
+                    <div><h3 style="margin:0 0 4px">{{ __('Awaiting student approval') }}</h3><p class="muted" style="margin:0">{{ __('Student identity is hidden until approval.') }}</p></div>
+                @endif
                 <span class="badge {{ $link->status === 'active' ? 'success' : 'warning' }}">{{ __($link->status) }}</span>
             </div>
             <p>{{ __('Relationship') }}: {{ $link->relationship }}</p>
