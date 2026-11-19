@@ -91,16 +91,13 @@ class AllRoleDeviceSecurityTest extends TestCase
             ->assertRedirect(route('admin.mfa.setup'));
         $this->assertSame(hash('sha256', strtolower($admin->email)), session('admin_mfa_bootstrap_email_hash'));
 
-        $this->get(route('admin.mfa.setup'))
-            ->assertOk();
-        $secret = session('admin_mfa_setup_secret');
-        $this->assertIsString($secret);
-
-        $this->get(route('admin.mfa.setup'))
+        $setupPage = $this->get(route('admin.mfa.setup'))
             ->assertOk()
             ->assertHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private')
-            ->assertSee($admin->email)
-            ->assertSee($secret);
+            ->assertSee($admin->email);
+        $secret = session('admin_mfa_setup_secret');
+        $this->assertIsString($secret);
+        $setupPage->assertSee($secret);
 
         $code = app(AdminTotpService::class)->codeForTesting($secret);
         $this->post(route('admin.mfa.setup.confirm'), ['code' => $code])
