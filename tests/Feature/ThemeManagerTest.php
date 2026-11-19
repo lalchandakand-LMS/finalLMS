@@ -281,6 +281,50 @@ class ThemeManagerTest extends TestCase
         @unlink($zipPath);
     }
 
+    public function test_theme_installation_refuses_to_overwrite_orphaned_storage_paths(): void
+    {
+        if (! class_exists(ZipArchive::class)) {
+            $this->markTestSkipped('PHP ZIP extension is unavailable.');
+        }
+
+        Storage::fake('public');
+        Storage::fake('local');
+        $orphanPath = 'themes/orphaned-theme/1.0.0/assets/theme.css';
+        Storage::disk('public')->put($orphanPath, 'existing orphan must be preserved');
+        $keyPair = openssl_pkey_new(['private_key_type' => OPENSSL_KEYTYPE_RSA, 'private_key_bits' => 2048]);
+        $details = openssl_pkey_get_details($keyPair);
+        config(['themes.public_key' => $details['key']]);
+
+        $manifest = json_encode([
+            'product_id' => 'aloms-lms-theme',
+            'slug' => 'orphaned-theme',
+            'version' => '1.0.0',
+            'name' => 'Orphaned Theme',
+            'min_lms_version' => '1.0.0',
+            'assets' => ['assets/theme.css' => hash('sha256', 'new theme css')],
+        ], JSON_UNESCAPED_SLASHES);
+        openssl_sign($manifest, $signature, $keyPair, OPENSSL_ALGO_SHA256);
+        $zipPath = tempnam(sys_get_temp_dir(), 'aec-theme-orphan-');
+        $zip = new ZipArchive();
+        $zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+        $zip->addFromString('theme.json', $manifest);
+        $zip->addFromString('theme.sig', base64_encode($signature));
+        $zip->addFromString('assets/', '');
+        $zip->addFromString('assets/theme.css', 'new theme css');
+        $zip->close();
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $upload = new UploadedFile($zipPath, 'orphaned-theme.zip', 'application/zip', null, true);
+        $this->actingAs($admin)->post(route('admin.themes.install'), ['package' => $upload])
+            ->assertRedirect()
+            ->assertSessionHasErrors('package');
+
+        $this->assertDatabaseCount('themes', 0);
+        $this->assertSame('existing orphan must be preserved', Storage::disk('public')->get($orphanPath));
+        $this->assertSame([], Storage::disk('local')->allFiles('themes/packages'));
+        @unlink($zipPath);
+    }
+
     public function test_theme_installation_fails_closed_when_lifecycle_lock_is_missing(): void
     {
         if (! class_exists(ZipArchive::class)) {
