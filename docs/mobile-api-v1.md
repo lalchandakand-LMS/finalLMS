@@ -13,9 +13,9 @@ Mobile clients must generate a cryptographically random 32-byte installation ide
 Body:
 - `email`, `password`
 - `device_name` (2–100 characters)
-- `device_id` (required for students; 64 lowercase hexadecimal characters; omitted for teachers)
+- `device_id` (required for both students and teachers; 64 lowercase hexadecimal characters)
 
-Teachers with valid credentials receive a bearer token as before and do not need a device ID. Student accounts must send the secure installation ID and have a registered mobile number:
+Student and Teacher accounts must send the secure installation ID and have a registered mobile number. Both roles use the SMS OTP and trusted-device approval workflow:
 - A previously approved installation receives a device-bound token.
 - A new, unknown, or revoked installation receives HTTP 202 with `status=phone_verification_required`, a one-time `challenge_token`, and `expires_in=600`. No API bearer token is issued at this stage. A six-digit OTP is sent to the phone number registered by the academy.
 - If SMS is not configured or sending fails, the endpoint returns HTTP 503 and issues no token.
@@ -24,8 +24,8 @@ Teachers with valid credentials receive a bearer token as before and do not need
 
 Body: `challenge_token`, `code` (six digits).
 
-- First-ever student installation: successful OTP verification approves the device and returns the bearer token.
-- Additional or previously approved/revoked installation: successful OTP verification returns HTTP 202 with `status=pending_admin_approval`. It does not issue a token. The request must be approved in Admin → Student Devices.
+- First-ever Student or Teacher installation: successful OTP verification approves the device and returns the bearer token.
+- Additional or previously approved/revoked Student or Teacher installation: successful OTP verification returns HTTP 202 with `status=pending_admin_approval`. It does not issue a token. The request must be approved in Admin → Student Devices.
 - Invalid/expired challenge: HTTP 410. Invalid OTP: HTTP 422. Too many attempts: HTTP 429.
 
 ### POST `/auth/device-status`
