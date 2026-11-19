@@ -283,7 +283,10 @@ class StudentDeviceAccessController extends Controller
             'admin_mfa_bootstrap_expires_at',
             'admin_mfa_bootstrap_email_hash',
             'admin_mfa_bootstrap_verified_at',
+            'admin_mfa_verified_at',
             'student_device_request_id',
+            'student_device_id',
+            'device_session_hash',
         ]);
 
         if ($user->isAdmin()) {
