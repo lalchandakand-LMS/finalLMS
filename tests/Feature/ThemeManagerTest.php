@@ -364,6 +364,51 @@ class ThemeManagerTest extends TestCase
         ]);
     }
 
+    public function test_theme_file_cleanup_failure_keeps_record_and_files_for_a_safe_retry(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $cssPath = 'themes/retry-theme/1.0.0/assets/theme.css';
+        $packagePath = 'themes/packages/123e4567-e89b-12d3-a456-426614174000.zip';
+        Storage::disk('public')->put($cssPath, 'body { color: #123456; }');
+        Storage::disk('local')->put($packagePath, 'signed package');
+        $themeId = DB::table('themes')->insertGetId([
+            'slug' => 'retry-theme',
+            'version' => '1.0.0',
+            'name' => 'Retry Theme',
+            'min_lms_version' => '1.0.0',
+            'manifest' => json_encode(['product_id' => 'aloms-lms-theme', 'assets' => ['assets/theme.css' => hash('sha256', 'body { color: #123456; }')]]),
+            'assets' => json_encode(['assets/theme.css']),
+            'preview_path' => null,
+            'package_path' => $packagePath,
+            'package_sha256' => str_repeat('e', 64),
+            'installed_by' => $admin->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        Setting::setValue('active_theme_id', 0);
+        Setting::setValue('active_theme_slug', '');
+        Setting::setValue('active_theme_version', '');
+
+        $realPublicDisk = Storage::disk('public');
+        $realLocalDisk = Storage::disk('local');
+        $publicDisk = \\Mockery::mock($realPublicDisk)->makePartial();
+        $publicDisk->shouldReceive('delete')->once()->with($cssPath)->andReturn(false);
+        Storage::shouldReceive('disk')->with('public')->andReturn($publicDisk);
+        Storage::shouldReceive('disk')->with('local')->andReturn($realLocalDisk);
+
+        $this->actingAs($admin)->delete(route('admin.themes.destroy', $themeId))
+            ->assertRedirect()
+            ->assertSessionHasErrors('theme');
+
+        $this->assertDatabaseHas('themes', ['id' => $themeId]);
+        $this->assertDatabaseMissing('theme_activations', ['action' => 'delete']);
+        $this->assertDatabaseMissing('activity_logs', ['event' => 'theme.deleted']);
+        $realPublicDisk->assertExists($cssPath);
+        $realLocalDisk->assertExists($packagePath);
+    }
+
     public function test_theme_deletion_refuses_untrusted_asset_paths_without_removing_the_record(): void
     {
         Storage::fake('public');
