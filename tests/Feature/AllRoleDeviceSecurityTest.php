@@ -339,6 +339,9 @@ class AllRoleDeviceSecurityTest extends TestCase
         $this->assertGuest();
         $this->assertSame($secondAdmin->id, session('pending_admin_mfa_user_id'));
         $this->assertNull(session('admin_mfa_bootstrap_verified_at'));
+        $this->assertNull(session('admin_mfa_verified_at'));
+        $this->assertNull(session('device_session_hash'));
+        $this->assertNull(session('student_device_id'));
         $this->get(route('admin.mfa.bootstrap'))->assertOk();
     }
 
