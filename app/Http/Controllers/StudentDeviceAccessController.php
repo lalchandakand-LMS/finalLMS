@@ -266,12 +266,13 @@ class StudentDeviceAccessController extends Controller
             return back()->withErrors(['email' => 'The provided credentials do not match our records.'])->onlyInput('email');
         }
 
+        if (Auth::check()) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
+
         if ($user->isAdmin()) {
-            if (Auth::check()) {
-                Auth::logout();
-                $request->session()->invalidate();
-                $request->session()->regenerateToken();
-            }
 
             $hasEnabledAt = $user->admin_totp_enabled_at !== null;
             $hasSecret = is_string($user->admin_totp_secret) && $user->admin_totp_secret !== '';
