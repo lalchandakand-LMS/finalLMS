@@ -373,4 +373,28 @@ class AllRoleDeviceSecurityTest extends TestCase
         $this->assertNull(session('pending_admin_mfa_password_hash'));
     }
 
+
+    public function test_admin_mfa_migration_refuses_to_drop_configured_authenticator_secrets(): void
+    {
+        User::factory()->create([
+            'role' => 'admin',
+            'email_verified_at' => now(),
+            'admin_totp_secret' => 'JBSWY3DPEHPK3PXP',
+            'admin_totp_enabled_at' => now(),
+            'admin_totp_recovery_codes' => [hash('sha256', 'A1B2C3D4E5F6')],
+        ]);
+
+        $migration = require database_path('migrations/2026_11_19_040000_add_admin_totp_fields_to_users.php');
+
+        try {
+            $migration->down();
+            $this->fail('Configured administrator MFA fields must never be dropped by an automatic rollback.');
+        } catch (\RuntimeException $exception) {
+            $this->assertStringContainsString('Cannot roll back administrator MFA fields', $exception->getMessage());
+        }
+
+        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasColumn('users', 'admin_totp_secret'));
+        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasColumn('users', 'admin_totp_recovery_codes'));
+    }
+
 }
