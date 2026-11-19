@@ -51,7 +51,7 @@ final class AssistantStreamRedactor
 
             $prefix = $match[0][0];
             $tokenOffset = strlen($prefix);
-            if (str_starts_with($prefix, 'Bearer') || str_starts_with($prefix, 'bearer')) {
+            if (stripos($prefix, 'Bearer') === 0) {
                 $charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-';
                 $minimum = 1;
                 $replacement = $prefix.'[REDACTED]';
