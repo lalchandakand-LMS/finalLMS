@@ -86,6 +86,21 @@ class AdminWebsiteMenuTest extends TestCase
             ->assertDontSee('Hidden link');
     }
 
+    public function test_menu_reordering_has_keyboard_controls_and_live_announcements(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        WebsiteMenuItem::query()->create(['label' => 'Courses', 'url' => '/courses']);
+        WebsiteMenuItem::query()->create(['label' => 'About', 'url' => '/about']);
+
+        $this->actingAs($admin)->get(route('admin.website-menu.index'))
+            ->assertOk()
+            ->assertSee('data-menu-move="up"', false)
+            ->assertSee('data-menu-move="down"', false)
+            ->assertSee('aria-live="polite"', false)
+            ->assertSee('Move Courses up')
+            ->assertSee('Move About down');
+    }
+
     public function test_admin_can_reorder_menu_items(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);

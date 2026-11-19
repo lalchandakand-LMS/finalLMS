@@ -9,7 +9,7 @@ class InvoiceRefund extends Model
 {
     protected $fillable = [
         'invoice_id', 'invoice_payment_id', 'requested_by', 'approved_by',
-        'amount', 'method', 'reference', 'reason', 'status', 'processed_at',
+        'amount', 'method', 'reference', 'gateway_refund_id', 'gateway_status', 'failure_reason', 'reason', 'status', 'processed_at',
     ];
 
     protected $casts = [

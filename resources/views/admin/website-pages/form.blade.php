@@ -28,6 +28,28 @@
         </div>
         <template id="page-section-template">@include('admin.website-pages.partials.section', ['i'=>'__INDEX__', 'section'=>[], 'media'=>$media])</template>
     </section>
+    @if($page->exists)
+    <section class="panel" style="margin-bottom:20px;">
+        <div class="page-header">
+            <div><h2>{{ __('Revision history') }}</h2><p class="muted">{{ __('Restore an earlier saved page. Restoring creates a new revision and keeps the current content in history.') }}</p></div>
+        </div>
+        @forelse($revisions as $revision)
+            <div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:10px;">
+                <div>
+                    <strong>{{ __('Version :version', ['version' => $revision->version]) }}</strong>
+                    <div class="muted">{{ $revision->snapshot['title'] ?? __('Untitled page') }} · {{ $revision->creator?->name ?? __('Former administrator') }}</div>
+                    <small class="muted">{{ $revision->created_at?->diffForHumans() }}</small>
+                </div>
+                <form method="POST" action="{{ route('admin.website-pages.revisions.restore', [$page, $revision]) }}" onsubmit="return confirm('{{ __('Restore this page revision? The current page will be retained as a new revision.') }}')">
+                    @csrf
+                    <button class="btn secondary" type="submit">{{ __('Restore this version') }}</button>
+                </form>
+            </div>
+        @empty
+            <p class="muted">{{ __('No saved revisions yet. A revision is created when this page is saved.') }}</p>
+        @endforelse
+    </section>
+    @endif
     <section class="panel" style="margin-bottom:20px;">
         <h2>SEO settings</h2>
         <label>SEO title<input name="seo_title" maxlength="255" value="{{ old('seo_title', $page->seo_title) }}"></label>

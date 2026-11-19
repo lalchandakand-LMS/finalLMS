@@ -101,6 +101,8 @@
                         <div><label>{{ __('Received amount (BDT)') }}</label><input type="number" name="amount" min="0.01" max="{{ number_format($due, 2, '.', '') }}" step="0.01" required></div>
                         <div><label>{{ __('Payment method') }}</label><select name="method" required><option value="cash">{{ __('Cash') }}</option><option value="bkash">{{ __('bKash') }}</option><option value="nagad">{{ __('Nagad') }}</option><option value="bank">{{ __('Bank') }}</option><option value="online">{{ __('Online gateway') }}</option><option value="other">{{ __('Other') }}</option></select></div>
                         <div><label>{{ __('Transaction / receipt reference') }}</label><input name="reference" maxlength="120"></div>
+                        <div><label>{{ __('bKash payment ID (required for bKash)') }}</label><input name="gateway_payment_id" maxlength="120"></div>
+                        <div><label>{{ __('bKash transaction ID (required for bKash)') }}</label><input name="gateway_transaction_id" maxlength="120"></div>
                         <div><label>{{ __('Received date') }}</label><input type="datetime-local" name="paid_at" value="{{ now()->format('Y-m-d\TH:i') }}" required></div>
                         <div style="grid-column:1/-1;"><label>{{ __('Note') }}</label><input name="note" maxlength="1000"></div>
                         <div><button class="btn primary" type="submit">{{ __('Record payment') }}</button></div>
@@ -110,7 +112,7 @@
                     <details style="margin-top:14px;">
                         <summary>{{ __('Payment history') }} ({{ $invoice->payments->count() }})</summary>
                         @foreach($invoice->payments as $receipt)
-                            <p class="muted">৳{{ number_format((float) $receipt->amount, 2) }} · {{ __(ucfirst($receipt->method)) }} · {{ $receipt->paid_at->format('d M Y H:i') }} · {{ $receipt->reference ?: __('No reference') }} · <a href="{{ route('admin.finance.invoice-payments.receipt', $receipt) }}" target="_blank" rel="noopener">{{ __('Print receipt') }}</a></p>
+                            <p class="muted">৳{{ number_format((float) $receipt->amount, 2) }} · {{ __(ucfirst($receipt->method)) }} · {{ $receipt->paid_at->format('d M Y H:i') }} · {{ $receipt->reference ?: __('No reference') }}@if($receipt->gateway_payment_id) · {{ __('Gateway payment') }}: {{ $receipt->gateway_payment_id }} · {{ __('Gateway transaction') }}: {{ $receipt->gateway_transaction_id }}@endif · <a href="{{ route('admin.finance.invoice-payments.receipt', $receipt) }}" target="_blank" rel="noopener">{{ __('Print receipt') }}</a></p>
                         @endforeach
                     </details>
                 @endif
