@@ -49,10 +49,11 @@ class FirstPartyPluginManifestTest extends TestCase
             $this->assertIsArray($manifest);
             $this->assertSame([], $validator->errors($manifest), basename(dirname(dirname($file)).'/'.basename(dirname($file))).' manifest must satisfy the installable plugin contract.');
 
-            $packageDirectory = basename(dirname($file));
-            $versionDirectory = basename(dirname(dirname($file)));
-            $this->assertSame($manifest['version'], $packageDirectory);
-            $this->assertSame('aec.'.str_replace('-', '.', basename(dirname(dirname(dirname($file))))), $manifest['key'] ?? null);
+            $versionDirectory = basename(dirname($file));
+            $pluginSlug = basename(dirname(dirname($file)));
+            $vendor = basename(dirname(dirname(dirname($file))));
+            $this->assertSame($manifest['version'], $versionDirectory);
+            $this->assertSame($vendor.'.'.$pluginSlug, $manifest['key'] ?? null);
             $manifests[$manifest['key']] = $manifest;
         }
 
