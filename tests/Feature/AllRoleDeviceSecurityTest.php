@@ -88,6 +88,8 @@ class AllRoleDeviceSecurityTest extends TestCase
             ->assertRedirect('/dashboard');
 
         $this->assertAuthenticatedAs($admin);
+        $this->get('/dashboard')->assertOk();
+        $this->assertAuthenticatedAs($admin);
         $fresh = $admin->fresh();
         $this->assertNotNull($fresh->admin_totp_enabled_at);
         $this->assertNotEmpty($fresh->admin_totp_secret);
@@ -125,6 +127,8 @@ class AllRoleDeviceSecurityTest extends TestCase
         $this->post(route('admin.mfa.verify'), ['code' => $code])
             ->assertRedirect('/dashboard');
         $this->assertAuthenticatedAs($admin);
+        $this->get('/dashboard')->assertOk();
+        $this->assertAuthenticatedAs($admin);
         $usedStep = $admin->fresh()->admin_totp_last_used_step;
         $this->assertNotNull($usedStep);
 
@@ -153,6 +157,8 @@ class AllRoleDeviceSecurityTest extends TestCase
             ->assertRedirect(route('admin.mfa.challenge'));
         $this->post(route('admin.mfa.verify'), ['recovery_code' => $recoveryCode])
             ->assertRedirect('/dashboard');
+        $this->assertAuthenticatedAs($admin);
+        $this->get('/dashboard')->assertOk();
         $this->assertAuthenticatedAs($admin);
         $this->assertSame([], $admin->fresh()->admin_totp_recovery_codes);
 
