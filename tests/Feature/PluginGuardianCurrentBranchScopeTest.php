@@ -58,7 +58,13 @@ class PluginGuardianCurrentBranchScopeTest extends TestCase
         $this->assertTrue($access->allows($guardian, $batch));
         $this->assertTrue($access->allows($guardian, $enrollment));
 
-        // A later branch transfer must invalidate the previously approved link
+        // Reassigning either side after approval must invalidate the old link.
+        $guardian->update(['branch_id' => $branchB->id]);
+        $this->assertFalse($access->allows($guardian, $student));
+        $this->assertSame([], $access->scopeQuery(User::query(), $guardian)->pluck('id')->all());
+        $guardian->update(['branch_id' => $branchA->id]);
+
+        // A later student branch transfer must invalidate the previously approved link
         // for plugin resources immediately, without waiting for link cleanup.
         $student->update(['branch_id' => $branchB->id]);
         $this->assertFalse($access->allows($guardian, $student));
