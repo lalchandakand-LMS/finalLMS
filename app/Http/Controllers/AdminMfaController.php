@@ -9,11 +9,67 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Symfony\Component\HttpFoundation\Response;
 
 class AdminMfaController extends Controller
 {
+
+    public function bootstrap(Request $request): Response
+    {
+        $admin = $this->pendingAdmin($request);
+        if (! $admin) {
+            return redirect()->route('login')->with('error', 'The administrator verification session expired. Please sign in again.');
+        }
+
+        $expiresAt = $request->session()->get('admin_mfa_bootstrap_expires_at');
+        if (! is_string($request->session()->get('admin_mfa_bootstrap_code_hash'))
+            || ! is_numeric($expiresAt)
+            || (int) $expiresAt < now()->timestamp) {
+            $this->forgetPending($request);
+
+            return redirect()->route('login')->with('error', 'The email verification code expired. Please sign in again.');
+        }
+
+        return response()->view('auth.admin-mfa-bootstrap', ['email' => $admin->email])
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    }
+
+    public function verifyBootstrap(Request $request): RedirectResponse
+    {
+        $admin = $this->pendingAdmin($request);
+        if (! $admin) {
+            return redirect()->route('login')->with('error', 'The administrator verification session expired. Please sign in again.');
+        }
+
+        $expiresAt = $request->session()->get('admin_mfa_bootstrap_expires_at');
+        $codeHash = $request->session()->get('admin_mfa_bootstrap_code_hash');
+        if (! is_string($codeHash) || ! is_numeric($expiresAt) || (int) $expiresAt < now()->timestamp) {
+            $this->forgetPending($request);
+
+            return redirect()->route('login')->with('error', 'The email verification code expired. Please sign in again.');
+        }
+
+        $validated = $request->validate(['code' => ['required', 'digits:6']]);
+        $key = 'admin-mfa-bootstrap:'.$admin->id;
+        if (RateLimiter::tooManyAttempts($key, 5)) {
+            return back()->withErrors(['code' => 'Too many attempts. Please sign in again later.']);
+        }
+
+        if (! Hash::check($validated['code'], $codeHash)) {
+            RateLimiter::hit($key, 600);
+
+            return back()->withErrors(['code' => 'The email verification code is invalid or expired.']);
+        }
+
+        RateLimiter::clear($key);
+        $request->session()->forget(['admin_mfa_bootstrap_code_hash', 'admin_mfa_bootstrap_expires_at']);
+        $request->session()->put('admin_mfa_bootstrap_verified_at', now()->timestamp);
+
+        return redirect()->route('admin.mfa.setup');
+    }
+
     public function setup(Request $request, AdminTotpService $totp): Response
     {
         $admin = $this->pendingAdmin($request);
@@ -23,6 +79,10 @@ class AdminMfaController extends Controller
 
         if ($admin->admin_totp_enabled_at && $admin->admin_totp_secret) {
             return redirect()->route('admin.mfa.challenge');
+        }
+
+        if (! $this->hasFreshBootstrapVerification($request)) {
+            return redirect()->route('admin.mfa.bootstrap');
         }
 
         $hasEnabledAt = $admin->admin_totp_enabled_at !== null;
@@ -51,6 +111,10 @@ class AdminMfaController extends Controller
         $admin = $this->pendingAdmin($request);
         if (! $admin) {
             return redirect()->route('login')->with('error', 'The administrator verification session expired. Please sign in again.');
+        }
+
+        if (! $this->hasFreshBootstrapVerification($request)) {
+            return redirect()->route('admin.mfa.bootstrap');
         }
 
         $validated = $request->validate(['code' => ['required', 'digits:6']]);
@@ -222,12 +286,23 @@ class AdminMfaController extends Controller
         return $admin;
     }
 
+    private function hasFreshBootstrapVerification(Request $request): bool
+    {
+        $verifiedAt = $request->session()->get('admin_mfa_bootstrap_verified_at');
+
+        return is_numeric($verifiedAt)
+            && (int) $verifiedAt >= now()->subMinutes(10)->timestamp;
+    }
+
     private function forgetPending(Request $request): void
     {
         $request->session()->forget([
             'pending_admin_mfa_user_id',
             'pending_admin_mfa_started_at',
             'admin_mfa_setup_secret',
+            'admin_mfa_bootstrap_code_hash',
+            'admin_mfa_bootstrap_expires_at',
+            'admin_mfa_bootstrap_verified_at',
         ]);
     }
 }
