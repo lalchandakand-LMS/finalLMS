@@ -1,6 +1,6 @@
 # Project Status — Alom's English Center LMS
 
-Last consolidated: 2026-11-18
+Last consolidated: 2026-11-19
 Repository: https://github.com/lalchandakand-LMS/finalLMS
 Production domain: https://alomsenglishcenter.com
 
@@ -17,28 +17,31 @@ Production domain: https://alomsenglishcenter.com
 
 Never promote a feature from one status to another without evidence.
 
-## Live GitHub workstream snapshot — reconciled 2026-11-18
+## Live GitHub workstream snapshot — 2026-11-19
 
-This section supersedes older PR snapshots and historical notes below where they conflict. Re-fetch exact heads and checks before any merge decision.
+This snapshot records verified repository state at the time of this update. Always re-fetch exact heads, required checks, reviews and mergeability before merging.
 
 | PR | Workstream | Current verified state |
 |---|---|---|
-| [#319](https://github.com/lalchandakand-LMS/finalLMS/pull/319) | Signed Theme Manager | Merged to main as `bdd6b3db1e5dbc1c69589d54e67864b0fd94f1a7`; exact-head Laravel CI and CodeQL passed. Trusted signing-key provisioning and staging acceptance remain. |
-| [#320](https://github.com/lalchandakand-LMS/finalLMS/pull/320) | Plugin migration claim/rollback safety | Merged to main as `b30b660f0c67f136377988d5740874cf1e42b397`; exact-head Laravel CI, cPanel package and CodeQL passed. MySQL/MariaDB staging concurrency and rollback rehearsal remain. |
-| [#318](https://github.com/lalchandakand-LMS/finalLMS/pull/318) | Learn & Earn paid exam plugin | Merged to main as `0df6cfb9a27803c47f6a39802b6b40731931105d`; exact-head Laravel CI test/package and CodeQL passed. Payment-provider sandbox callback, manual/offline review, standalone signed package, trusted key and staging acceptance remain. |
-| [#322](https://github.com/lalchandakand-LMS/finalLMS/pull/322) | Universal AI Assistant | Merged to main as `08c5456df67b818e60e337c1bf3bd677cd0d3f44`; exact-head Laravel CI test/package and CodeQL passed. Provider configuration, budget-concurrency and role-isolation staging acceptance remain. |
-| [#326](https://github.com/lalchandakand-LMS/finalLMS/pull/326) | Payment security and reconciliation | Merged to main as `c789ad3e0057388d1495ba3085aa5ee54cf5391d`; exact-head Laravel CI and CodeQL passed. Live bKash merchant sandbox, staging refund reconciliation and production enablement remain blocked pending merchant credentials and acceptance. |
-| [#311](https://github.com/lalchandakand-LMS/finalLMS/pull/311) | British/American phonetics practice plugin | Merged to main as `68c23a23b4c51c70baa6f45e903101781fcfe59a`; exact-head Laravel CI and CodeQL passed. Provider/device/browser acceptance and signed plugin lifecycle checks remain. |
-| [#323](https://github.com/lalchandakand-LMS/finalLMS/pull/323) | Remove external AI-builder branding references | Merged to main as `ae360fb9616499087a9ecb23d7f3d1f80f38eb26`; exact-head Laravel CI and CodeQL passed. The audited docs and Board Question Solver README were checked for the specified Google AI Studio strings; this was not a whole-repository scan. |
-| [#324](https://github.com/lalchandakand-LMS/finalLMS/pull/324) | Visual Page Builder drag-and-drop | Merged to main as `b731c4d0bcb0f2453422423bd7a7fe405ac17bb9`; exact-head Laravel CI and CodeQL passed. Manual browser and keyboard/screen-reader acceptance remain. |
-| [#277](https://github.com/lalchandakand-LMS/finalLMS/pull/277) | Flash Sale plugin + negative marking | Open Draft; exact current head `f769c5735853220b00b4734533597e31be48c89a`. Exact-head Laravel CI test, SQLite plugin-route/rollback checks, cPanel ZIP package and CodeQL all passed (Laravel CI run `44297523730`; CodeQL `44297523507`). Prior `CHANGES_REQUESTED` review is not superseded; fresh human approval, trusted signing key, standalone signed ZIP, MySQL/MariaDB rollback rehearsal and staging checkout/lifecycle acceptance remain. |
-| [#327](https://github.com/lalchandakand-LMS/finalLMS/pull/327) | Custom Page responsive preview | Open, Ready for Review; head `e8b3ef5ea6883ca547c0e084b29a84e00ef3283f`. Exact-head Laravel CI and CodeQL passed. Reviewer approval and real browser/staging visual acceptance remain. |
-| [#328](https://github.com/lalchandakand-LMS/finalLMS/pull/328) | Custom Page revision history and safe rollback | Open Draft; head `301e3a4285db07e056185207d153942e3772c544`. Exact-head Laravel CI, MySQL tests, cPanel package and CodeQL passed. Branch still contains #327 preview commits; rebase/recreate from updated main after #327 merges so this PR contains only revision-history changes. Fresh review and staging rollback acceptance remain. |
-| [#329](https://github.com/lalchandakand-LMS/finalLMS/pull/329) | Keyboard-accessible website menu reordering | Open, Ready for Review; head `22022029a3e36dbbcb044e634c54d23129a14827`. Exact-head Laravel CI, cPanel package and CodeQL passed. Fresh review and manual keyboard-only/focus-retention/screen-reader acceptance remain. |
+| [#319](https://github.com/lalchandakand-LMS/finalLMS/pull/319) | Signed Theme Manager | Merged to main as `bdd6b3db1e5dbc1c69589d54e67864b0fd94f1a7`; exact-head Laravel CI and CodeQL passed. Trusted signing-key provisioning and staging acceptance remain release gates. |
+| [#320](https://github.com/lalchandakand-LMS/finalLMS/pull/320) | Plugin migration claim/rollback safety | Merged as `b30b660f0c67f136377988d5740874cf1e42b397`; exact-head Laravel CI, cPanel package and CodeQL passed. MySQL/MariaDB staging concurrency and rollback rehearsal remain. |
+| [#318](https://github.com/lalchandakand-LMS/finalLMS/pull/318) | Learn & Earn paid exam plugin | Merged as `0df6cfb9a27803c47f6a39802b6b40731931105d`; provider sandbox, manual/offline payment review, standalone signed package, trusted key and staging acceptance remain. |
+| [#322](https://github.com/lalchandakand-LMS/finalLMS/pull/322) | Universal AI Assistant | Merged as `08c5456df67b818e60e337c1bf3bd677cd0d3f44`; provider configuration, budget concurrency and role-isolation staging acceptance remain. |
+| [#326](https://github.com/lalchandakand-LMS/finalLMS/pull/326) | Payment security and reconciliation | Merged as `c789ad3e0057388d1495ba3085aa5ee54cf5391d`; live bKash merchant sandbox and production enablement remain blocked pending merchant credentials and acceptance. |
+| [#311](https://github.com/lalchandakand-LMS/finalLMS/pull/311) | British/American phonetics practice plugin | Merged as `68c23a23b4c51c70baa6f45e903101781fcfe59a`; provider/device/browser acceptance and signed plugin lifecycle checks remain. |
+| [#323](https://github.com/lalchandakand-LMS/finalLMS/pull/323) | Remove external AI-builder branding references | Merged as `ae360fb9616499087a9ecb23d7f3d1f80f38eb26`; the scan covered specified docs and README files, not the whole repository. |
+| [#324](https://github.com/lalchandakand-LMS/finalLMS/pull/324) | Visual Page Builder drag-and-drop | Merged as `b731c4d0bcb0f2453422423bd7a7fe405ac17bb9`; manual browser and keyboard/screen-reader acceptance remain. |
+| [#325](https://github.com/lalchandakand-LMS/finalLMS/pull/325) | Page Builder revision history and safe restore | Merged as `f2d50d5ed31503898f92b05c48e5a323b4923e35`; exact-head Laravel CI and CodeQL passed. |
+| [#329](https://github.com/lalchandakand-LMS/finalLMS/pull/329) | Keyboard-accessible website menu reordering | Merged as `3ac95cf7654084066302e4bd1d508845fc8db564`; exact-head Laravel CI and CodeQL passed. |
+| [#332](https://github.com/lalchandakand-LMS/finalLMS/pull/332) | Prevent stale refund reconciliation overwrites | Merged as `bf338dd1e93b376f302058b2bb59e2cb4726b1dd`; CodeQL passed and main Laravel CI was running at snapshot time. |
+| [#327](https://github.com/lalchandakand-LMS/finalLMS/pull/327) | Responsive device preview for custom pages | Open; merged-base integration commit `781e02e730d60492934ef5d23a10c80729462bd7` preserves the already-merged revision-history implementation. Exact-head Laravel CI and CodeQL are running; do not merge until both pass. |
+| [#277](https://github.com/lalchandakand-LMS/finalLMS/pull/277) | Flash Sale plugin and negative marking | Open Draft; head `2618a6ba6235fb91c4dbcbfb0ae815e9e72be7e5`. Exact-head CI, package and CodeQL had passed on the prior base. The branch is behind/diverged from current main, a prior changes-requested review remains, and fresh integration checks/reviewer approval plus staging acceptance are required. Migration rollback explicitly refuses to proceed while negative awarded marks exist. |
+| [#334](https://github.com/lalchandakand-LMS/finalLMS/pull/334) | Separate teacher password auth from student device approval | Open Draft; latest head `05d4f147629dcc9839da3293323d443f9970c07a`; Laravel CI and CodeQL running. |
+| [#336](https://github.com/lalchandakand-LMS/finalLMS/pull/336) | Protect student identity in pending guardian links | Open Draft; head `ecc2aab5cdf87b182b010844d7809cb3e243b445`; CodeQL passed and Laravel CI running. |
 
-The previous #285 offline-attendance PR is closed unmerged. Its clean replacement, #301, merged to main as `f4e4ca4ed94a1a96d3832b7834806de85d405b74`; exact-head Laravel CI, CodeQL and both Flutter mobile workflows passed. Browser/device acceptance, QR permission/privacy review, offline replay/idempotency and staging API integration remain release gates. Do not revive or merge the stale #285 branch.
+Security issue [#335](https://github.com/lalchandakand-LMS/finalLMS/issues/335) tracks the high-risk finding that administrator sign-in currently bypasses MFA. This is not fixed by teacher/student mobile authentication changes.
 
-No production deployment, live database migration or live payment-provider activation has been performed. CI/package success does not establish signed-release, provider, staging, browser or production acceptance.
+No production deployment, live database migration or live payment-provider activation has been performed. CI/package success does not establish provider, staging, browser or production acceptance.
 
 ## Architecture decision
 
