@@ -357,9 +357,10 @@ class StudentDeviceApprovalTest extends TestCase
             ->assertSee('Pending Accountant');
     }
 
-    public function test_admin_password_login_remains_available_without_sms_for_recovery(): void
+    public function test_admin_password_login_uses_verified_email_mfa_without_sms(): void
     {
         Http::fake();
+        \Illuminate\Support\Facades\Notification::fake();
         $admin = User::factory()->create([
             'role' => 'admin',
             'email_verified_at' => now(),
@@ -367,10 +368,12 @@ class StudentDeviceApprovalTest extends TestCase
         ]);
 
         $this->post(route('login.post'), ['email' => $admin->email, 'password' => 'password'])
-            ->assertRedirect('/dashboard');
+            ->assertRedirect(route('admin.mfa.bootstrap'));
 
-        $this->assertAuthenticatedAs($admin);
+        $this->assertGuest();
+        $this->assertSame($admin->id, session('pending_admin_mfa_user_id'));
         Http::assertNothingSent();
+        \Illuminate\Support\Facades\Notification::assertSentOnDemand(\App\Notifications\AdminMfaBootstrapCodeNotification::class);
     }
 
 }
