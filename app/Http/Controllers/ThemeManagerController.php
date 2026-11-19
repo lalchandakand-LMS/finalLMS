@@ -411,12 +411,12 @@ class ThemeManagerController extends Controller
                 foreach ($paths as [$diskName, $relativePath]) {
                     $disk = Storage::disk($diskName);
                     if ($disk->exists($relativePath) && ! $disk->delete($relativePath)) {
-                        throw new \\RuntimeException(__('Theme file cleanup failed; the theme record was retained for retry.'));
+                        throw new \RuntimeException(__('Theme file cleanup failed; the theme record was retained for retry.'));
                     }
                 }
                 $localDisk = Storage::disk('local');
                 if ($localDisk->exists($packagePath) && ! $localDisk->delete($packagePath)) {
-                    throw new \\RuntimeException(__('Theme package cleanup failed; the theme record was retained for retry.'));
+                    throw new \RuntimeException(__('Theme package cleanup failed; the theme record was retained for retry.'));
                 }
 
                 DB::table('themes')->where('id', $record->id)->delete();
