@@ -393,7 +393,7 @@ class ThemeManagerTest extends TestCase
 
         $realPublicDisk = Storage::disk('public');
         $realLocalDisk = Storage::disk('local');
-        $publicDisk = \\Mockery::mock($realPublicDisk)->makePartial();
+        $publicDisk = \Mockery::mock($realPublicDisk)->makePartial();
         $publicDisk->shouldReceive('delete')->once()->with($cssPath)->andReturn(false);
         Storage::shouldReceive('disk')->with('public')->andReturn($publicDisk);
         Storage::shouldReceive('disk')->with('local')->andReturn($realLocalDisk);
