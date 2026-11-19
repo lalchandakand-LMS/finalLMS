@@ -247,7 +247,7 @@
         <div class="grid grid-2">
             <label>{{ __('Display frequency') }}
                 <select name="frequency">
-                    @foreach(['every_page' => 'Every page view', 'once_per_session' => 'Once per browser session', 'once_per_day' => 'Once per day', 'once_per_browser' => 'Once per browser (until cleared)'] as $value => $label)
+                    @foreach(['every_page' => 'Every page view', 'every_visit' => 'Every visit', 'once_per_session' => 'Once per browser session', 'once_per_day' => 'Once per calendar day (campaign timezone)', 'once_per_browser' => 'Once per browser (until cleared)'] as $value => $label)
                         <option value="{{ $value }}" @selected(old('frequency', $popup->frequency) === $value)>{{ __($label) }}</option>
                     @endforeach
                 </select>
