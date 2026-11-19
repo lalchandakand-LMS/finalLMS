@@ -89,6 +89,7 @@ class AllRoleDeviceSecurityTest extends TestCase
 
         $this->post(route('admin.mfa.bootstrap.verify'), ['code' => $bootstrapCode])
             ->assertRedirect(route('admin.mfa.setup'));
+        $this->assertSame(hash('sha256', strtolower($admin->email)), session('admin_mfa_bootstrap_email_hash'));
 
         $secret = session('admin_mfa_setup_secret');
         $this->assertIsString($secret);
