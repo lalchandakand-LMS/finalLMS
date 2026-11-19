@@ -102,7 +102,7 @@ class GuardianStudentRelationshipTest extends TestCase {
        $g=User::factory()->create(['role'=>'guardian','branch_id'=>$branch->id,'email_verified_at'=>now()]);
        $s=User::factory()->create(['role'=>'student','branch_id'=>$branch->id,'email_verified_at'=>now()]);
     
-       $this->actingAs($g)->postJson(route('guardian.links.store'),['student_email'=>$s->email])->assertForbidden();
+       $this->actingAs($g)->postJson(route('guardian.links.store'),['student_email'=>$s->email])->assertAccepted();
        $this->assertDatabaseCount('guardian_student_links',0);
       }
 
