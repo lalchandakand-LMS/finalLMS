@@ -6,8 +6,10 @@ use App\Models\DeviceSession;
 use App\Models\StudentDevice;
 use App\Models\User;
 use App\Services\Security\AdminTotpService;
+use App\Notifications\AdminMfaBootstrapCodeNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class AllRoleDeviceSecurityTest extends TestCase
@@ -63,7 +65,7 @@ class AllRoleDeviceSecurityTest extends TestCase
 
     public function test_admin_password_alone_does_not_authenticate_and_first_login_requires_totp_enrollment(): void
     {
-        Http::fake();
+        Notification::fake();
         $admin = User::factory()->create([
             'role' => 'admin',
             'email_verified_at' => now(),
@@ -71,10 +73,21 @@ class AllRoleDeviceSecurityTest extends TestCase
         ]);
 
         $this->post(route('login.post'), ['email' => $admin->email, 'password' => 'password'])
-            ->assertRedirect(route('admin.mfa.setup'));
+            ->assertRedirect(route('admin.mfa.bootstrap'));
 
         $this->assertGuest();
         $this->assertSame($admin->id, session('pending_admin_mfa_user_id'));
+        $this->assertNotNull(session('admin_mfa_bootstrap_code_hash'));
+        $bootstrapCode = null;
+        Notification::assertSentOnDemand(AdminMfaBootstrapCodeNotification::class, function ($notification) use (&$bootstrapCode): bool {
+            $bootstrapCode = $notification->code;
+            return true;
+        });
+        $this->assertIsString($bootstrapCode);
+
+        $this->post(route('admin.mfa.bootstrap.verify'), ['code' => $bootstrapCode])
+            ->assertRedirect(route('admin.mfa.setup'));
+
         $secret = session('admin_mfa_setup_secret');
         $this->assertIsString($secret);
 
@@ -106,7 +119,6 @@ class AllRoleDeviceSecurityTest extends TestCase
             'student_device_id' => null,
             'revoked_at' => null,
         ]);
-        Http::assertNothingSent();
     }
 
     public function test_existing_admin_login_requires_totp_and_rejects_replayed_codes(): void
