@@ -148,4 +148,91 @@ class LiveClassAccessTest extends TestCase
 
         return [$teacher, $batch, $course];
     }
+
+    public function test_guardian_sees_only_currently_linked_students_sessions_and_never_the_meeting_url(): void
+    {
+        [$teacher, $batch, $course] = $this->makeBatch();
+        $guardian = User::factory()->create(['role' => 'guardian', 'branch_id' => $batch->branch_id]);
+        $linkedStudent = User::factory()->create(['role' => 'student', 'branch_id' => $batch->branch_id]);
+        $unlinkedStudent = User::factory()->create(['role' => 'student', 'branch_id' => $batch->branch_id]);
+
+        GuardianStudentLink::create([
+            'guardian_id' => $guardian->id,
+            'student_id' => $linkedStudent->id,
+            'relationship' => 'Parent',
+            'status' => 'active',
+            'requested_by' => $guardian->id,
+            'reviewed_by' => $linkedStudent->id,
+            'requested_at' => now()->subMinute(),
+            'reviewed_at' => now(),
+        ]);
+
+        Enrollment::create(['user_id' => $linkedStudent->id, 'course_id' => $course->id, 'batch_id' => $batch->id, 'status' => 'active']);
+        Enrollment::create(['user_id' => $unlinkedStudent->id, 'course_id' => $course->id, 'batch_id' => $batch->id, 'status' => 'active']);
+
+        LiveClass::create([
+            'batch_id' => $batch->id,
+            'title' => 'Linked student live class',
+            'meeting_url' => 'https://meet.example.com/guardian-private-meeting',
+            'starts_at' => now()->addMinutes(10),
+            'ends_at' => now()->addHour(),
+            'status' => 'scheduled',
+            'created_by' => $teacher->id,
+        ]);
+
+        $this->actingAs($guardian)->get(route('live-classes.index'))
+            ->assertOk()
+            ->assertSee('Linked student live class')
+            ->assertDontSee('https://meet.example.com/guardian-private-meeting');
+    }
+
+    public function test_guardian_can_watch_only_published_recordings_for_currently_linked_students(): void
+    {
+        [$teacher, $batch, $course] = $this->makeBatch();
+        $guardian = User::factory()->create(['role' => 'guardian', 'branch_id' => $batch->branch_id]);
+        $linkedStudent = User::factory()->create(['role' => 'student', 'branch_id' => $batch->branch_id]);
+        $unlinkedStudent = User::factory()->create(['role' => 'student', 'branch_id' => $batch->branch_id]);
+
+        GuardianStudentLink::create([
+            'guardian_id' => $guardian->id,
+            'student_id' => $linkedStudent->id,
+            'relationship' => 'Parent',
+            'status' => 'active',
+            'requested_by' => $guardian->id,
+            'reviewed_by' => $linkedStudent->id,
+            'requested_at' => now()->subMinute(),
+            'reviewed_at' => now(),
+        ]);
+
+        Enrollment::create(['user_id' => $linkedStudent->id, 'course_id' => $course->id, 'batch_id' => $batch->id, 'status' => 'completed', 'completed_at' => now()->subDay()]);
+        Enrollment::create(['user_id' => $unlinkedStudent->id, 'course_id' => $course->id, 'batch_id' => $batch->id, 'status' => 'completed', 'completed_at' => now()->subDay()]);
+
+        LiveClass::create([
+            'batch_id' => $batch->id,
+            'title' => 'Linked student published recording',
+            'meeting_url' => 'https://meet.example.com/guardian-recording-meeting',
+            'recording_url' => 'https://youtu.be/abcdefghijk',
+            'recording_published_at' => now()->subMinute(),
+            'starts_at' => now()->subDays(2),
+            'ends_at' => now()->subDays(2)->addHour(),
+            'status' => 'completed',
+            'created_by' => $teacher->id,
+        ]);
+
+        $this->actingAs($guardian)->get(route('live-classes.index'))
+            ->assertOk()
+            ->assertSee('Linked student published recording')
+            ->assertSee('https://www.youtube-nocookie.com/embed/abcdefghijk', false)
+            ->assertDontSee('https://meet.example.com/guardian-recording-meeting');
+    }
+
+    public function test_branch_managers_and_accountants_cannot_view_global_live_class_schedule(): void
+    {
+        $branch = Branch::create(['name' => 'Restricted Staff Branch', 'slug' => 'restricted-staff-branch']);
+        foreach (['branch_manager', 'accountant'] as $role) {
+            $user = User::factory()->create(['role' => $role, 'branch_id' => $branch->id]);
+            $this->actingAs($user)->get(route('live-classes.index'))->assertForbidden();
+        }
+    }
+
 }
