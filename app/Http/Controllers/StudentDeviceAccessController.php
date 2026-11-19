@@ -312,6 +312,7 @@ class StudentDeviceAccessController extends Controller
 
             $bootstrapCode = (string) random_int(100000, 999999);
             $request->session()->put('admin_mfa_bootstrap_code_hash', Hash::make($bootstrapCode));
+            $request->session()->put('admin_mfa_bootstrap_email_hash', hash('sha256', strtolower($user->email)));
             $request->session()->put('admin_mfa_bootstrap_expires_at', now()->addMinutes(10)->timestamp);
 
             try {
