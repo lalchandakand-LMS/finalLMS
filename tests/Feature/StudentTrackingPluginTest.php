@@ -848,4 +848,38 @@ class StudentTrackingPluginTest extends TestCase
         $this->assertCount(1, $students);
         $this->assertSame($student->id, $students->first()->id);
     }
+
+    public function test_migration_refuses_to_drop_existing_risk_action_audit_records(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $actor = User::factory()->create(['role' => 'admin']);
+
+        $id = DB::table('student_tracking_risk_actions')->insertGetId([
+            'student_id' => $student->id,
+            'actor_id' => $actor->id,
+            'risk_code' => 'inactive_learning',
+            'action' => 'dismiss',
+            'note' => 'Follow-up completed.',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $migration = require base_path('plugins/aec/student-tracking/1.0.0/migrations/2026_11_17_180000_create_student_tracking_risk_actions.php');
+
+        try {
+            $migration->down();
+            $this->fail('The migration must refuse to remove existing student tracking audit records.');
+        } catch (\\RuntimeException $exception) {
+            $this->assertStringContainsString('risk-action audit records exist', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('student_tracking_risk_actions', [
+            'id' => $id,
+            'student_id' => $student->id,
+            'actor_id' => $actor->id,
+            'action' => 'dismiss',
+        ]);
+        $this->assertTrue(Schema::hasTable('student_tracking_risk_actions'));
+    }
+
 }
