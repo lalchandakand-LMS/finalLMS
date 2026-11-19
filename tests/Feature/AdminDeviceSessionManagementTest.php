@@ -117,7 +117,9 @@ class AdminDeviceSessionManagementTest extends TestCase
         ]);
 
         $this->actingAs($admin);
-        $session = DeviceSession::register($this->app['request'], $admin);
+        $request = \Illuminate\Http\Request::create('/admin/device-sessions', 'GET');
+        $request->setLaravelSession($this->app['session.store']);
+        $session = DeviceSession::register($request, $admin);
 
         $this->patch(route('admin.security.sessions.revoke', $session))
             ->assertStatus(422);
