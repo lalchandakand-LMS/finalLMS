@@ -294,8 +294,11 @@ class AdminMfaController extends Controller
         }
 
         $admin = User::query()->whereKey((int) $id)->where('role', 'admin')->first();
-        if (! $admin) {
+        $passwordHash = $request->session()->get('pending_admin_mfa_password_hash');
+        if (! $admin || ! is_string($passwordHash) || ! hash_equals($admin->password, $passwordHash)) {
             $this->forgetPending($request);
+
+            return null;
         }
 
         return $admin;
@@ -317,6 +320,7 @@ class AdminMfaController extends Controller
         $request->session()->forget([
             'pending_admin_mfa_user_id',
             'pending_admin_mfa_started_at',
+            'pending_admin_mfa_password_hash',
             'admin_mfa_setup_secret',
             'admin_mfa_bootstrap_code_hash',
             'admin_mfa_bootstrap_expires_at',
