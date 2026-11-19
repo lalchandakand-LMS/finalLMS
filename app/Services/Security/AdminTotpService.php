@@ -18,7 +18,7 @@ final class AdminTotpService
     public function provisioningUri(string $secret, string $email): string
     {
         $issuer = (string) config('app.name', 'Aloms LMS');
-        $label = rawurlencode($issuer.':'.$email);
+        $label = rawurlencode($issuer).':'.rawurlencode($email);
 
         return 'otpauth://totp/'.$label.'?'.http_build_query([
             'secret' => $secret,
