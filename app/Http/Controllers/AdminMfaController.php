@@ -10,11 +10,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\Response;
 
 class AdminMfaController extends Controller
 {
-    public function setup(Request $request, AdminTotpService $totp): View|RedirectResponse
+    public function setup(Request $request, AdminTotpService $totp): Response
     {
         $admin = $this->pendingAdmin($request);
         if (! $admin) {
@@ -107,7 +107,7 @@ class AdminMfaController extends Controller
         return redirect()->intended('/dashboard')->with('success', 'Administrator MFA is enabled. Save your recovery codes in a secure place.');
     }
 
-    public function challenge(Request $request): View|RedirectResponse
+    public function challenge(Request $request): Response
     {
         $admin = $this->pendingAdmin($request);
         if (! $admin) {
