@@ -271,6 +271,49 @@ class ThemeManagerTest extends TestCase
         @unlink($zipPath);
     }
 
+    public function test_theme_installation_fails_closed_when_lifecycle_lock_is_missing(): void
+    {
+        if (! class_exists(ZipArchive::class)) {
+            $this->markTestSkipped('PHP ZIP extension is unavailable.');
+        }
+
+        Storage::fake('public');
+        Storage::fake('local');
+        $keyPair = openssl_pkey_new(['private_key_type' => OPENSSL_KEYTYPE_RSA, 'private_key_bits' => 2048]);
+        $details = openssl_pkey_get_details($keyPair);
+        config(['themes.public_key' => $details['key']]);
+
+        $manifest = json_encode([
+            'product_id' => 'aloms-lms-theme',
+            'slug' => 'lock-required',
+            'version' => '1.0.0',
+            'name' => 'Lock Required',
+            'min_lms_version' => '1.0.0',
+            'assets' => ['assets/theme.css' => hash('sha256', 'body { color: #123456; }')],
+        ], JSON_UNESCAPED_SLASHES);
+        openssl_sign($manifest, $signature, $keyPair, OPENSSL_ALGO_SHA256);
+        $zipPath = tempnam(sys_get_temp_dir(), 'aec-theme-lock-');
+        $zip = new ZipArchive();
+        $zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+        $zip->addFromString('theme.json', $manifest);
+        $zip->addFromString('theme.sig', base64_encode($signature));
+        $zip->addFromString('assets/', '');
+        $zip->addFromString('assets/theme.css', 'body { color: #123456; }');
+        $zip->close();
+
+        DB::table('theme_manager_locks')->where('id', 1)->delete();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $upload = new UploadedFile($zipPath, 'lock-required.zip', 'application/zip', null, true);
+        $this->actingAs($admin)->post(route('admin.themes.install'), ['package' => $upload])
+            ->assertRedirect()
+            ->assertSessionHasErrors('package');
+
+        $this->assertDatabaseCount('themes', 0);
+        Storage::disk('public')->assertMissing('themes/lock-required/1.0.0/assets/theme.css');
+        $this->assertSame([], Storage::disk('local')->allFiles('themes/packages'));
+        @unlink($zipPath);
+    }
+
     public function test_active_theme_cannot_be_deleted(): void
     {
         Storage::fake('public');
