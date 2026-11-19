@@ -92,7 +92,7 @@ class AllRoleDeviceSecurityTest extends TestCase
         $this->assertNotNull($fresh->admin_totp_enabled_at);
         $this->assertNotEmpty($fresh->admin_totp_secret);
         $this->assertCount(8, $fresh->admin_totp_recovery_codes);
-        $storedSecret = \\Illuminate\\Support\\Facades\\DB::table('users')->where('id', $admin->id)->value('admin_totp_secret');
+        $storedSecret = \Illuminate\Support\Facades\DB::table('users')->where('id', $admin->id)->value('admin_totp_secret');
         $this->assertNotSame($secret, $storedSecret, 'TOTP secrets must be encrypted at rest.');
         $this->assertArrayNotHasKey('admin_totp_secret', $fresh->toArray());
         $this->assertArrayNotHasKey('admin_totp_recovery_codes', $fresh->toArray());
