@@ -20,6 +20,16 @@ class AdminTotpServiceTest extends TestCase
         $this->assertNull($service->verify($secret, $code, $timestamp + 120));
     }
 
+
+    public function test_totp_matches_the_rfc_6238_sha1_test_vector(): void
+    {
+        $service = app(AdminTotpService::class);
+        $secret = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
+
+        $this->assertSame('287082', $service->codeForTesting($secret, 59));
+        $this->assertSame(1, $service->verify($secret, '287082', 59));
+    }
+
     public function test_recovery_code_hash_is_case_and_separator_insensitive(): void
     {
         $service = app(AdminTotpService::class);
