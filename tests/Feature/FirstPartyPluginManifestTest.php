@@ -35,4 +35,33 @@ class FirstPartyPluginManifestTest extends TestCase
             }
         }
     }
+
+    public function test_executable_first_party_packages_have_valid_manifests_and_resolvable_dependencies(): void
+    {
+        $files = glob(base_path('plugins/aec/*/*/plugin.json')) ?: [];
+        $this->assertNotEmpty($files, 'Expected executable first-party packages under plugins/aec/.');
+
+        $validator = app(\App\Services\Plugins\PluginManifestValidator::class);
+        $manifests = [];
+
+        foreach ($files as $file) {
+            $manifest = json_decode((string) file_get_contents($file), true, 64, JSON_THROW_ON_ERROR);
+            $this->assertIsArray($manifest);
+            $this->assertSame([], $validator->errors($manifest), basename(dirname(dirname($file)).'/'.basename(dirname($file))).' manifest must satisfy the installable plugin contract.');
+
+            $versionDirectory = basename(dirname($file));
+            $pluginSlug = basename(dirname(dirname($file)));
+            $vendor = basename(dirname(dirname(dirname($file))));
+            $this->assertSame($manifest['version'], $versionDirectory);
+            $this->assertSame($vendor.'.'.$pluginSlug, $manifest['key'] ?? null);
+            $manifests[$manifest['key']] = $manifest;
+        }
+
+        foreach ($manifests as $key => $manifest) {
+            foreach ($manifest['dependencies'] as $dependency) {
+                $this->assertArrayHasKey($dependency, $manifests, $key.' has an unresolved first-party plugin dependency: '.$dependency);
+            }
+        }
+    }
+
 }

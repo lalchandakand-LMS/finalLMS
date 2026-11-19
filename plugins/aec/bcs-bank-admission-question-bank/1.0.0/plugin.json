@@ -3,7 +3,7 @@
   "key": "aec.bcs-bank-admission-question-bank",
   "name": "BCS, Bank Job & Admission Question Bank",
   "version": "1.0.0",
-  "type": "education",
+  "type": "module",
   "entrypoint": "src/Plugin.php",
   "requires": {
     "php": "^8.3",
