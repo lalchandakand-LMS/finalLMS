@@ -273,6 +273,19 @@ class StudentDeviceAccessController extends Controller
             $request->session()->regenerateToken();
         }
 
+        // Never carry a pending MFA or device-verification challenge from a
+        // previous identity into a new successful password-authentication flow.
+        $request->session()->forget([
+            'pending_admin_mfa_user_id',
+            'pending_admin_mfa_started_at',
+            'admin_mfa_setup_secret',
+            'admin_mfa_bootstrap_code_hash',
+            'admin_mfa_bootstrap_expires_at',
+            'admin_mfa_bootstrap_email_hash',
+            'admin_mfa_bootstrap_verified_at',
+            'student_device_request_id',
+        ]);
+
         if ($user->isAdmin()) {
 
             $hasEnabledAt = $user->admin_totp_enabled_at !== null;
