@@ -249,6 +249,20 @@ class ThemeManagerController extends Controller
 
                 $base = 'themes/'.$slug.'/'.$version;
                 $publicDisk = Storage::disk('public');
+                $previewPath = is_string($previewBytes) ? $base.'/preview.png' : null;
+
+                // A failed prior write/cleanup may leave files without a DB row.
+                // Never overwrite such paths: the earlier request may still be
+                // cleaning them after its transaction released the lifecycle lock.
+                foreach (array_keys($assetContents) as $assetName) {
+                    if ($publicDisk->exists($base.'/'.$assetName)) {
+                        throw new \RuntimeException(__('Theme storage paths already exist without a registry entry; installation was blocked to protect existing files.'));
+                    }
+                }
+                if ($previewPath !== null && $publicDisk->exists($previewPath)) {
+                    throw new \RuntimeException(__('Theme storage paths already exist without a registry entry; installation was blocked to protect existing files.'));
+                }
+
                 foreach ($assetContents as $assetName => $contents) {
                     $path = $base.'/'.$assetName;
                     $writtenPaths[] = $path;
@@ -257,9 +271,7 @@ class ThemeManagerController extends Controller
                     }
                 }
 
-                $previewPath = null;
-                if (is_string($previewBytes)) {
-                    $previewPath = $base.'/preview.png';
+                if ($previewPath !== null) {
                     $writtenPaths[] = $previewPath;
                     if (! $publicDisk->put($previewPath, $previewBytes)) {
                         throw new \RuntimeException(__('The theme preview could not be written to storage.'));
