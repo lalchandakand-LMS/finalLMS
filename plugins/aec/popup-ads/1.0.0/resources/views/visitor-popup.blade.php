@@ -208,7 +208,7 @@
         const id = overlay.dataset.popupId;
         const frequency = overlay.dataset.frequency || 'once_per_session';
         const campaignTimezone = overlay.dataset.timezone || 'UTC';
-        const campaignDayKey = (() => {
+        const getCampaignDayKey = () => {
             try {
                 const parts = new Intl.DateTimeFormat('en-US', {
                     timeZone: campaignTimezone,
@@ -221,7 +221,7 @@
             } catch (e) {
                 return new Date().toISOString().slice(0, 10);
             }
-        })();
+        };
         const delayMs = Math.max(0, Math.min(60, Number(overlay.dataset.delay || 0))) * 1000;
         const scrollPct = Math.max(0, Math.min(100, Number(overlay.dataset.scrollPercent || 0)));
         const cooldownHours = Math.max(0, Number(overlay.dataset.cooldownHours || 0));
@@ -255,18 +255,17 @@
             try {
                 if (cooldownHours > 0 && Number(localStorage.getItem(cooldownKey) || 0) > now) shouldShow = false;
                 if (frequency === 'once_per_session' && sessionStorage.getItem(key)) shouldShow = false;
-                if (frequency === 'once_per_day' && localStorage.getItem(key) === campaignDayKey) shouldShow = false;
                 if (frequency === 'once_per_browser' && localStorage.getItem(key)) shouldShow = false;
             } catch (e) {}
             if (!shouldShow) return;
         }
 
         let shown = false;
-        const markShown = () => {
+        const markShown = (campaignDayKey = null) => {
             if (isPreview) return;
             try {
                 if (frequency === 'once_per_session') sessionStorage.setItem(key, '1');
-                if (frequency === 'once_per_day') localStorage.setItem(key, campaignDayKey);
+                if (frequency === 'once_per_day' && campaignDayKey) localStorage.setItem(key, campaignDayKey);
                 if (frequency === 'once_per_browser') localStorage.setItem(key, '1');
             } catch (e) {}
         };
@@ -283,11 +282,18 @@
 
         const open = () => {
             if (shown) return;
+            let campaignDayKey = null;
+            if (!isPreview && frequency === 'once_per_day') {
+                campaignDayKey = getCampaignDayKey();
+                try {
+                    if (localStorage.getItem(key) === campaignDayKey) return;
+                } catch (e) {}
+            }
             shown = true;
             overlay.hidden = false;
             overlay.style.display = isModal ? 'flex' : (overlay.dataset.layout === 'corner_card' ? 'block' : 'flex');
             if (isModal) document.body.style.overflow = 'hidden';
-            markShown();
+            markShown(campaignDayKey);
             sendEvent('impression');
         };
 
