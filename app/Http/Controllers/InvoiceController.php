@@ -5,13 +5,18 @@ namespace App\Http\Controllers;
 use App\Models\Course;
 use App\Models\Invoice;
 use App\Models\InvoicePayment;
+use App\Models\Payment;
+use App\Models\PaymentGatewayEvent;
+use App\Models\PaymentAuditEvent;
 use App\Models\User;
+use App\Services\Payments\BkashCheckoutService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Throwable;
 
 class InvoiceController extends Controller
 {
@@ -138,7 +143,7 @@ class InvoiceController extends Controller
         return back()->with('success', 'Invoice created successfully.');
     }
 
-    public function receivePayment(Invoice $invoice, Request $request): RedirectResponse
+    public function receivePayment(Invoice $invoice, Request $request, BkashCheckoutService $bkash): RedirectResponse
     {
         $isAccountant = $request->user()->isAccountant();
         $branchId = $request->user()->branch_id;
@@ -152,10 +157,52 @@ class InvoiceController extends Controller
         $validated = $request->validate([
             'amount' => ['required', 'numeric', 'gt:0', 'max:99999999'],
             'method' => ['required', 'string', 'max:40'],
+            'gateway_payment_id' => ['nullable', 'string', 'max:120', 'required_if:method,bkash', 'unique:invoice_payments,gateway_payment_id'],
+            'gateway_transaction_id' => ['nullable', 'string', 'max:120', 'required_if:method,bkash', 'unique:invoice_payments,gateway_transaction_id'],
             'reference' => ['nullable', 'string', 'max:120'],
             'note' => ['nullable', 'string', 'max:1000'],
             'paid_at' => ['required', 'date'],
         ]);
+
+        if ($validated['method'] === 'bkash') {
+            $alreadyRecorded = Payment::query()
+                ->where('gateway_provider', 'bkash')
+                ->where(function ($query) use ($validated): void {
+                    $query->where('gateway_payment_id', $validated['gateway_payment_id'])
+                        ->orWhere('gateway_transaction_id', $validated['gateway_transaction_id']);
+                })
+                ->exists();
+
+            if ($alreadyRecorded) {
+                return back()->withErrors([
+                    'gateway_payment_id' => 'This bKash transaction is already recorded against another LMS payment.',
+                ])->withInput();
+            }
+
+            try {
+                if (! config('services.bkash.enabled') || ! config('services.bkash.verify_ssl', true)) {
+                    throw new \RuntimeException('bKash server-side verification is not enabled with verified TLS.');
+                }
+
+                $verified = $bkash->queryPayment($bkash->grantToken(), $validated['gateway_payment_id']);
+                $matches = strtolower((string) ($verified['transactionStatus'] ?? '')) === 'completed'
+                    && ($verified['paymentID'] ?? null) === $validated['gateway_payment_id']
+                    && ($verified['trxID'] ?? null) === $validated['gateway_transaction_id']
+                    && round((float) ($verified['amount'] ?? -1), 2) === round((float) $validated['amount'], 2)
+                    && strtoupper((string) ($verified['currency'] ?? '')) === 'BDT'
+                    && ($verified['merchantInvoiceNumber'] ?? null) === $invoice->invoice_number;
+
+                if (! $matches) {
+                    return back()->withErrors([
+                        'gateway_payment_id' => 'bKash payment verification did not match this invoice, amount, currency or transaction ID.',
+                    ])->withInput();
+                }
+            } catch (Throwable) {
+                return back()->withErrors([
+                    'gateway_payment_id' => 'bKash could not independently verify this transaction. No invoice payment was recorded.',
+                ])->withInput();
+            }
+        }
 
         $result = DB::transaction(function () use ($invoice, $validated, $request, $isAccountant, $branchId): string {
             $lockedInvoice = Invoice::query()->lockForUpdate()->findOrFail($invoice->id);
@@ -175,14 +222,75 @@ class InvoiceController extends Controller
                 return 'excess';
             }
 
-            InvoicePayment::create([
+            $gatewayEvent = null;
+            if ($validated['method'] === 'bkash') {
+                $eventKey = hash('sha256', 'bkash:payment:'.$validated['gateway_payment_id'].':'.$validated['gateway_transaction_id']);
+                $gatewayEvent = PaymentGatewayEvent::firstOrCreate(
+                    ['event_key' => $eventKey],
+                    [
+                        'provider' => 'bkash',
+                        'gateway_payment_id' => $validated['gateway_payment_id'],
+                        'gateway_transaction_id' => $validated['gateway_transaction_id'],
+                        'event_type' => 'invoice.payment.verified',
+                        'verification_status' => 'verified',
+                        'processing_status' => 'processing',
+                        'payload_hash' => hash('sha256', json_encode([
+                            'paymentID' => $validated['gateway_payment_id'],
+                            'trxID' => $validated['gateway_transaction_id'],
+                            'amount' => $validated['amount'],
+                            'invoice' => $lockedInvoice->invoice_number,
+                        ], JSON_THROW_ON_ERROR)),
+                        'verified_payload' => [
+                            'paymentID' => $validated['gateway_payment_id'],
+                            'trxID' => $validated['gateway_transaction_id'],
+                            'amount' => $validated['amount'],
+                            'merchantInvoiceNumber' => $lockedInvoice->invoice_number,
+                        ],
+                        'received_at' => now(),
+                        'verified_at' => now(),
+                    ]
+                );
+
+                if (! $gatewayEvent->wasRecentlyCreated || $gatewayEvent->payment_id) {
+                    return 'duplicate_gateway';
+                }
+            }
+
+            $receipt = InvoicePayment::create([
                 'invoice_id' => $lockedInvoice->id,
                 'received_by' => $request->user()->id,
                 'amount' => $amount,
                 'method' => $validated['method'],
+                'gateway_provider' => $validated['method'] === 'bkash' ? 'bkash' : null,
+                'gateway_payment_id' => $validated['gateway_payment_id'] ?? null,
+                'gateway_transaction_id' => $validated['gateway_transaction_id'] ?? null,
                 'reference' => $validated['reference'] ?? null,
                 'note' => $validated['note'] ?? null,
+
                 'paid_at' => $validated['paid_at'],
+            ]);
+
+            if ($gatewayEvent) {
+                $gatewayEvent->update([
+                    'invoice_payment_id' => $receipt->id,
+                    'processing_status' => 'processed',
+                    'processed_at' => now(),
+                ]);
+            }
+
+            PaymentAuditEvent::create([
+                'invoice_payment_id' => $receipt->id,
+                'actor_id' => $request->user()->id,
+                'provider' => $receipt->gateway_provider,
+                'event' => 'invoice_payment_recorded',
+                'source' => 'admin_invoice',
+                'after_state' => [
+                    'amount' => $receipt->amount,
+                    'method' => $receipt->method,
+                    'gateway_payment_id' => $receipt->gateway_payment_id,
+                    'gateway_transaction_id' => $receipt->gateway_transaction_id,
+                ],
+                'ip_address' => $request->ip(),
             ]);
 
             $newPaid = $paid + $amount;
@@ -191,6 +299,9 @@ class InvoiceController extends Controller
             return 'recorded';
         });
 
+        if ($result === 'duplicate_gateway') {
+            return back()->withErrors(['gateway_payment_id' => 'This bKash transaction has already been recorded in the LMS.'])->withInput();
+        }
         if ($result === 'excess') {
             return back()->withErrors(['amount' => 'Payment cannot exceed the outstanding invoice balance.']);
         }

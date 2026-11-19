@@ -9,6 +9,7 @@ use App\Models\Enrollment;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use InvalidArgumentException;
 
 final class PluginResourceAccess
@@ -57,7 +58,7 @@ final class PluginResourceAccess
             }
 
             if ($actor->isGuardian()) {
-                return $query->whereIn('id', $actor->linkedStudents()->select('users.id'));
+                return $query->whereIn('id', $this->guardianStudentQuery($actor)->select('users.id'));
             }
 
             if ($actor->isBranchManager()) {
@@ -105,7 +106,7 @@ final class PluginResourceAccess
 
             if ($actor->isGuardian()) {
                 return $query->whereHas('enrollments', fn ($enrollments) =>
-                    $enrollments->whereIn('user_id', $actor->linkedStudents()->select('users.id'))
+                    $enrollments->whereIn('user_id', $this->guardianStudentQuery($actor)->select('users.id'))
                 );
             }
 
@@ -129,7 +130,7 @@ final class PluginResourceAccess
 
             if ($actor->isGuardian()) {
                 return $query->whereHas('enrollments', fn ($enrollments) =>
-                    $enrollments->whereIn('user_id', $actor->linkedStudents()->select('users.id'))
+                    $enrollments->whereIn('user_id', $this->guardianStudentQuery($actor)->select('users.id'))
                 );
             }
 
@@ -141,7 +142,7 @@ final class PluginResourceAccess
         }
 
         if ($actor->isGuardian()) {
-            return $query->whereIn('user_id', $actor->linkedStudents()->select('users.id'));
+            return $query->whereIn('user_id', $this->guardianStudentQuery($actor)->select('users.id'));
         }
 
         if ($actor->isBranchManager()) {
@@ -186,7 +187,7 @@ final class PluginResourceAccess
         }
 
         if ($actor->isGuardian()) {
-            return $actor->linkedStudents()->whereKey($student->id)->exists();
+            return $this->guardianStudentQuery($actor)->whereKey($student->id)->exists();
         }
 
         if ($actor->isBranchManager()) {
@@ -233,7 +234,7 @@ final class PluginResourceAccess
         if ($actor->isGuardian()) {
             return Enrollment::query()
                 ->where('course_id', $course->id)
-                ->whereIn('user_id', $actor->linkedStudents()->select('users.id'))
+                ->whereIn('user_id', $this->guardianStudentQuery($actor)->select('users.id'))
                 ->exists();
         }
 
@@ -259,7 +260,7 @@ final class PluginResourceAccess
         if ($actor->isGuardian()) {
             return Enrollment::query()
                 ->where('batch_id', $batch->id)
-                ->whereIn('user_id', $actor->linkedStudents()->select('users.id'))
+                ->whereIn('user_id', $this->guardianStudentQuery($actor)->select('users.id'))
                 ->exists();
         }
 
@@ -273,7 +274,7 @@ final class PluginResourceAccess
         }
 
         if ($actor->isGuardian()) {
-            return $actor->linkedStudents()->whereKey($enrollment->user_id)->exists();
+            return $this->guardianStudentQuery($actor)->whereKey($enrollment->user_id)->exists();
         }
 
         if ($actor->isBranchManager()) {
@@ -293,6 +294,26 @@ final class PluginResourceAccess
         }
 
         return false;
+    }
+
+    /**
+     * A guardian relationship is valid only while it remains approved and both
+     * accounts still belong to the same currently active branch. Branch changes
+     * after approval must not leave stale cross-branch access behind.
+     */
+    private function guardianStudentQuery(User $guardian): BelongsToMany
+    {
+        $students = $guardian->linkedStudents()->where('users.role', 'student');
+
+        if ($guardian->branch_id === null) {
+            return $students->whereNull('users.branch_id');
+        }
+
+        if (! Branch::query()->whereKey($guardian->branch_id)->where('is_active', true)->exists()) {
+            return $students->whereRaw('1 = 0');
+        }
+
+        return $students->where('users.branch_id', $guardian->branch_id);
     }
 
     private function activeBranchId(User $actor): ?int

@@ -37,7 +37,13 @@
             <div id="menu-sort-list" style="display:grid;gap:8px;">
                 @forelse($items->whereNull('parent_id') as $item)
                     <div class="menu-sort-row card" draggable="true" data-id="{{ $item->id }}" style="padding:12px;cursor:grab;">
-                        <strong>☷ {{ $item->label }}</strong>
+                        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+                            <strong>☷ {{ $item->label }}</strong>
+                            <div class="cta-row" role="group" aria-label="{{ __('Reorder menu item') }}">
+                                <button type="button" class="btn secondary" data-menu-move="up" aria-label="{{ __('Move :label up', ['label' => $item->label]) }}">↑</button>
+                                <button type="button" class="btn secondary" data-menu-move="down" aria-label="{{ __('Move :label down', ['label' => $item->label]) }}">↓</button>
+                            </div>
+                        </div>
                         <small class="muted">{{ $item->url }} · {{ $item->is_active ? __('Visible') : __('Hidden') }}</small>
                         @foreach($items->where('parent_id', $item->id) as $child)
                             <div class="muted" style="padding-left:22px;">↳ {{ $child->label }} — {{ $child->url }}</div>
@@ -48,6 +54,7 @@
                 @endforelse
             </div>
             <div id="menu-order-inputs"></div>
+            <p id="menu-order-status" class="muted" role="status" aria-live="polite"></p>
             @if($items->whereNull('parent_id')->isNotEmpty())
                 <button class="btn primary" type="submit" style="margin-top:14px;">{{ __('Save drag order') }}</button>
             @endif
@@ -83,7 +90,26 @@
     const form = document.getElementById('menu-order-form');
     const inputs = document.getElementById('menu-order-inputs');
     if (!list || !form || !inputs) return;
+    const status = document.getElementById('menu-order-status');
     let dragged = null;
+    const announceOrder = (row, direction) => {
+        if (status) status.textContent = row.querySelector('strong')?.textContent.trim() + ' moved ' + direction + '.';
+    };
+    list.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-menu-move]');
+        if (!button) return;
+        const row = button.closest('[data-id]');
+        if (!row) return;
+        const direction = button.dataset.menuMove;
+        if (direction === 'up' && row.previousElementSibling) {
+            list.insertBefore(row, row.previousElementSibling);
+            announceOrder(row, 'up');
+        } else if (direction === 'down' && row.nextElementSibling) {
+            list.insertBefore(row.nextElementSibling, row);
+            announceOrder(row, 'down');
+        }
+        row.querySelector('[data-menu-move="' + direction + '"]')?.focus();
+    });
     list.querySelectorAll('[draggable="true"]').forEach((row) => {
         row.addEventListener('dragstart', () => { dragged = row; row.style.opacity = '0.5'; });
         row.addEventListener('dragend', () => { if (dragged) dragged.style.opacity = ''; dragged = null; });

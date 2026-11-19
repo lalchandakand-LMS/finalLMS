@@ -1465,5 +1465,17 @@
     "in_progress": "চলমান",
     "in_review": "পর্যালোচনায়",
     "approved": "অনুমোদিত",
-    "rejected": "প্রত্যাখ্যাত"
+    "rejected": "প্রত্যাখ্যাত",
+    "Revision history": "রিভিশন ইতিহাস",
+    "Restore an earlier saved page. Restoring creates a new revision and keeps the current content in history.": "আগের সংরক্ষিত পৃষ্ঠা ফিরিয়ে আনুন। ফিরিয়ে আনলে নতুন রিভিশন তৈরি হবে এবং বর্তমান কনটেন্ট ইতিহাসে থাকবে।",
+    "Version :version": "সংস্করণ :version",
+    "Untitled page": "শিরোনামহীন পৃষ্ঠা",
+    "Former administrator": "সাবেক অ্যাডমিন",
+    "Restore this page revision? The current page will be retained as a new revision.": "এই পৃষ্ঠার রিভিশনটি ফিরিয়ে আনবেন? বর্তমান পৃষ্ঠা নতুন রিভিশন হিসেবে সংরক্ষিত থাকবে।",
+    "Restore this version": "এই সংস্করণ ফিরিয়ে আনুন",
+    "No saved revisions yet. A revision is created when this page is saved.": "এখনো কোনো রিভিশন সংরক্ষিত নেই। পৃষ্ঠা সংরক্ষণ করলে রিভিশন তৈরি হবে।",
+    "The selected page revision is invalid and cannot be restored.": "নির্বাচিত পৃষ্ঠার রিভিশনটি সঠিক নয়, তাই ফিরিয়ে আনা যাবে না।",
+    "This revision references an academic level that no longer exists.": "এই রিভিশনে এমন একটি একাডেমিক লেভেল রয়েছে যা আর বিদ্যমান নেই।",
+    "This revision cannot be restored because its URL slug is now used by another page.": "এই রিভিশনটি ফিরিয়ে আনা যাবে না, কারণ এর URL slug বর্তমানে অন্য একটি পৃষ্ঠা ব্যবহার করছে।",
+    "Page revision restored. The restored state was saved as a new revision.": "পৃষ্ঠার রিভিশন ফিরিয়ে আনা হয়েছে। ফিরিয়ে আনা অবস্থাটি নতুন রিভিশন হিসেবে সংরক্ষিত হয়েছে।"
 }

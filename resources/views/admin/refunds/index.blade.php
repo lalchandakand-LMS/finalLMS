@@ -63,10 +63,18 @@
                             <span class="badge {{ $refund->status === 'approved' ? 'success' : ($refund->status === 'pending' ? 'warning' : 'info') }}">{{ __(ucfirst($refund->status)) }}</span>
                             <h3 style="margin:8px 0;">৳{{ number_format((float) $refund->amount, 2) }} — {{ $refund->invoice->user->name }}</h3>
                             <p class="muted" style="margin:4px 0;">{{ $refund->invoice->invoice_number }} · Payment #{{ $refund->invoice_payment_id }} · {{ __(ucfirst($refund->method)) }} · {{ $refund->reason }}</p>
+                            @if($refund->gateway_refund_id)<p class="muted">{{ __('Gateway refund ID') }}: {{ $refund->gateway_refund_id }} · {{ $refund->gateway_status }}</p>@endif
+                            @if($refund->failure_reason)<p class="muted">{{ __('Gateway review required') }}: {{ $refund->failure_reason }}</p>@endif
                             <p class="muted" style="margin:4px 0;">{{ __('Requested by') }} {{ $refund->requester->name }} · {{ $refund->created_at->format('d M Y H:i') }}
                                 @if($refund->approver) · {{ __('Processed by') }} {{ $refund->approver->name }} @endif
                             </p>
                         </div>
+                        @if($isAdmin && in_array($refund->status, ['gateway_unknown', 'processing'], true) && $refund->method === 'bkash' && ($refund->status !== 'processing' || $refund->created_at?->lte(now()->subMinutes(5))))
+                            <form method="POST" action="{{ route('admin.refunds.reconcile', $refund) }}">
+                                @csrf
+                                <button class="btn secondary" type="submit">{{ __('Reconcile gateway refund') }}</button>
+                            </form>
+                        @endif
                         @if($isAdmin && $refund->status === 'pending')
                             <div style="display:flex;gap:8px;align-items:center;">
                                 <form method="POST" action="{{ route('admin.refunds.approve', $refund) }}">

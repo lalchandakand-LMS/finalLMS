@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class WebsitePage extends Model
 {
@@ -26,6 +27,11 @@ class WebsitePage extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function revisions(): HasMany
+    {
+        return $this->hasMany(WebsitePageRevision::class, 'website_page_id')->orderByDesc('version');
     }
 
     public function scopePublished($query)

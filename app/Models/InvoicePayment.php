@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class InvoicePayment extends Model
 {
     protected $fillable = [
-        'invoice_id', 'received_by', 'amount', 'method', 'reference', 'note', 'paid_at',
+        'invoice_id', 'received_by', 'amount', 'method', 'gateway_provider', 'gateway_payment_id', 'gateway_transaction_id', 'reference', 'note', 'paid_at',
     ];
 
     protected $casts = [
