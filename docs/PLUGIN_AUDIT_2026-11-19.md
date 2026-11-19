@@ -82,3 +82,25 @@ Do not generate empty wrapper packages and label them complete. A module becomes
 - [ ] Perform a separate staging penetration test after the above changes. No production penetration test has been performed in this audit.
 
 **Production deployment remains blocked.** No production migration, live payment activation, plugin activation or hosting-file deployment was performed by this audit.
+
+
+## Complete declarative-module inventory
+
+The repository tree and `FirstPartyPluginManifestTest` were checked against `config/modules.php`. The following **56** directories each contain only a `plugin.json` catalogue manifest on current main; none has an executable entrypoint or independently packaged controllers, views, jobs or migrations. They are therefore module-registry entries, not installable Plugin Manager packages.
+
+| Domain | Metadata-only module keys |
+|---|---|
+| Academic, learning and portals | `academic_levels`, `assignment`, `attendance`, `batch_management`, `certificates`, `course_builder`, `course_content_studio`, `course_management`, `exam_management`, `lesson_management`, `live_classes`, `student_management`, `student_portal`, `teacher_management`, `guardian_management`, `guardian_portal`, `branch_management`, `staff_management` |
+| Website, content and growth | `ai_builder`, `ai_developer`, `analytics`, `blog_post_builder`, `carousel_builder`, `content_store`, `coupons_promotions`, `marketing`, `media_library`, `meta_ads`, `meta_pixel`, `page_builder`, `seo`, `slider`, `slider_builder`, `website_cms` |
+| Finance and operations | `expense_management`, `fee_management`, `finance`, `payments`, `refund_management`, `reporting`, `storage`, `support_center` |
+| Communications and integrations | `communications`, `email`, `email_otp`, `gmail`, `integrations`, `mobile_api`, `mobile_verification`, `notice_board`, `otp_verification`, `push_notifications`, `sms`, `sms_otp`, `student_mobile_app`, `instructor_mobile_app` |
+
+The seven executable packages reviewed separately are `aec.universal-ai-assistant`, `aec.board-question-solver`, `aec.learn-earn`, `aec.phonetics-practice`, `aec.popup-ads`, `aec.student-tracking`, and `aec.bcs-bank-admission-question-bank`. Flash Sale becomes an eighth only after PR #277 is approved and merged.
+
+## Current code-level findings from the continuation pass
+
+- The executable package entrypoints declare portal routes through `PluginContext` and require manifest-declared permissions; the route-name prefix lookup regression is covered by `PluginContextTest` and the Flash Sale feature setup.
+- The current package lifecycle is more capable than the older Manager documentation stated: signed package update, retained prior version, manual package rollback, pre-uninstall recovery snapshot and package restore are implemented and covered by `AdminPluginManagerTest`. This is not the same as an atomic LMS release updater rollback.
+- Plugin migration execution and lifecycle transitions use database row locks and persistent migration states. A failed/interrupted migration blocks activation/rollback pending recovery. Filesystem concurrency and real cPanel failure recovery still require staging stress tests.
+- No additional confirmed critical authorization or code-execution defect was found in the reviewed seven package entrypoints/controllers/migrations during this continuation pass. This is not proof that no defects exist; provider, browser, accessibility and production-like concurrency tests remain outstanding.
+- PR #277's cart checkout changes add stable-order campaign row locking/revalidation and reject duplicate pending course payments. Exact-head tests and package build passed; merge remains blocked by the outstanding write-access review state.
