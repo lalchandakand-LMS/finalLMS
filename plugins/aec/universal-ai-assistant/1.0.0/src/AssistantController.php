@@ -191,9 +191,7 @@ final class AssistantController
                 };
 
                 try {
-                    // Do not forward partial provider chunks: credentials such as Bearer tokens
-                    // can be arbitrarily long and cross chunk boundaries. Redact the complete,
-                    // size-bounded response before emitting any assistant text to the browser.
+                    $streamRedactor = new AssistantStreamRedactor();
                     $result = $provider->stream(
                         $apiKey,
                         rtrim((string) $settings['base_url'], '/'),
@@ -201,8 +199,13 @@ final class AssistantController
                         $messages,
                         (float) $settings['temperature'],
                         (int) $responseTokenLimit,
-                        static function (string $delta): void {}
+                        static function (string $delta) use ($emit, $streamRedactor): void {
+                            $safeDelta = $streamRedactor->push($delta);
+                            if ($safeDelta !== '') $emit(['type' => 'delta', 'content' => $safeDelta]);
+                        }
                     );
+                    $safeTail = $streamRedactor->finish();
+                    if ($safeTail !== '') $emit(['type' => 'delta', 'content' => $safeTail]);
 
                     $answer = self::redactSensitiveText(trim($result['content']));
                     $tokens = is_int($result['total_tokens']) && $result['total_tokens'] > 0
@@ -230,7 +233,6 @@ final class AssistantController
                         }
                     });
                     DB::table('ai_assistant_conversations')->where('id', $conversation->id)->update(['updated_at' => now()]);
-                    $emit(['type' => 'delta', 'content' => $answer]);
                     $emit(['type' => 'done', 'conversation_id' => $conversation->id]);
                 } catch (Throwable) {
                     // The provider may have accepted and billed the request before
