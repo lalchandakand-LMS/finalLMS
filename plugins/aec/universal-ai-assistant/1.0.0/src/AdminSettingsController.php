@@ -75,7 +75,16 @@ final class AdminSettingsController
         if (is_string($allowedHosts)) $allowedHosts = explode(',', $allowedHosts);
         $allowedHosts = array_map(static fn ($item) => strtolower(trim((string) $item)), is_array($allowedHosts) ? $allowedHosts : []);
         $scheme = strtolower((string) parse_url($validated['base_url'], PHP_URL_SCHEME));
-        if ($scheme !== 'https' || ! in_array($host, $allowedHosts, true)) {
+        $port = parse_url($validated['base_url'], PHP_URL_PORT);
+        $hasUserInfo = parse_url($validated['base_url'], PHP_URL_USER) !== null
+            || parse_url($validated['base_url'], PHP_URL_PASS) !== null;
+        $hasQueryOrFragment = parse_url($validated['base_url'], PHP_URL_QUERY) !== null
+            || parse_url($validated['base_url'], PHP_URL_FRAGMENT) !== null;
+        if ($scheme !== 'https'
+            || ($port !== null && $port !== 443)
+            || $hasUserInfo
+            || $hasQueryOrFragment
+            || ! in_array($host, $allowedHosts, true)) {
             return back()->withInput($request->except('api_key'))->withErrors([
                 'base_url' => __('Use HTTPS and a provider hostname explicitly allow-listed by the server.'),
             ]);
