@@ -348,4 +348,29 @@ class AllRoleDeviceSecurityTest extends TestCase
         $this->get(route('admin.mfa.bootstrap'))->assertOk();
     }
 
+
+    public function test_admin_password_change_invalidates_a_pending_totp_challenge(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'email_verified_at' => now(),
+            'admin_totp_secret' => 'JBSWY3DPEHPK3PXP',
+            'admin_totp_enabled_at' => now()->subDay(),
+            'admin_totp_recovery_codes' => [],
+        ]);
+
+        $this->post(route('login.post'), ['email' => $admin->email, 'password' => 'password'])
+            ->assertRedirect(route('admin.mfa.challenge'));
+        $this->assertGuest();
+        $this->assertSame($admin->id, session('pending_admin_mfa_user_id'));
+
+        $admin->forceFill(['password' => 'changed-password'])->save();
+
+        $this->get(route('admin.mfa.challenge'))
+            ->assertRedirect(route('login'));
+        $this->assertGuest();
+        $this->assertNull(session('pending_admin_mfa_user_id'));
+        $this->assertNull(session('pending_admin_mfa_password_hash'));
+    }
+
 }
