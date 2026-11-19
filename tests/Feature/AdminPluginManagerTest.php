@@ -318,7 +318,7 @@ PHP;
         ]);
         $this->assertFileExists($this->finalPath.'/src/Plugin.php');
 
-        app(\\App\\Services\\Plugins\\PluginPackageRecovery::class)
+        app(\App\Services\Plugins\PluginPackageRecovery::class)
             ->deleteSnapshot($snapshotDetails['recovery_path']);
     }
 
