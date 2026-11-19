@@ -267,6 +267,12 @@ class StudentDeviceAccessController extends Controller
         }
 
         if ($user->isAdmin()) {
+            if (Auth::check()) {
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+            }
+
             if ($user->admin_totp_enabled_at && ! $user->admin_totp_secret) {
                 return back()->withErrors(['email' => 'Administrator MFA needs secure account recovery. Contact the system owner.'])->onlyInput('email');
             }
