@@ -127,7 +127,7 @@ class AdminMfaController extends Controller
             return redirect()->route('login')->with('error', 'The administrator verification session expired. Please sign in again.');
         }
 
-        if (! $this->hasFreshBootstrapVerification($request)) {
+        if (! $admin->email_verified_at || ! $this->hasFreshBootstrapVerification($request, $admin)) {
             return redirect()->route('admin.mfa.bootstrap');
         }
 
