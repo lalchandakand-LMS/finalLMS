@@ -90,7 +90,7 @@ final class AdminTotpService
 
     public function recoveryCodeHash(string $code): string
     {
-        $normalized = strtoupper(preg_replace('/[^A-F0-9]/', '', $code) ?? '');
+        $normalized = preg_replace('/[^A-F0-9]/', '', strtoupper($code)) ?? '';
 
         return hash('sha256', $normalized);
     }
