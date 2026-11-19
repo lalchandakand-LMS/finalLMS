@@ -230,7 +230,6 @@
         const trackUrl = overlay.dataset.trackUrl || '';
         const key = 'aec-popup-' + id;
         const cooldownKey = 'aec-popup-cooldown-' + id;
-        const now = Date.now();
 
         const sendEvent = (eventName) => {
             if (isPreview || !trackUrl) return;
@@ -249,16 +248,6 @@
                 }).catch(() => {});
             } catch (e) {}
         };
-
-        if (!isPreview) {
-            let shouldShow = true;
-            try {
-                if (cooldownHours > 0 && Number(localStorage.getItem(cooldownKey) || 0) > now) shouldShow = false;
-                if (frequency === 'once_per_session' && sessionStorage.getItem(key)) shouldShow = false;
-                if (frequency === 'once_per_browser' && localStorage.getItem(key)) shouldShow = false;
-            } catch (e) {}
-            if (!shouldShow) return;
-        }
 
         let shown = false;
         const markShown = (campaignDayKey = null) => {
@@ -282,12 +271,16 @@
 
         const open = () => {
             if (shown) return;
-            if (!isPreview && cooldownHours > 0) {
+            let campaignDayKey = null;
+            if (!isPreview) {
                 try {
-                    if (Number(localStorage.getItem(cooldownKey) || 0) > Date.now()) return;
+                    // Recheck every visitor cap at display time so concurrent
+                    // tabs and delayed/scroll-triggered popups cannot bypass it.
+                    if (cooldownHours > 0 && Number(localStorage.getItem(cooldownKey) || 0) > Date.now()) return;
+                    if (frequency === 'once_per_session' && sessionStorage.getItem(key)) return;
+                    if (frequency === 'once_per_browser' && localStorage.getItem(key)) return;
                 } catch (e) {}
             }
-            let campaignDayKey = null;
             if (!isPreview && frequency === 'once_per_day') {
                 campaignDayKey = getCampaignDayKey();
                 try {
