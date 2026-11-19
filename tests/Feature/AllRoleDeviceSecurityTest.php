@@ -88,7 +88,10 @@ class AllRoleDeviceSecurityTest extends TestCase
             ->assertRedirect('/dashboard');
 
         $this->assertAuthenticatedAs($admin);
-        $this->get('/dashboard')->assertOk();
+        $recoveryCodes = session('admin_mfa_recovery_codes');
+        $this->assertCount(8, $recoveryCodes);
+        $dashboard = $this->get('/dashboard')->assertOk();
+        $dashboard->assertSee($recoveryCodes[0]);
         $this->assertAuthenticatedAs($admin);
         $fresh = $admin->fresh();
         $this->assertNotNull($fresh->admin_totp_enabled_at);
@@ -103,7 +106,6 @@ class AllRoleDeviceSecurityTest extends TestCase
             'student_device_id' => null,
             'revoked_at' => null,
         ]);
-        $this->assertSessionHas('admin_mfa_recovery_codes');
         Http::assertNothingSent();
     }
 
