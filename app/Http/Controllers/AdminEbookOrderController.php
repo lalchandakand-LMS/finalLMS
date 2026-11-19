@@ -313,20 +313,27 @@ class AdminEbookOrderController extends Controller
 
             return back()->with('success', __('Existing bKash refund verified and reconciled.'));
         } catch (Throwable $exception) {
-            $refund->update([
-                'status' => 'gateway_unknown',
-                'gateway_status' => 'verification_unknown',
-                'failure_reason' => mb_substr($exception->getMessage(), 0, 2000),
-            ]);
-            PaymentAuditEvent::create([
-                'ebook_refund_id' => $refund->id,
-                'actor_id' => $request->user()->id,
-                'provider' => 'bkash',
-                'event' => 'ebook_gateway_refund_reconciliation_unconfirmed',
-                'source' => 'admin_ebook_refund_reconciliation',
-                'after_state' => ['ebook_refund_id' => $refund->id, 'status' => 'gateway_unknown'],
-                'ip_address' => $request->ip(),
-            ]);
+            DB::transaction(function () use ($refund, $request, $exception): void {
+                $locked = EbookRefund::query()->lockForUpdate()->findOrFail($refund->id);
+                if (! in_array($locked->status, ['gateway_unknown', 'processing'], true)) {
+                    return;
+                }
+
+                $locked->update([
+                    'status' => 'gateway_unknown',
+                    'gateway_status' => 'verification_unknown',
+                    'failure_reason' => mb_substr($exception->getMessage(), 0, 2000),
+                ]);
+                PaymentAuditEvent::create([
+                    'ebook_refund_id' => $locked->id,
+                    'actor_id' => $request->user()->id,
+                    'provider' => 'bkash',
+                    'event' => 'ebook_gateway_refund_reconciliation_unconfirmed',
+                    'source' => 'admin_ebook_refund_reconciliation',
+                    'after_state' => ['ebook_refund_id' => $locked->id, 'status' => 'gateway_unknown'],
+                    'ip_address' => $request->ip(),
+                ]);
+            });
 
             return back()->with('error', __('bKash has not confirmed the refund. The order remains reserved for reconciliation.'));
         }

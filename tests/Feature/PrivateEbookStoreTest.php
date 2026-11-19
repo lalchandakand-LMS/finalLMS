@@ -9,6 +9,7 @@ use App\Models\Payment;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\Commerce\EbookOrderFulfillmentService;
+use App\Services\Payments\BkashRefundService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -693,5 +694,67 @@ class PrivateEbookStoreTest extends TestCase
             ->assertHeader('Cache-Control', 'no-store, private')
             ->assertHeader('X-Content-Type-Options', 'nosniff');
     }
+
+
+    public function test_stale_ebook_reconciliation_failure_cannot_overwrite_a_concurrently_completed_refund(): void
+    {
+        Storage::fake('local');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $product = $this->ebook($admin);
+        [$order] = $this->completedEbookOrder($student, $product);
+        Payment::create([
+            'user_id' => $student->id,
+            'order_id' => $order->id,
+            'gateway_provider' => 'bkash',
+            'gateway_payment_id' => 'BKASH-EBOOK-RACE-PAY',
+            'gateway_transaction_id' => 'BKASH-EBOOK-RACE-TRX',
+            'transaction_reference' => 'BKASH-EBOOK-RACE-TRX',
+            'method' => 'bkash',
+            'amount' => 350,
+            'currency' => 'BDT',
+            'status' => 'approved',
+        ]);
+        $refund = EbookRefund::create([
+            'order_id' => $order->id,
+            'processed_by' => $admin->id,
+            'amount' => 350,
+            'refund_reference' => 'BKASH-EBOOK-RACE-REFUND-REF',
+            'reason' => 'Concurrent reconciliation test',
+            'status' => 'gateway_unknown',
+            'processed_at' => now(),
+        ]);
+
+        $gateway = \Mockery::mock(BkashRefundService::class);
+        $gateway->shouldReceive('verifyExisting')->once()->andReturnUsing(function () use ($refund, $order): array {
+            $refund->update([
+                'status' => 'refunded',
+                'gateway_refund_id' => 'BKASH-EBOOK-RACE-REFUND-VERIFIED',
+                'gateway_status' => 'Completed',
+                'processed_at' => now(),
+            ]);
+            $order->update(['status' => 'refunded']);
+
+            throw new \RuntimeException('Simulated stale request failure after concurrent completion.');
+        });
+        $this->app->instance(BkashRefundService::class, $gateway);
+
+        $this->actingAs($admin)->post(route('admin.ebooks.refunds.reconcile', $refund))
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseHas('ebook_refunds', [
+            'id' => $refund->id,
+            'status' => 'refunded',
+            'gateway_refund_id' => 'BKASH-EBOOK-RACE-REFUND-VERIFIED',
+            'gateway_status' => 'Completed',
+        ]);
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'refunded']);
+        $this->assertDatabaseMissing('payment_audit_events', [
+            'ebook_refund_id' => $refund->id,
+            'event' => 'ebook_gateway_refund_reconciliation_unconfirmed',
+        ]);
+    }
+
 
 }
