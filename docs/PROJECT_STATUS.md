@@ -19,7 +19,7 @@ Never promote a feature from one status to another without evidence.
 
 ## Live GitHub workstream snapshot — 2026-11-19 (supersedes earlier snapshots)
 
-**Current main:** 5b5796f5e9059246d5815224929007c4ad28a3fc  
+**Current main:** 58925acc054fcc0da8553497c48b2469acd7ff76  
 **Production deployment:** blocked; no isolated staging subdomain/database was available in the last owner update.  
 **Full review:** see [PLUGIN_AUDIT_2026-11-19.md](PLUGIN_AUDIT_2026-11-19.md).
 
@@ -41,12 +41,12 @@ Never promote a feature from one status to another without evidence.
 
 | PR | Current state | Required next action |
 |---|---|---|
-| #341 — Administrator TOTP MFA | Open draft; CodeQL passed, Laravel CI running on head 2443688a420b0baacbb561d684dd5b306a5055b4 | Wait for exact-head CI; then review verified-email bootstrap, TOTP setup/login, replay protection, recovery codes and old-session invalidation. Rehearse on staging before production. |
-| #277 — Flash Sale package extraction | Open draft; exact-head Laravel CI and CodeQL passed, but branch is behind main and GitHub reports a merge conflict | Rebase/reconcile against current main; provide a standalone signed package and complete cPanel staging install/upgrade/deactivate/uninstall/rollback. Do not merge until review and staging acceptance. |
+| #341 — Administrator TOTP MFA | Merged into main (`58925acc`); CI/CodeQL passed before merge | Code is merged. Verify bootstrap, TOTP, recovery, replay rejection and old-session invalidation on isolated staging before production. |
+| #277 — Flash Sale package extraction | Open, ready for review; head `af9cebbd8edf031ed19a2e58917e68f61faff938`; exact-head Laravel CI + cPanel package + CodeQL passed; merge blocked by outstanding write-access `CHANGES_REQUESTED` review | Obtain fresh exact-head reviewer approval; then complete signed package/key provisioning and cPanel staging install/upgrade/deactivate/uninstall/rollback. No production deployment. |
 
 ### Related open security issue
 
-- **#335 — Admin password-only login bypasses MFA:** addressed in PR #341, but the issue must remain open until that PR merges and staging acceptance is complete.
+- **#335 — Admin password-only login bypasses MFA:** code remediation merged in PR #341; keep the release gate open until staging acceptance succeeds.
 
 ### Current architecture and launch reality
 
