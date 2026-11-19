@@ -4,14 +4,11 @@ use Aloms\UniversalAiAssistant\AssistantRequestLimit;
 use Aloms\UniversalAiAssistant\AssistantSettings;
 use Aloms\UniversalAiAssistant\AssistantTokenBudget;
 use App\Http\Controllers\Controller;
-use App\Services\AiDeveloperProviderEndpoint;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Contracts\Ai\AiProvider;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
-use Throwable;
 final class BoardQuestionSolverController extends Controller {
  public function index(Request $request):View{$this->assertAvailable();$history=DB::table('board_question_solutions')->where('user_id',$request->user()->id)->latest()->limit(10)->get();return view('board-question-solver::student.index',['settings'=>BoardQuestionSolverSettings::get(),'history'=>$history]);}
  public function settings():View{$settings=BoardQuestionSolverSettings::get();return view('board-question-solver::admin.settings',compact('settings'));}
@@ -46,7 +43,7 @@ final class BoardQuestionSolverController extends Controller {
     (int)$ai['daily_token_budget'],
     $estimatedPromptTokens,
     min((int)$ai['max_tokens'],2400),
-    (int)$ai['daily_request_limit'],
+    min((int)$ai['daily_request_limit'],(int)$settings['daily_request_limit']),
     'board_question_solver',
     (string)$ai['provider'],
     (string)$ai['model'],
@@ -97,10 +94,17 @@ final class BoardQuestionSolverController extends Controller {
     DB::table('ai_assistant_conversations')->where('id',$conversationId)->update(['updated_at'=>now()]);
     $solutionId=DB::table('board_question_solutions')->insertGetId([
      'user_id'=>$user->id,
+     'board'=>$data['board']??null,
+     'exam_year'=>$data['exam_year']??null,
+     'class_level'=>$data['class_level']??null,
      'subject'=>$data['subject'],
+     'question_type'=>$data['question_type'],
+     'mode'=>$data['mode'],
+     'language'=>$data['language'],
      'question'=>$data['question']??'[Image question]',
      'solution'=>$answer,
      'created_at'=>now(),
+     'updated_at'=>now(),
     ]);
    });
    $reservationFinalized=true;
