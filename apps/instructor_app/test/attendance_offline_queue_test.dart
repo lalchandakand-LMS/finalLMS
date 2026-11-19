@@ -19,6 +19,17 @@ class MemoryQueueStorage implements AttendanceQueueStorage {
     values.remove(key);
   }
 
+}
+
+void main() {
+  late MemoryQueueStorage storage;
+  late AttendanceOfflineQueue queue;
+
+  setUp(() {
+    storage = MemoryQueueStorage();
+    queue = AttendanceOfflineQueue(ownerId: 101, storage: storage);
+  });
+
   test('keeps offline attendance isolated between instructor accounts on one device', () async {
     final firstAccountQueue = AttendanceOfflineQueue(ownerId: 101, storage: storage);
     final secondAccountQueue = AttendanceOfflineQueue(ownerId: 202, storage: storage);
@@ -55,17 +66,6 @@ class MemoryQueueStorage implements AttendanceQueueStorage {
       'instructor_attendance_offline_queue_v1_user_101',
       'instructor_attendance_offline_queue_v1_user_202',
     });
-  });
-
-}
-
-void main() {
-  late MemoryQueueStorage storage;
-  late AttendanceOfflineQueue queue;
-
-  setUp(() {
-    storage = MemoryQueueStorage();
-    queue = AttendanceOfflineQueue(ownerId: 101, storage: storage);
   });
 
   Future<dynamic> addRecord({String status = 'present'}) => queue.enqueue(
