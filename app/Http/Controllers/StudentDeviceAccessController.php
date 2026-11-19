@@ -273,7 +273,9 @@ class StudentDeviceAccessController extends Controller
                 $request->session()->regenerateToken();
             }
 
-            if ($user->admin_totp_enabled_at && ! $user->admin_totp_secret) {
+            $hasEnabledAt = $user->admin_totp_enabled_at !== null;
+            $hasSecret = is_string($user->admin_totp_secret) && $user->admin_totp_secret !== '';
+            if ($hasEnabledAt !== $hasSecret) {
                 return back()->withErrors(['email' => 'Administrator MFA needs secure account recovery. Contact the system owner.'])->onlyInput('email');
             }
 
@@ -281,7 +283,7 @@ class StudentDeviceAccessController extends Controller
             $request->session()->put('pending_admin_mfa_user_id', $user->id);
             $request->session()->put('pending_admin_mfa_started_at', now()->timestamp);
 
-            if ($user->admin_totp_enabled_at && $user->admin_totp_secret) {
+            if ($hasEnabledAt && $hasSecret) {
                 return redirect()->route('admin.mfa.challenge');
             }
 
