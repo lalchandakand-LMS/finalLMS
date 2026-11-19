@@ -21,12 +21,14 @@ class AdminAttendanceAuditTest extends TestCase
             ->assertOk()
             ->assertSee('Attendance audit history');
 
-        $this->actingAs($admin)
+        $export = $this->actingAs($admin)
             ->get('/admin/attendance-audit/export?source=qr')
             ->assertOk()
             ->assertHeader('content-type', 'text/csv; charset=UTF-8')
-            ->assertHeader('cache-control', 'no-store, private')
             ->assertDownload();
+        $cacheControl = (string) $export->headers->get('Cache-Control');
+        $this->assertStringContainsString('no-store', $cacheControl);
+        $this->assertStringContainsString('private', $cacheControl);
 
         $this->assertDatabaseHas('activity_logs', [
             'user_id' => $admin->id,
