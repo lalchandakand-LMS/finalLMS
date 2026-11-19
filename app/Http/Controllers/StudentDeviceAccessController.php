@@ -324,6 +324,7 @@ class StudentDeviceAccessController extends Controller
                     'pending_admin_mfa_started_at',
                     'admin_mfa_bootstrap_code_hash',
                     'admin_mfa_bootstrap_expires_at',
+                    'admin_mfa_bootstrap_email_hash',
                     'admin_mfa_setup_secret',
                 ]);
 
