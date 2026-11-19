@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
 
 require_once __DIR__.'/AssistantSettings.php';
+require_once __DIR__.'/AssistantStreamRedactor.php';
 require_once __DIR__.'/OpenAiCompatibleProvider.php';
 require_once __DIR__.'/AssistantTokenBudget.php';
 require_once __DIR__.'/AssistantContextBuilder.php';
