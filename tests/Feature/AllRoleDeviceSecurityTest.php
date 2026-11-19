@@ -226,4 +226,19 @@ class AllRoleDeviceSecurityTest extends TestCase
         $this->assertSame('revoked', $device->fresh()->status);
         $this->assertNotNull($session->fresh()->revoked_at);
     }
+
+    public function test_admin_session_is_invalidated_if_account_role_changes(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'email_verified_at' => now(),
+        ]);
+
+        $this->actingAs($admin);
+        $admin->forceFill(['role' => 'student'])->save();
+
+        $this->get('/dashboard')->assertRedirect(route('login'));
+        $this->assertGuest();
+    }
+
 }
