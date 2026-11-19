@@ -261,7 +261,7 @@ class UniversalAiAssistantPluginTest extends TestCase
             'retention_days' => 365,
         ], 'test-secret-provider-key', false);
 
-        $provider = \\Mockery::mock(\\App\\Contracts\\Ai\\AiProvider::class);
+        $provider = \Mockery::mock(\App\Contracts\Ai\AiProvider::class);
         $provider->shouldReceive('capabilities')->once()->with('gpt-4o-mini')->andReturn([
             'temperature' => true,
             'output_token_parameter' => 'max_tokens',
@@ -281,8 +281,8 @@ class UniversalAiAssistantPluginTest extends TestCase
                 ];
             }
         );
-        app()->instance(\\App\\Contracts\\Ai\\AiProvider::class, $provider);
-        Route::post('/__test-ai-assistant/incremental-stream', [\\Aloms\\UniversalAiAssistant\\AssistantController::class, 'send']);
+        app()->instance(\App\Contracts\Ai\AiProvider::class, $provider);
+        Route::post('/__test-ai-assistant/incremental-stream', [\Aloms\UniversalAiAssistant\AssistantController::class, 'send']);
 
         $response = $this->actingAs($user)->postJson('/__test-ai-assistant/incremental-stream', [
             'message' => 'Explain a grammar rule.',
@@ -307,7 +307,7 @@ class UniversalAiAssistantPluginTest extends TestCase
 
     public function test_stream_redactor_handles_all_supported_credentials_split_across_chunks(): void
     {
-        $redactor = new \\Aloms\\UniversalAiAssistant\\AssistantStreamRedactor();
+        $redactor = new \Aloms\UniversalAiAssistant\AssistantStreamRedactor();
         $output = $redactor->push('Start BEARER my-long-bearer-token');
         $output .= $redactor->push(' then sk-1234567890');
         $output .= $redactor->push('abcdef then ghp_abcdefghij');
