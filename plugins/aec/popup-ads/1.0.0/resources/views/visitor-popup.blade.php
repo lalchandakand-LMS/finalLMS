@@ -282,6 +282,11 @@
 
         const open = () => {
             if (shown) return;
+            if (!isPreview && cooldownHours > 0) {
+                try {
+                    if (Number(localStorage.getItem(cooldownKey) || 0) > Date.now()) return;
+                } catch (e) {}
+            }
             let campaignDayKey = null;
             if (!isPreview && frequency === 'once_per_day') {
                 campaignDayKey = getCampaignDayKey();
