@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Services\Plugins;
+namespace App\\Services\\Plugins;
 
-use App\Contracts\Plugins\PluginContract;
-use App\Models\PluginInstallation;
-use Illuminate\Contracts\Foundation\Application;
-use Illuminate\Routing\Router;
+use App\\Contracts\\Plugins\\PluginContract;
+use App\\Models\\PluginInstallation;
+use Illuminate\\Contracts\\Foundation\\Application;
+use Illuminate\\Routing\\Router;
 use Throwable;
 use RuntimeException;
 
@@ -28,8 +28,10 @@ final class PluginRuntime
     ) {}
 
     /**
-     * Load only active, trusted, integrity-verified packages from the private plugins directory.
-     * Signed plugin code is trusted application code, not sandboxed code.
+     * Verify every active package before executing any plugin PHP, then load
+     * packages in dependency order. This prevents a dependent entrypoint from
+     * require_once-loading an unverified dependency before that dependency's
+     * signature and installed-file integrity checks have run.
      */
     public function registerActivePlugins(): void
     {
@@ -38,10 +40,49 @@ final class PluginRuntime
         }
         $this->registered = true;
         $hooks = $this->hookRegistry ?? $this->app->make(PluginHookRegistry::class);
+        $active = PluginInstallation::query()->where('status', 'active')->orderBy('plugin_key')->get();
 
-        foreach (PluginInstallation::query()->where('status', 'active')->orderBy('plugin_key')->get() as $plugin) {
+        /** @var array<string, array{plugin:PluginInstallation,entrypoint:string}> $verified */
+        $verified = [];
+
+        // Phase one: signature, manifest identity, path and complete file-integrity
+        // verification for every active package. No entrypoint is required here.
+        foreach ($active as $plugin) {
             try {
-                $instance = $this->loadVerifiedEntrypoint($plugin);
+                $verified[$plugin->plugin_key] = [
+                    'plugin' => $plugin,
+                    'entrypoint' => $this->verifiedEntrypointPath($plugin),
+                ];
+            } catch (Throwable $exception) {
+                report($exception);
+                $this->markFailed($plugin);
+            }
+        }
+
+        // Phase two: dependencies must themselves be active and verified.
+        // Topological ordering ensures dependency entrypoints run before dependents.
+        $orderedKeys = $this->dependencyOrder($verified);
+
+        foreach ($orderedKeys as $key) {
+            $record = $verified[$key];
+            $plugin = $record['plugin'];
+            $dependencies = $plugin->manifest['dependencies'] ?? [];
+
+            $dependenciesLoaded = true;
+            foreach ($dependencies as $dependency) {
+                if (! isset($this->loaded[$dependency])) {
+                    $dependenciesLoaded = false;
+                    break;
+                }
+            }
+
+            if (! $dependenciesLoaded) {
+                $this->markFailed($plugin);
+                continue;
+            }
+
+            try {
+                $instance = $this->instantiateVerifiedEntrypoint($record['entrypoint']);
                 $context = new PluginContext($this->app, $this->router, $plugin, $hooks);
 
                 $this->loaded[$plugin->plugin_key] = [
@@ -80,6 +121,13 @@ final class PluginRuntime
                     continue;
                 }
 
+                // A dependency may have failed while registering or booting.
+                foreach (($current->manifest['dependencies'] ?? []) as $dependency) {
+                    if (! isset($this->loaded[$dependency])) {
+                        throw new RuntimeException('A required plugin dependency did not remain available during boot: '.$dependency);
+                    }
+                }
+
                 $loaded['instance']->boot($loaded['context']);
             } catch (Throwable $exception) {
                 report($exception);
@@ -89,7 +137,63 @@ final class PluginRuntime
         }
     }
 
-    private function loadVerifiedEntrypoint(PluginInstallation $plugin): PluginContract
+    /**
+     * @param array<string, array{plugin:PluginInstallation,entrypoint:string}> $verified
+     * @return list<string>
+     */
+    private function dependencyOrder(array $verified): array
+    {
+        $states = [];
+        $failed = [];
+        $ordered = [];
+
+        $visit = function (string $key) use (&$visit, &$states, &$failed, &$ordered, $verified): bool {
+            if (isset($failed[$key])) {
+                return false;
+            }
+            if (($states[$key] ?? 0) === 2) {
+                return true;
+            }
+            if (($states[$key] ?? 0) === 1) {
+                // A dependency cycle is not loadable. Mark the current node;
+                // callers in the cycle are marked while the failure propagates.
+                $failed[$key] = true;
+                return false;
+            }
+
+            $states[$key] = 1;
+            $plugin = $verified[$key]['plugin'];
+
+            foreach (($plugin->manifest['dependencies'] ?? []) as $dependency) {
+                if (! isset($verified[$dependency]) || ! $visit($dependency)) {
+                    $failed[$key] = true;
+                    break;
+                }
+            }
+
+            $states[$key] = 2;
+            if (! isset($failed[$key])) {
+                $ordered[] = $key;
+                return true;
+            }
+
+            return false;
+        };
+
+        foreach (array_keys($verified) as $key) {
+            $visit($key);
+        }
+
+        foreach (array_keys($failed) as $key) {
+            if (isset($verified[$key])) {
+                $this->markFailed($verified[$key]['plugin']);
+            }
+        }
+
+        return $ordered;
+    }
+
+    private function verifiedEntrypointPath(PluginInstallation $plugin): string
     {
         if ($plugin->signature_verified_at === null
             || ! is_string($plugin->package_sha256)
@@ -128,7 +232,12 @@ final class PluginRuntime
             throw new RuntimeException('The active plugin entrypoint is missing or resolves outside its package.');
         }
 
-        $instance = require $realEntrypoint;
+        return $realEntrypoint;
+    }
+
+    private function instantiateVerifiedEntrypoint(string $entrypoint): PluginContract
+    {
+        $instance = require $entrypoint;
         if (! $instance instanceof PluginContract) {
             throw new RuntimeException('A plugin entrypoint must return an instance implementing PluginContract.');
         }
