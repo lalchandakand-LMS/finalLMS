@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -23,6 +24,13 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (Schema::hasTable('student_tracking_risk_actions')
+            && DB::table('student_tracking_risk_actions')->exists()) {
+            throw new RuntimeException(
+                'Student tracking risk-action audit records exist. Export or explicitly preserve them before rolling back this migration.'
+            );
+        }
+
         Schema::dropIfExists('student_tracking_risk_actions');
     }
 };
