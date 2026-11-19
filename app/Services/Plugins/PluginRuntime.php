@@ -1,11 +1,11 @@
 <?php
 
-namespace App\\Services\\Plugins;
+namespace App\Services\Plugins;
 
-use App\\Contracts\\Plugins\\PluginContract;
-use App\\Models\\PluginInstallation;
-use Illuminate\\Contracts\\Foundation\\Application;
-use Illuminate\\Routing\\Router;
+use App\Contracts\Plugins\PluginContract;
+use App\Models\PluginInstallation;
+use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Routing\Router;
 use Throwable;
 use RuntimeException;
 
