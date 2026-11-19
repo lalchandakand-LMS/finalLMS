@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 class PhoneticsPracticePluginTest extends TestCase {
  use RefreshDatabase;
@@ -44,7 +45,7 @@ class PhoneticsPracticePluginTest extends TestCase {
   $path='phonetics-practice/example-audio.mp3';
   Storage::disk('local')->put($path,'private audio bytes');
   $realDisk=Storage::disk('local');
-  $diskMock=\\Mockery::mock($realDisk)->makePartial();
+  $diskMock=\Mockery::mock($realDisk)->makePartial();
   $diskMock->shouldReceive('delete')->once()->with($path)->andReturn(false);
   Storage::shouldReceive('disk')->with('local')->andReturn($diskMock);
 
