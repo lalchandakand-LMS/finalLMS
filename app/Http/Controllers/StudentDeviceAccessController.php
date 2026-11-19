@@ -342,6 +342,7 @@ class StudentDeviceAccessController extends Controller
                 $request->session()->forget([
                     'pending_admin_mfa_user_id',
                     'pending_admin_mfa_started_at',
+                    'pending_admin_mfa_password_hash',
                     'admin_mfa_bootstrap_code_hash',
                     'admin_mfa_bootstrap_expires_at',
                     'admin_mfa_bootstrap_email_hash',
