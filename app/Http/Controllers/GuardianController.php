@@ -25,9 +25,7 @@ class GuardianController extends Controller
         abort_unless($guardian?->isGuardian(), 403);
         $this->requireActiveBranch($guardian);
 
-        $links = GuardianStudentLink::query()
-            ->where('guardian_id', $guardian->id)
-            ->whereIn('status', ['pending', 'active'])
+        $links = $this->visibleGuardianLinks($guardian)
             ->latest('requested_at')
             ->get();
 
@@ -56,9 +54,7 @@ class GuardianController extends Controller
         abort_unless($guardian?->isGuardian(), 403);
         $this->requireActiveBranch($guardian);
 
-        $rows = GuardianStudentLink::query()
-            ->where('guardian_id', $guardian->id)
-            ->whereIn('status', ['pending', 'active'])
+        $rows = $this->visibleGuardianLinks($guardian)
             ->latest('requested_at')
             ->get(['id', 'guardian_id', 'student_id', 'relationship', 'status', 'requested_at', 'reviewed_at']);
 
@@ -242,6 +238,26 @@ class GuardianController extends Controller
         if ($user->branch_id !== null && ! Branch::query()->whereKey($user->branch_id)->where('is_active', true)->exists()) {
             abort(403, 'The assigned branch is inactive.');
         }
+    }
+
+    private function visibleGuardianLinks(User $guardian)
+    {
+        return GuardianStudentLink::query()
+            ->where('guardian_id', $guardian->id)
+            ->where(function ($query) use ($guardian): void {
+                $query->where('status', 'pending')
+                    ->orWhere(function ($active) use ($guardian): void {
+                        $active->where('status', 'active')
+                            ->whereHas('student', function ($student) use ($guardian): void {
+                                $student->where('role', 'student');
+                                if ($guardian->branch_id === null) {
+                                    $student->whereNull('branch_id');
+                                } else {
+                                    $student->where('branch_id', $guardian->branch_id);
+                                }
+                            });
+                    });
+            });
     }
 
     private function canLinkSameBranch(User $guardian, User $student): bool
