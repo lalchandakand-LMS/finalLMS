@@ -475,6 +475,12 @@ class VisitorPopupManagementTest extends TestCase
         $this->assertSame('every_visit', $campaign->frequency);
         $this->assertSame('Asia/Dhaka', $campaign->toPublicPayload(null, false)['timezone']);
         $this->assertContains('every_visit', PopupCampaign::FREQUENCIES);
+
+        $this->get(route('landing'))
+            ->assertOk()
+            ->assertSee("if (frequency === 'once_per_session' && sessionStorage.getItem(key)) return;", false)
+            ->assertSee("if (frequency === 'once_per_browser' && localStorage.getItem(key)) return;", false)
+            ->assertSee("Number(localStorage.getItem(cooldownKey) || 0) > Date.now()", false);
     }
 
 }
