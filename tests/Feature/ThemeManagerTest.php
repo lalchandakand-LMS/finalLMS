@@ -268,6 +268,103 @@ class ThemeManagerTest extends TestCase
         $this->assertDatabaseHas('themes', ['slug' => 'signed-blue', 'version' => '1.0.0']);
         $this->assertSame('0', (string) Setting::value('active_theme_id', 0));
         Storage::disk('public')->assertExists('themes/signed-blue/1.0.0/assets/theme.css');
+
+        // A duplicate package must be rejected before it can overwrite the
+        // existing version's shared asset path or remove the installed theme.
+        $duplicateUpload = new UploadedFile($zipPath, 'signed-theme-duplicate.zip', 'application/zip', null, true);
+        $this->actingAs($admin)->post(route('admin.themes.install'), ['package' => $duplicateUpload])
+            ->assertRedirect()
+            ->assertSessionHasErrors('package');
+        $this->assertDatabaseCount('themes', 1);
+        Storage::disk('public')->assertExists('themes/signed-blue/1.0.0/assets/theme.css');
+        Storage::disk('local')->assertExists(DB::table('themes')->value('package_path'));
+        @unlink($zipPath);
+    }
+
+    public function test_theme_installation_refuses_to_overwrite_orphaned_storage_paths(): void
+    {
+        if (! class_exists(ZipArchive::class)) {
+            $this->markTestSkipped('PHP ZIP extension is unavailable.');
+        }
+
+        Storage::fake('public');
+        Storage::fake('local');
+        $orphanPath = 'themes/orphaned-theme/1.0.0/assets/theme.css';
+        Storage::disk('public')->put($orphanPath, 'existing orphan must be preserved');
+        $keyPair = openssl_pkey_new(['private_key_type' => OPENSSL_KEYTYPE_RSA, 'private_key_bits' => 2048]);
+        $details = openssl_pkey_get_details($keyPair);
+        config(['themes.public_key' => $details['key']]);
+
+        $manifest = json_encode([
+            'product_id' => 'aloms-lms-theme',
+            'slug' => 'orphaned-theme',
+            'version' => '1.0.0',
+            'name' => 'Orphaned Theme',
+            'min_lms_version' => '1.0.0',
+            'assets' => ['assets/theme.css' => hash('sha256', 'new theme css')],
+        ], JSON_UNESCAPED_SLASHES);
+        openssl_sign($manifest, $signature, $keyPair, OPENSSL_ALGO_SHA256);
+        $zipPath = tempnam(sys_get_temp_dir(), 'aec-theme-orphan-');
+        $zip = new ZipArchive();
+        $zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+        $zip->addFromString('theme.json', $manifest);
+        $zip->addFromString('theme.sig', base64_encode($signature));
+        $zip->addFromString('assets/', '');
+        $zip->addFromString('assets/theme.css', 'new theme css');
+        $zip->close();
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $upload = new UploadedFile($zipPath, 'orphaned-theme.zip', 'application/zip', null, true);
+        $this->actingAs($admin)->post(route('admin.themes.install'), ['package' => $upload])
+            ->assertRedirect()
+            ->assertSessionHasErrors('package');
+
+        $this->assertDatabaseCount('themes', 0);
+        $this->assertSame('existing orphan must be preserved', Storage::disk('public')->get($orphanPath));
+        $this->assertSame([], Storage::disk('local')->allFiles('themes/packages'));
+        @unlink($zipPath);
+    }
+
+    public function test_theme_installation_fails_closed_when_lifecycle_lock_is_missing(): void
+    {
+        if (! class_exists(ZipArchive::class)) {
+            $this->markTestSkipped('PHP ZIP extension is unavailable.');
+        }
+
+        Storage::fake('public');
+        Storage::fake('local');
+        $keyPair = openssl_pkey_new(['private_key_type' => OPENSSL_KEYTYPE_RSA, 'private_key_bits' => 2048]);
+        $details = openssl_pkey_get_details($keyPair);
+        config(['themes.public_key' => $details['key']]);
+
+        $manifest = json_encode([
+            'product_id' => 'aloms-lms-theme',
+            'slug' => 'lock-required',
+            'version' => '1.0.0',
+            'name' => 'Lock Required',
+            'min_lms_version' => '1.0.0',
+            'assets' => ['assets/theme.css' => hash('sha256', 'body { color: #123456; }')],
+        ], JSON_UNESCAPED_SLASHES);
+        openssl_sign($manifest, $signature, $keyPair, OPENSSL_ALGO_SHA256);
+        $zipPath = tempnam(sys_get_temp_dir(), 'aec-theme-lock-');
+        $zip = new ZipArchive();
+        $zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+        $zip->addFromString('theme.json', $manifest);
+        $zip->addFromString('theme.sig', base64_encode($signature));
+        $zip->addFromString('assets/', '');
+        $zip->addFromString('assets/theme.css', 'body { color: #123456; }');
+        $zip->close();
+
+        DB::table('theme_manager_locks')->where('id', 1)->delete();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $upload = new UploadedFile($zipPath, 'lock-required.zip', 'application/zip', null, true);
+        $this->actingAs($admin)->post(route('admin.themes.install'), ['package' => $upload])
+            ->assertRedirect()
+            ->assertSessionHasErrors('package');
+
+        $this->assertDatabaseCount('themes', 0);
+        Storage::disk('public')->assertMissing('themes/lock-required/1.0.0/assets/theme.css');
+        $this->assertSame([], Storage::disk('local')->allFiles('themes/packages'));
         @unlink($zipPath);
     }
 

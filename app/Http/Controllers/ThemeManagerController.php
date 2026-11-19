@@ -232,43 +232,79 @@ class ThemeManagerController extends Controller
 
             $slug = $manifest['slug'];
             $version = $manifest['version'];
-            if (DB::table('themes')->where('slug', $slug)->where('version', $version)->exists()) {
-                throw new \RuntimeException(__('This theme version is already installed.'));
-            }
 
-            $base = 'themes/'.$slug.'/'.$version;
-            foreach ($assetContents as $assetName => $contents) {
-                $path = $base.'/'.$assetName;
-                Storage::disk('public')->put($path, $contents);
-                $writtenPaths[] = $path;
-            }
+            DB::transaction(function () use (
+                $slug, $version, $assetContents, $previewBytes, $validated, $manifest,
+                $minVersion, $request, &$writtenPaths
+            ): void {
+                // Serialize installation with activate/reset/delete so two uploads
+                // for the same slug/version cannot overwrite shared asset paths.
+                $lock = DB::table('theme_manager_locks')->where('id', 1)->lockForUpdate()->first();
+                if (! $lock) {
+                    throw new \RuntimeException(__('Theme installation is unavailable because the lifecycle lock is missing.'));
+                }
+                if (DB::table('themes')->where('slug', $slug)->where('version', $version)->exists()) {
+                    throw new \RuntimeException(__('This theme version is already installed.'));
+                }
 
-            $previewPath = null;
-            if (is_string($previewBytes)) {
-                $previewPath = $base.'/preview.png';
-                Storage::disk('public')->put($previewPath, $previewBytes);
-                $writtenPaths[] = $previewPath;
-            }
+                $base = 'themes/'.$slug.'/'.$version;
+                $publicDisk = Storage::disk('public');
+                $previewPath = is_string($previewBytes) ? $base.'/preview.png' : null;
 
-            $packagePath = $validated['package']->storeAs('themes/packages', Str::uuid().'.zip', 'local');
-            $writtenPaths[] = 'local:'.$packagePath;
+                // A failed prior write/cleanup may leave files without a DB row.
+                // Never overwrite such paths: the earlier request may still be
+                // cleaning them after its transaction released the lifecycle lock.
+                foreach (array_keys($assetContents) as $assetName) {
+                    if ($publicDisk->exists($base.'/'.$assetName)) {
+                        throw new \RuntimeException(__('Theme storage paths already exist without a registry entry; installation was blocked to protect existing files.'));
+                    }
+                }
+                if ($previewPath !== null && $publicDisk->exists($previewPath)) {
+                    throw new \RuntimeException(__('Theme storage paths already exist without a registry entry; installation was blocked to protect existing files.'));
+                }
 
-            DB::table('themes')->insert([
-                'slug' => $slug,
-                'version' => $version,
-                'name' => trim($manifest['name']),
-                'author' => is_string($manifest['author'] ?? null) ? mb_substr($manifest['author'], 0, 120) : null,
-                'description' => is_string($manifest['description'] ?? null) ? mb_substr($manifest['description'], 0, 500) : null,
-                'min_lms_version' => $minVersion,
-                'manifest' => json_encode($manifest, JSON_THROW_ON_ERROR),
-                'assets' => json_encode(array_keys($assetContents), JSON_THROW_ON_ERROR),
-                'preview_path' => $previewPath,
-                'package_path' => $packagePath,
-                'package_sha256' => hash_file('sha256', $validated['package']->getRealPath()),
-                'installed_by' => $request->user()->id,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+                foreach ($assetContents as $assetName => $contents) {
+                    $path = $base.'/'.$assetName;
+                    $writtenPaths[] = $path;
+                    if (! $publicDisk->put($path, $contents)) {
+                        throw new \RuntimeException(__('A theme asset could not be written to storage.'));
+                    }
+                }
+
+                if ($previewPath !== null) {
+                    $writtenPaths[] = $previewPath;
+                    if (! $publicDisk->put($previewPath, $previewBytes)) {
+                        throw new \RuntimeException(__('The theme preview could not be written to storage.'));
+                    }
+                }
+
+                $packagePath = $validated['package']->storeAs('themes/packages', Str::uuid().'.zip', 'local');
+                if (! is_string($packagePath) || $packagePath === '') {
+                    throw new \RuntimeException(__('The original theme package could not be retained on private storage.'));
+                }
+                $writtenPaths[] = 'local:'.$packagePath;
+                $packageSha256 = hash_file('sha256', $validated['package']->getRealPath());
+                if (! is_string($packageSha256)) {
+                    throw new \RuntimeException(__('The original theme package checksum could not be calculated.'));
+                }
+
+                DB::table('themes')->insert([
+                    'slug' => $slug,
+                    'version' => $version,
+                    'name' => trim($manifest['name']),
+                    'author' => is_string($manifest['author'] ?? null) ? mb_substr($manifest['author'], 0, 120) : null,
+                    'description' => is_string($manifest['description'] ?? null) ? mb_substr($manifest['description'], 0, 500) : null,
+                    'min_lms_version' => $minVersion,
+                    'manifest' => json_encode($manifest, JSON_THROW_ON_ERROR),
+                    'assets' => json_encode(array_keys($assetContents), JSON_THROW_ON_ERROR),
+                    'preview_path' => $previewPath,
+                    'package_path' => $packagePath,
+                    'package_sha256' => $packageSha256,
+                    'installed_by' => $request->user()->id,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            });
 
             return redirect()->route('admin.themes.index')->with('success', __('Theme package verified and installed. It has not been activated.'));
         } catch (Throwable $exception) {
