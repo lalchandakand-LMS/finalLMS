@@ -1,6 +1,6 @@
 <?php
 
-namespace Aloms\\UniversalAiAssistant;
+namespace Aloms\UniversalAiAssistant;
 
 /**
  * Incrementally redacts supported credential patterns without emitting a
@@ -27,7 +27,7 @@ final class AssistantStreamRedactor
         $output = '';
 
         while ($this->buffer !== '') {
-            if (preg_match('/(?i:Bearer\\s+)|\\b(?:sk-|gh[pousr]_|xox[baprs]-|AKIA)/', $this->buffer, $match, PREG_OFFSET_CAPTURE) !== 1) {
+            if (preg_match('/(?i:Bearer\s+)|\b(?:sk-|gh[pousr]_|xox[baprs]-|AKIA)/', $this->buffer, $match, PREG_OFFSET_CAPTURE) !== 1) {
                 if ($final) {
                     $output .= $this->buffer;
                     $this->buffer = '';
