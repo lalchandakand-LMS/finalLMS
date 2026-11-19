@@ -81,8 +81,8 @@ final class AdminTotpService
     {
         $codes = [];
         for ($index = 0; $index < 8; $index++) {
-            $raw = strtoupper(bin2hex(random_bytes(6)));
-            $codes[] = substr($raw, 0, 4).'-'.substr($raw, 4, 4).'-'.substr($raw, 8, 4);
+            $raw = strtoupper(bin2hex(random_bytes(12)));
+            $codes[] = implode('-', str_split($raw, 6));
         }
 
         return $codes;
