@@ -116,12 +116,8 @@ class AdminDeviceSessionManagementTest extends TestCase
             'email_verified_at' => now(),
         ]);
 
-        $this->post(route('login.post'), [
-            'email' => $admin->email,
-            'password' => 'password',
-        ])->assertRedirect('/dashboard');
-
-        $session = DeviceSession::where('user_id', $admin->id)->firstOrFail();
+        $this->actingAs($admin);
+        $session = DeviceSession::register($this->app['request'], $admin);
 
         $this->patch(route('admin.security.sessions.revoke', $session))
             ->assertStatus(422);
