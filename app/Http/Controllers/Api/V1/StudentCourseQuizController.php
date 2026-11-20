@@ -232,8 +232,7 @@ class StudentCourseQuizController extends Controller
     public function attempt(Request $request, QuestionSetAttempt $attempt): JsonResponse
     {
         $student = $request->user();
-        abort_unless($student?->isStudent(), 403);
-        abort_unless((int) $attempt->student_id === (int) $student->id, 404);
+        $this->authorizeAttempt($student, $attempt, true);
 
         if ($attempt->status === 'in_progress' && $attempt->deadline_at
             && now()->gte($attempt->deadline_at)) {
