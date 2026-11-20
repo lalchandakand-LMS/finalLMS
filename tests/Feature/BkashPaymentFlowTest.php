@@ -78,12 +78,18 @@ class BkashPaymentFlowTest extends TestCase
                 'trxID' => 'BKASH-TRX-001',
                 'amount' => '1500.00',
             ], 200),
-            '*/tokenized/checkout/payment/status' => Http::response([
-                'transactionStatus' => 'Completed',
-                'paymentID' => 'BKASH-PAY-001',
-                'trxID' => 'BKASH-TRX-001',
-                'amount' => '1500.00',
-            ], 200),
+            '*/tokenized/checkout/payment/status' => function (Request $request) {
+                $payment = Payment::query()->where('gateway_payment_id', $request['paymentID'])->firstOrFail();
+
+                return Http::response([
+                    'transactionStatus' => 'Completed',
+                    'paymentID' => 'BKASH-PAY-001',
+                    'trxID' => 'BKASH-TRX-001',
+                    'amount' => '1500.00',
+                    'currency' => 'BDT',
+                    'merchantInvoiceNumber' => $payment->transaction_reference,
+                ], 200);
+            },
         ]);
 
         $this->actingAs($student)
@@ -190,6 +196,125 @@ class BkashPaymentFlowTest extends TestCase
         $this->assertSame('pending', $payment->status);
     }
 
+    public function test_course_callback_requires_server_verified_currency_and_merchant_invoice(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $course = $this->paidCourse();
+        $payment = Payment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'method' => 'bkash',
+            'gateway_provider' => 'bkash',
+            'amount' => '1500.00',
+            'currency' => 'BDT',
+            'transaction_reference' => 'BKASH-LOCAL-REF-MISSING-FIELDS',
+            'gateway_payment_id' => 'BKASH-PAY-MISSING-FIELDS',
+            'status' => 'pending',
+        ]);
+
+        Http::fake([
+            '*/tokenized/checkout/token/grant' => Http::response(['id_token' => 'verify-token'], 200),
+            '*/tokenized/checkout/payment/status' => Http::response([
+                'transactionStatus' => 'Completed',
+                'paymentID' => 'BKASH-PAY-MISSING-FIELDS',
+                'trxID' => 'BKASH-TRX-MISSING-FIELDS',
+                'amount' => '1500.00',
+            ], 200),
+        ]);
+
+        $this->get(route('payments.bkash.callback', [
+            'paymentID' => 'BKASH-PAY-MISSING-FIELDS',
+            'status' => 'failure',
+        ]))->assertRedirect(route('courses.show', $course));
+
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'pending']);
+        $this->assertDatabaseMissing('enrollments', [
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+        ]);
+    }
+
+    public function test_course_callback_rejects_currency_and_invoice_mismatches(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $course = $this->paidCourse();
+
+        $cases = [
+            [
+                'payment_id' => 'BKASH-PAY-PROVIDER-USD',
+                'reference' => 'BKASH-REF-PROVIDER-USD',
+                'local_currency' => 'BDT',
+                'provider_currency' => 'USD',
+                'provider_invoice' => 'BKASH-REF-PROVIDER-USD',
+            ],
+            [
+                'payment_id' => 'BKASH-PAY-LOCAL-USD',
+                'reference' => 'BKASH-REF-LOCAL-USD',
+                'local_currency' => 'USD',
+                'provider_currency' => 'BDT',
+                'provider_invoice' => 'BKASH-REF-LOCAL-USD',
+            ],
+            [
+                'payment_id' => 'BKASH-PAY-WRONG-INVOICE',
+                'reference' => 'BKASH-REF-WRONG-INVOICE',
+                'local_currency' => 'BDT',
+                'provider_currency' => 'BDT',
+                'provider_invoice' => 'BKASH-OTHER-INVOICE',
+            ],
+        ];
+
+        $payments = [];
+        $providerResponses = [];
+        foreach ($cases as $case) {
+            $payment = Payment::create([
+                'user_id' => $student->id,
+                'course_id' => $course->id,
+                'method' => 'bkash',
+                'gateway_provider' => 'bkash',
+                'amount' => '1500.00',
+                'currency' => $case['local_currency'],
+                'transaction_reference' => $case['reference'],
+                'gateway_payment_id' => $case['payment_id'],
+                'status' => 'pending',
+            ]);
+            $payments[] = $payment;
+            $providerResponses[$case['payment_id']] = [
+                'transactionStatus' => 'Completed',
+                'paymentID' => $case['payment_id'],
+                'trxID' => 'TRX-'.$case['payment_id'],
+                'amount' => '1500.00',
+                'currency' => $case['provider_currency'],
+                'merchantInvoiceNumber' => $case['provider_invoice'],
+            ];
+        }
+
+        Http::fake([
+            '*/tokenized/checkout/token/grant' => Http::response(['id_token' => 'verify-token'], 200),
+            '*/tokenized/checkout/payment/status' => function (Request $request) use ($providerResponses) {
+                return Http::response($providerResponses[$request['paymentID']] ?? [], 200);
+            },
+        ]);
+
+        foreach ($payments as $payment) {
+            $this->get(route('payments.bkash.callback', [
+                'paymentID' => $payment->gateway_payment_id,
+                'status' => 'failure',
+            ]))->assertRedirect(route('courses.show', $course));
+        }
+
+        foreach ($payments as $payment) {
+            $this->assertDatabaseHas('payments', [
+                'id' => $payment->id,
+                'status' => 'pending',
+            ]);
+        }
+
+        $this->assertDatabaseMissing('enrollments', [
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+        ]);
+    }
+
     public function test_callback_with_amount_mismatch_never_activates_enrollment(): void
     {
         $student = User::factory()->create(['role' => 'student']);
@@ -220,6 +345,8 @@ class BkashPaymentFlowTest extends TestCase
                 'paymentID' => 'BKASH-PAY-002',
                 'trxID' => 'BKASH-TRX-002',
                 'amount' => '1.00',
+                'currency' => 'BDT',
+                'merchantInvoiceNumber' => 'BKASH-LOCAL-REF-2',
             ], 200),
         ]);
 
@@ -370,6 +497,8 @@ class BkashPaymentFlowTest extends TestCase
                 'paymentID' => 'BKASH-PAY-FAIL-CALLBACK',
                 'trxID' => 'BKASH-TRX-FAIL-CALLBACK',
                 'amount' => '1500.00',
+                'currency' => 'BDT',
+                'merchantInvoiceNumber' => 'BKASH-LOCAL-REF-FAIL-CALLBACK',
             ], 200),
         ]);
 
