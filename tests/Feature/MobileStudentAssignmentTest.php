@@ -11,7 +11,10 @@ use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\StudentDevice;
 use App\Models\User;
+use Illuminate\Database\Events\TransactionBeginning;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\UploadedFile;
@@ -334,4 +337,38 @@ class MobileStudentAssignmentTest extends TestCase
 
         return $plain;
     }
+
+    public function test_assignment_submission_rechecks_enrollment_inside_the_write_transaction(): void
+    {
+        [$student, , $assignment] = $this->fixture();
+        $token = $this->token($student);
+        $enrollment = Enrollment::query()
+            ->where('user_id', $student->id)
+            ->where('batch_id', $assignment->batch_id)
+            ->firstOrFail();
+
+        $changedDuringTransaction = false;
+        Event::listen(TransactionBeginning::class, function () use ($enrollment, &$changedDuringTransaction): void {
+            if ($changedDuringTransaction) {
+                return;
+            }
+
+            $changedDuringTransaction = true;
+            DB::table('enrollments')->where('id', $enrollment->id)->update(['status' => 'cancelled']);
+        });
+
+        $this->withToken($token)
+            ->postJson('/api/v1/assignments/'.$assignment->id.'/submit', [
+                'answer' => 'This must not be submitted after enrollment is revoked.',
+            ])
+            ->assertForbidden();
+
+        $this->assertTrue($changedDuringTransaction);
+        $this->assertDatabaseMissing('assignment_submissions', [
+            'assignment_id' => $assignment->id,
+            'student_id' => $student->id,
+        ]);
+    }
+
+
 }
