@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\SmsCampaignRecipient;
+use App\Services\Modules\ModuleRegistry;
 use App\Services\SmsGateway;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -23,7 +24,7 @@ class SendSmsCampaignRecipient implements ShouldQueue
     {
     }
 
-    public function handle(SmsGateway $sms): void
+    public function handle(ModuleRegistry $modules, SmsGateway $sms): void
     {
         $recipient = SmsCampaignRecipient::with(['campaign', 'user'])->find($this->recipientId);
 
@@ -32,6 +33,17 @@ class SendSmsCampaignRecipient implements ShouldQueue
         }
 
         $campaign = $recipient->campaign;
+
+        // A campaign job may remain queued after an Admin disables SMS.
+        // Finalize it as skipped instead of sending after the module is disabled.
+        if (! $modules->isEnabled('sms')) {
+            $recipient->update(['status' => 'skipped']);
+            $campaign->increment('skipped_count');
+            $this->finishIfComplete($campaign);
+
+            return;
+        }
+
         $campaign->update(['status' => 'sending']);
 
         if (
