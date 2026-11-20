@@ -436,6 +436,7 @@ class CourseController extends Controller
             : collect();
         $batches = $course->batches()
             ->where('status', 'open')
+            ->when($user?->isStudent() && $user->branch_id !== null, fn ($query) => $query->where('branch_id', $user->branch_id))
             ->with('branch')
             ->withCount('enrollments')
             ->orderBy('starts_at')
