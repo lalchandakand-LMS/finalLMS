@@ -251,6 +251,8 @@ class VisitorPopupManagementTest extends TestCase
         $this->assertStringContainsString('noopener noreferrer', (string) $popup->rich_html);
 
         auth()->logout();
+        // The landing route intentionally redirects authenticated users to their dashboard.
+        auth()->logout();
         $this->get(route('landing'))
             ->assertOk()
             ->assertSee('Sanitized Announcement')
