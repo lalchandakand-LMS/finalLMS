@@ -6,7 +6,6 @@ use App\Models\PluginInstallation;
 use App\Services\Plugins\PluginIntegrityVerifier;
 use App\Services\Plugins\PluginSignatureVerifier;
 use App\Services\Plugins\PluginTrustFailure;
-use App\Services\Plugins\PluginTrustFailure;
 use Closure;
 use Illuminate\Support\Facades\Schema;
 use RuntimeException;
