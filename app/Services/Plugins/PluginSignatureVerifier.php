@@ -113,38 +113,40 @@ class PluginSignatureVerifier
 
     /**
      * Re-verify the original detached release signature against the currently
-     * trusted key. Returns false only for legacy installations created before
-     * the detached signature was persisted; those still require a prior
-     * verification timestamp and an intact installed-file hash manifest.
+     * trusted key. Returns false for legacy installations that have no persisted
+     * detached signature; callers must treat false as an authorization failure.
      */
     public function verifyInstalledSignature(PluginInstallation $plugin): bool
     {
-        if (! function_exists('sodium_crypto_sign_verify_detached')
-            || $plugin->signature_verified_at === null
+        if (! function_exists('sodium_crypto_sign_verify_detached')) {
+            throw new RuntimeException('The PHP sodium extension is required to re-verify installed plugin signatures.');
+        }
+
+        if ($plugin->signature_verified_at === null
             || ! is_string($plugin->package_sha256)
             || preg_match('/^[a-f0-9]{64}$/D', $plugin->package_sha256) !== 1
             || ! is_string($plugin->signature_key_id)
             || trim($plugin->signature_key_id) === '') {
-            throw new RuntimeException('The installed plugin is missing verified release metadata.');
+            throw new PluginTrustFailure('The installed plugin is missing verified release metadata.');
         }
 
         $manifest = $plugin->manifest ?? [];
         $errors = $this->manifestValidator->errors($manifest);
         if ($errors !== []) {
-            throw new RuntimeException('The installed plugin manifest is invalid: '.implode(' ', $errors));
+            throw new PluginTrustFailure('The installed plugin manifest is invalid: '.implode(' ', $errors));
         }
 
         if (! hash_equals((string) $plugin->plugin_key, (string) $manifest['key'])
             || (string) $plugin->version !== (string) $manifest['version']
             || (string) $plugin->name !== (string) $manifest['name']
             || (string) $plugin->type !== (string) $manifest['type']) {
-            throw new RuntimeException('The installed plugin manifest does not match its registry identity.');
+            throw new PluginTrustFailure('The installed plugin manifest does not match its registry identity.');
         }
 
         $keys = config('plugins.trusted_public_keys', []);
         $encodedPublicKey = is_array($keys) ? ($keys[$plugin->signature_key_id] ?? null) : null;
         if (! is_string($encodedPublicKey) || $encodedPublicKey === '') {
-            throw new RuntimeException('The installed plugin release key is no longer trusted.');
+            throw new PluginTrustFailure('The installed plugin release key is no longer trusted.');
         }
 
         $publicKey = base64_decode($encodedPublicKey, true);
@@ -160,7 +162,7 @@ class PluginSignatureVerifier
 
         $signature = base64_decode($signatureBase64, true);
         if (! is_string($signature) || strlen($signature) !== SODIUM_CRYPTO_SIGN_BYTES) {
-            throw new RuntimeException('The persisted plugin release signature is malformed.');
+            throw new PluginTrustFailure('The persisted plugin release signature is malformed.');
         }
 
         try {
@@ -174,7 +176,7 @@ class PluginSignatureVerifier
         }
 
         if (! $valid) {
-            throw new RuntimeException('The installed plugin release signature is invalid or no longer trusted.');
+            throw new PluginTrustFailure('The installed plugin release signature is invalid or no longer trusted.');
         }
 
         return true;

@@ -5,8 +5,13 @@ namespace Tests\Feature;
 use App\Http\Middleware\EnsurePluginJobActive;
 use App\Jobs\Plugins\PluginJob;
 use App\Models\PluginInstallation;
+use App\Services\Plugins\PluginIntegrityVerifier;
+use App\Services\Plugins\PluginSignatureVerifier;
+use App\Services\Plugins\PluginTrustFailure;
+use Closure;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
+use Mockery;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -31,8 +36,11 @@ class PluginQueuedJobLifecycleTest extends TestCase
                 'type' => 'module',
                 'entrypoint' => 'src/Plugin.php',
                 'requires' => ['php' => '^8.3', 'laravel' => '^12.0', 'lms' => '^1.0'],
+                'dependencies' => [],
+                'conflicts' => [],
                 'portals' => ['admin'],
                 'permissions' => ['notifications.send'],
+                'capabilities' => [],
             ],
             'package_sha256' => str_repeat('a', 64),
             'signature_key_id' => 'test-release-key',
@@ -44,12 +52,38 @@ class PluginQueuedJobLifecycleTest extends TestCase
         return $plugin;
     }
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-        config(['plugins.trusted_public_keys' => [
-            'test-release-key' => base64_encode(random_bytes(32)),
-        ]]);
+    private function runGuard(
+        Closure $next,
+        ?bool $signatureValid = true,
+        ?RuntimeException $integrityFailure = null,
+        ?RuntimeException $signatureFailure = null,
+    ): mixed {
+        $signatureVerifier = Mockery::mock(PluginSignatureVerifier::class);
+        $integrityVerifier = Mockery::mock(PluginIntegrityVerifier::class);
+
+        if ($signatureValid === null) {
+            $signatureVerifier->shouldNotReceive('verifyInstalledSignature');
+            $integrityVerifier->shouldNotReceive('verify');
+        } elseif ($signatureFailure) {
+            $signatureVerifier->shouldReceive('verifyInstalledSignature')->once()->andThrow($signatureFailure);
+            $integrityVerifier->shouldNotReceive('verify');
+        } elseif ($signatureValid === false) {
+            $signatureVerifier->shouldReceive('verifyInstalledSignature')->once()->andReturn(false);
+            $integrityVerifier->shouldNotReceive('verify');
+        } else {
+            $signatureVerifier->shouldReceive('verifyInstalledSignature')->once()->andReturn(true);
+            if ($integrityFailure) {
+                $integrityVerifier->shouldReceive('verify')->once()->andThrow($integrityFailure);
+            } else {
+                $integrityVerifier->shouldReceive('verify')->once();
+            }
+        }
+
+        $this->app->instance(PluginSignatureVerifier::class, $signatureVerifier);
+        $this->app->instance(PluginIntegrityVerifier::class, $integrityVerifier);
+
+        return (new EnsurePluginJobActive('aec.test-notifier', 'notifications.send'))
+            ->handle(new \stdClass(), $next);
     }
 
     public function test_plugin_job_base_class_attaches_the_lifecycle_guard(): void
@@ -70,35 +104,32 @@ class PluginQueuedJobLifecycleTest extends TestCase
             ->andThrow(new RuntimeException('database unavailable'));
 
         $this->expectException(RuntimeException::class);
-        (new EnsurePluginJobActive('aec.test-notifier', 'notifications.send'))
-            ->handle(new \stdClass(), fn () => 'must-not-run');
+        $this->runGuard(fn () => 'must-not-run', null);
     }
 
-    public function test_active_signed_plugin_with_admin_granted_permission_can_run_queued_work(): void
+    public function test_active_signed_intact_plugin_with_admin_grant_can_run_queued_work(): void
     {
         $this->signedPlugin();
         $called = false;
-        $result = (new EnsurePluginJobActive('aec.test-notifier', 'notifications.send'))
-            ->handle(new \stdClass(), function () use (&$called): string {
-                $called = true;
+        $result = $this->runGuard(function () use (&$called): string {
+            $called = true;
 
-                return 'executed';
-            });
+            return 'executed';
+        });
 
         $this->assertTrue($called);
         $this->assertSame('executed', $result);
     }
 
-    public function test_deactivated_plugin_queued_work_is_dropped(): void
+    public function test_deactivated_plugin_queued_work_is_dropped_before_signature_checks(): void
     {
         $this->signedPlugin('inactive');
         $called = false;
-        $result = (new EnsurePluginJobActive('aec.test-notifier', 'notifications.send'))
-            ->handle(new \stdClass(), function () use (&$called): string {
-                $called = true;
+        $result = $this->runGuard(function () use (&$called): string {
+            $called = true;
 
-                return 'executed';
-            });
+            return 'executed';
+        }, null);
 
         $this->assertFalse($called);
         $this->assertNull($result);
@@ -108,28 +139,95 @@ class PluginQueuedJobLifecycleTest extends TestCase
     {
         $this->signedPlugin('active', []);
         $called = false;
-        $result = (new EnsurePluginJobActive('aec.test-notifier', 'notifications.send'))
-            ->handle(new \stdClass(), function () use (&$called): string {
-                $called = true;
+        $result = $this->runGuard(function () use (&$called): string {
+            $called = true;
 
-                return 'executed';
-            });
+            return 'executed';
+        }, null);
 
         $this->assertFalse($called);
         $this->assertNull($result);
     }
 
-    public function test_missing_or_untrusted_release_key_drops_queued_work(): void
+    public function test_legacy_record_without_persisted_signature_is_not_allowed_to_run(): void
     {
         $this->signedPlugin();
-        config(['plugins.trusted_public_keys' => ['test-release-key' => '']]);
         $called = false;
-        $result = (new EnsurePluginJobActive('aec.test-notifier', 'notifications.send'))
-            ->handle(new \stdClass(), function () use (&$called): string {
+        $result = $this->runGuard(function () use (&$called): string {
+            $called = true;
+
+            return 'executed';
+        }, false);
+
+        $this->assertFalse($called);
+        $this->assertNull($result);
+    }
+
+    public function test_revoked_or_replaced_release_key_drops_queued_work_without_retry(): void
+    {
+        $this->signedPlugin();
+        $called = false;
+        $result = $this->runGuard(
+            function () use (&$called): string {
                 $called = true;
 
                 return 'executed';
-            });
+            },
+            true,
+            null,
+            new PluginTrustFailure('The installed plugin release key is no longer trusted.'),
+        );
+
+        $this->assertFalse($called);
+        $this->assertNull($result);
+    }
+
+    public function test_transient_integrity_infrastructure_failure_bubbles_for_queue_retry(): void
+    {
+        $this->signedPlugin();
+        $this->expectException(RuntimeException::class);
+        $this->runGuard(fn () => 'must-not-run', true, new RuntimeException('plugin storage temporarily unavailable'));
+    }
+
+    public function test_transient_signature_infrastructure_failure_bubbles_for_queue_retry(): void
+    {
+        $this->signedPlugin();
+        $this->expectException(RuntimeException::class);
+        $this->runGuard(fn () => 'must-not-run', true, null, new RuntimeException('sodium service temporarily unavailable'));
+    }
+
+    public function test_invalid_persisted_release_signature_drops_queued_work(): void
+    {
+        $this->signedPlugin();
+        $called = false;
+        $result = $this->runGuard(
+            function () use (&$called): string {
+                $called = true;
+
+                return 'executed';
+            },
+            true,
+            null,
+            new PluginTrustFailure('The persisted release signature is invalid.'),
+        );
+
+        $this->assertFalse($called);
+        $this->assertNull($result);
+    }
+
+    public function test_tampered_installed_plugin_files_drop_queued_work(): void
+    {
+        $this->signedPlugin();
+        $called = false;
+        $result = $this->runGuard(
+            function () use (&$called): string {
+                $called = true;
+
+                return 'executed';
+            },
+            true,
+            new PluginTrustFailure('Installed plugin integrity check failed.'),
+        );
 
         $this->assertFalse($called);
         $this->assertNull($result);
