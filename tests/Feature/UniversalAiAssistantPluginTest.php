@@ -42,6 +42,7 @@ class UniversalAiAssistantPluginTest extends TestCase
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantTokenBudget.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantContextBuilder.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantAudit.php');
+        require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantStreamRedactor.php');
         app()->bind(\App\Contracts\Ai\AiProvider::class, fn () => new OpenAiCompatibleProvider(app(AiDeveloperProviderEndpoint::class)));
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantController.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AdminSettingsController.php');
@@ -65,6 +66,45 @@ class UniversalAiAssistantPluginTest extends TestCase
             $budgetMigration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_16_120000_create_ai_assistant_token_reservations.php');
             $budgetMigration->up();
         }
+    }
+
+    public function test_chat_page_discloses_the_effective_role_data_access_mode(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $baseSettings = [
+            'model' => 'gpt-4o-mini',
+            'base_url' => 'https://api.openai.com/v1',
+            'temperature' => 0.4,
+            'max_tokens' => 800,
+            'global_enabled' => true,
+            'role_enabled' => array_replace(array_fill_keys(AssistantSettings::ROLES, false), ['student' => true]),
+            'daily_request_limit' => 20,
+            'daily_token_budget' => 50000,
+            'retention_days' => 365,
+        ];
+
+        Route::get('/__test-ai-assistant/privacy-notice', [\Aloms\UniversalAiAssistant\AssistantController::class, 'index'])
+            ->name('student.ai-assistant.index');
+        Route::post('/__test-ai-assistant/privacy-notice/messages', fn () => response()->json([]))
+            ->name('student.ai-assistant.messages.store');
+
+        AssistantSettings::save($baseSettings + [
+            'role_data_access' => array_fill_keys(AssistantSettings::ROLES, false),
+        ], 'test-secret-provider-key', false);
+
+        $this->actingAs($student)->get('/__test-ai-assistant/privacy-notice')
+            ->assertOk()
+            ->assertSee('General guidance only. This assistant cannot access private LMS records or perform actions.')
+            ->assertDontSee('This assistant may use read-only, role-scoped LMS context authorized for your account.');
+
+        AssistantSettings::save($baseSettings + [
+            'role_data_access' => array_replace(array_fill_keys(AssistantSettings::ROLES, false), ['student' => true]),
+        ], null, false);
+
+        $this->actingAs($student)->get('/__test-ai-assistant/privacy-notice')
+            ->assertOk()
+            ->assertSee('This assistant may use read-only, role-scoped LMS context authorized for your account. It cannot perform actions.')
+            ->assertDontSee('General guidance only. This assistant cannot access private LMS records or perform actions.');
     }
 
     public function test_enabled_role_context_is_audited_and_sent_only_with_scoped_course_data(): void
@@ -586,6 +626,24 @@ class UniversalAiAssistantPluginTest extends TestCase
         $this->assertDatabaseHas('ai_assistant_conversations', ['id' => $activeId]);
     }
 
+    public function test_stream_redactor_handles_credentials_split_across_provider_chunks(): void
+    {
+        $redactor = new \Aloms\UniversalAiAssistant\AssistantStreamRedactor();
+        $bearer = str_repeat('A', 400);
+        $apiKey = 'sk-ABCDEFGHIJKLMNOPQRSTUVWXYZ123456';
+
+        $output = $redactor->push('A safe sentence. Bear');
+        $output .= $redactor->push('er '.$bearer);
+        $output .= $redactor->push(' and another safe sentence '.$apiKey);
+        $output .= $redactor->finish();
+
+        $this->assertStringContainsString('A safe sentence.', $output);
+        $this->assertStringContainsString('Bearer [REDACTED]', $output);
+        $this->assertStringContainsString('[REDACTED_SECRET]', $output);
+        $this->assertStringNotContainsString($bearer, $output);
+        $this->assertStringNotContainsString($apiKey, $output);
+    }
+
     public function test_sensitive_provider_tokens_are_redacted_before_saving_conversation_titles_and_sending_messages(): void
     {
         AssistantSettings::save([
@@ -600,7 +658,10 @@ class UniversalAiAssistantPluginTest extends TestCase
         });
         Http::fake([
             'api.openai.com/v1/chat/completions' => Http::response(
-                "data: {\"choices\":[{\"delta\":{\"content\":\"Bearer ".str_repeat('A', 400)." is a test token. Let us practise English.\"}}],\"usage\":{\"total_tokens\":12}}\n\n".
+                "data: {\"choices\":[{\"delta\":{\"content\":\"Here is a helpful answer. \"}}]}\n\n".
+                "data: {\"choices\":[{\"delta\":{\"content\":\"Bearer \"}}]}\n\n".
+                "data: {\"choices\":[{\"delta\":{\"content\":\"".str_repeat('A', 200)."\"}}]}\n\n".
+                "data: {\"choices\":[{\"delta\":{\"content\":\"".str_repeat('A', 200)." is a test token. Let us practise English.\"}}],\"usage\":{\"total_tokens\":12}}\n\n".
                 "data: [DONE]\n\n",
                 200,
                 ['Content-Type' => 'text/event-stream']
@@ -618,6 +679,7 @@ class UniversalAiAssistantPluginTest extends TestCase
         $streamed = $response->streamedContent();
         $this->assertStringNotContainsString(str_repeat('A', 400), $streamed);
         $this->assertStringContainsString('Bearer [REDACTED]', $streamed);
+        $this->assertGreaterThanOrEqual(2, substr_count($streamed, '"type":"delta"'), 'Safe response chunks should reach the browser before the provider stream finishes.');
 
         $conversation = \DB::table('ai_assistant_conversations')->where('user_id', $user->id)->first();
         $message = \DB::table('ai_assistant_messages')->where('conversation_id', $conversation->id)->where('message_role', 'user')->first();
