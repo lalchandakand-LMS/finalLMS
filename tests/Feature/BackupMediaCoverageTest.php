@@ -249,4 +249,70 @@ class BackupMediaCoverageTest extends TestCase
         ]);
     }
 
+
+    public function test_restore_rejects_validly_signed_backup_when_media_sections_are_missing(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        Storage::disk('public')->put('media/keep-this-image.png', 'public-original');
+        Storage::disk('local')->put('payment-proofs/keep-this-proof.pdf', 'private-original');
+
+        $this->actingAs($admin);
+        app(BackupController::class)->create(app(UpdateOperationLock::class));
+        $backupPath = collect(Storage::disk('local')->files('backups'))->first();
+        $this->assertNotNull($backupPath);
+
+        $compressed = Storage::disk('local')->get($backupPath);
+        $envelope = json_decode(gzdecode($compressed), true, 512, JSON_THROW_ON_ERROR);
+        $payloadJson = base64_decode($envelope['payload'], true);
+        $this->assertIsString($payloadJson);
+        $payload = json_decode($payloadJson, true, 512, JSON_THROW_ON_ERROR);
+        unset($payload['public_media'], $payload['private_files']);
+
+        // Simulate a structurally incomplete but authentic archive from a faulty
+        // backup producer. HMAC validity must not bypass the format schema.
+        $incompletePayload = json_encode($payload, JSON_THROW_ON_ERROR);
+        $incompleteEnvelope = json_encode([
+            'payload' => base64_encode($incompletePayload),
+            'signature' => hash_hmac('sha256', $incompletePayload, (string) config('app.key')),
+        ], JSON_THROW_ON_ERROR);
+        $incompleteArchive = gzencode($incompleteEnvelope, 9);
+
+        $this->post(route('admin.backups.restore'), [
+            'backup_file' => UploadedFile::fake()->createWithContent('incomplete.json.gz', $incompleteArchive),
+            'confirmation' => 'RESTORE',
+            'password' => 'password',
+        ])->assertStatus(422);
+
+        Storage::disk('public')->assertExists('media/keep-this-image.png');
+        Storage::disk('local')->assertExists('payment-proofs/keep-this-proof.pdf');
+        $this->assertCount(1, Storage::disk('local')->files('backups'), 'Restore must reject the archive before creating a safety snapshot or deleting files.');
+    }
+
+    public function test_backup_creation_fails_when_a_course_references_a_missing_image(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        Course::factory()->create([
+            'teacher_id' => $teacher->id,
+            'image_path' => 'courses/missing-image.png',
+        ]);
+
+        $this->actingAs($admin);
+        app(BackupController::class)->create(app(UpdateOperationLock::class));
+
+        $this->assertNotEmpty(session('error'));
+        $this->assertSame([], Storage::disk('local')->files('backups'));
+        $this->assertDatabaseHas('system_update_events', [
+            'event' => 'manual_backup',
+            'status' => 'failed',
+            'performed_by' => $admin->id,
+        ]);
+    }
+
 }
