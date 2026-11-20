@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Models\PluginInstallation;
 use App\Services\Plugins\PluginContext;
 use App\Services\Plugins\PluginHookRegistry;
+use App\Services\Plugins\PluginSignatureVerifier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
 use InvalidArgumentException;
 use Tests\TestCase;
@@ -14,8 +16,54 @@ class PluginHookRegistryTest extends TestCase
 {
     use RefreshDatabase;
 
+    private string $packagePath = 'plugins/aec/course-studio/1.0.0';
+
+    private string $keyPair;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $directory = base_path($this->packagePath.'/src');
+        File::ensureDirectoryExists($directory);
+        file_put_contents($directory.'/Plugin.php', "<?php // signed test plugin entrypoint\n");
+
+        $this->keyPair = sodium_crypto_sign_keypair();
+        config(['plugins.trusted_public_keys' => [
+            'test-release-key' => base64_encode(sodium_crypto_sign_publickey($this->keyPair)),
+        ]]);
+    }
+
+    protected function tearDown(): void
+    {
+        $directory = base_path($this->packagePath);
+        if (is_dir($directory) && ! is_link($directory)) {
+            File::deleteDirectory($directory);
+        }
+
+        parent::tearDown();
+    }
+
     private function activePlugin(): PluginInstallation
     {
+        $manifest = [
+            'schema_version' => 1,
+            'key' => 'aec.course-studio',
+            'name' => 'Course Studio',
+            'version' => '1.0.0',
+            'type' => 'module',
+            'entrypoint' => 'src/Plugin.php',
+            'requires' => ['php' => '^8.3', 'laravel' => '^12.0', 'lms' => '^1.0'],
+            'portals' => ['admin', 'branch', 'teacher', 'student', 'guardian'],
+            'permissions' => ['courses.view'],
+            'capabilities' => ['course-studio'],
+        ];
+        $checksum = hash('sha256', 'signed test package');
+        $signature = base64_encode(sodium_crypto_sign_detached(
+            PluginSignatureVerifier::payloadForSignature($manifest, $checksum),
+            sodium_crypto_sign_secretkey($this->keyPair),
+        ));
+
         $plugin = new PluginInstallation();
         $plugin->forceFill([
             'plugin_key' => 'aec.course-studio',
@@ -23,23 +71,20 @@ class PluginHookRegistryTest extends TestCase
             'version' => '1.0.0',
             'type' => 'module',
             'status' => 'active',
-            'manifest' => [
-                'schema_version' => 1,
-                'key' => 'aec.course-studio',
-                'name' => 'Course Studio',
-                'version' => '1.0.0',
-                'type' => 'module',
-                'entrypoint' => 'src/Plugin.php',
-                'requires' => ['php' => '^8.3', 'laravel' => '^12.0', 'lms' => '^1.0'],
-                'portals' => ['admin', 'branch', 'teacher', 'student', 'guardian'],
-                'permissions' => ['courses.view'],
-                'capabilities' => ['course-studio'],
-            ],
-            'package_sha256' => str_repeat('a', 64),
+            'manifest' => $manifest,
+            'package_sha256' => $checksum,
             'signature_key_id' => 'test-release-key',
             'signature_verified_at' => now(),
-            'package_path' => 'plugins/aec/course-studio/1.0.0',
-            'metadata' => ['granted_permissions' => ['courses.view']],
+            'package_path' => $this->packagePath,
+            'metadata' => [
+                'granted_permissions' => ['courses.view'],
+                'integrity_version' => 1,
+                'release_signature' => $signature,
+                'signature_record_version' => 1,
+                'installed_file_hashes' => [
+                    'src/Plugin.php' => hash_file('sha256', base_path($this->packagePath.'/src/Plugin.php')),
+                ],
+            ],
         ])->save();
 
         return $plugin;
@@ -47,7 +92,6 @@ class PluginHookRegistryTest extends TestCase
 
     public function test_hooks_and_portal_navigation_are_available_only_while_the_signed_plugin_is_active(): void
     {
-        config(['plugins.trusted_public_keys' => ['test-release-key' => base64_encode(random_bytes(32))]]);
         Route::get('/plugin-hook-test', fn () => 'ok')->name('plugin-hook.test');
         Route::getRoutes()->refreshNameLookups();
         $this->assertTrue(Route::has('plugin-hook.test'));
@@ -139,6 +183,46 @@ class PluginHookRegistryTest extends TestCase
             ->get('/plugins/course-studio/empty-key-guard', fn () => response('should not run'));
 
         $this->get('/plugins/course-studio/empty-key-guard')->assertNotFound();
+    }
+
+
+    public function test_hooks_and_navigation_reject_a_revoked_or_replaced_release_key(): void
+    {
+        Route::get('/plugin-hook-revoked-key', fn () => 'ok')->name('plugin-hook.revoked-key');
+        Route::getRoutes()->refreshNameLookups();
+
+        $plugin = $this->activePlugin();
+        $registry = app(PluginHookRegistry::class);
+        $context = new PluginContext(app(), app('router'), $plugin, $registry);
+        $context->registerHook('lms.dashboard.widgets', fn () => 'must-not-run');
+        $context->registerPortalNavigation('student', 'Course Studio', 'plugin-hook.revoked-key', [
+            'permission' => 'courses.view',
+        ]);
+
+        config(['plugins.trusted_public_keys' => [
+            'test-release-key' => base64_encode(sodium_crypto_sign_publickey(sodium_crypto_sign_keypair())),
+        ]]);
+
+        $this->assertSame([], $registry->dispatch('lms.dashboard.widgets'));
+        $this->assertSame([], $registry->portalNavigation('student'));
+    }
+
+    public function test_hooks_and_navigation_reject_modified_installed_plugin_files(): void
+    {
+        Route::get('/plugin-hook-tampered', fn () => 'ok')->name('plugin-hook.tampered');
+        Route::getRoutes()->refreshNameLookups();
+
+        $plugin = $this->activePlugin();
+        $registry = app(PluginHookRegistry::class);
+        $context = new PluginContext(app(), app('router'), $plugin, $registry);
+        $context->registerHook('lms.dashboard.widgets', fn () => 'must-not-run');
+        $context->registerPortalNavigation('student', 'Course Studio', 'plugin-hook.tampered', [
+            'permission' => 'courses.view',
+        ]);
+
+        file_put_contents(base_path($this->packagePath.'/src/Plugin.php'), '<?php // tampered after plugin boot');
+        $this->assertSame([], $registry->dispatch('lms.dashboard.widgets'));
+        $this->assertSame([], $registry->portalNavigation('student'));
     }
 
 }
