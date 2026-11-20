@@ -264,6 +264,8 @@ class BkashPaymentFlowTest extends TestCase
                 'paymentID' => 'BKASH-PAY-002',
                 'trxID' => 'BKASH-TRX-002',
                 'amount' => '1.00',
+                'currency' => 'BDT',
+                'merchantInvoiceNumber' => 'BKASH-LOCAL-REF-2',
             ], 200),
         ]);
 
