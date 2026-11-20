@@ -244,25 +244,27 @@ class BkashPaymentController extends Controller
             $executed = $verification['executed'];
 
             $status = strtolower((string) ($verified['transactionStatus'] ?? ''));
-            $verifiedPaymentId = (string) ($verified['paymentID'] ?? $paymentId);
+            $verifiedPaymentId = $verified['paymentID'] ?? null;
             $verifiedAmount = round((float) ($verified['amount'] ?? -1), 2);
             $transactionId = $verified['trxID'] ?? null;
             $invoice = $verified['merchantInvoiceNumber'] ?? $executed['merchantInvoiceNumber'] ?? null;
 
+            // Never infer provider identity, currency or merchant invoice from
+            // the browser callback or local payment record. Require the
+            // authoritative server-side status response to bind all four.
             if ($status !== 'completed'
+                || ! is_string($verifiedPaymentId)
+                || $verifiedPaymentId === ''
                 || $verifiedPaymentId !== $paymentId
                 || $verifiedAmount !== round((float) $payment->amount, 2)
-                || (isset($verified['currency']) && strtoupper((string) $verified['currency']) !== 'BDT')
+                || strtoupper((string) $payment->currency) !== 'BDT'
+                || ! isset($verified['currency'])
+                || strtoupper((string) $verified['currency']) !== 'BDT'
                 || ! is_string($transactionId)
                 || $transactionId === ''
-                || ($invoice !== null && $invoice !== $payment->transaction_reference)
-                || ($payment->order_id && $invoice !== $payment->transaction_reference)
-                || ($payment->order_id && ! isset($verified['paymentID']))
-                || ($payment->order_id && (! isset($verified['currency']) || strtoupper((string) $verified['currency']) !== 'BDT'))
-                || ($payment->learn_earn_exam_id && ($invoice !== $payment->transaction_reference
-                    || ! isset($verified['paymentID'])
-                    || ! isset($verified['currency'])
-                    || strtoupper((string) $verified['currency']) !== 'BDT'))) {
+                || ! is_string($invoice)
+                || $invoice === ''
+                || $invoice !== $payment->transaction_reference) {
                 throw new \RuntimeException('bKash transaction verification did not match the local payment.');
             }
 
