@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Http\Middleware\EnsurePluginJobActive;
 use App\Jobs\Plugins\PluginJob;
 use App\Models\PluginInstallation;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\RefreshDatabase;\nuse Illuminate\Support\Facades\Schema;\nuse RuntimeException;
 use Tests\TestCase;
 
 class PluginQueuedJobLifecycleTest extends TestCase
@@ -60,6 +60,18 @@ class PluginQueuedJobLifecycleTest extends TestCase
         $this->assertInstanceOf(EnsurePluginJobActive::class, $job->middleware()[0]);
     }
 
+
+    public function test_registry_infrastructure_failure_throws_for_queue_retry(): void
+    {
+        Schema::shouldReceive('hasTable')
+            ->once()
+            ->with('plugin_registry')
+            ->andThrow(new RuntimeException('database unavailable'));
+
+        $this->expectException(RuntimeException::class);
+        (new EnsurePluginJobActive('aec.test-notifier', 'notifications.send'))
+            ->handle(new \\stdClass(), fn () => 'must-not-run');
+    }
 
     public function test_registry_infrastructure_failure_throws_for_queue_retry(): void
     {
