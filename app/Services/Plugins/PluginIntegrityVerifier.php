@@ -98,7 +98,11 @@ class PluginIntegrityVerifier
             }
 
             $actualHash = hash_file('sha256', $realFile);
-            if (! is_string($actualHash) || ! hash_equals($normalizedExpected[$relative], $actualHash)) {
+            if (! is_string($actualHash)) {
+                throw new RuntimeException('An installed plugin file could not be read for integrity verification.');
+            }
+
+            if (! hash_equals($normalizedExpected[$relative], $actualHash)) {
                 throw new PluginTrustFailure('An installed plugin file failed its integrity check.');
             }
 
