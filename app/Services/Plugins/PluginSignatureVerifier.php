@@ -125,26 +125,26 @@ class PluginSignatureVerifier
             || preg_match('/^[a-f0-9]{64}$/D', $plugin->package_sha256) !== 1
             || ! is_string($plugin->signature_key_id)
             || trim($plugin->signature_key_id) === '') {
-            throw new RuntimeException('The installed plugin is missing verified release metadata.');
+            throw new PluginTrustFailure('The installed plugin is missing verified release metadata.');
         }
 
         $manifest = $plugin->manifest ?? [];
         $errors = $this->manifestValidator->errors($manifest);
         if ($errors !== []) {
-            throw new RuntimeException('The installed plugin manifest is invalid: '.implode(' ', $errors));
+            throw new PluginTrustFailure('The installed plugin manifest is invalid: '.implode(' ', $errors));
         }
 
         if (! hash_equals((string) $plugin->plugin_key, (string) $manifest['key'])
             || (string) $plugin->version !== (string) $manifest['version']
             || (string) $plugin->name !== (string) $manifest['name']
             || (string) $plugin->type !== (string) $manifest['type']) {
-            throw new RuntimeException('The installed plugin manifest does not match its registry identity.');
+            throw new PluginTrustFailure('The installed plugin manifest does not match its registry identity.');
         }
 
         $keys = config('plugins.trusted_public_keys', []);
         $encodedPublicKey = is_array($keys) ? ($keys[$plugin->signature_key_id] ?? null) : null;
         if (! is_string($encodedPublicKey) || $encodedPublicKey === '') {
-            throw new RuntimeException('The installed plugin release key is no longer trusted.');
+            throw new PluginTrustFailure('The installed plugin release key is no longer trusted.');
         }
 
         $publicKey = base64_decode($encodedPublicKey, true);
@@ -160,7 +160,7 @@ class PluginSignatureVerifier
 
         $signature = base64_decode($signatureBase64, true);
         if (! is_string($signature) || strlen($signature) !== SODIUM_CRYPTO_SIGN_BYTES) {
-            throw new RuntimeException('The persisted plugin release signature is malformed.');
+            throw new PluginTrustFailure('The persisted plugin release signature is malformed.');
         }
 
         try {
@@ -174,7 +174,7 @@ class PluginSignatureVerifier
         }
 
         if (! $valid) {
-            throw new RuntimeException('The installed plugin release signature is invalid or no longer trusted.');
+            throw new PluginTrustFailure('The installed plugin release signature is invalid or no longer trusted.');
         }
 
         return true;
