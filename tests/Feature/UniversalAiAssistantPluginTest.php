@@ -28,6 +28,7 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\View;
 use Tests\TestCase;
 
 class UniversalAiAssistantPluginTest extends TestCase
@@ -83,6 +84,7 @@ class UniversalAiAssistantPluginTest extends TestCase
             'retention_days' => 365,
         ];
 
+        View::addNamespace('universal-ai-assistant', base_path('plugins/aec/universal-ai-assistant/1.0.0/resources/views'));
         Route::get('/__test-ai-assistant/privacy-notice', [\Aloms\UniversalAiAssistant\AssistantController::class, 'index'])
             ->name('student.ai-assistant.index');
         Route::post('/__test-ai-assistant/privacy-notice/messages', fn () => response()->json([]))
