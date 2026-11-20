@@ -245,20 +245,21 @@ class StudentCourseQuizController extends Controller
     public function attempt(Request $request, QuestionSetAttempt $attempt): JsonResponse
     {
         $student = $request->user();
-        $this->authorizeAttempt($student, $attempt, true);
+        $payload = DB::transaction(function () use ($student, $attempt): array {
+            $locked = QuestionSetAttempt::query()->whereKey($attempt->id)->lockForUpdate()->firstOrFail();
+            $this->authorizeAttempt($student, $locked, true, true);
 
-        if ($attempt->status === 'in_progress' && $attempt->deadline_at
-            && now()->gte($attempt->deadline_at)) {
-            DB::transaction(function () use ($attempt): void {
-                $locked = QuestionSetAttempt::query()->whereKey($attempt->id)->lockForUpdate()->firstOrFail();
+            if ($locked->status === 'in_progress' && $locked->deadline_at
+                && now()->gte($locked->deadline_at)) {
                 $this->finalizeExpiredAttempt($locked);
-            });
-            $attempt->refresh();
-        }
+            }
 
-        $attempt->load('questions');
+            $locked->load('questions');
 
-        return response()->json(['data' => $this->attemptPayload($attempt)]);
+            return $this->attemptPayload($locked);
+        });
+
+        return response()->json(['data' => $payload]);
     }
 
     public function saveAnswers(Request $request, QuestionSetAttempt $attempt): JsonResponse
