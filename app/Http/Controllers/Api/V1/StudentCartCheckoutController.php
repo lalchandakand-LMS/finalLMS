@@ -13,6 +13,7 @@ use App\Models\FlashSale;
 use App\Models\Payment;
 use App\Models\PaymentComboCourse;
 use App\Models\Setting;
+use App\Services\Payments\PendingCoursePaymentGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -70,7 +71,7 @@ class StudentCartCheckoutController extends Controller
         ]);
     }
 
-    public function submitManual(Request $request): JsonResponse
+    public function submitManual(Request $request, PendingCoursePaymentGuard $pendingPayments): JsonResponse
     {
         $student = $request->user();
         abort_unless($student->isStudent(), 403);
@@ -88,7 +89,7 @@ class StudentCartCheckoutController extends Controller
 
         $proofPath = null;
         try {
-            $result = DB::transaction(function () use ($student, $validated, $methods, $request, &$proofPath): array {
+            $result = DB::transaction(function () use ($student, $validated, $methods, $request, &$proofPath, $pendingPayments): array {
                 $cart = DB::table('student_cart_items')->where('user_id', $student->id)->orderBy('id')->lockForUpdate()->get();
                 abort_if($cart->isEmpty(), 422, 'Your cart is empty.');
 
@@ -105,13 +106,15 @@ class StudentCartCheckoutController extends Controller
                     abort_if($row->batch_id && (! $batch || (int) $batch->course_id !== (int) $course->id || $batch->status !== 'open'), 409, 'A selected batch is no longer available.');
                     abort_if(! $row->batch_id && $course->batches()->where('status', 'open')->exists(), 422, 'Select an open batch for each course before checkout.');
                     abort_if(Enrollment::query()->where('user_id', $student->id)->where('course_id', $course->id)->whereIn('status', ['active', 'completed'])->exists(), 409, 'You are already enrolled in a course in this cart.');
+                    abort_if($pendingPayments->hasPendingForCourse((int) $student->id, (int) $course->id), 409,
+                        'A payment for a course in your cart is already awaiting academy verification.');
                     if ($batch) {
                         abort_if(! $this->hasAvailableSeat($batch), 409, 'A selected batch has no seats remaining.');
                     }
                     $items->push((object) ['course_id' => $course->id, 'course' => $course, 'batch' => $batch]);
                 }
 
-                $pricing = $this->priceItems($items, (int) $student->id);
+                $pricing = $this->priceItems($items, (int) $student->id, true);
                 $coupon = null;
                 $discount = 0.0;
                 if (filled($validated['coupon_code'] ?? null)) {
@@ -230,8 +233,35 @@ class StudentCartCheckoutController extends Controller
             ]);
     }
 
-    private function priceItems($items, int $studentId): array
+    private function priceItems($items, int $studentId, bool $lockSales = false): array
     {
+        $salesByCourse = [];
+        foreach ($items as $item) {
+            $sale = FlashSale::activeForCourse((int) $item->course_id, $studentId);
+            if ($sale) {
+                $salesByCourse[(int) $item->course_id] = $sale;
+            }
+        }
+
+        if ($lockSales && $salesByCourse !== []) {
+            // Lock campaign rows in a stable order so concurrent cart checkouts
+            // cannot oversubscribe max_redemptions or deadlock on overlapping sales.
+            $lockedSales = [];
+            collect($salesByCourse)->unique('id')->sortBy('id')->each(function (FlashSale $candidate) use (&$lockedSales, $studentId): void {
+                $locked = FlashSale::query()->lockForUpdate()->find($candidate->id);
+                abort_unless($locked && $locked->isAvailableFor($studentId), 409,
+                    'This Flash Sale has ended or reached its purchase limit. Refresh your cart and try again.');
+                $lockedSales[$locked->id] = $locked;
+            });
+
+            foreach ($salesByCourse as $courseId => $candidate) {
+                $locked = $lockedSales[$candidate->id] ?? null;
+                abort_unless($locked && $locked->targetsCourse((int) $courseId), 409,
+                    'This Flash Sale no longer applies to a course in your cart. Refresh your cart and try again.');
+                $salesByCourse[$courseId] = $locked;
+            }
+        }
+
         $subtotal = 0.0;
         $lineTotals = [];
         $hasSale = false;
@@ -243,7 +273,7 @@ class StudentCartCheckoutController extends Controller
                 $base = $item->batch_id && (float) ($item->batch_fee ?? 0) > 0
                     ? (float) $item->batch_fee : (float) $item->price;
             }
-            $sale = FlashSale::activeForCourse((int) $item->course_id, $studentId);
+            $sale = $salesByCourse[(int) $item->course_id] ?? null;
             $amount = $sale ? $sale->discountedPrice($base) : $base;
             $hasSale = $hasSale || $sale !== null;
             $subtotal += $amount;

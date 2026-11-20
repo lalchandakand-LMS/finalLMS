@@ -39,7 +39,11 @@
             'mobileHeight' => $hasSettingsTable ? max(220, min(520, (int) \App\Models\Setting::value('home_slider_mobile_height', 300))) : 300,
             'overlay' => $hasSettingsTable ? max(20, min(90, (int) \App\Models\Setting::value('home_slider_overlay', 60))) : 60,
         ];
-        $flashSales = \Illuminate\Support\Facades\Schema::hasTable('flash_sales') ? \App\Models\FlashSale::activeCampaigns() : collect();
+        $flashSales = \Illuminate\Support\Facades\Route::has('flash-sales.public')
+            && \App\Models\FlashSale::isPluginActive()
+            && (bool) (int) \App\Models\Setting::value('flash_sale_page_enabled', '1')
+            ? \App\Models\FlashSale::activeCampaigns()
+            : collect();
         $homeSlides = collect(is_array($storedSlides) ? $storedSlides : [])->filter(fn ($slide) => is_array($slide) && !empty($slide['enabled']) && !empty($slide['image_id']))->map(function ($slide) {
             $asset = \App\Models\MediaAsset::query()->whereKey($slide['image_id'])->where('mime_type', 'like', 'image/%')->first();
             return $asset ? ['asset' => $asset, 'title' => $slide['title'] ?? '', 'subtitle' => $slide['subtitle'] ?? '', 'button_label' => $slide['button_label'] ?? '', 'button_url' => $slide['button_url'] ?? ''] : null;

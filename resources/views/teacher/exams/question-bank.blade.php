@@ -26,7 +26,8 @@
             </div>
             <div class="grid grid-2">
                 <label>{{ __('Correct option') }}<select name="correct_option"><option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select></label>
-                <label>{{ __('Marks') }}<input type="number" name="marks" min="1" max="100" value="1" required></label>
+                <label>{{ __('Positive marks') }}<input type="number" name="marks" min="1" max="100" value="1" required></label>
+                <label>{{ __('Negative marks') }}<input type="number" name="negative_marks" min="0" max="100" value="0" required></label>
             </div>
             <button class="btn primary" type="submit">{{ __('Save question') }}</button>
         </form>
@@ -49,7 +50,7 @@
                 <span class="badge info">{{ $question->subject ?: 'General' }}</span>
                 <h3>{{ $question->question }}</h3>
                 <ol type="A">@foreach($question->options as $option)<li>{{ $option }}</li>@endforeach</ol>
-                <p class="muted">{{ __('Correct answer:') }} {{ ['A', 'B', 'C', 'D'][$question->correct_option] }} · {{ $question->marks }} marks · {{ ucfirst($question->difficulty ?? 'medium') }}</p>
+                <p class="muted">{{ __('Correct answer:') }} {{ ['A', 'B', 'C', 'D'][$question->correct_option] }} · {{ $question->marks }} positive · {{ $question->negative_marks }} negative · {{ ucfirst($question->difficulty ?? 'medium') }}</p>
                 <details><summary>{{ __('Edit question') }}</summary>
                     <form method="POST" action="{{ $isAdmin ? route('admin.batches.question-bank.update', [$batch, $question]) : route('teacher.batches.question-bank.update', [$batch, $question]) }}">
                         @csrf @method('PUT')
@@ -58,7 +59,7 @@
                         <label>{{ __('Difficulty') }}<select name="difficulty">@foreach(['easy','medium','hard'] as $level)<option value="{{ $level }}" @selected(($question->difficulty ?? 'medium') === $level)>{{ ucfirst($level) }}</option>@endforeach</select></label>
                         <label>{{ __('Question') }}<textarea name="question" required>{{ $question->question }}</textarea></label>
                         <div class="grid grid-2">@foreach($question->options as $i => $option)<label>Option {{ ['A','B','C','D'][$i] }}<input name="options[{{ $i }}]" value="{{ $option }}" required></label>@endforeach</div>
-                        <div class="grid grid-2"><label>{{ __('Correct option') }}<select name="correct_option">@foreach(['A','B','C','D'] as $i => $letter)<option value="{{ $i }}" @selected($question->correct_option === $i)>{{ $letter }}</option>@endforeach</select></label><label>{{ __('Marks') }}<input type="number" name="marks" min="1" max="100" value="{{ $question->marks }}"></label></div>
+                        <div class="grid grid-2"><label>{{ __('Correct option') }}<select name="correct_option">@foreach(['A','B','C','D'] as $i => $letter)<option value="{{ $i }}" @selected($question->correct_option === $i)>{{ $letter }}</option>@endforeach</select></label><label>{{ __('Positive marks') }}<input type="number" name="marks" min="1" max="100" value="{{ $question->marks }}"></label><label>{{ __('Negative marks') }}<input type="number" name="negative_marks" min="0" max="100" value="{{ $question->negative_marks }}"></label></div>
                         <button class="btn primary" type="submit">{{ __('Update') }}</button>
                     </form>
                 </details>

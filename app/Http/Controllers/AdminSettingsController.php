@@ -55,6 +55,7 @@ class AdminSettingsController extends Controller
             'home_metric_2_label' => ['nullable', 'string', 'max:50'],
             'home_metric_3_value' => ['nullable', 'string', 'max:50'],
             'home_metric_3_label' => ['nullable', 'string', 'max:50'],
+            'flash_sale_page_enabled' => ['nullable', 'boolean'],
             'home_slider_autoplay' => ['nullable', 'boolean'],
             'home_slider_interval' => ['nullable', 'integer', 'min:3000', 'max:12000'],
             'home_slider_arrows' => ['nullable', 'boolean'],

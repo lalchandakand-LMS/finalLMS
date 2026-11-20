@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\Course;
+use App\Models\CourseCombo;
+use App\Models\Payment;
+use App\Models\PaymentComboCourse;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -151,4 +154,96 @@ class ManualPaymentFlowTest extends TestCase
 
         $this->assertDatabaseCount('payments', 0);
     }
+
+    public function test_direct_manual_checkout_is_blocked_when_course_is_reserved_by_a_pending_combo_payment(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $student = User::factory()->create(['role' => 'student']);
+        $first = Course::create([
+            'teacher_id' => $teacher->id, 'title' => 'Combo First Course',
+            'slug' => 'combo-first-course', 'description' => 'First course.',
+            'price' => 1000, 'status' => 'published',
+        ]);
+        $second = Course::create([
+            'teacher_id' => $teacher->id, 'title' => 'Combo Second Course',
+            'slug' => 'combo-second-course', 'description' => 'Second course.',
+            'price' => 1200, 'status' => 'published',
+        ]);
+        $combo = CourseCombo::create([
+            'title' => 'Pending Course Pair', 'slug' => 'pending-course-pair',
+            'description' => 'Two course bundle.', 'price' => 1800, 'status' => 'published',
+        ]);
+        $combo->courses()->attach([$first->id, $second->id]);
+        $payment = Payment::create([
+            'user_id' => $student->id, 'course_id' => $first->id,
+            'course_combo_id' => $combo->id, 'method' => 'manual',
+            'amount' => '1800.00', 'currency' => 'BDT',
+            'transaction_reference' => 'PENDING-COMBO-001', 'status' => 'pending',
+        ]);
+        PaymentComboCourse::create([
+            'payment_id' => $payment->id, 'course_id' => $first->id,
+            'course_title' => $first->title, 'position' => 1,
+        ]);
+        PaymentComboCourse::create([
+            'payment_id' => $payment->id, 'course_id' => $second->id,
+            'course_title' => $second->title, 'position' => 2,
+        ]);
+        Setting::setValue('payment_methods', json_encode([
+            'manual' => ['enabled' => true, 'label' => 'Manual', 'account' => '012345', 'instructions' => 'Send payment'],
+        ]));
+
+        $this->actingAs($student)
+            ->from(route('courses.show', $second))
+            ->post(route('courses.enroll', $second), [
+                'payment_method' => 'manual',
+                'transaction_reference' => 'DUPLICATE-DIRECT-001',
+            ])
+            ->assertRedirect(route('courses.show', $second))
+            ->assertSessionHas('info', 'Your payment is already waiting for review.');
+
+        $this->assertDatabaseCount('payments', 1);
+        $this->assertDatabaseMissing('payments', ['transaction_reference' => 'DUPLICATE-DIRECT-001']);
+    }
+
+    public function test_combo_checkout_is_blocked_when_any_included_course_has_a_pending_direct_payment(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $student = User::factory()->create(['role' => 'student']);
+        $first = Course::create([
+            'teacher_id' => $teacher->id, 'title' => 'Direct Pending Course',
+            'slug' => 'direct-pending-course', 'description' => 'First course.',
+            'price' => 1000, 'status' => 'published',
+        ]);
+        $second = Course::create([
+            'teacher_id' => $teacher->id, 'title' => 'Combo Companion Course',
+            'slug' => 'combo-companion-course', 'description' => 'Second course.',
+            'price' => 1200, 'status' => 'published',
+        ]);
+        $combo = CourseCombo::create([
+            'title' => 'Direct Pending Pair', 'slug' => 'direct-pending-pair',
+            'description' => 'Two course bundle.', 'price' => 1800, 'status' => 'published',
+        ]);
+        $combo->courses()->attach([$first->id, $second->id]);
+        Payment::create([
+            'user_id' => $student->id, 'course_id' => $first->id,
+            'method' => 'manual', 'amount' => '1000.00', 'currency' => 'BDT',
+            'transaction_reference' => 'PENDING-DIRECT-001', 'status' => 'pending',
+        ]);
+        Setting::setValue('payment_methods', json_encode([
+            'manual' => ['enabled' => true, 'label' => 'Manual', 'account' => '012345', 'instructions' => 'Send payment'],
+        ]));
+
+        $this->actingAs($student)
+            ->from(route('course-combos.show', $combo))
+            ->post(route('course-combos.enroll', $combo), [
+                'payment_method' => 'manual',
+                'transaction_reference' => 'DUPLICATE-COMBO-001',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('info', 'Your combo payment is already waiting for review.');
+
+        $this->assertDatabaseCount('payments', 1);
+        $this->assertDatabaseMissing('payments', ['transaction_reference' => 'DUPLICATE-COMBO-001']);
+    }
+
 }

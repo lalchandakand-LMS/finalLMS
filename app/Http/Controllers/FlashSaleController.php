@@ -15,6 +15,7 @@ class FlashSaleController extends Controller
 {
     public function publicIndex(): View
     {
+        abort_unless((bool) \App\Models\Setting::value('flash_sale_page_enabled', '1'), 404);
         $campaigns = FlashSale::activeCampaigns();
         return view('flash-sales.public', compact('campaigns'));
     }

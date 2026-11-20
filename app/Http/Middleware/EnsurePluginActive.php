@@ -15,9 +15,10 @@ final class EnsurePluginActive
             ->first();
 
         $trustedKeys = config('plugins.trusted_public_keys', []);
-        $trusted = is_array($trustedKeys)
-            && is_string($plugin?->signature_key_id)
-            && array_key_exists($plugin->signature_key_id, $trustedKeys);
+        $trustedKey = is_array($trustedKeys) && is_string($plugin?->signature_key_id)
+            ? ($trustedKeys[$plugin->signature_key_id] ?? null)
+            : null;
+        $trusted = is_string($trustedKey) && trim($trustedKey) !== '';
 
         abort_unless(
             $plugin

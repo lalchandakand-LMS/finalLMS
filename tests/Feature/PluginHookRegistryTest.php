@@ -111,4 +111,34 @@ class PluginHookRegistryTest extends TestCase
             Route::get('/', fn () => 'ok');
         });
     }
+    public function test_hook_registry_hides_plugins_when_the_trusted_public_key_is_empty(): void
+    {
+        config(['plugins.trusted_public_keys' => ['test-release-key' => '']]);
+        Route::get('/plugin-hook-empty-key', fn () => 'ok')->name('plugin-hook.empty-key');
+        Route::getRoutes()->refreshNameLookups();
+
+        $plugin = $this->activePlugin();
+        $registry = app(PluginHookRegistry::class);
+        $context = new PluginContext(app(), app('router'), $plugin, $registry);
+        $context->registerHook('lms.dashboard.widgets', fn () => 'must-not-run');
+        $context->registerPortalNavigation('student', 'Course Studio', 'plugin-hook.empty-key', [
+            'permission' => 'courses.view',
+        ]);
+
+        $this->assertSame([], $registry->dispatch('lms.dashboard.widgets'));
+        $this->assertSame([], $registry->portalNavigation('student'));
+    }
+
+
+
+    public function test_active_plugin_middleware_rejects_an_empty_trusted_public_key(): void
+    {
+        $this->activePlugin();
+        config(['plugins.trusted_public_keys' => ['test-release-key' => '']]);
+        Route::middleware('plugin.active:aec.course-studio')
+            ->get('/plugins/course-studio/empty-key-guard', fn () => response('should not run'));
+
+        $this->get('/plugins/course-studio/empty-key-guard')->assertNotFound();
+    }
+
 }
