@@ -18,6 +18,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use App\Services\Plugins\PluginContext;
 use App\Services\Plugins\PluginHookRegistry;
+use App\Services\Plugins\PluginSignatureVerifier;
+use FilesystemIterator;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
 use Tests\TestCase;
 
 class FlashSaleTest extends TestCase
@@ -28,7 +32,10 @@ class FlashSaleTest extends TestCase
     {
         parent::setUp();
 
-        config(['plugins.trusted_public_keys' => ['flash-sale-test-key' => 'test-public-key']]);
+        $keyPair = sodium_crypto_sign_keypair();
+        config(['plugins.trusted_public_keys' => [
+            'flash-sale-test-key' => base64_encode(sodium_crypto_sign_publickey($keyPair)),
+        ]]);
 
         $manifest = json_decode(
             file_get_contents(base_path('plugins/aec/flash-sale/1.0.0/plugin.json')),
@@ -37,6 +44,26 @@ class FlashSaleTest extends TestCase
             JSON_THROW_ON_ERROR
         );
 
+        $packageRoot = base_path('plugins/aec/flash-sale/1.0.0');
+        $hashes = [];
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator(realpath($packageRoot), FilesystemIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::SELF_FIRST
+        );
+        $realRoot = rtrim((string) realpath($packageRoot), DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR;
+        foreach ($iterator as $item) {
+            if (! $item->isFile()) {
+                continue;
+            }
+            $relative = str_replace(DIRECTORY_SEPARATOR, '/', substr($item->getPathname(), strlen($realRoot)));
+            $hashes[$relative] = hash_file('sha256', $item->getRealPath());
+        }
+        $checksum = hash('sha256', 'signed flash-sale test package');
+        $signature = base64_encode(sodium_crypto_sign_detached(
+            PluginSignatureVerifier::payloadForSignature($manifest, $checksum),
+            sodium_crypto_sign_secretkey($keyPair),
+        ));
+
         DB::table('plugin_registry')->insert([
             'plugin_key' => 'aec.flash-sale',
             'name' => 'Flash Sale',
@@ -44,12 +71,18 @@ class FlashSaleTest extends TestCase
             'type' => 'module',
             'status' => 'active',
             'manifest' => json_encode($manifest, JSON_THROW_ON_ERROR),
-            'package_sha256' => str_repeat('a', 64),
+            'package_sha256' => $checksum,
             'signature_key_id' => 'flash-sale-test-key',
             'signature_verified_at' => now(),
             'package_path' => 'plugins/aec/flash-sale/1.0.0',
             'health_status' => 'healthy',
-            'metadata' => json_encode(['granted_permissions' => ['flash-sale.manage']], JSON_THROW_ON_ERROR),
+            'metadata' => json_encode([
+                'granted_permissions' => ['flash-sale.manage'],
+                'integrity_version' => 1,
+                'release_signature' => $signature,
+                'signature_record_version' => 1,
+                'installed_file_hashes' => $hashes,
+            ], JSON_THROW_ON_ERROR),
             'installed_at' => now(),
             'activated_at' => now(),
             'created_at' => now(),
