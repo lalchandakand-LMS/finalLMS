@@ -7,7 +7,6 @@ use App\Services\Plugins\PluginIntegrityVerifier;
 use App\Services\Plugins\PluginSignatureVerifier;
 use Closure;
 use Illuminate\Support\Facades\Schema;
-use InvalidArgumentException;
 use RuntimeException;
 
 /**
@@ -64,7 +63,7 @@ final class EnsurePluginJobActive
             }
 
             $integrityVerifier->verify($plugin);
-        } catch (RuntimeException|InvalidArgumentException $exception) {
+        } catch (PluginTrustFailure $exception) {
             report($exception);
 
             // Invalid signatures, revoked keys and tampered packages are
