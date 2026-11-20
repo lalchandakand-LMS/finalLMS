@@ -89,6 +89,7 @@ class UniversalAiAssistantPluginTest extends TestCase
             ->name('student.ai-assistant.index');
         Route::post('/__test-ai-assistant/privacy-notice/messages', fn () => response()->json([]))
             ->name('student.ai-assistant.messages.store');
+        app('router')->getRoutes()->refreshNameLookups();
 
         AssistantSettings::save($baseSettings + [
             'role_data_access' => array_fill_keys(AssistantSettings::ROLES, false),
