@@ -687,8 +687,8 @@ class InstructorAttendanceSyncTest extends TestCase
         ]);
 
         $this->withoutMiddleware([
-            \App\Http\Middleware\\AuthenticateApiToken::class,
-            \App\Http\Middleware\\EnsureModuleEnabled::class,
+            \App\Http\Middleware\AuthenticateApiToken::class,
+            \App\Http\Middleware\EnsureModuleEnabled::class,
         ])->actingAs($otherTeacher)
             ->postJson('/api/v1/instructor/attendance/sync', [
                 'records' => [$this->payload($otherBatch, $otherStudent, $key)],
