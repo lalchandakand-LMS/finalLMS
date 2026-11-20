@@ -119,8 +119,11 @@ class PluginSignatureVerifier
      */
     public function verifyInstalledSignature(PluginInstallation $plugin): bool
     {
-        if (! function_exists('sodium_crypto_sign_verify_detached')
-            || $plugin->signature_verified_at === null
+        if (! function_exists('sodium_crypto_sign_verify_detached')) {
+            throw new RuntimeException('The PHP sodium extension is required to re-verify installed plugin signatures.');
+        }
+
+        if ($plugin->signature_verified_at === null
             || ! is_string($plugin->package_sha256)
             || preg_match('/^[a-f0-9]{64}$/D', $plugin->package_sha256) !== 1
             || ! is_string($plugin->signature_key_id)
