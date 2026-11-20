@@ -11,10 +11,6 @@
         $institutionFaviconUrl = $hasSettingsTable ? \App\Models\Setting::value('institution_favicon_url') : null;
         $institutionLogoMediaId = $hasSettingsTable ? (int) \App\Models\Setting::value('site_logo_media_id', 0) : 0;
         $institutionFaviconMediaId = $hasSettingsTable ? (int) \App\Models\Setting::value('site_favicon_media_id', 0) : 0;
-        $institutionLogoMedia = $institutionLogoMediaId ? \App\Models\MediaAsset::query()->whereKey($institutionLogoMediaId)->where('mime_type', 'like', 'image/%')->first() : null;
-        $institutionFaviconMedia = $institutionFaviconMediaId ? \App\Models\MediaAsset::query()->whereKey($institutionFaviconMediaId)->where('mime_type', 'like', 'image/%')->first() : null;
-        $institutionLogoUrl = $institutionLogoMedia?->url ?: $institutionLogoUrl;
-        $institutionFaviconUrl = $institutionFaviconMedia?->url ?: $institutionFaviconUrl;
         $loadingEnabled = $hasSettingsTable && \App\Models\Setting::value('loading_screen_enabled', '1') === '1';
         $loadingLogoMediaId = $hasSettingsTable ? (int) \App\Models\Setting::value('loading_screen_logo_media_id', 0) : 0;
         $loadingLogoMedia = $loadingLogoMediaId ? \App\Models\MediaAsset::query()->whereKey($loadingLogoMediaId)->where('mime_type', 'like', 'image/%')->first() : null;
@@ -26,6 +22,10 @@
         if (!in_array($loadingStyle, ['orbit', 'pulse', 'ring'], true)) $loadingStyle = 'orbit';
         $loadingSpeed = $hasSettingsTable ? (int) \App\Models\Setting::value('loading_screen_speed', 12) : 12;
         $loadingSpeed = max(6, min(24, $loadingSpeed));
+        $institutionLogoMedia = $institutionLogoMediaId ? \App\Models\MediaAsset::query()->whereKey($institutionLogoMediaId)->where('mime_type', 'like', 'image/%')->first() : null;
+        $institutionFaviconMedia = $institutionFaviconMediaId ? \App\Models\MediaAsset::query()->whereKey($institutionFaviconMediaId)->where('mime_type', 'like', 'image/%')->first() : null;
+        $institutionLogoUrl = $institutionLogoMedia?->url ?: $institutionLogoUrl;
+        $institutionFaviconUrl = $institutionFaviconMedia?->url ?: $institutionFaviconUrl;
         $seoTitle = $hasSettingsTable ? \App\Models\Setting::value('seo_title', config('app.name')) : config('app.name');
         $seoDescription = $hasSettingsTable ? \App\Models\Setting::value('seo_description', 'Learn with guided courses, track your progress, and grow your skills.') : 'Learn with guided courses, track your progress, and grow your skills.';
         $seoKeywords = $hasSettingsTable ? \App\Models\Setting::value('seo_keywords', 'online learning, courses, education') : 'online learning, courses, education';
@@ -35,8 +35,16 @@
         $googleSearchConsoleVerification = $hasSettingsTable ? \App\Models\Setting::value('google_search_console_verification') : null;
         $marketingConsent = request()->cookie('marketing_consent') === 'accepted';
         $isAdminLayout = auth()->check() && (auth()->user()->isAdmin() || auth()->user()->isBranchManager() || auth()->user()->isAccountant());
+        $studentTrackingPlugin = auth()->check() && \Illuminate\Support\Facades\Schema::hasTable('plugin_registry')
+            ? \App\Models\PluginInstallation::query()->where('plugin_key', 'aec.student-tracking')->where('status', 'active')->first()
+            : null;
+        $studentTrackingAvailable = $studentTrackingPlugin
+            && in_array('student-tracking.view', $studentTrackingPlugin->metadata['granted_permissions'] ?? [], true);
         $isPublicLayout = ! $isAdminLayout;
         $websiteHeaderLinks = $isPublicLayout && $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('header_links', '[]'), true) : [];
+        $websitePageLinks = $isPublicLayout && \Illuminate\Support\Facades\Schema::hasTable('website_pages')
+            ? \App\Models\WebsitePage::query()->where('status', 'published')->where('show_in_menu', true)->orderBy('menu_order')->orderBy('title')->get(['title', 'slug', 'menu_label'])
+            : collect();
         $websiteFooterTitle = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('footer_title', config('app.name')) : config('app.name');
         $websiteFooterText = $isPublicLayout && $hasSettingsTable ? \App\Models\Setting::value('footer_text', '') : '';
         $websiteFooterLinks = $isPublicLayout && $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('footer_links', '[]'), true) : [];
@@ -65,7 +73,7 @@
     @if($activeThemeSlug && $activeThemeVersion)
         @php $activeThemeRecord = \Illuminate\Support\Facades\DB::table('themes')->where('slug', $activeThemeSlug)->where('version', $activeThemeVersion)->first(); $activeThemeAssets = $activeThemeRecord ? json_decode($activeThemeRecord->assets, true) : []; @endphp
         @foreach(is_array($activeThemeAssets) ? $activeThemeAssets : [] as $activeThemeAsset)
-            @if(is_string($activeThemeAsset) && preg_match('/^assets\/[a-z0-9][a-z0-9._-]*\.css$/i', $activeThemeAsset))
+            @if(is_string($activeThemeAsset) && preg_match('/^assets\\/[a-z0-9][a-z0-9._-]*\\.css$/i', $activeThemeAsset))
                 <link rel="stylesheet" href="{{ route('themes.asset', ['slug' => $activeThemeSlug, 'version' => $activeThemeVersion, 'file' => basename($activeThemeAsset)]) }}">
             @endif
         @endforeach
@@ -401,7 +409,6 @@
             </div>
         </div>
     @endif
-
     @if($marketingConsent && $googleTagManagerId)
         <noscript><iframe src="https://www.googletagmanager.com/ns.html?id={{ urlencode($googleTagManagerId) }}" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     @endif
@@ -414,6 +421,7 @@
             <div class="admin-sidebar-label">Overview</div>
             <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><span>▦</span><span class="nav-text">Dashboard</span></a>
             <div class="admin-sidebar-label">Academy</div>
+            <a href="{{ route('admin.academic-levels.index') }}"><span>🎓</span><span class="nav-text">Academic levels</span></a>
             <a href="{{ route('admin.courses.index') }}"><span>📚</span><span class="nav-text">Courses & lessons</span></a>
             <a class="{{ request()->routeIs('admin.ebooks.*') ? 'active' : '' }}" href="{{ route('admin.ebooks.index') }}"><span>📕</span><span class="nav-text">eBook management</span></a>
             <a class="{{ request()->routeIs('admin.ebooks.orders.*') ? 'active' : '' }}" href="{{ route('admin.ebooks.orders.index') }}"><span>🧾</span><span class="nav-text">eBook orders</span></a>
@@ -422,8 +430,13 @@
             <a class="{{ request()->routeIs('admin.course-content-posts.*') ? 'active' : '' }}" href="{{ route('admin.course-content-posts.index') }}"><span>📝</span><span class="nav-text">Course content studio</span></a>
             <a class="{{ request()->routeIs('admin.question-sets.*') ? 'active' : '' }}" href="{{ route('admin.question-sets.index') }}"><span>🧩</span><span class="nav-text">Question sets</span></a>
             <a class="{{ request()->routeIs('admin.coupons.*') ? 'active' : '' }}" href="{{ route('admin.coupons.index') }}"><span>🏷️</span><span class="nav-text">Coupons</span></a>
-            <a href="{{ route('admin.flash-sales.index') }}"><span>🔥</span><span class="nav-text">Flash Sale</span></a>
+            @if(\Illuminate\Support\Facades\Route::has('admin.flash-sales.index') && \App\Models\FlashSale::isPluginActive())
+                <a href="{{ route('admin.flash-sales.index') }}"><span>🔥</span><span class="nav-text">Flash Sale</span></a>
+            @endif
             <a href="{{ route('admin.users.index') }}"><span>👥</span><span class="nav-text">Students & teachers</span></a>
+            @if($studentTrackingAvailable && \Illuminate\Support\Facades\Route::has('admin.student-tracking.index'))
+                <a class="{{ request()->routeIs('admin.student-tracking.*') ? 'active' : '' }}" href="{{ route('admin.student-tracking.index') }}"><span>📊</span><span class="nav-text">Student Tracking</span></a>
+            @endif
             <a class="{{ request()->routeIs('admin.teacher-applications.*') ? 'active' : '' }}" href="{{ route('admin.teacher-applications.index') }}"><span>🪪</span><span class="nav-text">Teacher KYC review</span></a>
             <a class="{{ request()->routeIs('admin.student-devices.*') ? 'active' : '' }}" href="{{ route('admin.student-devices.index') }}"><span>📱</span><span class="nav-text">Device approvals</span></a>
             <a class="{{ request()->routeIs('admin.verification-center.*') ? 'active' : '' }}" href="{{ route('admin.verification-center.index') }}"><span>✅</span><span class="nav-text">Verification center</span></a>
@@ -472,6 +485,9 @@
                     @if(auth()->user()->hasAdminPermission('branch.students'))
                         <a class="{{ request()->routeIs('admin.branch-workspace.students.*') ? 'active' : '' }}" href="{{ route('admin.branch-workspace.students.index') }}"><span>👥</span><span class="nav-text">Branch students</span></a>
                     @endif
+                    @if($studentTrackingAvailable && \Illuminate\Support\Facades\Route::has('branch.student-tracking.index'))
+                        <a class="{{ request()->routeIs('branch.student-tracking.*') ? 'active' : '' }}" href="{{ route('branch.student-tracking.index') }}"><span>📊</span><span class="nav-text">Student Tracking</span></a>
+                    @endif
                 @endif
             @elseif(auth()->user()->isAccountant())
                 <div class="admin-sidebar-label">Overview</div>
@@ -513,7 +529,7 @@
                 <a href="/">{{ __('Home') }}</a>
                 <a href="{{ route('courses.index') }}">{{ __('Courses') }}</a>
                 <a href="{{ route('ebooks.index') }}">eBooks</a>
-                @if(\Illuminate\Support\Facades\Schema::hasTable('flash_sales') && \App\Models\FlashSale::activeCampaigns()->isNotEmpty())<a href="{{ route('landing') }}#flash-sale">🔥 {{ __('Flash Sale') }}</a>@endif
+                @if(\Illuminate\Support\Facades\Route::has('flash-sales.public') && \App\Models\FlashSale::isPluginActive() && (bool) (int) \App\Models\Setting::value('flash_sale_page_enabled', '1') && \App\Models\FlashSale::activeCampaigns()->isNotEmpty())<a href="{{ route('landing') }}#flash-sale">🔥 {{ __('Flash Sale') }}</a>@endif
                 <a href="{{ route('contests.index') }}">Quiz & prizes</a>
                 <a href="{{ route('pages.about') }}">{{ __('About') }}</a>
                 <a href="{{ route('pages.contact') }}">{{ __('Contact') }}</a>
@@ -526,7 +542,10 @@
                         @endif
                     @endforeach
                 @auth
-                    <a href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a>
+                    <a href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a>                    @foreach($websitePageLinks as $websitePageLink)
+                        <a href="{{ route('website-pages.show', $websitePageLink->slug) }}">{{ $websitePageLink->menu_label ?: $websitePageLink->title }}</a>
+                    @endforeach
+
                     <a href="{{ route('notices.index') }}">{{ __('Notice Board') }}</a>
                     <a href="{{ route('profile.edit') }}">{{ __('Profile') }}</a>
                     <a href="{{ route('live-classes.index') }}">{{ __('Live classes') }}</a>
@@ -550,18 +569,29 @@
                         <a href="{{ route('admin.news.index') }}">{{ __('Blog & News') }}</a>
                         <a href="{{ route('admin.users.index') }}">Users</a>
                         <a href="{{ route('admin.courses.index') }}">Courses</a>
-                        <a href="{{ route('admin.flash-sales.index') }}">Flash Sale</a>
+                        @if(\Illuminate\Support\Facades\Route::has('admin.flash-sales.index') && \App\Models\FlashSale::isPluginActive())
+                            <a href="{{ route('admin.flash-sales.index') }}">Flash Sale</a>
+                        @endif
                     @endif
                     @if(auth()->user()->isTeacher())
                         <a href="{{ route('teacher.batches.index') }}">My batches</a>
+                        @if($studentTrackingAvailable && \Illuminate\Support\Facades\Route::has('teacher.student-tracking.index'))
+                            <a href="{{ route('teacher.student-tracking.index') }}">My Students</a>
+                        @endif
                     @endif
                     @if(auth()->user()->isGuardian())
                         <a href="{{ route('guardian.dashboard') }}">{{ __('Guardian portal') }}</a>
+                        @if($studentTrackingAvailable && \Illuminate\Support\Facades\Route::has('guardian.student-tracking.index'))
+                            <a href="{{ route('guardian.student-tracking.index') }}">Children Tracking</a>
+                        @endif
                     @endif
                     @if(auth()->user()->isStudent())
                         <a href="{{ route('student.guardian-requests.page') }}">{{ __('Guardian requests') }}</a>
                         <a href="{{ route('student.wishlist.index') }}">Wishlist</a>
                         <a href="{{ route('student.attendance.index') }}">Attendance</a>
+                        @if($studentTrackingAvailable && \Illuminate\Support\Facades\Route::has('student.tracking.index'))
+                            <a href="{{ route('student.tracking.index') }}">My Learning Tracking</a>
+                        @endif
                     <a href="{{ route('student.exams.index') }}">Exams</a>
                         <a href="{{ route('student.invoices.index') }}">My fees</a>
                     @endif
