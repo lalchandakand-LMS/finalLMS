@@ -565,30 +565,34 @@ class ThemeManagerController extends Controller
 
     public function reset(Request $request): RedirectResponse
     {
-        DB::transaction(function () use ($request): void {
-            $lock = DB::table('theme_manager_locks')->where('id', 1)->lockForUpdate()->first();
-            if (! $lock) {
-                throw new \RuntimeException('Theme lifecycle lock is missing.');
-            }
+        try {
+            DB::transaction(function () use ($request): void {
+                $lock = DB::table('theme_manager_locks')->where('id', 1)->lockForUpdate()->first();
+                if (! $lock) {
+                    throw new \\RuntimeException(__('Theme reset is unavailable because the lifecycle lock is missing.'));
+                }
 
-            $previous = [
-                'id' => (int) Setting::value('active_theme_id', 0),
-                'slug' => Setting::value('active_theme_slug'),
-                'version' => Setting::value('active_theme_version'),
-            ];
-            // A reset activates the built-in theme, which has no themes-table row.
-            // The previous installed theme remains available in previous_state for rollback/audit.
-            DB::table('theme_activations')->insert([
-                'theme_id' => null,
-                'action' => 'reset',
-                'previous_state' => json_encode($previous, JSON_THROW_ON_ERROR),
-                'actor_id' => $request->user()->id,
-                'created_at' => now(),
-            ]);
-            Setting::setValue('active_theme_id', 0);
-            Setting::setValue('active_theme_slug', '');
-            Setting::setValue('active_theme_version', '');
-        }, 3);
+                $previous = [
+                    'id' => (int) Setting::value('active_theme_id', 0),
+                    'slug' => Setting::value('active_theme_slug'),
+                    'version' => Setting::value('active_theme_version'),
+                ];
+                // A reset activates the built-in theme, which has no themes-table row.
+                // The previous installed theme remains available in previous_state for rollback/audit.
+                DB::table('theme_activations')->insert([
+                    'theme_id' => null,
+                    'action' => 'reset',
+                    'previous_state' => json_encode($previous, JSON_THROW_ON_ERROR),
+                    'actor_id' => $request->user()->id,
+                    'created_at' => now(),
+                ]);
+                Setting::setValue('active_theme_id', 0);
+                Setting::setValue('active_theme_slug', '');
+                Setting::setValue('active_theme_version', '');
+            }, 3);
+        } catch (\\RuntimeException $exception) {
+            return back()->withErrors(['theme' => $exception->getMessage()]);
+        }
 
         return redirect()->route('admin.themes.index')->with('success', __('The built-in Alom LMS theme has been restored. Your pages, menus, media and course data were not changed.'));
     }
