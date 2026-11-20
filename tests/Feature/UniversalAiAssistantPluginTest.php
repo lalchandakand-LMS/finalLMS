@@ -82,7 +82,7 @@ class UniversalAiAssistantPluginTest extends TestCase
             'retention_days' => 365,
         ];
 
-        Route::get('/__test-ai-assistant/privacy-notice', [\\Aloms\\UniversalAiAssistant\\AssistantController::class, 'index'])
+        Route::get('/__test-ai-assistant/privacy-notice', [\Aloms\UniversalAiAssistant\AssistantController::class, 'index'])
             ->name('student.ai-assistant.index');
         Route::post('/__test-ai-assistant/privacy-notice/messages', fn () => response()->json([]))
             ->name('student.ai-assistant.messages.store');
