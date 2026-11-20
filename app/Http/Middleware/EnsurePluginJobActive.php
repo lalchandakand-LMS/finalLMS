@@ -1,10 +1,10 @@
 <?php
 
-namespace App\\Http\\Middleware;
+namespace App\Http\Middleware;
 
-use App\\Models\\PluginInstallation;
+use App\Models\PluginInstallation;
 use Closure;
-use Illuminate\\Support\\Facades\\Schema;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Drop queued work when its owning signed plugin is no longer trusted, active,
@@ -55,7 +55,7 @@ final class EnsurePluginJobActive
                 // stale work; retrying cannot make a deactivated plugin safe.
                 return null;
             }
-        } catch (\\Throwable $exception) {
+        } catch (\Throwable $exception) {
             report($exception);
 
             // Fail closed if registry state cannot be established.
