@@ -78,12 +78,18 @@ class BkashPaymentFlowTest extends TestCase
                 'trxID' => 'BKASH-TRX-001',
                 'amount' => '1500.00',
             ], 200),
-            '*/tokenized/checkout/payment/status' => Http::response([
-                'transactionStatus' => 'Completed',
-                'paymentID' => 'BKASH-PAY-001',
-                'trxID' => 'BKASH-TRX-001',
-                'amount' => '1500.00',
-            ], 200),
+            '*/tokenized/checkout/payment/status' => function (Request $request) {
+                $payment = Payment::query()->where('gateway_payment_id', $request['paymentID'])->firstOrFail();
+
+                return Http::response([
+                    'transactionStatus' => 'Completed',
+                    'paymentID' => 'BKASH-PAY-001',
+                    'trxID' => 'BKASH-TRX-001',
+                    'amount' => '1500.00',
+                    'currency' => 'BDT',
+                    'merchantInvoiceNumber' => $payment->transaction_reference,
+                ], 200);
+            },
         ]);
 
         $this->actingAs($student)
@@ -370,6 +376,8 @@ class BkashPaymentFlowTest extends TestCase
                 'paymentID' => 'BKASH-PAY-FAIL-CALLBACK',
                 'trxID' => 'BKASH-TRX-FAIL-CALLBACK',
                 'amount' => '1500.00',
+                'currency' => 'BDT',
+                'merchantInvoiceNumber' => 'BKASH-LOCAL-REF-FAIL-CALLBACK',
             ], 200),
         ]);
 
