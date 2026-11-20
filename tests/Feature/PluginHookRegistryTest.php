@@ -114,10 +114,13 @@ class PluginHookRegistryTest extends TestCase
         $this->assertSame(['widget-teacher'], $registry->dispatch('lms.dashboard.widgets', ['role' => 'teacher']));
         $this->assertCount(1, $registry->portalNavigation('student'));
 
-        $plugin->forceFill(['metadata' => ['granted_permissions' => []]])->save();
+        $metadata = $plugin->metadata;
+        $metadata['granted_permissions'] = [];
+        $plugin->forceFill(['metadata' => $metadata])->save();
         $this->assertSame([], $registry->portalNavigation('student'));
         $this->assertSame([], $registry->dispatch('lms.dashboard.widgets', ['role' => 'teacher']));
-        $plugin->forceFill(['metadata' => ['granted_permissions' => ['courses.view']]])->save();
+        $metadata['granted_permissions'] = ['courses.view'];
+        $plugin->forceFill(['metadata' => $metadata])->save();
 
         $plugin->forceFill(['status' => 'inactive'])->save();
 
