@@ -17,6 +17,9 @@ final class PluginRuntime
     private bool $registered = false;
     private bool $booted = false;
 
+    /** @var array<string, true> */
+    private array $bootedPluginKeys = [];
+
     public function __construct(
         private readonly Application $app,
         private readonly Router $router,
@@ -38,9 +41,11 @@ final class PluginRuntime
         if ($this->registered) {
             return;
         }
-        $this->registered = true;
         $hooks = $this->hookRegistry ?? $this->app->make(PluginHookRegistry::class);
+        // Do not mark registration complete until the registry query succeeds.
+        // A transient database outage must allow a long-lived worker to retry.
         $active = PluginInstallation::query()->where('status', 'active')->orderBy('plugin_key')->get();
+        $this->registered = true;
 
         /** @var array<string, array{plugin:PluginInstallation,entrypoint:string}> $verified */
         $verified = [];
@@ -111,30 +116,41 @@ final class PluginRuntime
         }
 
         $this->registerActivePlugins();
-        $this->booted = true;
 
         foreach ($this->loaded as $key => $loaded) {
-            try {
-                $current = PluginInstallation::query()->find($loaded['plugin']->getKey());
-                if (! $current || $current->status !== 'active') {
-                    unset($this->loaded[$key]);
-                    continue;
-                }
+            if (isset($this->bootedPluginKeys[$key])) {
+                continue;
+            }
 
+            // Keep registry reads outside the plugin-failure handler. A database
+            // outage must bubble up so a long-lived worker can retry boot safely.
+            $current = PluginInstallation::query()->find($loaded['plugin']->getKey());
+            if (! $current || $current->status !== 'active') {
+                unset($this->loaded[$key]);
+                continue;
+            }
+
+            try {
                 // A dependency may have failed while registering or booting.
                 foreach (($current->manifest['dependencies'] ?? []) as $dependency) {
-                    if (! isset($this->loaded[$dependency])) {
+                    if (! isset($this->loaded[$dependency]) || ! isset($this->bootedPluginKeys[$dependency])) {
                         throw new RuntimeException('A required plugin dependency did not remain available during boot: '.$dependency);
                     }
                 }
 
                 $loaded['instance']->boot($loaded['context']);
+                $this->bootedPluginKeys[$key] = true;
             } catch (Throwable $exception) {
                 report($exception);
                 $this->markFailed($loaded['plugin']);
                 unset($this->loaded[$key]);
             }
         }
+
+        // Set only after every registry read completed. Successfully booted
+        // plugins are tracked individually to avoid replaying their boot hooks
+        // if a later plugin's registry read temporarily fails.
+        $this->booted = true;
     }
 
     /**
