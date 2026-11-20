@@ -76,17 +76,24 @@ class AttendanceController extends Controller
             'records.*.reason' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $enrolledStudentIds = $batch->enrollments()
-            ->where('status', 'active')
-            ->pluck('user_id')
-            ->all();
+        DB::transaction(function () use ($validated, $batch): void {
+            $lockedBatch = Batch::query()->whereKey($batch->id)->lockForUpdate()->firstOrFail();
+            $this->authorizeBatch($lockedBatch);
 
-        DB::transaction(function () use ($validated, $enrolledStudentIds, $batch): void {
+            // Read and lock the active enrollment set inside the same transaction
+            // as attendance writes so a concurrent cancellation cannot use a stale list.
+            $enrolledStudentIds = $lockedBatch->enrollments()
+                ->where('status', 'active')
+                ->lockForUpdate()
+                ->pluck('user_id')
+                ->map(fn ($id): int => (int) $id)
+                ->all();
+
             foreach ($validated['records'] as $record) {
                 abort_unless(in_array((int) $record['student_id'], $enrolledStudentIds, true), 403);
 
                 $attendance = Attendance::query()
-                    ->where('batch_id', $batch->id)
+                    ->where('batch_id', $lockedBatch->id)
                     ->where('student_id', $record['student_id'])
                     ->whereDate('attendance_date', $validated['attendance_date'])
                     ->lockForUpdate()
@@ -118,7 +125,7 @@ class AttendanceController extends Controller
 
                 if (! $attendance) {
                     $attendance = Attendance::query()->create([
-                        'batch_id' => $batch->id,
+                        'batch_id' => $lockedBatch->id,
                         'student_id' => $record['student_id'],
                         'marked_by' => Auth::id(),
                         'attendance_date' => $validated['attendance_date'],
