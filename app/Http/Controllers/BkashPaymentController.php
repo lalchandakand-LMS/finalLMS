@@ -33,12 +33,15 @@ class BkashPaymentController extends Controller
         abort_unless($gateways->isAvailable('bkash'), 503, 'bKash checkout is not enabled or configured.');
 
         $user = $request->user();
-        $hasOpenBatches = $course->batches()->where('status', 'open')->exists();
+        $hasOpenBatches = $course->batches()->where('status', 'open')
+            ->when($user->branch_id !== null, fn ($query) => $query->where('branch_id', $user->branch_id))
+            ->exists();
         $validated = $request->validate([
             'batch_id' => [
                 $hasOpenBatches ? 'required' : 'nullable',
                 'integer',
-                Rule::exists('batches', 'id')->where(fn ($query) => $query->where('course_id', $course->id)->where('status', 'open')),
+                Rule::exists('batches', 'id')->where(fn ($query) => $query->where('course_id', $course->id)->where('status', 'open')
+                    ->when($user->branch_id !== null, fn ($query) => $query->where('branch_id', $user->branch_id))),
             ],
         ]);
         $batchId = $validated['batch_id'] ?? null;
@@ -56,7 +59,9 @@ class BkashPaymentController extends Controller
 
             if ($batchId) {
                 $batch = Batch::query()->lockForUpdate()->findOrFail($batchId);
-                if ($batch->course_id !== $lockedCourse->id || $batch->status !== 'open' || ! $this->hasAvailableSeat($batch)) {
+                if ($batch->course_id !== $lockedCourse->id || $batch->status !== 'open'
+                    || ($user->branch_id !== null && (int) $batch->branch_id !== (int) $user->branch_id)
+                    || ! $this->hasAvailableSeat($batch)) {
                     abort(409, 'This batch has reached its enrollment capacity.');
                 }
             } else {
