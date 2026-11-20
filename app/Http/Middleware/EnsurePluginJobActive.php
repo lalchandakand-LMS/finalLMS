@@ -21,7 +21,8 @@ final class EnsurePluginJobActive
         private readonly string $permission,
     ) {}
 
-    public function handle(object $job, Closure $next): mixed {
+    public function handle(object $job, Closure $next): mixed
+    {
         // Infrastructure failures must bubble to the queue worker for retry.
         if (! Schema::hasTable('plugin_registry')) {
             throw new RuntimeException('The plugin registry is unavailable; queued plugin work cannot be authorized.');
