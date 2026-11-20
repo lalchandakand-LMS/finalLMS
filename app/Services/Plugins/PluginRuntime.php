@@ -38,9 +38,11 @@ final class PluginRuntime
         if ($this->registered) {
             return;
         }
-        $this->registered = true;
         $hooks = $this->hookRegistry ?? $this->app->make(PluginHookRegistry::class);
+        // Do not mark registration complete until the registry query succeeds.
+        // A transient database outage must allow a long-lived worker to retry.
         $active = PluginInstallation::query()->where('status', 'active')->orderBy('plugin_key')->get();
+        $this->registered = true;
 
         /** @var array<string, array{plugin:PluginInstallation,entrypoint:string}> $verified */
         $verified = [];
