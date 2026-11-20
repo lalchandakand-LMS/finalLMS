@@ -206,21 +206,26 @@ final class PluginHookRegistry
             return [];
         }
 
-        $trustedKeys = config('plugins.trusted_public_keys', []);
-        if (! is_array($trustedKeys)) {
-            return [];
-        }
-
+        $signatureVerifier = app(PluginSignatureVerifier::class);
+        $integrityVerifier = app(PluginIntegrityVerifier::class);
         $active = [];
-        foreach (PluginInstallation::query()->where('status', 'active')->get() as $plugin) {
-            $trustedKey = is_string($plugin->signature_key_id)
-                ? ($trustedKeys[$plugin->signature_key_id] ?? null)
-                : null;
 
-            if ($plugin->signature_verified_at !== null
-                && is_string($trustedKey)
-                && trim($trustedKey) !== '') {
+        foreach (PluginInstallation::query()->where('status', 'active')->get() as $plugin) {
+            try {
+                // A persisted "verified" timestamp and a still-present key ID are
+                // not proof that the current trusted key still validates the release.
+                if (! $signatureVerifier->verifyInstalledSignature($plugin)) {
+                    continue;
+                }
+
+                // Hooks and portal navigation execute in the current process after
+                // boot; re-check installed files so tampering/revocation takes effect.
+                $integrityVerifier->verify($plugin);
                 $active[$plugin->plugin_key] = $plugin;
+            } catch (PluginTrustFailure $exception) {
+                report($exception);
+                // Confirmed trust/integrity failures must fail closed.
+                continue;
             }
         }
 
