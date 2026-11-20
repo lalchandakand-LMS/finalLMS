@@ -251,8 +251,6 @@ class VisitorPopupManagementTest extends TestCase
         $this->assertStringContainsString('noopener noreferrer', (string) $popup->rich_html);
 
         auth()->logout();
-        // The landing route intentionally redirects authenticated users to their dashboard.
-        auth()->logout();
         $this->get(route('landing'))
             ->assertOk()
             ->assertSee('Sanitized Announcement')
@@ -478,6 +476,8 @@ class VisitorPopupManagementTest extends TestCase
         $this->assertSame('Asia/Dhaka', $campaign->toPublicPayload(null, false)['timezone']);
         $this->assertContains('every_visit', PopupCampaign::FREQUENCIES);
 
+        // The landing route intentionally redirects authenticated users to their dashboard.
+        auth()->logout();
         $this->get(route('landing'))
             ->assertOk()
             ->assertSee("if (frequency === 'once_per_session' && sessionStorage.getItem(key)) return;", false)
