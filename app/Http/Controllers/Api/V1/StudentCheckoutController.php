@@ -25,8 +25,10 @@ class StudentCheckoutController extends Controller
         abort_unless($request->user()->isStudent(), 403);
         abort_unless($course->status === 'published', 404);
 
+        $student = $request->user();
         $batches = $course->batches()
             ->where('status', 'open')
+            ->when($student->branch_id !== null, fn ($query) => $query->where('branch_id', $student->branch_id))
             ->orderBy('starts_at')
             ->get();
 
@@ -122,14 +124,18 @@ class StudentCheckoutController extends Controller
             ->keys()
             ->all();
 
-        $hasOpenBatches = $course->batches()->where('status', 'open')->exists();
+        $hasOpenBatches = $course->batches()
+            ->where('status', 'open')
+            ->when($student->branch_id !== null, fn ($query) => $query->where('branch_id', $student->branch_id))
+            ->exists();
         $validated = $request->validate([
             'batch_id' => [
                 $hasOpenBatches ? 'required' : 'nullable',
                 'integer',
                 Rule::exists('batches', 'id')->where(fn ($query) => $query
                     ->where('course_id', $course->id)
-                    ->where('status', 'open')),
+                    ->where('status', 'open')
+                    ->when($student->branch_id !== null, fn ($query) => $query->where('branch_id', $student->branch_id))),
             ],
             'payment_method' => ['nullable', 'string', Rule::in($enabledMethods)],
             'sender_account' => ['nullable', 'string', 'max:50'],
@@ -167,6 +173,7 @@ class StudentCheckoutController extends Controller
                     $batch = Batch::query()->lockForUpdate()->findOrFail($batchId);
                     if ((int) $batch->course_id !== (int) $lockedCourse->id
                         || $batch->status !== 'open'
+                        || ($student->branch_id !== null && (int) $batch->branch_id !== (int) $student->branch_id)
                         || ! $this->hasAvailableSeat($batch)) {
                         return ['status' => 'batch_full'];
                     }
@@ -257,14 +264,18 @@ class StudentCheckoutController extends Controller
         abort_unless($course->status === 'published', 404);
         abort_unless((bool) (Setting::paymentMethods()['bkash']['enabled'] ?? false) && $gateways->isAvailable('bkash'), 503, 'Online bKash checkout is not enabled or configured.');
 
-        $hasOpenBatches = $course->batches()->where('status', 'open')->exists();
+        $hasOpenBatches = $course->batches()
+            ->where('status', 'open')
+            ->when($student->branch_id !== null, fn ($query) => $query->where('branch_id', $student->branch_id))
+            ->exists();
         $validated = $request->validate([
             'batch_id' => [
                 $hasOpenBatches ? 'required' : 'nullable',
                 'integer',
                 Rule::exists('batches', 'id')->where(fn ($query) => $query
                     ->where('course_id', $course->id)
-                    ->where('status', 'open')),
+                    ->where('status', 'open')
+                    ->when($student->branch_id !== null, fn ($query) => $query->where('branch_id', $student->branch_id))),
             ],
         ]);
 
@@ -286,6 +297,7 @@ class StudentCheckoutController extends Controller
                 $batch = Batch::query()->lockForUpdate()->findOrFail($batchId);
                 if ((int) $batch->course_id !== (int) $lockedCourse->id
                     || $batch->status !== 'open'
+                    || ($student->branch_id !== null && (int) $batch->branch_id !== (int) $student->branch_id)
                     || ! $this->hasAvailableSeat($batch)) {
                     abort(409, 'This batch has reached its enrollment capacity.');
                 }

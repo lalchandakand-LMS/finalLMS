@@ -98,13 +98,18 @@ class StudentCartCheckoutController extends Controller
                 abort_if($courses->count() !== count($courseIds) || $courses->contains(fn (Course $course) => $course->status !== 'published'), 409, 'A course in your cart is no longer available.');
 
                 $batchIds = $cart->pluck('batch_id')->filter()->map(fn ($id) => (int) $id)->all();
-                $batches = Batch::query()->whereIn('id', $batchIds)->orderBy('id')->lockForUpdate()->get()->keyBy('id');
+                $batches = Batch::query()->whereIn('id', $batchIds)
+                    ->when($student->branch_id !== null, fn ($query) => $query->where('branch_id', $student->branch_id))
+                    ->orderBy('id')->lockForUpdate()->get()->keyBy('id');
                 $items = collect();
                 foreach ($cart as $row) {
                     $course = $courses->get((int) $row->course_id);
                     $batch = $row->batch_id ? $batches->get((int) $row->batch_id) : null;
-                    abort_if($row->batch_id && (! $batch || (int) $batch->course_id !== (int) $course->id || $batch->status !== 'open'), 409, 'A selected batch is no longer available.');
-                    abort_if(! $row->batch_id && $course->batches()->where('status', 'open')->exists(), 422, 'Select an open batch for each course before checkout.');
+                    abort_if($row->batch_id && (! $batch || (int) $batch->course_id !== (int) $course->id || $batch->status !== 'open'
+                        || ($student->branch_id !== null && (int) $batch->branch_id !== (int) $student->branch_id)), 409, 'A selected batch is no longer available for your branch.');
+                    abort_if(! $row->batch_id && $course->batches()->where('status', 'open')
+                        ->when($student->branch_id !== null, fn ($query) => $query->where('branch_id', $student->branch_id))
+                        ->exists(), 422, 'Select an open batch for each course before checkout.');
                     abort_if(Enrollment::query()->where('user_id', $student->id)->where('course_id', $course->id)->whereIn('status', ['active', 'completed'])->exists(), 409, 'You are already enrolled in a course in this cart.');
                     abort_if($pendingPayments->hasPendingForCourse((int) $student->id, (int) $course->id), 409,
                         'A payment for a course in your cart is already awaiting academy verification.');

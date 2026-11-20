@@ -113,6 +113,54 @@ class MobileStudentCartTest extends TestCase
         $this->assertDatabaseCount('student_cart_items', 0);
     }
 
+    public function test_assigned_student_cannot_add_or_checkout_a_foreign_branch_batch(): void
+    {
+        [$student, $course, $ownBatch] = $this->fixture();
+        $student->update(['branch_id' => $ownBatch->branch_id]);
+        $otherBranch = Branch::create(['name' => 'Foreign Cart Branch', 'slug' => 'foreign-cart-branch']);
+        $foreignBatch = Batch::create([
+            'branch_id' => $otherBranch->id,
+            'course_id' => $course->id,
+            'teacher_id' => $course->teacher_id,
+            'title' => 'Foreign Cart Batch',
+            'capacity' => 20,
+            'starts_at' => now()->addDay(),
+            'ends_at' => now()->addMonth(),
+            'fee' => 1800,
+            'status' => 'open',
+        ]);
+        $token = $this->token($student);
+
+        $this->withToken($token)->postJson('/api/v1/my/cart', [
+            'course_id' => $course->id,
+            'batch_id' => $foreignBatch->id,
+        ])->assertUnprocessable();
+
+        $this->withToken($token)->postJson('/api/v1/my/cart', [
+            'course_id' => $course->id,
+            'batch_id' => $ownBatch->id,
+        ])->assertCreated();
+
+        $this->withToken($token)->getJson('/api/v1/my/cart')
+            ->assertOk()
+            ->assertJsonPath('data.0.batch.id', $ownBatch->id);
+
+        // Simulate a stale cart row created before the student's branch was assigned.
+        \Illuminate\Support\Facades\DB::table('student_cart_items')
+            ->where('user_id', $student->id)
+            ->where('course_id', $course->id)
+            ->update(['batch_id' => $foreignBatch->id]);
+
+        $this->withToken($token)->getJson('/api/v1/my/cart')
+            ->assertOk()
+            ->assertJsonPath('data.0.batch', null);
+
+        $this->withToken($token)->postJson('/api/v1/my/cart/checkout/manual', [])
+            ->assertStatus(409);
+
+        $this->assertDatabaseCount('payments', 0);
+    }
+
     private function fixture(): array
     {
         $teacher = User::factory()->create(['role' => 'teacher']);
