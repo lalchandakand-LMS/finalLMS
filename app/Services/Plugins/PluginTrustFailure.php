@@ -1,6 +1,6 @@
 <?php
 
-namespace App\\Services\\Plugins;
+namespace App\Services\Plugins;
 
 use RuntimeException;
 
