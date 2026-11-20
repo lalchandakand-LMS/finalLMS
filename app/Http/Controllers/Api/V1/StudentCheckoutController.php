@@ -274,7 +274,8 @@ class StudentCheckoutController extends Controller
                 'integer',
                 Rule::exists('batches', 'id')->where(fn ($query) => $query
                     ->where('course_id', $course->id)
-                    ->where('status', 'open')),
+                    ->where('status', 'open')
+                    ->when($student->branch_id !== null, fn ($query) => $query->where('branch_id', $student->branch_id))),
             ],
         ]);
 
@@ -296,6 +297,7 @@ class StudentCheckoutController extends Controller
                 $batch = Batch::query()->lockForUpdate()->findOrFail($batchId);
                 if ((int) $batch->course_id !== (int) $lockedCourse->id
                     || $batch->status !== 'open'
+                    || ($student->branch_id !== null && (int) $batch->branch_id !== (int) $student->branch_id)
                     || ! $this->hasAvailableSeat($batch)) {
                     abort(409, 'This batch has reached its enrollment capacity.');
                 }
