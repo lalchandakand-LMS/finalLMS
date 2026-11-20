@@ -119,3 +119,10 @@ This file records decisions that should not be casually reversed by a developer 
 - Course management, course creation, lesson delivery and live class remain distinct plugin entries with shared services and dependency declarations. Disabling one must not delete records or disable unrelated modules.
 - Core is limited to protected platform infrastructure: plugin runtime/registry, authentication and recovery primitives, authorization/policy enforcement, branch/guardian isolation, database integrity, audit/security logging, secrets encryption, rate limiting, private-file authorization and backup/update safety. These protected safeguards cannot be disabled or removed by plugins.
 - Full module inventory and acceptance definition: `docs/PLUGIN_MODULE_CATALOG.md`. The catalogue documents approved scope; it is not a claim that all listed plugins are implemented.
+
+## D-018 — Learn & Earn and Flash Sale as independent plugins (2026-11-16)
+- Owner requires Learn & Earn and Flash Sale to be separate, independently installable/activatable/deactivatable/uninstallable plugins.
+- Learn & Earn: Admin authors reusable single MCQs with categories, positive and negative marks; builds exams by selecting saved MCQs; publishes free or paid exams; paid access requires verified server-side payment entitlement; scoring is server-side and preserves immutable question snapshots.
+- Flash Sale: Admin selects published courses, sets discounts and campaign windows, publishes campaigns to a public Flash Sale tab/page, and can independently disable the whole page or pause individual campaigns. Base course prices and completed order snapshots must remain unchanged.
+- Both plugins must preserve historical records on deactivation and use the verified backup/restore and data-retention safeguards before uninstall. Do not duplicate existing core workflows: audit and safely extract/reuse existing Question Bank, Exam, Question Set and Flash Sale capabilities.
+- Detailed acceptance criteria and delivery gates: `docs/LEARN_EARN_AND_FLASH_SALE_PLUGINS.md`. This records approved scope, not completed implementation.

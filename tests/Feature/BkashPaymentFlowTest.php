@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Course;
+use App\Models\CourseCombo;
+use App\Models\PaymentComboCourse;
 use App\Models\CourseCategory;
 use App\Models\CourseContentPost;
 use App\Models\CourseCurriculumItem;
@@ -18,6 +20,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class BkashPaymentFlowTest extends TestCase
@@ -29,6 +32,7 @@ class BkashPaymentFlowTest extends TestCase
         parent::setUp();
 
         config([
+            'plugins.trusted_public_keys' => ['flash-sale-test-key' => 'test-public-key'],
             'services.bkash.enabled' => true,
             'services.bkash.base_url' => 'https://tokenized.sandbox.bka.sh/v1.2.0-beta',
             'services.bkash.username' => 'sandbox-user',
@@ -36,6 +40,21 @@ class BkashPaymentFlowTest extends TestCase
             'services.bkash.app_key' => 'sandbox-app-key',
             'services.bkash.app_secret' => 'sandbox-app-secret',
             'services.bkash.verify_ssl' => true,
+        ]);
+
+        DB::table('plugin_registry')->insert([
+            'plugin_key' => 'aec.flash-sale',
+            'name' => 'Flash Sale',
+            'version' => '1.0.0',
+            'type' => 'module',
+            'status' => 'active',
+            'manifest' => json_encode(['key' => 'aec.flash-sale', 'permissions' => []], JSON_THROW_ON_ERROR),
+            'signature_key_id' => 'flash-sale-test-key',
+            'signature_verified_at' => now(),
+            'health_status' => 'healthy',
+            'metadata' => json_encode(['granted_permissions' => []], JSON_THROW_ON_ERROR),
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
     }
 
@@ -653,6 +672,42 @@ class BkashPaymentFlowTest extends TestCase
             'payment_id' => $payment->id,
             'event' => 'reconciliation_mismatch',
         ]);
+    }
+
+
+    public function test_bkash_direct_checkout_is_blocked_when_course_is_reserved_by_a_pending_combo_payment(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $first = $this->paidCourse();
+        $second = $this->paidCourse();
+        $combo = CourseCombo::create([
+            'title' => 'bKash Pending Pair', 'slug' => 'bkash-pending-pair',
+            'description' => 'Two course bundle.', 'price' => 2000, 'status' => 'published',
+        ]);
+        $combo->courses()->attach([$first->id, $second->id]);
+        $payment = Payment::create([
+            'user_id' => $student->id, 'course_id' => $first->id,
+            'course_combo_id' => $combo->id, 'method' => 'manual',
+            'amount' => '2000.00', 'currency' => 'BDT',
+            'transaction_reference' => 'BKASH-PENDING-COMBO-001', 'status' => 'pending',
+        ]);
+        PaymentComboCourse::create([
+            'payment_id' => $payment->id, 'course_id' => $first->id,
+            'course_title' => $first->title, 'position' => 1,
+        ]);
+        PaymentComboCourse::create([
+            'payment_id' => $payment->id, 'course_id' => $second->id,
+            'course_title' => $second->title, 'position' => 2,
+        ]);
+
+        Http::preventStrayRequests();
+
+        $this->actingAs($student)
+            ->post(route('courses.payments.bkash', $second))
+            ->assertStatus(409);
+
+        $this->assertDatabaseCount('payments', 1);
+        Http::assertNothingSent();
     }
 
 }

@@ -58,7 +58,6 @@ use App\Http\Controllers\BackupController;
 use App\Http\Controllers\InstallController;
 use App\Http\Controllers\SetupWizardController;
 use App\Http\Controllers\QuizContestController;
-use App\Http\Controllers\FlashSaleController;
 use App\Http\Controllers\AdminCouponController;
 use App\Http\Controllers\AdminProductController;
 use App\Http\Controllers\AdminQuestionSetController;
@@ -124,8 +123,6 @@ Route::post('/language', [LocaleController::class, 'update'])->middleware('throt
 Route::get('/payments/bkash/callback', [BkashPaymentController::class, 'callback'])->middleware('throttle:30,1')->name('payments.bkash.callback');
 Route::get('/student/invoices/{invoice}/print', [StudentInvoiceController::class, 'printInvoice'])->middleware(['signed', 'throttle:30,1'])->name('student.invoices.print');
 Route::get('/student/invoices/{invoice}/payments/{payment}/print', [StudentInvoiceController::class, 'printReceipt'])->middleware(['signed', 'throttle:30,1'])->name('student.invoices.receipts.print');
-
-Route::get('/flash-sale', [FlashSaleController::class, 'publicIndex'])->name('flash-sales.public');
 Route::get('/themes/{slug}/{version}/assets/{file}', [ThemeManagerController::class, 'asset'])
     ->where([
         'slug' => '[a-z0-9][a-z0-9-]{1,79}',
@@ -133,6 +130,7 @@ Route::get('/themes/{slug}/{version}/assets/{file}', [ThemeManagerController::cl
         'file' => '[A-Za-z0-9][A-Za-z0-9._-]{0,100}\\.css',
     ])
     ->name('themes.asset');
+
 Route::get('/contests', [QuizContestController::class, 'index'])->name('contests.index');
 Route::get('/contests/{contest}', [QuizContestController::class, 'show'])->name('contests.show');
 
@@ -328,7 +326,6 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::put('/academic-levels/{academicLevel}', [AcademicLevelController::class, 'update'])->name('admin.academic-levels.update');
         Route::delete('/academic-levels/{academicLevel}', [AcademicLevelController::class, 'destroy'])->name('admin.academic-levels.destroy');
         Route::get('/modules', [AdminModuleRegistryController::class, 'index'])->name('admin.modules.index');
-        Route::patch('/modules/{key}', [AdminModuleRegistryController::class, 'update'])->where('key', '[a-z_]+')->middleware('throttle:20,1')->name('admin.modules.update');
         Route::get('/themes', [ThemeManagerController::class, 'index'])->name('admin.themes.index');
         Route::post('/themes/install', [ThemeManagerController::class, 'install'])->middleware('throttle:3,10')->name('admin.themes.install');
         Route::get('/themes/{theme}/preview', [ThemeManagerController::class, 'preview'])->whereNumber('theme')->name('admin.themes.preview');
@@ -336,6 +333,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::delete('/themes/{theme}', [ThemeManagerController::class, 'destroy'])->whereNumber('theme')->middleware('throttle:10,1')->name('admin.themes.destroy');
         Route::post('/themes/{theme}/activate', [ThemeManagerController::class, 'activate'])->whereNumber('theme')->middleware('throttle:10,1')->name('admin.themes.activate');
         Route::post('/themes/reset', [ThemeManagerController::class, 'reset'])->middleware('throttle:5,1')->name('admin.themes.reset');
+        Route::patch('/modules/{key}', [AdminModuleRegistryController::class, 'update'])->where('key', '[a-z_]+')->middleware('throttle:20,1')->name('admin.modules.update');
         Route::get('/plugins', [AdminPluginManagerController::class, 'index'])->name('admin.plugins.index');
         Route::post('/plugins/install', [AdminPluginManagerController::class, 'install'])->middleware('throttle:3,10')->name('admin.plugins.install');
         Route::post('/plugins/{key}/update-package', [AdminPluginManagerController::class, 'updatePackage'])->where('key', '[a-z0-9.-]+')->middleware('throttle:3,10')->name('admin.plugins.update-package');
@@ -410,10 +408,6 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::post('/coupons', [AdminCouponController::class, 'store'])->name('admin.coupons.store');
         Route::put('/coupons/{coupon}', [AdminCouponController::class, 'update'])->name('admin.coupons.update');
         Route::delete('/coupons/{coupon}', [AdminCouponController::class, 'destroy'])->name('admin.coupons.destroy');
-        Route::get('/flash-sales', [FlashSaleController::class, 'index'])->name('admin.flash-sales.index');
-        Route::post('/flash-sales', [FlashSaleController::class, 'store'])->name('admin.flash-sales.store');
-        Route::put('/flash-sales/{flashSale}', [FlashSaleController::class, 'update'])->name('admin.flash-sales.update');
-        Route::delete('/flash-sales/{flashSale}', [FlashSaleController::class, 'destroy'])->name('admin.flash-sales.destroy');
         Route::get('/contests', [QuizContestController::class, 'adminIndex'])->name('admin.contests.index');
         Route::get('/contests/{contest}/entries', [QuizContestController::class, 'adminEntries'])->name('admin.contests.entries');
         Route::post('/contests', [QuizContestController::class, 'store'])->middleware('throttle:10,1')->name('admin.contests.store');

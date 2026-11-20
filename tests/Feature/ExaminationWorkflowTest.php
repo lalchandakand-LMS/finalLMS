@@ -54,6 +54,49 @@ class ExaminationWorkflowTest extends TestCase
         $this->assertDatabaseCount('exam_attempts', 1);
     }
 
+    public function test_exam_applies_per_question_negative_marks_and_floors_final_score_at_zero(): void
+    {
+        [$teacher, $student, $batch] = $this->makeBatchWithStudent();
+        $exam = Exam::create([
+            'batch_id' => $batch->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Negative marking test',
+            'starts_at' => now()->subMinute(),
+            'ends_at' => now()->addHour(),
+            'duration_minutes' => 30,
+            'pass_marks' => 1,
+            'status' => 'published',
+        ]);
+        $question = $exam->questions()->create([
+            'question' => 'Select the correct answer.',
+            'options' => ['Correct', 'Wrong A', 'Wrong B', 'Wrong C'],
+            'correct_option' => 0,
+            'marks' => 2,
+            'negative_marks' => 3,
+            'position' => 1,
+        ]);
+
+        $this->actingAs($student)->post(route('student.exams.start', $exam))
+            ->assertRedirect(route('student.exams.show', $exam));
+        $attempt = ExamAttempt::firstOrFail();
+
+        $this->post(route('student.exams.submit', $attempt), [
+            'answers' => [$question->id => 1],
+        ])->assertRedirect(route('student.exams.show', $exam));
+
+        $this->assertDatabaseHas('exam_answers', [
+            'exam_attempt_id' => $attempt->id,
+            'exam_question_id' => $question->id,
+            'is_correct' => false,
+            'marks_awarded' => -3,
+        ]);
+        $this->assertDatabaseHas('exam_attempts', [
+            'id' => $attempt->id,
+            'score' => 0,
+            'status' => 'submitted',
+        ]);
+    }
+
     public function test_student_cannot_access_exam_without_active_batch_enrollment(): void
     {
         [$teacher, $student, $batch] = $this->makeBatchWithStudent(false);
@@ -774,6 +817,85 @@ class ExaminationWorkflowTest extends TestCase
         $this->assertDatabaseMissing('exam_answers', [
             'exam_attempt_id' => $attempt->id,
             'exam_question_id' => $foreignQuestion->id,
+        ]);
+    }
+
+    public function test_negative_marking_migration_refuses_rollback_without_changing_recorded_negative_scores(): void
+    {
+        [$teacher, $student, $batch] = $this->makeBatchWithStudent();
+        $exam = Exam::create([
+            'batch_id' => $batch->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Rollback preservation test',
+            'starts_at' => now()->subMinute(),
+            'ends_at' => now()->addHour(),
+            'duration_minutes' => 30,
+            'pass_marks' => 0,
+            'status' => 'published',
+        ]);
+        $question = ExamQuestion::create([
+            'exam_id' => $exam->id,
+            'question' => 'Rollback preservation question?',
+            'options' => ['A', 'B', 'C', 'D'],
+            'correct_option' => 0,
+            'marks' => 1,
+            'negative_marks' => 3,
+            'position' => 1,
+        ]);
+        $attempt = ExamAttempt::create([
+            'exam_id' => $exam->id,
+            'student_id' => $student->id,
+            'started_at' => now()->subMinutes(5),
+            'submitted_at' => now(),
+            'score' => 0,
+            'status' => 'submitted',
+        ]);
+        $positiveQuestion = ExamQuestion::create([
+            'exam_id' => $exam->id,
+            'question' => 'Rollback preservation positive-score question?',
+            'options' => ['A', 'B', 'C', 'D'],
+            'correct_option' => 0,
+            'marks' => 1,
+            'negative_marks' => 0,
+            'position' => 2,
+        ]);
+        \App\Models\ExamAnswer::create([
+            'exam_attempt_id' => $attempt->id,
+            'exam_question_id' => $question->id,
+            'selected_option' => 1,
+            'is_correct' => false,
+            'marks_awarded' => -3,
+        ]);
+        \App\Models\ExamAnswer::create([
+            'exam_attempt_id' => $attempt->id,
+            'exam_question_id' => $positiveQuestion->id,
+            'selected_option' => 0,
+            'is_correct' => true,
+            'marks_awarded' => 1,
+        ]);
+
+        $migration = require database_path('migrations/2026_11_16_140000_add_negative_marking_to_exams.php');
+
+        try {
+            $migration->down();
+            $this->fail('Rollback should refuse to remove signed marks while negative scores exist.');
+        } catch (\RuntimeException $exception) {
+            $this->assertStringContainsString('negative awarded marks', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('exam_answers', [
+            'exam_attempt_id' => $attempt->id,
+            'exam_question_id' => $question->id,
+            'marks_awarded' => -3,
+        ]);
+        $this->assertDatabaseHas('exam_answers', [
+            'exam_attempt_id' => $attempt->id,
+            'exam_question_id' => $positiveQuestion->id,
+            'marks_awarded' => 1,
+        ]);
+        $this->assertDatabaseHas('exam_questions', [
+            'id' => $question->id,
+            'negative_marks' => 3,
         ]);
     }
 
