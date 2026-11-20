@@ -25,10 +25,13 @@ class LessonMediaController extends Controller
                 ->whereIn('status', ['active', 'completed'])->exists();
         abort_unless($lesson->is_preview || $canManage || $isEnrolled, 403);
 
+        // Uploaded lesson videos live on the dedicated private lesson_videos
+        // disk; attachments remain on the local private disk.
+        $disk = $type === 'video' ? Storage::disk('lesson_videos') : Storage::disk('local');
         $path = $type === 'video' ? $lesson->video_path : $lesson->attachment_path;
-        abort_unless($path && Storage::disk('local')->exists($path), 404);
+        abort_unless($path && $disk->exists($path), 404);
 
-        $absolutePath = Storage::disk('local')->path($path);
+        $absolutePath = $disk->path($path);
         $mime = $type === 'video'
             ? (mime_content_type($absolutePath) ?: 'video/mp4')
             : ($lesson->attachment_mime ?: 'application/pdf');
