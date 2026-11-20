@@ -174,11 +174,25 @@ class PluginQueuedJobLifecycleTest extends TestCase
             },
             true,
             null,
-            new RuntimeException('The installed plugin release key is no longer trusted.'),
+            new \\App\\Services\\Plugins\\PluginTrustFailure('The installed plugin release key is no longer trusted.'),
         );
 
         $this->assertFalse($called);
         $this->assertNull($result);
+    }
+
+    public function test_transient_integrity_infrastructure_failure_bubbles_for_queue_retry(): void
+    {
+        $this->signedPlugin();
+        $this->expectException(RuntimeException::class);
+        $this->runGuard(fn () => 'must-not-run', true, new RuntimeException('plugin storage temporarily unavailable'));
+    }
+
+    public function test_transient_signature_infrastructure_failure_bubbles_for_queue_retry(): void
+    {
+        $this->signedPlugin();
+        $this->expectException(RuntimeException::class);
+        $this->runGuard(fn () => 'must-not-run', true, null, new RuntimeException('sodium service temporarily unavailable'));
     }
 
     public function test_tampered_installed_plugin_files_drop_queued_work(): void
@@ -192,7 +206,7 @@ class PluginQueuedJobLifecycleTest extends TestCase
                 return 'executed';
             },
             true,
-            new RuntimeException('Installed plugin integrity check failed.'),
+            new \\App\\Services\\Plugins\\PluginTrustFailure('Installed plugin integrity check failed.'),
         );
 
         $this->assertFalse($called);
