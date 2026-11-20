@@ -271,6 +271,24 @@ class ThemeManagerTest extends TestCase
         @unlink($zipPath);
     }
 
+    public function test_theme_reset_fails_safely_when_lifecycle_lock_is_missing(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        Setting::setValue('active_theme_id', 42);
+        Setting::setValue('active_theme_slug', 'preserve-active');
+        Setting::setValue('active_theme_version', '1.0.0');
+        DB::table('theme_manager_locks')->where('id', 1)->delete();
+
+        $this->actingAs($admin)->post(route('admin.themes.reset'))
+            ->assertRedirect()
+            ->assertSessionHasErrors('theme');
+
+        $this->assertSame('42', (string) Setting::value('active_theme_id'));
+        $this->assertSame('preserve-active', Setting::value('active_theme_slug'));
+        $this->assertSame('1.0.0', Setting::value('active_theme_version'));
+        $this->assertDatabaseMissing('theme_activations', ['action' => 'reset']);
+    }
+
     public function test_active_theme_cannot_be_deleted(): void
     {
         Storage::fake('public');
@@ -464,6 +482,70 @@ class ThemeManagerTest extends TestCase
         }
 
         $this->assertDatabaseMissing('theme_activations', ['action' => 'delete']);
+    }
+
+
+    public function test_theme_file_cleanup_failure_keeps_record_and_files_for_a_safe_retry(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $cssPath = 'themes/retry-theme/1.0.0/assets/theme.css';
+        $packagePath = 'themes/packages/123e4567-e89b-12d3-a456-426614174000.zip';
+        Storage::disk('public')->put($cssPath, 'body { color: #123456; }');
+        Storage::disk('local')->put($packagePath, 'signed package');
+        $themeId = DB::table('themes')->insertGetId([
+            'slug' => 'retry-theme',
+            'version' => '1.0.0',
+            'name' => 'Retry Theme',
+            'min_lms_version' => '1.0.0',
+            'manifest' => json_encode(['product_id' => 'aloms-lms-theme', 'assets' => ['assets/theme.css' => hash('sha256', 'body { color: #123456; }')]]),
+            'assets' => json_encode(['assets/theme.css']),
+            'preview_path' => null,
+            'package_path' => $packagePath,
+            'package_sha256' => str_repeat('e', 64),
+            'installed_by' => $admin->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        Setting::setValue('active_theme_id', 0);
+        Setting::setValue('active_theme_slug', '');
+        Setting::setValue('active_theme_version', '');
+
+        $realPublicDisk = Storage::disk('public');
+        $realLocalDisk = Storage::disk('local');
+        $deleteAttempts = 0;
+        $publicDisk = \Mockery::mock($realPublicDisk)->makePartial();
+        $publicDisk->shouldReceive('delete')->twice()->with($cssPath)->andReturnUsing(
+            function (string $path) use ($realPublicDisk, &$deleteAttempts): bool {
+                $deleteAttempts++;
+
+                // Simulate a transient filesystem failure, then a successful retry.
+                return $deleteAttempts === 1 ? false : $realPublicDisk->delete($path);
+            }
+        );
+        Storage::shouldReceive('disk')->with('public')->andReturn($publicDisk);
+        Storage::shouldReceive('disk')->with('local')->andReturn($realLocalDisk);
+
+        $this->actingAs($admin)->delete(route('admin.themes.destroy', $themeId))
+            ->assertRedirect()
+            ->assertSessionHasErrors('theme');
+
+        $this->assertDatabaseHas('themes', ['id' => $themeId]);
+        $this->assertDatabaseMissing('theme_activations', ['action' => 'delete']);
+        $this->assertDatabaseMissing('activity_logs', ['event' => 'theme.deleted']);
+        $realPublicDisk->assertExists($cssPath);
+        $realLocalDisk->assertExists($packagePath);
+
+        $this->actingAs($admin)->delete(route('admin.themes.destroy', $themeId))
+            ->assertRedirect(route('admin.themes.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseMissing('themes', ['id' => $themeId]);
+        $this->assertDatabaseHas('theme_activations', ['action' => 'delete']);
+        $this->assertDatabaseHas('activity_logs', ['event' => 'theme.deleted']);
+        $realPublicDisk->assertMissing($cssPath);
+        $realLocalDisk->assertMissing($packagePath);
     }
 
 }

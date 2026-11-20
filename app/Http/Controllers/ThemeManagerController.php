@@ -232,43 +232,79 @@ class ThemeManagerController extends Controller
 
             $slug = $manifest['slug'];
             $version = $manifest['version'];
-            if (DB::table('themes')->where('slug', $slug)->where('version', $version)->exists()) {
-                throw new \RuntimeException(__('This theme version is already installed.'));
-            }
 
-            $base = 'themes/'.$slug.'/'.$version;
-            foreach ($assetContents as $assetName => $contents) {
-                $path = $base.'/'.$assetName;
-                Storage::disk('public')->put($path, $contents);
-                $writtenPaths[] = $path;
-            }
+            DB::transaction(function () use (
+                $slug, $version, $assetContents, $previewBytes, $validated, $manifest,
+                $minVersion, $request, &$writtenPaths
+            ): void {
+                // Serialize installation with activate/reset/delete so two uploads
+                // for the same slug/version cannot overwrite shared asset paths.
+                $lock = DB::table('theme_manager_locks')->where('id', 1)->lockForUpdate()->first();
+                if (! $lock) {
+                    throw new \RuntimeException(__('Theme installation is unavailable because the lifecycle lock is missing.'));
+                }
+                if (DB::table('themes')->where('slug', $slug)->where('version', $version)->exists()) {
+                    throw new \RuntimeException(__('This theme version is already installed.'));
+                }
 
-            $previewPath = null;
-            if (is_string($previewBytes)) {
-                $previewPath = $base.'/preview.png';
-                Storage::disk('public')->put($previewPath, $previewBytes);
-                $writtenPaths[] = $previewPath;
-            }
+                $base = 'themes/'.$slug.'/'.$version;
+                $publicDisk = Storage::disk('public');
+                $previewPath = is_string($previewBytes) ? $base.'/preview.png' : null;
 
-            $packagePath = $validated['package']->storeAs('themes/packages', Str::uuid().'.zip', 'local');
-            $writtenPaths[] = 'local:'.$packagePath;
+                // A failed prior write/cleanup may leave files without a DB row.
+                // Never overwrite such paths: the earlier request may still be
+                // cleaning them after its transaction released the lifecycle lock.
+                foreach (array_keys($assetContents) as $assetName) {
+                    if ($publicDisk->exists($base.'/'.$assetName)) {
+                        throw new \RuntimeException(__('Theme storage paths already exist without a registry entry; installation was blocked to protect existing files.'));
+                    }
+                }
+                if ($previewPath !== null && $publicDisk->exists($previewPath)) {
+                    throw new \RuntimeException(__('Theme storage paths already exist without a registry entry; installation was blocked to protect existing files.'));
+                }
 
-            DB::table('themes')->insert([
-                'slug' => $slug,
-                'version' => $version,
-                'name' => trim($manifest['name']),
-                'author' => is_string($manifest['author'] ?? null) ? mb_substr($manifest['author'], 0, 120) : null,
-                'description' => is_string($manifest['description'] ?? null) ? mb_substr($manifest['description'], 0, 500) : null,
-                'min_lms_version' => $minVersion,
-                'manifest' => json_encode($manifest, JSON_THROW_ON_ERROR),
-                'assets' => json_encode(array_keys($assetContents), JSON_THROW_ON_ERROR),
-                'preview_path' => $previewPath,
-                'package_path' => $packagePath,
-                'package_sha256' => hash_file('sha256', $validated['package']->getRealPath()),
-                'installed_by' => $request->user()->id,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+                foreach ($assetContents as $assetName => $contents) {
+                    $path = $base.'/'.$assetName;
+                    $writtenPaths[] = $path;
+                    if (! $publicDisk->put($path, $contents)) {
+                        throw new \RuntimeException(__('A theme asset could not be written to storage.'));
+                    }
+                }
+
+                if ($previewPath !== null) {
+                    $writtenPaths[] = $previewPath;
+                    if (! $publicDisk->put($previewPath, $previewBytes)) {
+                        throw new \RuntimeException(__('The theme preview could not be written to storage.'));
+                    }
+                }
+
+                $packagePath = $validated['package']->storeAs('themes/packages', Str::uuid().'.zip', 'local');
+                if (! is_string($packagePath) || $packagePath === '') {
+                    throw new \RuntimeException(__('The original theme package could not be retained on private storage.'));
+                }
+                $writtenPaths[] = 'local:'.$packagePath;
+                $packageSha256 = hash_file('sha256', $validated['package']->getRealPath());
+                if (! is_string($packageSha256)) {
+                    throw new \RuntimeException(__('The original theme package checksum could not be calculated.'));
+                }
+
+                DB::table('themes')->insert([
+                    'slug' => $slug,
+                    'version' => $version,
+                    'name' => trim($manifest['name']),
+                    'author' => is_string($manifest['author'] ?? null) ? mb_substr($manifest['author'], 0, 120) : null,
+                    'description' => is_string($manifest['description'] ?? null) ? mb_substr($manifest['description'], 0, 500) : null,
+                    'min_lms_version' => $minVersion,
+                    'manifest' => json_encode($manifest, JSON_THROW_ON_ERROR),
+                    'assets' => json_encode(array_keys($assetContents), JSON_THROW_ON_ERROR),
+                    'preview_path' => $previewPath,
+                    'package_path' => $packagePath,
+                    'package_sha256' => $packageSha256,
+                    'installed_by' => $request->user()->id,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            });
 
             return redirect()->route('admin.themes.index')->with('success', __('Theme package verified and installed. It has not been activated.'));
         } catch (Throwable $exception) {
@@ -395,8 +431,6 @@ class ThemeManagerController extends Controller
                     'created_at' => now(),
                 ]);
 
-                DB::table('themes')->where('id', $record->id)->delete();
-
                 ActivityLog::create([
                     'user_id' => $request->user()->id,
                     'event' => 'theme.deleted',
@@ -406,18 +440,25 @@ class ThemeManagerController extends Controller
                     'ip_address' => $request->ip(),
                     'user_agent' => substr((string) $request->userAgent(), 0, 1000),
                 ]);
+
+                // Keep the database record until every file has been removed. If
+                // storage cleanup fails, the transaction rolls back and Admin can
+                // retry deletion instead of losing the only paths to orphaned files.
+                foreach ($paths as [$diskName, $relativePath]) {
+                    $disk = Storage::disk($diskName);
+                    if ($disk->exists($relativePath) && ! $disk->delete($relativePath)) {
+                        throw new \RuntimeException(__('Theme file cleanup failed; the theme record was retained for retry.'));
+                    }
+                }
+                $localDisk = Storage::disk('local');
+                if ($localDisk->exists($packagePath) && ! $localDisk->delete($packagePath)) {
+                    throw new \RuntimeException(__('Theme package cleanup failed; the theme record was retained for retry.'));
+                }
+
+                DB::table('themes')->where('id', $record->id)->delete();
             }, 3);
         } catch (\RuntimeException $exception) {
             return back()->withErrors(['theme' => $exception->getMessage()]);
-        }
-
-        foreach ($paths as [$diskName, $relativePath]) {
-            if (Storage::disk($diskName)->exists($relativePath)) {
-                Storage::disk($diskName)->delete($relativePath);
-            }
-        }
-        if ($packagePath && Storage::disk('local')->exists($packagePath)) {
-            Storage::disk('local')->delete($packagePath);
         }
 
         return redirect()->route('admin.themes.index')->with('success', __('The inactive theme and its verified package files were deleted. The audit history and website content were retained.'));
@@ -524,30 +565,34 @@ class ThemeManagerController extends Controller
 
     public function reset(Request $request): RedirectResponse
     {
-        DB::transaction(function () use ($request): void {
-            $lock = DB::table('theme_manager_locks')->where('id', 1)->lockForUpdate()->first();
-            if (! $lock) {
-                throw new \RuntimeException('Theme lifecycle lock is missing.');
-            }
+        try {
+            DB::transaction(function () use ($request): void {
+                $lock = DB::table('theme_manager_locks')->where('id', 1)->lockForUpdate()->first();
+                if (! $lock) {
+                    throw new \RuntimeException(__('Theme reset is unavailable because the lifecycle lock is missing.'));
+                }
 
-            $previous = [
-                'id' => (int) Setting::value('active_theme_id', 0),
-                'slug' => Setting::value('active_theme_slug'),
-                'version' => Setting::value('active_theme_version'),
-            ];
-            // A reset activates the built-in theme, which has no themes-table row.
-            // The previous installed theme remains available in previous_state for rollback/audit.
-            DB::table('theme_activations')->insert([
-                'theme_id' => null,
-                'action' => 'reset',
-                'previous_state' => json_encode($previous, JSON_THROW_ON_ERROR),
-                'actor_id' => $request->user()->id,
-                'created_at' => now(),
-            ]);
-            Setting::setValue('active_theme_id', 0);
-            Setting::setValue('active_theme_slug', '');
-            Setting::setValue('active_theme_version', '');
-        }, 3);
+                $previous = [
+                    'id' => (int) Setting::value('active_theme_id', 0),
+                    'slug' => Setting::value('active_theme_slug'),
+                    'version' => Setting::value('active_theme_version'),
+                ];
+                // A reset activates the built-in theme, which has no themes-table row.
+                // The previous installed theme remains available in previous_state for rollback/audit.
+                DB::table('theme_activations')->insert([
+                    'theme_id' => null,
+                    'action' => 'reset',
+                    'previous_state' => json_encode($previous, JSON_THROW_ON_ERROR),
+                    'actor_id' => $request->user()->id,
+                    'created_at' => now(),
+                ]);
+                Setting::setValue('active_theme_id', 0);
+                Setting::setValue('active_theme_slug', '');
+                Setting::setValue('active_theme_version', '');
+            }, 3);
+        } catch (\RuntimeException $exception) {
+            return back()->withErrors(['theme' => $exception->getMessage()]);
+        }
 
         return redirect()->route('admin.themes.index')->with('success', __('The built-in Alom LMS theme has been restored. Your pages, menus, media and course data were not changed.'));
     }
