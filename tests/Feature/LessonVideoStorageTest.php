@@ -98,4 +98,54 @@ class LessonVideoStorageTest extends TestCase
         ])->assertSessionHasErrors('video_file');
         $this->assertDatabaseMissing('lessons', ['course_id' => $course->id, 'title' => 'Invalid video']);
     }
+
+    public function test_lesson_media_video_route_reads_from_the_private_lesson_video_disk(): void
+    {
+        Storage::fake('local');
+        Storage::fake('lesson_videos');
+
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $student = User::factory()->create(['role' => 'student']);
+        $outsider = User::factory()->create(['role' => 'student']);
+        $course = Course::factory()->create(['teacher_id' => $teacher->id, 'status' => 'published']);
+        $lesson = $course->lessons()->create([
+            'title' => 'Private media route video',
+            'content' => 'Only enrolled students can view this.',
+            'duration_minutes' => 10,
+            'order' => 1,
+            'video_path' => 'lessons/private-media-route.mp4',
+            'attachment_path' => 'course-media/'.$course->id.'/1/notes.pdf',
+            'attachment_mime' => 'application/pdf',
+        ]);
+
+        Storage::disk('lesson_videos')->put($lesson->video_path, 'private-video-bytes');
+        Storage::disk('local')->put($lesson->attachment_path, 'private-attachment-bytes');
+        Enrollment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'status' => 'active',
+        ]);
+
+        $videoResponse = $this->actingAs($student)
+            ->get(route('courses.lessons.media', [$course, $lesson, 'video']));
+        $videoResponse->assertOk()->assertHeader('X-Content-Type-Options', 'nosniff');
+        $this->assertSame(
+            Storage::disk('lesson_videos')->path($lesson->video_path),
+            $videoResponse->baseResponse->getFile()->getPathname()
+        );
+
+        $attachmentResponse = $this->actingAs($student)
+            ->get(route('courses.lessons.media', [$course, $lesson, 'attachment']));
+        $attachmentResponse->assertOk();
+        $this->assertSame(
+            Storage::disk('local')->path($lesson->attachment_path),
+            $attachmentResponse->baseResponse->getFile()->getPathname()
+        );
+
+        $this->actingAs($outsider)
+            ->get(route('courses.lessons.media', [$course, $lesson, 'video']))
+            ->assertForbidden();
+    }
+
+
 }
