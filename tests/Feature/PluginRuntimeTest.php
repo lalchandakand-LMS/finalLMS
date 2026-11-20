@@ -378,4 +378,33 @@ PHP,
         $this->assertNotNull(app('router')->getRoutes()->getByName('plugins.runtime_check.health'));
     }
 
+
+    public function test_transient_registry_query_failure_does_not_permanently_disable_plugin_boot(): void
+    {
+        $this->createPlugin($this->validEntrypoint());
+        $runtime = app(PluginRuntime::class);
+        $runtime->registerActivePlugins();
+
+        $failedOnce = false;
+        DB::connection()->beforeExecuting(function (string $query) use (&$failedOnce): void {
+            if (! $failedOnce && str_contains($query, 'plugin_registry')) {
+                $failedOnce = true;
+                throw new RuntimeException('Simulated transient plugin boot registry outage.');
+            }
+        });
+
+        try {
+            $runtime->bootActivePlugins();
+            $this->fail('The simulated registry outage should interrupt the first boot attempt.');
+        } catch (RuntimeException $exception) {
+            $this->assertSame('Simulated transient plugin boot registry outage.', $exception->getMessage());
+        }
+
+        $this->assertTrue($failedOnce);
+        $this->assertFalse(app()->bound('plugin.runtime.booted'));
+        $runtime->bootActivePlugins();
+
+        $this->assertTrue(app('plugin.runtime.booted'));
+    }
+
 }
