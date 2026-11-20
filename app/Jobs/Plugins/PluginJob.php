@@ -40,7 +40,7 @@ abstract class PluginJob implements ShouldQueue
      *
      * @return list<EnsurePluginJobActive>
      */
-    public function middleware(): array
+    final public function middleware(): array
     {
         return [new EnsurePluginJobActive($this->pluginKey, $this->requiredPermission)];
     }
