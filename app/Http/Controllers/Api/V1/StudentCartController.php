@@ -21,19 +21,25 @@ class StudentCartController extends Controller
 
         $items = DB::table('student_cart_items')
             ->join('courses', 'courses.id', '=', 'student_cart_items.course_id')
-            ->leftJoin('batches', 'batches.id', '=', 'student_cart_items.batch_id')
+            ->leftJoin('batches', function ($join) use ($student): void {
+                $join->on('batches.id', '=', 'student_cart_items.batch_id')
+                    ->where('batches.status', 'open');
+                if ($student->branch_id !== null) {
+                    $join->where('batches.branch_id', $student->branch_id);
+                }
+            })
             ->where('student_cart_items.user_id', $student->id)
             ->where('courses.status', 'published')
             ->orderByDesc('student_cart_items.created_at')
             ->select([
                 'student_cart_items.id', 'student_cart_items.course_id',
-                'student_cart_items.batch_id', 'student_cart_items.created_at',
+                'student_cart_items.batch_id', 'batches.id as visible_batch_id', 'student_cart_items.created_at',
                 'courses.title', 'courses.slug', 'courses.price',
                 'batches.title as batch_title', 'batches.fee as batch_fee',
             ])->get();
 
         $data = $items->map(function ($item) use ($student): array {
-            $base = (float) ($item->batch_id && (float) $item->batch_fee > 0
+            $base = (float) ($item->visible_batch_id && (float) $item->batch_fee > 0
                 ? $item->batch_fee : $item->price);
             $sale = FlashSale::activeForCourse((int) $item->course_id, $student->id);
             $total = $sale ? $sale->discountedPrice($base) : $base;
@@ -45,8 +51,8 @@ class StudentCartController extends Controller
                     'title' => $item->title,
                     'slug' => $item->slug,
                 ],
-                'batch' => $item->batch_id ? [
-                    'id' => $item->batch_id,
+                'batch' => $item->visible_batch_id ? [
+                    'id' => $item->visible_batch_id,
                     'title' => $item->batch_title,
                 ] : null,
                 'pricing' => [
@@ -79,7 +85,8 @@ class StudentCartController extends Controller
 
         $validated = $request->validate([
             'course_id' => ['required', 'integer', Rule::exists('courses', 'id')->where(fn ($query) => $query->where('status', 'published'))],
-            'batch_id' => ['nullable', 'integer', Rule::exists('batches', 'id')->where(fn ($query) => $query->where('course_id', $request->input('course_id'))->where('status', 'open'))],
+            'batch_id' => ['nullable', 'integer', Rule::exists('batches', 'id')->where(fn ($query) => $query->where('course_id', $request->input('course_id'))->where('status', 'open')
+                ->when($student->branch_id !== null, fn ($query) => $query->where('branch_id', $student->branch_id)))],
         ]);
 
         $batchId = $validated['batch_id'] ?? null;
@@ -90,7 +97,9 @@ class StudentCartController extends Controller
             abort_if(Enrollment::query()->where('user_id', $student->id)->where('course_id', $course->id)->whereIn('status', ['active', 'completed'])->exists(), 409, 'You are already enrolled in this course.');
 
             if ($batchId) {
-                $batch = Batch::query()->whereKey($batchId)->where('course_id', $course->id)->where('status', 'open')->lockForUpdate()->first();
+                $batch = Batch::query()->whereKey($batchId)->where('course_id', $course->id)->where('status', 'open')
+                    ->when($student->branch_id !== null, fn ($query) => $query->where('branch_id', $student->branch_id))
+                    ->lockForUpdate()->first();
                 abort_unless($batch, 422, 'Choose an open batch for this course.');
             }
 
@@ -118,7 +127,8 @@ class StudentCartController extends Controller
         abort_unless($course->status === 'published', 404);
 
         $validated = $request->validate([
-            'batch_id' => ['nullable', 'integer', Rule::exists('batches', 'id')->where(fn ($query) => $query->where('course_id', $course->id)->where('status', 'open'))],
+            'batch_id' => ['nullable', 'integer', Rule::exists('batches', 'id')->where(fn ($query) => $query->where('course_id', $course->id)->where('status', 'open')
+                ->when($student->branch_id !== null, fn ($query) => $query->where('branch_id', $student->branch_id)))],
         ]);
 
         $updated = DB::table('student_cart_items')
