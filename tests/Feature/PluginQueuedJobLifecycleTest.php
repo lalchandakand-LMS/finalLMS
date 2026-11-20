@@ -49,7 +49,7 @@ class PluginQueuedJobLifecycleTest extends TestCase
         ]]);
     }
 
-    public function test_active_signed_plugin_with_admin_granted_permission_can_run_queued_work(): void
+    public function test_plugin_job_base_class_attaches_the_lifecycle_guard(): void\n    {\n        $job = new class('aec.test-notifier', 'notifications.send') extends PluginJob {\n            public function handle(): void {}\n        };\n\n        $this->assertCount(1, $job->middleware());\n        $this->assertInstanceOf(EnsurePluginJobActive::class, $job->middleware()[0]);\n    }\n\n    public function test_active_signed_plugin_with_admin_granted_permission_can_run_queued_work(): void
     {
         $this->signedPlugin();
         $called = false;
