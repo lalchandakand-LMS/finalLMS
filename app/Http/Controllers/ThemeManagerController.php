@@ -569,7 +569,7 @@ class ThemeManagerController extends Controller
             DB::transaction(function () use ($request): void {
                 $lock = DB::table('theme_manager_locks')->where('id', 1)->lockForUpdate()->first();
                 if (! $lock) {
-                    throw new \\RuntimeException(__('Theme reset is unavailable because the lifecycle lock is missing.'));
+                    throw new \RuntimeException(__('Theme reset is unavailable because the lifecycle lock is missing.'));
                 }
 
                 $previous = [
@@ -590,7 +590,7 @@ class ThemeManagerController extends Controller
                 Setting::setValue('active_theme_slug', '');
                 Setting::setValue('active_theme_version', '');
             }, 3);
-        } catch (\\RuntimeException $exception) {
+        } catch (\RuntimeException $exception) {
             return back()->withErrors(['theme' => $exception->getMessage()]);
         }
 
