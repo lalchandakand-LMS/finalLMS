@@ -21,7 +21,7 @@ The contract exposes `register(PluginContext $context)` and `boot(PluginContext 
 
 `PluginContext::routesForPortal()` registers routes only for portals declared in the signed manifest. Route names and prefixes are namespaced; portal routes receive web and plugin-active middleware, and non-public portals also receive authentication, verification and matching role middleware.
 
-The plugin-active middleware checks registry state on requests. Deactivation or a failed runtime health state therefore blocks plugin routes rather than merely hiding navigation.
+The plugin-active middleware checks registry state on requests and re-verifies the detached release signature against the current trusted key plus every installed-file hash before allowing the request to reach plugin controllers. This is important because controller classes may be autoloaded after application boot. Confirmed trust/integrity failures return 404; transient infrastructure failures surface rather than silently authorizing execution. Deactivation or a failed runtime health state therefore blocks plugin routes rather than merely hiding navigation.
 
 The hook registry supports namespaced action hooks, declared capabilities and portal navigation. Dispatch and navigation are restricted to currently active, verified plugins. Non-public navigation also requires the corresponding permission to have been granted by the Admin. Navigation visibility is not authorization: each controller, API action, resource query, export and download must independently enforce permissions and data scope.
 
