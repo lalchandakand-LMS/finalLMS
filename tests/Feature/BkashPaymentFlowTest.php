@@ -196,6 +196,44 @@ class BkashPaymentFlowTest extends TestCase
         $this->assertSame('pending', $payment->status);
     }
 
+    public function test_course_callback_requires_server_verified_currency_and_merchant_invoice(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $course = $this->paidCourse();
+        $payment = Payment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'method' => 'bkash',
+            'gateway_provider' => 'bkash',
+            'amount' => '1500.00',
+            'currency' => 'BDT',
+            'transaction_reference' => 'BKASH-LOCAL-REF-MISSING-FIELDS',
+            'gateway_payment_id' => 'BKASH-PAY-MISSING-FIELDS',
+            'status' => 'pending',
+        ]);
+
+        Http::fake([
+            '*/tokenized/checkout/token/grant' => Http::response(['id_token' => 'verify-token'], 200),
+            '*/tokenized/checkout/payment/status' => Http::response([
+                'transactionStatus' => 'Completed',
+                'paymentID' => 'BKASH-PAY-MISSING-FIELDS',
+                'trxID' => 'BKASH-TRX-MISSING-FIELDS',
+                'amount' => '1500.00',
+            ], 200),
+        ]);
+
+        $this->get(route('payments.bkash.callback', [
+            'paymentID' => 'BKASH-PAY-MISSING-FIELDS',
+            'status' => 'failure',
+        ]))->assertRedirect(route('courses.show', $course));
+
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'pending']);
+        $this->assertDatabaseMissing('enrollments', [
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+        ]);
+    }
+
     public function test_callback_with_amount_mismatch_never_activates_enrollment(): void
     {
         $student = User::factory()->create(['role' => 'student']);
