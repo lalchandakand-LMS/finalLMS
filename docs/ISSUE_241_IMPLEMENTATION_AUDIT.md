@@ -15,7 +15,7 @@
 | Installed-file integrity | `PluginIntegrityVerifier` | Rejects modified, missing, extra or linked files before plugin code is loaded |
 | Registry and lifecycle | `PluginInstallation`, `PluginLifecycle` | Persists package identity and lifecycle transitions |
 | Runtime | `PluginRuntime`, `PluginContract` | Loads active, trusted and integrity-verified entrypoints; failed packages are blocked |
-| Route boundary | `PluginContext::routesForPortal()`, `EnsurePluginActive` | Supports declared portal routes with authentication, email verification and role middleware; active state is rechecked per request |
+| Route boundary | `PluginContext::routesForPortal()`, `EnsurePluginActive` | Supports declared portal routes with authentication, email verification and role middleware; active state, current detached signature and installed-file integrity are rechecked per request before controller execution |
 | Admin lifecycle UI | `AdminPluginManagerController`, Plugin Manager view | Signed ZIP install, activate, deactivate and uninstall; uninstall retains application data and migration records |
 | Plugin migrations | `PluginMigrationRunner` | Tracks plugin migrations and checks installed-file integrity |
 
