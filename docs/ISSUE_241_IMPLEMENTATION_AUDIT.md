@@ -42,7 +42,7 @@ The current repository includes a first-party Universal AI Assistant package. Po
 
 ### P1 — runtime integration contract
 
-- Route registration and API route helpers, typed action hooks, portal navigation and permission grants are partially implemented. A new opt-in `PluginJob` base class and execution middleware now recheck plugin active state, trusted signing-key presence and Admin-granted permission immediately before queued handlers run. Stale jobs are dropped fail-closed.
+- Route registration and API route helpers, typed action hooks, portal navigation and permission grants are partially implemented. A new opt-in `PluginJob` base class and execution middleware now recheck plugin active state and Admin-granted permission, cryptographically re-verify the persisted Ed25519 release signature against the current trusted key, and verify every installed file against its integrity manifest immediately before queued handlers run. Stale jobs are dropped fail-closed.
 - This does not yet provide scheduler registration, automatic wrapping of arbitrary jobs, provider-webhook lifecycle guards or migration of every existing plugin job. Each package must adopt the base class and prove deactivation/revocation behavior before claiming background-work isolation.
 - Deactivation must be tested against every actual entry point, not only web routes.
 - Secret storage/configuration needs a plugin-scoped encrypted settings contract with redaction in HTML, logs and exports.
