@@ -54,6 +54,8 @@ class PluginHookRegistryTest extends TestCase
             'type' => 'module',
             'entrypoint' => 'src/Plugin.php',
             'requires' => ['php' => '^8.3', 'laravel' => '^12.0', 'lms' => '^1.0'],
+            'dependencies' => [],
+            'conflicts' => [],
             'portals' => ['admin', 'branch', 'teacher', 'student', 'guardian'],
             'permissions' => ['courses.view'],
             'capabilities' => ['course-studio'],
