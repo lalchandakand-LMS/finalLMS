@@ -7,6 +7,7 @@ use App\Jobs\Plugins\PluginJob;
 use App\Models\PluginInstallation;
 use App\Services\Plugins\PluginIntegrityVerifier;
 use App\Services\Plugins\PluginSignatureVerifier;
+use App\Services\Plugins\PluginTrustFailure;
 use Closure;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
@@ -174,7 +175,7 @@ class PluginQueuedJobLifecycleTest extends TestCase
             },
             true,
             null,
-            new \\App\\Services\\Plugins\\PluginTrustFailure('The installed plugin release key is no longer trusted.'),
+            new PluginTrustFailure('The installed plugin release key is no longer trusted.'),
         );
 
         $this->assertFalse($called);
@@ -206,7 +207,7 @@ class PluginQueuedJobLifecycleTest extends TestCase
                 return 'executed';
             },
             true,
-            new \\App\\Services\\Plugins\\PluginTrustFailure('Installed plugin integrity check failed.'),
+            new PluginTrustFailure('Installed plugin integrity check failed.'),
         );
 
         $this->assertFalse($called);
