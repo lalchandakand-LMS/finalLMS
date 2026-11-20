@@ -24,8 +24,8 @@ abstract class PluginJob implements ShouldQueue
     use SerializesModels;
 
     public function __construct(
-        public string $pluginKey,
-        public string $requiredPermission,
+        public readonly string $pluginKey,
+        public readonly string $requiredPermission,
     ) {
         if (preg_match('/^[a-z0-9][a-z0-9_.-]{1,158}$/D', $pluginKey) !== 1
             || preg_match('/^[a-z][a-z0-9_.-]{1,158}$/D', $requiredPermission) !== 1) {
