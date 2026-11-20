@@ -19,14 +19,21 @@ final class PluginHookRegistry
     /** @var array<string, list<string>> */
     private array $capabilities = [];
 
-    public function registerHook(string $pluginKey, string $hook, callable $callback, int $priority = 10): void
+    public function registerHook(string $pluginKey, string $hook, string $permission, callable $callback, int $priority = 10): void
     {
-        if (preg_match('/^[a-z0-9][a-z0-9_.-]{1,120}$/D', $hook) !== 1) {
-            throw new InvalidArgumentException('Invalid plugin hook identifier.');
+        if (preg_match('/^[a-z0-9][a-z0-9_.-]{1,120}$/D', $hook) !== 1
+            || preg_match('/^[a-z][a-z0-9_.-]{1,120}$/D', $permission) !== 1) {
+            throw new InvalidArgumentException('Invalid plugin hook or permission identifier.');
+        }
+
+        $plugin = PluginInstallation::query()->where('plugin_key', $pluginKey)->first();
+        if (! $plugin || ! in_array($permission, $plugin->manifest['permissions'] ?? [], true)) {
+            throw new InvalidArgumentException('Plugin hooks must require a permission declared in the signed manifest.');
         }
 
         $this->hooks[$hook][] = [
             'plugin_key' => $pluginKey,
+            'permission' => $permission,
             'priority' => $priority,
             'callback' => $callback,
         ];
@@ -99,7 +106,20 @@ final class PluginHookRegistry
         $results = [];
 
         foreach ($entries as $entry) {
-            if (! isset($activeKeys[$entry['plugin_key']])) {
+            $plugin = $activeKeys[$entry['plugin_key']] ?? null;
+            if (! $plugin instanceof PluginInstallation) {
+                continue;
+            }
+
+            $declaredPermissions = is_array($plugin->manifest['permissions'] ?? null)
+                ? $plugin->manifest['permissions']
+                : [];
+            $metadata = is_array($plugin->metadata) ? $plugin->metadata : [];
+            $grantedPermissions = is_array($metadata['granted_permissions'] ?? null)
+                ? $metadata['granted_permissions']
+                : [];
+            if (! in_array($entry['permission'], $declaredPermissions, true)
+                || ! in_array($entry['permission'], $grantedPermissions, true)) {
                 continue;
             }
 
