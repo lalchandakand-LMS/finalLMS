@@ -134,7 +134,7 @@ class StudentCartCheckoutController extends Controller
                     foreach ($items as $item) {
                         Enrollment::firstOrCreate(
                             ['user_id' => $student->id, 'course_id' => $item->course_id],
-                            ['batch_id' => $item->batch?->id, 'flash_sale_id' => $pricing['sales_by_course'][$item->course_id]?->id, 'status' => 'active']
+                            ['batch_id' => $item->batch?->id, 'flash_sale_id' => ($pricing['sales_by_course'][$item->course_id] ?? null)?->id, 'status' => 'active']
                         );
                     }
                     if ($coupon) {
