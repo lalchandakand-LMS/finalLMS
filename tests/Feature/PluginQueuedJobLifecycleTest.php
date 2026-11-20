@@ -6,7 +6,7 @@ use App\Http\Middleware\EnsurePluginJobActive;
 use App\Jobs\Plugins\PluginJob;
 use App\Models\PluginInstallation;
 use App\Services\Plugins\PluginIntegrityVerifier;
-use App\Services\Plugins\PluginSignatureVerifier;
+use App\Services\Plugins\PluginSignatureVerifier;\nuse Closure;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Mockery;
