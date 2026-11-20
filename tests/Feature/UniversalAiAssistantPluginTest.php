@@ -707,6 +707,14 @@ class UniversalAiAssistantPluginTest extends TestCase
         $this->assertFalse($catalog['universal_ai_assistant']['installed']);
         $this->assertFalse($catalog['universal_ai_assistant']['enabled']);
         $this->assertSame('not_installed', $catalog['universal_ai_assistant']['status']);
+
+        $manifest = json_decode(
+            file_get_contents(base_path('plugins/aec/universal-ai-assistant/1.0.0/plugin.json')),
+            true,
+            512,
+            JSON_THROW_ON_ERROR
+        );
+        $this->assertContains('role-scoped-read-only-context', $manifest['capabilities']);
     }
 
     public function test_optional_plugin_cannot_be_enabled_from_the_module_toggle(): void
