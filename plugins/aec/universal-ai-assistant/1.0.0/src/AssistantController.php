@@ -54,6 +54,7 @@ final class AssistantController
 
         return view('universal-ai-assistant::chat', [
             'role' => $role,
+            'dataAccessEnabled' => $role !== 'support_staff' && (bool) (AssistantSettings::record()['role_data_access'][$role] ?? false),
             'messageRoute' => $routeName,
             'indexRoute' => $indexRoute,
             'activeConversation' => $activeConversation,
