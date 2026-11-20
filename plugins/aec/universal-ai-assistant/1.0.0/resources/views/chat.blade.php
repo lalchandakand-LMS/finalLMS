@@ -4,7 +4,15 @@
 
 @section('content')
 <div class="page-header">
-    <div><span class="badge info">{{ __('Advanced AI Assistant') }}</span><h1 style="margin:12px 0 0;">{{ __('AI Assistant') }}</h1><p class="muted">{{ __('General guidance only. This assistant cannot access private LMS records or perform actions.') }}</p></div>
+    <div>
+        <span class="badge info">{{ __('Advanced AI Assistant') }}</span>
+        <h1 style="margin:12px 0 0;">{{ __('AI Assistant') }}</h1>
+        @if($dataAccessEnabled)
+            <p class="muted">{{ __('This assistant may use read-only, role-scoped LMS context authorized for your account. It cannot perform actions.') }}</p>
+        @else
+            <p class="muted">{{ __('General guidance only. This assistant cannot access private LMS records or perform actions.') }}</p>
+        @endif
+    </div>
     @if($role === 'admin')<a class="btn secondary" href="{{ route('admin.ai-assistant.settings') }}">{{ __('AI Settings') }}</a>@endif
 </div>
 <div class="grid grid-2">
