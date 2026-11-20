@@ -225,4 +225,29 @@ class PluginHookRegistryTest extends TestCase
         $this->assertSame([], $registry->portalNavigation('student'));
     }
 
+
+    public function test_plugin_route_middleware_rejects_a_replaced_signing_key(): void
+    {
+        $this->activePlugin();
+        Route::middleware('plugin.active:aec.course-studio')
+            ->get('/plugins/course-studio/revoked-key', fn () => response('must not run'));
+
+        config(['plugins.trusted_public_keys' => [
+            'test-release-key' => base64_encode(sodium_crypto_sign_publickey(sodium_crypto_sign_keypair())),
+        ]]);
+
+        $this->get('/plugins/course-studio/revoked-key')->assertNotFound();
+    }
+
+    public function test_plugin_route_middleware_rejects_tampered_installed_files_before_controller_execution(): void
+    {
+        $this->activePlugin();
+        Route::middleware('plugin.active:aec.course-studio')
+            ->get('/plugins/course-studio/tampered-file', fn () => response('must not run'));
+
+        file_put_contents(base_path($this->packagePath.'/src/Plugin.php'), '<?php // tampered before route request');
+
+        $this->get('/plugins/course-studio/tampered-file')->assertNotFound();
+    }
+
 }
