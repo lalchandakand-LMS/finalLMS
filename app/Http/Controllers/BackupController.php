@@ -131,6 +131,42 @@ class BackupController extends Controller
                             $privateFiles[$privatePath] = base64_encode(Storage::disk('local')->get($privatePath));
                         }
                 
+                        // Backup format v1 restores public media to the public disk and
+                        // private uploads to the local private disk. Refuse unsupported
+                        // custom-disk records rather than copying them into the wrong disk.
+                        foreach (($tables['media_assets'] ?? []) as $asset) {
+                            $diskName = (string) ($asset['disk'] ?? 'public');
+                            $assetPath = (string) ($asset['path'] ?? '');
+                            if ($diskName !== 'public') {
+                                throw new \\RuntimeException('A media asset uses a non-public storage disk that backup format v1 cannot safely restore.');
+                            }
+                            if ($assetPath !== '' && ! array_key_exists($assetPath, $mediaFiles)) {
+                                throw new \\RuntimeException('A media asset references a missing public file; the backup is incomplete.');
+                            }
+                        }
+
+                        foreach (($tables['courses'] ?? []) as $course) {
+                            $imagePath = (string) ($course['image_path'] ?? '');
+                            if ($imagePath !== '' && ! array_key_exists($imagePath, $mediaFiles)) {
+                                throw new \\RuntimeException('A course image is missing from public storage; the backup is incomplete.');
+                            }
+                        }
+
+                        foreach (($tables['lessons'] ?? []) as $lesson) {
+                            $thumbnailPath = (string) ($lesson['thumbnail_path'] ?? '');
+                            $videoPath = (string) ($lesson['video_path'] ?? '');
+                            $attachmentPath = (string) ($lesson['attachment_path'] ?? '');
+                            if ($thumbnailPath !== '' && ! array_key_exists($thumbnailPath, $mediaFiles)) {
+                                throw new \\RuntimeException('A lesson thumbnail is missing from public storage; the backup is incomplete.');
+                            }
+                            if ($videoPath !== '' && ! array_key_exists('course-videos/'.$videoPath, $privateFiles)) {
+                                throw new \\RuntimeException('A private lesson video is missing from private storage; the backup is incomplete.');
+                            }
+                            if ($attachmentPath !== '' && ! array_key_exists($attachmentPath, $privateFiles)) {
+                                throw new \\RuntimeException('A lesson attachment is missing from private storage; the backup is incomplete.');
+                            }
+                        }
+
                         $payload = json_encode([
                             'format_version' => 1,
                             'created_at' => now()->toIso8601String(),
@@ -261,14 +297,34 @@ class BackupController extends Controller
             abort_unless(is_string($envelope['signature'] ?? null) && hash_equals($expected, $envelope['signature']), 422, 'Backup signature is invalid.');
 
             $payload = json_decode($payloadJson, true, 512, JSON_THROW_ON_ERROR);
-            abort_unless(($payload['format_version'] ?? null) === 1 && is_array($payload['tables'] ?? null), 422, 'Unsupported backup format.');
+            abort_unless(
+                ($payload['format_version'] ?? null) === 1
+                    && is_array($payload['tables'] ?? null)
+                    && is_array($payload['public_media'] ?? null)
+                    && is_array($payload['private_files'] ?? null)
+                    && is_string($payload['created_at'] ?? null),
+                422,
+                'The backup is incomplete or uses an unsupported format; no data was restored.'
+            );
 
             $currentTables = $this->backupTableNames();
-            sort($currentTables);
+            sort($currentTables, SORT_STRING);
             $backupTables = array_keys($payload['tables']);
-            sort($backupTables);
+            sort($backupTables, SORT_STRING);
             $missingTables = array_values(array_diff($currentTables, $backupTables));
-            abort_unless($missingTables === [], 422, 'This backup does not contain every table required by the installed LMS version. Update or downgrade the application before restoring.');
+            $unknownTables = array_values(array_diff($backupTables, $currentTables));
+            abort_unless(
+                $missingTables === [] && $unknownTables === [],
+                422,
+                'The backup table set does not exactly match the installed LMS version. Update or downgrade the application before restoring.'
+            );
+
+            foreach ($payload['tables'] as $tableRows) {
+                abort_unless(is_array($tableRows), 422, 'The backup contains an invalid database table snapshot.');
+                foreach ($tableRows as $row) {
+                    abort_unless(is_array($row), 422, 'The backup contains an invalid database row.');
+                }
+            }
 
             // Validate each encoded file without retaining a second copy of the
             // entire media library in memory. The restore service decodes one file
