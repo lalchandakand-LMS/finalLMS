@@ -94,7 +94,7 @@ class StudentAssignmentController extends Controller
             $result = DB::transaction(function () use ($assignment, $student, $validated, $file, $storedPath): array {
                 $locked = Assignment::query()->lockForUpdate()->findOrFail($assignment->id);
                 abort_unless($locked->status === 'published', 404);
-                $this->authorizeEnrollment($student->id, $locked);
+                $this->authorizeEnrollment($student->id, $locked, true);
 
                 if ($locked->due_at->isPast() && ! $locked->allow_late) {
                     return ['state' => 'closed'];
@@ -198,13 +198,18 @@ class StudentAssignmentController extends Controller
         );
     }
 
-    private function authorizeEnrollment(int $studentId, Assignment $assignment): void
+    private function authorizeEnrollment(int $studentId, Assignment $assignment, bool $lock = false): void
     {
-        abort_unless(Enrollment::query()
+        $enrollment = Enrollment::query()
             ->where('batch_id', $assignment->batch_id)
             ->where('user_id', $studentId)
-            ->where('status', 'active')
-            ->exists(), 403);
+            ->where('status', 'active');
+
+        if ($lock) {
+            $enrollment->lockForUpdate();
+        }
+
+        abort_unless($enrollment->exists(), 403);
     }
 
     private function payload(Assignment $assignment, bool $includeCourse = false): array
