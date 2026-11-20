@@ -60,6 +60,19 @@ class PluginQueuedJobLifecycleTest extends TestCase
         $this->assertInstanceOf(EnsurePluginJobActive::class, $job->middleware()[0]);
     }
 
+
+    public function test_registry_infrastructure_failure_throws_for_queue_retry(): void
+    {
+        Schema::shouldReceive('hasTable')
+            ->once()
+            ->with('plugin_registry')
+            ->andThrow(new RuntimeException('database unavailable'));
+
+        $this->expectException(RuntimeException::class);
+        (new EnsurePluginJobActive('aec.test-notifier', 'notifications.send'))
+            ->handle(new \\stdClass(), fn () => 'must-not-run');
+    }
+
     public function test_active_signed_plugin_with_admin_granted_permission_can_run_queued_work(): void
     {
         $this->signedPlugin();
