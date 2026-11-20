@@ -74,8 +74,11 @@ class PluginQueuedJobLifecycleTest extends TestCase
             }
         }
 
+        $this->app->instance(PluginSignatureVerifier::class, $signatureVerifier);
+        $this->app->instance(PluginIntegrityVerifier::class, $integrityVerifier);
+
         return (new EnsurePluginJobActive('aec.test-notifier', 'notifications.send'))
-            ->handle(new \stdClass(), $next, $signatureVerifier, $integrityVerifier);
+            ->handle(new \stdClass(), $next);
     }
 
     public function test_plugin_job_base_class_attaches_the_lifecycle_guard(): void
