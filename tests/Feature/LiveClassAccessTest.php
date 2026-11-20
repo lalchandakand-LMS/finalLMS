@@ -38,6 +38,45 @@ class LiveClassAccessTest extends TestCase
         ]);
     }
 
+    public function test_web_live_class_routes_reject_insecure_http_meeting_links(): void
+    {
+        [$teacher, $batch] = $this->makeBatch();
+
+        $this->actingAs($teacher)
+            ->from(route('live-classes.index'))
+            ->post(route('teacher.batches.live-classes.store', $batch), [
+                'title' => 'Insecure meeting link',
+                'meeting_url' => 'http://meet.example.com/insecure',
+                'starts_at' => now()->addDay()->format('Y-m-d H:i:s'),
+                'ends_at' => now()->addDay()->addHour()->format('Y-m-d H:i:s'),
+            ])
+            ->assertSessionHasErrors('meeting_url');
+
+        $session = LiveClass::create([
+            'batch_id' => $batch->id,
+            'title' => 'Secure meeting link',
+            'meeting_url' => 'https://meet.example.com/secure',
+            'starts_at' => now()->addDay(),
+            'ends_at' => now()->addDay()->addHour(),
+            'status' => 'scheduled',
+            'created_by' => $teacher->id,
+        ]);
+
+        $this->put(route('live-classes.update', $session), [
+            'title' => 'Changed session',
+            'meeting_url' => 'http://meet.example.com/downgrade',
+            'starts_at' => now()->addDay(),
+            'ends_at' => now()->addDay()->addHours(2),
+            'status' => 'scheduled',
+        ])->assertSessionHasErrors('meeting_url');
+
+        $this->assertDatabaseHas('live_classes', [
+            'id' => $session->id,
+            'meeting_url' => 'https://meet.example.com/secure',
+        ]);
+        $this->assertDatabaseCount('live_classes', 1);
+    }
+
     public function test_unassigned_teacher_cannot_schedule_or_manage_another_teachers_session(): void
     {
         [$teacher, $batch] = $this->makeBatch();
