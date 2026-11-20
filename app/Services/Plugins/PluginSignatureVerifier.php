@@ -113,9 +113,8 @@ class PluginSignatureVerifier
 
     /**
      * Re-verify the original detached release signature against the currently
-     * trusted key. Returns false only for legacy installations created before
-     * the detached signature was persisted; those still require a prior
-     * verification timestamp and an intact installed-file hash manifest.
+     * trusted key. Returns false for legacy installations that have no persisted
+     * detached signature; callers must treat false as an authorization failure.
      */
     public function verifyInstalledSignature(PluginInstallation $plugin): bool
     {
