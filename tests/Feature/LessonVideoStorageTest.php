@@ -126,16 +126,21 @@ class LessonVideoStorageTest extends TestCase
             'status' => 'active',
         ]);
 
-        $this->actingAs($student)
-            ->get(route('courses.lessons.media', [$course, $lesson, 'video']))
-            ->assertOk()
-            ->assertSee('private-video-bytes', false)
-            ->assertHeader('X-Content-Type-Options', 'nosniff');
+        $videoResponse = $this->actingAs($student)
+            ->get(route('courses.lessons.media', [$course, $lesson, 'video']));
+        $videoResponse->assertOk()->assertHeader('X-Content-Type-Options', 'nosniff');
+        $this->assertSame(
+            Storage::disk('lesson_videos')->path($lesson->video_path),
+            $videoResponse->baseResponse->getFile()->getPathname()
+        );
 
-        $this->actingAs($student)
-            ->get(route('courses.lessons.media', [$course, $lesson, 'attachment']))
-            ->assertOk()
-            ->assertSee('private-attachment-bytes', false);
+        $attachmentResponse = $this->actingAs($student)
+            ->get(route('courses.lessons.media', [$course, $lesson, 'attachment']));
+        $attachmentResponse->assertOk();
+        $this->assertSame(
+            Storage::disk('local')->path($lesson->attachment_path),
+            $attachmentResponse->baseResponse->getFile()->getPathname()
+        );
 
         $this->actingAs($outsider)
             ->get(route('courses.lessons.media', [$course, $lesson, 'video']))
