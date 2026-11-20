@@ -1,11 +1,11 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use App\\Http\\Middleware\\EnsurePluginJobActive;
-use App\\Models\\PluginInstallation;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Tests\\TestCase;
+use App\Http\Middleware\EnsurePluginJobActive;
+use App\Models\PluginInstallation;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class PluginQueuedJobLifecycleTest extends TestCase
 {
@@ -13,7 +13,8 @@ class PluginQueuedJobLifecycleTest extends TestCase
 
     private function signedPlugin(string $status = 'active', array $grants = ['notifications.send']): PluginInstallation
     {
-        return PluginInstallation::query()->create([
+        $plugin = new PluginInstallation();
+        $plugin->forceFill([
             'plugin_key' => 'aec.test-notifier',
             'name' => 'Test Notifier',
             'version' => '1.0.0',
@@ -35,7 +36,9 @@ class PluginQueuedJobLifecycleTest extends TestCase
             'signature_verified_at' => now(),
             'package_path' => 'plugins/aec/test-notifier/1.0.0',
             'metadata' => ['granted_permissions' => $grants],
-        ]);
+        ])->save();
+
+        return $plugin;
     }
 
     protected function setUp(): void
@@ -51,7 +54,7 @@ class PluginQueuedJobLifecycleTest extends TestCase
         $this->signedPlugin();
         $called = false;
         $result = (new EnsurePluginJobActive('aec.test-notifier', 'notifications.send'))
-            ->handle(new \\stdClass(), function () use (&$called): string {
+            ->handle(new \stdClass(), function () use (&$called): string {
                 $called = true;
 
                 return 'executed';
@@ -66,7 +69,7 @@ class PluginQueuedJobLifecycleTest extends TestCase
         $this->signedPlugin('inactive');
         $called = false;
         $result = (new EnsurePluginJobActive('aec.test-notifier', 'notifications.send'))
-            ->handle(new \\stdClass(), function () use (&$called): string {
+            ->handle(new \stdClass(), function () use (&$called): string {
                 $called = true;
 
                 return 'executed';
@@ -81,7 +84,7 @@ class PluginQueuedJobLifecycleTest extends TestCase
         $this->signedPlugin('active', []);
         $called = false;
         $result = (new EnsurePluginJobActive('aec.test-notifier', 'notifications.send'))
-            ->handle(new \\stdClass(), function () use (&$called): string {
+            ->handle(new \stdClass(), function () use (&$called): string {
                 $called = true;
 
                 return 'executed';
@@ -97,7 +100,7 @@ class PluginQueuedJobLifecycleTest extends TestCase
         config(['plugins.trusted_public_keys' => ['test-release-key' => '']]);
         $called = false;
         $result = (new EnsurePluginJobActive('aec.test-notifier', 'notifications.send'))
-            ->handle(new \\stdClass(), function () use (&$called): string {
+            ->handle(new \stdClass(), function () use (&$called): string {
                 $called = true;
 
                 return 'executed';
