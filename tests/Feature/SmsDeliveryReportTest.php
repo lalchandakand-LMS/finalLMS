@@ -5,9 +5,13 @@ namespace Tests\Feature;
 use App\Jobs\SendSmsCampaignRecipient;
 use App\Models\SmsCampaign;
 use App\Models\SmsCampaignRecipient;
-use App\Models\User;\nuse App\Models\Setting;\nuse App\Services\Modules\ModuleRegistry;\nuse App\Services\SmsGateway;
+use App\Models\User;
+use App\Models\Setting;
+use App\Services\Modules\ModuleRegistry;
+use App\Services\SmsGateway;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Queue;\nuse Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class SmsDeliveryReportTest extends TestCase
