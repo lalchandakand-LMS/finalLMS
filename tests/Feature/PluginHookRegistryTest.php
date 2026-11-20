@@ -195,7 +195,7 @@ class PluginHookRegistryTest extends TestCase
         $plugin = $this->activePlugin();
         $registry = app(PluginHookRegistry::class);
         $context = new PluginContext(app(), app('router'), $plugin, $registry);
-        $context->registerHook('lms.dashboard.widgets', fn () => 'must-not-run');
+        $context->registerHook('lms.dashboard.widgets', 'courses.view', fn () => 'must-not-run');
         $context->registerPortalNavigation('student', 'Course Studio', 'plugin-hook.revoked-key', [
             'permission' => 'courses.view',
         ]);
@@ -216,7 +216,7 @@ class PluginHookRegistryTest extends TestCase
         $plugin = $this->activePlugin();
         $registry = app(PluginHookRegistry::class);
         $context = new PluginContext(app(), app('router'), $plugin, $registry);
-        $context->registerHook('lms.dashboard.widgets', fn () => 'must-not-run');
+        $context->registerHook('lms.dashboard.widgets', 'courses.view', fn () => 'must-not-run');
         $context->registerPortalNavigation('student', 'Course Studio', 'plugin-hook.tampered', [
             'permission' => 'courses.view',
         ]);
