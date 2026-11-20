@@ -3,13 +3,16 @@
 namespace App\Http\Middleware;
 
 use App\Models\PluginInstallation;
+use App\Services\Plugins\PluginIntegrityVerifier;
+use App\Services\Plugins\PluginSignatureVerifier;
 use Closure;
 use Illuminate\Support\Facades\Schema;
+use InvalidArgumentException;
 use RuntimeException;
 
 /**
  * Drop queued work when its owning signed plugin is no longer trusted, active,
- * or explicitly authorized to perform the requested background capability.
+ * intact, or explicitly authorized to perform the requested capability.
  */
 final class EnsurePluginJobActive
 {
@@ -18,10 +21,13 @@ final class EnsurePluginJobActive
         private readonly string $permission,
     ) {}
 
-    public function handle(object $job, Closure $next): mixed
-    {
-        // Infrastructure failures must bubble to the queue worker for retry;
-        // only a confirmed inactive/untrusted/revoked plugin drops the job.
+    public function handle(
+        object $job,
+        Closure $next,
+        PluginSignatureVerifier $signatureVerifier,
+        PluginIntegrityVerifier $integrityVerifier,
+    ): mixed {
+        // Infrastructure failures must bubble to the queue worker for retry.
         if (! Schema::hasTable('plugin_registry')) {
             throw new RuntimeException('The plugin registry is unavailable; queued plugin work cannot be authorized.');
         }
@@ -29,11 +35,6 @@ final class EnsurePluginJobActive
         $plugin = PluginInstallation::query()
             ->where('plugin_key', $this->pluginKey)
             ->first();
-
-        $trustedKeys = config('plugins.trusted_public_keys', []);
-        $trustedKey = is_array($trustedKeys) && is_string($plugin?->signature_key_id)
-            ? ($trustedKeys[$plugin->signature_key_id] ?? null)
-            : null;
 
         $manifestPermissions = is_array($plugin?->manifest)
             ? ($plugin->manifest['permissions'] ?? [])
@@ -45,16 +46,29 @@ final class EnsurePluginJobActive
         $allowed = $plugin
             && $plugin->status === 'active'
             && $plugin->signature_verified_at !== null
-            && is_string($trustedKey)
-            && trim($trustedKey) !== ''
             && is_array($manifestPermissions)
             && in_array($this->permission, $manifestPermissions, true)
             && is_array($grantedPermissions)
             && in_array($this->permission, $grantedPermissions, true);
 
         if (! $allowed) {
-            // Returning without invoking the next pipe acknowledges and drops
-            // stale work; retrying cannot make a deactivated plugin safe.
+            // Confirmed inactive, missing or revoked plugin work is stale.
+            return null;
+        }
+
+        try {
+            // Re-verify the detached Ed25519 signature against the current
+            // trusted key and verify every installed file before handler code runs.
+            if (! $signatureVerifier->verifyInstalledSignature($plugin)) {
+                return null; // Legacy unsigned records are not trusted for new jobs.
+            }
+
+            $integrityVerifier->verify($plugin);
+        } catch (RuntimeException|InvalidArgumentException $exception) {
+            report($exception);
+
+            // Invalid signatures, revoked keys and tampered packages are
+            // permanent authorization failures, not transient queue outages.
             return null;
         }
 
