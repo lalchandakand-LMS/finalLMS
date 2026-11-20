@@ -956,4 +956,69 @@ class UniversalAiAssistantPluginTest extends TestCase
     }
 
 
+
+    public function test_assistant_controller_streams_incremental_deltas_and_redacts_secrets_across_chunks(): void
+    {
+        $user = User::factory()->create(['role' => 'student', 'email_verified_at' => now()]);
+        AssistantSettings::save([
+            'model' => 'gpt-4o-mini',
+            'base_url' => 'https://api.openai.com/v1',
+            'temperature' => 0.4,
+            'max_tokens' => 800,
+            'global_enabled' => true,
+            'role_enabled' => array_replace(array_fill_keys(AssistantSettings::ROLES, false), ['student' => true]),
+            'role_data_access' => array_fill_keys(AssistantSettings::ROLES, false),
+            'daily_request_limit' => 20,
+            'daily_token_budget' => 50000,
+            'retention_days' => 365,
+        ], 'test-secret-provider-key', false);
+
+        $provider = \Mockery::mock(\App\Contracts\Ai\AiProvider::class);
+        $provider->shouldReceive('capabilities')->once()->with('gpt-4o-mini')->andReturn([
+            'temperature' => true,
+            'output_token_parameter' => 'max_tokens',
+            'max_output_tokens' => 16384,
+        ]);
+        $provider->shouldReceive('stream')->once()->andReturnUsing(
+            function ($apiKey, $baseUrl, $model, $messages, $temperature, $maxTokens, $onDelta): array {
+                $onDelta(str_repeat('A useful streamed explanation. ', 3));
+                $onDelta(' Bearer abcdefghijklmnop');
+                $onDelta('qrstuvwxyz1234567890 ');
+                $onDelta('The remaining explanation arrives in a later chunk.');
+                return [
+                    'content' => str_repeat('A useful streamed explanation. ', 3)
+                        .' Bearer abcdefghijklmnopqrstuvwxyz1234567890 '
+                        .'The remaining explanation arrives in a later chunk.',
+                    'total_tokens' => 42,
+                ];
+            }
+        );
+        app()->instance(\App\Contracts\Ai\AiProvider::class, $provider);
+        Route::post('/__test-ai-assistant/incremental-stream', [\Aloms\UniversalAiAssistant\AssistantController::class, 'send']);
+
+        $response = $this->actingAs($user)->postJson('/__test-ai-assistant/incremental-stream', [
+            'message' => 'Explain a grammar rule.',
+        ]);
+        $response->assertOk();
+        $streamed = $response->streamedContent();
+        preg_match_all('/^data: (.+)$/m', $streamed, $matches);
+        $events = array_map(static fn (string $event): array => json_decode($event, true), $matches[1]);
+        $deltas = array_values(array_filter($events, static fn (array $event): bool => ($event['type'] ?? null) === 'delta'));
+        $this->assertGreaterThanOrEqual(2, count($deltas), 'The browser should receive multiple incremental delta events.');
+        $combinedDelta = implode('', array_map(
+            static fn (array $event): string => (string) ($event['content'] ?? ''),
+            $deltas
+        ));
+        $this->assertStringNotContainsString('abcdefghijklmnopqrstuvwxyz1234567890', $combinedDelta);
+        $this->assertStringContainsString('Bearer [REDACTED]', $combinedDelta);
+        $this->assertStringContainsString('The remaining explanation arrives in a later chunk.', $combinedDelta);
+        $this->assertStringContainsString('"type":"done"', $streamed);
+        $this->assertDatabaseHas('ai_assistant_messages', [
+            'conversation_id' => \DB::table('ai_assistant_conversations')->where('user_id', $user->id)->value('id'),
+            'message_role' => 'assistant',
+            'content' => str_repeat('A useful streamed explanation. ', 3)
+                .' Bearer [REDACTED] The remaining explanation arrives in a later chunk.',
+        ]);
+    }
+
 }
