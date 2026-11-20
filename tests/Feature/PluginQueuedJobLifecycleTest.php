@@ -196,6 +196,25 @@ class PluginQueuedJobLifecycleTest extends TestCase
         $this->runGuard(fn () => 'must-not-run', true, null, new RuntimeException('sodium service temporarily unavailable'));
     }
 
+    public function test_invalid_persisted_release_signature_drops_queued_work(): void
+    {
+        $this->signedPlugin();
+        $called = false;
+        $result = $this->runGuard(
+            function () use (&$called): string {
+                $called = true;
+
+                return 'executed';
+            },
+            true,
+            null,
+            new PluginTrustFailure('The persisted release signature is invalid.'),
+        );
+
+        $this->assertFalse($called);
+        $this->assertNull($result);
+    }
+
     public function test_tampered_installed_plugin_files_drop_queued_work(): void
     {
         $this->signedPlugin();
