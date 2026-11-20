@@ -27,9 +27,16 @@ class LessonMediaController extends Controller
 
         // Uploaded lesson videos live on the dedicated private lesson_videos
         // disk; attachments remain on the local private disk.
-        $disk = $type === 'video' ? Storage::disk('lesson_videos') : Storage::disk('local');
         $path = $type === 'video' ? $lesson->video_path : $lesson->attachment_path;
-        abort_unless($path && $disk->exists($path), 404);
+        abort_unless($path, 404);
+
+        $disk = $type === 'video' ? Storage::disk('lesson_videos') : Storage::disk('local');
+        // Keep already-uploaded legacy videos readable while new uploads use
+        // the dedicated lesson_videos disk.
+        if ($type === 'video' && ! $disk->exists($path)) {
+            $disk = Storage::disk('local');
+        }
+        abort_unless($disk->exists($path), 404);
 
         $absolutePath = $disk->path($path);
         $mime = $type === 'video'
