@@ -7,7 +7,9 @@ use App\Models\User;
 use App\Services\Plugins\PluginRuntime;
 use App\Services\Plugins\PluginSignatureVerifier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use RuntimeException;
 use Tests\TestCase;
 
 class PluginRuntimeTest extends TestCase
@@ -345,6 +347,35 @@ PHP,
         $this->assertSame('failed', $dependencyPlugin->fresh()->status);
         $this->assertSame('failed', $dependentPlugin->fresh()->status);
         $this->assertFileDoesNotExist(storage_path('plugin-dependency-tampered-executed'));
+    }
+
+
+    public function test_transient_registry_query_failure_does_not_permanently_disable_plugin_registration(): void
+    {
+        $this->createPlugin($this->validEntrypoint());
+
+        $failedOnce = false;
+        DB::connection()->beforeExecuting(function (string $query) use (&$failedOnce): void {
+            if (! $failedOnce && str_contains($query, 'plugin_registry')) {
+                $failedOnce = true;
+                throw new RuntimeException('Simulated transient plugin registry outage.');
+            }
+        });
+
+        $runtime = app(PluginRuntime::class);
+
+        try {
+            $runtime->registerActivePlugins();
+            $this->fail('The simulated registry outage should interrupt the first registration attempt.');
+        } catch (RuntimeException $exception) {
+            $this->assertSame('Simulated transient plugin registry outage.', $exception->getMessage());
+        }
+
+        $this->assertTrue($failedOnce);
+        $runtime->registerActivePlugins();
+
+        $this->assertTrue(app()->bound('plugin.runtime.registered'));
+        $this->assertNotNull(app('router')->getRoutes()->getByName('plugins.runtime_check.health'));
     }
 
 }
