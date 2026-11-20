@@ -86,6 +86,37 @@ class PluginQueuedJobLifecycleTest extends TestCase
             ->handle(new \stdClass(), $next);
     }
 
+    public function test_plugin_job_identity_and_permission_cannot_be_mutated_after_construction(): void
+    {
+        $job = new class('aec.test-notifier', 'notifications.send') extends PluginJob {
+            public function handle(): void {}
+
+            public function replacePluginKey(): void
+            {
+                $this->pluginKey = 'aec.other-plugin';
+            }
+
+            public function replacePermission(): void
+            {
+                $this->requiredPermission = 'system.admin';
+            }
+        };
+
+        try {
+            $job->replacePluginKey();
+            $this->fail('A plugin job must not be able to change its owning plugin identity.');
+        } catch (\\Error) {
+            $this->assertSame('aec.test-notifier', $job->pluginKey);
+        }
+
+        try {
+            $job->replacePermission();
+            $this->fail('A plugin job must not be able to elevate its required permission.');
+        } catch (\\Error) {
+            $this->assertSame('notifications.send', $job->requiredPermission);
+        }
+    }
+
     public function test_plugin_job_base_class_attaches_the_lifecycle_guard(): void
     {
         $job = new class('aec.test-notifier', 'notifications.send') extends PluginJob {
