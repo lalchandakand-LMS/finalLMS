@@ -54,6 +54,7 @@ final class AssistantController
 
         return view('universal-ai-assistant::chat', [
             'role' => $role,
+            'dataAccessEnabled' => $role !== 'support_staff' && (bool) (AssistantSettings::record()['role_data_access'][$role] ?? false),
             'messageRoute' => $routeName,
             'indexRoute' => $indexRoute,
             'activeConversation' => $activeConversation,
@@ -189,11 +190,10 @@ final class AssistantController
                     if (ob_get_level() > 0) @ob_flush();
                     flush();
                 };
+                $redactor = new AssistantStreamRedactor();
+                $streamedAnswer = '';
 
                 try {
-                    // Do not forward partial provider chunks: credentials such as Bearer tokens
-                    // can be arbitrarily long and cross chunk boundaries. Redact the complete,
-                    // size-bounded response before emitting any assistant text to the browser.
                     $result = $provider->stream(
                         $apiKey,
                         rtrim((string) $settings['base_url'], '/'),
@@ -201,10 +201,25 @@ final class AssistantController
                         $messages,
                         (float) $settings['temperature'],
                         (int) $responseTokenLimit,
-                        static function (string $delta): void {}
+                        static function (string $delta) use ($redactor, $emit, &$streamedAnswer): void {
+                            $safe = $redactor->push($delta);
+                            if ($safe !== '') {
+                                $streamedAnswer .= $safe;
+                                $emit(['type' => 'delta', 'content' => $safe]);
+                            }
+                        }
                     );
 
+                    $tail = $redactor->finish();
+                    if ($tail !== '') {
+                        $streamedAnswer .= $tail;
+                        $emit(['type' => 'delta', 'content' => $tail]);
+                    }
+
                     $answer = self::redactSensitiveText(trim($result['content']));
+                    if (! hash_equals($answer, trim($streamedAnswer))) {
+                        throw new \RuntimeException('The streamed response did not match its safely redacted content.');
+                    }
                     $tokens = is_int($result['total_tokens']) && $result['total_tokens'] > 0
                         ? $result['total_tokens']
                         : AssistantTokenBudget::estimatePromptTokens(array_merge($messages, [
@@ -230,7 +245,6 @@ final class AssistantController
                         }
                     });
                     DB::table('ai_assistant_conversations')->where('id', $conversation->id)->update(['updated_at' => now()]);
-                    $emit(['type' => 'delta', 'content' => $answer]);
                     $emit(['type' => 'done', 'conversation_id' => $conversation->id]);
                 } catch (Throwable) {
                     // The provider may have accepted and billed the request before

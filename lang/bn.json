@@ -1506,5 +1506,7 @@
     "These codes are shown only once. Store them somewhere private and secure. Each code can be used once.": "কোডগুলো শুধু একবার দেখানো হবে। নিরাপদ ও ব্যক্তিগত স্থানে সংরক্ষণ করুন। প্রতিটি কোড একবার ব্যবহার করা যাবে।",
     "Administrator two-factor verification is required. Please sign in again.": "অ্যাডমিনের দুই-ধাপ যাচাইকরণ প্রয়োজন। অনুগ্রহ করে আবার সাইন ইন করুন।",
     "Your account role changed. Please sign in again using the verification method for your current role.": "আপনার অ্যাকাউন্টের ভূমিকা পরিবর্তিত হয়েছে। বর্তমান ভূমিকার যাচাইকরণ পদ্ধতি ব্যবহার করে আবার সাইন ইন করুন।",
-    "Administrator sign-in verified.": "অ্যাডমিন সাইন-ইন যাচাই সম্পন্ন হয়েছে।"
+    "Administrator sign-in verified.": "অ্যাডমিন সাইন-ইন যাচাই সম্পন্ন হয়েছে।",
+    "General guidance only. This assistant cannot access private LMS records or perform actions.": "শুধু সাধারণ দিকনির্দেশনা। এই সহকারী ব্যক্তিগত LMS রেকর্ডে প্রবেশ করতে পারে না বা কোনো কাজ সম্পাদন করতে পারে না।",
+    "This assistant may use read-only, role-scoped LMS context authorized for your account. It cannot perform actions.": "এই সহকারী আপনার অ্যাকাউন্টের জন্য অনুমোদিত, ভূমিকা-সীমাবদ্ধ LMS তথ্য শুধু পড়ার জন্য ব্যবহার করতে পারে। এটি কোনো কাজ সম্পাদন করতে পারে না।"
 }

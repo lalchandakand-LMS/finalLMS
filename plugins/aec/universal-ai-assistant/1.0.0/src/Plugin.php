@@ -13,6 +13,7 @@ require_once __DIR__.'/OpenAiCompatibleProvider.php';
 require_once __DIR__.'/AssistantTokenBudget.php';
 require_once __DIR__.'/AssistantContextBuilder.php';
 require_once __DIR__.'/AssistantAudit.php';
+require_once __DIR__.'/AssistantStreamRedactor.php';
 require_once __DIR__.'/AdminSettingsController.php';
 require_once __DIR__.'/AssistantController.php';
 

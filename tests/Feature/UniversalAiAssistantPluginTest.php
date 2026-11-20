@@ -28,6 +28,7 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\View;
 use Tests\TestCase;
 
 class UniversalAiAssistantPluginTest extends TestCase
@@ -42,6 +43,7 @@ class UniversalAiAssistantPluginTest extends TestCase
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantTokenBudget.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantContextBuilder.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantAudit.php');
+        require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantStreamRedactor.php');
         app()->bind(\App\Contracts\Ai\AiProvider::class, fn () => new OpenAiCompatibleProvider(app(AiDeveloperProviderEndpoint::class)));
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantController.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AdminSettingsController.php');
@@ -65,6 +67,47 @@ class UniversalAiAssistantPluginTest extends TestCase
             $budgetMigration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_16_120000_create_ai_assistant_token_reservations.php');
             $budgetMigration->up();
         }
+    }
+
+    public function test_chat_page_discloses_the_effective_role_data_access_mode(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $baseSettings = [
+            'model' => 'gpt-4o-mini',
+            'base_url' => 'https://api.openai.com/v1',
+            'temperature' => 0.4,
+            'max_tokens' => 800,
+            'global_enabled' => true,
+            'role_enabled' => array_replace(array_fill_keys(AssistantSettings::ROLES, false), ['student' => true]),
+            'daily_request_limit' => 20,
+            'daily_token_budget' => 50000,
+            'retention_days' => 365,
+        ];
+
+        View::addNamespace('universal-ai-assistant', base_path('plugins/aec/universal-ai-assistant/1.0.0/resources/views'));
+        Route::get('/__test-ai-assistant/privacy-notice', [\Aloms\UniversalAiAssistant\AssistantController::class, 'index'])
+            ->name('student.ai-assistant.index');
+        Route::post('/__test-ai-assistant/privacy-notice/messages', fn () => response()->json([]))
+            ->name('student.ai-assistant.messages.store');
+        app('router')->getRoutes()->refreshNameLookups();
+
+        AssistantSettings::save($baseSettings + [
+            'role_data_access' => array_fill_keys(AssistantSettings::ROLES, false),
+        ], 'test-secret-provider-key', false);
+
+        $this->actingAs($student)->get('/__test-ai-assistant/privacy-notice')
+            ->assertOk()
+            ->assertSee('General guidance only. This assistant cannot access private LMS records or perform actions.')
+            ->assertDontSee('This assistant may use read-only, role-scoped LMS context authorized for your account.');
+
+        AssistantSettings::save($baseSettings + [
+            'role_data_access' => array_replace(array_fill_keys(AssistantSettings::ROLES, false), ['student' => true]),
+        ], null, false);
+
+        $this->actingAs($student)->get('/__test-ai-assistant/privacy-notice')
+            ->assertOk()
+            ->assertSee('This assistant may use read-only, role-scoped LMS context authorized for your account. It cannot perform actions.')
+            ->assertDontSee('General guidance only. This assistant cannot access private LMS records or perform actions.');
     }
 
     public function test_enabled_role_context_is_audited_and_sent_only_with_scoped_course_data(): void
@@ -586,6 +629,24 @@ class UniversalAiAssistantPluginTest extends TestCase
         $this->assertDatabaseHas('ai_assistant_conversations', ['id' => $activeId]);
     }
 
+    public function test_stream_redactor_handles_credentials_split_across_provider_chunks(): void
+    {
+        $redactor = new \Aloms\UniversalAiAssistant\AssistantStreamRedactor();
+        $bearer = str_repeat('A', 400);
+        $apiKey = 'sk-ABCDEFGHIJKLMNOPQRSTUVWXYZ123456';
+
+        $output = $redactor->push('A safe sentence. Bear');
+        $output .= $redactor->push('er '.$bearer);
+        $output .= $redactor->push(' and another safe sentence '.$apiKey);
+        $output .= $redactor->finish();
+
+        $this->assertStringContainsString('A safe sentence.', $output);
+        $this->assertStringContainsString('Bearer [REDACTED]', $output);
+        $this->assertStringContainsString('[REDACTED_SECRET]', $output);
+        $this->assertStringNotContainsString($bearer, $output);
+        $this->assertStringNotContainsString($apiKey, $output);
+    }
+
     public function test_sensitive_provider_tokens_are_redacted_before_saving_conversation_titles_and_sending_messages(): void
     {
         AssistantSettings::save([
@@ -600,7 +661,10 @@ class UniversalAiAssistantPluginTest extends TestCase
         });
         Http::fake([
             'api.openai.com/v1/chat/completions' => Http::response(
-                "data: {\"choices\":[{\"delta\":{\"content\":\"Bearer ".str_repeat('A', 400)." is a test token. Let us practise English.\"}}],\"usage\":{\"total_tokens\":12}}\n\n".
+                "data: {\"choices\":[{\"delta\":{\"content\":\"Here is a helpful answer. \"}}]}\n\n".
+                "data: {\"choices\":[{\"delta\":{\"content\":\"Bearer \"}}]}\n\n".
+                "data: {\"choices\":[{\"delta\":{\"content\":\"".str_repeat('A', 200)."\"}}]}\n\n".
+                "data: {\"choices\":[{\"delta\":{\"content\":\"".str_repeat('A', 200)." is a test token. Let us practise English.\"}}],\"usage\":{\"total_tokens\":12}}\n\n".
                 "data: [DONE]\n\n",
                 200,
                 ['Content-Type' => 'text/event-stream']
@@ -618,6 +682,7 @@ class UniversalAiAssistantPluginTest extends TestCase
         $streamed = $response->streamedContent();
         $this->assertStringNotContainsString(str_repeat('A', 400), $streamed);
         $this->assertStringContainsString('Bearer [REDACTED]', $streamed);
+        $this->assertGreaterThanOrEqual(2, substr_count($streamed, '"type":"delta"'), 'Safe response chunks should reach the browser before the provider stream finishes.');
 
         $conversation = \DB::table('ai_assistant_conversations')->where('user_id', $user->id)->first();
         $message = \DB::table('ai_assistant_messages')->where('conversation_id', $conversation->id)->where('message_role', 'user')->first();
@@ -643,6 +708,14 @@ class UniversalAiAssistantPluginTest extends TestCase
         $this->assertFalse($catalog['universal_ai_assistant']['installed']);
         $this->assertFalse($catalog['universal_ai_assistant']['enabled']);
         $this->assertSame('not_installed', $catalog['universal_ai_assistant']['status']);
+
+        $manifest = json_decode(
+            file_get_contents(base_path('plugins/aec/universal-ai-assistant/1.0.0/plugin.json')),
+            true,
+            512,
+            JSON_THROW_ON_ERROR
+        );
+        $this->assertContains('role-scoped-read-only-context', $manifest['capabilities']);
     }
 
     public function test_optional_plugin_cannot_be_enabled_from_the_module_toggle(): void
@@ -882,5 +955,70 @@ class UniversalAiAssistantPluginTest extends TestCase
         Http::assertSentCount(1);
     }
 
+
+
+    public function test_assistant_controller_streams_incremental_deltas_and_redacts_secrets_across_chunks(): void
+    {
+        $user = User::factory()->create(['role' => 'student', 'email_verified_at' => now()]);
+        AssistantSettings::save([
+            'model' => 'gpt-4o-mini',
+            'base_url' => 'https://api.openai.com/v1',
+            'temperature' => 0.4,
+            'max_tokens' => 800,
+            'global_enabled' => true,
+            'role_enabled' => array_replace(array_fill_keys(AssistantSettings::ROLES, false), ['student' => true]),
+            'role_data_access' => array_fill_keys(AssistantSettings::ROLES, false),
+            'daily_request_limit' => 20,
+            'daily_token_budget' => 50000,
+            'retention_days' => 365,
+        ], 'test-secret-provider-key', false);
+
+        $provider = \Mockery::mock(\App\Contracts\Ai\AiProvider::class);
+        $provider->shouldReceive('capabilities')->once()->with('gpt-4o-mini')->andReturn([
+            'temperature' => true,
+            'output_token_parameter' => 'max_tokens',
+            'max_output_tokens' => 16384,
+        ]);
+        $provider->shouldReceive('stream')->once()->andReturnUsing(
+            function ($apiKey, $baseUrl, $model, $messages, $temperature, $maxTokens, $onDelta): array {
+                $onDelta(str_repeat('A useful streamed explanation. ', 3));
+                $onDelta(' Bearer abcdefghijklmnop');
+                $onDelta('qrstuvwxyz1234567890 ');
+                $onDelta('The remaining explanation arrives in a later chunk.');
+                return [
+                    'content' => str_repeat('A useful streamed explanation. ', 3)
+                        .' Bearer abcdefghijklmnopqrstuvwxyz1234567890 '
+                        .'The remaining explanation arrives in a later chunk.',
+                    'total_tokens' => 42,
+                ];
+            }
+        );
+        app()->instance(\App\Contracts\Ai\AiProvider::class, $provider);
+        Route::post('/__test-ai-assistant/incremental-stream', [\Aloms\UniversalAiAssistant\AssistantController::class, 'send']);
+
+        $response = $this->actingAs($user)->postJson('/__test-ai-assistant/incremental-stream', [
+            'message' => 'Explain a grammar rule.',
+        ]);
+        $response->assertOk();
+        $streamed = $response->streamedContent();
+        preg_match_all('/^data: (.+)$/m', $streamed, $matches);
+        $events = array_map(static fn (string $event): array => json_decode($event, true), $matches[1]);
+        $deltas = array_values(array_filter($events, static fn (array $event): bool => ($event['type'] ?? null) === 'delta'));
+        $this->assertGreaterThanOrEqual(2, count($deltas), 'The browser should receive multiple incremental delta events.');
+        $combinedDelta = implode('', array_map(
+            static fn (array $event): string => (string) ($event['content'] ?? ''),
+            $deltas
+        ));
+        $this->assertStringNotContainsString('abcdefghijklmnopqrstuvwxyz1234567890', $combinedDelta);
+        $this->assertStringContainsString('Bearer [REDACTED]', $combinedDelta);
+        $this->assertStringContainsString('The remaining explanation arrives in a later chunk.', $combinedDelta);
+        $this->assertStringContainsString('"type":"done"', $streamed);
+        $this->assertDatabaseHas('ai_assistant_messages', [
+            'conversation_id' => \DB::table('ai_assistant_conversations')->where('user_id', $user->id)->value('id'),
+            'message_role' => 'assistant',
+            'content' => str_repeat('A useful streamed explanation. ', 3)
+                .' Bearer [REDACTED] The remaining explanation arrives in a later chunk.',
+        ]);
+    }
 
 }
