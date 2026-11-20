@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Course;
+use App\Models\Enrollment;
 use App\Models\QuestionSet;
 use App\Models\QuestionSetAttempt;
 use App\Models\QuestionSetAttemptQuestion;
@@ -130,12 +131,24 @@ class StudentCourseQuizController extends Controller
         $this->authorizeCourseQuiz($student, $course, $questionSet);
 
         $attempt = DB::transaction(function () use ($student, $course, $questionSet): QuestionSetAttempt {
+            $lockedCourse = Course::query()->whereKey($course->id)->lockForUpdate()->firstOrFail();
+            abort_unless($lockedCourse->status === 'published', 404);
+            abort_unless(Enrollment::query()
+                ->where('course_id', $lockedCourse->id)
+                ->where('user_id', $student->id)
+                ->whereIn('status', ['active', 'completed'])
+                ->lockForUpdate()
+                ->exists(), 403);
+
+            $lockedSet = QuestionSet::query()->whereKey($questionSet->id)->lockForUpdate()->firstOrFail();
+            abort_unless($lockedSet->status === 'published', 404);
+
             $pivot = DB::table('course_question_set')
                 ->where('course_id', $course->id)
                 ->where('question_set_id', $questionSet->id)
                 ->lockForUpdate()
                 ->first();
-            abort_unless($pivot && $questionSet->status === 'published', 404);
+            abort_unless($pivot, 404);
 
             if ($pivot->available_from && now()->lt($pivot->available_from)) {
                 abort(403, __('This quiz is not available yet.'));
@@ -167,7 +180,7 @@ class StudentCourseQuizController extends Controller
                 abort(403, __('You have used all allowed attempts for this quiz.'));
             }
 
-            $source = $questionSet->questions()->get();
+            $source = $lockedSet->questions()->get();
             abort_if($source->isEmpty(), 422, __('This quiz does not contain any questions.'));
             $count = $pivot->questions_per_attempt
                 ? min((int) $pivot->questions_per_attempt, $source->count())
@@ -232,21 +245,21 @@ class StudentCourseQuizController extends Controller
     public function attempt(Request $request, QuestionSetAttempt $attempt): JsonResponse
     {
         $student = $request->user();
-        abort_unless($student?->isStudent(), 403);
-        abort_unless((int) $attempt->student_id === (int) $student->id, 404);
+        $payload = DB::transaction(function () use ($student, $attempt): array {
+            $locked = QuestionSetAttempt::query()->whereKey($attempt->id)->lockForUpdate()->firstOrFail();
+            $this->authorizeAttempt($student, $locked, true, true);
 
-        if ($attempt->status === 'in_progress' && $attempt->deadline_at
-            && now()->gte($attempt->deadline_at)) {
-            DB::transaction(function () use ($attempt): void {
-                $locked = QuestionSetAttempt::query()->whereKey($attempt->id)->lockForUpdate()->firstOrFail();
+            if ($locked->status === 'in_progress' && $locked->deadline_at
+                && now()->gte($locked->deadline_at)) {
                 $this->finalizeExpiredAttempt($locked);
-            });
-            $attempt->refresh();
-        }
+            }
 
-        $attempt->load('questions');
+            $locked->load('questions');
 
-        return response()->json(['data' => $this->attemptPayload($attempt)]);
+            return $this->attemptPayload($locked);
+        });
+
+        return response()->json(['data' => $payload]);
     }
 
     public function saveAnswers(Request $request, QuestionSetAttempt $attempt): JsonResponse
@@ -254,8 +267,9 @@ class StudentCourseQuizController extends Controller
         $student = $request->user();
         $this->authorizeAttempt($student, $attempt, true);
 
-        return DB::transaction(function () use ($request, $attempt): JsonResponse {
+        return DB::transaction(function () use ($request, $attempt, $student): JsonResponse {
             $locked = QuestionSetAttempt::query()->whereKey($attempt->id)->lockForUpdate()->firstOrFail();
+            $this->authorizeAttempt($student, $locked, true, true);
             abort_unless($locked->status === 'in_progress', 409, __('This attempt is no longer accepting answers.'));
 
             if ($locked->deadline_at && now()->gte($locked->deadline_at)) {
@@ -295,8 +309,9 @@ class StudentCourseQuizController extends Controller
         $student = $request->user();
         $this->authorizeAttempt($student, $attempt, true);
 
-        $result = DB::transaction(function () use ($request, $attempt): array {
+        $result = DB::transaction(function () use ($request, $attempt, $student): array {
             $locked = QuestionSetAttempt::query()->whereKey($attempt->id)->lockForUpdate()->firstOrFail();
+            $this->authorizeAttempt($student, $locked, true, true);
             abort_unless($locked->status === 'in_progress', 409, __('This attempt has already been submitted.'));
 
             if ($locked->deadline_at && now()->gte($locked->deadline_at)) {
@@ -375,16 +390,24 @@ class StudentCourseQuizController extends Controller
         return $pivot;
     }
 
-    private function authorizeAttempt($student, QuestionSetAttempt $attempt, bool $requireEnrollment): void
-    {
+    private function authorizeAttempt(
+        $student,
+        QuestionSetAttempt $attempt,
+        bool $requireEnrollment,
+        bool $lockEnrollment = false,
+    ): void {
         abort_unless($student?->isStudent(), 403);
         abort_unless((int) $attempt->student_id === (int) $student->id, 404);
 
         if ($requireEnrollment) {
-            abort_unless($attempt->course->enrollments()
+            $enrollment = Enrollment::query()
+                ->where('course_id', $attempt->course_id)
                 ->where('user_id', $student->id)
-                ->whereIn('status', ['active', 'completed'])
-                ->exists(), 403);
+                ->whereIn('status', ['active', 'completed']);
+            if ($lockEnrollment) {
+                $enrollment->lockForUpdate();
+            }
+            abort_unless($enrollment->exists(), 403);
         }
     }
 

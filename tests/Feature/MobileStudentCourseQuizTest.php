@@ -137,6 +137,39 @@ class MobileStudentCourseQuizTest extends TestCase
         $this->assertDatabaseCount('question_set_attempt_questions', 2);
     }
 
+    public function test_student_cannot_read_or_submit_an_attempt_after_course_enrollment_is_revoked(): void
+    {
+        [$course, $set, $student] = $this->fixture();
+        $token = $this->token($student);
+        $started = $this->withToken($token)
+            ->postJson('/api/v1/courses/'.$course->slug.'/question-sets/'.$set->id.'/start')
+            ->assertCreated();
+        $attemptId = $started->json('data.attempt.id');
+
+        Enrollment::query()
+            ->where('user_id', $student->id)
+            ->where('course_id', $course->id)
+            ->update(['status' => 'cancelled']);
+
+        $this->withToken($token)
+            ->getJson('/api/v1/question-set-attempts/'.$attemptId)
+            ->assertForbidden();
+
+        $this->withToken($token)
+            ->putJson('/api/v1/question-set-attempts/'.$attemptId.'/answers', [
+                'answers' => [],
+            ])->assertForbidden();
+
+        $this->withToken($token)
+            ->postJson('/api/v1/question-set-attempts/'.$attemptId.'/submit', [])
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('question_set_attempts', [
+            'id' => $attemptId,
+            'status' => 'in_progress',
+        ]);
+    }
+
     public function test_quiz_cannot_start_before_scheduled_availability(): void
     {
         [$course, $set, $student] = $this->fixture([
