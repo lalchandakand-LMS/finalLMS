@@ -8,7 +8,10 @@ use App\Models\Branch;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\User;
+use Illuminate\Database\Events\TransactionBeginning;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
 
 class AttendanceManagementTest extends TestCase
@@ -266,5 +269,63 @@ class AttendanceManagementTest extends TestCase
             ->get(route('admin.branch-workspace.batches.attendance.index', $otherBatch))
             ->assertForbidden();
     }
+
+
+    public function test_attendance_rechecks_locked_enrollment_inside_the_write_transaction(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $student = User::factory()->create(['role' => 'student']);
+        $course = Course::create([
+            'teacher_id' => $teacher->id,
+            'title' => 'Enrollment Race Course',
+            'slug' => 'enrollment-race-course',
+            'description' => 'Transaction-time enrollment check.',
+            'price' => 1000,
+            'status' => 'published',
+        ]);
+        $branch = Branch::create(['name' => 'Enrollment Race Branch', 'slug' => 'enrollment-race-branch']);
+        $batch = Batch::create([
+            'branch_id' => $branch->id,
+            'course_id' => $course->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Enrollment Race Batch',
+            'capacity' => 20,
+            'starts_at' => now(),
+            'ends_at' => now()->addMonth(),
+            'fee' => 0,
+            'status' => 'open',
+        ]);
+        $enrollment = Enrollment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'batch_id' => $batch->id,
+            'status' => 'active',
+        ]);
+
+        $changedDuringTransaction = false;
+        Event::listen(TransactionBeginning::class, function () use ($enrollment, &$changedDuringTransaction): void {
+            if ($changedDuringTransaction) {
+                return;
+            }
+
+            $changedDuringTransaction = true;
+            DB::table('enrollments')->where('id', $enrollment->id)->update(['status' => 'cancelled']);
+        });
+
+        $this->actingAs($teacher)
+            ->post(route('teacher.batches.attendance.store', $batch), [
+                'attendance_date' => now()->toDateString(),
+                'records' => [['student_id' => $student->id, 'status' => 'present']],
+            ])
+            ->assertForbidden();
+
+        $this->assertTrue($changedDuringTransaction);
+        $this->assertDatabaseMissing('attendances', [
+            'batch_id' => $batch->id,
+            'student_id' => $student->id,
+            'attendance_date' => now()->toDateString(),
+        ]);
+    }
+
 
 }
