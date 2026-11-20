@@ -395,8 +395,6 @@ class ThemeManagerController extends Controller
                     'created_at' => now(),
                 ]);
 
-                DB::table('themes')->where('id', $record->id)->delete();
-
                 ActivityLog::create([
                     'user_id' => $request->user()->id,
                     'event' => 'theme.deleted',
@@ -406,18 +404,25 @@ class ThemeManagerController extends Controller
                     'ip_address' => $request->ip(),
                     'user_agent' => substr((string) $request->userAgent(), 0, 1000),
                 ]);
+
+                // Keep the database record until every file has been removed. If
+                // storage cleanup fails, the transaction rolls back and Admin can
+                // retry deletion instead of losing the only paths to orphaned files.
+                foreach ($paths as [$diskName, $relativePath]) {
+                    $disk = Storage::disk($diskName);
+                    if ($disk->exists($relativePath) && ! $disk->delete($relativePath)) {
+                        throw new \RuntimeException(__('Theme file cleanup failed; the theme record was retained for retry.'));
+                    }
+                }
+                $localDisk = Storage::disk('local');
+                if ($localDisk->exists($packagePath) && ! $localDisk->delete($packagePath)) {
+                    throw new \RuntimeException(__('Theme package cleanup failed; the theme record was retained for retry.'));
+                }
+
+                DB::table('themes')->where('id', $record->id)->delete();
             }, 3);
         } catch (\RuntimeException $exception) {
             return back()->withErrors(['theme' => $exception->getMessage()]);
-        }
-
-        foreach ($paths as [$diskName, $relativePath]) {
-            if (Storage::disk($diskName)->exists($relativePath)) {
-                Storage::disk($diskName)->delete($relativePath);
-            }
-        }
-        if ($packagePath && Storage::disk('local')->exists($packagePath)) {
-            Storage::disk('local')->delete($packagePath);
         }
 
         return redirect()->route('admin.themes.index')->with('success', __('The inactive theme and its verified package files were deleted. The audit history and website content were retained.'));
