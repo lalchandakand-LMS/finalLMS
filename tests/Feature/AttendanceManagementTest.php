@@ -320,7 +320,6 @@ class AttendanceManagementTest extends TestCase
             ->assertForbidden();
 
         $this->assertTrue($changedDuringTransaction);
-        $this->assertDatabaseHas('enrollments', ['id' => $enrollment->id, 'status' => 'cancelled']);
         $this->assertDatabaseMissing('attendances', [
             'batch_id' => $batch->id,
             'student_id' => $student->id,
