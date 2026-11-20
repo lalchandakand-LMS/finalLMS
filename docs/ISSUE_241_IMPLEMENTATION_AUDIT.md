@@ -42,8 +42,9 @@ The current repository includes a first-party Universal AI Assistant package. Po
 
 ### P1 — runtime integration contract
 
-- Route registration is implemented, but a complete typed event/action hook registry, queue-job and scheduler lifecycle, API route contract, portal navigation/widget registry and health probes are not yet present as a unified contract.
-- Deactivation must be tested against every eventual entry point, not only web routes.
+- Route registration and API route helpers, typed action hooks, portal navigation and permission grants are partially implemented. A new opt-in `PluginJob` base class and execution middleware now recheck plugin active state, trusted signing-key presence and Admin-granted permission immediately before queued handlers run. Stale jobs are dropped fail-closed.
+- This does not yet provide scheduler registration, automatic wrapping of arbitrary jobs, provider-webhook lifecycle guards or migration of every existing plugin job. Each package must adopt the base class and prove deactivation/revocation behavior before claiming background-work isolation.
+- Deactivation must be tested against every actual entry point, not only web routes.
 - Secret storage/configuration needs a plugin-scoped encrypted settings contract with redaction in HTML, logs and exports.
 
 ### P2 — first-party module coverage and migration
@@ -56,12 +57,13 @@ The current repository includes a first-party Universal AI Assistant package. Po
 ## Delivery sequence
 
 1. **Lifecycle safety:** separate package install from migration execution; preserve signed-package and installed-file verification. Add regression tests.
-2. **Permission contract:** administrator-approved permission grants, per-route permission requirements and tests for denied access.
-3. **Portal data scopes:** reusable branch, teacher/course, student/enrollment and guardian-child authorization helpers; require their use in first-party portal plugins.
-4. **Update and recovery:** staged version install, dependency/compatibility preflight, backup policy, atomic switch, retained previous version and tested rollback.
-5. **Manager completeness:** catalogue/discovery, settings schema, secret fields, health checks, audit history and version history.
-6. **First-party migration:** convert optional modules/builders and integrations in small, independently testable packages while preserving existing data and routes.
-7. **Release gates:** exact-head Laravel CI, CodeQL, cPanel package tests, upgrade/restore tests and staging/browser/provider acceptance. Production deployment remains separate.
+2. **Queued-work boundary:** require `PluginJob` for plugin-owned queue tasks, with active/trusted/permission rechecks at execution time; then add scheduler registration and webhook/event lifecycle guards.
+3. **Permission contract:** administrator-approved permission grants, per-route permission requirements and tests for denied access.
+4. **Portal data scopes:** reusable branch, teacher/course, student/enrollment and guardian-child authorization helpers; require their use in first-party portal plugins.
+5. **Update and recovery:** staged version install, dependency/compatibility preflight, backup policy, atomic switch, retained previous version and tested rollback.
+6. **Manager completeness:** catalogue/discovery, settings schema, secret fields, health checks, audit history and version history.
+7. **First-party migration:** convert optional modules/builders and integrations in small, independently testable packages while preserving existing data and routes.
+8. **Release gates:** exact-head Laravel CI, CodeQL, cPanel package tests, upgrade/restore tests and staging/browser/provider acceptance. Production deployment remains separate.
 
 ## Explicit non-goals for this change
 
