@@ -532,4 +532,28 @@ class FlashSaleTest extends TestCase
         $this->assertSame(1, Payment::where('flash_sale_id', $sale->id)->count());
     }
 
+
+    public function test_mobile_cart_free_flash_sale_enrollment_is_recorded_against_campaign_limit(): void
+    {
+        $course = $this->makeCourse(0);
+        $sale = $this->makeSale($course, ['max_redemptions' => 1, 'per_student_limit' => 1]);
+        $student = User::factory()->create(['role' => 'student']);
+        $token = $this->mobileToken($student);
+
+        $this->withToken($token)->postJson('/api/v1/my/cart', ['course_id' => $course->id])
+            ->assertCreated();
+        $this->withToken($token)->postJson('/api/v1/my/cart/checkout/manual', [])
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'enrolled_free');
+
+        $this->assertDatabaseHas('enrollments', [
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'flash_sale_id' => $sale->id,
+            'status' => 'active',
+        ]);
+        $this->assertNull(FlashSale::activeForCourse($course->id, User::factory()->create(['role' => 'student'])->id));
+        $this->assertFalse($sale->fresh()->isAvailableFor($student->id));
+    }
+
 }
