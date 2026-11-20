@@ -164,6 +164,45 @@ class MobileStudentCheckoutTest extends TestCase
         $this->assertDatabaseCount('payments', 0);
     }
 
+    public function test_assigned_student_only_sees_and_checks_out_into_their_own_branch_batches(): void
+    {
+        [$student, $course, $ownBatch] = $this->fixture();
+        $this->enableManualPayments();
+        $ownBranch = $ownBatch->branch;
+        $student->update(['branch_id' => $ownBranch->id]);
+
+        $otherBranch = Branch::create(['name' => 'Other Checkout Branch', 'slug' => 'other-checkout-branch']);
+        $otherBatch = Batch::create([
+            'branch_id' => $otherBranch->id,
+            'course_id' => $course->id,
+            'teacher_id' => $course->teacher_id,
+            'title' => 'Other Branch Batch',
+            'capacity' => 20,
+            'starts_at' => now()->addDay(),
+            'ends_at' => now()->addMonth(),
+            'fee' => 1800,
+            'status' => 'open',
+        ]);
+        $token = $this->token($student);
+
+        $this->withToken($token)->getJson('/api/v1/checkout/courses/'.$course->slug)
+            ->assertOk()
+            ->assertJsonCount(1, 'data.batches')
+            ->assertJsonPath('data.batches.0.id', $ownBatch->id);
+
+        $this->withToken($token)->postJson('/api/v1/checkout/courses/'.$course->slug.'/manual', [
+            'batch_id' => $otherBatch->id,
+            'payment_method' => 'manual',
+            'transaction_reference' => 'AEC-OTHER-BRANCH-REF',
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('batch_id');
+
+        $this->assertDatabaseMissing('payments', [
+            'user_id' => $student->id,
+            'batch_id' => $otherBatch->id,
+        ]);
+    }
+
     private function fixture(array $batchOverrides = []): array
     {
         $teacher = User::factory()->create(['role' => 'teacher']);
