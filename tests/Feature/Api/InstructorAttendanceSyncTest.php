@@ -661,4 +661,49 @@ class InstructorAttendanceSyncTest extends TestCase
         $this->assertDatabaseCount('attendance_change_logs', 0);
     }
 
+
+    public function test_sync_does_not_disclose_another_instructors_review_by_idempotency_key(): void
+    {
+        $owner = User::factory()->create(['role' => 'teacher']);
+        $ownerStudent = User::factory()->create(['role' => 'student']);
+        $ownerBatch = $this->makeBatch($owner, $ownerStudent);
+        $otherTeacher = User::factory()->create(['role' => 'teacher']);
+        $otherStudent = User::factory()->create(['role' => 'student']);
+        $otherBatch = $this->makeBatch($otherTeacher, $otherStudent);
+        $key = (string) Str::uuid();
+
+        $review = AttendanceSyncReview::create([
+            'idempotency_key' => $key,
+            'teacher_id' => $owner->id,
+            'batch_id' => $ownerBatch->id,
+            'student_id' => $ownerStudent->id,
+            'attendance_date' => now()->toDateString(),
+            'attendance_status' => 'present',
+            'location_latitude' => 23.8103,
+            'location_longitude' => 90.4125,
+            'location_accuracy_meters' => 12.5,
+            'location_captured_at' => now()->subHour(),
+            'review_status' => 'pending',
+        ]);
+
+        $this->withoutMiddleware([
+            \App\Http\Middleware\AuthenticateApiToken::class,
+            \App\Http\Middleware\EnsureModuleEnabled::class,
+        ])->actingAs($otherTeacher)
+            ->postJson('/api/v1/instructor/attendance/sync', [
+                'records' => [$this->payload($otherBatch, $otherStudent, $key)],
+            ])
+            ->assertOk()
+            ->assertJsonPath('results.0.status', 'failed')
+            ->assertJsonPath('results.0.message', 'This idempotency key is already in use.')
+            ->assertJsonMissingPath('results.0.review_id');
+
+        $this->assertDatabaseHas('attendance_sync_reviews', [
+            'id' => $review->id,
+            'teacher_id' => $owner->id,
+            'review_status' => 'pending',
+        ]);
+        $this->assertDatabaseCount('attendances', 0);
+    }
+
 }

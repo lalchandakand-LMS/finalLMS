@@ -118,6 +118,16 @@ class InstructorAttendanceSyncController extends Controller
                 ->lockForUpdate()
                 ->first();
             if ($existingReview) {
+                // Idempotency keys are globally unique, but they are not secrets.
+                // Do not disclose another instructor's review state or review ID.
+                if ((int) $existingReview->teacher_id !== (int) $teacher->id) {
+                    return [
+                        'idempotency_key' => $key,
+                        'status' => 'failed',
+                        'message' => 'This idempotency key is already in use.',
+                    ];
+                }
+
                 if ($existingReview->review_status === 'approved') {
                     return [
                         'idempotency_key' => $key,
