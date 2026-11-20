@@ -36,9 +36,12 @@ class PaymentController extends Controller
             return back()->with('info', 'You are already enrolled in this course.');
         }
 
-        $hasOpenBatches = $course->batches()->where('status', 'open')->exists();
+        $hasOpenBatches = $course->batches()->where('status', 'open')
+            ->when($user->branch_id !== null, fn ($query) => $query->where('branch_id', $user->branch_id))
+            ->exists();
         $validatedBatch = $request->validate([
-            'batch_id' => [$hasOpenBatches ? 'required' : 'nullable', 'integer', Rule::exists('batches', 'id')->where(fn ($queryBuilder) => $queryBuilder->where('course_id', $course->id)->where('status', 'open'))],
+            'batch_id' => [$hasOpenBatches ? 'required' : 'nullable', 'integer', Rule::exists('batches', 'id')->where(fn ($queryBuilder) => $queryBuilder->where('course_id', $course->id)->where('status', 'open')
+                ->when($user->branch_id !== null, fn ($query) => $query->where('branch_id', $user->branch_id)))],
         ]);
         $batchId = $validatedBatch['batch_id'] ?? null;
         $batchFee = $batchId ? (float) Batch::query()->whereKey($batchId)->value('fee') : 0;
@@ -61,7 +64,9 @@ class PaymentController extends Controller
 
                 if ($batchId) {
                     $batch = Batch::query()->lockForUpdate()->findOrFail($batchId);
-                    if ($batch->course_id !== $lockedCourse->id || $batch->status !== 'open' || ! $this->hasAvailableSeat($batch)) {
+                    if ($batch->course_id !== $lockedCourse->id || $batch->status !== 'open'
+                        || ($user->branch_id !== null && (int) $batch->branch_id !== (int) $user->branch_id)
+                        || ! $this->hasAvailableSeat($batch)) {
                         return 'batch_full';
                     }
                 } else {
@@ -142,7 +147,9 @@ class PaymentController extends Controller
 
             if ($batchId) {
                 $batch = Batch::query()->lockForUpdate()->findOrFail($batchId);
-                if ($batch->course_id !== $lockedCourse->id || $batch->status !== 'open' || ! $this->hasAvailableSeat($batch)) {
+                if ($batch->course_id !== $lockedCourse->id || $batch->status !== 'open'
+                        || ($user->branch_id !== null && (int) $batch->branch_id !== (int) $user->branch_id)
+                        || ! $this->hasAvailableSeat($batch)) {
                     return 'batch_full';
                 }
             } else {
