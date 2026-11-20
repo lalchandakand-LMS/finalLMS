@@ -70,7 +70,11 @@ jobs:
           cache: npm
       - run: composer validate --strict
       - run: composer install --no-interaction --prefer-dist
+      - name: Audit Composer dependencies for known security advisories
+        run: composer audit --no-interaction
       - run: npm ci
+      - name: Audit production npm dependencies for high-severity advisories
+        run: npm audit --omit=dev --audit-level=high
       - run: cp deployment/.env.example .env
       - run: php artisan key:generate --force
       - name: Run migrations
