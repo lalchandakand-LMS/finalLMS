@@ -59,7 +59,7 @@ final class EnsurePluginJobActive
 
             // Re-verify the detached Ed25519 signature against the current
             // trusted key and verify every installed file before handler code runs.
-            if (! $signatureVerifier->verifyInstalledSignature($plugin))
+            if (! $signatureVerifier->verifyInstalledSignature($plugin)) {
                 return null; // Legacy unsigned records are not trusted for new jobs.
             }
 
