@@ -35,11 +35,11 @@ The Admin activation path checks signature, manifest, compatibility, dependencie
 
 A plugin migration failure leaves the package inactive and records a safe failure status; inspect protected server logs for diagnostics. Health checks do not execute plugin code or migrations. Uninstall removes the executable package but preserves LMS data and migration history by default.
 
-## Route cache and background work
+## Queue jobs, route cache and background work
 
-Dynamically registered plugin routes are not compatible with Laravel route caching in this phase. Activation is blocked while routes are cached; clear route cache before activating plugins.
+Plugin-owned queued work must extend `App\\Jobs\\Plugins\\PluginJob` and pass its immutable plugin key plus a manifest-declared permission that an Admin has granted. The base job attaches `EnsurePluginJobActive` middleware. At execution time it rechecks that the registry exists, the plugin remains active, its persisted signature-verification record still references a currently trusted key, and the required permission remains both declared and Admin-granted. If any check fails or the registry cannot be read, the job is acknowledged without running its handler; stale work is not retried. Add regression tests for deactivation, permission revocation, missing registry and key rotation for every package that adopts this contract.
 
-The current hook/route runtime is not a general sandbox for arbitrary background workers. Do not assume that disabling a plugin automatically cancels arbitrary external workers, provider webhooks or jobs that were created outside the registered runtime. Any queue, scheduled task, event listener or webhook extension must use explicit plugin-active and permission checks and be covered by dedicated lifecycle tests before being enabled.
+This is an opt-in queue contract, not a general sandbox. Existing plugin jobs have not all been migrated, and the framework does not yet register or wrap arbitrary scheduler callbacks, external provider webhooks or already-dispatched work. Scheduled tasks must dispatch a guarded `PluginJob`; do not execute plugin callbacks directly from the scheduler. Event listeners/webhooks still need explicit active-state and permission checks plus lifecycle tests. Dynamically registered plugin routes are not compatible with Laravel route caching in this phase. Activation is blocked while routes are cached; clear route cache before activating plugins.
 
 ## Remaining release gates
 
