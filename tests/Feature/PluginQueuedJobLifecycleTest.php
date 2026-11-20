@@ -114,7 +114,7 @@ class PluginQueuedJobLifecycleTest extends TestCase
             $this->fail('A plugin job must not be able to elevate its required permission.');
         } catch (\Error) {
             $this->assertSame('notifications.send', $job->requiredPermission);
-        $this->assertTrue((new \\ReflectionMethod(PluginJob::class, 'middleware'))->isFinal());
+        $this->assertTrue((new \ReflectionMethod(PluginJob::class, 'middleware'))->isFinal());
         }
     }
 
