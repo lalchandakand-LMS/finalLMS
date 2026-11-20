@@ -5,9 +5,9 @@ namespace Tests\Feature;
 use App\Jobs\SendSmsCampaignRecipient;
 use App\Models\SmsCampaign;
 use App\Models\SmsCampaignRecipient;
-use App\Models\User;
+use App\Models\User;\nuse App\Models\Setting;\nuse App\Services\Modules\ModuleRegistry;\nuse App\Services\SmsGateway;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Queue;\nuse Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class SmsDeliveryReportTest extends TestCase
@@ -122,4 +122,50 @@ class SmsDeliveryReportTest extends TestCase
             ])
             ->assertSessionHasErrors('audience');
     }
+
+    public function test_queued_campaign_recipient_is_skipped_if_sms_module_was_disabled(): void
+    {
+        Http::fake();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create([
+            'role' => 'student',
+            'phone_number' => '+8801712345678',
+            'phone_verified_at' => now(),
+            'sms_marketing_opt_in' => true,
+        ]);
+        $campaign = SmsCampaign::create([
+            'created_by' => $admin->id,
+            'title' => 'Queued reminder',
+            'message' => 'This must not be sent.',
+            'audience' => 'student',
+            'status' => 'sending',
+            'recipient_count' => 1,
+            'skipped_count' => 0,
+            'sent_count' => 0,
+            'failed_count' => 0,
+        ]);
+        $recipient = SmsCampaignRecipient::create([
+            'sms_campaign_id' => $campaign->id,
+            'user_id' => $student->id,
+            'status' => 'pending',
+        ]);
+        Setting::setValue('module_registry', json_encode(['sms' => false]));
+
+        (new SendSmsCampaignRecipient($recipient->id))->handle(
+            app(ModuleRegistry::class),
+            app(SmsGateway::class),
+        );
+
+        $this->assertDatabaseHas('sms_campaign_recipients', [
+            'id' => $recipient->id,
+            'status' => 'skipped',
+        ]);
+        $this->assertDatabaseHas('sms_campaigns', [
+            'id' => $campaign->id,
+            'status' => 'completed',
+            'skipped_count' => 1,
+        ]);
+        Http::assertNothingSent();
+    }
+
 }
