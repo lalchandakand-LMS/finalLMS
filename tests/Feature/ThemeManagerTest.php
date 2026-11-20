@@ -496,8 +496,16 @@ class ThemeManagerTest extends TestCase
 
         $realPublicDisk = Storage::disk('public');
         $realLocalDisk = Storage::disk('local');
+        $deleteAttempts = 0;
         $publicDisk = \Mockery::mock($realPublicDisk)->makePartial();
-        $publicDisk->shouldReceive('delete')->once()->with($cssPath)->andReturn(false);
+        $publicDisk->shouldReceive('delete')->twice()->with($cssPath)->andReturnUsing(
+            function (string $path) use ($realPublicDisk, &$deleteAttempts): bool {
+                $deleteAttempts++;
+
+                // Simulate a transient filesystem failure, then a successful retry.
+                return $deleteAttempts === 1 ? false : $realPublicDisk->delete($path);
+            }
+        );
         Storage::shouldReceive('disk')->with('public')->andReturn($publicDisk);
         Storage::shouldReceive('disk')->with('local')->andReturn($realLocalDisk);
 
@@ -510,6 +518,16 @@ class ThemeManagerTest extends TestCase
         $this->assertDatabaseMissing('activity_logs', ['event' => 'theme.deleted']);
         $realPublicDisk->assertExists($cssPath);
         $realLocalDisk->assertExists($packagePath);
+
+        $this->actingAs($admin)->delete(route('admin.themes.destroy', $themeId))
+            ->assertRedirect(route('admin.themes.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseMissing('themes', ['id' => $themeId]);
+        $this->assertDatabaseHas('theme_activations', ['action' => 'delete']);
+        $this->assertDatabaseHas('activity_logs', ['event' => 'theme.deleted']);
+        $realPublicDisk->assertMissing($cssPath);
+        $realLocalDisk->assertMissing($packagePath);
     }
 
 }
