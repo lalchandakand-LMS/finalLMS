@@ -138,17 +138,17 @@ class BackupController extends Controller
                             $diskName = (string) ($asset['disk'] ?? 'public');
                             $assetPath = (string) ($asset['path'] ?? '');
                             if ($diskName !== 'public') {
-                                throw new \\RuntimeException('A media asset uses a non-public storage disk that backup format v1 cannot safely restore.');
+                                throw new \RuntimeException('A media asset uses a non-public storage disk that backup format v1 cannot safely restore.');
                             }
                             if ($assetPath !== '' && ! array_key_exists($assetPath, $mediaFiles)) {
-                                throw new \\RuntimeException('A media asset references a missing public file; the backup is incomplete.');
+                                throw new \RuntimeException('A media asset references a missing public file; the backup is incomplete.');
                             }
                         }
 
                         foreach (($tables['courses'] ?? []) as $course) {
                             $imagePath = (string) ($course['image_path'] ?? '');
                             if ($imagePath !== '' && ! array_key_exists($imagePath, $mediaFiles)) {
-                                throw new \\RuntimeException('A course image is missing from public storage; the backup is incomplete.');
+                                throw new \RuntimeException('A course image is missing from public storage; the backup is incomplete.');
                             }
                         }
 
@@ -157,13 +157,13 @@ class BackupController extends Controller
                             $videoPath = (string) ($lesson['video_path'] ?? '');
                             $attachmentPath = (string) ($lesson['attachment_path'] ?? '');
                             if ($thumbnailPath !== '' && ! array_key_exists($thumbnailPath, $mediaFiles)) {
-                                throw new \\RuntimeException('A lesson thumbnail is missing from public storage; the backup is incomplete.');
+                                throw new \RuntimeException('A lesson thumbnail is missing from public storage; the backup is incomplete.');
                             }
                             if ($videoPath !== '' && ! array_key_exists('course-videos/'.$videoPath, $privateFiles)) {
-                                throw new \\RuntimeException('A private lesson video is missing from private storage; the backup is incomplete.');
+                                throw new \RuntimeException('A private lesson video is missing from private storage; the backup is incomplete.');
                             }
                             if ($attachmentPath !== '' && ! array_key_exists($attachmentPath, $privateFiles)) {
-                                throw new \\RuntimeException('A lesson attachment is missing from private storage; the backup is incomplete.');
+                                throw new \RuntimeException('A lesson attachment is missing from private storage; the backup is incomplete.');
                             }
                         }
 
