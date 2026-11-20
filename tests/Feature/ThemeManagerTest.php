@@ -271,6 +271,24 @@ class ThemeManagerTest extends TestCase
         @unlink($zipPath);
     }
 
+    public function test_theme_reset_fails_safely_when_lifecycle_lock_is_missing(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        Setting::setValue('active_theme_id', 42);
+        Setting::setValue('active_theme_slug', 'preserve-active');
+        Setting::setValue('active_theme_version', '1.0.0');
+        DB::table('theme_manager_locks')->where('id', 1)->delete();
+
+        $this->actingAs($admin)->post(route('admin.themes.reset'))
+            ->assertRedirect()
+            ->assertSessionHasErrors('theme');
+
+        $this->assertSame('42', (string) Setting::value('active_theme_id'));
+        $this->assertSame('preserve-active', Setting::value('active_theme_slug'));
+        $this->assertSame('1.0.0', Setting::value('active_theme_version'));
+        $this->assertDatabaseMissing('theme_activations', ['action' => 'reset']);
+    }
+
     public function test_active_theme_cannot_be_deleted(): void
     {
         Storage::fake('public');
