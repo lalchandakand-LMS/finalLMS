@@ -67,6 +67,45 @@ class UniversalAiAssistantPluginTest extends TestCase
         }
     }
 
+    public function test_chat_page_discloses_the_effective_role_data_access_mode(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $baseSettings = [
+            'model' => 'gpt-4o-mini',
+            'base_url' => 'https://api.openai.com/v1',
+            'temperature' => 0.4,
+            'max_tokens' => 800,
+            'global_enabled' => true,
+            'role_enabled' => array_replace(array_fill_keys(AssistantSettings::ROLES, false), ['student' => true]),
+            'daily_request_limit' => 20,
+            'daily_token_budget' => 50000,
+            'retention_days' => 365,
+        ];
+
+        Route::get('/__test-ai-assistant/privacy-notice', [\\Aloms\\UniversalAiAssistant\\AssistantController::class, 'index'])
+            ->name('student.ai-assistant.index');
+        Route::post('/__test-ai-assistant/privacy-notice/messages', fn () => response()->json([]))
+            ->name('student.ai-assistant.messages.store');
+
+        AssistantSettings::save($baseSettings + [
+            'role_data_access' => array_fill_keys(AssistantSettings::ROLES, false),
+        ], 'test-secret-provider-key', false);
+
+        $this->actingAs($student)->get('/__test-ai-assistant/privacy-notice')
+            ->assertOk()
+            ->assertSee('General guidance only. This assistant cannot access private LMS records or perform actions.')
+            ->assertDontSee('This assistant may use read-only, role-scoped LMS context authorized for your account.');
+
+        AssistantSettings::save($baseSettings + [
+            'role_data_access' => array_replace(array_fill_keys(AssistantSettings::ROLES, false), ['student' => true]),
+        ], null, false);
+
+        $this->actingAs($student)->get('/__test-ai-assistant/privacy-notice')
+            ->assertOk()
+            ->assertSee('This assistant may use read-only, role-scoped LMS context authorized for your account. It cannot perform actions.')
+            ->assertDontSee('General guidance only. This assistant cannot access private LMS records or perform actions.');
+    }
+
     public function test_enabled_role_context_is_audited_and_sent_only_with_scoped_course_data(): void
     {
         $branch = Branch::query()->create(['name' => 'AI Context Branch', 'slug' => 'ai-context-branch', 'is_active' => true]);
