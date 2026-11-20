@@ -105,14 +105,14 @@ class PluginQueuedJobLifecycleTest extends TestCase
         try {
             $job->replacePluginKey();
             $this->fail('A plugin job must not be able to change its owning plugin identity.');
-        } catch (\\Error) {
+        } catch (\Error) {
             $this->assertSame('aec.test-notifier', $job->pluginKey);
         }
 
         try {
             $job->replacePermission();
             $this->fail('A plugin job must not be able to elevate its required permission.');
-        } catch (\\Error) {
+        } catch (\Error) {
             $this->assertSame('notifications.send', $job->requiredPermission);
         }
     }
