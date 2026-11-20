@@ -218,11 +218,10 @@ final class PluginHookRegistry
      */
     private function activeVerifiedPlugins(): array
     {
-        try {
-            if (! Schema::hasTable('plugin_registry')) {
-                return [];
-            }
-        } catch (Throwable) {
+        // A genuinely absent registry table means the plugin subsystem is not
+        // installed yet. Database/schema outages must bubble up so callers do not
+        // mistake an infrastructure failure for an empty trusted-plugin set.
+        if (! Schema::hasTable('plugin_registry')) {
             return [];
         }
 
