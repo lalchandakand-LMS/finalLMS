@@ -9,14 +9,100 @@ use App\Models\CourseCurriculumItem;
 use App\Models\Enrollment;
 use App\Models\FlashSale;
 use App\Models\Payment;
+use App\Models\PluginInstallation;
 use App\Models\Setting;
+use App\Models\StudentDevice;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
+use App\Services\Plugins\PluginContext;
+use App\Services\Plugins\PluginHookRegistry;
 use Tests\TestCase;
 
 class FlashSaleTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config(['plugins.trusted_public_keys' => ['flash-sale-test-key' => 'test-public-key']]);
+
+        $manifest = json_decode(
+            file_get_contents(base_path('plugins/aec/flash-sale/1.0.0/plugin.json')),
+            true,
+            512,
+            JSON_THROW_ON_ERROR
+        );
+
+        DB::table('plugin_registry')->insert([
+            'plugin_key' => 'aec.flash-sale',
+            'name' => 'Flash Sale',
+            'version' => '1.0.0',
+            'type' => 'module',
+            'status' => 'active',
+            'manifest' => json_encode($manifest, JSON_THROW_ON_ERROR),
+            'package_sha256' => str_repeat('a', 64),
+            'signature_key_id' => 'flash-sale-test-key',
+            'signature_verified_at' => now(),
+            'package_path' => 'plugins/aec/flash-sale/1.0.0',
+            'health_status' => 'healthy',
+            'metadata' => json_encode(['granted_permissions' => ['flash-sale.manage']], JSON_THROW_ON_ERROR),
+            'installed_at' => now(),
+            'activated_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $installation = PluginInstallation::query()->where('plugin_key', 'aec.flash-sale')->firstOrFail();
+        $plugin = require base_path('plugins/aec/flash-sale/1.0.0/src/Plugin.php');
+        $plugin->register(new PluginContext(app(), app('router'), $installation, app(PluginHookRegistry::class)));
+
+        foreach ([
+            'admin.flash-sales.index',
+            'admin.flash-sales.store',
+            'admin.flash-sales.update',
+            'admin.flash-sales.destroy',
+            'flash-sales.public',
+        ] as $routeName) {
+            $this->assertTrue(Route::has($routeName), "Route lookup must resolve dynamically registered plugin route [{$routeName}].");
+        }
+
+        $registeredFlashRoutes = array_map(
+            fn ($route): string => $route->uri().' => '.($route->getName() ?? 'unnamed'),
+            array_filter(
+                Route::getRoutes()->getRoutes(),
+                fn ($route): bool => str_contains($route->uri(), 'flash-sale')
+            )
+        );
+        $registeredFlashRouteNames = array_map(
+            fn ($route): ?string => $route->getName(),
+            Route::getRoutes()->getRoutes()
+        );
+        $this->assertContains('admin.flash-sales.index', $registeredFlashRouteNames, 'Flash Sale admin route was not registered: '.implode(', ', $registeredFlashRoutes));
+        $this->assertContains('admin.flash-sales.store', $registeredFlashRouteNames, 'Flash Sale store route was not registered: '.implode(', ', $registeredFlashRoutes));
+        $this->assertContains('admin.flash-sales.update', $registeredFlashRouteNames, 'Flash Sale update route was not registered: '.implode(', ', $registeredFlashRoutes));
+        $this->assertContains('admin.flash-sales.destroy', $registeredFlashRouteNames, 'Flash Sale destroy route was not registered: '.implode(', ', $registeredFlashRoutes));
+        $this->assertContains('flash-sales.public', $registeredFlashRouteNames, 'Flash Sale public route was not registered: '.implode(', ', $registeredFlashRoutes));
+        $registeredRoutes = collect(app('router')->getRoutes()->getRoutes())->keyBy(fn ($route) => $route->getName());
+        foreach (['admin.flash-sales.index', 'admin.flash-sales.store', 'admin.flash-sales.update', 'admin.flash-sales.destroy'] as $routeName) {
+            $route = $registeredRoutes->get($routeName);
+            $this->assertNotNull($route, "Missing registered route {$routeName}.");
+            $this->assertContains('plugin.active:aec.flash-sale', $route->middleware());
+            $this->assertContains('auth', $route->middleware());
+            $this->assertContains('verified', $route->middleware());
+            $this->assertContains('role:admin', $route->middleware());
+            $this->assertContains('plugin.permission:aec.flash-sale,flash-sale.manage', $route->middleware());
+        }
+
+        $publicRoute = $registeredRoutes->get('flash-sales.public');
+        $this->assertNotNull($publicRoute);
+        $this->assertContains('plugin.active:aec.flash-sale', $publicRoute->middleware());
+        $this->assertNotContains('auth', $publicRoute->middleware());
+
+    }
 
     private function makeCourse(float $price = 1000): Course
     {
@@ -82,6 +168,23 @@ class FlashSaleTest extends TestCase
         $this->actingAs($student)->get(route('admin.flash-sales.index'))->assertForbidden();
     }
 
+    public function test_flash_sale_admin_and_public_pages_render_bangla_translations(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->withSession(['locale' => 'bn'])->actingAs($admin)->get(route('admin.flash-sales.index'))
+            ->assertOk()
+            ->assertSee('ফ্ল্যাশ সেল ব্যবস্থাপনা')
+            ->assertSee('ক্যাম্পেইন তৈরি করুন')
+            ->assertSee('ক্যাম্পেইনসমূহ');
+
+        $this->get(route('flash-sales.public'))
+            ->assertOk()
+            ->assertSee('সীমিত সময়ের অফার')
+            ->assertSee('এই মুহূর্তে কোনো সক্রিয় অফার নেই')
+            ->assertSee('সব কোর্স দেখুন');
+    }
+
     public function test_homepage_displays_only_current_active_flash_sale_courses(): void
     {
         $course = $this->makeCourse();
@@ -93,6 +196,54 @@ class FlashSaleTest extends TestCase
 
         $sale->update(['status' => 'paused']);
         $this->get('/')->assertOk()->assertDontSee('November Mega Sale');
+    }
+
+    public function test_flash_sale_fails_closed_when_configured_trusted_key_is_empty(): void
+    {
+        $course = $this->makeCourse(1000);
+        $sale = $this->makeSale($course, ['discount_value' => 25]);
+
+        config(['plugins.trusted_public_keys' => ['flash-sale-test-key' => '']]);
+
+        $this->assertFalse(FlashSale::isPluginActive());
+        $this->assertNull(FlashSale::activeForCourse($course->id));
+        $this->assertCount(0, FlashSale::activeCampaigns());
+        $this->assertSame(1000.0, $sale->discountedPrice(1000));
+    }
+
+    public function test_deactivating_flash_sale_plugin_disables_routes_and_all_discount_pricing(): void
+    {
+        $course = $this->makeCourse();
+        $this->makeSale($course);
+
+        $this->assertNotNull(FlashSale::activeForCourse($course->id));
+        $this->assertNotEmpty(FlashSale::activeCampaigns());
+
+        DB::table('plugin_registry')->where('plugin_key', 'aec.flash-sale')->update([
+            'status' => 'inactive',
+            'updated_at' => now(),
+        ]);
+
+        $this->assertNull(FlashSale::activeForCourse($course->id));
+        $this->assertCount(0, FlashSale::activeCampaigns());
+        $this->get('/flash-sale')->assertNotFound();
+    }
+
+    public function test_admin_can_disable_public_flash_sale_page_without_deleting_campaigns(): void
+    {
+        $course = $this->makeCourse();
+        $sale = $this->makeSale($course);
+
+        $this->get(route('flash-sales.public'))->assertOk()->assertSee('November Mega Sale');
+
+        Setting::setValue('flash_sale_page_enabled', '0');
+        $this->get(route('flash-sales.public'))->assertNotFound();
+        $this->get('/')->assertOk()
+            ->assertDontSee(route('flash-sales.public'))
+            ->assertDontSee('November Mega Sale');
+
+        $this->assertDatabaseHas('flash_sales', ['id' => $sale->id, 'status' => 'active']);
+        $this->assertDatabaseHas('flash_sale_course', ['flash_sale_id' => $sale->id, 'course_id' => $course->id]);
     }
 
     public function test_manual_payment_uses_server_calculated_flash_sale_price_and_snapshots_campaign(): void
@@ -282,6 +433,103 @@ class FlashSaleTest extends TestCase
         $sale = FlashSale::where('title', 'Speaking category offer')->firstOrFail();
         $this->assertTrue($sale->categories->contains($category));
         $this->assertCount(0, $sale->courses);
+    }
+
+    public function test_campaign_with_rejected_payment_history_cannot_be_deleted(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $course = $this->makeCourse();
+        $sale = $this->makeSale($course);
+
+        Payment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'flash_sale_id' => $sale->id,
+            'method' => 'manual',
+            'amount' => '700.00',
+            'currency' => 'BDT',
+            'transaction_reference' => 'FLASH-SALE-REJECTED-RETENTION-001',
+            'status' => 'rejected',
+        ]);
+
+        $this->actingAs($admin)
+            ->from(route('admin.flash-sales.index'))
+            ->delete(route('admin.flash-sales.destroy', $sale))
+            ->assertRedirect(route('admin.flash-sales.index'))
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseHas('flash_sales', ['id' => $sale->id]);
+        $this->assertDatabaseHas('payments', [
+            'transaction_reference' => 'FLASH-SALE-REJECTED-RETENTION-001',
+            'flash_sale_id' => $sale->id,
+            'status' => 'rejected',
+        ]);
+    }
+
+
+
+    private function mobileToken(User $student): string
+    {
+        $plain = \Illuminate\Support\Str::random(80);
+        $device = StudentDevice::create([
+            'user_id' => $student->id,
+            'device_hash' => hash('sha256', \Illuminate\Support\Str::random(64)),
+            'device_name' => 'Flash Sale checkout test device',
+            'status' => 'approved',
+            'phone_verified_at' => now(),
+            'approved_at' => now(),
+        ]);
+        $student->apiTokens()->create([
+            'student_device_id' => $device->id,
+            'name' => 'Flash Sale checkout test',
+            'token_hash' => hash('sha256', $plain),
+            'expires_at' => now()->addDay(),
+        ]);
+
+        return $plain;
+    }
+
+    public function test_mobile_cart_checkout_uses_a_locked_flash_sale_reservation_and_does_not_oversell(): void
+    {
+        $course = $this->makeCourse(1000);
+        $sale = $this->makeSale($course, ['discount_value' => 30, 'max_redemptions' => 1]);
+        Setting::setValue('payment_methods', json_encode([
+            'manual' => ['enabled' => true, 'label' => 'Manual', 'account' => '012345', 'instructions' => 'Send payment'],
+        ]));
+
+        $firstStudent = User::factory()->create(['role' => 'student']);
+        $firstToken = $this->mobileToken($firstStudent);
+        $this->withToken($firstToken)->postJson('/api/v1/my/cart', ['course_id' => $course->id])
+            ->assertCreated();
+        $this->withToken($firstToken)->postJson('/api/v1/my/cart/checkout/manual', [
+            'payment_method' => 'manual',
+            'transaction_reference' => 'CART-FLASH-SALE-001',
+        ])->assertCreated()->assertJsonPath('data.amount', '700.00');
+
+        $firstPayment = Payment::where('transaction_reference', 'CART-FLASH-SALE-001')->firstOrFail();
+        $this->assertSame($sale->id, $firstPayment->flash_sale_id);
+
+        $this->withToken($firstToken)->postJson('/api/v1/my/cart', ['course_id' => $course->id])
+            ->assertCreated();
+        $this->withToken($firstToken)->postJson('/api/v1/my/cart/checkout/manual', [
+            'payment_method' => 'manual',
+            'transaction_reference' => 'CART-FLASH-SALE-DUPLICATE',
+        ])->assertStatus(409);
+        $this->assertDatabaseMissing('payments', ['transaction_reference' => 'CART-FLASH-SALE-DUPLICATE']);
+
+        $secondStudent = User::factory()->create(['role' => 'student']);
+        $secondToken = $this->mobileToken($secondStudent);
+        $this->withToken($secondToken)->postJson('/api/v1/my/cart', ['course_id' => $course->id])
+            ->assertCreated();
+        $this->withToken($secondToken)->postJson('/api/v1/my/cart/checkout/manual', [
+            'payment_method' => 'manual',
+            'transaction_reference' => 'CART-FLASH-SALE-002',
+        ])->assertCreated()->assertJsonPath('data.amount', '1000.00');
+
+        $secondPayment = Payment::where('transaction_reference', 'CART-FLASH-SALE-002')->firstOrFail();
+        $this->assertNull($secondPayment->flash_sale_id);
+        $this->assertSame(1, Payment::where('flash_sale_id', $sale->id)->count());
     }
 
 }

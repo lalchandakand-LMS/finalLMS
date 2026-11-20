@@ -11,6 +11,7 @@ use App\Models\Payment;
 use App\Models\PaymentAuditEvent;
 use App\Models\FlashSale;
 use App\Models\Setting;
+use App\Services\Payments\PendingCoursePaymentGuard;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +22,7 @@ use Illuminate\View\View;
 
 class PaymentController extends Controller
 {
-    public function submit(Course $course, Request $request): RedirectResponse
+    public function submit(Course $course, Request $request, PendingCoursePaymentGuard $pendingPayments): RedirectResponse
     {
         $user = $request->user();
 
@@ -46,13 +47,16 @@ class PaymentController extends Controller
         $amount = $flashSale ? $flashSale->discountedPrice($baseAmount) : $baseAmount;
 
         if ($amount <= 0) {
-            $result = DB::transaction(function () use ($batchId, $course, $user): string {
+            $result = DB::transaction(function () use ($batchId, $course, $user, $pendingPayments): string {
                 $lockedCourse = Course::query()->lockForUpdate()->findOrFail($course->id);
                 if ($lockedCourse->status !== 'published') {
                     return 'unavailable';
                 }
                 if (Enrollment::query()->where('course_id', $lockedCourse->id)->where('user_id', $user->id)->exists()) {
                     return 'already_enrolled';
+                }
+                if ($pendingPayments->hasPendingForCourse((int) $user->id, (int) $lockedCourse->id)) {
+                    return 'payment_pending';
                 }
 
                 if ($batchId) {
@@ -91,12 +95,13 @@ class PaymentController extends Controller
                 'already_enrolled' => back()->with('info', 'You are already enrolled in this course.'),
                 'batch_full' => back()->with('error', 'The selected batch is full or no longer available.'),
                 'sale_unavailable' => back()->with('error', 'This Flash Sale has ended or reached its purchase limit. Refresh the page and try again.'),
+                'payment_pending' => back()->with('info', 'Your payment is already waiting for review.'),
                 'price_changed' => back()->with('warning', 'The course price changed. Refresh the page and review the current checkout price.'),
                 default => back()->with('error', 'This course is no longer available.'),
             };
         }
 
-        if ($course->payments()->where('user_id', $user->id)->where('status', 'pending')->exists()) {
+        if ($pendingPayments->hasPendingForCourse((int) $user->id, (int) $course->id)) {
             return back()->with('info', 'Your payment is already waiting for review.');
         }
 
@@ -123,7 +128,7 @@ class PaymentController extends Controller
         ]);
 
         $proof = $request->file('proof');
-        $result = DB::transaction(function () use ($batchId, $course, $proof, $user, $validated): string {
+        $result = DB::transaction(function () use ($batchId, $course, $proof, $user, $validated, $pendingPayments): string {
             $lockedCourse = Course::query()->lockForUpdate()->findOrFail($course->id);
             if ($lockedCourse->status !== 'published') {
                 return 'unavailable';
@@ -131,7 +136,7 @@ class PaymentController extends Controller
             if (Enrollment::query()->where('course_id', $lockedCourse->id)->where('user_id', $user->id)->exists()) {
                 return 'already_enrolled';
             }
-            if (Payment::query()->where('course_id', $lockedCourse->id)->where('user_id', $user->id)->where('status', 'pending')->exists()) {
+            if ($pendingPayments->hasPendingForCourse((int) $user->id, (int) $lockedCourse->id)) {
                 return 'payment_pending';
             }
 
@@ -191,7 +196,7 @@ class PaymentController extends Controller
         };
     }
 
-    public function submitCombo(CourseCombo $courseCombo, Request $request): RedirectResponse
+    public function submitCombo(CourseCombo $courseCombo, Request $request, PendingCoursePaymentGuard $pendingPayments): RedirectResponse
     {
         $user = $request->user();
         if (! $user->isStudent()) {
@@ -231,7 +236,7 @@ class PaymentController extends Controller
         }
 
         $proof = $request->file('proof');
-        $result = DB::transaction(function () use ($courseCombo, $proof, $user, $validated): string {
+        $result = DB::transaction(function () use ($courseCombo, $proof, $user, $validated, $pendingPayments): string {
             $lockedCombo = CourseCombo::query()->lockForUpdate()->with('courses')->findOrFail($courseCombo->id);
             $courses = $lockedCombo->courses;
             if ($lockedCombo->status !== 'published' || $courses->count() < 2
@@ -240,7 +245,24 @@ class PaymentController extends Controller
                 return 'unavailable';
             }
 
-            $courseIds = $courses->pluck('id')->all();
+            $orderedCourseIds = $courses->pluck('id')->map(fn ($id) => (int) $id)->values()->all();
+            $courseIds = collect($orderedCourseIds)->sort()->values()->all();
+            $lockedCourses = Course::query()->whereIn('id', $courseIds)
+                ->orderBy('id')->lockForUpdate()->get()->keyBy('id');
+            if ($lockedCourses->count() !== count($courseIds)) {
+                return 'unavailable';
+            }
+            // Keep the administrator-defined combo display order after locking
+            // the underlying course rows in a stable order.
+            $courses = collect($orderedCourseIds)->map(fn (int $id) => $lockedCourses->get($id))->values();
+            if ($courses->contains(fn (Course $course) => $course->status !== 'published'
+                || $course->batches()->where('status', 'open')->exists())) {
+                return 'unavailable';
+            }
+            if ($pendingPayments->hasPendingForCourses((int) $user->id, $courseIds)) {
+                return 'payment_pending';
+            }
+
             $alreadyEnrolled = Enrollment::query()
                 ->where('user_id', $user->id)
                 ->whereIn('course_id', $courseIds)

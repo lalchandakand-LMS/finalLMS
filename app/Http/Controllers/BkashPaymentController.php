@@ -15,6 +15,7 @@ use App\Models\Product;
 use App\Models\DownloadPermission;
 use App\Models\FlashSale;
 use App\Services\Payments\PaymentGatewayManager;
+use App\Services\Payments\PendingCoursePaymentGuard;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -25,7 +26,7 @@ use Throwable;
 
 class BkashPaymentController extends Controller
 {
-    public function initiate(Course $course, Request $request, PaymentGatewayManager $gateways): RedirectResponse
+    public function initiate(Course $course, Request $request, PaymentGatewayManager $gateways, PendingCoursePaymentGuard $pendingPayments): RedirectResponse
     {
         abort_unless($request->user()?->isStudent(), 403);
         abort_unless($course->status === 'published', 404);
@@ -42,15 +43,15 @@ class BkashPaymentController extends Controller
         ]);
         $batchId = $validated['batch_id'] ?? null;
 
-        $payment = DB::transaction(function () use ($batchId, $course, $user): Payment {
+        $payment = DB::transaction(function () use ($batchId, $course, $user, $pendingPayments): Payment {
             $lockedCourse = Course::query()->lockForUpdate()->findOrFail($course->id);
             abort_unless($lockedCourse->status === 'published', 404);
 
             if (Enrollment::query()->where('course_id', $lockedCourse->id)->where('user_id', $user->id)->exists()) {
                 abort(409, 'You are already enrolled in this course.');
             }
-            if (Payment::query()->where('course_id', $lockedCourse->id)->where('user_id', $user->id)->where('status', 'pending')->exists()) {
-                abort(409, 'A payment is already awaiting verification.');
+            if ($pendingPayments->hasPendingForCourse((int) $user->id, (int) $lockedCourse->id)) {
+                abort(409, 'A payment for this course is already awaiting verification.');
             }
 
             if ($batchId) {

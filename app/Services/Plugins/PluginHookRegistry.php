@@ -213,9 +213,13 @@ final class PluginHookRegistry
 
         $active = [];
         foreach (PluginInstallation::query()->where('status', 'active')->get() as $plugin) {
+            $trustedKey = is_string($plugin->signature_key_id)
+                ? ($trustedKeys[$plugin->signature_key_id] ?? null)
+                : null;
+
             if ($plugin->signature_verified_at !== null
-                && is_string($plugin->signature_key_id)
-                && array_key_exists($plugin->signature_key_id, $trustedKeys)) {
+                && is_string($trustedKey)
+                && trim($trustedKey) !== '') {
                 $active[$plugin->plugin_key] = $plugin;
             }
         }

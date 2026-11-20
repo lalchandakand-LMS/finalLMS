@@ -1,4 +1,4 @@
-@if($flashSales->isNotEmpty())
+@if($flashSales->isNotEmpty() && (bool) (int) \App\Models\Setting::value('flash_sale_page_enabled', '1'))
 <section id="flash-sale" class="panel" style="margin-bottom:30px;background:linear-gradient(125deg,#102b63,#1546a8);color:#fff;">
     <div class="page-header">
         <div>

@@ -20,7 +20,12 @@ class FlashSale extends Model
 
     public function isAvailableFor(?int $userId = null): bool
     {
-        if ($this->status !== 'active' || $this->starts_at->isFuture() || $this->ends_at->isPast()) return false;
+        if (! self::isPluginActive()
+            || $this->status !== 'active'
+            || $this->starts_at->isFuture()
+            || $this->ends_at->isPast()) {
+            return false;
+        }
         $paidRedemptions = fn () => $this->payments()->whereIn('status', ['pending', 'approved']);
         $freeRedemptions = fn () => $this->enrollments()->whereIn('status', ['active', 'completed']);
         $redemptionCount = $paidRedemptions()->count() + $freeRedemptions()->count();
@@ -46,6 +51,10 @@ class FlashSale extends Model
 
     public function discountedPrice(float $basePrice): float
     {
+        if (! self::isPluginActive()) {
+            return round(max(0, $basePrice), 2);
+        }
+
         $price = $this->discount_type === 'percentage'
             ? $basePrice * (1 - ((float) $this->discount_value / 100))
             : min($basePrice, (float) $this->discount_value);
@@ -54,6 +63,10 @@ class FlashSale extends Model
 
     public static function activeForCourse(int $courseId, ?int $userId = null): ?self
     {
+        if (! self::isPluginActive()) {
+            return null;
+        }
+
         return static::query()->where('status','active')->where('starts_at','<=',now())->where('ends_at','>=',now())
             ->where(function ($query) use ($courseId): void {
                 $query->whereHas('courses', fn ($courses) => $courses->where('courses.id', $courseId))
@@ -64,8 +77,30 @@ class FlashSale extends Model
             ->first(fn (self $sale) => $sale->isAvailableFor($userId));
     }
 
+    public static function isPluginActive(): bool
+    {
+        $plugin = PluginInstallation::query()
+            ->where('plugin_key', 'aec.flash-sale')
+            ->where('status', 'active')
+            ->first();
+        $trustedKeys = config('plugins.trusted_public_keys', []);
+
+        $trustedKey = is_array($trustedKeys) && is_string($plugin?->signature_key_id)
+            ? ($trustedKeys[$plugin->signature_key_id] ?? null)
+            : null;
+
+        return $plugin !== null
+            && $plugin->signature_verified_at !== null
+            && is_string($trustedKey)
+            && trim($trustedKey) !== '';
+    }
+
     public static function activeCampaigns(): \Illuminate\Support\Collection
     {
+        if (! self::isPluginActive()) {
+            return collect();
+        }
+
         return static::query()->where('status','active')->where('starts_at','<=',now())->where('ends_at','>=',now())
             ->where(function ($query): void {
                 $query->whereHas('courses', fn ($courses) => $courses->where('courses.status', 'published'))

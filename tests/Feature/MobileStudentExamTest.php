@@ -67,6 +67,80 @@ class MobileStudentExamTest extends TestCase
         ]);
     }
 
+
+    public function test_api_negative_marking_matches_mixed_web_score_and_persists_awarded_marks(): void
+    {
+        [$student, $exam] = $this->fixture();
+        $questions = $exam->questions()->orderBy('position')->get();
+        $questions[0]->update(['negative_marks' => 3]);
+        $questions[1]->update(['negative_marks' => 1]);
+
+        $token = $this->token($student);
+        $started = $this->withToken($token)->postJson('/api/v1/exams/'.$exam->id.'/start')->assertOk();
+        $attemptId = $started->json('data.attempt.id');
+        $questionIds = $started->json('data.questions.*.id');
+        $correctId = (string) $questions[0]->id;
+        $incorrectId = (string) $questions[1]->id;
+        $this->assertEqualsCanonicalizing([$correctId, $incorrectId], array_map('strval', $questionIds));
+
+        $this->withToken($token)->postJson('/api/v1/exam-attempts/'.$attemptId.'/submit', [
+            'answers' => [$correctId => 1, $incorrectId => 0],
+        ])->assertOk()
+            ->assertJsonPath('data.score', 4)
+            ->assertJsonPath('data.status', 'submitted');
+
+        $this->assertDatabaseHas('exam_answers', [
+            'exam_attempt_id' => $attemptId,
+            'exam_question_id' => $questions[0]->id,
+            'marks_awarded' => 5,
+            'is_correct' => true,
+        ]);
+        $this->assertDatabaseHas('exam_answers', [
+            'exam_attempt_id' => $attemptId,
+            'exam_question_id' => $questions[1]->id,
+            'marks_awarded' => -1,
+            'is_correct' => false,
+        ]);
+        $this->assertDatabaseHas('exam_attempts', ['id' => $attemptId, 'score' => 4, 'status' => 'submitted']);
+    }
+
+    public function test_api_negative_aggregate_is_floored_at_zero_and_repeat_submit_cannot_rewrite_score(): void
+    {
+        [$student, $exam] = $this->fixture();
+        $question = $exam->questions()->orderBy('position')->firstOrFail();
+        $question->update(['negative_marks' => 3]);
+
+        $token = $this->token($student);
+        $started = $this->withToken($token)->postJson('/api/v1/exams/'.$exam->id.'/start')->assertOk();
+        $attemptId = $started->json('data.attempt.id');
+
+        $this->withToken($token)->postJson('/api/v1/exam-attempts/'.$attemptId.'/submit', [
+            'answers' => [(string) $question->id => 0],
+        ])->assertOk()
+            ->assertJsonPath('data.score', 0)
+            ->assertJsonPath('data.status', 'submitted');
+
+        $this->assertDatabaseHas('exam_answers', [
+            'exam_attempt_id' => $attemptId,
+            'exam_question_id' => $question->id,
+            'marks_awarded' => -3,
+            'is_correct' => false,
+        ]);
+        $this->assertDatabaseHas('exam_attempts', ['id' => $attemptId, 'score' => 0, 'status' => 'submitted']);
+
+        $this->withToken($token)->postJson('/api/v1/exam-attempts/'.$attemptId.'/submit', [
+            'answers' => [(string) $question->id => 1],
+        ])->assertStatus(409);
+
+        $this->assertDatabaseHas('exam_answers', [
+            'exam_attempt_id' => $attemptId,
+            'exam_question_id' => $question->id,
+            'marks_awarded' => -3,
+            'is_correct' => false,
+        ]);
+        $this->assertDatabaseHas('exam_attempts', ['id' => $attemptId, 'score' => 0, 'status' => 'submitted']);
+    }
+
     public function test_exam_api_rejects_unenrolled_students_and_non_student_roles(): void
     {
         [$student, $exam] = $this->fixture();
