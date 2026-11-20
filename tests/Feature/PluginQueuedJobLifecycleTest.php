@@ -55,12 +55,16 @@ class PluginQueuedJobLifecycleTest extends TestCase
         Closure $next,
         ?bool $signatureValid = true,
         ?RuntimeException $integrityFailure = null,
+        ?RuntimeException $signatureFailure = null,
     ): mixed {
         $signatureVerifier = Mockery::mock(PluginSignatureVerifier::class);
         $integrityVerifier = Mockery::mock(PluginIntegrityVerifier::class);
 
         if ($signatureValid === null) {
             $signatureVerifier->shouldNotReceive('verifyInstalledSignature');
+            $integrityVerifier->shouldNotReceive('verify');
+        } elseif ($signatureFailure) {
+            $signatureVerifier->shouldReceive('verifyInstalledSignature')->once()->andThrow($signatureFailure);
             $integrityVerifier->shouldNotReceive('verify');
         } elseif ($signatureValid === false) {
             $signatureVerifier->shouldReceive('verifyInstalledSignature')->once()->andReturn(false);
@@ -153,6 +157,25 @@ class PluginQueuedJobLifecycleTest extends TestCase
 
             return 'executed';
         }, false);
+
+        $this->assertFalse($called);
+        $this->assertNull($result);
+    }
+
+    public function test_revoked_or_replaced_release_key_drops_queued_work_without_retry(): void
+    {
+        $this->signedPlugin();
+        $called = false;
+        $result = $this->runGuard(
+            function () use (&$called): string {
+                $called = true;
+
+                return 'executed';
+            },
+            true,
+            null,
+            new RuntimeException('The installed plugin release key is no longer trusted.'),
+        );
 
         $this->assertFalse($called);
         $this->assertNull($result);
