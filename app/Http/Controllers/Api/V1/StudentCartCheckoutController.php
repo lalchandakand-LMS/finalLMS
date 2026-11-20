@@ -134,7 +134,7 @@ class StudentCartCheckoutController extends Controller
                     foreach ($items as $item) {
                         Enrollment::firstOrCreate(
                             ['user_id' => $student->id, 'course_id' => $item->course_id],
-                            ['batch_id' => $item->batch?->id, 'status' => 'active']
+                            ['batch_id' => $item->batch?->id, 'flash_sale_id' => $pricing['sales_by_course'][$item->course_id]?->id, 'status' => 'active']
                         );
                     }
                     if ($coupon) {
@@ -157,7 +157,7 @@ class StudentCartCheckoutController extends Controller
                 $reference = trim($validated['transaction_reference']);
                 if ($items->count() === 1) {
                     $item = $items->first();
-                    $sale = FlashSale::activeForCourse($item->course_id, $student->id);
+                    $sale = $pricing['sales_by_course'][$item->course_id] ?? null;
                     $payment = Payment::create([
                         'user_id' => $student->id, 'course_id' => $item->course_id,
                         'batch_id' => $item->batch?->id, 'flash_sale_id' => $sale?->id,
@@ -280,7 +280,7 @@ class StudentCartCheckoutController extends Controller
             $lineTotals[(int) $item->course_id] = $amount;
         }
 
-        return ['subtotal' => round($subtotal, 2), 'line_totals' => $lineTotals, 'has_flash_sale' => $hasSale];
+        return ['subtotal' => round($subtotal, 2), 'line_totals' => $lineTotals, 'has_flash_sale' => $hasSale, 'sales_by_course' => $salesByCourse];
     }
 
     private function assertCouponAvailable(Coupon $coupon, int $userId, float $subtotal, $items, bool $hasFlashSale): void
