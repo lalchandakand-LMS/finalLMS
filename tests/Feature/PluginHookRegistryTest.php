@@ -101,7 +101,7 @@ class PluginHookRegistryTest extends TestCase
         $registry->registerCapabilities($plugin->plugin_key, ['course-studio', 'admin.superuser']);
 
         $context = new PluginContext(app(), app('router'), $plugin, $registry);
-        $context->registerHook('lms.dashboard.widgets', fn (array $payload) => 'widget-'.$payload['role'], 5);
+        $context->registerHook('lms.dashboard.widgets', 'courses.view', fn (array $payload) => 'widget-'.$payload['role'], 5);
         $context->registerPortalNavigation('student', 'Course Studio', 'plugin-hook.test', [
             'icon' => 'book-open',
             'permission' => 'courses.view',
@@ -116,6 +116,7 @@ class PluginHookRegistryTest extends TestCase
 
         $plugin->forceFill(['metadata' => ['granted_permissions' => []]])->save();
         $this->assertSame([], $registry->portalNavigation('student'));
+        $this->assertSame([], $registry->dispatch('lms.dashboard.widgets', ['role' => 'teacher']));
         $plugin->forceFill(['metadata' => ['granted_permissions' => ['courses.view']]])->save();
 
         $plugin->forceFill(['status' => 'inactive'])->save();
@@ -164,7 +165,7 @@ class PluginHookRegistryTest extends TestCase
         $plugin = $this->activePlugin();
         $registry = app(PluginHookRegistry::class);
         $context = new PluginContext(app(), app('router'), $plugin, $registry);
-        $context->registerHook('lms.dashboard.widgets', fn () => 'must-not-run');
+        $context->registerHook('lms.dashboard.widgets', 'courses.view', fn () => 'must-not-run');
         $context->registerPortalNavigation('student', 'Course Studio', 'plugin-hook.empty-key', [
             'permission' => 'courses.view',
         ]);
@@ -248,6 +249,16 @@ class PluginHookRegistryTest extends TestCase
         file_put_contents(base_path($this->packagePath.'/src/Plugin.php'), '<?php // tampered before route request');
 
         $this->get('/plugins/course-studio/tampered-file')->assertNotFound();
+    }
+
+
+    public function test_plugin_hooks_cannot_request_permissions_not_declared_in_the_manifest(): void
+    {
+        $plugin = $this->activePlugin();
+        $context = new PluginContext(app(), app('router'), $plugin, app(PluginHookRegistry::class));
+
+        $this->expectException(InvalidArgumentException::class);
+        $context->registerHook('lms.dashboard.widgets', 'admin.users.delete', fn () => 'must-not-run');
     }
 
 }
