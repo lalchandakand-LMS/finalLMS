@@ -480,7 +480,7 @@ class VisitorPopupManagementTest extends TestCase
         auth()->logout();
         $this->get(route('landing'))
             ->assertOk()
-            ->assertSee("if (frequency === 'once_per_session' && sessionStorage.getItem(key)) return;", false)
+            ->assertSee("if (frequency === 'once_per_session' && hasSessionMarker()) return;", false)
             ->assertSee("if (frequency === 'once_per_browser' && localStorage.getItem(key)) return;", false)
             ->assertSee("Number(localStorage.getItem(cooldownKey) || 0) > Date.now()", false);
     }
