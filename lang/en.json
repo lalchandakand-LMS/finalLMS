@@ -899,5 +899,7 @@
     "These codes are shown only once. Store them somewhere private and secure. Each code can be used once.": "These codes are shown only once. Store them somewhere private and secure. Each code can be used once.",
     "Administrator two-factor verification is required. Please sign in again.": "Administrator two-factor verification is required. Please sign in again.",
     "Your account role changed. Please sign in again using the verification method for your current role.": "Your account role changed. Please sign in again using the verification method for your current role.",
-    "Administrator sign-in verified.": "Administrator sign-in verified."
+    "Administrator sign-in verified.": "Administrator sign-in verified.",
+    "General guidance only. This assistant cannot access private LMS records or perform actions.": "General guidance only. This assistant cannot access private LMS records or perform actions.",
+    "This assistant may use read-only, role-scoped LMS context authorized for your account. It cannot perform actions.": "This assistant may use read-only, role-scoped LMS context authorized for your account. It cannot perform actions."
 }
