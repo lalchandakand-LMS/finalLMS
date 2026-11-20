@@ -77,7 +77,7 @@ Plugins integrate through explicit platform interfaces, not arbitrary file inclu
 - Namespaced, collision-checked route registration with middleware and permission declarations.
 - Admin settings schema with validation, secret fields, defaults and health checks.
 - Portal navigation/widgets declared in manifest and filtered by portal + server-side permission.
-- Queue jobs and scheduled work namespaced, rate-limited, retry-safe and disabled when plugin inactive.
+- Queue jobs and scheduled work namespaced, rate-limited, retry-safe and disabled when plugin inactive. Plugin-owned queue work must extend `App\Jobs\Plugins\PluginJob`, which rechecks active state, trusted signing key and Admin-granted permission at execution time; scheduled callbacks must dispatch guarded jobs rather than execute plugin code directly. Scheduler registration and webhook/event lifecycle adapters remain follow-up work.
 - Migrations are versioned and tracked per plugin; destructive migrations require backup/preflight and explicit data-retention policy.
 - Module capability contracts define stable interfaces for replacing a provider (for example SMS vendor A with vendor B) without rewriting OTP, notices or business workflows.
 - Core workflows call provider interfaces; they must not contain hard-coded provider credentials or depend directly on a single vendor SDK.
