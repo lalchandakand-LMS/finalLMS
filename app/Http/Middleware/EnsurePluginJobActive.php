@@ -21,12 +21,7 @@ final class EnsurePluginJobActive
         private readonly string $permission,
     ) {}
 
-    public function handle(
-        object $job,
-        Closure $next,
-        PluginSignatureVerifier $signatureVerifier,
-        PluginIntegrityVerifier $integrityVerifier,
-    ): mixed {
+    public function handle(object $job, Closure $next): mixed {
         // Infrastructure failures must bubble to the queue worker for retry.
         if (! Schema::hasTable('plugin_registry')) {
             throw new RuntimeException('The plugin registry is unavailable; queued plugin work cannot be authorized.');
@@ -57,9 +52,14 @@ final class EnsurePluginJobActive
         }
 
         try {
+            // Resolve services from Laravel's container here: queue middleware
+            // pipelines invoke handle($job, $next), not arbitrary method injection.
+            $signatureVerifier = app(PluginSignatureVerifier::class);
+            $integrityVerifier = app(PluginIntegrityVerifier::class);
+
             // Re-verify the detached Ed25519 signature against the current
             // trusted key and verify every installed file before handler code runs.
-            if (! $signatureVerifier->verifyInstalledSignature($plugin)) {
+            if (! $signatureVerifier->verifyInstalledSignature($plugin))
                 return null; // Legacy unsigned records are not trusted for new jobs.
             }
 
