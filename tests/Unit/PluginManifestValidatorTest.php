@@ -40,6 +40,34 @@ class PluginManifestValidatorTest extends TestCase
         $this->assertTrue(app(PluginManifestValidator::class)->isValid($manifest));
     }
 
+    public function test_accepts_a_valid_typed_settings_schema(): void
+    {
+        $manifest = $this->validManifest();
+        $manifest['settings_schema'] = [
+            'api_endpoint' => ['label' => 'API endpoint', 'type' => 'url', 'required' => true],
+            'api_secret' => ['label' => 'API secret', 'type' => 'secret'],
+            'region' => ['label' => 'Region', 'type' => 'select', 'options' => ['asia', 'europe'], 'default' => 'asia'],
+        ];
+
+        $this->assertTrue(app(PluginManifestValidator::class)->isValid($manifest));
+    }
+
+    public function test_rejects_malformed_typed_settings_schema(): void
+    {
+        $manifest = $this->validManifest();
+        $manifest['settings_schema'] = [
+            'Invalid Key' => ['label' => 'Invalid', 'type' => 'text'],
+            'region' => ['label' => 'Region', 'type' => 'select', 'options' => []],
+            'secret' => ['label' => 'Secret', 'type' => 'secret', 'options' => ['not-allowed']],
+        ];
+
+        $errors = app(PluginManifestValidator::class)->errors($manifest);
+
+        $this->assertContains('settings_schema contains an invalid setting key.', $errors);
+        $this->assertContains('settings_schema.region.options must be a non-empty list.', $errors);
+        $this->assertContains('settings_schema.secret.options is only valid for select settings.', $errors);
+    }
+
     public function test_plugin_key_requires_vendor_and_plugin_segments(): void
     {
         $manifest = $this->validManifest();
