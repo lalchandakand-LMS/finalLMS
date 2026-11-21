@@ -91,7 +91,8 @@ final class ReferralIncomePluginTest extends TestCase
             'status' => 'approved',
         ]);
         $commissionId = $service->recordApprovedPayment((int) $payment->id);
-        $service->reviewCommission((int) $commissionId, (int) $referrer->id, 'approved', null);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $service->reviewCommission((int) $commissionId, (int) $admin->id, 'approved', null);
 
         $payoutId = $service->requestPayout($referrer, 'bkash', '01700000000');
         $this->assertDatabaseHas('referral_payout_requests', [
@@ -103,8 +104,8 @@ final class ReferralIncomePluginTest extends TestCase
         $this->assertNotSame('01700000000', $stored);
         $this->assertSame('01700000000', \Illuminate\Support\Facades\Crypt::decryptString($stored));
 
-        $service->reviewPayout($payoutId, (int) $referrer->id, 'approved', 'Finance checked');
-        $service->reviewPayout($payoutId, (int) $referrer->id, 'paid', 'BANK-REF-2026-001');
+        $service->reviewPayout($payoutId, (int) $admin->id, 'approved', 'Finance checked');
+        $service->reviewPayout($payoutId, (int) $admin->id, 'paid', 'BANK-REF-2026-001');
         $this->assertDatabaseHas('referral_payout_requests', ['id' => $payoutId, 'status' => 'paid']);
         $this->assertDatabaseHas('referral_commissions', ['id' => $commissionId, 'status' => 'paid']);
     }
