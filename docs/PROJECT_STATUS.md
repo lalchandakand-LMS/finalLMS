@@ -7,7 +7,7 @@ Production domain: https://alomsenglishcenter.com
 ## Current verified snapshot — 2026-11-21
 
 **Main commit:** `9d22623aa4cd34270909fa21b6427b74b46b42a8` (PR #386 squash merge).  
-**Open pull requests:** PR #387 is this documentation-only status refresh; the GitHub search returned no other open PRs at the time of this snapshot.  
+**Open pull requests:** #387 (this status refresh) and #388 (SMS recipient delivery concurrency fix) are open; the latest GitHub search returned no others. PR #387's corrected-head CodeQL passed and Laravel CI is running; PR #388's latest exact-head checks are still in progress.  
 **Production deployment:** blocked; the last owner-provided hosting update did not include an isolated staging subdomain or separate test database. Do not deploy production.
 
 ### Recently merged
