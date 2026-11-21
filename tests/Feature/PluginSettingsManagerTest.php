@@ -81,6 +81,28 @@ class PluginSettingsManagerTest extends TestCase
         $this->assertStringNotContainsString('schema-secret-value', $stored);
     }
 
+    public function test_manifest_defaults_are_available_until_overridden_and_required_values_cannot_be_cleared(): void
+    {
+        $plugin = $this->schemaPlugin();
+        $plugin->forceFill(['manifest' => array_replace_recursive($plugin->manifest, [
+            'settings_schema' => [
+                'retry_count' => ['default' => 5],
+                'enabled' => ['default' => true],
+                'region' => ['default' => 'asia'],
+            ],
+        ])])->save();
+        $manager = app(PluginSettingsManager::class);
+
+        $this->assertSame('5', $manager->get($plugin, 'retry_count'));
+        $this->assertSame('1', $manager->get($plugin, 'enabled'));
+        $this->assertSame('asia', $manager->get($plugin, 'region'));
+        $manager->set($plugin, 'retry_count', '7');
+        $this->assertSame('7', $manager->get($plugin, 'retry_count'));
+
+        $this->expectException(\\InvalidArgumentException::class);
+        $manager->forget($plugin, 'endpoint');
+    }
+
     public function test_manifest_settings_schema_rejects_undeclared_keys_and_invalid_typed_values(): void
     {
         $plugin = $this->schemaPlugin();
