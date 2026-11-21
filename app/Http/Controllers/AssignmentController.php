@@ -24,7 +24,7 @@ class AssignmentController extends Controller
     {
         $this->authorizeBatchManagement($batch);
 
-        $questionSets = QuestionSet::published()->withCount('questions')->orderBy('title')->get();
+        $questionSets = QuestionSet::published()->whereHas('questions')->withCount('questions')->orderBy('title')->get();
         $assignments = $batch->assignments()
             ->with(['submissions.student', 'questionSet.questions'])
             ->withCount('submissions')
@@ -88,6 +88,7 @@ class AssignmentController extends Controller
             'attachment' => ['nullable', 'file', 'max:10240', 'mimes:pdf,doc,docx,jpg,jpeg,png'],
         ];
         if ($assignment->questionSet) {
+            $rules['question_answers'] = ['required', 'array'];
             foreach ($assignment->questionSet->questions as $question) {
                 $rules['question_answers.'.$question->id] = ['required', 'string', 'max:5000'];
             }
@@ -143,6 +144,7 @@ class AssignmentController extends Controller
 
                 if (
                     blank($validated['answer'] ?? null)
+                    && $questionAnswers === []
                     && ! $storedPath
                     && ! $submission?->attachment_path
                 ) {
