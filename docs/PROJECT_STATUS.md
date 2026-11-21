@@ -7,7 +7,7 @@ Production domain: https://alomsenglishcenter.com
 ## Current verified snapshot — 2026-11-21
 
 **Main commit after latest merges:** `c87433a3d44dd9b27bded7145057711b8263782c` (PR #392 merged; PR #390 and #387 merged immediately before it).  
-**Open pull requests at this update:** #393 (plugin health-check transient failure handling) remained open with exact-head CI running; PR #391 is this documentation update. PR #392 has merged.  
+**Open pull requests at this update:** #393 (Admin Plugin Health Check preserves active plugin state on transient verification errors) and #395 (Plugin Runtime retries after transient phase-one preflight failure) are open with exact-head Laravel CI running; PR #391 is this documentation update. PR #392 has merged.  
 **Production deployment:** blocked; the last owner-provided hosting update did not include an isolated staging subdomain or separate test database. Do not deploy production.
 
 ### Recently merged
@@ -31,6 +31,7 @@ Mainline fixes selectively carried into the bundle:
 - PR #389 plugin runtime catches only confirmed `PluginTrustFailure` during signature/manifest/integrity preflight; operational failures bubble for retry, with regression coverage.
 - PR #390 pending combo/cart batch reservations are included in capacity checks during manual payment approval, with regression coverage.
 - PR #392 attendance route deduplication and module-gate regression test are also present in the local artifact; PR #392 has now merged to main.
+- PR #393's confirmed-trust-vs-operational-error distinction and PR #395's same-process registration retry guard are also selectively backported into the local artifact with regression tests; their repository PRs remain open pending exact-head CI.
 
 Additional ZIP-only corrections:
 - Admission status no longer discloses internal reviewer notes; conflicting email/phone identity matches are rejected; capacity considers pending direct/combo reservations; newly created accounts dispatch `Registered` after commit.
