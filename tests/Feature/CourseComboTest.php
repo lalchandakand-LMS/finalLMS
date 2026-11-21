@@ -156,4 +156,75 @@ class CourseComboTest extends TestCase
         $this->get(route('course-combos.index'))->assertOk()->assertDontSee('Unpublished Combo');
         $this->get(route('course-combos.show', $combo))->assertNotFound();
     }
+
+    public function test_combo_approval_counts_other_pending_combo_batch_reservations(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $studentA = User::factory()->create(['role' => 'student']);
+        $studentB = User::factory()->create(['role' => 'student']);
+
+        $courseA = Course::factory()->create(['teacher_id' => $teacher->id, 'status' => 'published']);
+        $courseB = Course::factory()->create(['teacher_id' => $teacher->id, 'status' => 'published']);
+        $sharedBatch = \\App\\Models\\Batch::create([
+            'course_id' => $courseA->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'One-seat batch',
+            'capacity' => 1,
+            'starts_at' => now()->addDay(),
+            'ends_at' => now()->addDays(30),
+            'fee' => 1000,
+            'status' => 'open',
+        ]);
+
+        $makePendingComboPayment = function (User $student, string $reference) use ($courseA, $courseB, $sharedBatch): Payment {
+            $combo = CourseCombo::create([
+                'title' => 'Reserved cart '.$reference,
+                'slug' => 'reserved-cart-'.strtolower($reference),
+                'description' => 'System generated pending cart.',
+                'price' => 1500,
+                'status' => 'archived',
+            ]);
+            $combo->courses()->attach([$courseA->id, $courseB->id]);
+
+            $payment = Payment::create([
+                'user_id' => $student->id,
+                'course_id' => $courseA->id,
+                'course_combo_id' => $combo->id,
+                'method' => 'manual',
+                'amount' => '1500.00',
+                'currency' => 'BDT',
+                'transaction_reference' => $reference,
+                'status' => 'pending',
+            ]);
+
+            \\App\\Models\\PaymentComboCourse::create([
+                'payment_id' => $payment->id,
+                'course_id' => $courseA->id,
+                'batch_id' => $sharedBatch->id,
+                'course_title' => $courseA->title,
+                'position' => 1,
+            ]);
+            \\App\\Models\\PaymentComboCourse::create([
+                'payment_id' => $payment->id,
+                'course_id' => $courseB->id,
+                'course_title' => $courseB->title,
+                'position' => 2,
+            ]);
+
+            return $payment;
+        };
+
+        $paymentA = $makePendingComboPayment($studentA, 'CAPACITY-COMBO-A');
+        $makePendingComboPayment($studentB, 'CAPACITY-COMBO-B');
+
+        $this->actingAs($admin)
+            ->post(route('admin.payments.approve', $paymentA))
+            ->assertRedirect()
+            ->assertSessionHas('error', 'The batch is full. Payment remains pending and requires manual resolution.');
+
+        $this->assertSame('pending', $paymentA->fresh()->status);
+        $this->assertDatabaseCount('enrollments', 0);
+    }
+
 }
