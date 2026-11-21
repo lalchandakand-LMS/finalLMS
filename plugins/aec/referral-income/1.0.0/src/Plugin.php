@@ -31,6 +31,7 @@ return new class implements PluginContract {
         }, 'referral.use');
         $context->routesForPortal('admin', 'admin/referrals', 'admin.referrals.', function (): void {
             Route::get('/', [ReferralIncomeController::class, 'adminIndex'])->name('index');
+            Route::put('/rules', [ReferralIncomeController::class, 'updateRules'])->middleware('throttle:10,1')->name('rules.update');
             Route::post('/commissions/{commission}/review', [ReferralIncomeController::class, 'reviewCommission'])->whereNumber('commission')->middleware('throttle:20,1')->name('commissions.review');
             Route::post('/payouts/{payout}/review', [ReferralIncomeController::class, 'reviewPayout'])->whereNumber('payout')->middleware('throttle:10,1')->name('payouts.review');
         }, 'referral.manage');
