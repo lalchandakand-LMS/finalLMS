@@ -56,6 +56,25 @@ class InstructorAnalyticsApiTest extends TestCase
             'status' => 'submitted',
         ]);
 
+        $batch->assignments()->create([
+            'teacher_id' => $teacher->id,
+            'title' => 'Draft assignment',
+            'instructions' => 'Not published.',
+            'due_at' => now()->addDays(2),
+            'max_marks' => 5,
+            'status' => 'draft',
+        ]);
+
+        $batch->exams()->create([
+            'teacher_id' => $teacher->id,
+            'title' => 'Draft assessment',
+            'starts_at' => now()->addDay(),
+            'ends_at' => now()->addDays(2),
+            'duration_minutes' => 20,
+            'pass_marks' => 3,
+            'status' => 'draft',
+        ]);
+
         $exam = $batch->exams()->create([
             'teacher_id' => $teacher->id,
             'title' => 'Unit test',
