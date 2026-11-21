@@ -4,7 +4,7 @@
 @if(session('success'))<p class="rounded bg-green-50 p-3 text-green-800">{{ session('success') }}</p>@endif
 @if($errors->any())<p class="rounded bg-red-50 p-3 text-red-800">{{ $errors->first() }}</p>@endif
 <div class="grid gap-3 sm:grid-cols-4">
-<div class="rounded border bg-white p-4"><p class="text-sm text-gray-500">Referral code</p><p class="text-xl font-bold">{{ $code }}</p><p class="break-all text-xs text-blue-700">{{ route('referral.public.track', $code) }}</p><button type="button" class="mt-2 rounded border px-3 py-1" onclick="navigator.clipboard.writeText('{{ $code }}')">Copy code</button></div>
+<div class="rounded border bg-white p-4"><p class="text-sm text-gray-500">Referral code</p><p class="text-xl font-bold">{{ $code }}</p><p class="break-all text-xs text-blue-700">{{ route('referral.public.track', $code) }}</p></div>
 <div class="rounded border bg-white p-4"><p class="text-sm text-gray-500">Referrals</p><p class="text-2xl font-bold">{{ $referralCount }}</p></div>
 <div class="rounded border bg-white p-4"><p class="text-sm text-gray-500">Pending commission</p><p class="text-2xl font-bold">৳{{ number_format((float)$stats->pending,2) }}</p></div>
 <div class="rounded border bg-white p-4"><p class="text-sm text-gray-500">Available / paid</p><p class="text-xl font-bold">৳{{ number_format((float)$stats->available,2) }} / ৳{{ number_format((float)$stats->paid,2) }}</p></div>
