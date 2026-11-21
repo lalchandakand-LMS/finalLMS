@@ -137,7 +137,7 @@ final class BoardQuestionSolverController extends Controller {
    ->orderByDesc('board_question_solutions.created_at')->paginate(25)->withQueryString();
   return view('board-question-solver::admin.history',compact('history','status'));
  }
- public function approveSolution(Request $request,int $solution):\\Illuminate\\Http\\RedirectResponse{
+ public function approveSolution(Request $request,int $solution):\Illuminate\Http\RedirectResponse{
   $data=$request->validate(['admin_notes'=>['nullable','string','max:2000'],'marks'=>['required','integer','min:1','max:100']]);
   $setId=DB::transaction(function()use($request,$solution,$data):int{
    $record=DB::table('board_question_solutions')->where('id',$solution)->lockForUpdate()->first();
@@ -168,7 +168,7 @@ final class BoardQuestionSolverController extends Controller {
   });
   return redirect()->route('admin.question-sets.edit',$setId)->with('success',__('Solution approved and copied into a draft exam question set. Review and publish the question set before assigning it.'));
  }
- public function rejectSolution(Request $request,int $solution):\\Illuminate\\Http\\RedirectResponse{
+ public function rejectSolution(Request $request,int $solution):\Illuminate\Http\RedirectResponse{
   $data=$request->validate(['admin_notes'=>['required','string','max:2000']]);
   DB::transaction(function()use($request,$solution,$data):void{
    $record=DB::table('board_question_solutions')->where('id',$solution)->lockForUpdate()->first();
