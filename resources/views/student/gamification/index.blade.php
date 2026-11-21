@@ -13,8 +13,8 @@
 </section>
 <section class="panel"><h2>{{ __('Leaderboard privacy') }}</h2><p class="muted">{{ __('Your profile is private on the leaderboard unless you opt in. You can use a display name instead of your account name.') }}</p>
 <form method="POST" action="{{ route('student.gamification.preferences') }}">@csrf @method('PUT')
-<label style="display:block;margin:12px 0;"><input type="checkbox" name="leaderboard_opt_in" value="1" @checked($profile->leaderboard_opt_in)> {{ __('Show me on the leaderboard') }}</label>
+<input type="hidden" name="leaderboard_opt_in" value="0"><label style="display:block;margin:12px 0;"><input type="checkbox" name="leaderboard_opt_in" value="1" @checked($profile->leaderboard_opt_in)> {{ __('Show me on the leaderboard') }}</label>
 <label for="display_name">{{ __('Leaderboard display name') }}</label><input id="display_name" class="form-control" name="display_name" maxlength="40" value="{{ old('display_name', $profile->display_name) }}" placeholder="{{ __('Choose a nickname') }}">
-<label style="display:block;margin:12px 0;"><input type="checkbox" name="show_streak" value="1" @checked($profile->show_streak)> {{ __('Show my streak') }}</label>
+<input type="hidden" name="show_streak" value="0"><label style="display:block;margin:12px 0;"><input type="checkbox" name="show_streak" value="1" @checked($profile->show_streak)> {{ __('Show my streak') }}</label>
 <button class="btn primary" type="submit">{{ __('Save privacy settings') }}</button></form></section>
 @endsection
