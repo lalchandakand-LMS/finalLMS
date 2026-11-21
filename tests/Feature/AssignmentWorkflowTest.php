@@ -480,6 +480,41 @@ class AssignmentWorkflowTest extends TestCase
         $this->assertDatabaseCount('assignment_submissions', 0);
     }
 
+    public function test_question_set_mcq_submission_rejects_values_outside_the_available_options(): void
+    {
+        ['teacher' => $teacher, 'student' => $student, 'batch' => $batch] = $this->assignmentFixture();
+        $set = \\App\\Models\\QuestionSet::create([
+            'title' => 'MCQ Validation Set',
+            'description' => null,
+            'status' => 'published',
+            'created_by' => $teacher->id,
+        ]);
+        $question = $set->questions()->create([
+            'type' => 'mcq',
+            'question' => 'Choose a valid option.',
+            'options' => ['Alpha', 'Beta', 'Gamma', 'Delta'],
+            'correct_option' => 0,
+            'marks' => 1,
+            'position' => 10,
+        ]);
+        $assignment = $batch->assignments()->create([
+            'teacher_id' => $teacher->id,
+            'title' => 'MCQ validation homework',
+            'instructions' => 'Choose one option.',
+            'due_at' => now()->addDay(),
+            'max_marks' => 10,
+            'allow_late' => false,
+            'status' => 'published',
+            'question_set_id' => $set->id,
+        ]);
+
+        $this->actingAs($student)->post(route('student.assignments.submit', $assignment), [
+            'question_answers' => [$question->id => 'Injected answer'],
+        ])->assertSessionHasErrors(['question_answers.'.$question->id]);
+
+        $this->assertDatabaseCount('assignment_submissions', 0);
+    }
+
     /**
      * Build an isolated teacher, student, batch and published assignment.
      *
