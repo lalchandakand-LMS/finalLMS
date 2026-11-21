@@ -13,6 +13,7 @@ use App\Models\PageView;
 use App\Models\QuestionSetAttempt;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\Gamification\GamificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
 use Illuminate\Http\Request;
