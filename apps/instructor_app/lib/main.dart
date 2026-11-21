@@ -625,8 +625,11 @@ class _InstructorAssessmentCreatePageState extends State<InstructorAssessmentCre
                   if (picked != null) {
                     setState(() {
                     startsAt = picked;
-                    if (!endsAt.isAfter(startsAt)) endsAt = startsAt.add(const Duration(hours: 1));
-                  });
+                      if (!endsAt.isAfter(startsAt)) {
+                        endsAt = startsAt.add(const Duration(hours: 1));
+                      }
+                    });
+                  }
                 })),
               ListTile(title: const Text('Ends'), subtitle: Text(endsAt.toLocal().toString().split('.').first),
                 trailing: IconButton(icon: const Icon(Icons.schedule), onPressed: () async {
