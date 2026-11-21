@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\PluginInstallation;
 use App\Services\Plugins\PluginSignatureVerifier;
+use App\Services\Plugins\PluginTrustFailure;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use RuntimeException;
 use Tests\TestCase;
@@ -135,7 +136,7 @@ class PluginSignatureVerifierTest extends TestCase
         app(PluginSignatureVerifier::class)->verifyInstalledSignature($plugin->fresh());
     }
 
-    public function test_legacy_install_without_persisted_signature_is_identified_for_compatibility(): void
+    public function test_legacy_install_without_persisted_signature_fails_closed(): void
     {
         $plugin = app(PluginSignatureVerifier::class)->verifyAndRecord(
             $this->registeredPlugin(), $this->manifest, $this->archivePath,
@@ -145,7 +146,9 @@ class PluginSignatureVerifierTest extends TestCase
         unset($metadata['release_signature'], $metadata['signature_record_version']);
         $plugin->forceFill(['metadata' => $metadata])->save();
 
-        $this->assertFalse(app(PluginSignatureVerifier::class)->verifyInstalledSignature($plugin->fresh()));
+        $this->expectException(PluginTrustFailure::class);
+        $this->expectExceptionMessage('no persisted detached release signature');
+        app(PluginSignatureVerifier::class)->verifyInstalledSignature($plugin->fresh());
     }
 
     public function test_invalid_signature_is_rejected_without_recording_trust(): void

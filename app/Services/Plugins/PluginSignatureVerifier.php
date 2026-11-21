@@ -113,8 +113,8 @@ class PluginSignatureVerifier
 
     /**
      * Re-verify the original detached release signature against the currently
-     * trusted key. Returns false for legacy installations that have no persisted
-     * detached signature; callers must treat false as an authorization failure.
+     * trusted key. Legacy installations without a persisted detached signature
+     * fail closed and must be reinstalled from a trusted signed package.
      */
     public function verifyInstalledSignature(PluginInstallation $plugin): bool
     {
@@ -157,7 +157,7 @@ class PluginSignatureVerifier
         $metadata = is_array($plugin->metadata) ? $plugin->metadata : [];
         $signatureBase64 = $metadata['release_signature'] ?? null;
         if (! is_string($signatureBase64) || $signatureBase64 === '') {
-            return false;
+            throw new PluginTrustFailure('The installed plugin has no persisted detached release signature.');
         }
 
         $signature = base64_decode($signatureBase64, true);
