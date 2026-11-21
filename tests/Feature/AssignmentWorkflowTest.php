@@ -484,7 +484,7 @@ class AssignmentWorkflowTest extends TestCase
     public function test_question_set_mcq_submission_rejects_values_outside_the_available_options(): void
     {
         ['teacher' => $teacher, 'student' => $student, 'batch' => $batch] = $this->assignmentFixture();
-        $set = \\App\\Models\\QuestionSet::create([
+        $set = \App\Models\QuestionSet::create([
             'title' => 'MCQ Validation Set',
             'description' => null,
             'status' => 'published',
