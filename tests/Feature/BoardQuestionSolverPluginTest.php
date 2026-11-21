@@ -40,6 +40,12 @@ class BoardQuestionSolverPluginTest extends TestCase {
   require_once base_path('plugins/aec/board-question-solver/1.0.0/src/BoardQuestionSolverSettings.php');
   require_once base_path('plugins/aec/board-question-solver/1.0.0/src/BoardQuestionSolverController.php');
   if(!Schema::hasTable('board_question_solver_settings')){$migration=require base_path('plugins/aec/board-question-solver/1.0.0/migrations/2026_11_18_020000_create_board_question_solver_tables.php');$migration->up();}
+  $reviewMigration=require base_path('plugins/aec/board-question-solver/1.0.0/migrations/2026_11_21_130000_add_admin_question_review.php');$reviewMigration->up();
+  Route::middleware(['auth','role:admin'])->group(function():void {
+   Route::get('/__test-board-solver/admin-history',[BoardQuestionSolverController::class,'adminHistory'])->name('admin.board-solver.history');
+   Route::post('/__test-board-solver/{solution}/approve',[BoardQuestionSolverController::class,'approveSolution']);
+   Route::post('/__test-board-solver/{solution}/reject',[BoardQuestionSolverController::class,'rejectSolution']);
+  });
   Route::get('/__test-board-solver/history',[BoardQuestionSolverController::class,'history']);
   Route::get('/__test-board-solver/index',[BoardQuestionSolverController::class,'index'])->name('student.board-solver.index');
   Route::post('/__test-board-solver/solve',[BoardQuestionSolverController::class,'solve']);
@@ -100,6 +106,44 @@ class BoardQuestionSolverPluginTest extends TestCase {
   $this->assertNotNull($conversationId);
   $this->assertDatabaseHas('ai_assistant_token_reservations',['conversation_id'=>$conversationId,'status'=>'completed','actual_tokens'=>420,'prompt_persisted'=>true]);
   $this->assertDatabaseHas('ai_assistant_messages',['conversation_id'=>$conversationId,'message_role'=>'assistant','content'=>'Worked solution']);
+ }
+
+
+ public function test_admin_can_approve_a_solved_question_into_a_draft_exam_question_set():void {
+  $student=User::factory()->create(['role'=>'student']);
+  $admin=User::factory()->create(['role'=>'admin']);
+  $solutionId=DB::table('board_question_solutions')->insertGetId([
+   'user_id'=>$student->id,'board'=>'Dhaka','exam_year'=>2025,'class_level'=>'SSC',
+   'subject'=>'Mathematics','question_type'=>'math','mode'=>'full','language'=>'bn',
+   'question'=>'Solve 2x = 10','solution'=>'Step 1: divide both sides by 2. Final: x = 5.',
+   'created_at'=>now(),'updated_at'=>now(),
+  ]);
+  $response=$this->actingAs($admin)->post('/__test-board-solver/'.$solutionId.'/approve',['marks'=>3,'admin_notes'=>'Checked by academic team.']);
+  $setId=(int)DB::table('board_question_solutions')->where('id',$solutionId)->value('question_set_id');
+  $response->assertRedirect(route('admin.question-sets.edit',$setId));
+  $this->assertDatabaseHas('board_question_solutions',['id'=>$solutionId,'review_status'=>'approved','reviewed_by'=>$admin->id,'question_set_id'=>$setId]);
+  $this->assertDatabaseHas('question_sets',['id'=>$setId,'status'=>'draft','created_by'=>$admin->id]);
+  $this->assertDatabaseHas('question_set_questions',['question_set_id'=>$setId,'type'=>'short_answer','question'=>'Solve 2x = 10','correct_answer'=>'Step 1: divide both sides by 2. Final: x = 5.','marks'=>3]);
+ }
+ public function test_admin_can_reject_a_solution_with_a_reason_without_deleting_history():void {
+  $student=User::factory()->create(['role'=>'student']);
+  $admin=User::factory()->create(['role'=>'admin']);
+  $solutionId=DB::table('board_question_solutions')->insertGetId([
+   'user_id'=>$student->id,'subject'=>'English','question_type'=>'grammar','mode'=>'full','language'=>'en',
+   'question'=>'Correct this sentence.','solution'=>'Suggested correction.','created_at'=>now(),'updated_at'=>now(),
+  ]);
+  $this->actingAs($admin)->post('/__test-board-solver/'.$solutionId.'/reject',['admin_notes'=>'Please verify the source question.'])->assertRedirect();
+  $this->assertDatabaseHas('board_question_solutions',['id'=>$solutionId,'review_status'=>'rejected','reviewed_by'=>$admin->id,'admin_notes'=>'Please verify the source question.']);
+ }
+ public function test_student_cannot_approve_or_reject_solver_history():void {
+  $student=User::factory()->create(['role'=>'student']);
+  $owner=User::factory()->create(['role'=>'student']);
+  $solutionId=DB::table('board_question_solutions')->insertGetId([
+   'user_id'=>$owner->id,'subject'=>'English','question_type'=>'grammar','mode'=>'full','language'=>'en',
+   'question'=>'Question','solution'=>'Answer','created_at'=>now(),'updated_at'=>now(),
+  ]);
+  $this->actingAs($student)->post('/__test-board-solver/'.$solutionId.'/approve',['marks'=>5])->assertForbidden();
+  $this->assertDatabaseHas('board_question_solutions',['id'=>$solutionId,'review_status'=>'pending']);
  }
 
  public function test_reasoning_model_provider_uses_max_completion_tokens_without_temperature():void {

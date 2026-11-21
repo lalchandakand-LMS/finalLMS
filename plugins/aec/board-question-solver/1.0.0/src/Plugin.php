@@ -19,6 +19,8 @@ return new class implements PluginContract {
    Route::get('/settings',[BoardQuestionSolverController::class,'settings'])->name('settings');
    Route::put('/settings',[BoardQuestionSolverController::class,'updateSettings'])->middleware('throttle:10,1')->name('settings.update');
    Route::get('/history',[BoardQuestionSolverController::class,'adminHistory'])->name('history');
+   Route::post('/history/{solution}/approve',[BoardQuestionSolverController::class,'approveSolution'])->middleware('throttle:20,1')->name('history.approve');
+   Route::post('/history/{solution}/reject',[BoardQuestionSolverController::class,'rejectSolution'])->middleware('throttle:20,1')->name('history.reject');
   },'board-solver.configure');
   $context->routesForPortal('student','student/board-question-solver','student.board-solver.',function():void {
    Route::get('/',[BoardQuestionSolverController::class,'index'])->name('index');

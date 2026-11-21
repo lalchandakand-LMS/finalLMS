@@ -12,5 +12,5 @@
 <label>{{ __('Per-student daily request limit') }}<input type="number" name="daily_request_limit" min="1" max="50" value="{{ $settings['daily_request_limit'] }}" required></label>
 <label>{{ __('Default answer language') }}<select name="default_language"><option value="bn" @selected($settings['default_language']==='bn')>{{ __('Bangla') }}</option><option value="en" @selected($settings['default_language']==='en')>{{ __('English') }}</option></select></label>
 <button class="btn primary">{{ __('Save settings') }}</button></form></div>
-<p style="margin-top:16px"><a href="{{ route('admin.board-solver.history') }}">{{ __('View recent student solver activity') }}</a></p>
+<p style="margin-top:16px"><a href="{{ route('admin.board-solver.history') }}">{{ __('Review AI solutions and approve exam questions') }}</a></p>
 @endsection
