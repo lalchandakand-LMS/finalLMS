@@ -60,7 +60,7 @@ final class AdmissionController extends Controller
         $application = AdmissionApplication::query()
             ->where('application_code', strtoupper(trim($data['application_code'])))
             ->whereRaw('LOWER(email) = ?', [strtolower(trim($data['email']))])
-            ->first(['application_code', 'applicant_name', 'desired_course', 'status', 'created_at', 'reviewed_at', 'interview_at', 'reviewer_notes']);
+            ->first(['application_code', 'applicant_name', 'desired_course', 'status', 'created_at', 'reviewed_at', 'interview_at']);
 
         return view('admission-management::public.track', ['application' => $application, 'searched' => true]);
     }
