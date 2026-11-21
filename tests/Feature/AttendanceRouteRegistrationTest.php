@@ -2,13 +2,11 @@
 
 namespace Tests\Feature;
 
-use Illuminate\Foundation\Testing\TestCase;
 use Illuminate\Support\Facades\Route;
-use Tests\CreatesApplication;
+use Tests\TestCase;
 
 class AttendanceRouteRegistrationTest extends TestCase
 {
-    use CreatesApplication;
 
     public function test_each_attendance_route_is_declared_once_and_remains_module_gated(): void
     {
@@ -23,6 +21,9 @@ class AttendanceRouteRegistrationTest extends TestCase
             'admin.branch-workspace.batches.attendance.index',
             'admin.branch-workspace.batches.attendance.store',
         ];
+
+        $this->assertSame(1, substr_count($source, "->name('batches.attendance.index')"));
+        $this->assertSame(1, substr_count($source, "->name('batches.attendance.store')"));
 
         $routes = Route::getRoutes();
 
