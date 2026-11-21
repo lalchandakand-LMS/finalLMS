@@ -158,7 +158,7 @@ final class ReferralIncomeService
     public function reviewPayout(int $id, int $adminId, string $status, ?string $note): void
     {
         abort_unless(User::query()->whereKey($adminId)->where('role', 'admin')->exists(), 403);
-        if (!in_array($status, ['approved', 'paid', 'rejected'], true) || ($status === 'paid' && trim((string) $note) === '')) {
+        if (!in_array($status, ['approved', 'paid', 'rejected'], true) || (in_array($status, ['paid', 'rejected'], true) && trim((string) $note) === '')) {
             throw ValidationException::withMessages(['status' => 'A payout reference is required when marking a payout paid.']);
         }
         DB::transaction(function () use ($id, $adminId, $status, $note): void {
@@ -171,7 +171,7 @@ final class ReferralIncomeService
             ]);
             $commissionStatus = $status === 'paid' ? 'paid' : ($status === 'rejected' ? 'approved' : 'payout_requested');
             DB::table('referral_commissions')->where('payout_request_id', $id)->where('status', 'payout_requested')
-                ->update(['status' => $commissionStatus, 'updated_at' => now()]);
+                ->update(['status' => $commissionStatus, 'paid_at' => $status === 'paid' ? now() : null, 'updated_at' => now()]);
             $this->audit('payout.reviewed', (string) $id, ['status' => $status, 'note' => $note], $adminId);
         });
     }
