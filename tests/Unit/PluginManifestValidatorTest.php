@@ -52,6 +52,20 @@ class PluginManifestValidatorTest extends TestCase
         $this->assertTrue(app(PluginManifestValidator::class)->isValid($manifest));
     }
 
+    public function test_rejects_secret_defaults_and_defaults_that_do_not_match_their_type(): void
+    {
+        $manifest = $this->validManifest();
+        $manifest['settings_schema'] = [
+            'api_secret' => ['label' => 'API secret', 'type' => 'secret', 'default' => 'do-not-embed-secrets'],
+            'endpoint' => ['label' => 'API endpoint', 'type' => 'url', 'default' => 'http://insecure.example.com'],
+            'enabled' => ['label' => 'Enabled', 'type' => 'boolean', 'default' => 'yes'],
+        ];
+
+        $errors = app(PluginManifestValidator::class)->errors($manifest);
+
+        $this->assertCount(3, array_filter($errors, fn (string $error): bool => str_contains($error, '.default is invalid')));
+    }
+
     public function test_rejects_malformed_typed_settings_schema(): void
     {
         $manifest = $this->validManifest();
