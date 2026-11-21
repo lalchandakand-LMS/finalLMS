@@ -482,7 +482,7 @@ class _InstructorAssessmentCreatePageState extends State<InstructorAssessmentCre
                     decoration: InputDecoration(labelText: 'Option ${index + 1}'),
                   )),
                   DropdownButtonFormField<int>(
-                    value: correct,
+                    initialValue: correct,
                     decoration: const InputDecoration(labelText: 'Correct option'),
                     items: List.generate(4, (index) => DropdownMenuItem(
                       value: index, child: Text('Option ${index + 1}'),
@@ -502,7 +502,9 @@ class _InstructorAssessmentCreatePageState extends State<InstructorAssessmentCre
                 final markValue = int.tryParse(marks.text.trim());
                 final values = options.map((item) => item.text.trim()).toList();
                 if (question.text.trim().isEmpty || values.any((item) => item.isEmpty) ||
-                    values.toSet().length != 4 || markValue == null || markValue < 1) return;
+                    values.toSet().length != 4 || markValue == null || markValue < 1) {
+                  return;
+                }
                 Navigator.pop(dialogContext, {
                   'question': question.text.trim(),
                   'options': values,
@@ -610,7 +612,9 @@ class _InstructorAssessmentCreatePageState extends State<InstructorAssessmentCre
               ListTile(title: const Text('Ends'), subtitle: Text(endsAt.toLocal().toString().split('.').first),
                 trailing: IconButton(icon: const Icon(Icons.schedule), onPressed: () async {
                   final picked = await pickDateTime(endsAt);
-                  if (picked != null) setState(() => endsAt = picked);
+                  if (picked != null) {
+                    setState(() => endsAt = picked);
+                  }
                 })),
             ])),
             const SizedBox(height: 12),
