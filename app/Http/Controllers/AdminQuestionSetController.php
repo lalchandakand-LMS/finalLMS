@@ -65,6 +65,11 @@ class AdminQuestionSetController extends Controller
 
         DB::transaction(function () use ($questionSet, $data, $items): void {
             $set = QuestionSet::query()->lockForUpdate()->findOrFail($questionSet->id);
+            if (DB::table('assignments')->where('question_set_id', $set->id)->exists()) {
+                throw ValidationException::withMessages([
+                    'question_set' => __('This Question Set is attached to batch homework and cannot be edited. Create a new version for future assignments.'),
+                ]);
+            }
             $set->update([
                 'title' => $data['title'],
                 'description' => $data['description'] ?? null,
@@ -81,7 +86,11 @@ class AdminQuestionSetController extends Controller
     {
         $archived = DB::transaction(function () use ($questionSet): bool {
             $set = QuestionSet::query()->lockForUpdate()->findOrFail($questionSet->id);
-            if ($set->courses()->exists() || DB::table('question_set_attempts')->where('question_set_id', $set->id)->exists()) {
+            if (
+                $set->courses()->exists()
+                || DB::table('question_set_attempts')->where('question_set_id', $set->id)->exists()
+                || DB::table('assignments')->where('question_set_id', $set->id)->exists()
+            ) {
                 $set->update(['status' => 'archived']);
                 return true;
             }
