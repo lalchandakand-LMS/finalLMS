@@ -520,7 +520,7 @@ class PaymentController extends Controller
         $pendingPayments = Payment::query()
             ->where('batch_id', $batch->id)
             ->where('status', 'pending')
-            ->when($excludePaymentId !== null, fn ($query) => $query->whereKeyNot($excludePaymentId))
+            ->when($excludePaymentId !== null, fn ($query) => $query->where('id', '<>', $excludePaymentId))
             ->count();
 
         // Multi-course cart/combo payments reserve batch seats through the
