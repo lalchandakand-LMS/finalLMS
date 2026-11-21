@@ -7,7 +7,7 @@ Production domain: https://alomsenglishcenter.com
 ## Current verified snapshot — 2026-11-21
 
 **Main commit after latest merges:** `722e846e5bbc7245d344771e7e107f6792c1a521` (PR #390 merged; PR #387 documentation refresh merged immediately before it).  
-**Open pull requests:** none found in the repository search at this snapshot (2026-11-21).  
+**Open pull requests at this update:** #392 (attendance route deduplication/module gate regression coverage) and #393 (plugin health-check transient failure handling). Both were open with exact-head CI running when this status was refreshed; PR #391 is this documentation update.  
 **Production deployment:** blocked; the last owner-provided hosting update did not include an isolated staging subdomain or separate test database. Do not deploy production.
 
 ### Recently merged
@@ -21,16 +21,23 @@ Production domain: https://alomsenglishcenter.com
 
 The PR #386 merge commit is `9d22623aa4cd34270909fa21b6427b74b46b42a8`. Post-merge workflow runs were not returned by the PR-run lookup; do not describe post-merge mainline CI as verified until separately confirmed.
 
-### Latest ZIP audit — not yet imported into main
+### Latest ZIP audit — selectively reconciled, not imported into main
 
-The uploaded `finalLMS-advanced.zip` feature bundle remains separate from the repository. Its current patched local copy passes ZIP integrity, PHP syntax lint for 646 PHP files, and exact English/Bangla JSON key parity (3,179 keys each). A full PHPUnit/database run against this archive has not been performed locally.
+The uploaded feature bundle has been selectively reconciled with the high-risk mainline fixes and remains a separate local artifact; no ZIP feature bundle has been merged into `main`. The reconciled archive contains 970 files and has passed ZIP integrity validation, PHP syntax lint for 647 PHP files, English/Bangla JSON key parity (3,179 keys each), translation-placeholder parity, and a source check confirming unique module-gated Student/Teacher/Admin attendance routes. It includes 107 migrations with no duplicate migration filenames.
 
-The re-audit found and patched three issues in that archive only:
-- Admission capacity checks now count pending direct and combo/cart batch reservations once per payment.
-- Newly provisioned admission accounts now dispatch Laravel's `Registered` event after the admission transaction commits so the normal email-verification notification can run.
-- Public certificate verification now treats only `issued` as authentic; pending/draft/unknown statuses return no identity or course details.
+Mainline fixes selectively carried into the bundle:
+- PR #388 SMS recipient row locking and post-transaction campaign completion, with a duplicate-job regression test.
+- PR #389 plugin runtime catches only confirmed `PluginTrustFailure` during signature/manifest/integrity preflight; operational failures bubble for retry, with regression coverage.
+- PR #390 pending combo/cart batch reservations are included in capacity checks during manual payment approval, with regression coverage.
+- PR #392 attendance route deduplication and module-gate regression test are also present in the local artifact; PR #392 itself remains open pending exact-head CI.
 
-These patches have not been merged into main. The archive still needs a three-way source reconciliation, full CI, and staged migration/browser acceptance before import or release.
+Additional ZIP-only corrections:
+- Admission status no longer discloses internal reviewer notes; conflicting email/phone identity matches are rejected; capacity considers pending direct/combo reservations; newly created accounts dispatch `Registered` after commit.
+- Public certificate verification exposes identity/course details only for `issued` certificates.
+- Guardian status/summary access and model imports were reviewed.
+- Fleet Plugin Health now treats confirmed trust failures as permanent but leaves plugin state unchanged when verification is interrupted by operational/configuration errors.
+
+The ZIP also contains new Admission, Cart, Course Discussion/Q&A, Certificate, Guardian and plugin-fleet features. These have not received a complete end-to-end PHPUnit/database run locally because Composer/vendor are unavailable in this environment. A full three-way reconciliation against every current `main` file, complete CI, MySQL/MariaDB migration execution, and staging/browser acceptance remain required before importing or releasing the whole bundle.
 
 ### Plugin platform status
 
