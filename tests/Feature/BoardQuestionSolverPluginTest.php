@@ -41,9 +41,11 @@ class BoardQuestionSolverPluginTest extends TestCase {
   require_once base_path('plugins/aec/board-question-solver/1.0.0/src/BoardQuestionSolverController.php');
   if(!Schema::hasTable('board_question_solver_settings')){$migration=require base_path('plugins/aec/board-question-solver/1.0.0/migrations/2026_11_18_020000_create_board_question_solver_tables.php');$migration->up();}
   $reviewMigration=require base_path('plugins/aec/board-question-solver/1.0.0/migrations/2026_11_21_130000_add_admin_question_review.php');$reviewMigration->up();
-  Route::get('/__test-board-solver/admin-history',[BoardQuestionSolverController::class,'adminHistory'])->name('admin.board-solver.history');
-  Route::post('/__test-board-solver/{solution}/approve',[BoardQuestionSolverController::class,'approveSolution']);
-  Route::post('/__test-board-solver/{solution}/reject',[BoardQuestionSolverController::class,'rejectSolution']);
+  Route::middleware(['auth','role:admin'])->group(function():void {
+   Route::get('/__test-board-solver/admin-history',[BoardQuestionSolverController::class,'adminHistory'])->name('admin.board-solver.history');
+   Route::post('/__test-board-solver/{solution}/approve',[BoardQuestionSolverController::class,'approveSolution']);
+   Route::post('/__test-board-solver/{solution}/reject',[BoardQuestionSolverController::class,'rejectSolution']);
+  });
   Route::get('/__test-admin-question-sets/{questionSet}/edit',fn()=>response('edit'))->name('admin.question-sets.edit');
   Route::get('/__test-board-solver/history',[BoardQuestionSolverController::class,'history']);
   Route::get('/__test-board-solver/index',[BoardQuestionSolverController::class,'index'])->name('student.board-solver.index');
