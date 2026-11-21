@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\PluginInstallation;
 use App\Services\Plugins\PluginSignatureVerifier;
+use App\Services\Plugins\PluginTrustFailure;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use RuntimeException;
 use Tests\TestCase;
