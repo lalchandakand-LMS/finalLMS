@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Aloms\AdmissionManagement;
 
 use App\Http\Controllers\Controller;
+use App\Models\PluginInstallation;
 use App\Models\User;
+use App\Services\Plugins\PluginSettingsManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -32,9 +34,10 @@ final class AdmissionController extends Controller
         return view('admission-management::public.apply');
     }
 
-    public function applyPublic(Request $request): RedirectResponse
+    public function applyPublic(Request $request, PluginSettingsManager $settings): RedirectResponse
     {
-        abort_if(strtolower((string) config('admissions.intake_status', 'open')) !== 'open', 403, 'Admission applications are currently closed.');
+        $plugin = PluginInstallation::query()->where('plugin_key', 'aec.admission-management')->firstOrFail();
+        abort_if(strtolower((string) ($settings->get($plugin, 'intake_status') ?? 'open')) !== 'open', 403, 'Admission applications are currently closed.');
         $data = $this->validatedApplicant($request);
         $data['email'] = strtolower(trim($data['email']));
         $data['application_source'] = 'website';
