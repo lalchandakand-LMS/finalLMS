@@ -97,7 +97,7 @@ class PluginSettingsManagerTest extends TestCase
             try {
                 $manager->set($plugin, $key, $value);
                 $this->fail("Expected {$key} to reject its invalid value.");
-            } catch (\\InvalidArgumentException) {
+            } catch (\InvalidArgumentException) {
                 $this->assertDatabaseMissing('plugin_settings', [
                     'plugin_key' => $plugin->plugin_key,
                     'setting_key' => $key,
