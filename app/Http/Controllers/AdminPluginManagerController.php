@@ -46,11 +46,29 @@ class AdminPluginManagerController extends Controller
 
         $validated = $request->validate([
             'setting_key' => ['required', 'string', 'max:120', 'regex:/^[a-z][a-z0-9_.-]{0,119}$/D'],
-            'setting_value' => ['required', 'string', 'min:1', 'max:4096'],
+            'setting_value' => ['present', 'nullable', 'string', 'max:4096'],
         ]);
 
-        $settings->set($plugin, $validated['setting_key'], $validated['setting_value']);
-        $this->audit($request, 'admin.plugins.setting_saved', 'Saved encrypted setting '.$validated['setting_key'].' for '.$plugin->plugin_key);
+        $settingKey = $validated['setting_key'];
+        $settingValue = (string) ($validated['setting_value'] ?? '');
+        if ($settingValue === '') {
+            if ($settings->isRequired($plugin, $settingKey)) {
+                return back()->withErrors(['setting_value' => __('This plugin setting is required.')])
+                    ->withInput($request->except('setting_value'));
+            }
+            $settings->forget($plugin, $settingKey);
+            $this->audit($request, 'admin.plugins.setting_deleted', 'Cleared optional setting '.$settingKey.' for '.$plugin->plugin_key);
+
+            return back()->with('success', __('Optional plugin setting cleared.'));
+        }
+
+        try {
+            $settings->set($plugin, $settingKey, $settingValue);
+        } catch (InvalidArgumentException $exception) {
+            return back()->withErrors(['setting_value' => $exception->getMessage()])
+                ->withInput($request->except('setting_value'));
+        }
+        $this->audit($request, 'admin.plugins.setting_saved', 'Saved encrypted setting '.$settingKey.' for '.$plugin->plugin_key);
 
         return back()->with('success', __('Plugin setting saved encrypted. Its value is never displayed in the manager.'));
     }
