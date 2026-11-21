@@ -18,6 +18,11 @@ final class ReferralIncomeController extends Controller
         $user = $request->user();
         abort_unless(in_array($user->role, ['student', 'teacher'], true), 403);
         $code = $service->createOrGetCode($user);
+        $pendingCode = $request->session()->pull('aec_referral_code');
+        if (is_string($pendingCode) && $pendingCode !== '') {
+            try { $service->applyCode($user, $pendingCode); }
+            catch (\\Illuminate\\Validation\\ValidationException) { /* Keep existing account attribution unchanged. */ }
+        }
         $commissions = DB::table('referral_commissions')->where('referrer_user_id', $user->id)->latest('id')->paginate(20);
         $payouts = DB::table('referral_payout_requests')->where('user_id', $user->id)->latest('id')->limit(10)->get();
         $stats = DB::table('referral_commissions')->where('referrer_user_id', $user->id)
@@ -26,6 +31,14 @@ final class ReferralIncomeController extends Controller
             ->selectRaw("SUM(CASE WHEN status = 'paid' THEN commission_amount ELSE 0 END) as paid")->first();
         $referralCount = DB::table('referral_attributions')->where('referrer_user_id', $user->id)->where('status', 'active')->count();
         return view('referral-income::dashboard', compact('code', 'commissions', 'payouts', 'stats', 'referralCount'));
+    }
+
+    public function track(string $code, Request $request): RedirectResponse
+    {
+        $valid = DB::table('referral_codes')->where('code', strtoupper($code))->where('is_active', true)->exists();
+        if (!$valid) return redirect('/register')->withErrors(['referral_code' => 'This referral link is invalid or inactive.']);
+        $request->session()->put('aec_referral_code', strtoupper($code));
+        return redirect('/register')->with('status', 'Referral code saved. Sign in or register to apply it.');
     }
 
     public function apply(Request $request, ReferralIncomeService $service): RedirectResponse
