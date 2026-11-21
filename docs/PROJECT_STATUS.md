@@ -6,8 +6,9 @@ Production domain: https://alomsenglishcenter.com
 
 ## Current verified snapshot — 2026-11-21
 
-**Main commit:** `9d22623aa4cd34270909fa21b6427b74b46b42a8` (PR #386 squash merge).  
-**Open pull requests:** #387 (this status refresh), #388 (SMS recipient delivery concurrency fix) and #389 (plugin runtime transient-verification handling) are open; the latest GitHub search returned no others. CodeQL has passed on the current heads of all three; Laravel CI is still running on their latest heads.nd #388 (SMS recipient delivery concurrency fix) are open; the latest GitHub search returned no others. PR #387's corrected-head CodeQL passed and Laravel CI is running; PR #388's latest exact-head checks are still in progress.  
+**Main commit after latest merges:** `d4b70a1caef9c1ccf168d99acf5c9ca1a336e976` (PR #389 squash merge; PR #388 merged immediately before it).  
+**Open pull requests:** #387 (this status refresh) remains open. PR #388 (SMS recipient delivery concurrency) and #389 (plugin runtime transient-verification resilience) are merged after exact-head Laravel CI and CodeQL passed.  
+**Production deployment:** blocked; the last owner-provided hosting update did not include an isolated staging subdomain or separate test database. Do not deploy production.
 **Production deployment:** blocked; the last owner-provided hosting update did not include an isolated staging subdomain or separate test database. Do not deploy production.
 
 ### Recently merged
@@ -408,3 +409,11 @@ Production deployment remains blocked until staging, backup/restore, rollback an
 - PR #323 documentation branding cleanup: branch `docs/remove-external-ai-builder-branding`; the canonical Project Handoff replaces the duplicated legacy content, while `docs/AI_STUDIO_HANDOFF.md` remains only as a short compatibility pointer for older links. A source audit of the affected docs and Board Question Solver README found no external builder branding references. Latest recorded source commit before this status correction: `e0b59ddc7c12ee5f554d402d97185cee25422397`; exact-head Laravel CI and CodeQL are running.
 - PR #324 Visual Page Builder increment: current head `774d818eed2403bb5f5874e170d34e9aa0fdc517`; CodeQL passed and Laravel CI is running. Scope is accessible custom-page section drag-and-drop; device preview and page revision/rollback are not yet implemented.
 - No production deployment or live database/payment-provider changes have been performed. Do not infer staging or production acceptance from CI/package success.
+
+
+## Follow-up verification — 2026-11-21
+
+- PR #388 merged as `09016977f327e8dab99f96c9a0e298c786a926a9` after exact-head Laravel CI and CodeQL passed. The recipient-row lock prevents concurrent duplicate processing; provider acceptance followed by a database commit failure can still require provider idempotency/reconciliation.
+- PR #389 merged as `d4b70a1caef9c1ccf168d99acf5c9ca1a336e976` after exact-head Laravel CI and CodeQL passed. Confirmed trust failures remain fail-closed; transient verification infrastructure errors no longer permanently demote an active plugin.
+- Post-merge workflow runs for these squash commits were not returned by the PR-run lookup; do not claim post-merge mainline CI has passed based on the pre-merge checks.
+- The uploaded `finalLMS-advanced.zip` feature bundle is not yet imported. It requires a three-way reconciliation against the updated mainline so its admission, cart, discussion, certificate, Guardian, plugin-health and localization work is retained without reverting the above fixes.
