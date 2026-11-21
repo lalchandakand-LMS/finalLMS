@@ -90,7 +90,7 @@ class SendSmsCampaignRecipient implements ShouldQueue
             $campaign->increment('sent_count');
 
             return $campaign->id;
-        }, 3);
+        });
 
         // Finalize outside the delivery transaction so concurrent deliveries
         // cannot use an older transaction snapshot when checking pending rows.
