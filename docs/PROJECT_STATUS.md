@@ -9,7 +9,6 @@ Production domain: https://alomsenglishcenter.com
 **Main commit after latest merges:** `d4b70a1caef9c1ccf168d99acf5c9ca1a336e976` (PR #389 squash merge; PR #388 merged immediately before it).  
 **Open pull requests:** #387 (this status refresh) remains open. PR #388 (SMS recipient delivery concurrency) and #389 (plugin runtime transient-verification resilience) are merged after exact-head Laravel CI and CodeQL passed.  
 **Production deployment:** blocked; the last owner-provided hosting update did not include an isolated staging subdomain or separate test database. Do not deploy production.
-**Production deployment:** blocked; the last owner-provided hosting update did not include an isolated staging subdomain or separate test database. Do not deploy production.
 
 ### Recently merged
 
