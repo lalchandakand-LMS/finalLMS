@@ -86,6 +86,7 @@ class InstructorAnalyticsApiTest extends TestCase
         ]);
         ExamAttempt::create(['exam_id' => $exam->id, 'student_id' => $student->id, 'started_at' => now()->subHour(), 'submitted_at' => now(), 'score' => 8, 'status' => 'submitted']);
         ExamAttempt::create(['exam_id' => $exam->id, 'student_id' => User::factory()->create(['role' => 'student'])->id, 'started_at' => now()->subHour(), 'submitted_at' => now(), 'score' => 2, 'status' => 'submitted']);
+        ExamAttempt::create(['exam_id' => $exam->id, 'student_id' => User::factory()->create(['role' => 'student'])->id, 'started_at' => now()->subHour(), 'submitted_at' => now(), 'score' => null, 'status' => 'submitted']);
 
         // Even inconsistent legacy rows must not leak another teacher's batch data.
         $foreignBatchAssignment = $otherBatch->assignments()->create([
@@ -136,7 +137,8 @@ class InstructorAnalyticsApiTest extends TestCase
             ->assertJsonPath('data.assignments.submissions', 2)
             ->assertJsonPath('data.assignments.graded', 1)
             ->assertJsonPath('data.assessments.published', 1)
-            ->assertJsonPath('data.assessments.submitted_attempts', 2)
+            ->assertJsonPath('data.assessments.submitted_attempts', 3)
+            ->assertJsonPath('data.assessments.graded_attempts', 2)
             ->assertJsonPath('data.assessments.passed_attempts', 1)
             ->assertJsonPath('data.assessments.pass_rate', 50)
             ->assertJsonPath('data.assessments.average_score', 5);
