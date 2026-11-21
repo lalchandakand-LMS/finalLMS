@@ -29,6 +29,24 @@ class PluginSettingsManagerTest extends TestCase
         return PluginInstallation::query()->findOrFail($id);
     }
 
+    private function schemaPlugin(): PluginInstallation
+    {
+        $plugin = $this->plugin('inactive', 'aec.test-settings-schema');
+        $plugin->forceFill(['manifest' => [
+            'key' => $plugin->plugin_key,
+            'settings_schema' => [
+                'endpoint' => ['label' => 'API endpoint', 'type' => 'url', 'required' => true],
+                'contact_email' => ['label' => 'Contact email', 'type' => 'email'],
+                'retry_count' => ['label' => 'Retry count', 'type' => 'integer'],
+                'enabled' => ['label' => 'Enabled', 'type' => 'boolean'],
+                'region' => ['label' => 'Region', 'type' => 'select', 'options' => ['asia', 'europe']],
+                'api_secret' => ['label' => 'API secret', 'type' => 'secret'],
+            ],
+        ]])->save();
+
+        return $plugin->fresh();
+    }
+
     public function test_plugin_settings_are_encrypted_at_rest_and_decrypted_for_plugin_services(): void
     {
         $plugin = $this->plugin();
@@ -41,6 +59,51 @@ class PluginSettingsManagerTest extends TestCase
         $this->assertNotSame('super-secret-value', $stored);
         $this->assertStringNotContainsString('super-secret-value', $stored);
         $this->assertSame(['api.secret_key'], array_column($manager->keys($plugin), 'key'));
+    }
+
+    public function test_manifest_settings_schema_enforces_typed_values_and_encryption(): void
+    {
+        $plugin = $this->schemaPlugin();
+        $manager = app(PluginSettingsManager::class);
+
+        $manager->set($plugin, 'endpoint', 'https://api.example.com/v1');
+        $manager->set($plugin, 'contact_email', 'ops@example.com');
+        $manager->set($plugin, 'retry_count', '3');
+        $manager->set($plugin, 'enabled', '1');
+        $manager->set($plugin, 'region', 'asia');
+        $manager->set($plugin, 'api_secret', 'schema-secret-value');
+
+        $this->assertSame('https://api.example.com/v1', $manager->get($plugin, 'endpoint'));
+        $this->assertSame('3', $manager->get($plugin, 'retry_count'));
+        $this->assertSame('1', $manager->get($plugin, 'enabled'));
+        $stored = DB::table('plugin_settings')->where('plugin_key', $plugin->plugin_key)
+            ->where('setting_key', 'api_secret')->value('encrypted_value');
+        $this->assertStringNotContainsString('schema-secret-value', $stored);
+    }
+
+    public function test_manifest_settings_schema_rejects_undeclared_keys_and_invalid_typed_values(): void
+    {
+        $plugin = $this->schemaPlugin();
+        $manager = app(PluginSettingsManager::class);
+
+        foreach ([
+            ['unknown_setting', 'value'],
+            ['endpoint', 'http://api.example.com'],
+            ['contact_email', 'not-an-email'],
+            ['retry_count', '3.5'],
+            ['enabled', 'yes'],
+            ['region', 'antarctica'],
+        ] as [$key, $value]) {
+            try {
+                $manager->set($plugin, $key, $value);
+                $this->fail("Expected {$key} to reject its invalid value.");
+            } catch (\\InvalidArgumentException) {
+                $this->assertDatabaseMissing('plugin_settings', [
+                    'plugin_key' => $plugin->plugin_key,
+                    'setting_key' => $key,
+                ]);
+            }
+        }
     }
 
     public function test_plugin_settings_can_be_updated_and_deleted_without_exposing_values(): void
