@@ -88,3 +88,14 @@ A target-native `aec.hr-staff-management` package has also been added with:
 - activity-log events and feature tests for branch isolation, duplicate payroll and paid-state authorization.
 
 This is a foundation, not a complete HR suite: leave requests/approvals, staff-user linking, payroll slips, exports and full accounting integration remain open. The package is not yet activated or production-accepted.
+
+
+### Physical Library Management package added
+A target-native `aec.library-management` package now adds:
+- ISBN/catalogue inventory with branch-aware book stock;
+- borrower issue/return records and copy counts protected by row locks;
+- duplicate-safe return processing and overdue fine calculation;
+- configurable daily fine rate;
+- branch-scoped admin/branch-manager views and feature tests for cross-branch isolation, exhausted stock and repeat returns.
+
+The feature is a physical circulation foundation. Member account linking, reservations, lost/damaged-book workflows, fine payment/waivers, inventory import/export and audit/reporting expansion remain follow-ups. It has not been activated or production-accepted.
