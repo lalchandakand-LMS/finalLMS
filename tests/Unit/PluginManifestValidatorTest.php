@@ -59,11 +59,12 @@ class PluginManifestValidatorTest extends TestCase
             'api_secret' => ['label' => 'API secret', 'type' => 'secret', 'default' => 'do-not-embed-secrets'],
             'endpoint' => ['label' => 'API endpoint', 'type' => 'url', 'default' => 'http://insecure.example.com'],
             'enabled' => ['label' => 'Enabled', 'type' => 'boolean', 'default' => 'yes'],
+            'empty_text' => ['label' => 'Empty text', 'type' => 'text', 'default' => ''],
         ];
 
         $errors = app(PluginManifestValidator::class)->errors($manifest);
 
-        $this->assertCount(3, array_filter($errors, fn (string $error): bool => str_contains($error, '.default is invalid')));
+        $this->assertCount(4, array_filter($errors, fn (string $error): bool => str_contains($error, '.default is invalid')));
     }
 
     public function test_rejects_malformed_typed_settings_schema(): void
