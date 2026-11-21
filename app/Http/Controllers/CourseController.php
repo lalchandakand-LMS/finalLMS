@@ -564,7 +564,7 @@ class CourseController extends Controller
             ->header('Referrer-Policy', 'same-origin');
     }
 
-    public function completeLesson(Course $course, Lesson $lesson): RedirectResponse
+    public function completeLesson(Course $course, Lesson $lesson, GamificationService $gamification): RedirectResponse
     {
         $user = Auth::user();
         abort_unless($user?->isStudent() && $course->status === 'published' && $lesson->course_id === $course->id, 403);
@@ -581,6 +581,8 @@ class CourseController extends Controller
                 'last_viewed_at' => $progress->last_viewed_at ?? now(),
             ])->save();
         }
+
+        $gamification->award($user, 'lesson_completed', 'lesson', $lesson->id);
 
         return back()->with('success', 'Lesson progress saved.');
     }
