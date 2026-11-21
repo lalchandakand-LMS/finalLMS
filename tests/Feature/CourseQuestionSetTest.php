@@ -293,6 +293,62 @@ class CourseQuestionSetTest extends TestCase
         ]);
     }
 
+    public function test_question_set_attached_to_batch_homework_cannot_be_edited_and_is_archived_on_delete(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $batch = Batch::factory()->create(['teacher_id' => $teacher->id]);
+        $set = QuestionSet::create([
+            'title' => 'Batch-linked set',
+            'description' => 'Preserve this question history.',
+            'status' => 'published',
+            'created_by' => $admin->id,
+        ]);
+        $set->questions()->create([
+            'type' => 'mcq',
+            'question' => 'Original question?',
+            'options' => ['A', 'B', 'C', 'D'],
+            'correct_option' => 0,
+            'marks' => 1,
+            'position' => 10,
+        ]);
+        $assignment = $batch->assignments()->create([
+            'teacher_id' => $teacher->id,
+            'title' => 'Linked homework',
+            'instructions' => 'Keep this assignment stable.',
+            'due_at' => now()->addDay(),
+            'max_marks' => 10,
+            'allow_late' => false,
+            'status' => 'published',
+            'question_set_id' => $set->id,
+        ]);
+
+        $this->actingAs($admin)->from(route('admin.question-sets.edit', $set))
+            ->put(route('admin.question-sets.update', $set), [
+                'title' => 'Changed set',
+                'description' => 'Should not replace historical questions.',
+                'status' => 'published',
+                'questions' => [[
+                    'type' => 'short_answer',
+                    'question' => 'Replacement question?',
+                    'correct_answer' => 'expected',
+                    'marks' => 1,
+                ]],
+            ])->assertSessionHasErrors('question_set');
+
+        $this->assertDatabaseHas('question_set_questions', [
+            'question_set_id' => $set->id,
+            'question' => 'Original question?',
+        ]);
+
+        $this->delete(route('admin.question-sets.destroy', $set))->assertRedirect();
+        $this->assertDatabaseHas('question_sets', ['id' => $set->id, 'status' => 'archived']);
+        $this->assertDatabaseHas('assignments', [
+            'id' => $assignment->id,
+            'question_set_id' => $set->id,
+        ]);
+    }
+
     public function test_question_set_management_and_course_attachment_are_admin_only(): void
     {
         $student = User::factory()->create(['role' => 'student']);
