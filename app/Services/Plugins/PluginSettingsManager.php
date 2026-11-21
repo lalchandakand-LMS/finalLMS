@@ -84,7 +84,18 @@ final class PluginSettingsManager
             ->where('setting_key', $key)
             ->first();
 
-        return $setting?->encrypted_value;
+        if ($setting !== null) {
+            return $setting->encrypted_value;
+        }
+
+        $default = $this->definition($plugin, $key)['default'] ?? null;
+        if ($default === null) {
+            return null;
+        }
+
+        $value = is_bool($default) ? ($default ? '1' : '0') : (string) $default;
+
+        return $this->validatedValue($plugin, $key, $value);
     }
 
     /** @return list<array{key: string, updated_at: mixed}> */
@@ -104,6 +115,9 @@ final class PluginSettingsManager
     public function forget(PluginInstallation $plugin, string $key): void
     {
         $this->assertKey($key);
+        if ($this->isRequired($plugin, $key)) {
+            throw new InvalidArgumentException('Required plugin settings cannot be cleared.');
+        }
 
         PluginSetting::query()
             ->where('plugin_key', $plugin->plugin_key)
