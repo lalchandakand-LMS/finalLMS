@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CourseController;
+use App\Http\Controllers\Api\V1\InstructorAnalyticsController;
 use App\Http\Controllers\Api\V1\InstructorAssignmentController;
 use App\Http\Controllers\Api\V1\InstructorAttendanceSyncController;
 use App\Http\Controllers\Api\V1\AttendanceQrController;
@@ -67,6 +68,7 @@ Route::prefix('v1')->group(function (): void {
         Route::patch('/instructor/attendance/{attendance}/resolve', [InstructorAttendanceSyncController::class, 'resolveConflict'])->middleware(['throttle:20,1', 'module.enabled:attendance']);
         Route::post('/instructor/batches/{batch}/attendance/qr', [AttendanceQrController::class, 'createSession'])->middleware(['throttle:10,1', 'module.enabled:attendance']);
         Route::post('/attendance/qr/{session}/check-in', [AttendanceQrController::class, 'checkIn'])->middleware(['signed', 'throttle:10,1', 'module.enabled:attendance'])->name('api.v1.attendance.qr.checkin');
+        Route::get('/instructor/analytics/summary', [InstructorAnalyticsController::class, 'summary'])->middleware('throttle:30,1');
         Route::get('/instructor/batches', [InstructorAssignmentController::class, 'batches']);
         Route::get('/instructor/batches/{batch}', [InstructorAssignmentController::class, 'showBatch']);
         Route::get('/instructor/assignments', [InstructorAssignmentController::class, 'index']);
