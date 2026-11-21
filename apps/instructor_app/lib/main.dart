@@ -577,7 +577,7 @@ class _InstructorAssessmentCreatePageState extends State<InstructorAssessmentCre
               child: Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
             ),
             DropdownButtonFormField<int>(
-              value: batchId,
+              initialValue: batchId,
               decoration: const InputDecoration(labelText: 'Your batch', border: OutlineInputBorder()),
               items: batches.map((batch) => DropdownMenuItem<int>(
                 value: (batch['id'] as num).toInt(),
