@@ -69,7 +69,20 @@ final class ReferralIncomeController extends Controller
             catch (\Throwable) { $row->account_details = '[Unable to decrypt payout destination]'; }
             return $row;
         });
-        return view('referral-income::admin', compact('commissions', 'payouts'));
+        $rules = DB::table('referral_income_rules')->orderBy('owner_type')->get();
+        return view('referral-income::admin', compact('commissions', 'payouts', 'rules'));
+    }
+
+    public function updateRules(Request $request, ReferralIncomeService $service): RedirectResponse
+    {
+        $data = $request->validate([
+            'student_commission_percent' => ['required', 'numeric', 'min:0', 'max:50'],
+            'teacher_commission_percent' => ['required', 'numeric', 'min:0', 'max:50'],
+            'student_minimum_payout' => ['required', 'numeric', 'min:1', 'max:10000000'],
+            'teacher_minimum_payout' => ['required', 'numeric', 'min:1', 'max:10000000'],
+        ]);
+        $service->updateRules((int) $request->user()->id, $data);
+        return back()->with('success', 'Referral rules updated.');
     }
 
     public function reviewCommission(Request $request, int $commission, ReferralIncomeService $service): RedirectResponse
