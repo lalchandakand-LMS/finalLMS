@@ -38,6 +38,7 @@ class Scorm12PackageValidator
             }
 
             $files = [];
+            $seenPaths = [];
             $expanded = 0;
             $manifest = null;
             for ($i = 0; $i < $zip->numFiles; $i++) {
@@ -47,6 +48,10 @@ class Scorm12PackageValidator
                 }
 
                 $name = $this->safePath((string) $stat['name']);
+                if (isset($seenPaths[$name])) {
+                    throw new RuntimeException('The SCORM archive contains duplicate paths.');
+                }
+                $seenPaths[$name] = true;
                 $size = (int) $stat['size'];
                 $compressed = (int) ($stat['comp_size'] ?? 0);
                 if ($size < 0 || $size > self::MAX_FILE_BYTES) {
