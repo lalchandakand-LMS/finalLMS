@@ -1,16 +1,16 @@
 <?php
 
-namespace App\\Http\\Controllers\\Api\\V1;
+namespace App\Http\Controllers\Api\V1;
 
-use App\\Http\\Controllers\\Controller;
-use App\\Models\\Assignment;
-use App\\Models\\Attendance;
-use App\\Models\\Batch;
-use App\\Models\\Enrollment;
-use App\\Models\\Exam;
-use Illuminate\\Http\\JsonResponse;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Facades\\DB;
+use App\Http\Controllers\Controller;
+use App\Models\Assignment;
+use App\Models\Attendance;
+use App\Models\Batch;
+use App\Models\Enrollment;
+use App\Models\Exam;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class InstructorAnalyticsController extends Controller
 {
