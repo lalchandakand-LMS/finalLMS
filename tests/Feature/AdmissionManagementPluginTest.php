@@ -83,10 +83,11 @@ final class AdmissionManagementPluginTest extends TestCase
             'email' => 'wrong@example.com',
         ])->assertOk()->assertSee('No application matched those details.');
 
+        $application->update(['reviewer_notes' => 'Confidential reviewer note']);
         $this->post('/__admission/track', [
             'application_code' => strtolower($application->application_code),
             'email' => 'APPLICANT@example.com',
-        ])->assertOk()->assertSee('Applicant One')->assertSee('Pending');
+        ])->assertOk()->assertSee('Applicant One')->assertSee('Pending')->assertDontSee('Confidential reviewer note');
     }
 
     public function test_branch_manager_cannot_list_or_review_another_branch_application(): void
