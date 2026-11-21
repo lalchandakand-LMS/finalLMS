@@ -646,7 +646,6 @@ class AdminPluginManagerController extends Controller
             $integrityVerifier->verify($plugin);
         } catch (PluginTrustFailure $exception) {
             report($exception);
-            report($exception);
             $attributes = [
                 'health_status' => 'failed',
                 'health_message' => 'A trusted signature, manifest, dependency or installed-file integrity check failed. Plugin execution is blocked when active.',
@@ -678,24 +677,24 @@ class AdminPluginManagerController extends Controller
             return back()->with('error', __('Plugin health check could not be completed because of a temporary system error. The plugin status was not changed.'));
         }
 
-            $healthAttributes = [
-                'health_status' => 'healthy',
-                'health_message' => $signatureReverified
-                    ? 'Detached release signature, manifest and installed files verified.'
-                    : 'Legacy release signature was verified at install; manifest and installed files verified.',
-                'last_health_check_at' => now(),
-            ];
-            if ($plugin->status === 'failed') {
-                $plugin = $lifecycle->transition($plugin->plugin_key, 'inactive', $healthAttributes);
-            } else {
-                $plugin->forceFill($healthAttributes)->save();
-                $plugin->refresh();
-            }
-            $history->record($plugin, 'health_check_passed', $request->user());
-            $this->audit($request, 'admin.plugins.health_check_passed',
-                'Verified plugin health for '.$plugin->plugin_key.' version '.$plugin->version);
+        $healthAttributes = [
+            'health_status' => 'healthy',
+            'health_message' => $signatureReverified
+                ? 'Detached release signature, manifest and installed files verified.'
+                : 'Legacy release signature was verified at install; manifest and installed files verified.',
+            'last_health_check_at' => now(),
+        ];
+        if ($plugin->status === 'failed') {
+            $plugin = $lifecycle->transition($plugin->plugin_key, 'inactive', $healthAttributes);
+        } else {
+            $plugin->forceFill($healthAttributes)->save();
+            $plugin->refresh();
+        }
+        $history->record($plugin, 'health_check_passed', $request->user());
+        $this->audit($request, 'admin.plugins.health_check_passed',
+            'Verified plugin health for '.$plugin->plugin_key.' version '.$plugin->version);
 
-            return redirect()->route('admin.plugins.index')->with('success', __('Plugin health check passed.'));
+        return redirect()->route('admin.plugins.index')->with('success', __('Plugin health check passed.'));
     }
 
     private function assertDependenciesAvailable(PluginInstallation $plugin): void
