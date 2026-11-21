@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'api_client.dart';
 import 'attendance_page.dart';
+import 'analytics_page.dart';
 
 void main() => runApp(const InstructorApp());
 
@@ -1635,6 +1636,12 @@ class _InstructorHomeState extends State<InstructorHome> {
     }
   }
 
+  Future<void> openAnalytics() async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => InstructorAnalyticsPage(api: widget.api),
+    ));
+  }
+
   Future<void> openNotices() async {
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => InstructorNoticesPage(api: widget.api),
@@ -1735,6 +1742,11 @@ class _InstructorHomeState extends State<InstructorHome> {
             spacing: 8,
             runSpacing: 8,
             children: [
+              OutlinedButton.icon(
+                onPressed: openAnalytics,
+                icon: const Icon(Icons.insights_outlined),
+                label: const Text('Academic analytics'),
+              ),
               OutlinedButton.icon(
                 onPressed: openAssessments,
                 icon: const Icon(Icons.analytics_outlined),
