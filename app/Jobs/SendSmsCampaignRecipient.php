@@ -1,17 +1,17 @@
 <?php
 
-namespace App\\Jobs;
+namespace App\Jobs;
 
-use App\\Models\\SmsCampaign;
-use App\\Models\\SmsCampaignRecipient;
-use App\\Services\\Modules\\ModuleRegistry;
-use App\\Services\\SmsGateway;
-use Illuminate\\Bus\\Queueable;
-use Illuminate\\Contracts\\Queue\\ShouldQueue;
-use Illuminate\\Foundation\\Bus\\Dispatchable;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\Queue\\InteractsWithQueue;
-use Illuminate\\Queue\\SerializesModels;
+use App\Models\SmsCampaign;
+use App\Models\SmsCampaignRecipient;
+use App\Services\Modules\ModuleRegistry;
+use App\Services\SmsGateway;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 use Throwable;
 
 class SendSmsCampaignRecipient implements ShouldQueue
