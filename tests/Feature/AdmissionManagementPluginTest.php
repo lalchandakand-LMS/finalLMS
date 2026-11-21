@@ -36,7 +36,7 @@ final class AdmissionManagementPluginTest extends TestCase
             'version' => '1.0.0',
             'type' => 'module',
             'status' => 'active',
-            'manifest' => ['settings_schema' => ['intake_status' => ['label' => 'Intake status', 'type' => 'select', 'options' => ['open', 'closed'], 'default' => 'open']]],
+            'manifest' => ['settings_schema' => ['intake_status' => ['label' => 'Intake status', 'type' => 'select', 'options' => ['open', 'closed'], 'default' => 'open'], 'admission_fee_bdt' => ['label' => 'Admission fee', 'type' => 'integer', 'default' => 0]]],
         ])->save();
         Route::post('/__admission/apply', [AdmissionController::class, 'applyPublic'])->name('admission.public.apply.store');
         Route::get('/__admission/track', [AdmissionController::class, 'trackForm'])->name('admission.public.track');
@@ -158,6 +158,35 @@ final class AdmissionManagementPluginTest extends TestCase
             'status' => 'pending',
         ]);
         $this->actingAs($admin)->get('/__admission/'.$other->id.'/documents/'.$document->id)->assertNotFound();
+    }
+
+
+    public function test_conversion_creates_configured_admission_fee_invoice_atomically(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $application = AdmissionApplication::query()->create([
+            'application_code' => 'ADM-FEE000001',
+            'applicant_name' => 'Fee Applicant',
+            'email' => 'feeapplicant@example.com',
+            'phone' => '01700000006',
+            'desired_course' => 'Spoken English',
+            'application_source' => 'website',
+            'status' => 'approved',
+        ]);
+        $plugin = \App\Models\PluginInstallation::query()->where('plugin_key', 'aec.admission-management')->firstOrFail();
+        app(\App\Services\Plugins\PluginSettingsManager::class)->set($plugin, 'admission_fee_bdt', '1500');
+
+        $this->actingAs($admin)->post('/__admission/'.$application->id.'/convert')->assertRedirect();
+
+        $application->refresh();
+        $this->assertNotNull($application->converted_student_id);
+        $this->assertNotNull($application->admission_fee_invoice_id);
+        $this->assertDatabaseHas('invoices', [
+            'id' => $application->admission_fee_invoice_id,
+            'user_id' => $application->converted_student_id,
+            'amount' => 1500,
+            'status' => 'unpaid',
+        ]);
     }
 
     public function test_only_approved_applicants_convert_once_and_existing_emails_are_not_attached(): void
