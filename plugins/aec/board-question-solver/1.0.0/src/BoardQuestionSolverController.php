@@ -127,7 +127,60 @@ final class BoardQuestionSolverController extends Controller {
   }
  }
  public function history(Request $request):View{$history=DB::table('board_question_solutions')->where('user_id',$request->user()->id)->latest()->paginate(20);return view('board-question-solver::student.history',compact('history'));}
- public function adminHistory():View{$history=DB::table('board_question_solutions')->latest()->paginate(30);return view('board-question-solver::admin.history',compact('history'));}
+ public function adminHistory(Request $request):View{
+  $status=$request->validate(['status'=>['nullable','in:pending,approved,rejected']])['status']??null;
+  $history=DB::table('board_question_solutions')
+   ->leftJoin('users','users.id','=','board_question_solutions.user_id')
+   ->select('board_question_solutions.*','users.name as student_name')
+   ->when($status,fn($query)=>$query->where('review_status',$status))
+   ->orderByRaw("CASE WHEN review_status = 'pending' THEN 0 ELSE 1 END")
+   ->orderByDesc('board_question_solutions.created_at')->paginate(25)->withQueryString();
+  return view('board-question-solver::admin.history',compact('history','status'));
+ }
+ public function approveSolution(Request $request,int $solution):\\Illuminate\\Http\\RedirectResponse{
+  $data=$request->validate(['admin_notes'=>['nullable','string','max:2000'],'marks'=>['required','integer','min:1','max:100']]);
+  $setId=DB::transaction(function()use($request,$solution,$data):int{
+   $record=DB::table('board_question_solutions')->where('id',$solution)->lockForUpdate()->first();
+   abort_unless($record,404);
+   if($record->review_status==='approved'&&$record->question_set_id)return (int)$record->question_set_id;
+   abort_unless($record->review_status==='pending',409,'Only pending solutions can be approved.');
+   $title=trim(($record->board?:'Board').' '.($record->exam_year?:'').' '.($record->class_level?:'').' '.$record->subject.' — reviewed question');
+   $setId=DB::table('question_sets')->insertGetId([
+    'title'=>mb_substr($title,0,180),
+    'description'=>'Admin-reviewed solution from Board Question Solver. Source student submission #'.$record->id.'.',
+    'status'=>'draft',
+    'created_by'=>$request->user()->id,
+    'created_at'=>now(),'updated_at'=>now(),
+   ]);
+   DB::table('question_set_questions')->insert([
+    'question_set_id'=>$setId,'source_question_id'=>null,'type'=>'short_answer',
+    'question'=>$record->question,'options'=>null,'correct_option'=>null,
+    'correct_answer'=>$record->solution,'explanation'=>$record->solution,
+    'difficulty'=>'medium',
+    'tags'=>json_encode(array_values(array_filter(['board-solver',$record->board,$record->exam_year,$record->class_level,$record->subject,$record->question_type]))),
+    'marks'=>$data['marks'],'position'=>10,'created_at'=>now(),'updated_at'=>now(),
+   ]);
+   DB::table('board_question_solutions')->where('id',$record->id)->update([
+    'review_status'=>'approved','reviewed_by'=>$request->user()->id,'reviewed_at'=>now(),
+    'admin_notes'=>$data['admin_notes']??null,'question_set_id'=>$setId,'updated_at'=>now(),
+   ]);
+   return $setId;
+  });
+  return redirect()->route('admin.question-sets.edit',$setId)->with('success',__('Solution approved and copied into a draft exam question set. Review and publish the question set before assigning it.'));
+ }
+ public function rejectSolution(Request $request,int $solution):\\Illuminate\\Http\\RedirectResponse{
+  $data=$request->validate(['admin_notes'=>['required','string','max:2000']]);
+  DB::transaction(function()use($request,$solution,$data):void{
+   $record=DB::table('board_question_solutions')->where('id',$solution)->lockForUpdate()->first();
+   abort_unless($record,404);
+   abort_unless($record->review_status==='pending',409,'Only pending solutions can be rejected.');
+   DB::table('board_question_solutions')->where('id',$solution)->update([
+    'review_status'=>'rejected','reviewed_by'=>$request->user()->id,'reviewed_at'=>now(),
+    'admin_notes'=>$data['admin_notes'],'updated_at'=>now(),
+   ]);
+  });
+  return back()->with('success',__('Solution rejected and retained in the audit history.'));
+ }
  private function assertAvailable():void{$s=BoardQuestionSolverSettings::get();abort_unless($s['enabled'],404);$this->assertAiReady();}
  private function assertAiReady():void{$ai=AssistantSettings::record();abort_unless($ai['global_enabled']&&filled($ai['api_key_encrypted']),503,'Universal AI Assistant provider must be configured and globally enabled.');}
  private function prompt(array $d):string{$language=$d['language']==='bn'?'Bangla':'English';$mode=match($d['mode']){'hints'=>'Give progressive hints first. Do not reveal the final answer unless necessary to clarify a hint.','explain'=>'Focus on explaining the underlying concept, definitions and reasoning.','full'=>'Provide a complete, step-by-step worked solution.'};return "Solve and teach this Bangladesh board-exam preparation question.\nBoard: ".($d['board']??'Not specified')."\nYear: ".($d['exam_year']??'Not specified')."\nClass: ".($d['class_level']??'Not specified')."\nSubject: ".$d['subject']."\nQuestion type: ".$d['question_type']."\nResponse language: ".$language."\nMode: ".$mode."\n\nQuestion text:\n".($d['question']??'[Read the attached image carefully using OCR.]')."\n\nFormat your answer with: (1) question interpretation, (2) relevant rule/formula/concept, (3) numbered solution steps, (4) final answer clearly highlighted, (5) common mistakes, and (6) suggested marking points if relevant. For MCQ, explain why the correct option fits and why other options are wrong. For Bangla/English grammar or writing, explain corrections and provide a model answer. For math/science, show units and intermediate calculations. Never invent missing details; state assumptions."; }
