@@ -166,12 +166,12 @@ class CourseComboTest extends TestCase
 
         $courseA = Course::factory()->create(['teacher_id' => $teacher->id, 'status' => 'published']);
         $courseB = Course::factory()->create(['teacher_id' => $teacher->id, 'status' => 'published']);
-        $branch = \\App\\Models\\Branch::create([
+        $branch = \App\Models\Branch::create([
             'name' => 'Capacity Test Branch',
             'slug' => 'capacity-test-branch',
             'is_active' => true,
         ]);
-        $sharedBatch = \\App\\Models\\Batch::create([
+        $sharedBatch = \App\Models\Batch::create([
             'branch_id' => $branch->id,
             'course_id' => $courseA->id,
             'teacher_id' => $teacher->id,
@@ -204,14 +204,14 @@ class CourseComboTest extends TestCase
                 'status' => 'pending',
             ]);
 
-            \\App\\Models\\PaymentComboCourse::create([
+            \App\Models\PaymentComboCourse::create([
                 'payment_id' => $payment->id,
                 'course_id' => $courseA->id,
                 'batch_id' => $sharedBatch->id,
                 'course_title' => $courseA->title,
                 'position' => 1,
             ]);
-            \\App\\Models\\PaymentComboCourse::create([
+            \App\Models\PaymentComboCourse::create([
                 'payment_id' => $payment->id,
                 'course_id' => $courseB->id,
                 'course_title' => $courseB->title,
