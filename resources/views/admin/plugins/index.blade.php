@@ -97,12 +97,55 @@
                             @if(in_array($plugin->status, ['installed', 'active', 'inactive'], true))
                                 <details style="margin-top:8px;">
                                     <summary>{{ __('Encrypted plugin settings') }} ({{ count($settingsForPlugin) }})</summary>
-                                    <form method="POST" action="{{ route('admin.plugins.settings.store', $plugin->plugin_key) }}" style="margin-top:8px;display:grid;gap:8px;max-width:420px;">
-                                        @csrf
-                                        <label>{{ __('Setting key') }}<input name="setting_key" maxlength="120" pattern="[a-z][a-z0-9_.-]{0,119}" placeholder="api_key" required></label>
-                                        <label>{{ __('Secret / value') }}<input type="password" name="setting_value" maxlength="4096" autocomplete="new-password" required></label>
-                                        <button class="btn secondary" type="submit">{{ __('Save encrypted setting') }}</button>
-                                    </form>
+                                    @php($settingsSchema = $plugin->manifest['settings_schema'] ?? [])
+                                    @if(is_array($settingsSchema) && $settingsSchema !== [])
+                                        @php($configuredSettingKeys = array_column($settingsForPlugin, 'key'))
+                                        @foreach($settingsSchema as $settingKey => $definition)
+                                            <form method="POST" action="{{ route('admin.plugins.settings.store', $plugin->plugin_key) }}" style="margin-top:10px;display:grid;gap:6px;max-width:420px;">
+                                                @csrf
+                                                <input type="hidden" name="setting_key" value="{{ $settingKey }}">
+                                                <label>
+                                                    {{ $definition['label'] ?? $settingKey }}
+                                                    @if($definition['required'] ?? false)<span aria-label="{{ __('required') }}">*</span>@endif
+                                                    @if(($definition['type'] ?? 'text') === 'select')
+                                                        <select name="setting_value" @required($definition['required'] ?? false)>
+                                                            @unless($definition['required'] ?? false)<option value="">{{ __('Not configured / clear') }}</option>@endunless
+                                                            @foreach($definition['options'] ?? [] as $option)
+                                                                <option value="{{ $option }}" @selected(($definition['default'] ?? null) === $option)>{{ $option }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    @elseif(($definition['type'] ?? 'text') === 'boolean')
+                                                        <select name="setting_value" @required($definition['required'] ?? false)>
+                                                            <option value="">{{ __('Not configured / clear') }}</option>
+                                                            <option value="1" @selected(($definition['default'] ?? null) === true || ($definition['default'] ?? null) === 1)>{{ __('Enabled') }}</option>
+                                                            <option value="0" @selected(($definition['default'] ?? null) === false || ($definition['default'] ?? null) === 0)>{{ __('Disabled') }}</option>
+                                                        </select>
+                                                    @else
+                                                        <input
+                                                            type="{{ match($definition['type'] ?? 'text') { 'secret' => 'password', 'url' => 'url', 'email' => 'email', 'integer' => 'number', default => 'text' } }}"
+                                                            name="setting_value"
+                                                            maxlength="4096"
+                                                            autocomplete="new-password"
+                                                            placeholder="{{ in_array($settingKey, $configuredSettingKeys, true) ? __('Configured — enter a new value to replace') : ($definition['default'] ?? '') }}"
+                                                            @if(($definition['type'] ?? null) === 'integer') step="1" @endif
+                                                            @required($definition['required'] ?? false)
+                                                        >
+                                                    @endif
+                                                </label>
+                                                @if(in_array($settingKey, $configuredSettingKeys, true))
+                                                    <small class="muted">{{ __('A value is configured. Existing values are never displayed.') }}</small>
+                                                @endif
+                                                <button class="btn secondary" type="submit">{{ __('Save encrypted setting') }}</button>
+                                            </form>
+                                        @endforeach
+                                    @else
+                                        <form method="POST" action="{{ route('admin.plugins.settings.store', $plugin->plugin_key) }}" style="margin-top:8px;display:grid;gap:8px;max-width:420px;">
+                                            @csrf
+                                            <label>{{ __('Setting key') }}<input name="setting_key" maxlength="120" pattern="[a-z][a-z0-9_.-]{0,119}" placeholder="api_key" required></label>
+                                            <label>{{ __('Secret / value') }}<input type="password" name="setting_value" maxlength="4096" autocomplete="new-password" required></label>
+                                            <button class="btn secondary" type="submit">{{ __('Save encrypted setting') }}</button>
+                                        </form>
+                                    @endif
                                     @forelse($settingsForPlugin as $storedSetting)
                                         <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
                                             <code>{{ $storedSetting['key'] }}</code>
