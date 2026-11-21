@@ -51,3 +51,28 @@ Both are PHP/Laravel 12 applications targeting PHP 8.3. They are not drop-in com
 6. Close Student Activity Trace and Phonetics capability gaps without duplicating existing packages.
 
 This is a static source-tree comparison. It is not a runtime audit of either repository and does not certify the reference modules as production-ready. The reference repository's own acceptance documentation also notes that provider sandbox/live callbacks and full independent per-plugin acceptance remain separate release gates.
+
+
+## Implementation progress (2026-11-21)
+
+### Admission Management package added
+A target-native package has been added at `plugins/aec/admission-management/1.0.0/` with:
+- public intake and tracking by application code plus email;
+- admin and branch-manager portals, with branch-scoped application queries and record checks;
+- locked, explicit status transitions and rejection-reason validation;
+- private local-disk PDF/JPG/PNG evidence uploads and application-scoped downloads;
+- idempotent approved-applicant conversion to a student User account;
+- manifest-declared intake open/closed setting;
+- migration, views, package documentation and feature tests.
+
+The source has been committed to `feat/aec-feature-parity-port`. It has not yet been executed in a local PHP/Laravel environment or accepted by CI. The package remains unverified for activation until the feature suite and signed-package lifecycle checks pass. Conversion sends a password-reset link only if the configured mail channel works; this needs a staging mail test.
+
+### Remaining parity work
+- HR & Payroll: inspect existing staff-management coverage and adapt payroll ledger/disbursement features only where absent.
+- Physical Library: implement inventory, issue/return, borrower and overdue-fine workflows if no equivalent exists.
+- Referral Income: port referral attribution, commission ledger, payout review and refund/reversal protections.
+- Payment gateways: compare provider adapters individually; prioritize SSLCOMMERZ for Bangladesh and keep credentials encrypted and provider callbacks signature/idempotency checked.
+- Student Activity Trace: compare the existing Student Tracking and activity log capabilities before extending.
+- Phonetics: retain the existing target package and port only missing assignment/exam/batch features.
+
+Do not enable production deployment based on this branch alone. Require passing CI, staging installation, authorization/privacy tests, payment sandbox checks, and backup/restore rehearsal.
