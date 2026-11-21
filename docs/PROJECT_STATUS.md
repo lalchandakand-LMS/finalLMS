@@ -1,8 +1,47 @@
 # Project Status — Alom's English Center LMS
 
-Last consolidated: 2026-11-19
+Last consolidated: 2026-11-21
 Repository: https://github.com/lalchandakand-LMS/finalLMS
 Production domain: https://alomsenglishcenter.com
+
+## Current verified snapshot — 2026-11-21
+
+**Main commit:** `9d22623aa4cd34270909fa21b6427b74b46b42a8` (PR #386 squash merge).  
+**Open pull requests:** none at the time of this snapshot.  
+**Production deployment:** blocked; the last owner-provided hosting update did not include an isolated staging subdomain or separate test database. Do not deploy production.
+
+### Recently merged
+
+| PR | Result |
+|---|---|
+| #384 | Merged — Instructor Academic Analytics API and Flutter dashboard; exact-head Laravel CI, CodeQL, instructor/student Flutter analysis/tests and APK build passed before merge. |
+| #386 | Merged — signed plugin manifest settings schemas, typed server-side validation, encrypted secrets, validated defaults, required-setting protection and Admin controls; exact-head Laravel CI and CodeQL passed before merge. |
+
+The PR #386 merge commit is `9d22623aa4cd34270909fa21b6427b74b46b42a8`. Post-merge workflow runs were not returned by the PR-run lookup; do not describe post-merge mainline CI as verified until separately confirmed.
+
+### Plugin platform status
+
+- The plugin package lifecycle includes signed package verification, manifest validation, dependency/conflict checks, permission grants, encrypted settings, integrity checks, and package update/rollback foundations.
+- Manifest-defined typed settings are now merged: text, HTTPS URL, email, integer, boolean, select and secret. Secret values remain encrypted and are not rendered back to Admin.
+- These foundations do **not** make plugins sandboxed. Plugin PHP executes as trusted application code.
+- Earlier audit inventory identified 8 executable first-party plugins and 56 metadata-only catalogue modules. Re-audit the current tree before changing these counts; metadata-only entries are not independently installable packages.
+- Scheduler callback registration, external provider webhook lifecycle guards, migration of legacy plugin jobs to lifecycle guards, and SMS retry idempotency/reconciliation remain audit priorities unless current source/tests prove otherwise.
+- Whole-LMS Update Center safe activation/rollback remains distinct from plugin package update/rollback and still needs end-to-end release rehearsal.
+
+### Release gates — still required
+
+1. Create isolated staging subdomain and separate test database.
+2. Provision and protect production signing keys; verify key rotation/revocation procedures.
+3. Run clean install and upgrade on supported MySQL/MariaDB, including migration rollback-safety checks.
+4. Exercise cPanel install/update/rollback, writable paths, cron/queue workers and private media storage.
+5. Complete full backup and file/database restore rehearsal, including recovery-time evidence.
+6. Verify official payment provider sandboxes, SMS/email/OTP delivery, live-class privacy and webhook replay protections.
+7. Complete five-portal browser acceptance and mobile app workflows.
+8. Review current open PRs and exact-head CI before each release.
+
+No production deployment, live payment activation, production migration or hosting-file change was performed by this workstream.
+
+---
 
 ## Status vocabulary
 
