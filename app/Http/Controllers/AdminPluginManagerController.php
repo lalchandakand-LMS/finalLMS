@@ -84,6 +84,10 @@ class AdminPluginManagerController extends Controller
         abort_unless($plugin->status !== 'uninstalled', 404);
         abort_unless(preg_match('/^[a-z][a-z0-9_.-]{0,119}$/D', $settingKey) === 1, 404);
 
+        if ($settings->isRequired($plugin, $settingKey)) {
+            return back()->withErrors(['setting_key' => __('Required plugin settings cannot be deleted.')]);
+        }
+
         $settings->forget($plugin, $settingKey);
         $this->audit($request, 'admin.plugins.setting_deleted', 'Deleted encrypted setting '.$settingKey.' for '.$plugin->plugin_key);
 
