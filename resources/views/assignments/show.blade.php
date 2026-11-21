@@ -11,6 +11,11 @@
         @if($submission)
             <span class="badge {{ $submission->status === 'graded' ? 'success' : 'warning' }}">{{ __($submission->status === 'graded' ? 'Graded' : 'Submitted') }}</span>
             @if($submission->answer)<p>{{ $submission->answer }}</p>@endif
+            @if($submission->question_answers && $assignment->questionSet)
+                @foreach($assignment->questionSet->questions as $question)
+                    <div class="panel"><strong>{{ $loop->iteration }}. {{ $question->question }}</strong><p>{{ $submission->question_answers[$question->id] ?? '—' }}</p></div>
+                @endforeach
+            @endif
             @if($submission->attachment_path)<p><a class="btn secondary" href="{{ route('assignment-submissions.attachment', $submission) }}">{{ __('Download submitted file:') }} {{ $submission->attachment_name }}</a></p>@endif
             @if($submission->status === 'graded')
                 <p><strong>{{ __('Score:') }}</strong> {{ $submission->score }} / {{ $assignment->max_marks }}</p>
@@ -18,7 +23,22 @@
                 @if($assignment->status === 'published' && (! $assignment->due_at->isPast() || $assignment->allow_late))
                     <form method="POST" enctype="multipart/form-data" action="{{ route('student.assignments.submit', $assignment) }}">
                         @csrf
-                        <label>{{ __('Resubmit answer') }}<textarea name="answer" maxlength="50000"></textarea></label>
+                        @if($assignment->questionSet)
+                            @foreach($assignment->questionSet->questions as $question)
+                                <label>{{ $loop->iteration }}. {{ $question->question }}
+                                    @if(in_array($question->type, ['mcq', 'true_false'], true))
+                                        <select name="question_answers[{{ $question->id }}]" required>
+                                            <option value="">{{ __('Choose an answer') }}</option>
+                                            @foreach($question->options ?? [] as $option)<option value="{{ $option }}">{{ $option }}</option>@endforeach
+                                        </select>
+                                    @else
+                                        <textarea name="question_answers[{{ $question->id }}]" maxlength="5000" required></textarea>
+                                    @endif
+                                </label>
+                            @endforeach
+                        @else
+                            <label>{{ __('Resubmit answer') }}<textarea name="answer" maxlength="50000"></textarea></label>
+                        @endif
                         <label>{{ __('Replace attachment (PDF, DOC, DOCX, JPG, PNG; max 10 MB)') }}<input type="file" name="attachment" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"></label>
                         <button type="submit" class="btn primary">{{ __('Resubmit assignment') }}</button>
                     </form>
@@ -27,8 +47,25 @@
         @elseif(! $submission && $assignment->status === 'published' && (! $assignment->due_at->isPast() || $assignment->allow_late))
             <form method="POST" enctype="multipart/form-data" action="{{ route('student.assignments.submit', $assignment) }}">
                 @csrf
-                <label for="assignment-answer">{{ __('Your answer') }}</label>
+                @if($assignment->questionSet)
+                    @foreach($assignment->questionSet->questions as $question)
+                        <label>{{ $loop->iteration }}. {{ $question->question }}
+                            @if(in_array($question->type, ['mcq', 'true_false'], true))
+                                <select name="question_answers[{{ $question->id }}]" required>
+                                    <option value="">{{ __('Choose an answer') }}</option>
+                                    @foreach($question->options ?? [] as $option)
+                                        <option value="{{ $option }}">{{ $option }}</option>
+                                    @endforeach
+                                </select>
+                            @else
+                                <textarea name="question_answers[{{ $question->id }}]" maxlength="5000" required></textarea>
+                            @endif
+                        </label>
+                    @endforeach
+                @else
+                    <label for="assignment-answer">{{ __('Your answer') }}</label>
                 <textarea id="assignment-answer" name="answer" maxlength="50000"></textarea>
+                @endif
                 <label for="assignment-attachment">{{ __('Attach file (PDF, DOC, DOCX, JPG, PNG; max 10 MB)') }}</label>
                 <input id="assignment-attachment" type="file" name="attachment" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
                 <button type="submit" class="btn primary">{{ __('Submit assignment') }}</button>
