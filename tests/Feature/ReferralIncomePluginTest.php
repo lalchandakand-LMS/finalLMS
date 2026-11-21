@@ -74,7 +74,7 @@ final class ReferralIncomePluginTest extends TestCase
         try {
             $service->applyCode($buyer, $service->createOrGetCode($second));
             $this->fail('An existing referral attribution must not be replaceable.');
-        } catch (\\Illuminate\\Validation\\ValidationException) {
+        } catch (\Illuminate\Validation\ValidationException) {
             $this->assertDatabaseHas('referral_attributions', ['referred_user_id' => $buyer->id, 'referrer_user_id' => $first->id]);
             $this->assertDatabaseMissing('referral_attributions', ['referred_user_id' => $buyer->id, 'referrer_user_id' => $second->id]);
         }
@@ -94,7 +94,7 @@ final class ReferralIncomePluginTest extends TestCase
             'status' => 'approved',
         ]);
         $commissionId = $service->recordApprovedPayment((int) $payment->id);
-        $this->expectException(\\Symfony\\Component\\HttpKernel\\Exception\\HttpException::class);
+        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
         $service->reviewCommission((int) $commissionId, (int) $referrer->id, 'approved', null);
     }
     public function test_pending_or_non_bdt_payments_never_create_commissions(): void
