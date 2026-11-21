@@ -52,9 +52,15 @@ class AssignmentController extends Controller
             abort_unless(QuestionSet::published()->whereKey($validated['question_set_id'])->exists(), 422, __('Only published question sets can be assigned.'));
         }
 
-        $batch->assignments()->create([
-            ...$validated,
+        $assignment = $batch->assignments()->create([
+            'title' => $validated['title'],
+            'instructions' => $validated['instructions'],
+            'due_at' => $validated['due_at'],
             'allow_late' => $request->boolean('allow_late'),
+            'max_marks' => $validated['max_marks'],
+            // Explicit assignment avoids silently dropping the optional relation
+            // when mass-assignment configuration changes.
+            'question_set_id' => $validated['question_set_id'] ?? null,
             // Admins manage the batch on behalf of its assigned teacher.
             'teacher_id' => $batch->teacher_id,
             'status' => 'published',
