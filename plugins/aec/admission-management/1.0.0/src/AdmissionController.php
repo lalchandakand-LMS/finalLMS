@@ -191,7 +191,7 @@ final class AdmissionController extends Controller
                 'phone_number' => $record->phone, 'role' => 'student', 'branch_id' => $record->branch_id,
                 'password' => Str::random(48),
             ]);
-                        $invoice = null;
+            $invoice = null;
             if ($admissionFee > 0) {
                 $invoice = Invoice::query()->create([
                     'user_id' => $student->id,
