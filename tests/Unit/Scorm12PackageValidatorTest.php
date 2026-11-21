@@ -31,7 +31,7 @@ class Scorm12PackageValidatorTest extends TestCase
     public function test_it_accepts_a_valid_scorm_12_sco_manifest(): void
     {
         $zip = new ZipArchive();
-        $zip->open($this->archive, ZipArchive::OVERWRITE);
+        $zip->open($this->archive, ZipArchive::CREATE | ZipArchive::OVERWRITE);
         $zip->addFromString('imsmanifest.xml', $this->manifest());
         $zip->addFromString('index.html', '<!doctype html><title>Lesson</title>');
         $zip->close();
