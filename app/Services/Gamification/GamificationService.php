@@ -30,16 +30,23 @@ class GamificationService
         }
 
         return DB::transaction(function () use ($user, $eventKey, $sourceType, $sourceId, $occurredAt): bool {
-            $profile = GamificationProfile::query()->firstOrCreate(['user_id' => $user->id]);
+            GamificationProfile::query()->firstOrCreate(['user_id' => $user->id]);
+            $profile = GamificationProfile::query()->where('user_id', $user->id)->lockForUpdate()->firstOrFail();
             $date = ($occurredAt ?? now())->copy()->startOfDay();
             $lastDate = $profile->current_streak_date?->copy()->startOfDay();
 
-            $created = GamificationEvent::query()->firstOrCreate(
-                ['user_id' => $user->id, 'event_key' => $eventKey, 'source_type' => $sourceType, 'source_id' => $sourceId],
-                ['xp' => self::XP_REWARDS[$eventKey], 'occurred_at' => $occurredAt ?? now()]
-            );
+            $inserted = DB::table('gamification_events')->insertOrIgnore([
+                'user_id' => $user->id,
+                'event_key' => $eventKey,
+                'source_type' => $sourceType,
+                'source_id' => $sourceId,
+                'xp' => self::XP_REWARDS[$eventKey],
+                'occurred_at' => $occurredAt ?? now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
 
-            if (! $created->wasRecentlyCreated) {
+            if ($inserted !== 1) {
                 return false;
             }
 
