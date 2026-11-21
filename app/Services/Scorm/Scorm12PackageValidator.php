@@ -124,7 +124,7 @@ class Scorm12PackageValidator
             }
 
             $xpath = new DOMXPath($document);
-            $resources = $xpath->query('//*[local-name()="resource" and @adlcp:scormtype="sco"]');
+            $resources = $xpath->query('//*[local-name()="resource" and @*[local-name()="scormtype" and namespace-uri()="http://www.adlnet.org/xsd/adlcp_rootv1p2"]="sco"]');
             if (! $resources || $resources->length < 1) {
                 throw new RuntimeException('The manifest does not declare a SCORM 1.2 SCO.');
             }
