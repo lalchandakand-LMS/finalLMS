@@ -1,14 +1,14 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use App\\Models\\GamificationBadge;
-use App\\Models\\GamificationEvent;
-use App\\Models\\GamificationProfile;
-use App\\Models\\User;
-use App\\Services\\Gamification\\GamificationService;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Tests\\TestCase;
+use App\Models\GamificationBadge;
+use App\Models\GamificationEvent;
+use App\Models\GamificationProfile;
+use App\Models\User;
+use App\Services\Gamification\GamificationService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class GamificationServiceTest extends TestCase
 {
