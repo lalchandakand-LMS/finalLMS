@@ -1,9 +1,9 @@
 <?php
 
-namespace App\\Services\\Plugins;
+namespace App\Services\Plugins;
 
-use App\\Models\\PluginInstallation;
-use App\\Models\\PluginSetting;
+use App\Models\PluginInstallation;
+use App\Models\PluginSetting;
 use InvalidArgumentException;
 use RuntimeException;
 
