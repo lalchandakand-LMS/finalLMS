@@ -63,6 +63,17 @@ class GamificationService
             $profile->longest_streak = max($profile->longest_streak, $profile->current_streak);
             $profile->save();
 
+            if ($eventKey === 'lesson_completed'
+                && GamificationEvent::query()->where('user_id', $user->id)->where('event_key', 'lesson_completed')->count() === 1) {
+                $this->awardBadge($user, 'first_lesson');
+            }
+            if ($profile->current_streak >= 7) {
+                $this->awardBadge($user, 'streak_7');
+            }
+            if ($eventKey === 'course_completed') {
+                $this->awardBadge($user, 'course_finisher', ['source_id' => $sourceId]);
+            }
+
             return true;
         }, 3);
     }
