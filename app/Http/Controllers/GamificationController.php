@@ -1,14 +1,14 @@
 <?php
 
-namespace App\\Http\\Controllers;
+namespace App\Http\Controllers;
 
-use App\\Models\\GamificationBadge;
-use App\\Models\\GamificationEvent;
-use App\\Models\\GamificationProfile;
-use App\\Services\\Gamification\\GamificationService;
-use Illuminate\\Http\\RedirectResponse;
-use Illuminate\\Http\\Request;
-use Illuminate\\View\\View;
+use App\Models\GamificationBadge;
+use App\Models\GamificationEvent;
+use App\Models\GamificationProfile;
+use App\Services\Gamification\GamificationService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 class GamificationController extends Controller
 {
@@ -35,7 +35,7 @@ class GamificationController extends Controller
         $validated = $request->validate([
             'leaderboard_opt_in' => ['required', 'boolean'],
             // A public leaderboard entry must always use a learner-chosen nickname.
-            'display_name' => ['required_if:leaderboard_opt_in,1', 'nullable', 'string', 'min:2', 'max:40', 'regex:/^[\\pL\\pN _.-]+$/u'],
+            'display_name' => ['required_if:leaderboard_opt_in,1', 'nullable', 'string', 'min:2', 'max:40', 'regex:/^[\pL\pN _.-]+$/u'],
             'show_streak' => ['required', 'boolean'],
         ]);
 
