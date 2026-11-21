@@ -165,6 +165,7 @@ class _InstructorAnalyticsPageState extends State<InstructorAnalyticsPage> {
                           runSpacing: 12,
                           children: [
                             _CountLabel(label: 'Submitted attempts', value: _number(assessments['submitted_attempts'])),
+                            _CountLabel(label: 'Graded attempts', value: _number(assessments['graded_attempts'])),
                             _CountLabel(label: 'Passed attempts', value: _number(assessments['passed_attempts'])),
                             _CountLabel(label: 'Pass rate', value: _percent(assessments['pass_rate'])),
                             _CountLabel(
