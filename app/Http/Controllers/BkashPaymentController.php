@@ -508,6 +508,15 @@ class BkashPaymentController extends Controller
 
             $event->update(['processing_status' => 'processed', 'processed_at' => now()]);
             $payment->refresh();
+            if ($payment->status === 'approved') {
+                try {
+                    if (class_exists(\\Aloms\\ReferralIncome\\ReferralIncomeService::class)) {
+                        app(\\Aloms\\ReferralIncome\\ReferralIncomeService::class)->recordApprovedPayment((int) $payment->id);
+                    }
+                } catch (\\Throwable $exception) {
+                    report($exception);
+                }
+            }
             PaymentAuditEvent::firstOrCreate(
                 ['correlation_id' => hash('sha256', $eventKey)],
                 [
