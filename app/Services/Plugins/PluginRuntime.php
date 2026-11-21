@@ -58,7 +58,10 @@ final class PluginRuntime
                     'plugin' => $plugin,
                     'entrypoint' => $this->verifiedEntrypointPath($plugin),
                 ];
-            } catch (Throwable $exception) {
+            } catch (PluginTrustFailure $exception) {
+                // A confirmed signature/manifest/integrity rejection is permanent.
+                // Infrastructure/configuration failures must bubble up for retry and
+                // must never permanently demote an otherwise valid installation.
                 report($exception);
                 $this->markFailed($plugin);
             }
@@ -216,28 +219,28 @@ final class PluginRuntime
             || preg_match('/^[a-f0-9]{64}$/D', $plugin->package_sha256) !== 1
             || ! is_string($plugin->signature_key_id)
             || trim($plugin->signature_key_id) === '') {
-            throw new RuntimeException('The active plugin is missing verified release metadata.');
+            throw new PluginTrustFailure('The active plugin is missing verified release metadata.');
         }
 
         $this->signatureVerifier->verifyInstalledSignature($plugin);
 
         $errors = $this->manifestValidator->errors($plugin->manifest ?? []);
         if ($errors !== []) {
-            throw new RuntimeException('The active plugin manifest is invalid: '.implode(' ', $errors));
+            throw new PluginTrustFailure('The active plugin manifest is invalid: '.implode(' ', $errors));
         }
 
         if (! hash_equals((string) $plugin->plugin_key, (string) $plugin->manifest['key'])
             || (string) $plugin->name !== (string) $plugin->manifest['name']
             || (string) $plugin->version !== (string) $plugin->manifest['version']
             || (string) $plugin->type !== (string) $plugin->manifest['type']) {
-            throw new RuntimeException('The active plugin manifest does not match its registry identity.');
+            throw new PluginTrustFailure('The active plugin manifest does not match its registry identity.');
         }
 
         $this->integrityVerifier->verify($plugin);
 
         $packageRoot = realpath(base_path((string) $plugin->package_path));
         if ($packageRoot === false || is_link(base_path((string) $plugin->package_path))) {
-            throw new RuntimeException('The active plugin package directory is unavailable or unsafe.');
+            throw new PluginTrustFailure('The active plugin package directory is unavailable or unsafe.');
         }
 
         $entrypoint = $packageRoot.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, $plugin->manifest['entrypoint']);
@@ -245,7 +248,7 @@ final class PluginRuntime
         $prefix = rtrim($packageRoot, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR;
         if ($realEntrypoint === false || ! is_file($realEntrypoint) || is_link($entrypoint)
             || ! str_starts_with($realEntrypoint, $prefix)) {
-            throw new RuntimeException('The active plugin entrypoint is missing or resolves outside its package.');
+            throw new PluginTrustFailure('The active plugin entrypoint is missing or resolves outside its package.');
         }
 
         return $realEntrypoint;
