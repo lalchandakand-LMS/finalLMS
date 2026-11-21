@@ -1,8 +1,47 @@
 # Project Status — Alom's English Center LMS
 
-Last consolidated: 2026-11-19
+Last consolidated: 2026-11-21
 Repository: https://github.com/lalchandakand-LMS/finalLMS
 Production domain: https://alomsenglishcenter.com
+
+## Current verified snapshot — 2026-11-21
+
+**Main commit after latest merges:** `d4b70a1caef9c1ccf168d99acf5c9ca1a336e976` (PR #389 squash merge; PR #388 merged immediately before it).  
+**Open pull requests:** #387 (this status refresh) and #390 (combo-payment batch-capacity protection) are open. PR #390's initial Laravel CI exposed an escaped namespace syntax error in its regression test; the test was corrected and exact-head CI is rerunning. PR #388 (SMS recipient delivery concurrency) and #389 (plugin runtime transient-verification resilience) are merged after exact-head Laravel CI and CodeQL passed.  
+**Production deployment:** blocked; the last owner-provided hosting update did not include an isolated staging subdomain or separate test database. Do not deploy production.
+
+### Recently merged
+
+| PR | Result |
+|---|---|
+| #384 | Merged — Instructor Academic Analytics API and Flutter dashboard; exact-head Laravel CI, CodeQL, instructor/student Flutter analysis/tests and APK build passed before merge. |
+| #386 | Merged — signed plugin manifest settings schemas, typed server-side validation, encrypted secrets, validated defaults, required-setting protection and Admin controls; exact-head Laravel CI and CodeQL passed before merge. |
+
+The PR #386 merge commit is `9d22623aa4cd34270909fa21b6427b74b46b42a8`. Post-merge workflow runs were not returned by the PR-run lookup; do not describe post-merge mainline CI as verified until separately confirmed.
+
+### Plugin platform status
+
+- The plugin package lifecycle includes signed package verification, manifest validation, dependency/conflict checks, permission grants, encrypted settings, integrity checks, and package update/rollback foundations.
+- Manifest-defined typed settings are now merged: text, HTTPS URL, email, integer, boolean, select and secret. Secret values remain encrypted and are not rendered back to Admin.
+- These foundations do **not** make plugins sandboxed. Plugin PHP executes as trusted application code.
+- Earlier audit inventory identified 8 executable first-party plugins and 56 metadata-only catalogue modules. Re-audit the current tree before changing these counts; metadata-only entries are not independently installable packages.
+- Scheduler callback registration, external provider webhook lifecycle guards, migration of legacy plugin jobs to lifecycle guards, and SMS retry idempotency/reconciliation remain audit priorities unless current source/tests prove otherwise.
+- Whole-LMS Update Center safe activation/rollback remains distinct from plugin package update/rollback and still needs end-to-end release rehearsal.
+
+### Release gates — still required
+
+1. Create isolated staging subdomain and separate test database.
+2. Provision and protect production signing keys; verify key rotation/revocation procedures.
+3. Run clean install and upgrade on supported MySQL/MariaDB, including migration rollback-safety checks.
+4. Exercise cPanel install/update/rollback, writable paths, cron/queue workers and private media storage.
+5. Complete full backup and file/database restore rehearsal, including recovery-time evidence.
+6. Verify official payment provider sandboxes, SMS/email/OTP delivery, live-class privacy and webhook replay protections.
+7. Complete five-portal browser acceptance and mobile app workflows.
+8. Review current open PRs and exact-head CI before each release.
+
+No production deployment, live payment activation, production migration or hosting-file change was performed by this workstream.
+
+---
 
 ## Status vocabulary
 
@@ -369,3 +408,11 @@ Production deployment remains blocked until staging, backup/restore, rollback an
 - PR #323 documentation branding cleanup: branch `docs/remove-external-ai-builder-branding`; the canonical Project Handoff replaces the duplicated legacy content, while `docs/AI_STUDIO_HANDOFF.md` remains only as a short compatibility pointer for older links. A source audit of the affected docs and Board Question Solver README found no external builder branding references. Latest recorded source commit before this status correction: `e0b59ddc7c12ee5f554d402d97185cee25422397`; exact-head Laravel CI and CodeQL are running.
 - PR #324 Visual Page Builder increment: current head `774d818eed2403bb5f5874e170d34e9aa0fdc517`; CodeQL passed and Laravel CI is running. Scope is accessible custom-page section drag-and-drop; device preview and page revision/rollback are not yet implemented.
 - No production deployment or live database/payment-provider changes have been performed. Do not infer staging or production acceptance from CI/package success.
+
+
+## Follow-up verification — 2026-11-21
+
+- PR #388 merged as `09016977f327e8dab99f96c9a0e298c786a926a9` after exact-head Laravel CI and CodeQL passed. The recipient-row lock prevents concurrent duplicate processing; provider acceptance followed by a database commit failure can still require provider idempotency/reconciliation.
+- PR #389 merged as `d4b70a1caef9c1ccf168d99acf5c9ca1a336e976` after exact-head Laravel CI and CodeQL passed. Confirmed trust failures remain fail-closed; transient verification infrastructure errors no longer permanently demote an active plugin.
+- Post-merge workflow runs for these squash commits were not returned by the PR-run lookup; do not claim post-merge mainline CI has passed based on the pre-merge checks.
+- The uploaded `finalLMS-advanced.zip` feature bundle is not yet imported. It requires a three-way reconciliation against the updated mainline so its admission, cart, discussion, certificate, Guardian, plugin-health and localization work is retained without reverting the above fixes.
