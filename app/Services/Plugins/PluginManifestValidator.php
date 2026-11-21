@@ -122,7 +122,7 @@ final class PluginManifestValidator
                         $default = $definition['default'];
                         $type = $definition['type'] ?? null;
                         $validDefault = match ($type) {
-                            'text' => is_string($default) && mb_strlen($default) <= 4096,
+                            'text' => is_string($default) && mb_strlen($default) >= 1 && mb_strlen($default) <= 4096,
                             'url' => is_string($default) && filter_var($default, FILTER_VALIDATE_URL) !== false
                                 && strtolower((string) parse_url($default, PHP_URL_SCHEME)) === 'https',
                             'email' => is_string($default) && filter_var($default, FILTER_VALIDATE_EMAIL) !== false,
