@@ -79,6 +79,7 @@ use App\Http\Controllers\AdminCourseContentPostController;
 use App\Http\Controllers\AdminCourseBuilderController;
 use App\Http\Controllers\CourseContentController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\GamificationController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/install', [InstallController::class, 'index'])->name('install.index');
