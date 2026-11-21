@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Aloms\AdmissionManagement;
 
 use App\Http\Controllers\Controller;
+use App\Models\Invoice;
 use App\Models\PluginInstallation;
 use App\Models\User;
 use App\Services\Plugins\PluginSettingsManager;
@@ -173,30 +174,52 @@ final class AdmissionController extends Controller
         ]);
     }
 
-    public function convertToStudent(Request $request, int $application): RedirectResponse
+    public function convertToStudent(Request $request, int $application, PluginSettingsManager $settings): RedirectResponse
     {
         $actor = $request->user();
         $this->assertBranchAssigned($actor);
-        $studentId = DB::transaction(function () use ($actor, $application): int {
+        $plugin = PluginInstallation::query()->where('plugin_key', 'aec.admission-management')->firstOrFail();
+        $admissionFee = max(0, (int) ($settings->get($plugin, 'admission_fee_bdt') ?? 0));
+        $conversion = DB::transaction(function () use ($actor, $application, $admissionFee): array {
             $record = AdmissionApplication::query()->lockForUpdate()->findOrFail($application);
             $this->assertApplicationBranch($actor, $record);
             abort_unless($record->status === 'approved', 422, 'Only approved applicants can be converted.');
-            if ($record->converted_student_id) return (int) $record->converted_student_id;
+            if ($record->converted_student_id) return ['student_id' => (int) $record->converted_student_id, 'invoice_id' => $record->admission_fee_invoice_id ? (int) $record->admission_fee_invoice_id : null];
             abort_if(User::query()->where('email', strtolower($record->email))->exists(), 409, 'An account already uses this email. Review it manually before conversion.');
             $student = User::query()->create([
                 'name' => $record->applicant_name, 'email' => strtolower($record->email),
                 'phone_number' => $record->phone, 'role' => 'student', 'branch_id' => $record->branch_id,
                 'password' => Str::random(48),
             ]);
-            $record->forceFill(['converted_student_id' => $student->id, 'converted_at' => now()])->save();
+                        $invoice = null;
+            if ($admissionFee > 0) {
+                $invoice = Invoice::query()->create([
+                    'user_id' => $student->id,
+                    'created_by' => $actor->id,
+                    'invoice_number' => 'AEC-ADM-'.now()->format('ymd').'-'.Str::upper(Str::random(8)),
+                    'title' => 'Admission Fee - '.$record->desired_course,
+                    'description' => 'Admission processing fee for application '.$record->application_code,
+                    'amount' => $admissionFee,
+                    'subtotal' => $admissionFee,
+                    'discount_type' => null,
+                    'discount_value' => 0,
+                    'due_date' => now()->addDays(14)->toDateString(),
+                    'status' => 'unpaid',
+                ]);
+            }
+            $record->forceFill([
+                'converted_student_id' => $student->id,
+                'converted_at' => now(),
+                'admission_fee_invoice_id' => $invoice?->id,
+            ])->save();
 
-            return (int) $student->id;
+            return ['student_id' => (int) $student->id, 'invoice_id' => $invoice?->id];
         }, 3);
-        $student = User::query()->findOrFail($studentId);
+        $student = User::query()->findOrFail($conversion['student_id']);
         $status = Password::sendResetLink(['email' => $student->email]);
-        Log::info('Admission conversion password setup requested.', ['application_id' => $application, 'student_id' => $studentId, 'broker_status' => $status]);
+        Log::info('Admission conversion password setup requested.', ['application_id' => $application, 'student_id' => $conversion['student_id'], 'invoice_id' => $conversion['invoice_id'], 'broker_status' => $status]);
 
-        return back()->with('success', 'Student account created. A password setup email was requested if mail is configured.');
+        return back()->with('success', 'Student account created.'.($conversion['invoice_id'] ? ' Admission fee invoice #'.$conversion['invoice_id'].' created.' : '').' A password setup email was requested if mail is configured.');
     }
 
     private function validatedApplicant(Request $request): array
