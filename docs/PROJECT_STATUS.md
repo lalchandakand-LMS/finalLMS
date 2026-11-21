@@ -6,8 +6,8 @@ Production domain: https://alomsenglishcenter.com
 
 ## Current verified snapshot — 2026-11-21
 
-**Main commit after latest merges:** `722e846e5bbc7245d344771e7e107f6792c1a521` (PR #390 merged; PR #387 documentation refresh merged immediately before it).  
-**Open pull requests at this update:** #392 (attendance route deduplication/module gate regression coverage) and #393 (plugin health-check transient failure handling). Both were open with exact-head CI running when this status was refreshed; PR #391 is this documentation update.  
+**Main commit after latest merges:** `c87433a3d44dd9b27bded7145057711b8263782c` (PR #392 merged; PR #390 and #387 merged immediately before it).  
+**Open pull requests at this update:** #393 (plugin health-check transient failure handling) remained open with exact-head CI running; PR #391 is this documentation update. PR #392 has merged.  
 **Production deployment:** blocked; the last owner-provided hosting update did not include an isolated staging subdomain or separate test database. Do not deploy production.
 
 ### Recently merged
@@ -18,6 +18,7 @@ Production domain: https://alomsenglishcenter.com
 | #386 | Merged — signed plugin manifest settings schemas, typed server-side validation, encrypted secrets, validated defaults, required-setting protection and Admin controls; exact-head Laravel CI and CodeQL passed before merge. |
 | #387 | Merged as `4ccf11aab5e45b1aadc2d41870b99038b67a24a5` — project status documentation refresh; exact-head Laravel test, package and CodeQL jobs passed before merge. |
 | #390 | Merged as `722e846e5bbc7245d344771e7e107f6792c1a521` — prevents manual approval from overbooking a batch reserved by another pending combo/cart payment; regression test added; exact-head Laravel test, package and CodeQL jobs passed before merge. |
+| #392 | Merged as `c87433a3d44dd9b27bded7145057711b8263782c` — removes duplicate unguarded Student, Teacher and Admin attendance route declarations; a feature test confirms unique declarations and module middleware; exact-head Laravel test, package and CodeQL jobs passed before merge. |
 
 The PR #386 merge commit is `9d22623aa4cd34270909fa21b6427b74b46b42a8`. Post-merge workflow runs were not returned by the PR-run lookup; do not describe post-merge mainline CI as verified until separately confirmed.
 
@@ -29,7 +30,7 @@ Mainline fixes selectively carried into the bundle:
 - PR #388 SMS recipient row locking and post-transaction campaign completion, with a duplicate-job regression test.
 - PR #389 plugin runtime catches only confirmed `PluginTrustFailure` during signature/manifest/integrity preflight; operational failures bubble for retry, with regression coverage.
 - PR #390 pending combo/cart batch reservations are included in capacity checks during manual payment approval, with regression coverage.
-- PR #392 attendance route deduplication and module-gate regression test are also present in the local artifact; PR #392 itself remains open pending exact-head CI.
+- PR #392 attendance route deduplication and module-gate regression test are also present in the local artifact; PR #392 has now merged to main.
 
 Additional ZIP-only corrections:
 - Admission status no longer discloses internal reviewer notes; conflicting email/phone identity matches are rejected; capacity considers pending direct/combo reservations; newly created accounts dispatch `Registered` after commit.
