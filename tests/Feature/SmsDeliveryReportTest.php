@@ -127,6 +127,58 @@ class SmsDeliveryReportTest extends TestCase
             ->assertSessionHasErrors('audience');
     }
 
+
+    public function test_duplicate_queued_recipient_job_does_not_send_or_count_twice(): void
+    {
+        config([
+            'services.twilio.sid' => 'AC'.str_repeat('0', 32),
+            'services.twilio.token' => 'test-token',
+            'services.twilio.from' => '+15005550006',
+        ]);
+        Http::fake(['api.twilio.com/*' => Http::response(['sid' => 'SM123'], 201)]);
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create([
+            'role' => 'student',
+            'phone_number' => '+8801712345678',
+            'phone_verified_at' => now(),
+            'sms_marketing_opt_in' => true,
+        ]);
+        $campaign = SmsCampaign::create([
+            'created_by' => $admin->id,
+            'title' => 'Duplicate guard',
+            'message' => 'One delivery only.',
+            'audience' => 'student',
+            'status' => 'sending',
+            'recipient_count' => 1,
+            'sent_count' => 0,
+            'failed_count' => 0,
+            'skipped_count' => 0,
+        ]);
+        $recipient = SmsCampaignRecipient::create([
+            'sms_campaign_id' => $campaign->id,
+            'user_id' => $student->id,
+            'status' => 'pending',
+        ]);
+        $job = new SendSmsCampaignRecipient($recipient->id);
+
+        $job->handle(app(ModuleRegistry::class), app(SmsGateway::class));
+        $job->handle(app(ModuleRegistry::class), app(SmsGateway::class));
+
+        $this->assertDatabaseHas('sms_campaign_recipients', [
+            'id' => $recipient->id,
+            'status' => 'sent',
+        ]);
+        $this->assertDatabaseHas('sms_campaigns', [
+            'id' => $campaign->id,
+            'status' => 'completed',
+            'sent_count' => 1,
+            'failed_count' => 0,
+            'skipped_count' => 0,
+        ]);
+        Http::assertSentCount(1);
+    }
+
     public function test_queued_campaign_recipient_is_skipped_if_sms_module_was_disabled(): void
     {
         Http::fake();
