@@ -23,7 +23,22 @@
                 @if($assignment->status === 'published' && (! $assignment->due_at->isPast() || $assignment->allow_late))
                     <form method="POST" enctype="multipart/form-data" action="{{ route('student.assignments.submit', $assignment) }}">
                         @csrf
-                        <label>{{ __('Resubmit answer') }}<textarea name="answer" maxlength="50000"></textarea></label>
+                        @if($assignment->questionSet)
+                            @foreach($assignment->questionSet->questions as $question)
+                                <label>{{ $loop->iteration }}. {{ $question->question }}
+                                    @if(in_array($question->type, ['mcq', 'true_false'], true))
+                                        <select name="question_answers[{{ $question->id }}]" required>
+                                            <option value="">{{ __('Choose an answer') }}</option>
+                                            @foreach($question->options ?? [] as $option)<option value="{{ $option }}">{{ $option }}</option>@endforeach
+                                        </select>
+                                    @else
+                                        <textarea name="question_answers[{{ $question->id }}]" maxlength="5000" required></textarea>
+                                    @endif
+                                </label>
+                            @endforeach
+                        @else
+                            <label>{{ __('Resubmit answer') }}<textarea name="answer" maxlength="50000"></textarea></label>
+                        @endif
                         <label>{{ __('Replace attachment (PDF, DOC, DOCX, JPG, PNG; max 10 MB)') }}<input type="file" name="attachment" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"></label>
                         <button type="submit" class="btn primary">{{ __('Resubmit assignment') }}</button>
                     </form>
