@@ -510,10 +510,10 @@ class BkashPaymentController extends Controller
             $payment->refresh();
             if ($payment->status === 'approved') {
                 try {
-                    if (class_exists(\\Aloms\\ReferralIncome\\ReferralIncomeService::class)) {
-                        app(\\Aloms\\ReferralIncome\\ReferralIncomeService::class)->recordApprovedPayment((int) $payment->id);
+                    if (class_exists(\Aloms\ReferralIncome\ReferralIncomeService::class)) {
+                        app(\Aloms\ReferralIncome\ReferralIncomeService::class)->recordApprovedPayment((int) $payment->id);
                     }
-                } catch (\\Throwable $exception) {
+                } catch (\Throwable $exception) {
                     report($exception);
                 }
             }
