@@ -120,12 +120,22 @@ final class PluginManifestValidator
                     }
                     if (array_key_exists('default', $definition)) {
                         $default = $definition['default'];
-                        if (! is_scalar($default) || is_array($default)) {
-                            $errors[] = "settings_schema.{$settingKey}.default must be a scalar.";
-                        } elseif (($definition['type'] ?? null) === 'select'
-                            && is_array($definition['options'] ?? null)
-                            && ! in_array((string) $default, $definition['options'], true)) {
-                            $errors[] = "settings_schema.{$settingKey}.default must match one of its options.";
+                        $type = $definition['type'] ?? null;
+                        $validDefault = match ($type) {
+                            'text' => is_string($default) && mb_strlen($default) <= 4096,
+                            'url' => is_string($default) && filter_var($default, FILTER_VALIDATE_URL) !== false
+                                && strtolower((string) parse_url($default, PHP_URL_SCHEME)) === 'https',
+                            'email' => is_string($default) && filter_var($default, FILTER_VALIDATE_EMAIL) !== false,
+                            'integer' => is_int($default) || (is_string($default) && filter_var($default, FILTER_VALIDATE_INT) !== false),
+                            'boolean' => is_bool($default) || in_array($default, [0, 1, '0', '1'], true),
+                            'select' => is_string($default) && is_array($definition['options'] ?? null)
+                                && in_array($default, $definition['options'], true),
+                            // Secret defaults would be embedded in the signed manifest and are not supported.
+                            'secret' => false,
+                            default => false,
+                        };
+                        if (! $validDefault) {
+                            $errors[] = "settings_schema.{$settingKey}.default is invalid for its setting type.";
                         }
                     }
                 }
