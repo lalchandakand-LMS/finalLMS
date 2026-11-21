@@ -106,6 +106,41 @@ class PluginSettingsManagerTest extends TestCase
         }
     }
 
+    public function test_admin_sees_manifest_defined_settings_without_existing_values(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $this->schemaPlugin();
+
+        $this->actingAs($admin)->get(route('admin.plugins.index'))
+            ->assertOk()
+            ->assertSee('API endpoint')
+            ->assertSee('Contact email')
+            ->assertSee('API secret')
+            ->assertSee('name="setting_key" value="endpoint"', false)
+            ->assertDontSee('schema-secret-value');
+    }
+
+    public function test_admin_cannot_save_invalid_manifest_defined_setting_value(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $plugin = $this->schemaPlugin();
+
+        $this->actingAs($admin)
+            ->from(route('admin.plugins.index'))
+            ->post(route('admin.plugins.settings.store', $plugin->plugin_key), [
+                'setting_key' => 'endpoint',
+                'setting_value' => 'http://insecure.example.com',
+            ])
+            ->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHasErrors('setting_value');
+
+        $this->assertDatabaseMissing('plugin_settings', [
+            'plugin_key' => $plugin->plugin_key,
+            'setting_key' => 'endpoint',
+        ]);
+        $this->assertArrayNotHasKey('setting_value', session()->get('_old_input', []));
+    }
+
     public function test_plugin_settings_can_be_updated_and_deleted_without_exposing_values(): void
     {
         $plugin = $this->plugin();
