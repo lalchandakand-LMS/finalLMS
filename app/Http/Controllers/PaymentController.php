@@ -381,7 +381,7 @@ class PaymentController extends Controller
 
             if ($payment->batch_id) {
                 $batch = Batch::query()->lockForUpdate()->findOrFail($payment->batch_id);
-                if ($batch->status !== 'open' || ! $this->hasAvailableSeat($batch, false)) {
+                if ($batch->status !== 'open' || ! $this->hasAvailableSeat($batch, $payment->id)) {
                     return 'full';
                 }
             }
@@ -407,7 +407,7 @@ class PaymentController extends Controller
                     if ($item->batch_id) {
                         $batch = Batch::query()->lockForUpdate()->find($item->batch_id);
                         if (! $batch || $batch->course_id !== $item->course_id
-                            || $batch->status !== 'open' || ! $this->hasAvailableSeat($batch, false)) {
+                            || $batch->status !== 'open' || ! $this->hasAvailableSeat($batch, $payment->id)) {
                             return 'full';
                         }
                     }
@@ -510,16 +510,30 @@ class PaymentController extends Controller
         return Storage::disk('local')->download($payment->proof_path);
     }
 
-    private function hasAvailableSeat(Batch $batch, bool $includePendingPayments = true): bool
+    private function hasAvailableSeat(Batch $batch, ?int $excludePaymentId = null): bool
     {
         $enrollments = Enrollment::query()
             ->where('batch_id', $batch->id)
             ->whereIn('status', ['active', 'completed'])
             ->count();
-        $pendingPayments = $includePendingPayments
-            ? Payment::query()->where('batch_id', $batch->id)->where('status', 'pending')->count()
-            : 0;
 
-        return $enrollments + $pendingPayments < $batch->capacity;
+        $pendingPayments = Payment::query()
+            ->where('batch_id', $batch->id)
+            ->where('status', 'pending')
+            ->when($excludePaymentId !== null, fn ($query) => $query->whereKeyNot($excludePaymentId))
+            ->count();
+
+        // Multi-course cart/combo payments reserve batch seats through the
+        // payment_combo_courses snapshot rather than payments.batch_id.
+        // Count those reservations too, excluding only the payment currently
+        // being approved so competing pending checkouts cannot overbook a batch.
+        $pendingComboPayments = DB::table('payment_combo_courses')
+            ->join('payments', 'payments.id', '=', 'payment_combo_courses.payment_id')
+            ->where('payment_combo_courses.batch_id', $batch->id)
+            ->where('payments.status', 'pending')
+            ->when($excludePaymentId !== null, fn ($query) => $query->where('payments.id', '<>', $excludePaymentId))
+            ->count();
+
+        return $enrollments + $pendingPayments + $pendingComboPayments < $batch->capacity;
     }
 }
