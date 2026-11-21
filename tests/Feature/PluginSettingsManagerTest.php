@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\Plugins\PluginSettingsManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 use Tests\TestCase;
 
 class PluginSettingsManagerTest extends TestCase
@@ -29,6 +30,24 @@ class PluginSettingsManagerTest extends TestCase
         return PluginInstallation::query()->findOrFail($id);
     }
 
+    private function schemaPlugin(): PluginInstallation
+    {
+        $plugin = $this->plugin('inactive', 'aec.test-settings-schema');
+        $plugin->forceFill(['manifest' => [
+            'key' => $plugin->plugin_key,
+            'settings_schema' => [
+                'endpoint' => ['label' => 'API endpoint', 'type' => 'url', 'required' => true],
+                'contact_email' => ['label' => 'Contact email', 'type' => 'email'],
+                'retry_count' => ['label' => 'Retry count', 'type' => 'integer'],
+                'enabled' => ['label' => 'Enabled', 'type' => 'boolean'],
+                'region' => ['label' => 'Region', 'type' => 'select', 'options' => ['asia', 'europe']],
+                'api_secret' => ['label' => 'API secret', 'type' => 'secret'],
+            ],
+        ]])->save();
+
+        return $plugin->fresh();
+    }
+
     public function test_plugin_settings_are_encrypted_at_rest_and_decrypted_for_plugin_services(): void
     {
         $plugin = $this->plugin();
@@ -41,6 +60,124 @@ class PluginSettingsManagerTest extends TestCase
         $this->assertNotSame('super-secret-value', $stored);
         $this->assertStringNotContainsString('super-secret-value', $stored);
         $this->assertSame(['api.secret_key'], array_column($manager->keys($plugin), 'key'));
+    }
+
+    public function test_manifest_settings_schema_enforces_typed_values_and_encryption(): void
+    {
+        $plugin = $this->schemaPlugin();
+        $manager = app(PluginSettingsManager::class);
+
+        $manager->set($plugin, 'endpoint', 'https://api.example.com/v1');
+        $manager->set($plugin, 'contact_email', 'ops@example.com');
+        $manager->set($plugin, 'retry_count', '3');
+        $manager->set($plugin, 'enabled', '1');
+        $manager->set($plugin, 'region', 'asia');
+        $manager->set($plugin, 'api_secret', 'schema-secret-value');
+
+        $this->assertSame('https://api.example.com/v1', $manager->get($plugin, 'endpoint'));
+        $this->assertSame('3', $manager->get($plugin, 'retry_count'));
+        $this->assertSame('1', $manager->get($plugin, 'enabled'));
+        $stored = DB::table('plugin_settings')->where('plugin_key', $plugin->plugin_key)
+            ->where('setting_key', 'api_secret')->value('encrypted_value');
+        $this->assertStringNotContainsString('schema-secret-value', $stored);
+    }
+
+    public function test_manifest_defaults_are_available_until_overridden_and_required_values_cannot_be_cleared(): void
+    {
+        $plugin = $this->schemaPlugin();
+        $plugin->forceFill(['manifest' => array_replace_recursive($plugin->manifest, [
+            'settings_schema' => [
+                'retry_count' => ['default' => 5],
+                'enabled' => ['default' => true],
+                'region' => ['default' => 'asia'],
+            ],
+        ])])->save();
+        $manager = app(PluginSettingsManager::class);
+
+        $this->assertSame('5', $manager->get($plugin, 'retry_count'));
+        $this->assertSame('1', $manager->get($plugin, 'enabled'));
+        $this->assertSame('asia', $manager->get($plugin, 'region'));
+        $manager->set($plugin, 'retry_count', '7');
+        $this->assertSame('7', $manager->get($plugin, 'retry_count'));
+
+        $this->expectException(InvalidArgumentException::class);
+        $manager->forget($plugin, 'endpoint');
+    }
+
+    public function test_manifest_settings_schema_rejects_undeclared_keys_and_invalid_typed_values(): void
+    {
+        $plugin = $this->schemaPlugin();
+        $manager = app(PluginSettingsManager::class);
+
+        foreach ([
+            ['unknown_setting', 'value'],
+            ['endpoint', 'http://api.example.com'],
+            ['contact_email', 'not-an-email'],
+            ['retry_count', '3.5'],
+            ['enabled', 'yes'],
+            ['region', 'antarctica'],
+        ] as [$key, $value]) {
+            try {
+                $manager->set($plugin, $key, $value);
+                $this->fail("Expected {$key} to reject its invalid value.");
+            } catch (InvalidArgumentException) {
+                $this->assertDatabaseMissing('plugin_settings', [
+                    'plugin_key' => $plugin->plugin_key,
+                    'setting_key' => $key,
+                ]);
+            }
+        }
+    }
+
+    public function test_admin_sees_manifest_defined_settings_without_existing_values(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $this->schemaPlugin();
+
+        $this->actingAs($admin)->get(route('admin.plugins.index'))
+            ->assertOk()
+            ->assertSee('API endpoint')
+            ->assertSee('Contact email')
+            ->assertSee('API secret')
+            ->assertSee('name="setting_key" value="endpoint"', false)
+            ->assertDontSee('schema-secret-value');
+    }
+
+    public function test_configured_select_and_boolean_settings_require_an_explicit_replacement(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $plugin = $this->schemaPlugin();
+        $manager = app(PluginSettingsManager::class);
+        $manager->set($plugin, 'region', 'europe');
+        $manager->set($plugin, 'enabled', '1');
+
+        $response = $this->actingAs($admin)->get(route('admin.plugins.index'));
+
+        $response->assertOk()
+            ->assertSee('Configured — choose a replacement')
+            ->assertSee('A value is configured. Existing values are never displayed.')
+            ->assertDontSee('value="europe" selected', false);
+    }
+
+    public function test_admin_cannot_save_invalid_manifest_defined_setting_value(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $plugin = $this->schemaPlugin();
+
+        $this->actingAs($admin)
+            ->from(route('admin.plugins.index'))
+            ->post(route('admin.plugins.settings.store', $plugin->plugin_key), [
+                'setting_key' => 'endpoint',
+                'setting_value' => 'http://insecure.example.com',
+            ])
+            ->assertRedirect(route('admin.plugins.index'))
+            ->assertSessionHasErrors('setting_value');
+
+        $this->assertDatabaseMissing('plugin_settings', [
+            'plugin_key' => $plugin->plugin_key,
+            'setting_key' => 'endpoint',
+        ]);
+        $this->assertArrayNotHasKey('setting_value', session()->get('_old_input', []));
     }
 
     public function test_plugin_settings_can_be_updated_and_deleted_without_exposing_values(): void

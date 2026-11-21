@@ -7,7 +7,7 @@ final class PluginManifestValidator
     private const ALLOWED_FIELDS = [
         'schema_version', 'key', 'name', 'version', 'type', 'entrypoint',
         'requires', 'dependencies', 'conflicts', 'portals', 'permissions',
-        'capabilities', 'migrations',
+        'capabilities', 'migrations', 'settings_schema',
     ];
 
     private const ALLOWED_TYPES = ['module', 'integration', 'builder', 'portal', 'ai', 'provider'];
@@ -71,6 +71,75 @@ final class PluginManifestValidator
         }
         if (array_key_exists('migrations', $manifest) && ! $this->isSafeRelativePath($manifest['migrations'], [])) {
             $errors[] = 'migrations must be a safe relative directory path.';
+        }
+
+        if (array_key_exists('settings_schema', $manifest)) {
+            $schema = $manifest['settings_schema'];
+            if (! is_array($schema) || array_is_list($schema) || count($schema) > 30) {
+                $errors[] = 'settings_schema must be an object with no more than 30 settings.';
+            } else {
+                foreach ($schema as $settingKey => $definition) {
+                    if (! is_string($settingKey) || preg_match('/^[a-z][a-z0-9_.-]{0,119}$/D', $settingKey) !== 1) {
+                        $errors[] = 'settings_schema contains an invalid setting key.';
+                        continue;
+                    }
+                    if (! is_array($definition) || array_is_list($definition)) {
+                        $errors[] = "settings_schema.{$settingKey} must be an object.";
+                        continue;
+                    }
+                    $allowed = ['label', 'type', 'required', 'options', 'default'];
+                    foreach (array_diff(array_keys($definition), $allowed) as $field) {
+                        $errors[] = "Unsupported settings_schema.{$settingKey}.{$field}.";
+                    }
+                    if (! $this->isNonEmptyString($definition['label'] ?? null, 120)) {
+                        $errors[] = "settings_schema.{$settingKey}.label is required.";
+                    }
+                    if (! in_array($definition['type'] ?? null, ['text', 'url', 'email', 'integer', 'boolean', 'select', 'secret'], true)) {
+                        $errors[] = "settings_schema.{$settingKey}.type is invalid.";
+                    }
+                    if (array_key_exists('required', $definition) && ! is_bool($definition['required'])) {
+                        $errors[] = "settings_schema.{$settingKey}.required must be boolean.";
+                    }
+                    if (($definition['type'] ?? null) === 'select') {
+                        $options = $definition['options'] ?? null;
+                        if (! is_array($options) || ! array_is_list($options) || $options === [] || count($options) > 50) {
+                            $errors[] = "settings_schema.{$settingKey}.options must be a non-empty list.";
+                        } else {
+                            foreach ($options as $option) {
+                                if (! is_string($option) || trim($option) === '' || mb_strlen($option) > 160) {
+                                    $errors[] = "settings_schema.{$settingKey}.options must contain short strings.";
+                                    break;
+                                }
+                            }
+                            if (count($options) !== count(array_unique($options))) {
+                                $errors[] = "settings_schema.{$settingKey}.options must not contain duplicates.";
+                            }
+                        }
+                    } elseif (array_key_exists('options', $definition)) {
+                        $errors[] = "settings_schema.{$settingKey}.options is only valid for select settings.";
+                    }
+                    if (array_key_exists('default', $definition)) {
+                        $default = $definition['default'];
+                        $type = $definition['type'] ?? null;
+                        $validDefault = match ($type) {
+                            'text' => is_string($default) && mb_strlen($default) >= 1 && mb_strlen($default) <= 4096,
+                            'url' => is_string($default) && filter_var($default, FILTER_VALIDATE_URL) !== false
+                                && strtolower((string) parse_url($default, PHP_URL_SCHEME)) === 'https',
+                            'email' => is_string($default) && filter_var($default, FILTER_VALIDATE_EMAIL) !== false,
+                            'integer' => is_int($default) || (is_string($default) && filter_var($default, FILTER_VALIDATE_INT) !== false),
+                            'boolean' => is_bool($default) || in_array($default, [0, 1, '0', '1'], true),
+                            'select' => is_string($default) && is_array($definition['options'] ?? null)
+                                && in_array($default, $definition['options'], true),
+                            // Secret defaults would be embedded in the signed manifest and are not supported.
+                            'secret' => false,
+                            default => false,
+                        };
+                        if (! $validDefault) {
+                            $errors[] = "settings_schema.{$settingKey}.default is invalid for its setting type.";
+                        }
+                    }
+                }
+            }
         }
 
         return array_values(array_unique($errors));
