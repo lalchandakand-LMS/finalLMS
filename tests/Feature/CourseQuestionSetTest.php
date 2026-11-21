@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Course;
 use App\Models\CourseContentPost;
+use App\Models\Batch;
 use App\Models\QuestionBankQuestion;
 use App\Models\QuestionSet;
 use App\Models\User;
