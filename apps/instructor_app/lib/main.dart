@@ -106,7 +106,9 @@ class _InstructorLoginState extends State<InstructorLogin> {
         setState(() => error = e.toString());
       }
     } finally {
-      if (mounted) setState(() => busy = false);
+      if (mounted) {
+        setState(() => busy = false);
+      }
     }
   }
 
@@ -121,9 +123,13 @@ class _InstructorLoginState extends State<InstructorLogin> {
         setState(() => statusMessage = outcome.message);
       }
     } catch (e) {
-      if (mounted) setState(() => error = e.toString());
+      if (mounted) {
+        setState(() => error = e.toString());
+      }
     } finally {
-      if (mounted) setState(() => busy = false);
+      if (mounted) {
+        setState(() => busy = false);
+      }
     }
   }
 
@@ -441,7 +447,9 @@ class _InstructorAssessmentCreatePageState extends State<InstructorAssessmentCre
         if (batches.isNotEmpty) batchId = (batches.first['id'] as num).toInt();
       });
     } catch (e) {
-      if (mounted) setState(() => error = e.toString());
+      if (mounted) {
+        setState(() => error = e.toString());
+      }
     } finally {
       if (mounted) {
         setState(() => loading = false);
@@ -526,7 +534,9 @@ class _InstructorAssessmentCreatePageState extends State<InstructorAssessmentCre
     question.dispose();
     for (final item in options) { item.dispose(); }
     marks.dispose();
-    if (result != null && mounted) setState(() => questions.add(result));
+    if (result != null && mounted) {
+      setState(() => questions.add(result));
+    }
   }
 
   Future<void> publish() async {
@@ -562,9 +572,13 @@ class _InstructorAssessmentCreatePageState extends State<InstructorAssessmentCre
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Assessment published.')));
       Navigator.pop(context);
     } catch (e) {
-      if (mounted) setState(() => error = e.toString());
+      if (mounted) {
+        setState(() => error = e.toString());
+      }
     } finally {
-      if (mounted) setState(() => saving = false);
+      if (mounted) {
+        setState(() => saving = false);
+      }
     }
   }
 
@@ -608,7 +622,8 @@ class _InstructorAssessmentCreatePageState extends State<InstructorAssessmentCre
               ListTile(title: const Text('Starts'), subtitle: Text(startsAt.toLocal().toString().split('.').first),
                 trailing: IconButton(icon: const Icon(Icons.edit_calendar), onPressed: () async {
                   final picked = await pickDateTime(startsAt);
-                  if (picked != null) setState(() {
+                  if (picked != null) {
+                    setState(() {
                     startsAt = picked;
                     if (!endsAt.isAfter(startsAt)) endsAt = startsAt.add(const Duration(hours: 1));
                   });
