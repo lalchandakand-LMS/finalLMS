@@ -62,12 +62,14 @@ class InstructorAnalyticsController extends Controller
             ->where('exams.status', 'published')
             ->where('exam_attempts.status', 'submitted')
             ->selectRaw('COUNT(*) as submitted')
+            ->selectRaw('COUNT(exam_attempts.score) as graded')
             ->selectRaw('AVG(exam_attempts.score) as average_score')
             ->selectRaw('SUM(CASE WHEN exam_attempts.score >= exams.pass_marks THEN 1 ELSE 0 END) as passed')
             ->first();
 
         $submittedExams = (int) ($examTotals->submitted ?? 0);
         $passedExams = (int) ($examTotals->passed ?? 0);
+        $gradedExams = (int) ($examTotals->graded ?? 0);
 
         return response()->json([
             'data' => [
@@ -95,9 +97,10 @@ class InstructorAnalyticsController extends Controller
                 'assessments' => [
                     'published' => $examCount,
                     'submitted_attempts' => $submittedExams,
+                    'graded_attempts' => $gradedExams,
                     'passed_attempts' => $passedExams,
-                    'pass_rate' => $submittedExams > 0
-                        ? round(($passedExams / $submittedExams) * 100, 1)
+                    'pass_rate' => $gradedExams > 0
+                        ? round(($passedExams / $gradedExams) * 100, 1)
                         : null,
                     'average_score' => $examTotals?->average_score !== null
                         ? round((float) $examTotals->average_score, 2)
