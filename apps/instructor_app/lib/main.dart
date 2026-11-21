@@ -102,7 +102,9 @@ class _InstructorLoginState extends State<InstructorLogin> {
         setState(() => statusMessage = outcome.message);
       }
     } catch (e) {
-      if (mounted) setState(() => error = e.toString());
+      if (mounted) {
+        setState(() => error = e.toString());
+      }
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -441,7 +443,9 @@ class _InstructorAssessmentCreatePageState extends State<InstructorAssessmentCre
     } catch (e) {
       if (mounted) setState(() => error = e.toString());
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) {
+        setState(() => loading = false);
+      }
     }
   }
 
