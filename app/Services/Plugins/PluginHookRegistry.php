@@ -19,14 +19,21 @@ final class PluginHookRegistry
     /** @var array<string, list<string>> */
     private array $capabilities = [];
 
-    public function registerHook(string $pluginKey, string $hook, callable $callback, int $priority = 10): void
+    public function registerHook(string $pluginKey, string $hook, string $permission, callable $callback, int $priority = 10): void
     {
-        if (preg_match('/^[a-z0-9][a-z0-9_.-]{1,120}$/D', $hook) !== 1) {
-            throw new InvalidArgumentException('Invalid plugin hook identifier.');
+        if (preg_match('/^[a-z0-9][a-z0-9_.-]{1,120}$/D', $hook) !== 1
+            || preg_match('/^[a-z][a-z0-9_.-]{1,120}$/D', $permission) !== 1) {
+            throw new InvalidArgumentException('Invalid plugin hook or permission identifier.');
+        }
+
+        $plugin = PluginInstallation::query()->where('plugin_key', $pluginKey)->first();
+        if (! $plugin || ! in_array($permission, $plugin->manifest['permissions'] ?? [], true)) {
+            throw new InvalidArgumentException('Plugin hooks must require a permission declared in the signed manifest.');
         }
 
         $this->hooks[$hook][] = [
             'plugin_key' => $pluginKey,
+            'permission' => $permission,
             'priority' => $priority,
             'callback' => $callback,
         ];
@@ -99,7 +106,20 @@ final class PluginHookRegistry
         $results = [];
 
         foreach ($entries as $entry) {
-            if (! isset($activeKeys[$entry['plugin_key']])) {
+            $plugin = $activeKeys[$entry['plugin_key']] ?? null;
+            if (! $plugin instanceof PluginInstallation) {
+                continue;
+            }
+
+            $declaredPermissions = is_array($plugin->manifest['permissions'] ?? null)
+                ? $plugin->manifest['permissions']
+                : [];
+            $metadata = is_array($plugin->metadata) ? $plugin->metadata : [];
+            $grantedPermissions = is_array($metadata['granted_permissions'] ?? null)
+                ? $metadata['granted_permissions']
+                : [];
+            if (! in_array($entry['permission'], $declaredPermissions, true)
+                || ! in_array($entry['permission'], $grantedPermissions, true)) {
                 continue;
             }
 
@@ -198,29 +218,33 @@ final class PluginHookRegistry
      */
     private function activeVerifiedPlugins(): array
     {
-        try {
-            if (! Schema::hasTable('plugin_registry')) {
-                return [];
-            }
-        } catch (Throwable) {
+        // A genuinely absent registry table means the plugin subsystem is not
+        // installed yet. Database/schema outages must bubble up so callers do not
+        // mistake an infrastructure failure for an empty trusted-plugin set.
+        if (! Schema::hasTable('plugin_registry')) {
             return [];
         }
 
-        $trustedKeys = config('plugins.trusted_public_keys', []);
-        if (! is_array($trustedKeys)) {
-            return [];
-        }
-
+        $signatureVerifier = app(PluginSignatureVerifier::class);
+        $integrityVerifier = app(PluginIntegrityVerifier::class);
         $active = [];
-        foreach (PluginInstallation::query()->where('status', 'active')->get() as $plugin) {
-            $trustedKey = is_string($plugin->signature_key_id)
-                ? ($trustedKeys[$plugin->signature_key_id] ?? null)
-                : null;
 
-            if ($plugin->signature_verified_at !== null
-                && is_string($trustedKey)
-                && trim($trustedKey) !== '') {
+        foreach (PluginInstallation::query()->where('status', 'active')->get() as $plugin) {
+            try {
+                // A persisted "verified" timestamp and a still-present key ID are
+                // not proof that the current trusted key still validates the release.
+                if (! $signatureVerifier->verifyInstalledSignature($plugin)) {
+                    continue;
+                }
+
+                // Hooks and portal navigation execute in the current process after
+                // boot; re-check installed files so tampering/revocation takes effect.
+                $integrityVerifier->verify($plugin);
                 $active[$plugin->plugin_key] = $plugin;
+            } catch (PluginTrustFailure $exception) {
+                report($exception);
+                // Confirmed trust/integrity failures must fail closed.
+                continue;
             }
         }
 

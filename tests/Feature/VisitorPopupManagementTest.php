@@ -12,6 +12,7 @@ use App\Models\PluginInstallation;
 use App\Models\User;
 use App\Services\Modules\ModuleRegistry;
 use App\Services\Plugins\PluginRuntime;
+use App\Services\Plugins\PluginSignatureVerifier;
 use FilesystemIterator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -47,7 +48,15 @@ class VisitorPopupManagementTest extends TestCase
             $hashes[$relative] = hash_file('sha256', $item->getRealPath());
         }
 
-        config(['plugins.trusted_public_keys' => ['aec-release-2026' => base64_encode(random_bytes(SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES))]]);
+        $keyPair = sodium_crypto_sign_keypair();
+        config(['plugins.trusted_public_keys' => [
+            'aec-release-2026' => base64_encode(sodium_crypto_sign_publickey($keyPair)),
+        ]]);
+        $checksum = hash('sha256', 'signed-popup-ads-1.0.0');
+        $signature = base64_encode(sodium_crypto_sign_detached(
+            PluginSignatureVerifier::payloadForSignature($manifest, $checksum),
+            sodium_crypto_sign_secretkey($keyPair),
+        ));
 
         $plugin = PluginInstallation::query()->where('plugin_key', 'aec.popup-ads')->first()
             ?? new PluginInstallation();
@@ -58,7 +67,7 @@ class VisitorPopupManagementTest extends TestCase
             'type' => $manifest['type'],
             'status' => 'active',
             'manifest' => $manifest,
-            'package_sha256' => hash('sha256', 'signed-popup-ads-1.0.0'),
+            'package_sha256' => $checksum,
             'signature_key_id' => 'aec-release-2026',
             'signature_verified_at' => now(),
             'package_path' => $packageRelative,
@@ -67,6 +76,8 @@ class VisitorPopupManagementTest extends TestCase
             'metadata' => [
                 'granted_permissions' => ['popup-ads.manage'],
                 'integrity_version' => 1,
+                'release_signature' => $signature,
+                'signature_record_version' => 1,
                 'installed_file_hashes' => $hashes,
             ],
         ])->save();

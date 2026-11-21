@@ -133,9 +133,13 @@ final class PluginContext
         $this->router->getRoutes()->refreshNameLookups();
     }
 
-    public function registerHook(string $hook, callable $callback, int $priority = 10): void
+    public function registerHook(string $hook, string $permission, callable $callback, int $priority = 10): void
     {
-        $this->hooks()->registerHook((string) $this->plugin->plugin_key, $hook, $callback, $priority);
+        if (! $this->hasPermission($permission)) {
+            throw new InvalidArgumentException('Plugin hooks must require a permission declared in the signed manifest.');
+        }
+
+        $this->hooks()->registerHook((string) $this->plugin->plugin_key, $hook, $permission, $callback, $priority);
     }
 
     /**
