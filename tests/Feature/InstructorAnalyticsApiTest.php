@@ -87,6 +87,42 @@ class InstructorAnalyticsApiTest extends TestCase
         ExamAttempt::create(['exam_id' => $exam->id, 'student_id' => $student->id, 'started_at' => now()->subHour(), 'submitted_at' => now(), 'score' => 8, 'status' => 'submitted']);
         ExamAttempt::create(['exam_id' => $exam->id, 'student_id' => User::factory()->create(['role' => 'student'])->id, 'started_at' => now()->subHour(), 'submitted_at' => now(), 'score' => 2, 'status' => 'submitted']);
 
+        // Even inconsistent legacy rows must not leak another teacher's batch data.
+        $foreignBatchAssignment = $otherBatch->assignments()->create([
+            'teacher_id' => $teacher->id,
+            'title' => 'Foreign batch assignment',
+            'instructions' => 'Must not be counted.',
+            'due_at' => now()->addDay(),
+            'max_marks' => 10,
+            'status' => 'published',
+        ]);
+        AssignmentSubmission::create([
+            'assignment_id' => $foreignBatchAssignment->id,
+            'student_id' => $otherStudent->id,
+            'answer' => 'Foreign batch submission',
+            'submitted_at' => now(),
+            'score' => 10,
+            'status' => 'graded',
+        ]);
+
+        $foreignBatchExam = $otherBatch->exams()->create([
+            'teacher_id' => $teacher->id,
+            'title' => 'Foreign batch assessment',
+            'starts_at' => now()->subDay(),
+            'ends_at' => now()->addDay(),
+            'duration_minutes' => 30,
+            'pass_marks' => 5,
+            'status' => 'published',
+        ]);
+        ExamAttempt::create([
+            'exam_id' => $foreignBatchExam->id,
+            'student_id' => $otherStudent->id,
+            'started_at' => now()->subHour(),
+            'submitted_at' => now(),
+            'score' => 10,
+            'status' => 'submitted',
+        ]);
+
         $response = $this->withToken($this->token($teacher))->getJson('/api/v1/instructor/analytics/summary');
 
         $response->assertOk()
