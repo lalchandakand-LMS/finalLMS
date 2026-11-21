@@ -16,6 +16,9 @@ return new class implements PluginContract {
     public function register(PluginContext $context): void
     {
         View::addNamespace('referral-income', dirname(__DIR__).'/resources/views');
+        $context->routesForPortal('public', 'r', 'referral.public.', function (): void {
+            Route::get('/{code}', [ReferralIncomeController::class, 'track'])->where('code', '[A-Za-z0-9]{6,32}')->name('track');
+        });
         $context->routesForPortal('student', 'student/referrals', 'student.referrals.', function (): void {
             Route::get('/', [ReferralIncomeController::class, 'dashboard'])->name('dashboard');
             Route::post('/apply', [ReferralIncomeController::class, 'apply'])->middleware('throttle:5,1')->name('apply');
