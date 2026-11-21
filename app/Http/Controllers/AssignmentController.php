@@ -96,8 +96,19 @@ class AssignmentController extends Controller
         $validated = $request->validate($rules);
         $questionAnswers = $validated['question_answers'] ?? [];
         if ($assignment->questionSet) {
-            $allowedIds = $assignment->questionSet->questions->pluck('id')->map(fn ($id) => (string) $id)->all();
+            $questionsById = $assignment->questionSet->questions->keyBy(fn ($question) => (string) $question->id);
+            $allowedIds = $questionsById->keys()->all();
             abort_unless(array_diff(array_keys($questionAnswers), $allowedIds) === [], 422);
+
+            foreach ($questionAnswers as $questionId => $answer) {
+                $question = $questionsById->get((string) $questionId);
+                if (in_array($question->type, ['mcq', 'true_false'], true)
+                    && ! in_array($answer, $question->options ?? [], true)) {
+                    throw ValidationException::withMessages([
+                        'question_answers.'.$questionId => __('Please choose one of the available options.'),
+                    ]);
+                }
+            }
         }
 
         $file = $request->file('attachment');
