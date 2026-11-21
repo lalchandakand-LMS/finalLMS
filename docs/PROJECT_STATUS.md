@@ -6,8 +6,8 @@ Production domain: https://alomsenglishcenter.com
 
 ## Current verified snapshot — 2026-11-21
 
-**Main commit after latest merges:** `d4b70a1caef9c1ccf168d99acf5c9ca1a336e976` (PR #389 squash merge; PR #388 merged immediately before it).  
-**Open pull requests:** #387 (this status refresh) and #390 (combo-payment batch-capacity protection) are open. PR #390's initial Laravel CI exposed an escaped namespace syntax error in its regression test; the test was corrected and exact-head CI is rerunning. PR #388 (SMS recipient delivery concurrency) and #389 (plugin runtime transient-verification resilience) are merged after exact-head Laravel CI and CodeQL passed.  
+**Main commit after latest merges:** `722e846e5bbc7245d344771e7e107f6792c1a521` (PR #390 merged; PR #387 documentation refresh merged immediately before it).  
+**Open pull requests:** none found in the repository search at this snapshot (2026-11-21).  
 **Production deployment:** blocked; the last owner-provided hosting update did not include an isolated staging subdomain or separate test database. Do not deploy production.
 
 ### Recently merged
@@ -16,8 +16,21 @@ Production domain: https://alomsenglishcenter.com
 |---|---|
 | #384 | Merged — Instructor Academic Analytics API and Flutter dashboard; exact-head Laravel CI, CodeQL, instructor/student Flutter analysis/tests and APK build passed before merge. |
 | #386 | Merged — signed plugin manifest settings schemas, typed server-side validation, encrypted secrets, validated defaults, required-setting protection and Admin controls; exact-head Laravel CI and CodeQL passed before merge. |
+| #387 | Merged as `4ccf11aab5e45b1aadc2d41870b99038b67a24a5` — project status documentation refresh; exact-head Laravel test, package and CodeQL jobs passed before merge. |
+| #390 | Merged as `722e846e5bbc7245d344771e7e107f6792c1a521` — prevents manual approval from overbooking a batch reserved by another pending combo/cart payment; regression test added; exact-head Laravel test, package and CodeQL jobs passed before merge. |
 
 The PR #386 merge commit is `9d22623aa4cd34270909fa21b6427b74b46b42a8`. Post-merge workflow runs were not returned by the PR-run lookup; do not describe post-merge mainline CI as verified until separately confirmed.
+
+### Latest ZIP audit — not yet imported into main
+
+The uploaded `finalLMS-advanced.zip` feature bundle remains separate from the repository. Its current patched local copy passes ZIP integrity, PHP syntax lint for 646 PHP files, and exact English/Bangla JSON key parity (3,179 keys each). A full PHPUnit/database run against this archive has not been performed locally.
+
+The re-audit found and patched three issues in that archive only:
+- Admission capacity checks now count pending direct and combo/cart batch reservations once per payment.
+- Newly provisioned admission accounts now dispatch Laravel's `Registered` event after the admission transaction commits so the normal email-verification notification can run.
+- Public certificate verification now treats only `issued` as authentic; pending/draft/unknown statuses return no identity or course details.
+
+These patches have not been merged into main. The archive still needs a three-way source reconciliation, full CI, and staged migration/browser acceptance before import or release.
 
 ### Plugin platform status
 
