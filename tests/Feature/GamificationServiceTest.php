@@ -1,14 +1,14 @@
 <?php
 
-namespace Tests\Feature;
+namespace Tests\\Feature;
 
-use App\Models\GamificationBadge;
-use App\Models\GamificationEvent;
-use App\Models\GamificationProfile;
-use App\Models\User;
-use App\Services\Gamification\GamificationService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
+use App\\Models\\GamificationBadge;
+use App\\Models\\GamificationEvent;
+use App\\Models\\GamificationProfile;
+use App\\Models\\User;
+use App\\Services\\Gamification\\GamificationService;
+use Illuminate\\Foundation\\Testing\\RefreshDatabase;
+use Tests\\TestCase;
 
 class GamificationServiceTest extends TestCase
 {
@@ -59,5 +59,38 @@ class GamificationServiceTest extends TestCase
         $this->assertTrue($service->awardBadge($student, $badge->key));
         $this->assertFalse($service->awardBadge($student, $badge->key));
         $this->assertDatabaseCount('gamification_user_badges', 1);
+    }
+
+    public function test_leaderboard_opt_in_requires_a_learner_chosen_display_name(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+
+        $response = $this->actingAs($student)->from('/my/gamification')->put('/my/gamification/preferences', [
+            'leaderboard_opt_in' => '1',
+            'show_streak' => '0',
+        ]);
+
+        $response->assertRedirect('/my/gamification');
+        $response->assertSessionHasErrors('display_name');
+        $this->assertDatabaseMissing('gamification_profiles', ['user_id' => $student->id]);
+    }
+
+    public function test_private_leaderboard_preferences_do_not_require_a_display_name(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+
+        $response = $this->actingAs($student)->from('/my/gamification')->put('/my/gamification/preferences', [
+            'leaderboard_opt_in' => '0',
+            'show_streak' => '1',
+        ]);
+
+        $response->assertRedirect('/my/gamification');
+        $response->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('gamification_profiles', [
+            'user_id' => $student->id,
+            'leaderboard_opt_in' => false,
+            'display_name' => null,
+            'show_streak' => false,
+        ]);
     }
 }
