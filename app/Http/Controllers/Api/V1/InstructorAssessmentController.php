@@ -44,6 +44,80 @@ class InstructorAssessmentController extends Controller
         ]);
     }
 
+    public function store(Request $request, \App\Models\Batch $batch): JsonResponse
+    {
+        $teacher = $request->user();
+        abort_unless($teacher?->isTeacher(), 403);
+        abort_unless((int) $batch->teacher_id === (int) $teacher->id, 404);
+
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:180'],
+            'instructions' => ['nullable', 'string', 'max:5000'],
+            'starts_at' => ['required', 'date', 'after:now'],
+            'ends_at' => ['required', 'date', 'after:starts_at'],
+            'duration_minutes' => ['required', 'integer', 'min:1', 'max:600'],
+            'pass_marks' => ['required', 'integer', 'min:0'],
+            'questions_per_attempt' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'questions' => ['required', 'array', 'min:1', 'max:100'],
+            'questions.*.question' => ['required', 'string', 'max:3000'],
+            'questions.*.options' => ['required', 'array', 'size:4'],
+            'questions.*.options.*' => ['required', 'string', 'max:500', 'distinct'],
+            'questions.*.correct_option' => ['required', 'integer', 'between:0,3'],
+            'questions.*.marks' => ['required', 'integer', 'min:1', 'max:100'],
+            'questions.*.negative_marks' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:100'],
+        ]);
+
+        $questions = collect($validated['questions']);
+        $totalMarks = (int) $questions->sum('marks');
+        abort_if($validated['pass_marks'] > $totalMarks, 422, 'Pass marks cannot exceed the total marks.');
+        abort_if(
+            ($validated['questions_per_attempt'] ?? 0) > $questions->count(),
+            422,
+            'Questions per attempt cannot exceed the number of questions in this exam.'
+        );
+
+        $exam = \Illuminate\Support\Facades\DB::transaction(function () use ($batch, $teacher, $validated, $questions): Exam {
+            $exam = $batch->exams()->create([
+                'teacher_id' => $teacher->id,
+                'title' => $validated['title'],
+                'instructions' => $validated['instructions'] ?? null,
+                'starts_at' => $validated['starts_at'],
+                'ends_at' => $validated['ends_at'],
+                'duration_minutes' => $validated['duration_minutes'],
+                'pass_marks' => $validated['pass_marks'],
+                'questions_per_attempt' => $validated['questions_per_attempt'] ?? null,
+                'status' => 'published',
+            ]);
+
+            foreach ($questions as $index => $question) {
+                $exam->questions()->create([
+                    'question' => $question['question'],
+                    'options' => $question['options'],
+                    'correct_option' => $question['correct_option'],
+                    'marks' => $question['marks'],
+                    'negative_marks' => $question['negative_marks'] ?? 0,
+                    'position' => $index + 1,
+                ]);
+            }
+
+            return $exam->load('batch.course')->loadCount('questions');
+        });
+
+        return response()->json([
+            'message' => 'Assessment published successfully.',
+            'data' => [
+                'id' => $exam->id,
+                'title' => $exam->title,
+                'status' => $exam->status,
+                'batch' => $exam->batch?->title,
+                'course' => $exam->batch?->course?->title,
+                'questions_count' => $exam->questions_count,
+                'starts_at' => $exam->starts_at?->toIso8601String(),
+                'ends_at' => $exam->ends_at?->toIso8601String(),
+            ],
+        ], 201);
+    }
+
     public function results(Request $request, Exam $exam): JsonResponse
     {
         $teacher = $request->user();

@@ -102,9 +102,13 @@ class _InstructorLoginState extends State<InstructorLogin> {
         setState(() => statusMessage = outcome.message);
       }
     } catch (e) {
-      if (mounted) setState(() => error = e.toString());
+      if (mounted) {
+        setState(() => error = e.toString());
+      }
     } finally {
-      if (mounted) setState(() => busy = false);
+      if (mounted) {
+        setState(() => busy = false);
+      }
     }
   }
 
@@ -119,9 +123,13 @@ class _InstructorLoginState extends State<InstructorLogin> {
         setState(() => statusMessage = outcome.message);
       }
     } catch (e) {
-      if (mounted) setState(() => error = e.toString());
+      if (mounted) {
+        setState(() => error = e.toString());
+      }
     } finally {
-      if (mounted) setState(() => busy = false);
+      if (mounted) {
+        setState(() => busy = false);
+      }
     }
   }
 
@@ -219,7 +227,19 @@ class _InstructorAssessmentsPageState extends State<InstructorAssessmentsPage> {
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
       title: const Text('Assessments & Results'),
-      actions: [IconButton(onPressed: loading ? null : load, icon: const Icon(Icons.refresh))],
+      actions: [
+        IconButton(
+          tooltip: 'Create assessment',
+          onPressed: () async {
+            await Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => InstructorAssessmentCreatePage(api: widget.api),
+            ));
+            if (mounted) load();
+          },
+          icon: const Icon(Icons.add),
+        ),
+        IconButton(onPressed: loading ? null : load, icon: const Icon(Icons.refresh)),
+      ],
     ),
     body: loading
       ? const Center(child: CircularProgressIndicator())
@@ -374,6 +394,270 @@ class _AssessmentMetric extends StatelessWidget {
         ],
       ),
     ),
+  );
+}
+
+
+class InstructorAssessmentCreatePage extends StatefulWidget {
+  const InstructorAssessmentCreatePage({required this.api, super.key});
+  final MobileApi api;
+
+  @override
+  State<InstructorAssessmentCreatePage> createState() => _InstructorAssessmentCreatePageState();
+}
+
+class _InstructorAssessmentCreatePageState extends State<InstructorAssessmentCreatePage> {
+  final title = TextEditingController();
+  final instructions = TextEditingController();
+  final duration = TextEditingController(text: '30');
+  final passMarks = TextEditingController(text: '1');
+  final questionLimit = TextEditingController();
+  List<Map<String, dynamic>> batches = [];
+  final List<Map<String, dynamic>> questions = [];
+  int? batchId;
+  DateTime startsAt = DateTime.now().add(const Duration(days: 1));
+  DateTime endsAt = DateTime.now().add(const Duration(days: 1, hours: 1));
+  bool loading = true;
+  bool saving = false;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    loadBatches();
+  }
+
+  @override
+  void dispose() {
+    title.dispose();
+    instructions.dispose();
+    duration.dispose();
+    passMarks.dispose();
+    questionLimit.dispose();
+    super.dispose();
+  }
+
+  Future<void> loadBatches() async {
+    try {
+      final response = await widget.api.get('/instructor/batches');
+      if (!mounted) return;
+      final items = response['data'] as List<dynamic>? ?? [];
+      setState(() {
+        batches = items.whereType<Map<String, dynamic>>().toList();
+        if (batches.isNotEmpty) batchId = (batches.first['id'] as num).toInt();
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() => error = e.toString());
+      }
+    } finally {
+      if (mounted) {
+        setState(() => loading = false);
+      }
+    }
+  }
+
+  Future<DateTime?> pickDateTime(DateTime initial) async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: initial.isBefore(DateTime.now()) ? DateTime.now() : initial,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 730)),
+    );
+    if (date == null || !mounted) return null;
+    final time = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(initial));
+    if (time == null) return null;
+    return DateTime(date.year, date.month, date.day, time.hour, time.minute);
+  }
+
+  Future<void> addQuestion() async {
+    final question = TextEditingController();
+    final options = List.generate(4, (_) => TextEditingController());
+    final marks = TextEditingController(text: '1');
+    int correct = 0;
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Add question'),
+          content: SizedBox(
+            width: 480,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(controller: question, minLines: 2, maxLines: 4,
+                    decoration: const InputDecoration(labelText: 'Question')),
+                  const SizedBox(height: 8),
+                  ...List.generate(4, (index) => TextField(
+                    controller: options[index],
+                    decoration: InputDecoration(labelText: 'Option ${index + 1}'),
+                  )),
+                  DropdownButtonFormField<int>(
+                    initialValue: correct,
+                    decoration: const InputDecoration(labelText: 'Correct option'),
+                    items: List.generate(4, (index) => DropdownMenuItem(
+                      value: index, child: Text('Option ${index + 1}'),
+                    )),
+                    onChanged: (value) => setDialogState(() => correct = value ?? 0),
+                  ),
+                  TextField(controller: marks, keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Marks')),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+            FilledButton(
+              onPressed: () {
+                final markValue = int.tryParse(marks.text.trim());
+                final values = options.map((item) => item.text.trim()).toList();
+                if (question.text.trim().isEmpty || values.any((item) => item.isEmpty) ||
+                    values.toSet().length != 4 || markValue == null || markValue < 1) {
+                  return;
+                }
+                Navigator.pop(dialogContext, {
+                  'question': question.text.trim(),
+                  'options': values,
+                  'correct_option': correct,
+                  'marks': markValue,
+                  'negative_marks': 0,
+                });
+              },
+              child: const Text('Add question'),
+            ),
+          ],
+        ),
+      ),
+    );
+    question.dispose();
+    for (final item in options) { item.dispose(); }
+    marks.dispose();
+    if (result != null && mounted) {
+      setState(() => questions.add(result));
+    }
+  }
+
+  Future<void> publish() async {
+    final durationValue = int.tryParse(duration.text.trim());
+    final passValue = int.tryParse(passMarks.text.trim());
+    final limitText = questionLimit.text.trim();
+    final limitValue = limitText.isEmpty ? null : int.tryParse(limitText);
+    if (batchId == null || title.text.trim().isEmpty || questions.isEmpty ||
+        durationValue == null || durationValue < 1 || passValue == null || passValue < 0 ||
+        (limitText.isNotEmpty && (limitValue == null || limitValue < 1 || limitValue > questions.length)) ||
+        !startsAt.isAfter(DateTime.now()) || !endsAt.isAfter(startsAt)) {
+      setState(() => error = 'Check the batch, title, dates, marks, duration and question list.');
+      return;
+    }
+    final totalMarks = questions.fold<int>(0, (sum, item) => sum + (item['marks'] as int));
+    if (passValue > totalMarks) {
+      setState(() => error = 'Pass marks cannot exceed total question marks ($totalMarks).');
+      return;
+    }
+    setState(() { saving = true; error = null; });
+    try {
+      await widget.api.postJson('/instructor/batches/$batchId/exams', {
+        'title': title.text.trim(),
+        'instructions': instructions.text.trim(),
+        'starts_at': startsAt.toUtc().toIso8601String(),
+        'ends_at': endsAt.toUtc().toIso8601String(),
+        'duration_minutes': durationValue,
+        'pass_marks': passValue,
+        if (limitValue != null) 'questions_per_attempt': limitValue,
+        'questions': questions,
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Assessment published.')));
+      Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        setState(() => error = e.toString());
+      }
+    } finally {
+      if (mounted) {
+        setState(() => saving = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Create assessment')),
+    body: loading
+      ? const Center(child: CircularProgressIndicator())
+      : ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            if (error != null) Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            ),
+            DropdownButtonFormField<int>(
+              initialValue: batchId,
+              decoration: const InputDecoration(labelText: 'Your batch', border: OutlineInputBorder()),
+              items: batches.map((batch) => DropdownMenuItem<int>(
+                value: (batch['id'] as num).toInt(),
+                child: Text(batch['title']?.toString() ?? 'Batch'),
+              )).toList(),
+              onChanged: (value) => setState(() => batchId = value),
+            ),
+            if (batches.isEmpty) const ListTile(title: Text('No assigned batches are available.')),
+            const SizedBox(height: 12),
+            TextField(controller: title, decoration: const InputDecoration(labelText: 'Assessment title', border: OutlineInputBorder())),
+            const SizedBox(height: 12),
+            TextField(controller: instructions, minLines: 2, maxLines: 4,
+              decoration: const InputDecoration(labelText: 'Instructions (optional)', border: OutlineInputBorder())),
+            const SizedBox(height: 12),
+            TextField(controller: duration, keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Duration (minutes)', border: OutlineInputBorder())),
+            const SizedBox(height: 12),
+            TextField(controller: passMarks, keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Pass marks', border: OutlineInputBorder())),
+            const SizedBox(height: 12),
+            TextField(controller: questionLimit, keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Questions per attempt (optional)', border: OutlineInputBorder())),
+            Card(child: Column(children: [
+              ListTile(title: const Text('Starts'), subtitle: Text(startsAt.toLocal().toString().split('.').first),
+                trailing: IconButton(icon: const Icon(Icons.edit_calendar), onPressed: () async {
+                  final picked = await pickDateTime(startsAt);
+                  if (picked != null) {
+                    setState(() {
+                    startsAt = picked;
+                      if (!endsAt.isAfter(startsAt)) {
+                        endsAt = startsAt.add(const Duration(hours: 1));
+                      }
+                    });
+                  }
+                })),
+              ListTile(title: const Text('Ends'), subtitle: Text(endsAt.toLocal().toString().split('.').first),
+                trailing: IconButton(icon: const Icon(Icons.schedule), onPressed: () async {
+                  final picked = await pickDateTime(endsAt);
+                  if (picked != null) {
+                    setState(() => endsAt = picked);
+                  }
+                })),
+            ])),
+            const SizedBox(height: 12),
+            Row(children: [
+              Expanded(child: Text('Questions (${questions.length})', style: Theme.of(context).textTheme.titleLarge)),
+              FilledButton.icon(onPressed: addQuestion, icon: const Icon(Icons.add), label: const Text('Add')),
+            ]),
+            ...questions.asMap().entries.map((entry) => Card(child: ListTile(
+              title: Text(entry.value['question'].toString()),
+              subtitle: Text('4 options · ${entry.value['marks']} marks'),
+              trailing: IconButton(icon: const Icon(Icons.delete_outline),
+                onPressed: () => setState(() => questions.removeAt(entry.key))),
+            ))),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: saving || loading || batches.isEmpty ? null : publish,
+              icon: saving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.publish),
+              label: const Text('Publish assessment'),
+            ),
+          ],
+        ),
   );
 }
 
