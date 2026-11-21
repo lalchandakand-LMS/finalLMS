@@ -99,7 +99,7 @@ class PluginSettingsManagerTest extends TestCase
         $manager->set($plugin, 'retry_count', '7');
         $this->assertSame('7', $manager->get($plugin, 'retry_count'));
 
-        $this->expectException(\\InvalidArgumentException::class);
+        $this->expectException(\InvalidArgumentException::class);
         $manager->forget($plugin, 'endpoint');
     }
 
