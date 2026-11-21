@@ -33,6 +33,7 @@ return new class extends Migration {
                 $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
                 $table->foreignId('converted_student_id')->nullable()->constrained('users')->nullOnDelete();
                 $table->timestamp('converted_at')->nullable();
+                $table->foreignId('admission_fee_invoice_id')->nullable()->constrained('invoices')->nullOnDelete();
                 $table->timestamps();
                 $table->index(['status', 'branch_id'], 'admission_status_branch_idx');
                 $table->index(['email', 'application_code'], 'admission_tracking_lookup_idx');
