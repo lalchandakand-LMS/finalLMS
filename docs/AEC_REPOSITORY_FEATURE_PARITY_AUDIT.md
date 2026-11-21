@@ -76,3 +76,15 @@ The source has been committed to `feat/aec-feature-parity-port`. It has not yet 
 - Phonetics: retain the existing target package and port only missing assignment/exam/batch features.
 
 Do not enable production deployment based on this branch alone. Require passing CI, staging installation, authorization/privacy tests, payment sandbox checks, and backup/restore rehearsal.
+
+
+### HR & Payroll package added
+A target-native `aec.hr-staff-management` package has also been added with:
+- staff profiles, employee codes, department/designation, contact details and active/on-leave/inactive status;
+- branch-scoped staff directory and branch-manager payroll preparation;
+- monthly payroll ledger with gross, bonus, deductions and net amount;
+- unique staff/month constraint to prevent duplicate payroll records;
+- central-admin-only paid confirmation with a required disbursement reference;
+- activity-log events and feature tests for branch isolation, duplicate payroll and paid-state authorization.
+
+This is a foundation, not a complete HR suite: leave requests/approvals, staff-user linking, payroll slips, exports and full accounting integration remain open. The package is not yet activated or production-accepted.
