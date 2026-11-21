@@ -28,10 +28,10 @@ final class HrStaffManagementPluginTest extends TestCase
             $migration = require base_path('plugins/aec/hr-staff-management/1.0.0/migrations/2026_11_21_020000_create_hr_staff_payroll_tables.php');
             $migration->up();
         }
-        Route::get('/__hr', [HrController::class, 'index']);
-        Route::post('/__hr/staff', [HrController::class, 'storeStaff']);
-        Route::post('/__hr/payroll', [HrController::class, 'recordPayroll']);
-        Route::post('/__hr/payroll/{payroll}/paid', [HrController::class, 'markPayrollPaid']);
+        Route::get('/__hr', [HrController::class, 'index'])->name('branch.hr.index');
+        Route::post('/__hr/staff', [HrController::class, 'storeStaff'])->name('branch.hr.staff.store');
+        Route::post('/__hr/payroll', [HrController::class, 'recordPayroll'])->name('branch.hr.payrolls.store');
+        Route::post('/__hr/payroll/{payroll}/paid', [HrController::class, 'markPayrollPaid'])->name('admin.hr.payroll.mark-paid');
     }
 
     public function test_branch_manager_can_only_see_and_prepare_payroll_for_their_branch(): void
