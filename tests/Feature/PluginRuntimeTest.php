@@ -350,6 +350,29 @@ PHP,
     }
 
 
+
+    public function test_transient_signature_verification_failure_does_not_mark_plugin_failed(): void
+    {
+        $plugin = $this->createPlugin($this->validEntrypoint());
+
+        $verifier = \Mockery::mock(PluginSignatureVerifier::class);
+        $verifier->shouldReceive('verifyInstalledSignature')
+            ->once()
+            ->andThrow(new RuntimeException('Simulated temporary signing configuration failure'));
+
+        app()->instance(PluginSignatureVerifier::class, $verifier);
+        app()->forgetInstance(PluginRuntime::class);
+
+        try {
+            app(PluginRuntime::class)->registerActivePlugins();
+            $this->fail('A transient signature-verification failure must interrupt registration.');
+        } catch (RuntimeException $exception) {
+            $this->assertSame('Simulated temporary signing configuration failure', $exception->getMessage());
+        }
+
+        $this->assertSame('active', $plugin->fresh()->status);
+    }
+
     public function test_transient_registry_query_failure_does_not_permanently_disable_plugin_registration(): void
     {
         $this->createPlugin($this->validEntrypoint());
