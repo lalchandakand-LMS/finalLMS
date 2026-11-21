@@ -8,13 +8,18 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Assignment extends Model
 {
-    protected $fillable = ['batch_id', 'teacher_id', 'title', 'instructions', 'due_at', 'allow_late', 'max_marks', 'status'];
+    protected $fillable = ['batch_id', 'teacher_id', 'title', 'instructions', 'due_at', 'allow_late', 'max_marks', 'status', 'question_set_id'];
 
     protected $casts = ['due_at' => 'datetime', 'allow_late' => 'boolean', 'max_marks' => 'integer'];
 
     public function batch(): BelongsTo
     {
         return $this->belongsTo(Batch::class);
+    }
+
+    public function questionSet(): BelongsTo
+    {
+        return $this->belongsTo(QuestionSet::class);
     }
 
     public function submissions(): HasMany
