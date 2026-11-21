@@ -50,6 +50,11 @@ class AdminPluginManagerController extends Controller
         ]);
 
         $settingKey = $validated['setting_key'];
+        $settingsSchema = $plugin->manifest['settings_schema'] ?? null;
+        if (is_array($settingsSchema) && $settingsSchema !== [] && $settings->definition($plugin, $settingKey) === null) {
+            return back()->withErrors(['setting_key' => __('This setting is not declared in the signed plugin manifest.')])
+                ->withInput($request->except('setting_value'));
+        }
         $settingValue = (string) ($validated['setting_value'] ?? '');
         if ($settingValue === '') {
             if ($settings->isRequired($plugin, $settingKey)) {
