@@ -64,6 +64,31 @@ final class ReferralIncomePluginTest extends TestCase
         ]);
     }
 
+    public function test_pending_or_non_bdt_payments_never_create_commissions(): void
+    {
+        $referrer = User::factory()->create(['role' => 'student']);
+        $buyer = User::factory()->create(['role' => 'student']);
+        $service = app(ReferralIncomeService::class);
+        $service->applyCode($buyer, $service->createOrGetCode($referrer));
+        $course = Course::factory()->create();
+
+        $pending = Payment::query()->create([
+            'user_id' => $buyer->id, 'course_id' => $course->id, 'method' => 'bkash',
+            'amount' => 2000, 'currency' => 'BDT',
+            'transaction_reference' => 'REF-PENDING-'.strtoupper(bin2hex(random_bytes(5))),
+            'status' => 'pending',
+        ]);
+        $foreign = Payment::query()->create([
+            'user_id' => $buyer->id, 'course_id' => $course->id, 'method' => 'card',
+            'amount' => 2000, 'currency' => 'USD',
+            'transaction_reference' => 'REF-FOREIGN-'.strtoupper(bin2hex(random_bytes(5))),
+            'status' => 'approved',
+        ]);
+
+        $this->assertNull($service->recordApprovedPayment((int) $pending->id));
+        $this->assertNull($service->recordApprovedPayment((int) $foreign->id));
+        $this->assertDatabaseCount('referral_commissions', 0);
+    }
     public function test_self_referral_and_second_attribution_are_rejected(): void
     {
         $owner = User::factory()->create(['role' => 'teacher']);
