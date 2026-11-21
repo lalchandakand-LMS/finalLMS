@@ -83,7 +83,8 @@ final class ReferralIncomeService
             $payment = Payment::query()->lockForUpdate()->find($paymentId);
             if (!$payment || $payment->status !== 'approved' || (float) $payment->amount <= 0
                 || strtoupper((string) $payment->currency) !== 'BDT'
-                || $payment->learn_earn_exam_id) return null;
+                || $payment->learn_earn_exam_id
+                || (filled($payment->gateway_provider) && ($payment->gateway_provider !== 'bkash' || blank($payment->gateway_transaction_id)))) return null;
             $attribution = DB::table('referral_attributions')->where('referred_user_id', $payment->user_id)
                 ->where('status', 'active')->lockForUpdate()->first();
             if (!$attribution) return null;
