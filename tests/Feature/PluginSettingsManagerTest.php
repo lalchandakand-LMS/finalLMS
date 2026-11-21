@@ -143,6 +143,22 @@ class PluginSettingsManagerTest extends TestCase
             ->assertDontSee('schema-secret-value');
     }
 
+    public function test_configured_select_and_boolean_settings_require_an_explicit_replacement(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $plugin = $this->schemaPlugin();
+        $manager = app(PluginSettingsManager::class);
+        $manager->set($plugin, 'region', 'europe');
+        $manager->set($plugin, 'enabled', '1');
+
+        $response = $this->actingAs($admin)->get(route('admin.plugins.index'));
+
+        $response->assertOk()
+            ->assertSee('Configured — choose a replacement')
+            ->assertSee('A value is configured. Existing values are never displayed.')
+            ->assertDontSee('value="europe" selected', false);
+    }
+
     public function test_admin_cannot_save_invalid_manifest_defined_setting_value(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
