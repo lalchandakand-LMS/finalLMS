@@ -21,7 +21,7 @@ final class ReferralIncomeController extends Controller
         $pendingCode = $request->session()->pull('aec_referral_code');
         if (is_string($pendingCode) && $pendingCode !== '') {
             try { $service->applyCode($user, $pendingCode); }
-            catch (\\Illuminate\\Validation\\ValidationException) { /* Keep existing account attribution unchanged. */ }
+            catch (\Illuminate\Validation\ValidationException) { /* Keep existing account attribution unchanged. */ }
         }
         $commissions = DB::table('referral_commissions')->where('referrer_user_id', $user->id)->latest('id')->paginate(20);
         $payouts = DB::table('referral_payout_requests')->where('user_id', $user->id)->latest('id')->limit(10)->get();
