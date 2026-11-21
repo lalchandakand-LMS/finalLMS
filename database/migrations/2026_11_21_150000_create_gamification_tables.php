@@ -43,6 +43,12 @@ return new class extends Migration {
             $table->timestamps();
         });
 
+        DB::table('gamification_badges')->insert([
+            ['key' => 'first_lesson', 'name' => 'First Steps', 'description' => 'Complete your first lesson.', 'icon' => 'book-open', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'streak_7', 'name' => 'Seven-Day Streak', 'description' => 'Learn on seven consecutive days.', 'icon' => 'flame', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'course_finisher', 'name' => 'Course Finisher', 'description' => 'Complete a course.', 'icon' => 'graduation-cap', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
         Schema::create('gamification_user_badges', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
