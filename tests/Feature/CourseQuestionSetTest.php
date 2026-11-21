@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Course;
 use App\Models\CourseContentPost;
 use App\Models\Batch;
+use App\Models\Branch;
 use App\Models\QuestionBankQuestion;
 use App\Models\QuestionSet;
 use App\Models\User;
@@ -298,7 +299,19 @@ class CourseQuestionSetTest extends TestCase
     {
         $admin = User::factory()->create(['role' => 'admin']);
         $teacher = User::factory()->create(['role' => 'teacher']);
-        $batch = Batch::factory()->create(['teacher_id' => $teacher->id]);
+        $course = Course::factory()->create(['teacher_id' => $teacher->id]);
+        $branch = Branch::create(['name' => 'Question Set Branch', 'slug' => 'question-set-branch']);
+        $batch = Batch::create([
+            'branch_id' => $branch->id,
+            'course_id' => $course->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Question Set Batch',
+            'capacity' => 10,
+            'starts_at' => now(),
+            'ends_at' => now()->addMonth(),
+            'fee' => 0,
+            'status' => 'open',
+        ]);
         $set = QuestionSet::create([
             'title' => 'Batch-linked set',
             'description' => 'Preserve this question history.',
