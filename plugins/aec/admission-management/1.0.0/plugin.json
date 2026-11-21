@@ -38,6 +38,11 @@
         "closed"
       ],
       "default": "open"
+    },
+    "admission_fee_bdt": {
+      "label": "Default admission fee (BDT)",
+      "type": "integer",
+      "default": 0
     }
   }
 }
