@@ -99,3 +99,14 @@ A target-native `aec.library-management` package now adds:
 - branch-scoped admin/branch-manager views and feature tests for cross-branch isolation, exhausted stock and repeat returns.
 
 The feature is a physical circulation foundation. Member account linking, reservations, lost/damaged-book workflows, fine payment/waivers, inventory import/export and audit/reporting expansion remain follow-ups. It has not been activated or production-accepted.
+
+### Referral Income ported as a target-native plugin
+Added `aec.referral-income` under `plugins/aec/referral-income/1.0.0`:
+- Student/teacher shareable codes and one-time attribution before the buyer's first approved payment
+- Commission ledger only after an authoritative LMS Payment row is approved (manual admin verification or server-verified bKash callback); unique payment key makes retries idempotent
+- Student/teacher dashboards, admin commission rules, commission review and payout review
+- Encrypted bKash/Nagad/bank payout destinations, BDT-only payouts and mandatory payment reference before marking paid
+- Referral audit events; finance review methods verify admin actor server-side
+- Manual payment approval and verified bKash settlement now call the commission accrual service when the plugin is loaded
+
+Focused tests cover attribution, self-referral prevention, idempotent commission creation, pending/foreign-currency rejection, encrypted payout details and admin payout transitions. Refund/reversal recovery and other payment providers remain explicit follow-up work; commissions must not be treated as production-ready until those lifecycle paths are implemented and the test suite passes.
