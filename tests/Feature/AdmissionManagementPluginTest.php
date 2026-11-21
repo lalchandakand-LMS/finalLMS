@@ -48,6 +48,22 @@ final class AdmissionManagementPluginTest extends TestCase
         Route::get('/__admission/{application}/documents/{document}', [AdmissionController::class, 'downloadDocument']);
     }
 
+
+    public function test_public_intake_can_be_closed_from_plugin_settings(): void
+    {
+        $plugin = \App\Models\PluginInstallation::query()->where('plugin_key', 'aec.admission-management')->firstOrFail();
+        app(\App\Services\Plugins\PluginSettingsManager::class)->set($plugin, 'intake_status', 'closed');
+
+        $this->post('/__admission/apply', [
+            'applicant_name' => 'Closed Intake Applicant',
+            'email' => 'closed@example.com',
+            'phone' => '01700000007',
+            'desired_course' => 'Spoken English',
+        ])->assertForbidden();
+
+        $this->assertDatabaseCount('admission_applications', 0);
+    }
+
     public function test_public_intake_and_tracking_require_both_application_code_and_email(): void
     {
         $this->post('/__admission/apply', [
