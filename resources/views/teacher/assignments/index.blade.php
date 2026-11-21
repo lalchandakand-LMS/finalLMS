@@ -19,6 +19,14 @@
             <label>{{ __('Instructions') }}<textarea name="instructions" maxlength="10000" required></textarea></label>
             <label>{{ __('Due date') }}<input type="datetime-local" name="due_at" required></label>
             <label>{{ __('Maximum marks') }}<input type="number" name="max_marks" min="1" max="10000" required></label>
+            <label>{{ __('Question Set (optional)') }}
+                <select name="question_set_id">
+                    <option value="">{{ __('Regular written assignment') }}</option>
+                    @foreach($questionSets as $questionSet)
+                        <option value="{{ $questionSet->id }}">{{ $questionSet->title }} ({{ $questionSet->questions_count }} {{ __('questions') }})</option>
+                    @endforeach
+                </select>
+            </label>
             <label style="display:flex;gap:8px;align-items:center;margin:12px 0;"><input type="checkbox" name="allow_late" value="1"> {{ __('Allow late submissions after the deadline') }}</label>
             <button type="submit" class="btn primary">{{ __('Publish') }}</button>
         </form>
@@ -30,6 +38,7 @@
                 <span class="badge info">{{ $assignment->submissions_count }} {{ __('submissions') }}</span>
                 <h2 style="margin:10px 0 6px;">{{ $assignment->title }}</h2>
                 <p>{{ $assignment->instructions }}</p>
+                @if($assignment->questionSet)<p class="muted">{{ __('Question Set:') }} {{ $assignment->questionSet->title }}</p>@endif
                 <div class="muted">{{ __('Due') }} {{ $assignment->due_at->format('M j, Y H:i') }} · {{ $assignment->max_marks }} {{ __('marks') }}</div>
                 @foreach($assignment->submissions as $submission)
                     <div class="course-item" style="margin-top:12px;">
@@ -37,6 +46,13 @@
                         <span class="badge {{ $submission->status === 'graded' ? 'success' : 'warning' }}">{{ __($submission->status === 'graded' ? 'Graded' : 'Submitted') }}</span>
                         <div class="muted">{{ __('Submitted') }}: {{ $submission->submitted_at?->format('M j, Y H:i') ?? '—' }}</div>
                         <p>{{ $submission->answer }}</p>
+                        @if($submission->question_answers)
+                            <div class="panel"><strong>{{ __('Question answers') }}</strong>
+                                @foreach($assignment->questionSet?->questions ?? [] as $question)
+                                    <p><strong>{{ $loop->iteration }}. {{ $question->question }}</strong><br>{{ $submission->question_answers[$question->id] ?? '—' }}</p>
+                                @endforeach
+                            </div>
+                        @endif
                         @if($submission->attachment_path)<a class="btn secondary" href="{{ route('assignment-submissions.attachment', $submission) }}">{{ __('Download student attachment') }}: {{ $submission->attachment_name }}</a>@endif
                         <form method="POST" action="{{ $isAdmin ? route('admin.assignments.grade', [$assignment, $submission]) : route('teacher.assignments.grade', [$assignment, $submission]) }}">
                             @csrf
