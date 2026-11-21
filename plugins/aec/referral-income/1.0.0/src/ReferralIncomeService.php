@@ -140,6 +140,7 @@ final class ReferralIncomeService
 
     public function reviewCommission(int $id, int $adminId, string $status, ?string $note): void
     {
+        abort_unless(User::query()->whereKey($adminId)->where('role', 'admin')->exists(), 403);
         if (!in_array($status, ['approved', 'rejected'], true) || ($status === 'rejected' && trim((string) $note) === '')) {
             throw ValidationException::withMessages(['status' => 'Select a valid review status and provide a reason for rejection.']);
         }
@@ -156,6 +157,7 @@ final class ReferralIncomeService
 
     public function reviewPayout(int $id, int $adminId, string $status, ?string $note): void
     {
+        abort_unless(User::query()->whereKey($adminId)->where('role', 'admin')->exists(), 403);
         if (!in_array($status, ['approved', 'paid', 'rejected'], true) || ($status === 'paid' && trim((string) $note) === '')) {
             throw ValidationException::withMessages(['status' => 'A payout reference is required when marking a payout paid.']);
         }
@@ -171,6 +173,26 @@ final class ReferralIncomeService
             DB::table('referral_commissions')->where('payout_request_id', $id)->where('status', 'payout_requested')
                 ->update(['status' => $commissionStatus, 'updated_at' => now()]);
             $this->audit('payout.reviewed', (string) $id, ['status' => $status, 'note' => $note], $adminId);
+        });
+    }
+
+    public function updateRules(int $adminId, array $values): void
+    {
+        abort_unless(User::query()->whereKey($adminId)->where('role', 'admin')->exists(), 403);
+        DB::transaction(function () use ($adminId, $values): void {
+            foreach (['student', 'teacher'] as $role) {
+                $before = DB::table('referral_income_rules')->where('owner_type', $role)->lockForUpdate()->first();
+                abort_unless($before, 503);
+                DB::table('referral_income_rules')->where('owner_type', $role)->update([
+                    'commission_percent' => $values[$role.'_commission_percent'],
+                    'minimum_payout' => $values[$role.'_minimum_payout'],
+                    'updated_at' => now(),
+                ]);
+                $this->audit('rules.updated', $role, [
+                    'before' => ['commission_percent' => $before->commission_percent, 'minimum_payout' => $before->minimum_payout],
+                    'after' => ['commission_percent' => $values[$role.'_commission_percent'], 'minimum_payout' => $values[$role.'_minimum_payout']],
+                ], $adminId);
+            }
         });
     }
 
