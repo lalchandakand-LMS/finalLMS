@@ -60,6 +60,21 @@ class GamificationService
         }, 3);
     }
 
+    public function awardBadge(User $user, string $badgeKey, array $metadata = []): bool
+    {
+        $badge = \\App\\Models\\GamificationBadge::query()
+            ->where('key', $badgeKey)->where('is_active', true)->firstOrFail();
+
+        return DB::table('gamification_user_badges')->insertOrIgnore([
+            'user_id' => $user->id,
+            'badge_id' => $badge->id,
+            'awarded_at' => now(),
+            'metadata' => json_encode($metadata, JSON_THROW_ON_ERROR),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]) === 1;
+    }
+
     public function leaderboard(?int $branchId = null, int $limit = 50)
     {
         $limit = max(1, min($limit, 100));
