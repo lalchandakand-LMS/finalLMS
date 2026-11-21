@@ -747,7 +747,7 @@ class CourseController extends Controller
         return back()->with('success', 'Lesson deleted successfully.');
     }
 
-    public function complete(Course $course, Request $request): RedirectResponse
+    public function complete(Course $course, Request $request, GamificationService $gamification): RedirectResponse
     {
         $user = Auth::user();
         $studentId = (int) ($request->input('student_id') ?? $user->id);
@@ -800,6 +800,11 @@ class CourseController extends Controller
                 'issued_at' => now(),
             ]
         );
+
+        $learner = User::query()->find($studentId);
+        if ($learner?->isStudent()) {
+            $gamification->award($learner, 'course_completed', 'course', $course->id);
+        }
 
         return back()->with('success', 'Course marked complete and certificate issued.');
     }
