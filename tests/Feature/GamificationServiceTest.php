@@ -53,7 +53,7 @@ class GamificationServiceTest extends TestCase
     public function test_badge_awards_are_idempotent(): void
     {
         $student = User::factory()->create(['role' => 'student']);
-        $badge = GamificationBadge::create(['key' => 'first_lesson', 'name' => 'First lesson', 'description' => 'Complete a lesson', 'is_active' => true]);
+        $badge = GamificationBadge::create(['key' => 'custom_test_badge', 'name' => 'First lesson', 'description' => 'Complete a lesson', 'is_active' => true]);
         $service = app(GamificationService::class);
 
         $this->assertTrue($service->awardBadge($student, $badge->key));
