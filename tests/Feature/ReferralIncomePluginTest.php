@@ -64,6 +64,39 @@ final class ReferralIncomePluginTest extends TestCase
         ]);
     }
 
+    public function test_a_buyer_cannot_change_an_existing_referral_attribution(): void
+    {
+        $first = User::factory()->create(['role' => 'student']);
+        $second = User::factory()->create(['role' => 'teacher']);
+        $buyer = User::factory()->create(['role' => 'student']);
+        $service = app(ReferralIncomeService::class);
+        $service->applyCode($buyer, $service->createOrGetCode($first));
+        try {
+            $service->applyCode($buyer, $service->createOrGetCode($second));
+            $this->fail('An existing referral attribution must not be replaceable.');
+        } catch (\\Illuminate\\Validation\\ValidationException) {
+            $this->assertDatabaseHas('referral_attributions', ['referred_user_id' => $buyer->id, 'referrer_user_id' => $first->id]);
+            $this->assertDatabaseMissing('referral_attributions', ['referred_user_id' => $buyer->id, 'referrer_user_id' => $second->id]);
+        }
+    }
+
+    public function test_non_admin_cannot_review_commissions(): void
+    {
+        $referrer = User::factory()->create(['role' => 'student']);
+        $buyer = User::factory()->create(['role' => 'student']);
+        $service = app(ReferralIncomeService::class);
+        $service->applyCode($buyer, $service->createOrGetCode($referrer));
+        $course = Course::factory()->create();
+        $payment = Payment::query()->create([
+            'user_id' => $buyer->id, 'course_id' => $course->id, 'method' => 'bkash',
+            'amount' => 1000, 'currency' => 'BDT',
+            'transaction_reference' => 'REF-AUTH-'.strtoupper(bin2hex(random_bytes(5))),
+            'status' => 'approved',
+        ]);
+        $commissionId = $service->recordApprovedPayment((int) $payment->id);
+        $this->expectException(\\Symfony\\Component\\HttpKernel\\Exception\\HttpException::class);
+        $service->reviewCommission((int) $commissionId, (int) $referrer->id, 'approved', null);
+    }
     public function test_pending_or_non_bdt_payments_never_create_commissions(): void
     {
         $referrer = User::factory()->create(['role' => 'student']);
