@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\Plugins\PluginSettingsManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 use Tests\TestCase;
 
 class PluginSettingsManagerTest extends TestCase
@@ -99,7 +100,7 @@ class PluginSettingsManagerTest extends TestCase
         $manager->set($plugin, 'retry_count', '7');
         $this->assertSame('7', $manager->get($plugin, 'retry_count'));
 
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
         $manager->forget($plugin, 'endpoint');
     }
 
@@ -119,7 +120,7 @@ class PluginSettingsManagerTest extends TestCase
             try {
                 $manager->set($plugin, $key, $value);
                 $this->fail("Expected {$key} to reject its invalid value.");
-            } catch (\InvalidArgumentException) {
+            } catch (InvalidArgumentException) {
                 $this->assertDatabaseMissing('plugin_settings', [
                     'plugin_key' => $plugin->plugin_key,
                     'setting_key' => $key,
