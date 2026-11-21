@@ -809,6 +809,42 @@ PHP;
     }
 
 
+    public function test_transient_plugin_health_verification_failure_does_not_demote_active_plugin(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData())
+            ->assertRedirect(route('admin.plugins.index'));
+        $this->actingAs($admin)->post(route('admin.plugins.activate', 'aec.course-management'))
+            ->assertRedirect(route('admin.plugins.index'));
+
+        $plugin = PluginInstallation::query()->where('plugin_key', 'aec.course-management')->firstOrFail();
+        $plugin->forceFill([
+            'health_status' => 'healthy',
+            'health_message' => 'Last successful verification.',
+            'last_health_check_at' => now()->subHour(),
+        ])->save();
+
+        $verifier = $this->mock(PluginSignatureVerifier::class);
+        $verifier->shouldReceive('verifyInstalledSignature')->once()
+            ->andThrow(new \RuntimeException('Simulated temporary signature verification infrastructure failure.'));
+
+        $this->actingAs($admin)->post(route('admin.plugins.health-check', 'aec.course-management'))
+            ->assertRedirect()
+            ->assertSessionHas('error', __('Plugin health check could not be completed because of a temporary system error. The plugin status was not changed.'));
+
+        $this->assertDatabaseHas('plugin_registry', [
+            'plugin_key' => 'aec.course-management',
+            'status' => 'active',
+            'health_status' => 'healthy',
+            'health_message' => 'Last successful verification.',
+        ]);
+        $this->assertDatabaseMissing('plugin_version_history', [
+            'plugin_key' => 'aec.course-management',
+            'action' => 'health_check_failed',
+        ]);
+    }
+
+
     public function test_uninstall_requires_explicit_server_side_confirmation(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
