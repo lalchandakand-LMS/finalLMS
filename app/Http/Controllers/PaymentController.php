@@ -445,6 +445,16 @@ class PaymentController extends Controller
             return 'approved';
         });
 
+        if ($result === 'approved') {
+            try {
+                if (class_exists(\\Aloms\\ReferralIncome\\ReferralIncomeService::class)) {
+                    app(\\Aloms\\ReferralIncome\\ReferralIncomeService::class)->recordApprovedPayment((int) $payment->id);
+                }
+            } catch (\\Throwable $exception) {
+                report($exception);
+            }
+        }
+
         if ($result === 'full') {
             return back()->with('error', 'The batch is full. Payment remains pending and requires manual resolution.');
         }
