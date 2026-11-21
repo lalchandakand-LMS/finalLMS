@@ -34,6 +34,7 @@ class InstructorAnalyticsController extends Controller
 
         $publishedAssignments = Assignment::query()
             ->where('teacher_id', $teacher->id)
+            ->whereIn('batch_id', $batchIds)
             ->where('status', 'published');
 
         $assignmentCount = (clone $publishedAssignments)->count();
@@ -41,6 +42,7 @@ class InstructorAnalyticsController extends Controller
         $submissionTotals = DB::table('assignment_submissions')
             ->join('assignments', 'assignments.id', '=', 'assignment_submissions.assignment_id')
             ->where('assignments.teacher_id', $teacher->id)
+            ->whereIn('assignments.batch_id', $batchIds)
             ->where('assignments.status', 'published')
             ->selectRaw('COUNT(*) as total')
             ->selectRaw("SUM(CASE WHEN assignment_submissions.status = 'graded' THEN 1 ELSE 0 END) as graded")
@@ -48,6 +50,7 @@ class InstructorAnalyticsController extends Controller
 
         $publishedExams = Exam::query()
             ->where('teacher_id', $teacher->id)
+            ->whereIn('batch_id', $batchIds)
             ->where('status', 'published');
 
         $examCount = (clone $publishedExams)->count();
@@ -55,6 +58,7 @@ class InstructorAnalyticsController extends Controller
         $examTotals = DB::table('exam_attempts')
             ->join('exams', 'exams.id', '=', 'exam_attempts.exam_id')
             ->where('exams.teacher_id', $teacher->id)
+            ->whereIn('exams.batch_id', $batchIds)
             ->where('exams.status', 'published')
             ->where('exam_attempts.status', 'submitted')
             ->selectRaw('COUNT(*) as submitted')
