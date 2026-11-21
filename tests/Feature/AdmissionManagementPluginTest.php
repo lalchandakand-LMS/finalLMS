@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use Aloms\AdmissionManagement\AdmissionApplication;
 use Aloms\AdmissionManagement\AdmissionController;
 use App\Models\Branch;
+use App\Models\PluginInstallation;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
@@ -28,8 +29,17 @@ final class AdmissionManagementPluginTest extends TestCase
             $migration = require base_path('plugins/aec/admission-management/1.0.0/migrations/2026_11_21_010000_create_admission_management_tables.php');
             $migration->up();
         }
-        Route::post('/__admission/apply', [AdmissionController::class, 'applyPublic']);
-        Route::post('/__admission/track', [AdmissionController::class, 'track']);
+        PluginInstallation::query()->create([
+            'plugin_key' => 'aec.admission-management',
+            'name' => 'Admission Management',
+            'version' => '1.0.0',
+            'type' => 'module',
+            'status' => 'active',
+            'manifest' => ['settings_schema' => ['intake_status' => ['label' => 'Intake status', 'type' => 'select', 'options' => ['open', 'closed'], 'default' => 'open']]],
+        ]);
+        Route::post('/__admission/apply', [AdmissionController::class, 'applyPublic'])->name('admission.public.apply.store');
+        Route::get('/__admission/track', [AdmissionController::class, 'trackForm'])->name('admission.public.track');
+        Route::post('/__admission/track', [AdmissionController::class, 'track'])->name('admission.public.track.submit');
         Route::get('/__admission/admin', [AdmissionController::class, 'index']);
         Route::post('/__admission/{application}/review', [AdmissionController::class, 'review']);
         Route::post('/__admission/{application}/convert', [AdmissionController::class, 'convertToStudent']);
