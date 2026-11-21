@@ -6,8 +6,8 @@ Production domain: https://alomsenglishcenter.com
 
 ## Current verified snapshot — 2026-11-21
 
-**Main commit after latest merges:** `d4b70a1caef9c1ccf168d99acf5c9ca1a336e976` (PR #389 squash merge; PR #388 merged immediately before it).  
-**Open pull requests:** #387 (this status refresh) and #390 (combo-payment batch-capacity protection) are open. PR #390's initial Laravel CI exposed an escaped namespace syntax error in its regression test; the test was corrected and exact-head CI is rerunning. PR #388 (SMS recipient delivery concurrency) and #389 (plugin runtime transient-verification resilience) are merged after exact-head Laravel CI and CodeQL passed.  
+**Main commit after latest merges:** `c87433a3d44dd9b27bded7145057711b8263782c` (PR #392 merged; PR #390 and #387 merged immediately before it).  
+**Open pull requests at this update:** #393 (Admin Plugin Health Check preserves active plugin state on transient verification errors) and #395 (Plugin Runtime retries after transient phase-one preflight failure) are open with exact-head Laravel CI running; PR #391 is this documentation update. PR #392 has merged.  
 **Production deployment:** blocked; the last owner-provided hosting update did not include an isolated staging subdomain or separate test database. Do not deploy production.
 
 ### Recently merged
@@ -16,8 +16,30 @@ Production domain: https://alomsenglishcenter.com
 |---|---|
 | #384 | Merged — Instructor Academic Analytics API and Flutter dashboard; exact-head Laravel CI, CodeQL, instructor/student Flutter analysis/tests and APK build passed before merge. |
 | #386 | Merged — signed plugin manifest settings schemas, typed server-side validation, encrypted secrets, validated defaults, required-setting protection and Admin controls; exact-head Laravel CI and CodeQL passed before merge. |
+| #387 | Merged as `4ccf11aab5e45b1aadc2d41870b99038b67a24a5` — project status documentation refresh; exact-head Laravel test, package and CodeQL jobs passed before merge. |
+| #390 | Merged as `722e846e5bbc7245d344771e7e107f6792c1a521` — prevents manual approval from overbooking a batch reserved by another pending combo/cart payment; regression test added; exact-head Laravel test, package and CodeQL jobs passed before merge. |
+| #392 | Merged as `c87433a3d44dd9b27bded7145057711b8263782c` — removes duplicate unguarded Student, Teacher and Admin attendance route declarations; a feature test confirms unique declarations and module middleware; exact-head Laravel test, package and CodeQL jobs passed before merge. |
 
 The PR #386 merge commit is `9d22623aa4cd34270909fa21b6427b74b46b42a8`. Post-merge workflow runs were not returned by the PR-run lookup; do not describe post-merge mainline CI as verified until separately confirmed.
+
+### Latest ZIP audit — selectively reconciled, not imported into main
+
+The uploaded feature bundle has been selectively reconciled with the high-risk mainline fixes and remains a separate local artifact; no ZIP feature bundle has been merged into `main`. The reconciled archive contains 970 files and has passed ZIP integrity validation, PHP syntax lint for 647 PHP files, English/Bangla JSON key parity (3,179 keys each), translation-placeholder parity, and a source check confirming unique module-gated Student/Teacher/Admin attendance routes. It includes 107 migrations with no duplicate migration filenames.
+
+Mainline fixes selectively carried into the bundle:
+- PR #388 SMS recipient row locking and post-transaction campaign completion, with a duplicate-job regression test.
+- PR #389 plugin runtime catches only confirmed `PluginTrustFailure` during signature/manifest/integrity preflight; operational failures bubble for retry, with regression coverage.
+- PR #390 pending combo/cart batch reservations are included in capacity checks during manual payment approval, with regression coverage.
+- PR #392 attendance route deduplication and module-gate regression test are also present in the local artifact; PR #392 has now merged to main.
+- PR #393's confirmed-trust-vs-operational-error distinction and PR #395's same-process registration retry guard are also selectively backported into the local artifact with regression tests; their repository PRs remain open pending exact-head CI.
+
+Additional ZIP-only corrections:
+- Admission status no longer discloses internal reviewer notes; conflicting email/phone identity matches are rejected; capacity considers pending direct/combo reservations; newly created accounts dispatch `Registered` after commit.
+- Public certificate verification exposes identity/course details only for `issued` certificates.
+- Guardian status/summary access and model imports were reviewed.
+- Fleet Plugin Health now treats confirmed trust failures as permanent but leaves plugin state unchanged when verification is interrupted by operational/configuration errors.
+
+The ZIP also contains new Admission, Cart, Course Discussion/Q&A, Certificate, Guardian and plugin-fleet features. These have not received a complete end-to-end PHPUnit/database run locally because Composer/vendor are unavailable in this environment. A full three-way reconciliation against every current `main` file, complete CI, MySQL/MariaDB migration execution, and staging/browser acceptance remain required before importing or releasing the whole bundle.
 
 ### Plugin platform status
 
