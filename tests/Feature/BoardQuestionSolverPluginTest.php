@@ -46,7 +46,6 @@ class BoardQuestionSolverPluginTest extends TestCase {
    Route::post('/__test-board-solver/{solution}/approve',[BoardQuestionSolverController::class,'approveSolution']);
    Route::post('/__test-board-solver/{solution}/reject',[BoardQuestionSolverController::class,'rejectSolution']);
   });
-  Route::get('/__test-admin-question-sets/{questionSet}/edit',fn()=>response('edit'))->name('admin.question-sets.edit');
   Route::get('/__test-board-solver/history',[BoardQuestionSolverController::class,'history']);
   Route::get('/__test-board-solver/index',[BoardQuestionSolverController::class,'index'])->name('student.board-solver.index');
   Route::post('/__test-board-solver/solve',[BoardQuestionSolverController::class,'solve']);
