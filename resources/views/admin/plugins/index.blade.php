@@ -109,16 +109,16 @@
                                                     @if($definition['required'] ?? false)<span aria-label="{{ __('required') }}">*</span>@endif
                                                     @if(($definition['type'] ?? 'text') === 'select')
                                                         <select name="setting_value" @required($definition['required'] ?? false)>
-                                                            @unless($definition['required'] ?? false)<option value="">{{ __('Not configured / clear') }}</option>@endunless
+                                                            <option value="" disabled @selected(in_array($settingKey, $configuredSettingKeys, true) || !array_key_exists('default', $definition))>{{ in_array($settingKey, $configuredSettingKeys, true) ? __('Configured — choose a replacement') : __('Choose an option') }}</option>
                                                             @foreach($definition['options'] ?? [] as $option)
-                                                                <option value="{{ $option }}" @selected(($definition['default'] ?? null) === $option)>{{ $option }}</option>
+                                                                <option value="{{ $option }}" @selected(!in_array($settingKey, $configuredSettingKeys, true) && ($definition['default'] ?? null) === $option)>{{ $option }}</option>
                                                             @endforeach
                                                         </select>
                                                     @elseif(($definition['type'] ?? 'text') === 'boolean')
                                                         <select name="setting_value" @required($definition['required'] ?? false)>
-                                                            <option value="">{{ __('Not configured / clear') }}</option>
-                                                            <option value="1" @selected(($definition['default'] ?? null) === true || ($definition['default'] ?? null) === 1)>{{ __('Enabled') }}</option>
-                                                            <option value="0" @selected(($definition['default'] ?? null) === false || ($definition['default'] ?? null) === 0)>{{ __('Disabled') }}</option>
+                                                            <option value="" disabled @selected(in_array($settingKey, $configuredSettingKeys, true) || !array_key_exists('default', $definition))>{{ in_array($settingKey, $configuredSettingKeys, true) ? __('Configured — choose a replacement') : __('Choose a value') }}</option>
+                                                            <option value="1" @selected(!in_array($settingKey, $configuredSettingKeys, true) && in_array($definition['default'] ?? null, [true, 1, '1'], true))>{{ __('Enabled') }}</option>
+                                                            <option value="0" @selected(!in_array($settingKey, $configuredSettingKeys, true) && in_array($definition['default'] ?? null, [false, 0, '0'], true))>{{ __('Disabled') }}</option>
                                                         </select>
                                                     @else
                                                         <input
