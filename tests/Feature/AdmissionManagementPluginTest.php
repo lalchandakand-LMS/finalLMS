@@ -29,14 +29,15 @@ final class AdmissionManagementPluginTest extends TestCase
             $migration = require base_path('plugins/aec/admission-management/1.0.0/migrations/2026_11_21_010000_create_admission_management_tables.php');
             $migration->up();
         }
-        PluginInstallation::query()->create([
+        $plugin = new PluginInstallation();
+        $plugin->forceFill([
             'plugin_key' => 'aec.admission-management',
             'name' => 'Admission Management',
             'version' => '1.0.0',
             'type' => 'module',
             'status' => 'active',
             'manifest' => ['settings_schema' => ['intake_status' => ['label' => 'Intake status', 'type' => 'select', 'options' => ['open', 'closed'], 'default' => 'open']]],
-        ]);
+        ])->save();
         Route::post('/__admission/apply', [AdmissionController::class, 'applyPublic'])->name('admission.public.apply.store');
         Route::get('/__admission/track', [AdmissionController::class, 'trackForm'])->name('admission.public.track');
         Route::post('/__admission/track', [AdmissionController::class, 'track'])->name('admission.public.track.submit');
