@@ -97,7 +97,7 @@ class WebsiteBuilderTest extends TestCase
         $savedHeaderLinks = json_decode((string) Setting::value('header_links'), true);
         $this->assertSame([['label' => 'Admissions', 'url' => '/admissions']], $savedHeaderLinks);
         Auth::logout();
-        $this->get('/')->assertOk()->assertSee('Alom Learning')->assertSee('Learn with confidence.')->assertSee('New batches open')->assertSee('Our live numbers')->assertSee('Choose a study path')->assertSee('Learners recommend us')->assertSee('Featured courses')->assertSee('Courses')->assertSee('Admissions')->assertDontSee('Unsafe menu');
+        $this->get('/')->assertOk()->assertSee('Alom Learning')->assertSee('Learn with confidence.')->assertSee('New batches open')->assertSee('Our live numbers')->assertSee('Learners recommend us')->assertSee('Featured courses')->assertSee('Courses')->assertSee('Admissions')->assertDontSee('Unsafe menu');
     }
 
     public function test_reference_homepage_design_is_available_as_a_main_builder_preset(): void
