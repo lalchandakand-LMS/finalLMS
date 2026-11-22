@@ -200,6 +200,9 @@ class StudentManagementController extends Controller
                 $otherBranchEnrollments = $student->enrollments()->where('status', 'active')->where('id', '!=', $enrollment->id)
                     ->whereHas('batch', fn ($q) => $q->where('branch_id', '!=', $target->branch_id))->exists();
                 abort_if($otherBranchEnrollments, 422, 'Transfer the student’s other active enrollments to the target branch first.');
+                $otherBranchEnrollments = $student->enrollments()->where('status', 'active')->where('id', '!=', $enrollment->id)
+                    ->whereHas('batch', fn ($q) => $q->where('branch_id', '!=', $target->branch_id))->exists();
+                abort_if($otherBranchEnrollments, 422, 'Transfer the student’s other active enrollments to the target branch first.');
             }
             if ($target->capacity !== null) {
                 $occupied = $target->enrollments()->where('status', 'active')->where('id', '!=', $enrollment->id)->count();
