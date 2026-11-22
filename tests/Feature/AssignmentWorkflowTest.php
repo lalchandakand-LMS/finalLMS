@@ -449,6 +449,27 @@ class AssignmentWorkflowTest extends TestCase
         $this->assertDatabaseCount('assignments', 1);
     }
 
+    public function test_teacher_cannot_attach_empty_published_question_set_to_batch_assignment(): void
+    {
+        ['teacher' => $teacher, 'batch' => $batch] = $this->assignmentFixture();
+        $set = QuestionSet::create([
+            'title' => 'Empty Published Set',
+            'description' => null,
+            'status' => 'published',
+            'created_by' => $teacher->id,
+        ]);
+
+        $this->actingAs($teacher)->post(route('teacher.batches.assignments.store', $batch), [
+            'title' => 'Empty Question Set Homework',
+            'instructions' => 'Should fail.',
+            'due_at' => now()->addDays(2)->format('Y-m-d H:i:s'),
+            'max_marks' => 10,
+            'question_set_id' => $set->id,
+        ])->assertStatus(422);
+
+        $this->assertDatabaseCount('assignments', 1);
+    }
+
     public function test_question_set_assignment_requires_all_answers_from_its_own_question_set(): void
     {
         ['teacher' => $teacher, 'student' => $student, 'batch' => $batch] = $this->assignmentFixture();
