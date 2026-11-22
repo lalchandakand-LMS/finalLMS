@@ -6,6 +6,7 @@ use App\Models\Batch;
 use App\Models\Branch;
 use App\Models\Course;
 use App\Models\Enrollment;
+use App\Models\QuestionSet;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -380,6 +381,162 @@ class AssignmentWorkflowTest extends TestCase
         $this->assertStringNotContainsString(chr(10), $submission->attachment_name);
         $this->assertStringNotContainsString('"', $submission->attachment_name);
         $this->assertStringEndsWith('.pdf', $submission->attachment_name);
+    }
+
+    public function test_teacher_can_attach_published_question_set_and_student_answers_are_saved_for_grading(): void
+    {
+        ['teacher' => $teacher, 'student' => $student, 'batch' => $batch] = $this->assignmentFixture();
+        $set = \App\Models\QuestionSet::create([
+            'title' => 'Batch English Practice',
+            'description' => 'Practice set',
+            'status' => 'published',
+            'created_by' => $teacher->id,
+        ]);
+        $question = $set->questions()->create([
+            'type' => 'mcq',
+            'question' => 'Choose the correct greeting.',
+            'options' => ['Hello', 'Goodbye', 'Never', 'Later'],
+            'correct_option' => 0,
+            'marks' => 2,
+            'position' => 10,
+        ]);
+
+        $this->actingAs($teacher)->post(route('teacher.batches.assignments.store', $batch), [
+            'title' => 'Question Set Homework',
+            'instructions' => 'Answer all questions.',
+            'due_at' => now()->addDays(2)->format('Y-m-d H:i:s'),
+            'max_marks' => 10,
+            'question_set_id' => $set->id,
+        ])->assertRedirect();
+
+        $assignment = \App\Models\Assignment::where('batch_id', $batch->id)
+            ->where('title', 'Question Set Homework')
+            ->firstOrFail();
+        $this->assertSame($set->id, $assignment->question_set_id);
+
+        $this->actingAs($student)->get(route('student.assignments.show', $assignment))
+            ->assertOk()
+            ->assertSee('Choose the correct greeting.');
+
+        $this->actingAs($student)->post(route('student.assignments.submit', $assignment), [
+            'question_answers' => [$question->id => 'Hello'],
+        ])->assertRedirect();
+
+        $submission = \App\Models\AssignmentSubmission::where('assignment_id', $assignment->id)->firstOrFail();
+        $this->assertSame([''.$question->id => 'Hello'], $submission->question_answers);
+
+        $this->actingAs($teacher)->get(route('teacher.batches.assignments.index', $batch))
+            ->assertOk()
+            ->assertSee('Hello');
+    }
+
+    public function test_teacher_cannot_attach_draft_question_set_to_batch_assignment(): void
+    {
+        ['teacher' => $teacher, 'batch' => $batch] = $this->assignmentFixture();
+        $set = \App\Models\QuestionSet::create([
+            'title' => 'Draft Set',
+            'description' => null,
+            'status' => 'draft',
+            'created_by' => $teacher->id,
+        ]);
+        $this->actingAs($teacher)->post(route('teacher.batches.assignments.store', $batch), [
+            'title' => 'Draft Question Set Homework',
+            'instructions' => 'Should fail.',
+            'due_at' => now()->addDays(2)->format('Y-m-d H:i:s'),
+            'max_marks' => 10,
+            'question_set_id' => $set->id,
+        ])->assertStatus(422);
+        $this->assertDatabaseCount('assignments', 1);
+    }
+
+    public function test_teacher_cannot_attach_empty_published_question_set_to_batch_assignment(): void
+    {
+        ['teacher' => $teacher, 'batch' => $batch] = $this->assignmentFixture();
+        $set = QuestionSet::create([
+            'title' => 'Empty Published Set',
+            'description' => null,
+            'status' => 'published',
+            'created_by' => $teacher->id,
+        ]);
+
+        $this->actingAs($teacher)->post(route('teacher.batches.assignments.store', $batch), [
+            'title' => 'Empty Question Set Homework',
+            'instructions' => 'Should fail.',
+            'due_at' => now()->addDays(2)->format('Y-m-d H:i:s'),
+            'max_marks' => 10,
+            'question_set_id' => $set->id,
+        ])->assertStatus(422);
+
+        $this->assertDatabaseCount('assignments', 1);
+    }
+
+    public function test_question_set_assignment_requires_all_answers_from_its_own_question_set(): void
+    {
+        ['teacher' => $teacher, 'student' => $student, 'batch' => $batch] = $this->assignmentFixture();
+        $set = \App\Models\QuestionSet::create([
+            'title' => 'Required Answers Set',
+            'description' => null,
+            'status' => 'published',
+            'created_by' => $teacher->id,
+        ]);
+        $question = $set->questions()->create([
+            'type' => 'short_answer',
+            'question' => 'What is a noun?',
+            'correct_answer' => 'A naming word.',
+            'marks' => 2,
+            'position' => 10,
+        ]);
+        $assignment = $batch->assignments()->create([
+            'teacher_id' => $teacher->id,
+            'title' => 'Required question homework',
+            'instructions' => 'Answer the question.',
+            'due_at' => now()->addDay(),
+            'max_marks' => 10,
+            'allow_late' => false,
+            'status' => 'published',
+            'question_set_id' => $set->id,
+        ]);
+
+        $this->actingAs($student)->post(route('student.assignments.submit', $assignment), [
+            'question_answers' => [999999 => 'Injected question id'],
+        ])->assertSessionHasErrors(['question_answers.'.$question->id]);
+
+        $this->assertDatabaseCount('assignment_submissions', 0);
+    }
+
+    public function test_question_set_mcq_submission_rejects_values_outside_the_available_options(): void
+    {
+        ['teacher' => $teacher, 'student' => $student, 'batch' => $batch] = $this->assignmentFixture();
+        $set = \App\Models\QuestionSet::create([
+            'title' => 'MCQ Validation Set',
+            'description' => null,
+            'status' => 'published',
+            'created_by' => $teacher->id,
+        ]);
+        $question = $set->questions()->create([
+            'type' => 'mcq',
+            'question' => 'Choose a valid option.',
+            'options' => ['Alpha', 'Beta', 'Gamma', 'Delta'],
+            'correct_option' => 0,
+            'marks' => 1,
+            'position' => 10,
+        ]);
+        $assignment = $batch->assignments()->create([
+            'teacher_id' => $teacher->id,
+            'title' => 'MCQ validation homework',
+            'instructions' => 'Choose one option.',
+            'due_at' => now()->addDay(),
+            'max_marks' => 10,
+            'allow_late' => false,
+            'status' => 'published',
+            'question_set_id' => $set->id,
+        ]);
+
+        $this->actingAs($student)->post(route('student.assignments.submit', $assignment), [
+            'question_answers' => [$question->id => 'Injected answer'],
+        ])->assertSessionHasErrors(['question_answers.'.$question->id]);
+
+        $this->assertDatabaseCount('assignment_submissions', 0);
     }
 
     /**

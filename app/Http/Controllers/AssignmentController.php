@@ -6,6 +6,7 @@ use App\Models\Assignment;
 use App\Models\AssignmentSubmission;
 use App\Models\Batch;
 use App\Models\Enrollment;
+use App\Models\QuestionSet;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,15 +24,16 @@ class AssignmentController extends Controller
     {
         $this->authorizeBatchManagement($batch);
 
+        $questionSets = QuestionSet::published()->whereHas('questions')->withCount('questions')->orderBy('title')->get();
         $assignments = $batch->assignments()
-            ->with(['submissions.student'])
+            ->with(['submissions.student', 'questionSet.questions'])
             ->withCount('submissions')
             ->latest()
             ->get();
 
         $isAdmin = Auth::user()->isAdmin();
 
-        return view('teacher.assignments.index', compact('batch', 'assignments', 'isAdmin'));
+        return view('teacher.assignments.index', compact('batch', 'assignments', 'isAdmin', 'questionSets'));
     }
 
     public function store(Batch $batch, Request $request): RedirectResponse
@@ -44,15 +46,41 @@ class AssignmentController extends Controller
             'due_at' => ['required', 'date', 'after:now'],
             'allow_late' => ['nullable', 'boolean'],
             'max_marks' => ['required', 'integer', 'min:1', 'max:10000'],
+            'question_set_id' => ['nullable', 'integer', 'exists:question_sets,id'],
         ]);
+        $assignment = DB::transaction(function () use ($batch, $request, $validated): Assignment {
+            $questionSetId = $validated['question_set_id'] ?? null;
 
-        $batch->assignments()->create([
-            ...$validated,
-            'allow_late' => $request->boolean('allow_late'),
-            // Admins manage the batch on behalf of its assigned teacher.
-            'teacher_id' => $batch->teacher_id,
-            'status' => 'published',
-        ]);
+            if ($questionSetId) {
+                // Lock the set while checking and attaching it. This serializes
+                // assignment creation with edits/archival in QuestionSetController.
+                $questionSet = QuestionSet::query()
+                    ->whereKey($questionSetId)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                abort_unless(
+                    $questionSet->status === 'published'
+                        && $questionSet->questions()->exists(),
+                    422,
+                    __('Only published question sets containing questions can be assigned.')
+                );
+            }
+
+            return $batch->assignments()->create([
+                'title' => $validated['title'],
+                'instructions' => $validated['instructions'],
+                'due_at' => $validated['due_at'],
+                'allow_late' => $request->boolean('allow_late'),
+                'max_marks' => $validated['max_marks'],
+                // Explicit assignment avoids silently dropping the optional relation
+                // when mass-assignment configuration changes.
+                'question_set_id' => $questionSetId,
+                // Admins manage the batch on behalf of its assigned teacher.
+                'teacher_id' => $batch->teacher_id,
+                'status' => 'published',
+            ]);
+        });
 
         return back()->with('success', __('Assignment published to the batch.'));
     }
@@ -63,7 +91,7 @@ class AssignmentController extends Controller
         abort_unless($assignment->status === 'published', 404);
         $this->authorizeActiveEnrollment($assignment);
 
-        $assignment->load('batch.course');
+        $assignment->load(['batch.course', 'questionSet.questions']);
         $submission = $assignment->submissions()
             ->where('student_id', Auth::id())
             ->first();
@@ -76,10 +104,34 @@ class AssignmentController extends Controller
         abort_unless(Auth::user()->isStudent(), 403);
         $this->authorizeActiveEnrollment($assignment);
 
-        $validated = $request->validate([
+        $assignment->load('questionSet.questions');
+        $rules = [
             'answer' => ['nullable', 'string', 'max:50000'],
             'attachment' => ['nullable', 'file', 'max:10240', 'mimes:pdf,doc,docx,jpg,jpeg,png'],
-        ]);
+        ];
+        if ($assignment->questionSet) {
+            $rules['question_answers'] = ['required', 'array'];
+            foreach ($assignment->questionSet->questions as $question) {
+                $rules['question_answers.'.$question->id] = ['required', 'string', 'max:5000'];
+            }
+        }
+        $validated = $request->validate($rules);
+        $questionAnswers = $validated['question_answers'] ?? [];
+        if ($assignment->questionSet) {
+            $questionsById = $assignment->questionSet->questions->keyBy(fn ($question) => (string) $question->id);
+            $allowedIds = $questionsById->keys()->all();
+            abort_unless(array_diff(array_keys($questionAnswers), $allowedIds) === [], 422);
+
+            foreach ($questionAnswers as $questionId => $answer) {
+                $question = $questionsById->get((string) $questionId);
+                if (in_array($question->type, ['mcq', 'true_false'], true)
+                    && ! in_array($answer, $question->options ?? [], true)) {
+                    throw ValidationException::withMessages([
+                        'question_answers.'.$questionId => __('Please choose one of the available options.'),
+                    ]);
+                }
+            }
+        }
 
         $file = $request->file('attachment');
         $storedPath = $file?->store('assignment-submissions/'.$assignment->id, 'local');
@@ -91,7 +143,7 @@ class AssignmentController extends Controller
         }
 
         try {
-            $result = DB::transaction(function () use ($assignment, $validated, $file, $storedPath): array {
+            $result = DB::transaction(function () use ($assignment, $validated, $questionAnswers, $file, $storedPath): array {
                 // Serialize submissions for one assignment to prevent duplicate first submissions.
                 $lockedAssignment = Assignment::query()
                     ->lockForUpdate()
@@ -125,6 +177,7 @@ class AssignmentController extends Controller
 
                 if (
                     blank($validated['answer'] ?? null)
+                    && $questionAnswers === []
                     && ! $storedPath
                     && ! $submission?->attachment_path
                 ) {
@@ -141,6 +194,7 @@ class AssignmentController extends Controller
 
                 $submission->fill([
                     'answer' => $validated['answer'] ?? '',
+                    'question_answers' => $questionAnswers ?: null,
                     'attachment_path' => $storedPath ?? $submission->attachment_path,
                     'attachment_name' => $file
                         ? $this->safeOriginalFilename($file->getClientOriginalName())
