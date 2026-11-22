@@ -53,7 +53,7 @@ Both are PHP/Laravel 12 applications targeting PHP 8.3. They are not drop-in com
 This is a static source-tree comparison. It is not a runtime audit of either repository and does not certify the reference modules as production-ready. The reference repository's own acceptance documentation also notes that provider sandbox/live callbacks and full independent per-plugin acceptance remain separate release gates.
 
 
-## Implementation progress (2026-11-21)
+## Implementation progress (2026-11-22)
 
 ### Admission Management package added
 A target-native package has been added at `plugins/aec/admission-management/1.0.0/` with:
@@ -108,5 +108,6 @@ Added `aec.referral-income` under `plugins/aec/referral-income/1.0.0`:
 - Encrypted bKash/Nagad/bank payout destinations, BDT-only payouts and mandatory payment reference before marking paid
 - Referral audit events; finance review methods verify admin actor server-side
 - Manual payment approval and verified bKash settlement now call the commission accrual service when the plugin is loaded
+- A scheduled `referral-income:reconcile-approved-payments` command scans eligible approved payments with active referral attribution and no commission row; it retries transient failures every five minutes and relies on the unique payment key plus idempotent accrual to prevent duplicates. A feature test covers recovery of a missing commission and repeated execution.
 
 Focused tests cover attribution, self-referral prevention, idempotent commission creation, pending/foreign-currency rejection, encrypted payout details and admin payout transitions. Refund/reversal recovery and other payment providers remain explicit follow-up work; commissions must not be treated as production-ready until those lifecycle paths are implemented and the test suite passes.
