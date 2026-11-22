@@ -69,8 +69,8 @@ final class HrController extends Controller
                 'resume_path' => $resumePath,
                 'status' => 'submitted',
             ]);
-        } catch (\\Throwable $exception) {
-            \\Illuminate\\Support\\Facades\\Storage::disk('local')->delete($resumePath);
+        } catch (\Throwable $exception) {
+            \Illuminate\Support\Facades\Storage::disk('local')->delete($resumePath);
             throw $exception;
         }
 
@@ -163,9 +163,9 @@ final class HrController extends Controller
     {
         abort_unless(auth()->user()?->isAdmin(), 403);
         $record = StaffApplication::query()->findOrFail($application);
-        abort_unless(\\Illuminate\\Support\\Facades\\Storage::disk('local')->exists($record->resume_path), 404);
+        abort_unless(\Illuminate\Support\Facades\Storage::disk('local')->exists($record->resume_path), 404);
 
-        return \\Illuminate\\Support\\Facades\\Storage::disk('local')->download($record->resume_path, 'application-'.$record->id.'-resume');
+        return \Illuminate\Support\Facades\Storage::disk('local')->download($record->resume_path, 'application-'.$record->id.'-resume');
     }
 
     public function teacherIndex(Request $request): View
