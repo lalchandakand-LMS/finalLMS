@@ -7,6 +7,8 @@ namespace Tests\Feature;
 use Aloms\HrStaffManagement\HrController;
 use Aloms\HrStaffManagement\StaffAttendance;
 use Aloms\HrStaffManagement\StaffLeaveRequest;
+use Aloms\HrStaffManagement\StaffJobOpening;
+use Aloms\HrStaffManagement\StaffApplication;
 use Aloms\HrStaffManagement\StaffPayroll;
 use Aloms\HrStaffManagement\StaffProfile;
 use App\Models\Branch;
@@ -14,6 +16,8 @@ use App\Models\User;
 use Tests\Support\RefreshDatabaseWithPluginMigrations;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 final class HrStaffManagementPluginTest extends TestCase
