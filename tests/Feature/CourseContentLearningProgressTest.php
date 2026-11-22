@@ -44,9 +44,16 @@ class CourseContentLearningProgressTest extends TestCase
     {
         [$course, $post, $student] = $this->fixture();
         $this->actingAs($student)->postJson(route('student.courses.content.progress', [$course, $post]), [
+            'position_seconds' => 0, 'duration_seconds' => 100,
+        ])->assertOk()->assertJson(['saved' => true, 'progress_percent' => 0, 'completed' => false]);
+
+        $this->travel(45)->seconds();
+        $this->postJson(route('student.courses.content.progress', [$course, $post]), [
             'position_seconds' => 45, 'duration_seconds' => 100,
         ])->assertOk()->assertJson(['saved' => true, 'position_seconds' => 45, 'duration_seconds' => 100, 'progress_percent' => 45, 'completed' => false]);
-        $this->assertDatabaseHas('course_content_progress', ['user_id' => $student->id, 'progress_percent' => 45, 'last_position_seconds' => 45, 'duration_seconds' => 100]);
+        $this->assertDatabaseHas('course_content_progress', ['user_id' => $student->id, 'progress_percent' => 45, 'watched_seconds' => 45, 'last_position_seconds' => 45, 'duration_seconds' => 100]);
+
+        $this->travel(50)->seconds();
         $this->postJson(route('student.courses.content.progress', [$course, $post]), [
             'position_seconds' => 95, 'duration_seconds' => 100,
         ])->assertOk()->assertJson(['completed' => true, 'progress_percent' => 95]);
