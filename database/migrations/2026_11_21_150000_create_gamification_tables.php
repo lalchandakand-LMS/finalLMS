@@ -63,6 +63,12 @@ return new class extends Migration {
 
     public function down(): void
     {
+        foreach (['gamification_events', 'gamification_user_badges', 'gamification_profiles'] as $table) {
+            if (Schema::hasTable($table) && DB::table($table)->exists()) {
+                throw new RuntimeException('Cannot roll back gamification tables while learner progress or privacy settings exist.');
+            }
+        }
+
         Schema::dropIfExists('gamification_user_badges');
         Schema::dropIfExists('gamification_badges');
         Schema::dropIfExists('gamification_events');
