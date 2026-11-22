@@ -421,7 +421,7 @@ final class AdmissionController extends Controller
             'documents.*' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
         ]);
 
-        $files = array_filter($data['documents'] ?? [], fn ($file) => $file instanceof \\Illuminate\\Http\\UploadedFile);
+        $files = array_filter($data['documents'] ?? [], fn ($file) => $file instanceof \Illuminate\Http\UploadedFile);
         foreach (array_keys($files) as $type) {
             abort_unless(in_array((string) $type, self::DOCUMENT_TYPES, true), 422, 'Invalid document type.');
         }
