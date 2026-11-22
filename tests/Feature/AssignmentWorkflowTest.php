@@ -409,7 +409,9 @@ class AssignmentWorkflowTest extends TestCase
             'question_set_id' => $set->id,
         ])->assertRedirect();
 
-        $assignment = \App\Models\Assignment::where('batch_id', $batch->id)->firstOrFail();
+        $assignment = \App\Models\Assignment::where('batch_id', $batch->id)
+            ->where('title', 'Question Set Homework')
+            ->firstOrFail();
         $this->assertSame($set->id, $assignment->question_set_id);
 
         $this->actingAs($student)->get(route('student.assignments.show', $assignment))
