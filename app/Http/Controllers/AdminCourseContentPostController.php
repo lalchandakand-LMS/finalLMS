@@ -198,6 +198,56 @@ class AdminCourseContentPostController extends Controller
         return redirect()->route('admin.course-content-posts.index')->with('success', __('Course content post updated.'));
     }
 
+    public function versions(CourseContentPost $courseContentPost): View
+    {
+        $versions = $courseContentPost->versions()->with('creator')->paginate(20);
+        return view('admin.course-content-posts.versions', compact('courseContentPost', 'versions'));
+    }
+
+    public function restoreVersion(Request $request, CourseContentPost $courseContentPost, CourseContentPostVersion $version): RedirectResponse
+    {
+        abort_unless($version->course_content_post_id === $courseContentPost->id, 404);
+        $snapshot = $version->snapshot;
+        abort_unless(is_array($snapshot) && isset($snapshot['title'], $snapshot['slug'], $snapshot['long_description']), 422);
+
+        DB::transaction(function () use ($request, $courseContentPost, $version, $snapshot): void {
+            $post = CourseContentPost::query()->lockForUpdate()->findOrFail($courseContentPost->id);
+            $slugTaken = CourseContentPost::query()->where('slug', $snapshot['slug'])->whereKeyNot($post->id)->exists();
+            abort_if($slugTaken, 422, __('This historical slug is now used by another lesson. Rename the other lesson before restoring this revision.'));
+
+            CourseContentPostVersion::create([
+                'course_content_post_id' => $post->id,
+                'version_number' => ((int) CourseContentPostVersion::query()->where('course_content_post_id', $post->id)->max('version_number')) + 1,
+                'snapshot' => $this->versionSnapshot($post),
+                'created_by' => $request->user()->id,
+                'change_type' => 'restore',
+            ]);
+
+            $post->fill([
+                'title' => $snapshot['title'],
+                'slug' => $snapshot['slug'],
+                'short_description' => $snapshot['short_description'] ?? null,
+                'long_description' => $snapshot['long_description'],
+                'video_url' => $snapshot['video_url'] ?? null,
+                'academic_level_id' => $snapshot['academic_level_id'] ?? null,
+                'seo_title' => $snapshot['seo_title'] ?? null,
+                'seo_description' => $snapshot['seo_description'] ?? null,
+                'tags' => $snapshot['tags'] ?? [],
+                'status' => in_array($snapshot['status'] ?? 'draft', ['draft', 'published', 'archived'], true) ? $snapshot['status'] : 'draft',
+                'published_at' => $snapshot['published_at'] ?? null,
+            ]);
+            $post->save();
+            $post->categories()->sync(array_values(array_filter(
+                $snapshot['category_ids'] ?? [],
+                fn ($id) => is_int($id) && DB::table('course_categories')->where('id', $id)->exists()
+            )));
+            $this->syncPaidProduct($post);
+        });
+
+        return redirect()->route('admin.course-content-posts.versions', $courseContentPost)
+            ->with('success', __('Lesson revision restored. Current state was saved as a new revision first.'));
+    }
+
     private function versionSnapshot(CourseContentPost $post): array
     {
         return [
