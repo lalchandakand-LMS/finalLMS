@@ -8,10 +8,10 @@ class AuthContinuationTest extends TestCase
 {
     public function test_password_reset_request_uses_a_generic_response_for_unknown_emails(): void
     {
-        \\Illuminate\\Support\\Facades\\Password::shouldReceive('sendResetLink')
+        \Illuminate\Support\Facades\Password::shouldReceive('sendResetLink')
             ->once()
             ->with(['email' => 'unknown@example.com'])
-            ->andReturn(\\Illuminate\\Support\\Facades\\Password::INVALID_USER);
+            ->andReturn(\Illuminate\Support\Facades\Password::INVALID_USER);
 
         $this->post('/forgot-password', ['email' => 'unknown@example.com'])
             ->assertRedirect()
