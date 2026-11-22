@@ -1,4 +1,6 @@
-<x-app-layout>
+@extends('layouts.app')
+
+@section('content')
 <div class="mx-auto max-w-7xl space-y-6 p-4 sm:p-6">
 <div><h1 class="text-2xl font-bold">HR & Staff Management</h1><p class="text-sm text-gray-600">Staff profiles and monthly payroll ledger.</p></div>
 @if(session('success'))<p class="rounded bg-green-50 p-3 text-green-800">{{ session('success') }}</p>@endif
@@ -23,4 +25,5 @@
 </div>
 <section class="overflow-x-auto rounded border bg-white"><div class="border-b p-4 font-semibold">Staff directory</div><table class="min-w-full text-sm"><thead class="bg-gray-50"><tr><th class="p-3 text-left">Employee</th><th class="p-3 text-left">Department / Designation</th><th class="p-3 text-left">Branch</th><th class="p-3 text-left">Salary</th><th class="p-3 text-left">Status</th></tr></thead><tbody>@forelse($staff as $member)<tr class="border-t"><td class="p-3">{{ $member->full_name }}<small class="block text-gray-500">{{ $member->employee_code }}</small></td><td class="p-3">{{ $member->department }} / {{ $member->designation }}</td><td class="p-3">{{ $member->branch_id ?? '—' }}</td><td class="p-3">৳{{ $member->base_salary }}</td><td class="p-3">{{ $member->status }}</td></tr>@empty<tr><td colspan="5" class="p-5 text-center">No staff profiles.</td></tr>@endforelse</tbody></table>{{ $staff->links() }}</section>
 <section class="overflow-x-auto rounded border bg-white"><div class="border-b p-4 font-semibold">Recent payroll ledger</div><table class="min-w-full text-sm"><thead class="bg-gray-50"><tr><th class="p-3 text-left">Staff</th><th class="p-3 text-left">Month</th><th class="p-3 text-left">Gross / Bonus / Deduction</th><th class="p-3 text-left">Net</th><th class="p-3 text-left">Status / Disbursement</th></tr></thead><tbody>@forelse($payrolls as $pay)<tr class="border-t"><td class="p-3">{{ $pay->staff?->full_name ?? 'Staff #'.$pay->staff_profile_id }}</td><td class="p-3">{{ $pay->payroll_month }}</td><td class="p-3">৳{{ $pay->gross_salary }} / ৳{{ $pay->bonus }} / ৳{{ $pay->deductions }}</td><td class="p-3 font-semibold">৳{{ $pay->net_paid }}</td><td class="p-3">{{ $pay->status }} @if($pay->status==='paid')<small class="block text-gray-500">{{ $pay->paid_at?->format('d M Y') }} · {{ $pay->payment_reference }}</small>@elseif(request()->routeIs('admin.*'))<form method="POST" action="{{ route('admin.hr.payroll.mark-paid',$pay->id) }}" class="mt-2 flex gap-2">@csrf<input required maxlength="120" name="payment_reference" placeholder="Payment reference" class="min-w-0 rounded border-gray-300 text-xs"><button class="rounded bg-emerald-700 px-2 py-1 text-xs text-white">Mark paid</button></form>@endif</td></tr>@empty<tr><td colspan="5" class="p-5 text-center">No payroll entries.</td></tr>@endforelse</tbody></table></section>
-</div></x-app-layout>
+</div>
+@endsection
