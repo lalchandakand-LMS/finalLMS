@@ -152,7 +152,6 @@ class CourseContentController extends Controller
         ]);
         $position = min((int) $data['position_seconds'], (int) $data['duration_seconds']);
         $duration = (int) $data['duration_seconds'];
-        $percent = min(100, round(($position / $duration) * 100, 2));
         $progress = DB::transaction(function () use ($item, $student, $position, $duration): CourseContentProgress {
             $record = CourseContentProgress::query()->where('course_curriculum_item_id', $item->id)
                 ->where('user_id', $student->id)->lockForUpdate()->first();
