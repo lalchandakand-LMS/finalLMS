@@ -1557,5 +1557,20 @@
     "Flash sale campaign deleted.": "ফ্ল্যাশ সেল ক্যাম্পেইন মুছে ফেলা হয়েছে।",
     "(hidden)": "(গোপন)",
     "General guidance only. This assistant cannot access private LMS records or perform actions.": "শুধু সাধারণ দিকনির্দেশনা। এই সহকারী ব্যক্তিগত LMS রেকর্ডে প্রবেশ করতে পারে না বা কোনো কাজ সম্পাদন করতে পারে না।",
-    "This assistant may use read-only, role-scoped LMS context authorized for your account. It cannot perform actions.": "এই সহকারী আপনার অ্যাকাউন্টের জন্য অনুমোদিত, ভূমিকা-সীমাবদ্ধ LMS তথ্য শুধু পড়ার জন্য ব্যবহার করতে পারে। এটি কোনো কাজ সম্পাদন করতে পারে না।"
+    "This assistant may use read-only, role-scoped LMS context authorized for your account. It cannot perform actions.": "এই সহকারী আপনার অ্যাকাউন্টের জন্য অনুমোদিত, ভূমিকা-সীমাবদ্ধ LMS তথ্য শুধু পড়ার জন্য ব্যবহার করতে পারে। এটি কোনো কাজ সম্পাদন করতে পারে না।",
+    "Learn": "শিখুন",
+    "Instructors": "শিক্ষকমণ্ডলী",
+    "E-Books": "ই-বুক",
+    "Our Instructors": "আমাদের শিক্ষকবৃন্দ",
+    "Meet our instructors": "আমাদের শিক্ষকদের সঙ্গে পরিচিত হোন",
+    "Meet the teachers behind our published courses and explore the subjects they teach.": "আমাদের প্রকাশিত কোর্সগুলোর শিক্ষকদের সঙ্গে পরিচিত হোন এবং তাঁদের পড়ানো বিষয়গুলো দেখুন।",
+    "Learn from experienced educators": "অভিজ্ঞ শিক্ষকদের কাছ থেকে শিখুন",
+    "Explore the teachers who lead our published courses. Find a subject, discover a course and take your next step with Alom’s English Center.": "আমাদের প্রকাশিত কোর্সের শিক্ষকদের দেখুন, পছন্দের বিষয় খুঁজুন এবং Alom’s English Center-এর সঙ্গে শেখার পরবর্তী ধাপে এগিয়ে যান।",
+    "Search instructors or courses": "শিক্ষক অথবা কোর্স খুঁজুন",
+    "Teacher name or course title": "শিক্ষকের নাম অথবা কোর্সের শিরোনাম",
+    "instructors": "জন শিক্ষক",
+    "published courses": "প্রকাশিত কোর্স",
+    "View instructor courses": "শিক্ষকের কোর্স দেখুন",
+    "No instructors found": "কোনো শিক্ষক পাওয়া যায়নি",
+    "Try another name or course title. Instructors appear here when they have at least one published course.": "অন্য নাম অথবা কোর্সের শিরোনাম দিয়ে খুঁজুন। অন্তত একটি প্রকাশিত কোর্স থাকলেই শিক্ষক এখানে দেখা যাবেন।"
 }

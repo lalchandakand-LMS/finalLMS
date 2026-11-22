@@ -954,5 +954,22 @@
     "Flash sale campaign deleted.": "Flash sale campaign deleted.",
     "(hidden)": "(hidden)",
     "General guidance only. This assistant cannot access private LMS records or perform actions.": "General guidance only. This assistant cannot access private LMS records or perform actions.",
-    "This assistant may use read-only, role-scoped LMS context authorized for your account. It cannot perform actions.": "This assistant may use read-only, role-scoped LMS context authorized for your account. It cannot perform actions."
+    "This assistant may use read-only, role-scoped LMS context authorized for your account. It cannot perform actions.": "This assistant may use read-only, role-scoped LMS context authorized for your account. It cannot perform actions.",
+    "Learn": "Learn",
+    "Instructors": "Instructors",
+    "Exams": "Exams",
+    "E-Books": "E-Books",
+    "Our Instructors": "Our Instructors",
+    "Meet our instructors": "Meet our instructors",
+    "Meet the teachers behind our published courses and explore the subjects they teach.": "Meet the teachers behind our published courses and explore the subjects they teach.",
+    "Learn from experienced educators": "Learn from experienced educators",
+    "Explore the teachers who lead our published courses. Find a subject, discover a course and take your next step with Alom’s English Center.": "Explore the teachers who lead our published courses. Find a subject, discover a course and take your next step with Alom’s English Center.",
+    "Search instructors or courses": "Search instructors or courses",
+    "Teacher name or course title": "Teacher name or course title",
+    "instructors": "instructors",
+    "published courses": "published courses",
+    "View instructor courses": "View instructor courses",
+    "No instructors found": "No instructors found",
+    "Try another name or course title. Instructors appear here when they have at least one published course.": "Try another name or course title. Instructors appear here when they have at least one published course.",
+    "Browse courses": "Browse courses"
 }
