@@ -73,6 +73,28 @@ final class PhysicalLibraryManagementPluginTest extends TestCase
         $this->assertDatabaseHas('library_loans', ['library_book_id' => $localBook->id, 'status' => 'borrowed']);
     }
 
+    public function test_same_isbn_can_be_stocked_at_multiple_branches_but_not_twice_in_one_branch(): void
+    {
+        $first = Branch::query()->create(['name' => 'Library East', 'slug' => 'library-east', 'is_active' => true]);
+        $second = Branch::query()->create(['name' => 'Library West', 'slug' => 'library-west', 'is_active' => true]);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $payload = [
+            'isbn' => '9780000000123',
+            'title' => 'English Grammar',
+            'author' => 'A. Writer',
+            'category' => 'English',
+            'total_copies' => 3,
+        ];
+
+        $this->actingAs($admin)->post('/__library/books', $payload + ['branch_id' => $first->id])->assertRedirect();
+        $this->actingAs($admin)->post('/__library/books', $payload + ['branch_id' => $second->id])->assertRedirect();
+        $this->assertDatabaseCount('library_books', 2);
+
+        $this->actingAs($admin)->post('/__library/books', $payload + ['branch_id' => $first->id])
+            ->assertSessionHasErrors('isbn');
+        $this->assertDatabaseCount('library_books', 2);
+    }
+
     public function test_return_is_idempotent_and_restores_one_copy_with_overdue_fine(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
