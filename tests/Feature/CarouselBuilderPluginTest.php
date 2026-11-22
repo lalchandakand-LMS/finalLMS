@@ -116,6 +116,26 @@ class CarouselBuilderPluginTest extends TestCase
         $this->assertDatabaseMissing('website_carousels', ['slug' => 'unsafe']);
     }
 
+    public function test_manual_carousel_cannot_be_published_without_any_items(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->from('/__test-carousels')->post('/__test-carousels', [
+            'title' => 'Empty carousel',
+            'slug' => 'empty-carousel',
+            'source_type' => 'manual',
+            'item_limit' => 8,
+            'desktop_cards' => 3,
+            'mobile_cards' => 1,
+            'interval_ms' => 5000,
+            'status' => 'published',
+            'sort_order' => 0,
+            'items' => [],
+        ])->assertSessionHasErrors('items');
+
+        $this->assertDatabaseMissing('website_carousels', ['slug' => 'empty-carousel']);
+    }
+
     public function test_plugin_manifest_uses_the_verified_executable_package_contract(): void
     {
         $manifest = json_decode(file_get_contents(base_path('plugins/aec/carousel-builder/1.0.0/plugin.json')), true, 64, JSON_THROW_ON_ERROR);
