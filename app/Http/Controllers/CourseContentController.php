@@ -34,6 +34,10 @@ class CourseContentController extends Controller
                 ->whereHas('orderItem.order', fn ($query) => $query->where('status', 'completed'))->exists()
             : false;
 
+        if ($isEnrolled && ! $canManage && ! $this->isLessonUnlocked($course, $item, $user)) {
+            return redirect()->route('courses.show', $course)->with('warning', __('Complete the required lesson before opening this content.'));
+        }
+
         $accessAllowed = match ($post->access_type) {
             'free' => true,
             'paid' => $canManage || $isEnrolled || $hasPurchased,
@@ -103,6 +107,7 @@ class CourseContentController extends Controller
                 ->whereHas('orderItem.order', fn ($query) => $query->where('status', 'completed'))->exists()
             : false;
         $previewFileAllowed = $post->access_type !== 'paid' && $curriculumItem->is_preview;
+        if ($isEnrolled && ! $canManage) abort_unless($this->isLessonUnlocked($course, $curriculumItem, $user), 403);
         if ($post->access_type === 'paid' && ! $canManage && ! $isEnrolled) {
             $permission = DownloadPermission::query()->where('user_id', $user?->id)
                 ->where('product_id', $post->product_id)
@@ -138,6 +143,7 @@ class CourseContentController extends Controller
         abort_unless($post->status === 'published' && $post->published_at && $post->published_at->lte(now()), 404);
         abort_unless($course->enrollments()->where('user_id', $student->id)->whereIn('status', ['active', 'completed'])->exists(), 403);
         $item = $course->curriculumItems()->where('course_content_post_id', $post->id)->firstOrFail();
+        abort_unless($this->isLessonUnlocked($course, $item, $student), 403, 'Complete the required lesson first.');
         $data = $request->validate([
             'position_seconds' => ['required', 'integer', 'min:0', 'max:86400'],
             'duration_seconds' => ['required', 'integer', 'min:1', 'max:86400'],
@@ -166,6 +172,32 @@ class CourseContentController extends Controller
         ]);
     }
 
+    private function isLessonUnlocked(Course $course, \\App\\Models\\CourseCurriculumItem $item, \\App\\Models\\User $student): bool
+    {
+        if ($item->prerequisite_post_id) {
+            $prerequisite = $course->curriculumItems()->where('course_content_post_id', $item->prerequisite_post_id)->first();
+            if (! $prerequisite || ! CourseContentProgress::query()
+                ->where('course_curriculum_item_id', $prerequisite->id)
+                ->where('user_id', $student->id)
+                ->whereNotNull('completed_at')->exists()) {
+                return false;
+            }
+        }
+
+        if ($item->unlock_after_previous) {
+            $previous = $course->curriculumItems()->where('position', '<', $item->position)
+                ->orderByDesc('position')->orderByDesc('id')->first();
+            if ($previous && ! CourseContentProgress::query()
+                ->where('course_curriculum_item_id', $previous->id)
+                ->where('user_id', $student->id)
+                ->whereNotNull('completed_at')->exists()) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public function complete(Request $request, Course $course, CourseContentPost $post): RedirectResponse
     {
         $student = $request->user();
@@ -178,6 +210,7 @@ class CourseContentController extends Controller
             ->exists(), 403);
 
         $item = $course->curriculumItems()->where('course_content_post_id', $post->id)->firstOrFail();
+        abort_unless($this->isLessonUnlocked($course, $item, $student), 403, 'Complete the required lesson first.');
 
         DB::transaction(function () use ($item, $student): void {
             $progress = CourseContentProgress::query()
