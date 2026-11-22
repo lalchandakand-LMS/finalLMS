@@ -17,6 +17,19 @@ final class ReferralIncomePluginTest extends TestCase
 {
     use DatabaseMigrations;
 
+    protected function tearDown(): void
+    {
+        Schema::disableForeignKeyConstraints();
+        Schema::dropIfExists('referral_audit_events');
+        Schema::dropIfExists('referral_payout_requests');
+        Schema::dropIfExists('referral_commissions');
+        Schema::dropIfExists('referral_attributions');
+        Schema::dropIfExists('referral_codes');
+        Schema::dropIfExists('referral_income_rules');
+        Schema::enableForeignKeyConstraints();
+        parent::tearDown();
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
