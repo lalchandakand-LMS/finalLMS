@@ -12,6 +12,20 @@
         <a href="{{ $isAdmin ? route('admin.batches.exams.index', $exam->batch_id) : route('teacher.batches.exams.index', $exam->batch_id) }}" class="btn secondary">{{ __('Back to exams') }}</a>
     </div>
 
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" style="margin-bottom:18px;">
+        <div class="panel"><div class="muted">{{ __('Submitted attempts') }}</div><strong style="font-size:1.6rem;">{{ $totalSubmitted }}</strong></div>
+        <div class="panel"><div class="muted">{{ __('Pass rate') }}</div><strong style="font-size:1.6rem;">{{ number_format($passRate, 1) }}%</strong></div>
+        <div class="panel"><div class="muted">{{ __('Average score') }}</div><strong style="font-size:1.6rem;">{{ $summary->average_score !== null ? number_format((float) $summary->average_score, 2) : '—' }}</strong></div>
+        <div class="panel"><div class="muted">{{ __('Highest / Lowest') }}</div><strong style="font-size:1.6rem;">{{ $summary->highest_score ?? '—' }} / {{ $summary->lowest_score ?? '—' }}</strong></div>
+    </div>
+    <div class="panel" style="margin-bottom:18px;">
+        <h2>{{ __('Question-wise performance') }}</h2>
+        <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;text-align:left;">
+            <thead><tr><th style="padding:12px;">{{ __('Question') }}</th><th style="padding:12px;">{{ __('Answered') }}</th><th style="padding:12px;">{{ __('Correct') }}</th><th style="padding:12px;">{{ __('Accuracy') }}</th></tr></thead>
+            <tbody>@forelse($questionAnalytics as $question)<tr><td style="padding:12px;border-top:1px solid var(--border);">{{ $question->question }}</td><td style="padding:12px;border-top:1px solid var(--border);">{{ $question->answered_count }}</td><td style="padding:12px;border-top:1px solid var(--border);">{{ $question->correct_count }}</td><td style="padding:12px;border-top:1px solid var(--border);">{{ number_format($question->accuracy, 1) }}%</td></tr>@empty<tr><td colspan="4" class="muted" style="padding:18px;">{{ __('No question analytics yet.') }}</td></tr>@endforelse</tbody>
+        </table></div>
+    </div>
+
     <div class="panel">
         <div style="overflow-x:auto;">
             <table style="width:100%;border-collapse:collapse;text-align:left;">
