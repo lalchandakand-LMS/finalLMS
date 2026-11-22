@@ -13,7 +13,7 @@
 @foreach($availablePosts as $post)
 @php($item = $current->get($post->id))
 <tr data-sortable-row style="border-top:1px solid var(--border);"><td style="padding:12px;"><button type="button" draggable="true" data-drag-handle aria-label="Drag to reorder lesson" title="Drag to reorder" style="cursor:grab;padding:6px;">⠿</button></td><td style="padding:12px;"><input type="checkbox" name="post_ids[]" value="{{ $post->id }}" @checked($item) style="width:auto;"></td>
-<td><strong>{{ $post->title }}</strong><div class="muted">{{ $post->academicLevel?->name ?: __('All levels') }} · {{ $post->categories->pluck('name')->join(', ') }} · {{ __(ucwords(str_replace('_', ' ', $post->access_type))) }} · {{ __(ucfirst($post->status)) }}</div></td>
+<td><strong>{{ $post->title }}</strong><div class="muted">{{ $post->academicLevel?->name ?: __('All levels') }} · {{ $post->categories->pluck('name')->join(', ') }} · {{ __(ucwords(str_replace('_', ' ', $post->access_type))) }} · {{ __(ucfirst($post->status)) }}</div>@if($item && $post->status === 'published' && $post->published_at?->lte(now()))<a class="muted" target="_blank" rel="noopener" href="{{ route('courses.content.show', [$course, $post]) }}">{{ __('Preview lesson') }} ↗</a>@endif</td>
 <td><input name="section_titles[{{ $post->id }}]" maxlength="120" value="{{ old('section_titles.'.$post->id, $item?->section_title) }}" placeholder="{{ __('e.g. Module 1') }}"></td>
 <td><input type="number" name="positions[{{ $post->id }}]" min="0" max="100000" value="{{ old('positions.'.$post->id, $item?->position ?? (($loop->iteration) * 10)) }}" style="width:90px;"></td>
 <td><input type="number" name="durations[{{ $post->id }}]" min="1" max="600" value="{{ old('durations.'.$post->id, $item?->duration_minutes) }}" style="width:90px;"></td>
@@ -34,8 +34,8 @@
                 <tbody data-course-sortable="question-sets">
                 @foreach($availableQuestionSets as $set)
                     @php($attached = $currentQuestionSets->get($set->id))
-                    <tr draggable="true" data-sortable-row style="border-top:1px solid var(--border);">
-                        <td style="padding:10px;"><button type="button" data-drag-handle aria-label="Drag to reorder question set" title="Drag to reorder" style="cursor:grab;padding:6px;">⠿</button></td>
+                    <tr data-sortable-row style="border-top:1px solid var(--border);">
+                        <td style="padding:10px;"><button type="button" draggable="true" data-drag-handle aria-label="Drag to reorder question set" title="Drag to reorder" style="cursor:grab;padding:6px;">⠿</button></td>
                         <td style="padding:10px;"><input type="checkbox" name="question_set_ids[]" value="{{ $set->id }}" @checked($attached) style="width:auto;"></td>
                         <td><strong>{{ $set->title }}</strong><div class="muted">{{ $set->questions_count }} {{ __('questions') }} · {{ __(ucfirst($set->status)) }}</div></td>
                         <td><input name="question_set_section_titles[{{ $set->id }}]" maxlength="120" value="{{ old('question_set_section_titles.'.$set->id, $attached?->pivot?->section_title) }}" placeholder="{{ __('e.g. Module 1 quiz') }}"></td>
