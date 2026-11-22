@@ -70,6 +70,31 @@ final class HrStaffManagementPluginTest extends TestCase
         $this->actingAs($admin)->post('/__hr/payroll/'.$payroll->id.'/paid', ['payment_reference' => 'BANK-REF-002'])->assertStatus(409);
     }
 
+    public function test_payroll_calculates_allowances_overtime_bonus_and_deductions_and_preserves_breakdown(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $staff = StaffProfile::query()->create(['employee_code' => 'PAY-COMP-01', 'full_name' => 'Payroll Components', 'designation' => 'Teacher', 'department' => 'Academic', 'base_salary' => 30000, 'status' => 'active']);
+
+        $this->actingAs($admin)->post('/__hr/payroll', [
+            'staff_profile_id' => $staff->id,
+            'payroll_month' => now()->format('Y-m'),
+            'allowances' => 2500,
+            'overtime_hours' => 5,
+            'overtime_rate' => 200,
+            'bonus' => 1000,
+            'deductions' => 1500,
+        ])->assertRedirect();
+
+        $payroll = StaffPayroll::query()->firstOrFail();
+        $this->assertSame('30000.00', $payroll->basic_salary);
+        $this->assertSame('2500.00', $payroll->allowances);
+        $this->assertSame('1000.00', $payroll->overtime_amount);
+        $this->assertSame('33500.00', $payroll->gross_salary);
+        $this->assertSame('1000.00', $payroll->bonus);
+        $this->assertSame('1500.00', $payroll->deductions);
+        $this->assertSame('33000.00', $payroll->net_paid);
+    }
+
     public function test_branch_manager_cannot_mark_payroll_paid(): void
     {
         $branch = Branch::query()->create(['name' => 'Branch', 'slug' => 'hr-branch', 'is_active' => true]);
