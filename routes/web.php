@@ -29,6 +29,7 @@ use App\Http\Controllers\CourseController;
 use App\Http\Controllers\CourseComboController;
 use App\Http\Controllers\CourseWishlistController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\AdminCmsDashboardController;
 use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PaymentController;
@@ -319,6 +320,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         ->name('courses.lessons.complete');
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
+        Route::get('/cms', [AdminCmsDashboardController::class, 'index'])->name('admin.cms.index');
         Route::get('/system-health', [AdminSystemHealthController::class, 'index'])->name('admin.system-health.index');
         Route::post('/system-health/run', [AdminSystemHealthController::class, 'run'])->middleware('throttle:3,1')->name('admin.system-health.run');
         Route::get('/academic-levels', [AcademicLevelController::class, 'index'])->name('admin.academic-levels.index');
