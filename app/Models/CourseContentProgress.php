@@ -11,11 +11,17 @@ class CourseContentProgress extends Model
         'user_id',
         'course_curriculum_item_id',
         'last_viewed_at',
+        'last_position_seconds',
+        'duration_seconds',
+        'progress_percent',
         'completed_at',
     ];
 
     protected $casts = [
         'last_viewed_at' => 'datetime',
+        'last_position_seconds' => 'integer',
+        'duration_seconds' => 'integer',
+        'progress_percent' => 'decimal:2',
         'completed_at' => 'datetime',
     ];
 
