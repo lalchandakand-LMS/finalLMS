@@ -140,6 +140,9 @@ class CarouselBuilderPluginTest extends TestCase
     {
         $manifest = json_decode(file_get_contents(base_path('plugins/aec/carousel-builder/1.0.0/plugin.json')), true, 64, JSON_THROW_ON_ERROR);
 
+        $entrypoint = require base_path('plugins/aec/carousel-builder/1.0.0/src/Plugin.php');
+        $this->assertInstanceOf(\App\Contracts\Plugins\PluginContract::class, $entrypoint);
+
         $this->assertSame('aec.carousel-builder', $manifest['key']);
         $this->assertSame([], app(\App\Services\Plugins\PluginManifestValidator::class)->errors($manifest));
     }
