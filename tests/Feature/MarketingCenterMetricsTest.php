@@ -65,7 +65,7 @@ class MarketingCenterMetricsTest extends TestCase
             ->assertSee('Campaign performance snapshot')
             ->assertSee('SMS campaigns')
             ->assertSee('3 sent')
-            ->assertSee('1 failed')
+            ->assertSee('1 Failed')
             ->assertSee('Meta boost plans')
             ->assertSee('৳125.50')
             ->assertSee('Open support tickets')
