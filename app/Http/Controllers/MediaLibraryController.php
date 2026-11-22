@@ -66,7 +66,7 @@ class MediaLibraryController extends Controller
         $usedAsBranding = (int) Setting::value('site_logo_media_id', 0) === $media->id
             || (int) Setting::value('site_favicon_media_id', 0) === $media->id
             || (int) Setting::value('loading_screen_logo_media_id', 0) === $media->id;
-        abort_if($usedAsBranding, 422, 'This file is currently used as the website logo or favicon.');
+        abort_if($usedAsBranding, 422, 'This file is currently used as the website logo, favicon or loading-screen logo.');
         Storage::disk($media->disk)->delete($media->path);
         $media->delete();
         return back()->with('success', 'Media deleted.');
