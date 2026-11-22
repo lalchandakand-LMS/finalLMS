@@ -84,6 +84,23 @@ class GamificationServiceTest extends TestCase
         $this->assertDatabaseCount('gamification_user_badges', 1);
     }
 
+    public function test_disabled_optional_badge_does_not_block_verified_xp(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        GamificationBadge::query()->where('key', 'first_lesson')->update(['is_active' => false]);
+
+        $service = app(GamificationService::class);
+
+        $this->assertTrue($service->award($student, 'lesson_completed', 'lesson', 701));
+        $this->assertDatabaseHas('gamification_events', [
+            'user_id' => $student->id,
+            'event_key' => 'lesson_completed',
+            'source_id' => 701,
+            'xp' => 10,
+        ]);
+        $this->assertDatabaseCount('gamification_user_badges', 0);
+    }
+
     public function test_leaderboard_opt_in_requires_a_learner_chosen_display_name(): void
     {
         $student = User::factory()->create(['role' => 'student']);
