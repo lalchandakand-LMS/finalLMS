@@ -30,7 +30,7 @@ class AdminCourseContentPostController extends Controller
             'access_type' => ['nullable', Rule::in(['free', 'paid', 'course_enrollment'])],
         ]);
 
-        $posts = CourseContentPost::query()->with(['author', 'thumbnail', 'categories', 'academicLevel', 'product'])
+        $posts = CourseContentPost::query()->with(['author', 'thumbnail', 'categories', 'academicLevel', 'product'])->withCount('versions')
             ->when($filters['q'] ?? null, function ($query, string $term): void {
                 $query->where(fn ($builder) => $builder
                     ->where('title', 'like', '%'.$term.'%')
