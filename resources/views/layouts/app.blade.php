@@ -742,7 +742,7 @@
             });
         })();
     </script>
-    @if(! $isAdminLayout && app()->bound('popup_ads.render'))
+    @if((! auth()->check() || ! in_array(auth()->user()->role, ['admin', 'branch_manager', 'accountant'], true)) && app()->bound('popup_ads.render'))
         {!! app('popup_ads.render')(request()) !!}
     @endif
 
