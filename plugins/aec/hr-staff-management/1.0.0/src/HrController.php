@@ -103,9 +103,19 @@ final class HrController extends Controller
             'ends_on' => ['required', 'date', 'after_or_equal:starts_on'],
             'reason' => ['required', 'string', 'max:2000'],
         ]);
-        $member = StaffProfile::query()->findOrFail($data['staff_profile_id']);
-        $this->assertRecordBranch($actor, $member->branch_id);
-        $leave = StaffLeaveRequest::query()->create($data + ['branch_id' => $member->branch_id, 'status' => 'pending']);
+        $leave = DB::transaction(function () use ($actor, $data): StaffLeaveRequest {
+            $member = StaffProfile::query()->lockForUpdate()->findOrFail($data['staff_profile_id']);
+            $this->assertRecordBranch($actor, $member->branch_id);
+            abort_unless($member->status === 'active', 422, 'Leave can only be requested for active staff.');
+            $overlap = StaffLeaveRequest::query()
+                ->where('staff_profile_id', $member->id)
+                ->whereIn('status', ['pending', 'approved'])
+                ->whereDate('starts_on', '<=', $data['ends_on'])
+                ->whereDate('ends_on', '>=', $data['starts_on'])
+                ->exists();
+            abort_if($overlap, 409, 'This leave period overlaps an existing pending or approved request.');
+            return StaffLeaveRequest::query()->create($data + ['branch_id' => $member->branch_id, 'status' => 'pending']);
+        }, 3);
         $this->audit($request, 'hr.leave_requested', 'Created leave request #'.$leave->id);
         return back()->with('success', 'Leave request submitted for approval.');
     }
