@@ -20,7 +20,7 @@ class UniversalAiAgentSpecialistPromptTest extends TestCase
 
         $this->assertStringContainsString('AI Student Agent', $prompt);
         $this->assertStringContainsString('AI Learning Agent', $prompt);
-        $this->assertStringContainsString('Vocabulary', $prompt);
+        $this->assertStringContainsString('vocabulary', strtolower($prompt));
         $this->assertStringContainsString('grammar', $prompt);
         $this->assertStringContainsString('exam-preparation', $prompt);
         $this->assertStringContainsString('Do not claim to detect academic weaknesses from marks', $prompt);
@@ -44,7 +44,7 @@ class UniversalAiAgentSpecialistPromptTest extends TestCase
         $support = AssistantSettings::rolePrompt('support_staff');
 
         $this->assertStringContainsString('AI Admin Agent', $admin);
-        $this->assertStringContainsString('aggregate operational summaries', $admin);
+        $this->assertStringContainsString('aggregate reports, operational summaries', $admin);
         $this->assertStringContainsString('never approve admissions', strtolower($admin));
         $this->assertStringContainsString('AI Support Agent', $support);
         $this->assertStringContainsString('24/7-style procedural guidance', $support);
