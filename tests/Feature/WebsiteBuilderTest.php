@@ -151,6 +151,21 @@ class WebsiteBuilderTest extends TestCase
         $this->get('/')->assertOk()->assertSee('Builder responsive slide')->assertSee('/storage/media/builder-mobile.jpg', false);
     }
 
+    public function test_admin_can_configure_the_featured_course_carousel_from_website_builder(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->post(route('admin.website-builder.update'), [
+            'home_course_carousel_enabled' => '0',
+            'home_course_carousel_items' => '10',
+            'home_course_carousel_cards' => '4',
+        ])->assertRedirect(route('admin.website-builder.index'));
+
+        $this->assertDatabaseHas('settings', ['key' => 'home_course_carousel_enabled', 'value' => '0']);
+        $this->assertDatabaseHas('settings', ['key' => 'home_course_carousel_items', 'value' => '10']);
+        $this->assertDatabaseHas('settings', ['key' => 'home_course_carousel_cards', 'value' => '4']);
+    }
+
     public function test_non_admin_cannot_access_website_builder(): void
     {
         $student = User::factory()->create(['role' => 'student']);
