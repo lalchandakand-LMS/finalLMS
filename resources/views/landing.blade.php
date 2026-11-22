@@ -133,11 +133,11 @@
         @keyframes home-carousel-progress { to { transform:scaleX(1); } }
         .home-carousel__controls { display:flex; justify-content:flex-end; margin-top:8px; }
         .home-carousel__toggle { border:1px solid var(--border); border-radius:999px; padding:6px 12px; background:var(--surface,#fff); color:var(--text); cursor:pointer; }
-        .home-carousel.is-fade .home-carousel__track,.home-carousel.is-zoom .home-carousel__track { position:relative; display:block; transform:none !important; }
-        .home-carousel.is-fade .home-carousel__slide,.home-carousel.is-zoom .home-carousel__slide { position:absolute; inset:0; opacity:0; pointer-events:none; transition:opacity .55s ease; }
-        .home-carousel.is-fade .home-carousel__slide.is-active,.home-carousel.is-zoom .home-carousel__slide.is-active { opacity:1; pointer-events:auto; }
-        .home-carousel.is-zoom .home-carousel__slide img { transform:scale(1.05); transition:transform .8s ease; }
-        .home-carousel.is-zoom .home-carousel__slide.is-active img { transform:scale(1); }
+        .home-carousel--fade .home-carousel__track,.home-carousel--zoom .home-carousel__track { position:relative; display:block; transform:none !important; }
+        .home-carousel--fade .home-carousel__slide,.home-carousel--zoom .home-carousel__slide { position:absolute; inset:0; opacity:0; pointer-events:none; transition:opacity .55s ease; }
+        .home-carousel--fade .home-carousel__slide.is-active,.home-carousel--zoom .home-carousel__slide.is-active { opacity:1; pointer-events:auto; }
+        .home-carousel--zoom .home-carousel__slide img { transform:scale(1.05); transition:transform .8s ease; }
+        .home-carousel--zoom .home-carousel__slide.is-active img { transform:scale(1); }
         .home-carousel__content h2 { margin:0 0 14px; color:#fff; font-size:clamp(28px,4.4vw,54px); line-height:1.1; letter-spacing:-.03em; }
         .home-carousel__content p { margin:0 0 24px; color:rgba(255,255,255,.94); font-size:clamp(15px,1.6vw,19px); line-height:1.7; }
         .home-carousel__arrow { position:absolute; top:50%; z-index:2; transform:translateY(-50%); width:46px; height:46px; border:1px solid #ffffff88; border-radius:50%; background:#0b1738aa; color:#fff; font-size:32px; line-height:1; cursor:pointer; backdrop-filter:blur(8px); }
@@ -329,10 +329,10 @@
                     <button type="button" class="home-carousel__arrow home-carousel__arrow--next" data-carousel-next aria-label="{{ __('Next slide') }}">›</button>
                 @endif
             </div>
-            @if($sliderOptions['progress'])
+            @if($sliderOptions['progress'] && $homeSlides->count() > 1)
                 <div class="home-carousel__progress" aria-hidden="true"><span data-carousel-progress></span></div>
             @endif
-            @if($sliderOptions['playPause'])
+            @if($sliderOptions['playPause'] && $homeSlides->count() > 1)
                 <div class="home-carousel__controls"><button type="button" class="home-carousel__toggle" data-carousel-toggle aria-pressed="{{ $sliderOptions['autoplay'] ? 'false' : 'true' }}">{{ $sliderOptions['autoplay'] ? __('Pause') : __('Play') }}</button></div>
             @endif
             @if($showSliderDots)
