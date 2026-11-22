@@ -191,15 +191,13 @@ Artisan::command('referral-income:reconcile-approved-payments', function (): int
         ->select('p.id')
         ->where('p.status', 'approved')
         ->where('p.amount', '>', 0)
-        ->where('p.currency', 'BDT')
+        ->whereRaw('UPPER(p.currency) = ?', ['BDT'])
         ->whereNull('p.learn_earn_exam_id')
         ->where(function ($query): void {
-            $query->whereNull('p.gateway_provider')
-                ->orWhere('p.gateway_provider', '')
+            $query->whereRaw("TRIM(COALESCE(p.gateway_provider, '')) = ''")
                 ->orWhere(function ($gateway): void {
                     $gateway->where('p.gateway_provider', 'bkash')
-                        ->whereNotNull('p.gateway_transaction_id')
-                        ->where('p.gateway_transaction_id', '<>', '');
+                        ->whereRaw("TRIM(COALESCE(p.gateway_transaction_id, '')) <> ''");
                 });
         })
         ->whereExists(function ($query): void {
@@ -210,7 +208,8 @@ Artisan::command('referral-income:reconcile-approved-payments', function (): int
                     $rules->selectRaw('1')->from('referral_income_rules as rir')
                         ->whereColumn('rir.owner_type', 'ra.referrer_type')
                         ->where('rir.is_active', true)
-                        ->where('rir.commission_percent', '>', 0);
+                        ->where('rir.commission_percent', '>', 0)
+                        ->whereRaw('ROUND(p.amount * rir.commission_percent / 100, 2) > 0');
                 });
         })
         ->whereNotExists(function ($query): void {
