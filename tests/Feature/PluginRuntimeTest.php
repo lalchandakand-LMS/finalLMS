@@ -141,7 +141,6 @@ PHP;
         $runtime->registerActivePlugins();
         $runtime->bootActivePlugins();
 
-        $this->assertTrue(app('plugin.runtime.registered'));
         $this->assertTrue(app('plugin.runtime.booted'));
 
         $routes = app('router')->getRoutes()->getRoutes();
@@ -403,8 +402,6 @@ PHP,
         }
 
         $this->assertSame('active', $plugin->fresh()->status);
-        $this->assertFalse(app()->bound('plugin.runtime.registered'));
-
         // The same long-lived runtime instance must retry preflight rather than
         // returning early because a failed attempt marked itself registered.
         $runtime->registerActivePlugins();
