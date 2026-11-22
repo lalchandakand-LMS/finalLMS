@@ -307,3 +307,13 @@ Current work is on PR #116, branch `feature/aloms-premium-homepage-clean`. Keep 
 - Course completion and certificate issuance now require every published curriculum post and every legacy lesson to be complete.
 - Exact PR-head checks passed: 503 PHPUnit tests / 2,872 assertions, PHP lint, MySQL migrations, route listing, Vite build, cPanel ZIP packaging and CodeQL. Main merge-commit CI must be rechecked separately.
 - No production deployment, production migration or live payment action was performed.
+
+
+## Current continuation note — PR #396 (2026-11-22)
+
+- Continue from PR #396, branch `feat/aec-feature-parity-port`, latest code commit before this note: `72dc9fc94ced8b130ddd6c24bed82e94f0ef42ec`.
+- Referral payout creation now serializes per referrer by locking the owner row; payout review locks and reconciles all reserved commission rows against the exact payout total and owner before approval/payment.
+- New tests cover repeat payout submission after a completed payout and fail-closed payout review when the reserved ledger total changes.
+- Run the full Laravel CI/package workflow and CodeQL once on the final consolidated commit; do not trigger redundant full-suite runs for intermediate edits.
+- Refund-to-course-payment linkage remains unresolved because invoice refunds and course payments are separate ledgers. Never join by matching numeric IDs. Keep referral payouts out of production until explicit linkage, partial/full refund reversal, chargeback, and paid-commission recovery are implemented and tested.
+- Production deployment, live payment activation and cPanel installation remain blocked pending isolated staging, verified backup/restore, rollback and provider sandbox acceptance.
