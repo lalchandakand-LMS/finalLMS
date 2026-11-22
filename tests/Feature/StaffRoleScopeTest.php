@@ -49,7 +49,7 @@ class StaffRoleScopeTest extends TestCase
         $this->actingAs($teacher)->get(route('dashboard'))
             ->assertOk()
             ->assertSee('Teacher Panel')
-            ->assertSee('My batches &amp; classes', false)
+            ->assertSee('My batches & classes', false)
             ->assertSee('/teacher/batches');
 
         $student = User::factory()->create(['role' => 'student']);
