@@ -202,6 +202,17 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         ->name('invoice-payments.receipt');
 
     // Staff subroles use the shared Admin shell and only their scoped modules.
+    // Dedicated Branch Panel: all records are scoped to the manager's assigned active branch.
+    Route::middleware('role:branch_manager')->prefix('branch')->name('branch.')->group(function () {
+        Route::get('/dashboard', [BranchDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/batches', [BatchController::class, 'branchManagerIndex'])->middleware('admin.permission:branch.batches')->name('batches.index');
+        Route::get('/students', [BatchController::class, 'branchManagerStudents'])->middleware('admin.permission:branch.students')->name('students.index');
+        Route::post('/batches', [BatchController::class, 'branchManagerStore'])->middleware('admin.permission:branch.batches')->name('batches.store');
+        Route::put('/batches/{batch}', [BatchController::class, 'branchManagerUpdate'])->middleware('admin.permission:branch.batches')->name('batches.update');
+        Route::get('/batches/{batch}/attendance', [AttendanceController::class, 'index'])->middleware(['admin.permission:branch.attendance', 'module.enabled:attendance'])->name('batches.attendance.index');
+        Route::post('/batches/{batch}/attendance', [AttendanceController::class, 'store'])->middleware(['admin.permission:branch.attendance', 'module.enabled:attendance'])->name('batches.attendance.store');
+    });
+
     Route::middleware('role:branch_manager')
         ->prefix('admin/branch-workspace')
         ->name('admin.branch-workspace.')

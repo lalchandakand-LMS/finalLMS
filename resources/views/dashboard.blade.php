@@ -179,16 +179,16 @@
             <section class="panel" style="margin-bottom:20px;">
                 <div class="page-header" style="margin-bottom:10px;">
                     <div>
-                        <span class="badge info">{{ __('Admin Panel · Branch workspace') }}</span>
-                        <h2 style="margin:10px 0 0;">{{ __('Manage your assigned branch') }}</h2>
+                        <span class="badge info">{{ __('Branch Panel') }}</span>
+                        <h2 style="margin:10px 0 0;">{{ __('Manage your assigned branch') }}</h2><p class="muted">{{ __('This is a separate branch workspace with access limited to your assigned branch.') }}</p>
                         <p class="muted">{{ __('You can manage only the branch modules explicitly assigned to your account.') }}</p>
                     </div>
                     @if($user->hasAdminPermission('branch.batches'))
-                        <a href="{{ route('admin.branch-workspace.batches.index') }}" class="btn primary">{{ __('Open branch batches') }}</a>
+                        <a href="{{ route('branch.batches.index') }}" class="btn primary">{{ __('Open branch batches') }}</a>
                     @endif
                 </div>
                 @if($user->hasAdminPermission('branch.students'))
-                    <a href="{{ route('admin.branch-workspace.students.index') }}" class="btn secondary">{{ __('View branch students') }}</a>
+                    <a href="{{ route('branch.students.index') }}" class="btn secondary">{{ __('View branch students') }}</a>
                 @endif
             </section>
         @endif

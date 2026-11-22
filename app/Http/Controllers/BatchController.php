@@ -62,7 +62,7 @@ class BatchController extends Controller
             'fee' => ['required', 'numeric', 'min:0'],
         ]);
         Batch::create([...$validated, 'branch_id' => $branchId, 'status' => 'open']);
-        return redirect()->route('branch-manager.batches.index')->with('success', 'Batch created for your branch.');
+        return redirect()->route('branch.batches.index')->with('success', 'Batch created for your branch.');
     }
 
     public function branchManagerUpdate(Batch $batch, Request $request): RedirectResponse
@@ -85,7 +85,7 @@ class BatchController extends Controller
         ]);
         abort_if($validated['capacity'] < $batch->enrollments()->whereIn('status', ['active', 'completed'])->count(), 422, 'Capacity cannot be lower than the current enrolled student count.');
         $batch->update($validated);
-        return redirect()->route('branch-manager.batches.index')->with('success', 'Your branch batch was updated.');
+        return redirect()->route('branch.batches.index')->with('success', 'Your branch batch was updated.');
     }
 
     public function branchManagerStudents(Request $request): View
