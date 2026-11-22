@@ -102,9 +102,10 @@ final class AdmissionController extends Controller
         $actor = $request->user();
         $this->assertBranchAssigned($actor);
         $filters = $this->validatedReportFilters($request);
+        $search = $request->validate(['q' => ['nullable', 'string', 'max:120']]);
         $query = $this->filteredApplications($actor, $filters)
-            ->when($request->filled('q'), function (Builder $q) use ($request): void {
-                $term = trim($request->string('q')->toString());
+            ->when(! empty($search['q']), function (Builder $q) use ($search): void {
+                $term = trim($search['q']);
                 $q->where(fn (Builder $nested) => $nested
                     ->where('applicant_name', 'like', '%'.$term.'%')
                     ->orWhere('email', 'like', '%'.$term.'%')
@@ -115,11 +116,14 @@ final class AdmissionController extends Controller
             ->when($request->filled('document_status'), fn (Builder $q) => $q->where('document_verification_status', $request->input('document_status')));
 
         return view('admission-management::admin.index', [
-            'applications' => $query->with(['documents', 'assignee'])->latest()->paginate(20)->withQueryString(),
+            'applications' => $query->with(['documents.reviewer', 'assignee', 'events.actor', 'branch'])->latest()->paginate(20)->withQueryString(),
             'statusCounts' => $this->scopedApplications($actor)->selectRaw('status, COUNT(*) as aggregate')->groupBy('status')->pluck('aggregate', 'status'),
             'statuses' => array_keys(self::TRANSITIONS),
             'documentTypes' => self::DOCUMENT_TYPES,
             'branches' => $actor->isBranchManager() ? collect() : Branch::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'reviewers' => User::query()->whereIn('role', ['admin', 'branch_manager', 'teacher'])
+                ->when($actor->isBranchManager(), fn (Builder $q) => $q->where('branch_id', $actor->branch_id))
+                ->orderBy('name')->get(['id', 'name', 'role']),
         ]);
     }
 
@@ -495,6 +499,7 @@ final class AdmissionController extends Controller
             'source' => ['nullable', Rule::in(['website', 'walk_in'])],
             'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
             'course' => ['nullable', 'string', 'max:160'],
+            'document_status' => ['nullable', Rule::in(['missing', 'pending', 'verified', 'revision_required'])],
         ]);
     }
 
@@ -506,7 +511,8 @@ final class AdmissionController extends Controller
             ->when(! empty($filters['status']), fn (Builder $q) => $q->where('status', $filters['status']))
             ->when(! empty($filters['source']), fn (Builder $q) => $q->where('application_source', $filters['source']))
             ->when(! empty($filters['branch_id']) && ! $actor->isBranchManager(), fn (Builder $q) => $q->where('branch_id', $filters['branch_id']))
-            ->when(! empty($filters['course']), fn (Builder $q) => $q->where('desired_course', 'like', '%'.$filters['course'].'%'));
+            ->when(! empty($filters['course']), fn (Builder $q) => $q->where('desired_course', 'like', '%'.$filters['course'].'%'))
+            ->when(! empty($filters['document_status']), fn (Builder $q) => $q->where('document_verification_status', $filters['document_status']));
     }
 
     private function scopedApplications(User $actor): Builder
