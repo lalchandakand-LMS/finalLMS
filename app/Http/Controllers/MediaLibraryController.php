@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\MediaAsset;
 use App\Models\Setting;
+use App\Services\Media\ImageOptimizer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class MediaLibraryController extends Controller
@@ -26,19 +28,30 @@ class MediaLibraryController extends Controller
         ]);
 
         foreach ($validated['files'] as $file) {
-            $path = $file->store('media/'.now()->format('Y/m'), 'public');
+            $webp = app(ImageOptimizer::class)->toWebp($file);
+            if ($webp !== null) {
+                $path = 'media/'.now()->format('Y/m').'/'.Str::uuid().'.webp';
+                Storage::disk('public')->put($path, $webp);
+                $mimeType = 'image/webp';
+                $size = strlen($webp);
+            } else {
+                $path = $file->store('media/'.now()->format('Y/m'), 'public');
+                $mimeType = $file->getMimeType() ?: 'application/octet-stream';
+                $size = $file->getSize();
+            }
+
             MediaAsset::create([
                 'uploaded_by' => $request->user()->id,
                 'disk' => 'public',
                 'path' => $path,
                 'original_name' => mb_substr($file->getClientOriginalName(), 0, 255),
-                'mime_type' => $file->getMimeType() ?: 'application/octet-stream',
-                'size' => $file->getSize(),
+                'mime_type' => $mimeType,
+                'size' => $size,
                 'alt_text' => $validated['alt_text'] ?? null,
             ]);
         }
 
-        return back()->with('success', 'Media uploaded successfully.');
+        return back()->with('success', 'Media uploaded successfully. JPEG/PNG files are converted to optimized WebP when server support is available.');
     }
 
     public function destroy(MediaAsset $media): RedirectResponse
