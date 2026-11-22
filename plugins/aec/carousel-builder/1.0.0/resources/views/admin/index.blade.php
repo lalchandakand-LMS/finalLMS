@@ -13,6 +13,6 @@
             </tbody></table>
         </div>
         {{ $carousels->links() }}
-        <div class="rounded-xl border bg-blue-50 p-4 text-sm text-blue-950"><strong>How to use:</strong> Publish a carousel and it will appear on the homepage. Manual items are fully editable; dynamic sources refresh from published courses, active teacher profiles and approved course testimonials.</div>
+        <div class="rounded-xl border bg-blue-50 p-4 text-sm text-blue-950"><strong>How to use:</strong> Publish a carousel and it will appear on the homepage. Manual items are fully editable; dynamic sources refresh from published courses, teacher profiles and approved course testimonials.</div>
     </div>
 </x-app-layout>
