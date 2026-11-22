@@ -29,10 +29,19 @@ final class HrStaffManagementPluginTest extends TestCase
     {
         parent::setUp();
         View::addNamespace('hr-staff-management', base_path('plugins/aec/hr-staff-management/1.0.0/resources/views'));
-        foreach (['StaffProfile.php', 'StaffPayroll.php', 'StaffAttendance.php', 'StaffLeaveRequest.php', 'HrController.php'] as $file) {
+        foreach (['StaffProfile.php', 'StaffPayroll.php', 'StaffAttendance.php', 'StaffLeaveRequest.php', 'StaffJobOpening.php', 'StaffApplication.php', 'HrController.php'] as $file) {
             require_once base_path('plugins/aec/hr-staff-management/1.0.0/src/'.$file);
         }
         Route::get('/__hr', [HrController::class, 'index'])->name('branch.hr.index');
+        Route::get('/__careers', [HrController::class, 'publicCareers'])->name('careers.index');
+        Route::get('/__careers/{opening}', [HrController::class, 'publicCareerShow'])->name('careers.show');
+        Route::post('/__careers/{opening}/apply', [HrController::class, 'applyCareer'])->name('careers.apply');
+        Route::get('/__admin/hr/recruitment', [HrController::class, 'recruitmentIndex'])->name('admin.hr.recruitment.index');
+        Route::post('/__admin/hr/recruitment/openings', [HrController::class, 'storeJobOpening'])->name('admin.hr.recruitment.openings.store');
+        Route::patch('/__admin/hr/recruitment/openings/{opening}', [HrController::class, 'updateJobOpeningStatus'])->name('admin.hr.recruitment.openings.status');
+        Route::post('/__admin/hr/recruitment/applications/{application}', [HrController::class, 'reviewApplication'])->name('admin.hr.recruitment.applications.review');
+        Route::get('/__admin/hr/recruitment/applications/{application}/resume', [HrController::class, 'downloadApplicationResume'])->name('admin.hr.recruitment.applications.resume');
+
         Route::get('/__hr/teacher', [HrController::class, 'teacherIndex'])->name('teacher.hr.index');
         Route::post('/__hr/teacher/leave', [HrController::class, 'teacherRequestLeave'])->name('teacher.hr.leave.store');
         Route::post('/__hr/staff', [HrController::class, 'storeStaff'])->name('branch.hr.staff.store');
@@ -42,6 +51,77 @@ final class HrStaffManagementPluginTest extends TestCase
         Route::post('/__hr/payroll', [HrController::class, 'recordPayroll'])->name('branch.hr.payrolls.store');
         Route::post('/__hr/payroll/{payroll}/paid', [HrController::class, 'markPayrollPaid'])->name('admin.hr.payroll.mark-paid');
         app('router')->getRoutes()->refreshNameLookups();
+    }
+
+    public function test_public_recruitment_application_is_stored_privately_and_admin_can_hire_candidate(): void
+    {
+        Storage::fake('local');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $opening = StaffJobOpening::query()->create([
+            'title' => 'English Teacher',
+            'department' => 'Academic',
+            'designation' => 'English Teacher',
+            'description' => 'Teach English classes.',
+            'employment_type' => 'full_time',
+            'status' => 'published',
+            'created_by' => $admin->id,
+        ]);
+
+        $this->get('/__careers')->assertOk()->assertSee('English Teacher');
+        $this->get('/__careers/'.$opening->id)->assertOk()->assertSee('Apply for this position');
+        $this->post('/__careers/'.$opening->id.'/apply', [
+            'applicant_name' => 'Candidate One',
+            'email' => 'candidate@example.test',
+            'phone' => '01700000000',
+            'cover_letter' => 'I have teaching experience.',
+            'resume' => UploadedFile::fake()->create('candidate.pdf', 80, 'application/pdf'),
+        ])->assertRedirect();
+
+        $application = StaffApplication::query()->firstOrFail();
+        $this->assertSame('submitted', $application->status);
+        Storage::disk('local')->assertExists($application->resume_path);
+        $this->actingAs($admin)->get('/__admin/hr/recruitment/applications/'.$application->id.'/resume')->assertOk();
+
+        $branch = Branch::query()->create(['name' => 'Recruitment Branch', 'slug' => 'recruitment-branch', 'is_active' => true]);
+        $this->post('/__admin/hr/recruitment/applications/'.$application->id, [
+            'status' => 'hired',
+            'review_notes' => 'Interview completed and approved.',
+            'employee_code' => 'HIRED-001',
+            'base_salary' => 32000,
+            'branch_id' => $branch->id,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('staff_profiles', [
+            'employee_code' => 'HIRED-001',
+            'full_name' => 'Candidate One',
+            'email' => 'candidate@example.test',
+            'branch_id' => $branch->id,
+            'base_salary' => 32000,
+        ]);
+        $this->assertDatabaseHas('staff_applications', ['id' => $application->id, 'status' => 'hired']);
+        $this->post('/__admin/hr/recruitment/applications/'.$application->id, [
+            'status' => 'hired', 'employee_code' => 'HIRED-002', 'base_salary' => 30000,
+        ])->assertStatus(409);
+    }
+
+    public function test_recruitment_review_and_resume_access_are_admin_only(): void
+    {
+        Storage::fake('local');
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $opening = StaffJobOpening::query()->create([
+            'title' => 'Tutor', 'department' => 'Academic', 'designation' => 'Tutor',
+            'description' => 'Tutor role.', 'employment_type' => 'part_time', 'status' => 'published',
+        ]);
+        $path = UploadedFile::fake()->create('resume.pdf', 20, 'application/pdf')->store('private/hr-applications', 'local');
+        $application = StaffApplication::query()->create([
+            'staff_job_opening_id' => $opening->id, 'applicant_name' => 'Applicant',
+            'email' => 'applicant@example.test', 'phone' => '01700000001', 'resume_path' => $path,
+            'status' => 'submitted',
+        ]);
+
+        $this->actingAs($teacher)->post('/__admin/hr/recruitment/applications/'.$application->id, ['status' => 'rejected'])->assertForbidden();
+        $this->get('/__admin/hr/recruitment/applications/'.$application->id.'/resume')->assertForbidden();
+        $this->assertSame('submitted', $application->fresh()->status);
     }
 
     public function test_branch_manager_can_only_see_and_prepare_payroll_for_their_branch(): void
