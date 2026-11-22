@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\DeviceSession;
 use App\Models\StudentDevice;
+use App\Models\StudentProfile;
 use App\Models\User;
 use App\Services\SmsGateway;
 use App\Notifications\AdminMfaBootstrapCodeNotification;
@@ -265,6 +266,10 @@ class StudentDeviceAccessController extends Controller
         $user = User::query()->where('email', $validated['email'])->first();
         if (! $user || ! Hash::check($validated['password'], $user->password)) {
             return back()->withErrors(['email' => 'The provided credentials do not match our records.'])->onlyInput('email');
+        }
+
+        if ($user->isStudent() && StudentProfile::query()->where('user_id', $user->id)->whereIn('lifecycle_status', ['suspended', 'graduated'])->exists()) {
+            return back()->withErrors(['email' => 'This student account is inactive. Please contact the administration.'])->onlyInput('email');
         }
 
         if (Auth::check()) {
