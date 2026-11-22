@@ -84,6 +84,24 @@ class CourseContentLearningProgressTest extends TestCase
         ]);
     }
 
+    public function test_video_lesson_cannot_be_manually_completed_before_ninety_percent_observed_watch_time(): void
+    {
+        [$course, $post, $student] = $this->fixture();
+        $post->update(['video_url' => 'https://youtu.be/dQw4w9WgXcQ']);
+
+        $this->actingAs($student)
+            ->from(route('courses.content.show', [$course, $post]))
+            ->post(route('student.courses.content.complete', [$course, $post]))
+            ->assertRedirect(route('courses.content.show', [$course, $post]))
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseMissing('course_content_progress', [
+            'user_id' => $student->id,
+            'course_curriculum_item_id' => $course->curriculumItems()->firstOrFail()->id,
+            'completed_at' => now(),
+        ]);
+    }
+
     public function test_course_completion_requires_all_published_curriculum_posts_and_issues_certificate_afterward(): void
     {
         [$course, $firstPost, $student] = $this->fixture();
