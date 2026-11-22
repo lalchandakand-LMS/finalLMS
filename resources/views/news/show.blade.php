@@ -3,7 +3,9 @@
 @section('content')
 <article class="panel" style="max-width:900px;margin:auto;">
 @if($post->cover)<img src="{{ $post->cover->url }}" alt="{{ $post->cover->alt_text }}" style="width:100%;max-height:420px;object-fit:cover;border-radius:14px;">@endif
-<h1>{{ $post->title }}</h1><p class="muted">{{ $post->published_at->format('d M Y') }} · {{ $post->author->name }}</p>
+<h1>{{ $post->title }}</h1>
+@if($post->categories->isNotEmpty())<p class="muted">{{ $post->categories->pluck('name')->join(' · ') }}</p>@endif
+@if($post->tags->isNotEmpty())<p class="muted">{{ __('Tags') }}: {{ $post->tags->pluck('name')->join(', ') }}</p>@endif<p class="muted">{{ $post->published_at->format('d M Y') }} · {{ $post->author->name }}</p>
 @if($post->excerpt)<p><strong>{{ $post->excerpt }}</strong></p>@endif
 <div style="white-space:pre-line;line-height:1.8;">{{ $post->body }}</div>
 <div class="meta-row"><span class="badge info">{{ number_format($post->views_count) }} {{ __('views') }}</span><span class="muted">{{ $comments->total() }} {{ __('comments') }}</span></div>
