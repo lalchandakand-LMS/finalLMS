@@ -20,6 +20,15 @@ final class AdmissionManagementPluginTest extends TestCase
 {
     use DatabaseMigrations;
 
+    protected function tearDown(): void
+    {
+        Schema::disableForeignKeyConstraints();
+        Schema::dropIfExists('admission_documents');
+        Schema::dropIfExists('admission_applications');
+        Schema::enableForeignKeyConstraints();
+        parent::tearDown();
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
