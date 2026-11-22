@@ -7,6 +7,7 @@ use App\Models\AcademicLevel;
 use App\Models\WebsitePage;
 use App\Models\WebsitePageRevision;
 use App\Models\ActivityLog;
+use App\Models\Setting;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Http\RedirectResponse;
@@ -34,6 +35,7 @@ class WebsitePageController extends Controller
             'media' => MediaAsset::query()->where('mime_type', 'like', 'image/%')->latest()->limit(200)->get(),
             'academicLevels' => AcademicLevel::query()->where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(),
             'revisions' => collect(),
+            'reusableBlocks' => $this->reusableBlocks(),
         ]);
     }
 
@@ -58,6 +60,7 @@ class WebsitePageController extends Controller
             'media' => MediaAsset::query()->where('mime_type', 'like', 'image/%')->latest()->limit(200)->get(),
             'academicLevels' => AcademicLevel::query()->where('is_active', true)->orWhere('id', $websitePage->academic_level_id)->orderBy('sort_order')->orderBy('name')->get(),
             'revisions' => $websitePage->revisions()->with('creator')->limit(20)->get(),
+            'reusableBlocks' => $this->reusableBlocks(),
         ]);
     }
 
@@ -221,6 +224,34 @@ class WebsitePageController extends Controller
         $imageIds = collect($page->sections ?? [])->pluck('image_id')->filter()->unique();
         $media = MediaAsset::query()->whereIn('id', $imageIds)->where('mime_type', 'like', 'image/%')->get()->keyBy('id');
         return view('website-pages.show', compact('page', 'media', 'isPreview', 'previewDevice', 'previewFrame'));
+    }
+
+    /**
+     * @return array<int, array<string, string>>
+     */
+    private function reusableBlocks(): array
+    {
+        $blocks = json_decode((string) Setting::value('homepage_custom_blocks', '[]'), true);
+        if (! is_array($blocks)) {
+            return [];
+        }
+
+        return collect($blocks)->filter(fn ($block): bool => is_array($block)
+            && is_string($block['id'] ?? null)
+            && is_string($block['name'] ?? null)
+            && is_string($block['title'] ?? null))
+            ->take(30)
+            ->map(fn ($block): array => [
+                'id' => $block['id'],
+                'name' => mb_substr($block['name'], 0, 80),
+                'title' => mb_substr($block['title'], 0, 180),
+                'body' => mb_substr((string) ($block['body'] ?? ''), 0, 5000),
+                'button_label' => mb_substr((string) ($block['button_label'] ?? ''), 0, 60),
+                'button_url' => mb_substr((string) ($block['button_url'] ?? ''), 0, 500),
+                'background_color' => preg_match('/^#[0-9A-Fa-f]{6}$/', (string) ($block['background_color'] ?? '')) ? $block['background_color'] : '#ffffff',
+                'text_color' => preg_match('/^#[0-9A-Fa-f]{6}$/', (string) ($block['text_color'] ?? '')) ? $block['text_color'] : '#18212f',
+                'layout' => in_array($block['layout'] ?? 'standard', ['standard', 'reversed', 'centered'], true) ? ($block['layout'] ?? 'standard') : 'standard',
+            ])->values()->all();
     }
 
     private function validated(Request $request, ?WebsitePage $page = null): array

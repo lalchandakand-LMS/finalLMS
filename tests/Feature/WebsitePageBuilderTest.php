@@ -57,6 +57,18 @@ class WebsitePageBuilderTest extends TestCase
             ->assertDontSee('<script>alert(1)</script>', false);
     }
 
+    public function test_page_builder_can_insert_saved_reusable_homepage_blocks(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($admin)->post(route('admin.website-builder.custom-blocks.store'), [
+            'name' => 'Welcome banner', 'title' => 'Welcome to Alom English Center',
+            'body' => 'Learn English with confidence.', 'button_label' => 'Explore courses',
+            'button_url' => '/courses', 'background_color' => '#123456', 'text_color' => '#ffffff', 'layout' => 'centered',
+        ])->assertRedirect(route('admin.website-builder.index'));
+        $this->get(route('admin.website-pages.create'))->assertOk()
+            ->assertSee('Welcome banner')->assertSee('Welcome to Alom English Center')->assertSee('data-reusable-block', false);
+    }
+
     public function test_page_builder_supports_quote_and_divider_blocks(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
