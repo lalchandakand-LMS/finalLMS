@@ -37,6 +37,7 @@ return new class implements PluginContract {
         }, 'admissions.manage');
         $context->routesForPortal('branch', 'branch/admissions', 'branch.admissions.', function (): void {
             Route::get('/', [AdmissionController::class, 'index'])->name('index');
+            Route::post('/', [AdmissionController::class, 'store'])->middleware('throttle:20,1')->name('store');
             Route::get('/reports', [AdmissionController::class, 'reports'])->name('reports');
             Route::get('/reports/export', [AdmissionController::class, 'exportReport'])->middleware('throttle:10,1')->name('reports.export');
             Route::post('/{application}/review', [AdmissionController::class, 'review'])->whereNumber('application')->middleware('throttle:20,1')->name('review');
