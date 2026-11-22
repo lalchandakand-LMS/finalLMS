@@ -94,7 +94,7 @@ final class ReferralIncomeController extends Controller
 
     public function reviewPayout(Request $request, int $payout, ReferralIncomeService $service): RedirectResponse
     {
-        $data = $request->validate(['status' => ['required', 'in:approved,paid,rejected'], 'admin_note' => ['nullable', 'string', 'max:1000', 'required_if:status,paid,rejected']);
+        $data = $request->validate(['status' => ['required', 'in:approved,paid,rejected'], 'admin_note' => ['nullable', 'string', 'max:1000', 'required_if:status,paid,rejected']]);
         $service->reviewPayout($payout, (int) $request->user()->id, $data['status'], $data['admin_note'] ?? null);
         return back()->with('success', 'Payout review saved.');
     }
