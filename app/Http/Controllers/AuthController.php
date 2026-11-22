@@ -1,18 +1,18 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\\Http\\Controllers;
 
-use App\Models\DeviceSession;
-use App\Models\User;
-use Illuminate\Auth\Events\Registered;
-use Illuminate\Auth\Events\PasswordReset;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Password;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rules\Password;
-use Illuminate\View\View;
+use App\\Models\\DeviceSession;
+use App\\Models\\User;
+use Illuminate\\Auth\\Events\\Registered;
+use Illuminate\\Auth\\Events\\PasswordReset;
+use Illuminate\\Http\\RedirectResponse;
+use Illuminate\\Http\\Request;
+use Illuminate\\Support\\Facades\\Auth;
+use Illuminate\\Support\\Facades\\Password as PasswordBroker;
+use Illuminate\\Support\\Str;
+use Illuminate\\Validation\\Rules\\Password;
+use Illuminate\\View\\View;
 
 class AuthController extends Controller
 {
@@ -43,7 +43,7 @@ class AuthController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'phone_number' => ['required', 'string', 'regex:/^\+[1-9][0-9]{7,14}$/', 'unique:users,phone_number'],
+            'phone_number' => ['required', 'string', 'regex:/^\\+[1-9][0-9]{7,14}$/', 'unique:users,phone_number'],
             'password' => ['required', 'confirmed', Password::defaults()],
         ]);
 
@@ -79,9 +79,9 @@ class AuthController extends Controller
     public function sendPasswordResetLink(Request $request): RedirectResponse
     {
         $data = $request->validate(['email' => ['required', 'email', 'max:255']]);
-        $status = Password::sendResetLink($data);
+        $status = PasswordBroker::sendResetLink($data);
 
-        return $status === Password::RESET_LINK_SENT
+        return $status === PasswordBroker::RESET_LINK_SENT
             ? back()->with('success', __($status))
             : back()->withErrors(['email' => __($status)]);
     }
@@ -94,7 +94,7 @@ class AuthController extends Controller
             'password' => ['required', 'confirmed', Password::defaults()],
         ]);
 
-        $status = Password::reset($data, function (User $user, string $password): void {
+        $status = PasswordBroker::reset($data, function (User $user, string $password): void {
             $user->forceFill([
                 'password' => $password,
                 'remember_token' => Str::random(60),
@@ -102,7 +102,7 @@ class AuthController extends Controller
             event(new PasswordReset($user));
         });
 
-        return $status === Password::PASSWORD_RESET
+        return $status === PasswordBroker::PASSWORD_RESET
             ? redirect()->route('login')->with('success', __($status))
             : back()->withErrors(['email' => __($status)]);
     }
@@ -133,7 +133,7 @@ class AuthController extends Controller
             || ! str_starts_with($continue, '/')
             || str_starts_with($continue, '//')
             || str_contains($continue, chr(92))
-            || preg_match('/[\\r\\n]/', $continue)) {
+            || preg_match('/[\\\\r\\\\n]/', $continue)) {
             return;
         }
 
