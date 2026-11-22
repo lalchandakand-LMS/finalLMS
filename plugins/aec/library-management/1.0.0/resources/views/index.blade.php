@@ -1,4 +1,6 @@
-<x-app-layout>
+@extends('layouts.app')
+
+@section('content')
 <div class="mx-auto max-w-7xl space-y-6 p-4 sm:p-6">
 <div><h1 class="text-2xl font-bold">Physical Library Management</h1><p class="text-sm text-gray-600">Book inventory, issue/return tracking and overdue fines.</p></div>
 @if(session('success'))<p class="rounded bg-green-50 p-3 text-green-800">{{ session('success') }}</p>@endif
@@ -14,4 +16,5 @@
 </div>
 <section class="overflow-x-auto rounded border bg-white"><div class="border-b p-4 font-semibold">Book catalogue</div><table class="min-w-full text-sm"><thead class="bg-gray-50"><tr><th class="p-3 text-left">Book</th><th class="p-3 text-left">ISBN</th><th class="p-3 text-left">Branch</th><th class="p-3 text-left">Available</th></tr></thead><tbody>@forelse($books as $book)<tr class="border-t"><td class="p-3">{{ $book->title }}<small class="block text-gray-500">{{ $book->author }} · {{ $book->category }}</small></td><td class="p-3">{{ $book->isbn }}</td><td class="p-3">{{ $book->branch_id ?? 'Main' }}</td><td class="p-3">{{ $book->available_copies }}/{{ $book->total_copies }}</td></tr>@empty<tr><td colspan="4" class="p-5 text-center">No books in catalogue.</td></tr>@endforelse</tbody></table>{{ $books->links() }}</section>
 <section class="overflow-x-auto rounded border bg-white"><div class="border-b p-4 font-semibold">Recent loans</div><table class="min-w-full text-sm"><thead class="bg-gray-50"><tr><th class="p-3 text-left">Book / Borrower</th><th class="p-3 text-left">Due</th><th class="p-3 text-left">Status</th><th class="p-3 text-left">Fine</th><th class="p-3 text-left">Action</th></tr></thead><tbody>@forelse($loans as $loan)<tr class="border-t"><td class="p-3">{{ $loan->book?->title ?? 'Book #'.$loan->library_book_id }}<small class="block text-gray-500">{{ $loan->borrower_name }} ({{ $loan->borrower_code }})</small></td><td class="p-3">{{ $loan->due_at?->format('d M Y') }}</td><td class="p-3">{{ $loan->status }}</td><td class="p-3">৳{{ $loan->fine_amount }}</td><td class="p-3">@if($loan->status==='borrowed')<form method="POST" action="{{ route(request()->routeIs('branch.*')?'branch.library.loans.return':'admin.library.loans.return',$loan->id) }}">@csrf<button class="rounded border px-3 py-1">Return</button></form>@else{{ $loan->returned_at?->format('d M Y') }}@endif</td></tr>@empty<tr><td colspan="5" class="p-5 text-center">No loans yet.</td></tr>@endforelse</tbody></table></section>
-</div></x-app-layout>
+</div>
+@endsection
