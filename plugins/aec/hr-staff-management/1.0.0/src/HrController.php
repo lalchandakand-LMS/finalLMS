@@ -32,6 +32,142 @@ final class HrController extends Controller
         ]);
     }
 
+    public function publicCareers(): View
+    {
+        $openings = StaffJobOpening::query()->where('status', 'published')
+            ->where(fn ($query) => $query->whereNull('closes_at')->orWhere('closes_at', '>=', now()))
+            ->latest()->paginate(20);
+
+        return view('hr-staff-management::careers.index', compact('openings'));
+    }
+
+    public function publicCareerShow(StaffJobOpening $opening): View
+    {
+        abort_unless($opening->status === 'published' && (! $opening->closes_at || $opening->closes_at->isFuture()), 404);
+
+        return view('hr-staff-management::careers.show', compact('opening'));
+    }
+
+    public function applyCareer(Request $request, StaffJobOpening $opening): RedirectResponse
+    {
+        abort_unless($opening->status === 'published' && (! $opening->closes_at || $opening->closes_at->isFuture()), 404);
+        $data = $request->validate([
+            'applicant_name' => ['required', 'string', 'max:160'],
+            'email' => ['required', 'email:rfc', 'max:160'],
+            'phone' => ['required', 'string', 'max:40'],
+            'cover_letter' => ['nullable', 'string', 'max:5000'],
+            'resume' => ['required', 'file', 'mimes:pdf,doc,docx', 'max:10240'],
+        ]);
+        $resumePath = $request->file('resume')->store('private/hr-applications', 'local');
+        try {
+            StaffApplication::query()->create([
+                'staff_job_opening_id' => $opening->id,
+                'applicant_name' => $data['applicant_name'],
+                'email' => $data['email'],
+                'phone' => $data['phone'],
+                'cover_letter' => $data['cover_letter'] ?? null,
+                'resume_path' => $resumePath,
+                'status' => 'submitted',
+            ]);
+        } catch (\\Throwable $exception) {
+            \\Illuminate\\Support\\Facades\\Storage::disk('local')->delete($resumePath);
+            throw $exception;
+        }
+
+        return back()->with('success', 'Your application has been submitted successfully.');
+    }
+
+    public function recruitmentIndex(): View
+    {
+        abort_unless(auth()->user()?->isAdmin(), 403);
+        $openings = StaffJobOpening::query()->withCount('applications')->latest()->paginate(20, ['*'], 'opening_page');
+        $applications = StaffApplication::query()->with('opening')->latest()->paginate(30, ['*'], 'application_page');
+
+        return view('hr-staff-management::recruitment', compact('openings', 'applications'));
+    }
+
+    public function storeJobOpening(Request $request): RedirectResponse
+    {
+        $actor = $request->user();
+        abort_unless($actor && $actor->isAdmin(), 403);
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:180'],
+            'department' => ['required', 'string', 'max:100'],
+            'designation' => ['required', 'string', 'max:120'],
+            'description' => ['required', 'string', 'max:12000'],
+            'employment_type' => ['required', 'in:full_time,part_time,contract,temporary'],
+            'location' => ['nullable', 'string', 'max:160'],
+            'closes_at' => ['nullable', 'date', 'after:now'],
+            'status' => ['required', 'in:draft,published'],
+        ]);
+        StaffJobOpening::query()->create($data + ['created_by' => $actor->id]);
+        $this->audit($request, 'hr.job_opening_created', 'Created recruitment opening '.$data['title']);
+
+        return back()->with('success', 'Job opening created.');
+    }
+
+    public function updateJobOpeningStatus(Request $request, int $opening): RedirectResponse
+    {
+        $actor = $request->user();
+        abort_unless($actor && $actor->isAdmin(), 403);
+        $data = $request->validate(['status' => ['required', 'in:draft,published,closed']]);
+        $job = StaffJobOpening::query()->findOrFail($opening);
+        $job->update(['status' => $data['status']]);
+        $this->audit($request, 'hr.job_opening_status_changed', 'Updated recruitment opening #'.$job->id.' to '.$job->status);
+
+        return back()->with('success', 'Job opening status updated.');
+    }
+
+    public function reviewApplication(Request $request, int $application): RedirectResponse
+    {
+        $actor = $request->user();
+        abort_unless($actor && $actor->isAdmin(), 403);
+        $data = $request->validate([
+            'status' => ['required', 'in:shortlisted,interview,approved,rejected,hired'],
+            'review_notes' => ['nullable', 'string', 'max:3000'],
+            'employee_code' => ['required_if:status,hired', 'nullable', 'string', 'max:40', 'regex:/^[A-Za-z0-9._-]+$/D', 'unique:staff_profiles,employee_code'],
+            'base_salary' => ['required_if:status,hired', 'nullable', 'numeric', 'min:0', 'max:9999999999.99'],
+            'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
+        ]);
+        DB::transaction(function () use ($application, $data, $actor): void {
+            $record = StaffApplication::query()->lockForUpdate()->findOrFail($application);
+            abort_unless(! in_array($record->status, ['rejected', 'hired'], true), 409, 'This application has already been closed.');
+            if ($data['status'] === 'hired') {
+                StaffProfile::query()->create([
+                    'employee_code' => $data['employee_code'],
+                    'full_name' => $record->applicant_name,
+                    'designation' => $record->opening->designation,
+                    'department' => $record->opening->department,
+                    'phone' => $record->phone,
+                    'email' => $record->email,
+                    'base_salary' => $data['base_salary'],
+                    'status' => 'active',
+                    'branch_id' => $data['branch_id'] ?? null,
+                    'employment_type' => $record->opening->employment_type,
+                    'joined_at' => now()->toDateString(),
+                ]);
+            }
+            $record->forceFill([
+                'status' => $data['status'],
+                'review_notes' => $data['review_notes'] ?? null,
+                'reviewed_by' => $actor->id,
+                'reviewed_at' => now(),
+            ])->save();
+        }, 3);
+        $this->audit($request, 'hr.application_reviewed', 'Reviewed recruitment application #'.$application.' as '.$data['status']);
+
+        return back()->with('success', 'Application status updated.');
+    }
+
+    public function downloadApplicationResume(int $application)
+    {
+        abort_unless(auth()->user()?->isAdmin(), 403);
+        $record = StaffApplication::query()->findOrFail($application);
+        abort_unless(\\Illuminate\\Support\\Facades\\Storage::disk('local')->exists($record->resume_path), 404);
+
+        return \\Illuminate\\Support\\Facades\\Storage::disk('local')->download($record->resume_path, 'application-'.$record->id.'-resume');
+    }
+
     public function teacherIndex(Request $request): View
     {
         $teacher = $request->user();
