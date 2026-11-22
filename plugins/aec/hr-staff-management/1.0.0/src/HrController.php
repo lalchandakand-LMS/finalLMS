@@ -129,6 +129,9 @@ final class HrController extends Controller
             'base_salary' => ['required_if:status,hired', 'nullable', 'numeric', 'min:0', 'max:9999999999.99'],
             'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
         ]);
+        if (! empty($data['branch_id'])) {
+            abort_unless(DB::table('branches')->where('id', $data['branch_id'])->where('is_active', true)->exists(), 422, 'Select an active branch.');
+        }
         DB::transaction(function () use ($application, $data, $actor): void {
             $record = StaffApplication::query()->lockForUpdate()->findOrFail($application);
             abort_unless(! in_array($record->status, ['rejected', 'hired'], true), 409, 'This application has already been closed.');
