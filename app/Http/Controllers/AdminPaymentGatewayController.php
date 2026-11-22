@@ -60,7 +60,7 @@ class AdminPaymentGatewayController extends Controller
 
     public function updateMfs(Request $request, string $provider, MfsMerchantConfigurationService $mfs): RedirectResponse
     {
-        $mfs->assertProvider($provider);
+        abort_unless(array_key_exists($provider, $mfs->providers()), 404);
         $validated = $request->validate([
             'mode' => ['required', 'in:sandbox'],
             'credentials_json' => ['required', 'string', 'max:12000'],
@@ -74,7 +74,7 @@ class AdminPaymentGatewayController extends Controller
             return back()->withErrors(['credentials_json' => __('Credentials must be a non-empty JSON object.')])->withInput();
         }
         foreach ($credentials as $key => $value) {
-            if (! is_string($key) || preg_match('/^[a-z][a-z0-9_]{1,49}$/D', $key) !== 1
+            if (! is_string($key) || preg_match('/^[a-z][a-z0-9_]{0,49}$/D', $key) !== 1
                 || ! is_string($value) || $value === '' || mb_strlen($value) > 4096) {
                 return back()->withErrors(['credentials_json' => __('Each credential must have a valid key and a non-empty string value (maximum 4096 characters).')])->withInput();
             }

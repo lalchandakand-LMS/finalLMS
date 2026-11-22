@@ -59,7 +59,7 @@
                     <input type="hidden" name="mode" value="sandbox">
                     <label for="mfs-credentials-{{ $provider }}">{{ __('Merchant credentials (JSON)') }}</label>
                     <textarea id="mfs-credentials-{{ $provider }}" name="credentials_json" rows="5" required maxlength="12000" autocomplete="off" spellcheck="false"
-                        placeholder="{{ $provider === 'bkash' ? '{&#10;  &quot;username&quot;: &quot;SANDBOX_USERNAME&quot;,&#10;  &quot;password&quot;: &quot;SANDBOX_PASSWORD&quot;,&#10;  &quot;app_key&quot;: &quot;SANDBOX_APP_KEY&quot;,&#10;  &quot;app_secret&quot;: &quot;SANDBOX_APP_SECRET&quot;&#10;}' : '{&#10;  &quot;credential_name&quot;: &quot;SANDBOX_VALUE&quot;&#10;}' }}">{{ old('credentials_json') }}</textarea>
+                        placeholder="{{ $provider === 'bkash' ? '{&#10;  &quot;username&quot;: &quot;SANDBOX_USERNAME&quot;,&#10;  &quot;password&quot;: &quot;SANDBOX_PASSWORD&quot;,&#10;  &quot;app_key&quot;: &quot;SANDBOX_APP_KEY&quot;,&#10;  &quot;app_secret&quot;: &quot;SANDBOX_APP_SECRET&quot;&#10;}' : '{&#10;  &quot;credential_name&quot;: &quot;SANDBOX_VALUE&quot;&#10;}' }}"></textarea>
                     <p class="muted">{{ __('Submitting replaces the complete stored credential set. Secrets are never included in the page response or activity log.') }}</p>
                     <button class="btn primary" type="submit">{{ __('Save encrypted sandbox credentials') }}</button>
                 </form>
