@@ -26,12 +26,20 @@
   ],
   "capabilities": [
     "role-assistants",
+    "role-specialist-agent-guidance",
+    "student-vocabulary-grammar-exam-preparation",
+    "teacher-question-rubric-and-lesson-drafts",
+    "admin-aggregate-admission-fee-report-guidance",
+    "support-faq-guidance",
+    "learning-progress-based-study-plans",
     "encrypted-provider-credentials",
     "general-guidance-only",
     "provider-model-discovery",
     "conversation-retention",
     "user-owned-conversation-history",
-    "role-scoped-read-only-context"
+    "role-scoped-read-only-context",
+    "no-autonomous-actions",
+    "future-actions-require-human-approval"
   ],
   "migrations": "migrations"
 }
