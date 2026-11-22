@@ -130,6 +130,39 @@ class HomepageSliderTest extends TestCase
         ])->assertSessionHasErrors('home_slides.0.mobile_image_id');
     }
 
+    public function test_unrelated_settings_updates_preserve_existing_homepage_slides(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $savedSlides = [['enabled' => true, 'image_id' => 987, 'title' => 'Keep this slide']];
+        Setting::setValue('home_slides', json_encode($savedSlides, JSON_THROW_ON_ERROR));
+
+        $this->actingAs($admin)->post(route('admin.settings.update'), [
+            'institution_name' => 'Alom English Center',
+        ])->assertRedirect(route('admin.settings.index'));
+
+        $this->assertSame($savedSlides, json_decode((string) Setting::value('home_slides'), true));
+    }
+
+    public function test_mobile_slide_assets_cannot_be_deleted_while_in_use(): void
+    {
+        Storage::fake('public');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $desktop = MediaAsset::create([
+            'uploaded_by' => $admin->id, 'disk' => 'public', 'path' => 'media/desktop-keep.jpg',
+            'original_name' => 'desktop-keep.jpg', 'mime_type' => 'image/jpeg', 'size' => 100,
+        ]);
+        $mobile = MediaAsset::create([
+            'uploaded_by' => $admin->id, 'disk' => 'public', 'path' => 'media/mobile-keep.jpg',
+            'original_name' => 'mobile-keep.jpg', 'mime_type' => 'image/jpeg', 'size' => 100,
+        ]);
+        Setting::setValue('home_slides', json_encode([[
+            'enabled' => true, 'image_id' => $desktop->id, 'mobile_image_id' => $mobile->id,
+        ]], JSON_THROW_ON_ERROR));
+
+        $this->actingAs($admin)->delete(route('admin.media.destroy', $mobile))->assertStatus(422);
+        $this->assertDatabaseHas('media_assets', ['id' => $mobile->id]);
+    }
+
     public function test_slider_media_cannot_be_deleted_while_a_slide_uses_it(): void
     {
         Storage::fake('public');
