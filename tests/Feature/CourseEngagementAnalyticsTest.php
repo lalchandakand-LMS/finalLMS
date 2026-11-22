@@ -36,13 +36,12 @@ class CourseEngagementAnalyticsTest extends TestCase
             'position' => 1,
         ]);
         Enrollment::create(['user_id' => $activeStudent->id, 'course_id' => $course->id, 'status' => 'active']);
-        Enrollment::create([
+        $dropoutEnrollment = Enrollment::create([
             'user_id' => $dropoutStudent->id,
             'course_id' => $course->id,
             'status' => 'active',
-            'created_at' => now()->subDays(45),
-            'updated_at' => now()->subDays(45),
         ]);
+        $dropoutEnrollment->forceFill(['created_at' => now()->subDays(45)])->save();
         CourseContentProgress::create([
             'user_id' => $activeStudent->id,
             'course_curriculum_item_id' => $item->id,
@@ -57,7 +56,7 @@ class CourseEngagementAnalyticsTest extends TestCase
             ->assertOk()
             ->assertSee('Analytics course')
             ->assertSee('100.0%')
-            ->assertSee('1');
+            ->assertSee('data-dropout-risk="1"', false);
     }
 
     public function test_non_admin_cannot_access_course_engagement_analytics(): void
