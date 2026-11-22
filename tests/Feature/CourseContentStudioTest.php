@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Models\AcademicLevel;
 use App\Models\Course;
 use App\Models\CourseCategory;
-use App\Models\CourseContentPost;
+use App\Models\CourseContentPost;\nuse App\Models\CourseContentPostVersion;
 use App\Models\CourseContentProgress;
 use App\Models\CourseCurriculumItem;
 use App\Models\DownloadPermission;
@@ -535,6 +535,38 @@ class CourseContentStudioTest extends TestCase
             'course_id' => $course->id,
             'course_content_post_id' => $otherLevel->id,
         ]);
+    }
+
+    public function test_content_edits_create_immutable_previous_versions_and_ignore_noop_updates(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $category = CourseCategory::create(['name' => 'Grammar', 'slug' => 'grammar']);
+        $post = $this->makePost($admin, $category, 'Original lesson');
+
+        $this->actingAs($admin)->put(route('admin.course-content-posts.update', $post), [
+            'title' => 'Updated lesson',
+            'long_description' => 'Updated lesson body.',
+            'video_url' => 'https://youtu.be/dQw4w9WgXcQ',
+            'status' => 'published',
+            'category_ids' => [$category->id],
+        ])->assertRedirect(route('admin.course-content-posts.index'));
+
+        $version = CourseContentPostVersion::query()->where('course_content_post_id', $post->id)->firstOrFail();
+        $this->assertSame(1, $version->version_number);
+        $this->assertSame('Original lesson', $version->snapshot['title']);
+        $this->assertSame('Lesson content', $version->snapshot['long_description']);
+        $this->assertSame([$category->id], $version->snapshot['category_ids']);
+        $this->assertSame('Updated lesson', $post->fresh()->title);
+
+        $this->actingAs($admin)->put(route('admin.course-content-posts.update', $post->fresh()), [
+            'title' => 'Updated lesson',
+            'long_description' => 'Updated lesson body.',
+            'video_url' => 'https://youtu.be/dQw4w9WgXcQ',
+            'status' => 'published',
+            'category_ids' => [$category->id],
+        ])->assertRedirect(route('admin.course-content-posts.index'));
+
+        $this->assertDatabaseCount('course_content_post_versions', 1);
     }
 
     private function makePost(User $author, ?CourseCategory $category, string $title): CourseContentPost
