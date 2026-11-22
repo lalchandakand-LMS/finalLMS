@@ -405,6 +405,7 @@ class CourseController extends Controller
             )));
         });
 
+        $course->refresh();
         return redirect()->route('admin.courses.versions', $course)
             ->with('success', __('Course revision restored. Current state was saved as a new revision first.'));
     }
