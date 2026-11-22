@@ -185,6 +185,27 @@ class CourseContentStudioTest extends TestCase
             ->assertOk()->assertSee('Members only lesson');
     }
 
+    public function test_course_builder_exposes_drag_handles_and_safe_lesson_preview_links(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $course = Course::factory()->create(['teacher_id' => $teacher->id, 'status' => 'published']);
+        $post = $this->makePost($admin, null, 'Previewable curriculum lesson');
+        CourseCurriculumItem::create([
+            'course_id' => $course->id,
+            'course_content_post_id' => $post->id,
+            'position' => 10,
+            'is_preview' => true,
+        ]);
+
+        $this->actingAs($admin)->get(route('admin.course-builder.edit', $course))
+            ->assertOk()
+            ->assertSee('data-course-sortable="lessons"', false)
+            ->assertSee('data-drag-handle', false)
+            ->assertSee('Preview lesson')
+            ->assertSee(route('courses.content.show', [$course, $post]), false);
+    }
+
     public function test_non_admin_cannot_access_content_studio_or_course_builder(): void
     {
         $student = User::factory()->create(['role' => 'student']);
