@@ -95,11 +95,7 @@ class CourseContentLearningProgressTest extends TestCase
             ->assertRedirect(route('courses.content.show', [$course, $post]))
             ->assertSessionHas('error');
 
-        $this->assertDatabaseMissing('course_content_progress', [
-            'user_id' => $student->id,
-            'course_curriculum_item_id' => $course->curriculumItems()->firstOrFail()->id,
-            'completed_at' => now(),
-        ]);
+        $this->assertDatabaseCount('course_content_progress', 0);
     }
 
     public function test_course_completion_requires_all_published_curriculum_posts_and_issues_certificate_afterward(): void
