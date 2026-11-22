@@ -27,6 +27,15 @@ final class AdmissionManagementPluginTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $plugin = new PluginInstallation();
+        $plugin->forceFill([
+            'plugin_key' => 'aec.admission-management',
+            'name' => 'Admission Management',
+            'version' => '1.0.0',
+            'type' => 'module',
+            'status' => 'active',
+            'manifest' => ['settings_schema' => []],
+        ])->save();
         View::addNamespace('admission-management', base_path('plugins/aec/admission-management/1.0.0/resources/views'));
         require_once base_path('plugins/aec/admission-management/1.0.0/src/AdmissionApplication.php');
         require_once base_path('plugins/aec/admission-management/1.0.0/src/AdmissionDocument.php');
