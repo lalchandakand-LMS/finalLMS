@@ -90,7 +90,8 @@
         <label>Pause when hovered<select name="home_slider_pause_hover"><option value="1" @selected(old('home_slider_pause_hover', $settings['home_slider_pause_hover'] ?? '1') == '1')>Yes</option><option value="0" @selected(old('home_slider_pause_hover', $settings['home_slider_pause_hover'] ?? '1') == '0')>No</option></select></label>
         <label>Desktop slider height<select name="home_slider_height">@foreach([360,420,480,540,600,660,720] as $height)<option value="{{ $height }}" @selected((int) old('home_slider_height', $settings['home_slider_height'] ?? 480) === $height)>{{ $height }} px</option>@endforeach</select></label>
         <label>Mobile slider height<select name="home_slider_mobile_height">@foreach([220,260,300,340,380,420,460,520] as $height)<option value="{{ $height }}" @selected((int) old('home_slider_mobile_height', $settings['home_slider_mobile_height'] ?? 300) === $height)>{{ $height }} px</option>@endforeach</select></label>
-        <label>Image overlay strength<select name="home_slider_overlay">@foreach([20,30,40,50,60,70,80,90] as $opacity)<option value="{{ $opacity }}" @selected((int) old('home_slider_overlay', $settings['home_slider_overlay'] ?? 60) === $opacity)>{{ $opacity }}%</option>@endforeach</select></label>
+        <label>Image overlay strength<select name="home_slider_overlay">@foreach([0,10,20,30,40,50,60,70,80,90] as $opacity)<option value="{{ $opacity }}" @selected((int) old('home_slider_overlay', $settings['home_slider_overlay'] ?? 60) === $opacity)>{{ $opacity }}%</option>@endforeach</select></label>
+        <label>Transition effect<select name="home_slider_transition">@foreach(['slide'=>'Slide','fade'=>'Fade','zoom'=>'Zoom'] as $value=>$label)<option value="{{ $value }}" @selected(old('home_slider_transition', $settings['home_slider_transition'] ?? 'slide') === $value)>{{ $label }}</option>@endforeach</select></label>
     </div>
     @for($i = 0; $i < 8; $i++)
         @php($slide = old("home_slides.$i", $slides[$i] ?? []))
@@ -106,9 +107,23 @@
             <div class="grid grid-2">
                 <div><label>Slide title<input name="home_slides[{{ $i }}][title]" maxlength="180" value="{{ $slide['title'] ?? '' }}"></label></div>
                 <div><label>Slide subtitle<textarea name="home_slides[{{ $i }}][subtitle]" rows="2" maxlength="500">{{ $slide['subtitle'] ?? '' }}</textarea></label></div>
-                <div><label>Button label<input name="home_slides[{{ $i }}][button_label]" maxlength="60" value="{{ $slide['button_label'] ?? '' }}"></label></div>
-                <div><label>Button URL<input name="home_slides[{{ $i }}][button_url]" maxlength="500" value="{{ $slide['button_url'] ?? '' }}" placeholder="/courses"></label></div>
+                <div><label>Eyebrow / small label<input name="home_slides[{{ $i }}][eyebrow]" maxlength="80" value="{{ $slide['eyebrow'] ?? 'Online Course' }}"></label></div>
+                <div><label>Main button label<input name="home_slides[{{ $i }}][button_label]" maxlength="60" value="{{ $slide['button_label'] ?? '' }}"></label></div>
+                <div><label>Main button URL<input name="home_slides[{{ $i }}][button_url]" maxlength="500" value="{{ $slide['button_url'] ?? '' }}" placeholder="/courses"></label></div>
+                <div><label>Secondary button label<input name="home_slides[{{ $i }}][secondary_button_label]" maxlength="60" value="{{ $slide['secondary_button_label'] ?? '' }}"></label></div>
+                <div><label>Secondary button URL<input name="home_slides[{{ $i }}][secondary_button_url]" maxlength="500" value="{{ $slide['secondary_button_url'] ?? '' }}" placeholder="/register"></label></div>
             </div>
+            <details style="margin-top:14px;">
+                <summary style="cursor:pointer;font-weight:700;">Advanced crop, text position & overlay</summary>
+                <div class="grid grid-2" style="margin-top:12px;">
+                    <label>Desktop crop horizontal<input type="range" min="0" max="100" name="home_slides[{{ $i }}][image_position_x]" value="{{ $slide['image_position_x'] ?? 50 }}"></label>
+                    <label>Desktop crop vertical<input type="range" min="0" max="100" name="home_slides[{{ $i }}][image_position_y]" value="{{ $slide['image_position_y'] ?? 50 }}"></label>
+                    <label>Mobile crop horizontal<input type="range" min="0" max="100" name="home_slides[{{ $i }}][mobile_position_x]" value="{{ $slide['mobile_position_x'] ?? 50 }}"></label>
+                    <label>Mobile crop vertical<input type="range" min="0" max="100" name="home_slides[{{ $i }}][mobile_position_y]" value="{{ $slide['mobile_position_y'] ?? 50 }}"></label>
+                    <label>Text alignment<select name="home_slides[{{ $i }}][content_alignment]"><option value="left" @selected(($slide['content_alignment'] ?? 'left') === 'left')>Left</option><option value="center" @selected(($slide['content_alignment'] ?? 'left') === 'center')>Center</option><option value="right" @selected(($slide['content_alignment'] ?? 'left') === 'right')>Right</option></select></label>
+                    <label>Overlay color<input type="color" name="home_slides[{{ $i }}][overlay_color]" value="{{ $slide['overlay_color'] ?? '#050f23' }}"></label>
+                </div>
+            </details>
         </section>
     @endfor
 </section>
