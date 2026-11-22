@@ -56,21 +56,43 @@
 </section>
 @endif
 @if($slides->isNotEmpty())
-<section class="panel" style="margin-bottom:20px;"><h2>Homepage slider</h2><div class="grid grid-3">
-    @foreach($slides as $slide)
-        <article class="card">
-            @if(!empty($slide['image_id']) && $media->has($slide['image_id']))
-                <picture>
-                    @if(!empty($slide['mobile_image_id']) && $media->has($slide['mobile_image_id']))
-                        <source media="(max-width: 700px)" srcset="{{ \Illuminate\Support\Facades\Storage::disk($media[$slide['mobile_image_id']]->disk)->url($media[$slide['mobile_image_id']]->path) }}">
+<section class="panel homepage-slider-draft-preview" style="margin-bottom:20px;">
+    <div class="page-header"><div><h2>Homepage slider preview</h2><p class="muted">Responsive art, crop position, text alignment, overlay, calls to action and animation preset.</p></div><span class="badge info">{{ $slides->count() }} slides · {{ ucfirst($draft['home_slider_transition'] ?? 'slide') }} transition</span></div>
+    <div class="grid grid-2">
+        @foreach($slides as $slide)
+            @php
+                $desktopAsset = !empty($slide['image_id']) ? $media->get($slide['image_id']) : null;
+                $mobileAsset = !empty($slide['mobile_image_id']) ? $media->get($slide['mobile_image_id']) : null;
+                $positionX = max(0, min(100, (int) ($slide['image_position_x'] ?? 50)));
+                $positionY = max(0, min(100, (int) ($slide['image_position_y'] ?? 50)));
+                $mobileX = max(0, min(100, (int) ($slide['mobile_position_x'] ?? 50)));
+                $mobileY = max(0, min(100, (int) ($slide['mobile_position_y'] ?? 50)));
+                $overlayColor = preg_match('/^#[0-9A-Fa-f]{6}$/', $slide['overlay_color'] ?? '') ? $slide['overlay_color'] : '#050f23';
+                $alignment = in_array($slide['content_alignment'] ?? 'left', ['left','center','right'], true) ? $slide['content_alignment'] : 'left';
+            @endphp
+            <article class="homepage-slider-draft-slide card" style="--draft-overlay:{{ $overlayColor }};--draft-x:{{ $positionX }}%;--draft-y:{{ $positionY }}%;--draft-mobile-x:{{ $mobileX }}%;--draft-mobile-y:{{ $mobileY }}%;text-align:{{ $alignment }};">
+                <div class="homepage-slider-draft-art">
+                    @if($desktopAsset)
+                        <picture>
+                            @if($mobileAsset)
+                                <source media="(max-width: 700px)" srcset="{{ \Illuminate\Support\Facades\Storage::disk($mobileAsset->disk)->url($mobileAsset->path) }}">
+                            @endif
+                            <img src="{{ \Illuminate\Support\Facades\Storage::disk($desktopAsset->disk)->url($desktopAsset->path) }}" alt="{{ $desktopAsset->alt_text ?: ($slide['title'] ?? 'Homepage slide') }}">
+                        </picture>
                     @endif
-                    <img src="{{ \Illuminate\Support\Facades\Storage::disk($media[$slide['image_id']]->disk)->url($media[$slide['image_id']]->path) }}" alt="{{ $slide['title'] ?? 'Homepage slide' }}" style="width:100%;max-height:180px;object-fit:cover;border-radius:12px;">
-                </picture>
-            @endif
-            <h3>{{ $slide['title'] ?? '' }}</h3><p>{{ $slide['subtitle'] ?? '' }}</p>
-        </article>
-    @endforeach
-</div></section>
+                    <div class="homepage-slider-draft-shade"></div>
+                    <div class="homepage-slider-draft-copy">
+                        @if(!empty($slide['eyebrow']))<span class="badge info">{{ $slide['eyebrow'] }}</span>@endif
+                        <h3>{{ $slide['title'] ?? '' }}</h3><p>{{ $slide['subtitle'] ?? '' }}</p>
+                        @if(!empty($slide['button_label']))<span class="btn primary">{{ $slide['button_label'] }}</span>@endif
+                        @if(!empty($slide['secondary_button_label']))<span class="btn secondary">{{ $slide['secondary_button_label'] }}</span>@endif
+                    </div>
+                </div>
+                <small class="muted">Desktop crop: {{ $positionX }}% / {{ $positionY }}% · Mobile crop: {{ $mobileX }}% / {{ $mobileY }}%</small>
+            </article>
+        @endforeach
+    </div>
+</section>
 @endif
 @if($sections->isNotEmpty())
 <section class="panel"><h2>Custom homepage sections</h2>
@@ -97,6 +119,17 @@
 </footer>
 </div>
 <style>
+    .homepage-slider-draft-slide { overflow:hidden; }
+    .homepage-slider-draft-art { position:relative; display:flex; align-items:center; min-height:260px; overflow:hidden; border-radius:14px; background:#10213d; color:#fff; }
+    .homepage-slider-draft-art picture,.homepage-slider-draft-art img,.homepage-slider-draft-shade { position:absolute; inset:0; width:100%; height:100%; }
+    .homepage-slider-draft-art img { object-fit:cover; object-position:var(--draft-x) var(--draft-y); }
+    .homepage-slider-draft-shade { background:linear-gradient(90deg,color-mix(in srgb,var(--draft-overlay) 65%,transparent),transparent); }
+    .homepage-slider-draft-copy { position:relative; z-index:1; width:100%; padding:24px; color:#fff; }
+    .homepage-slider-draft-copy h3,.homepage-slider-draft-copy p { color:#fff; }
+    .homepage-slider-draft-copy .btn { display:inline-flex; margin:4px; }
+    .homepage-slider-draft-slide > small { display:block; margin-top:8px; }
+    .homepage-preview-frame[data-size="mobile"] .homepage-slider-draft-art { min-height:320px; }
+    .homepage-preview-frame[data-size="mobile"] .homepage-slider-draft-art img { object-position:var(--draft-mobile-x) var(--draft-mobile-y); }
     .homepage-preview-footer { margin-top:20px; padding:clamp(18px,3vw,30px); }
     .homepage-preview-footer nav { display:flex; flex-wrap:wrap; gap:14px; }
     .homepage-preview-frame { width:100%; margin:0 auto; transition:max-width .2s ease; --preview-accent:#2457c5; --preview-radius:20px; }
