@@ -98,6 +98,7 @@ class CarouselBuilderController extends Controller
             'starts_at' => ['nullable', 'date'],
             'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
             'items' => ['nullable', 'array', 'max:30'],
+            'items.*' => ['array'],
             'items.*.title' => ['required_if:source_type,manual', 'nullable', 'string', 'max:180'],
             'items.*.description' => ['nullable', 'string', 'max:2000'],
             'items.*.image_url' => ['nullable', 'string', 'max:2048', function ($attribute, $value, $fail): void {
@@ -128,7 +129,7 @@ class CarouselBuilderController extends Controller
         ]);
 
         if ($data['source_type'] === 'manual' && $data['status'] === 'published'
-            && collect($data['items'] ?? [])->filter(fn (array $item): bool => trim((string) ($item['title'] ?? '')) !== '')->isEmpty()) {
+            && collect($data['items'] ?? [])->filter(fn ($item): bool => is_array($item) && trim((string) ($item['title'] ?? '')) !== '')->isEmpty()) {
             throw ValidationException::withMessages(['items' => 'Add at least one titled item before publishing a manual carousel.']);
         }
 
@@ -150,7 +151,7 @@ class CarouselBuilderController extends Controller
         }
 
         foreach (array_values($items) as $index => $item) {
-            if (trim((string) ($item['title'] ?? '')) === '') {
+            if (! is_array($item) || trim((string) ($item['title'] ?? '')) === '') {
                 continue;
             }
 
