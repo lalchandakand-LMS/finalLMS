@@ -101,6 +101,27 @@ class GamificationServiceTest extends TestCase
         $this->assertDatabaseCount('gamification_user_badges', 0);
     }
 
+    public function test_gamification_migration_refuses_to_drop_existing_learner_progress(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        GamificationProfile::query()->create([
+            'user_id' => $student->id,
+            'leaderboard_opt_in' => false,
+            'show_streak' => false,
+        ]);
+
+        $migration = require base_path('database/migrations/2026_11_21_150000_create_gamification_tables.php');
+
+        try {
+            $migration->down();
+            $this->fail('Gamification rollback must preserve learner progress and privacy settings.');
+        } catch (\\RuntimeException $exception) {
+            $this->assertStringContainsString('learner progress or privacy settings', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('gamification_profiles', ['user_id' => $student->id]);
+    }
+
     public function test_leaderboard_opt_in_requires_a_learner_chosen_display_name(): void
     {
         $student = User::factory()->create(['role' => 'student']);
