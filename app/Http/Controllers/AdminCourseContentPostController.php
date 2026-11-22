@@ -244,6 +244,7 @@ class AdminCourseContentPostController extends Controller
             $this->syncPaidProduct($post);
         });
 
+        $courseContentPost->refresh();
         return redirect()->route('admin.course-content-posts.versions', $courseContentPost)
             ->with('success', __('Lesson revision restored. Current state was saved as a new revision first.'));
     }
