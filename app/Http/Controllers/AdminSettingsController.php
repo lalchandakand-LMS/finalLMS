@@ -123,6 +123,7 @@ class AdminSettingsController extends Controller
         ]);
 
         $paymentMethods = $validated['payment_methods'] ?? Setting::paymentMethods();
+        $hasHomeSlides = array_key_exists('home_slides', $validated);
         $slides = collect($validated['home_slides'] ?? [])->take(8)->map(function (array $slide) {
             $image = !empty($slide['image_id']) ? MediaAsset::query()->whereKey($slide['image_id'])->where('mime_type', 'like', 'image/%')->first() : null;
             if (empty($slide['enabled']) || !$image) {
@@ -165,7 +166,9 @@ class AdminSettingsController extends Controller
         }
 
         Setting::setValue('payment_methods', json_encode($paymentMethods, JSON_THROW_ON_ERROR));
-        Setting::setValue('home_slides', json_encode($slides, JSON_THROW_ON_ERROR));
+        if ($hasHomeSlides) {
+            Setting::setValue('home_slides', json_encode($slides, JSON_THROW_ON_ERROR));
+        }
 
         return redirect()->route('admin.settings.index')->with('success', 'Settings updated successfully.');
     }
