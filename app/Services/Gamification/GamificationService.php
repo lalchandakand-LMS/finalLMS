@@ -25,6 +25,10 @@ class GamificationService
      */
     public function award(User $user, string $eventKey, string $sourceType, int $sourceId, ?Carbon $occurredAt = null): bool
     {
+        if (! $user->isStudent()) {
+            throw new InvalidArgumentException('Gamification rewards can only be awarded to students.');
+        }
+
         if (! isset(self::XP_REWARDS[$eventKey]) || ! preg_match('/^[a-z][a-z0-9_]{1,39}$/', $sourceType) || $sourceId < 1) {
             throw new InvalidArgumentException('Unsupported gamification event.');
         }
@@ -84,6 +88,10 @@ class GamificationService
 
     public function awardBadge(User $user, string $badgeKey, array $metadata = []): bool
     {
+        if (! $user->isStudent()) {
+            throw new InvalidArgumentException('Gamification badges can only be awarded to students.');
+        }
+
         $badge = \App\Models\GamificationBadge::query()
             ->where('key', $badgeKey)->where('is_active', true)->firstOrFail();
 
