@@ -5,11 +5,35 @@
   "version": "1.0.0",
   "type": "module",
   "entrypoint": "src/Plugin.php",
-  "requires": {"php": "^8.3", "laravel": "^12.0", "lms": "^1.0"},
+  "requires": {
+    "php": "^8.3",
+    "laravel": "^12.0",
+    "lms": "^1.0"
+  },
   "dependencies": [],
   "conflicts": [],
-  "portals": ["admin", "branch"],
-  "permissions": ["hr.manage", "hr.payroll.disburse"],
-  "capabilities": ["staff-profiles", "linked-staff-user-accounts", "employment-contract-tracking", "daily-staff-attendance", "attendance-exceptions", "leave-request-and-approval-workflow", "monthly-payroll-ledger", "payroll-disbursement-reference", "branch-scoped-hr-data"],
+  "portals": [
+    "admin",
+    "branch",
+    "teacher"
+  ],
+  "permissions": [
+    "hr.manage",
+    "hr.payroll.disburse",
+    "hr.self-service"
+  ],
+  "capabilities": [
+    "staff-profiles",
+    "linked-staff-user-accounts",
+    "employment-contract-tracking",
+    "daily-staff-attendance",
+    "attendance-exceptions",
+    "leave-request-and-approval-workflow",
+    "monthly-payroll-ledger",
+    "payroll-disbursement-reference",
+    "branch-scoped-hr-data",
+    "teacher-self-service-attendance-and-leave-history",
+    "teacher-leave-applications"
+  ],
   "migrations": "migrations"
 }
