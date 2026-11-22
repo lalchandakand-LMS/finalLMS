@@ -58,6 +58,21 @@ final class HrStaffManagementPluginTest extends TestCase
         $this->assertDatabaseHas('staff_payrolls', ['staff_profile_id' => $localStaff->id, 'net_paid' => 30500, 'status' => 'pending']);
     }
 
+    public function test_staff_linking_rejects_admin_accounts_and_cross_branch_teacher_accounts(): void
+    {
+        $branch = Branch::query()->create(['name' => 'Link Branch', 'slug' => 'link-branch', 'is_active' => true]);
+        $manager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $branch->id]);
+        $remoteTeacher = User::factory()->create(['role' => 'teacher', 'branch_id' => Branch::query()->create(['name' => 'Other', 'slug' => 'link-other', 'is_active' => true])->id]);
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $payload = ['employee_code' => 'LINK-FAIL-1', 'full_name' => 'Wrong Link', 'designation' => 'Teacher', 'department' => 'Academic', 'base_salary' => 20000, 'status' => 'active', 'employment_type' => 'full_time', 'user_id' => $admin->id];
+        $this->actingAs($manager)->post('/__hr/staff', $payload)->assertStatus(422);
+        $payload['employee_code'] = 'LINK-FAIL-2';
+        $payload['user_id'] = $remoteTeacher->id;
+        $this->post('/__hr/staff', $payload)->assertStatus(422);
+        $this->assertDatabaseCount('staff_profiles', 0);
+    }
+
     public function test_payroll_month_is_unique_and_only_admin_can_confirm_disbursement_once(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
