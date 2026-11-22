@@ -117,7 +117,8 @@ class StudentManagementController extends Controller
             ->latest()->paginate(25)->withQueryString();
 
         $routePrefix = $branchManager ? 'branch.students.manage' : 'admin.students';
-        return view('admin.students.index', compact('students', 'filters', 'routePrefix'));
+        $indexRoute = $branchManager ? 'branch.students.manage' : 'admin.students.index';
+        return view('admin.students.index', compact('students', 'filters', 'routePrefix', 'indexRoute'));
     }
 
     public function show(User $student): View
@@ -125,6 +126,7 @@ class StudentManagementController extends Controller
         abort_unless($student->isStudent(), 404);
         $this->authorizeStudentScope(request(), $student);
         $routePrefix = request()->user()->isBranchManager() ? 'branch.students.manage' : 'admin.students';
+        $indexRoute = request()->user()->isBranchManager() ? 'branch.students.manage' : 'admin.students.index';
         $student->load(['branch', 'studentProfile.suspendedBy', 'enrollments.batch.branch', 'enrollments.course', 'guardianLinksAsStudent.guardian']);
         $history = StudentLifecycleEvent::query()->where('student_id', $student->id)
             ->with('actor:id,name')->latest()->paginate(30);
@@ -133,7 +135,7 @@ class StudentManagementController extends Controller
             ->when(request()->user()->isBranchManager(), fn ($q) => $q->where('branch_id', request()->user()->branch_id))
             ->with('branch')->orderBy('starts_at')->get();
 
-        return view('admin.students.show', compact('student', 'history', 'batches', 'routePrefix'));
+        return view('admin.students.show', compact('student', 'history', 'batches', 'routePrefix', 'indexRoute'));
     }
 
     public function updateProfile(Request $request, User $student): RedirectResponse
