@@ -92,11 +92,13 @@
         <label>Mobile slider height<select name="home_slider_mobile_height">@foreach([220,260,300,340,380,420,460,520] as $height)<option value="{{ $height }}" @selected((int) old('home_slider_mobile_height', $settings['home_slider_mobile_height'] ?? 300) === $height)>{{ $height }} px</option>@endforeach</select></label>
         <label>Image overlay strength<select name="home_slider_overlay">@foreach([0,10,20,30,40,50,60,70,80,90] as $opacity)<option value="{{ $opacity }}" @selected((int) old('home_slider_overlay', $settings['home_slider_overlay'] ?? 60) === $opacity)>{{ $opacity }}%</option>@endforeach</select></label>
         <label>Transition effect<select name="home_slider_transition">@foreach(['slide'=>'Slide','fade'=>'Fade','zoom'=>'Zoom'] as $value=>$label)<option value="{{ $value }}" @selected(old('home_slider_transition', $settings['home_slider_transition'] ?? 'slide') === $value)>{{ $label }}</option>@endforeach</select></label>
+        <label>Progress bar<select name="home_slider_progress"><option value="1" @selected(old('home_slider_progress', $settings['home_slider_progress'] ?? '1') == '1')>Show</option><option value="0" @selected(old('home_slider_progress', $settings['home_slider_progress'] ?? '1') == '0')>Hide</option></select></label>
+        <label>Manual play / pause button<select name="home_slider_play_pause"><option value="1" @selected(old('home_slider_play_pause', $settings['home_slider_play_pause'] ?? '1') == '1')>Show</option><option value="0" @selected(old('home_slider_play_pause', $settings['home_slider_play_pause'] ?? '1') == '0')>Hide</option></select></label>
     </div>
     @for($i = 0; $i < 8; $i++)
         @php($slide = old("home_slides.$i", $slides[$i] ?? []))
-        <section class="card" style="margin-bottom:14px;">
-            <div class="page-header"><h3>Slide {{ $i + 1 }}</h3><label style="display:flex;gap:8px;align-items:center;"><input type="hidden" name="home_slides[{{ $i }}][enabled]" value="0"><input type="checkbox" name="home_slides[{{ $i }}][enabled]" value="1" style="width:auto;" @checked($slide['enabled'] ?? false)> Enabled</label></div>
+        <section class="card homepage-slide-item" draggable="true" data-home-slide-item style="margin-bottom:14px;">
+            <div class="page-header"><h3><span data-slide-number>Slide {{ $i + 1 }}</span></h3><div class="cta-row"><button type="button" class="btn secondary" data-slide-drag-handle style="cursor:grab;">↕ Drag to reorder</button></div><label style="display:flex;gap:8px;align-items:center;"><input type="hidden" name="home_slides[{{ $i }}][enabled]" value="0"><input type="checkbox" name="home_slides[{{ $i }}][enabled]" value="1" style="width:auto;" @checked($slide['enabled'] ?? false)> Enabled</label></div>
             <div class="grid grid-2">
                 <label>Desktop image<select name="home_slides[{{ $i }}][image_id]"><option value="">Select image</option>@foreach($media as $asset)<option value="{{ $asset->id }}" @selected((string) ($slide['image_id'] ?? '') === (string) $asset->id)>{{ $asset->original_name }}</option>@endforeach</select></label>
                 <label>Mobile image (optional)<select name="home_slides[{{ $i }}][mobile_image_id]"><option value="">Use desktop image</option>@foreach($media as $asset)<option value="{{ $asset->id }}" @selected((string) ($slide['mobile_image_id'] ?? '') === (string) $asset->id)>{{ $asset->original_name }}</option>@endforeach</select></label>
@@ -238,6 +240,38 @@
 </section>
 @endif
 @push('scripts')
+<script>
+(() => {
+    const list = document.querySelector('#homepage-slider');
+    if (!list) return;
+    let dragged = null;
+    const items = () => [...list.querySelectorAll('[data-home-slide-item]')];
+    const renumber = () => items().forEach((item, index) => {
+        const order = item.querySelector('input[name$="[sort_order]"]');
+        const label = item.querySelector('[data-slide-number]');
+        if (order) order.value = String(index);
+        if (label) label.textContent = 'Slide ' + (index + 1);
+    });
+    items().forEach((item) => {
+        item.addEventListener('dragstart', (event) => {
+            if (!event.target.closest('[data-slide-drag-handle]')) { event.preventDefault(); return; }
+            dragged = item;
+            item.classList.add('is-dragging');
+            event.dataTransfer.effectAllowed = 'move';
+        });
+        item.addEventListener('dragover', (event) => {
+            if (!dragged || dragged === item) return;
+            event.preventDefault();
+            const rect = item.getBoundingClientRect();
+            const after = event.clientY > rect.top + rect.height / 2;
+            item.parentNode.insertBefore(dragged, after ? item.nextSibling : item);
+        });
+        item.addEventListener('drop', (event) => { event.preventDefault(); renumber(); });
+        item.addEventListener('dragend', () => { dragged?.classList.remove('is-dragging'); dragged = null; renumber(); });
+    });
+})();
+</script>
+@endpush
 <script>
 (() => {
     document.addEventListener('click', (event) => {
