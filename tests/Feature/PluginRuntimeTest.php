@@ -379,7 +379,7 @@ PHP,
         $plugin = $this->createPlugin($this->validEntrypoint());
 
         $failedOnce = false;
-        $verifier = \\Mockery::mock(PluginSignatureVerifier::class);
+        $verifier = \Mockery::mock(PluginSignatureVerifier::class);
         $verifier->shouldReceive('verifyInstalledSignature')
             ->twice()
             ->andReturnUsing(function () use (&$failedOnce): bool {
