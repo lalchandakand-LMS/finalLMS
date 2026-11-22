@@ -1,9 +1,9 @@
 <?php
 
-namespace Aloms\\UniversalAiAssistant;
+namespace Aloms\UniversalAiAssistant;
 
-use Illuminate\\Support\\Facades\\Crypt;
-use Illuminate\\Support\\Facades\\DB;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Throwable;
 
