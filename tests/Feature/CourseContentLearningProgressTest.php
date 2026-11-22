@@ -40,6 +40,19 @@ class CourseContentLearningProgressTest extends TestCase
             ->assertSee('Mark as complete');
     }
 
+    public function test_video_progress_autosaves_resume_position_and_auto_completes_at_ninety_percent(): void
+    {
+        [$course, $post, $student] = $this->fixture();
+        $this->actingAs($student)->postJson(route('student.courses.content.progress', [$course, $post]), [
+            'position_seconds' => 45, 'duration_seconds' => 100,
+        ])->assertOk()->assertJson(['saved' => true, 'position_seconds' => 45, 'duration_seconds' => 100, 'progress_percent' => 45, 'completed' => false]);
+        $this->assertDatabaseHas('course_content_progress', ['user_id' => $student->id, 'progress_percent' => 45, 'last_position_seconds' => 45, 'duration_seconds' => 100]);
+        $this->postJson(route('student.courses.content.progress', [$course, $post]), [
+            'position_seconds' => 95, 'duration_seconds' => 100,
+        ])->assertOk()->assertJson(['completed' => true, 'progress_percent' => 95]);
+        $this->assertNotNull(CourseContentProgress::query()->firstOrFail()->completed_at);
+    }
+
     public function test_course_completion_requires_all_published_curriculum_posts_and_issues_certificate_afterward(): void
     {
         [$course, $firstPost, $student] = $this->fixture();
