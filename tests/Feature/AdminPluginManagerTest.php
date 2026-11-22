@@ -176,7 +176,7 @@ PHP;
         $this->actingAs($admin)->get(route('admin.plugins.index'))
             ->assertOk()
             ->assertSee('Plugin Manager')
-            ->assertSee('Install a signed plugin')
+            ->assertSee('Install a plugin')
             ->assertSee('Only trusted, signed packages with intact installed-file hashes can be activated.');
 
         $this->actingAs($admin)->post(route('admin.plugins.install'), $this->uploadData())
