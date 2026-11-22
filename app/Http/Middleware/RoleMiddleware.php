@@ -24,7 +24,7 @@ class RoleMiddleware
                 ->exists();
 
             if ($suspended) {
-                abort(403, 'This student account is suspended. Please contact the administration.');
+                abort(403, 'This student account is not active. Please contact the administration.');
             }
         }
 
