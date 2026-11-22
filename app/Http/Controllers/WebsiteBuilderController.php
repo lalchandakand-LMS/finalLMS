@@ -89,6 +89,10 @@ class WebsiteBuilderController extends Controller
             'home_slider_overlay' => ['nullable', 'integer', 'min:20', 'max:90'],
             'home_slides.*.enabled' => ['nullable', 'boolean'],
             'home_slides.*.image_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
+            'home_slides.*.mobile_image_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
+            'home_slides.*.sort_order' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'home_slides.*.starts_at' => ['nullable', 'date'],
+            'home_slides.*.ends_at' => ['nullable', 'date', 'after_or_equal:home_slides.*.starts_at'],
             'home_slides.*.title' => ['nullable', 'string', 'max:180'],
             'home_slides.*.subtitle' => ['nullable', 'string', 'max:500'],
             'home_slides.*.button_label' => ['nullable', 'string', 'max:60'],
@@ -181,6 +185,7 @@ class WebsiteBuilderController extends Controller
         abort_unless(is_array($draft), 404, 'No saved homepage draft is available.');
 
         $imageIds = collect($draft['home_slides'] ?? [])->pluck('image_id')
+            ->merge(collect($draft['home_slides'] ?? [])->pluck('mobile_image_id'))
             ->merge(collect($draft['sections'] ?? [])->pluck('image_id'))
             ->filter()->unique()->values();
         $media = MediaAsset::query()->whereIn('id', $imageIds)->where('mime_type', 'like', 'image/%')->get()->keyBy('id');
@@ -313,6 +318,10 @@ class WebsiteBuilderController extends Controller
             'home_slider_overlay' => ['nullable', 'integer', 'min:20', 'max:90'],
             'home_slides.*.enabled' => ['nullable', 'boolean'],
             'home_slides.*.image_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
+            'home_slides.*.mobile_image_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
+            'home_slides.*.sort_order' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'home_slides.*.starts_at' => ['nullable', 'date'],
+            'home_slides.*.ends_at' => ['nullable', 'date', 'after_or_equal:home_slides.*.starts_at'],
             'home_slides.*.title' => ['nullable', 'string', 'max:180'],
             'home_slides.*.subtitle' => ['nullable', 'string', 'max:500'],
             'home_slides.*.button_label' => ['nullable', 'string', 'max:60'],
@@ -370,15 +379,23 @@ class WebsiteBuilderController extends Controller
                 $buttonUrl = '';
             }
 
+            $mobileImage = !empty($slide['mobile_image_id'])
+                ? MediaAsset::query()->whereKey($slide['mobile_image_id'])->where('mime_type', 'like', 'image/%')->first()
+                : null;
+
             return [
                 'image_id' => $image->id,
+                'mobile_image_id' => $mobileImage?->id,
+                'sort_order' => max(0, (int) ($slide['sort_order'] ?? 0)),
+                'starts_at' => $slide['starts_at'] ?? null,
+                'ends_at' => $slide['ends_at'] ?? null,
                 'title' => trim($slide['title'] ?? ''),
                 'subtitle' => trim($slide['subtitle'] ?? ''),
                 'button_label' => trim($slide['button_label'] ?? ''),
                 'button_url' => $buttonUrl,
                 'enabled' => true,
             ];
-        })->filter()->values()->all();
+        })->filter()->sortBy('sort_order')->values()->all();
 
         $footerLinks = collect($validated['footer_links'] ?? [])->map(function (array $link): ?array {
             $label = trim($link['label'] ?? '');
