@@ -899,6 +899,49 @@ class ExaminationWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_teacher_results_include_pass_rate_and_question_level_accuracy_analytics(): void
+    {
+        [$teacher, $student, $batch] = $this->makeBatchWithStudent();
+        $exam = Exam::create([
+            'batch_id' => $batch->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Analytics test',
+            'starts_at' => now()->subMinute(),
+            'ends_at' => now()->addHour(),
+            'duration_minutes' => 30,
+            'pass_marks' => 2,
+            'status' => 'published',
+        ]);
+        $first = $exam->questions()->create([
+            'question' => 'Choose the correct answer.',
+            'options' => ['Correct', 'Wrong A', 'Wrong B', 'Wrong C'],
+            'correct_option' => 0,
+            'marks' => 2,
+            'position' => 1,
+        ]);
+        $second = $exam->questions()->create([
+            'question' => 'Choose the second answer.',
+            'options' => ['Wrong A', 'Correct', 'Wrong B', 'Wrong C'],
+            'correct_option' => 1,
+            'marks' => 1,
+            'position' => 2,
+        ]);
+
+        $this->actingAs($student)->post(route('student.exams.start', $exam))->assertRedirect();
+        $attempt = ExamAttempt::firstOrFail();
+        $this->post(route('student.exams.submit', $attempt), [
+            'answers' => [$first->id => 0, $second->id => 0],
+        ])->assertRedirect();
+
+        $this->actingAs($teacher)->get(route('teacher.exams.results', $exam))
+            ->assertOk()
+            ->assertSee('Submitted attempts')
+            ->assertSee('Pass rate')
+            ->assertSee('Question-wise performance')
+            ->assertSee('100.0%')
+            ->assertSee('Choose the correct answer.');
+    }
+
     private function makeBatchWithStudent(bool $enroll = true): array
     {
         $teacher = User::factory()->create(['role' => 'teacher']);
