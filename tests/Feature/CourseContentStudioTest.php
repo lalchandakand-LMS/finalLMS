@@ -206,6 +206,33 @@ class CourseContentStudioTest extends TestCase
             ->assertSee(route('courses.content.show', [$course, $post]), false);
     }
 
+    public function test_lesson_prerequisites_and_sequential_unlocks_block_access_until_previous_lesson_is_completed(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $student = User::factory()->create(['role' => 'student']);
+        $course = Course::factory()->create(['teacher_id' => $teacher->id, 'status' => 'published']);
+        $first = $this->makePost($teacher, null, 'Prerequisite lesson');
+        $second = $this->makePost($teacher, null, 'Locked lesson');
+        $firstItem = CourseCurriculumItem::create([
+            'course_id' => $course->id, 'course_content_post_id' => $first->id, 'position' => 10,
+        ]);
+        CourseCurriculumItem::create([
+            'course_id' => $course->id, 'course_content_post_id' => $second->id, 'position' => 20,
+            'prerequisite_post_id' => $first->id, 'unlock_after_previous' => true,
+        ]);
+        Enrollment::create(['user_id' => $student->id, 'course_id' => $course->id, 'status' => 'active']);
+
+        $this->actingAs($student)->get(route('courses.content.show', [$course, $second]))
+            ->assertRedirect(route('courses.show', $course));
+        $this->post(route('student.courses.content.complete', [$course, $second]))->assertForbidden();
+
+        CourseContentProgress::create([
+            'user_id' => $student->id, 'course_curriculum_item_id' => $firstItem->id,
+            'last_viewed_at' => now(), 'completed_at' => now(),
+        ]);
+        $this->get(route('courses.content.show', [$course, $second]))->assertOk();
+    }
+
     public function test_non_admin_cannot_access_content_studio_or_course_builder(): void
     {
         $student = User::factory()->create(['role' => 'student']);
