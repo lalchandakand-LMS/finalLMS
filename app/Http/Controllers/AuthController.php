@@ -1,18 +1,18 @@
 <?php
 
-namespace App\\Http\\Controllers;
+namespace App\Http\Controllers;
 
-use App\\Models\\DeviceSession;
-use App\\Models\\User;
-use Illuminate\\Auth\\Events\\Registered;
-use Illuminate\\Auth\\Events\\PasswordReset;
-use Illuminate\\Http\\RedirectResponse;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Facades\\Auth;
-use Illuminate\\Support\\Facades\\Password as PasswordBroker;
-use Illuminate\\Support\\Str;
-use Illuminate\\Validation\\Rules\\Password;
-use Illuminate\\View\\View;
+use App\Models\DeviceSession;
+use App\Models\User;
+use Illuminate\Auth\Events\Registered;
+use Illuminate\Auth\Events\PasswordReset;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Password as PasswordBroker;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Password;
+use Illuminate\View\View;
 
 class AuthController extends Controller
 {
@@ -43,7 +43,7 @@ class AuthController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'phone_number' => ['required', 'string', 'regex:/^\\+[1-9][0-9]{7,14}$/', 'unique:users,phone_number'],
+            'phone_number' => ['required', 'string', 'regex:/^\+[1-9][0-9]{7,14}$/', 'unique:users,phone_number'],
             'password' => ['required', 'confirmed', Password::defaults()],
         ]);
 
@@ -133,7 +133,7 @@ class AuthController extends Controller
             || ! str_starts_with($continue, '/')
             || str_starts_with($continue, '//')
             || str_contains($continue, chr(92))
-            || preg_match('/[\\\\r\\\\n]/', $continue)) {
+            || preg_match('/[\r\n]/', $continue)) {
             return;
         }
 
