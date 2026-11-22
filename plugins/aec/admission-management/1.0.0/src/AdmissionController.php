@@ -62,8 +62,8 @@ final class AdmissionController extends Controller
                 $application = AdmissionApplication::query()->create($data);
                 $this->recordEvent($application, null, 'application_submitted', null, 'pending', 'Online admission application submitted.');
 
-                foreach ($files as $index => $file) {
-                    $storedPaths[] = $this->persistDocument($application, $file, $request->input("document_types.$index", 'other'), null);
+                foreach ($files as $type => $file) {
+                    $storedPaths[] = $this->persistDocument($application, $file, (string) $type, null);
                 }
 
                 return $application;
@@ -412,13 +412,13 @@ final class AdmissionController extends Controller
         $data = $request->validate([
             'documents' => ['nullable', 'array', 'max:5'],
             'documents.*' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
-            'document_types' => ['nullable', 'array', 'max:5'],
-            'document_types.*' => ['required', Rule::in(self::DOCUMENT_TYPES)],
         ]);
 
-        $files = array_values($data['documents'] ?? []);
-        $types = array_values($data['document_types'] ?? []);
-        abort_if(count($types) > count($files), 422, 'A document type was provided without a file.');
+        $files = $data['documents'] ?? [];
+        foreach (array_keys($files) as $type) {
+            abort_unless(in_array((string) $type, self::DOCUMENT_TYPES, true), 422, 'Invalid document type.');
+        }
+
         return $files;
     }
 
