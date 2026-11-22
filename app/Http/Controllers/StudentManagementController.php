@@ -44,7 +44,7 @@ class StudentManagementController extends Controller
         $student->load(['branch', 'studentProfile.suspendedBy', 'enrollments.batch.branch', 'enrollments.course', 'guardianLinksAsStudent.guardian']);
         $history = StudentLifecycleEvent::query()->where('student_id', $student->id)
             ->with('actor:id,name')->latest()->paginate(30);
-        $batches = Batch::query()->where('status', 'open')->where('course_id', $student->enrollments()->whereIn('status', ['active', 'completed'])->value('course_id'))
+        $batches = Batch::query()->where('status', 'open')->where('course_id', $student->enrollments()->where('status', 'active')->value('course_id'))\n            ->when(request()->user()->isBranchManager(), fn ($q) => $q->where('branch_id', request()->user()->branch_id))
             ->with('branch')->orderBy('starts_at')->get();
 
         return view('admin.students.show', compact('student', 'history', 'batches', 'routePrefix'));
@@ -101,7 +101,7 @@ class StudentManagementController extends Controller
                 abort_if($request->user()->isBranchManager(), 403, 'Branch managers cannot transfer students outside their assigned branch.');
             }
             if ($target->capacity !== null) {
-                $occupied = $target->enrollments()->where('status', 'active')->whereKeyNot($enrollment->id)->count();
+                $occupied = $target->enrollments()->where('status', 'active')->where('id', '!=', $enrollment->id)->count();
                 abort_if($occupied >= $target->capacity, 422, 'The target batch is full.');
             }
             $old = ['batch_id' => $enrollment->batch_id, 'branch_id' => $student->branch_id, 'status' => $enrollment->status];
