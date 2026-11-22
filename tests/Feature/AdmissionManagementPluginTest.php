@@ -40,6 +40,7 @@ final class AdmissionManagementPluginTest extends TestCase
         require_once base_path('plugins/aec/admission-management/1.0.0/src/AdmissionApplication.php');
         require_once base_path('plugins/aec/admission-management/1.0.0/src/AdmissionDocument.php');
         require_once base_path('plugins/aec/admission-management/1.0.0/src/AdmissionController.php');
+        Route::get('/__admission/apply', [AdmissionController::class, 'publicForm'])->name('admission.public.apply');
         Route::post('/__admission/apply', [AdmissionController::class, 'applyPublic'])->name('admission.public.apply.store');
         Route::get('/__admission/track', [AdmissionController::class, 'trackForm'])->name('admission.public.track');
         Route::post('/__admission/track', [AdmissionController::class, 'track'])->name('admission.public.track.submit');
@@ -88,17 +89,26 @@ final class AdmissionManagementPluginTest extends TestCase
 
     public function test_public_intake_and_tracking_require_both_application_code_and_email(): void
     {
+        $branch = Branch::query()->create(['name' => 'Central Branch', 'slug' => 'central-branch', 'is_active' => true]);
+        $this->get('/__admission/apply')->assertOk()->assertSee('Preferred branch')->assertSee('Central Branch');
+
         $this->post('/__admission/apply', [
             'applicant_name' => 'Applicant One',
             'email' => 'APPLICANT@example.com',
             'phone' => '01700000000',
             'desired_course' => 'Spoken English',
+            'branch_id' => $branch->id,
         ])->assertRedirect();
 
         $application = AdmissionApplication::query()->firstOrFail();
         $this->assertSame('applicant@example.com', $application->email);
         $this->assertSame('pending', $application->status);
+        $this->assertSame($branch->id, $application->branch_id);
         $this->assertStringStartsWith('ADM-', $application->application_code);
+
+        $branchManager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $branch->id]);
+        $this->actingAs($branchManager)->get('/__admission/admin')->assertOk()->assertSee('Applicant One');
+        auth()->logout();
 
         $this->post('/__admission/track', [
             'application_code' => $application->application_code,

@@ -33,7 +33,9 @@ final class AdmissionController extends Controller
 
     public function publicForm(): View
     {
-        return view('admission-management::public.apply');
+        return view('admission-management::public.apply', [
+            'branches' => DB::table('branches')->where('is_active', true)->orderBy('name')->get(['id', 'name']),
+        ]);
     }
 
     public function applyPublic(Request $request, PluginSettingsManager $settings): RedirectResponse
@@ -41,6 +43,10 @@ final class AdmissionController extends Controller
         $plugin = PluginInstallation::query()->where('plugin_key', 'aec.admission-management')->firstOrFail();
         abort_if(strtolower((string) ($settings->get($plugin, 'intake_status') ?? 'open')) !== 'open', 403, 'Admission applications are currently closed.');
         $data = $this->validatedApplicant($request);
+        if (DB::table('branches')->where('is_active', true)->exists()) {
+            $request->validate(['branch_id' => ['required', 'integer', Rule::exists('branches', 'id')->where('is_active', true)]]);
+            $data['branch_id'] = (int) $request->input('branch_id');
+        }
         $data['email'] = strtolower(trim($data['email']));
         $data['application_source'] = 'website';
         $data['status'] = 'pending';

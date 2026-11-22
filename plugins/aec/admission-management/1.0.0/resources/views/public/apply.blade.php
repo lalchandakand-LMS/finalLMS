@@ -12,6 +12,7 @@
 <label class="grid gap-1">Phone<input required maxlength="40" name="phone" value="{{ old('phone') }}" class="rounded border-gray-300"></label>
 <label class="grid gap-1">Guardian phone<input maxlength="40" name="guardian_phone" value="{{ old('guardian_phone') }}" class="rounded border-gray-300"></label>
 <label class="grid gap-1 sm:col-span-2">Desired course<input required maxlength="160" name="desired_course" value="{{ old('desired_course') }}" class="rounded border-gray-300"></label>
+@if($branches->isNotEmpty())<label class="grid gap-1">Preferred branch<select required name="branch_id" class="rounded border-gray-300"><option value="">Select a branch</option>@foreach($branches as $branch)<option value="{{ $branch->id }}" @selected((string)old('branch_id')===(string)$branch->id)>{{ $branch->name }}</option>@endforeach</select></label>@endif
 <label class="grid gap-1">Preferred batch<input maxlength="80" name="preferred_batch" value="{{ old('preferred_batch') }}" class="rounded border-gray-300"></label>
 <label class="grid gap-1">Previous education<input maxlength="160" name="previous_education" value="{{ old('previous_education') }}" class="rounded border-gray-300"></label>
 <label class="grid gap-1">Date of birth<input type="date" name="date_of_birth" value="{{ old('date_of_birth') }}" class="rounded border-gray-300"></label>
