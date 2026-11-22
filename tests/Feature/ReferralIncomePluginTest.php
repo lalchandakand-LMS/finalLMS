@@ -84,7 +84,7 @@ final class ReferralIncomePluginTest extends TestCase
         $service = app(ReferralIncomeService::class);
         $service->applyCode($buyer, $service->createOrGetCode($referrer));
 
-        $order = \\App\\Models\\Order::query()->create([
+        $order = \App\Models\Order::query()->create([
             'order_number' => 'AEC-REFERRAL-EBOOK-'.strtoupper(bin2hex(random_bytes(5))),
             'user_id' => $buyer->id,
             'status' => 'completed',
