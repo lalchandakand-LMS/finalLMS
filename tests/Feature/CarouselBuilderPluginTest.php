@@ -32,6 +32,7 @@ class CarouselBuilderPluginTest extends TestCase
         Route::post('/__test-carousels', [CarouselBuilderController::class, 'store'])->name('admin.carousels.store');
         Route::put('/__test-carousels/{carousel}', [CarouselBuilderController::class, 'update'])->name('admin.carousels.update');
         Route::delete('/__test-carousels/{carousel}', [CarouselBuilderController::class, 'destroy'])->name('admin.carousels.destroy');
+        Route::getRoutes()->refreshNameLookups();
     }
 
     public function test_admin_can_create_and_update_a_reusable_manual_carousel(): void
