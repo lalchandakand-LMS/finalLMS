@@ -586,6 +586,8 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::put('/courses/{course}/builder', [AdminCourseBuilderController::class, 'update'])->name('admin.course-builder.update');
         Route::get('/courses/create', [CourseController::class, 'create'])->name('admin.courses.create');
         Route::post('/courses', [CourseController::class, 'store'])->name('admin.courses.store');
+        Route::get('/courses/{course}/versions', [CourseController::class, 'versions'])->name('admin.courses.versions');
+        Route::post('/courses/{course}/versions/{version}/restore', [CourseController::class, 'restoreVersion'])->middleware('throttle:10,1')->name('admin.courses.versions.restore');
         Route::get('/courses/{course}/edit', [CourseController::class, 'edit'])->name('admin.courses.edit');
         Route::put('/courses/{course}', [CourseController::class, 'update'])->name('admin.courses.update');
         Route::delete('/courses/{course}', [CourseController::class, 'destroy'])->name('admin.courses.destroy');
