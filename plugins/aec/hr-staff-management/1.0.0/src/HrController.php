@@ -178,6 +178,9 @@ final class HrController extends Controller
         $data = $request->validate([
             'staff_profile_id' => ['required', 'integer', 'exists:staff_profiles,id'],
             'payroll_month' => ['required', 'date_format:Y-m'],
+            'allowances' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
+            'overtime_hours' => ['nullable', 'numeric', 'min:0', 'max:744'],
+            'overtime_rate' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
             'bonus' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
             'deductions' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
         ]);
@@ -185,13 +188,20 @@ final class HrController extends Controller
             $member = StaffProfile::query()->lockForUpdate()->findOrFail($data['staff_profile_id']);
             $this->assertRecordBranch($actor, $member->branch_id);
             abort_unless($member->status === 'active', 422, 'Payroll can only be prepared for active staff.');
+            $basic = round((float) $member->base_salary, 2);
+            $allowances = round((float) ($data['allowances'] ?? 0), 2);
+            $overtimeHours = round((float) ($data['overtime_hours'] ?? 0), 2);
+            $overtimeRate = round((float) ($data['overtime_rate'] ?? 0), 2);
+            $overtimeAmount = round($overtimeHours * $overtimeRate, 2);
             $bonus = round((float) ($data['bonus'] ?? 0), 2);
             $deductions = round((float) ($data['deductions'] ?? 0), 2);
-            $gross = round((float) $member->base_salary, 2);
+            $gross = round($basic + $allowances + $overtimeAmount, 2);
             abort_if($deductions > $gross + $bonus, 422, 'Deductions cannot exceed gross salary plus bonus.');
             abort_if(StaffPayroll::query()->where('staff_profile_id', $member->id)->where('payroll_month', $data['payroll_month'])->exists(), 409, 'Payroll already exists for this staff member and month.');
             return StaffPayroll::query()->create([
                 'staff_profile_id' => $member->id, 'branch_id' => $member->branch_id, 'payroll_month' => $data['payroll_month'],
+                'basic_salary' => $basic, 'allowances' => $allowances, 'overtime_hours' => $overtimeHours,
+                'overtime_rate' => $overtimeRate, 'overtime_amount' => $overtimeAmount,
                 'gross_salary' => $gross, 'bonus' => $bonus, 'deductions' => $deductions,
                 'net_paid' => round($gross + $bonus - $deductions, 2), 'status' => 'pending',
             ]);
