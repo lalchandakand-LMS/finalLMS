@@ -268,15 +268,16 @@ class StudentDeviceAccessController extends Controller
             return back()->withErrors(['email' => 'The provided credentials do not match our records.'])->onlyInput('email');
         }
 
-        if ($user->isStudent() && StudentProfile::query()->where('user_id', $user->id)->whereIn('lifecycle_status', ['suspended', 'graduated'])->exists()) {
-            return back()->withErrors(['email' => 'This student account is inactive. Please contact the administration.'])->onlyInput('email');
-        }
-
         if (Auth::check()) {
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
         }
+
+        if ($user->isStudent() && StudentProfile::query()->where('user_id', $user->id)->whereIn('lifecycle_status', ['suspended', 'graduated'])->exists()) {
+            return back()->withErrors(['email' => 'This student account is inactive. Please contact the administration.'])->onlyInput('email');
+        }
+
 
         // Never carry a pending MFA or device-verification challenge from a
         // previous identity into a new successful password-authentication flow.
