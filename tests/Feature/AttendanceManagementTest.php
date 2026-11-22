@@ -203,7 +203,7 @@ class AttendanceManagementTest extends TestCase
         $manager = User::factory()->create([
             'role' => 'branch_manager',
             'branch_id' => $branch->id,
-            'admin_permissions' => ['branch.attendance'],
+            'admin_permissions' => ['branch.attendance', 'branch.batches'],
         ]);
         $teacher = User::factory()->create(['role' => 'teacher']);
         $student = User::factory()->create(['role' => 'student']);
@@ -246,6 +246,11 @@ class AttendanceManagementTest extends TestCase
                 'status' => 'active',
             ]);
         }
+
+        $this->actingAs($manager)
+            ->get(route('branch.batches.index'))
+            ->assertOk()
+            ->assertSee(route('branch.batches.attendance.index', $batch));
 
         $this->actingAs($manager)
             ->get(route('branch.batches.attendance.index', $batch))
