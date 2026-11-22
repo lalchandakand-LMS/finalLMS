@@ -39,7 +39,7 @@
             <div class="grid gap-3 sm:grid-cols-2">
                 @php($documentLabels = ['photo' => 'Recent photo', 'birth_certificate' => 'Birth certificate', 'nid' => 'NID / identity document', 'previous_certificate' => 'Previous education certificate', 'other' => 'Other supporting document'])
                 @foreach($documentLabels as $type => $label)
-                    <label class="grid gap-2 rounded-lg border border-dashed p-3 text-sm font-medium">{{ $label }}<input type="hidden" name="document_types[{{ $loop->index }}]" value="{{ $type }}"><input type="file" name="documents[{{ $loop->index }}]" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" class="block w-full text-sm text-gray-600"></label>
+                    <label class="grid gap-2 rounded-lg border border-dashed p-3 text-sm font-medium">{{ $label }}<input type="file" name="documents[{{ $type }}]" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" class="block w-full text-sm text-gray-600"></label>
                 @endforeach
             </div>
         </section>
