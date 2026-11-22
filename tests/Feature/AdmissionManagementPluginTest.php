@@ -300,7 +300,7 @@ final class AdmissionManagementPluginTest extends TestCase
             'desired_course' => 'Spoken English',
             'branch_id' => $branch->id,
             'documents' => [
-                'photo' => \Illuminate\Http\UploadedFile::fake()->image('applicant.jpg'),
+                'photo' => \Illuminate\Http\UploadedFile::fake()->create('applicant.jpg', 100, 'image/jpeg'),
                 'nid' => \Illuminate\Http\UploadedFile::fake()->create('nid.pdf', 120, 'application/pdf'),
             ],
         ])->assertRedirect();
@@ -386,7 +386,7 @@ final class AdmissionManagementPluginTest extends TestCase
         $inside = AdmissionApplication::query()->create([
             'branch_id' => $branchA->id,
             'application_code' => 'ADM-REPORTA0001',
-            'applicant_name' => 'Branch A Applicant',
+            'applicant_name' => '=HYPERLINK("https://evil.example","Branch A Applicant")',
             'email' => 'report-a@example.com',
             'phone' => '01700000012',
             'desired_course' => 'Spoken English',
@@ -423,7 +423,7 @@ final class AdmissionManagementPluginTest extends TestCase
         $response = $this->actingAs($manager)->get('/__admission/reports/export?status=approved');
         $response->assertOk()->assertHeader('content-type', 'text/csv; charset=UTF-8');
         $csv = $response->streamedContent();
-        $this->assertStringContainsString('Branch A Applicant', $csv);
+        $this->assertStringContainsString("'=HYPERLINK(\"https://evil.example\"", $csv);
         $this->assertStringNotContainsString('Branch B Private Applicant', $csv);
     }
 
