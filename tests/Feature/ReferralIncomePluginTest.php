@@ -9,6 +9,7 @@ use App\Models\Course;
 use App\Models\Payment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
@@ -132,17 +133,20 @@ final class ReferralIncomePluginTest extends TestCase
             'status' => 'approved',
         ]);
 
-        $failingService = \Mockery::mock(ReferralIncomeService::class);
-        $failingService->shouldReceive('recordApprovedPayment')
-            ->once()
-            ->with((int) $payment->id)
-            ->andThrow(new \RuntimeException('Transient referral database failure.'));
-        app()->instance(ReferralIncomeService::class, $failingService);
+        // Throw after the insert query executes but before its transaction commits.
+        // This proves a transient failure rolls back the commission and is retried.
+        $shouldFail = true;
+        DB::listen(function (\\Illuminate\\Database\\Events\\QueryExecuted $query) use (&$shouldFail): void {
+            if ($shouldFail && str_contains(strtolower($query->sql), 'referral_commissions')
+                && str_starts_with(strtolower(ltrim($query->sql)), 'insert')) {
+                $shouldFail = false;
+                throw new \\RuntimeException('Transient referral database failure.');
+            }
+        });
 
         $this->assertSame(1, Artisan::call('referral-income:reconcile-approved-payments'));
         $this->assertDatabaseCount('referral_commissions', 0);
 
-        app()->instance(ReferralIncomeService::class, new ReferralIncomeService());
         $this->assertSame(0, Artisan::call('referral-income:reconcile-approved-payments'));
         $this->assertDatabaseHas('referral_commissions', [
             'payment_id' => $payment->id,
