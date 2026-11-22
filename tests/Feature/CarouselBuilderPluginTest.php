@@ -80,9 +80,9 @@ class CarouselBuilderPluginTest extends TestCase
         $draft = Course::factory()->create(['status' => 'draft', 'title' => 'Private draft']);
         $student = User::factory()->create(['role' => 'student', 'name' => 'Verified learner']);
 
-        Comment::create(['author_id' => $student->id, 'commentable_type' => Course::class, 'commentable_id' => $published->id, 'body' => 'Excellent class', 'status' => 'approved']);
-        Comment::create(['author_id' => $student->id, 'commentable_type' => Course::class, 'commentable_id' => $draft->id, 'body' => 'Private course review', 'status' => 'approved']);
-        Comment::create(['author_id' => $student->id, 'commentable_type' => Course::class, 'commentable_id' => $published->id, 'body' => 'Unmoderated review', 'status' => 'pending']);
+        $published->comments()->create(['author_id' => $student->id, 'body' => 'Excellent class', 'status' => 'approved']);
+        $draft->comments()->create(['author_id' => $student->id, 'body' => 'Private course review', 'status' => 'approved']);
+        $published->comments()->create(['author_id' => $student->id, 'body' => 'Unmoderated review', 'status' => 'pending']);
 
         $courseCarousel = Carousel::create(['title' => 'Courses', 'slug' => 'courses', 'source_type' => 'courses', 'item_limit' => 10, 'desktop_cards' => 3, 'mobile_cards' => 1, 'interval_ms' => 5000, 'status' => 'published']);
         $testimonialCarousel = Carousel::create(['title' => 'Testimonials', 'slug' => 'testimonials', 'source_type' => 'testimonials', 'item_limit' => 10, 'desktop_cards' => 3, 'mobile_cards' => 1, 'interval_ms' => 5000, 'status' => 'published']);
