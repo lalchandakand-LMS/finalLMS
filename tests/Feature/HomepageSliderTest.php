@@ -187,6 +187,36 @@ class HomepageSliderTest extends TestCase
         $this->assertDatabaseHas('media_assets', ['id' => $asset->id]);
     }
 
+    public function test_saved_draft_slide_assets_cannot_be_deleted(): void
+    {
+        Storage::fake('public');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $asset = MediaAsset::create([
+            'uploaded_by' => $admin->id, 'disk' => 'public', 'path' => 'media/draft-slide.jpg',
+            'original_name' => 'draft-slide.jpg', 'mime_type' => 'image/jpeg', 'size' => 100,
+        ]);
+        Setting::setValue('homepage_draft', json_encode([
+            'home_slides' => [['enabled' => true, 'image_id' => $asset->id]],
+        ], JSON_THROW_ON_ERROR));
+
+        $this->actingAs($admin)->delete(route('admin.media.destroy', $asset))->assertStatus(422);
+        $this->assertDatabaseHas('media_assets', ['id' => $asset->id]);
+    }
+
+    public function test_loading_screen_logo_cannot_be_deleted_while_in_use(): void
+    {
+        Storage::fake('public');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $asset = MediaAsset::create([
+            'uploaded_by' => $admin->id, 'disk' => 'public', 'path' => 'media/loader-logo.png',
+            'original_name' => 'loader-logo.png', 'mime_type' => 'image/png', 'size' => 100,
+        ]);
+        Setting::setValue('loading_screen_logo_media_id', (string) $asset->id);
+
+        $this->actingAs($admin)->delete(route('admin.media.destroy', $asset))->assertStatus(422);
+        $this->assertDatabaseHas('media_assets', ['id' => $asset->id]);
+    }
+
     public function test_unsafe_slider_button_urls_are_not_saved(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
