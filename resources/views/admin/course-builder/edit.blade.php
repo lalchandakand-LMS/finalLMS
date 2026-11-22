@@ -8,7 +8,7 @@
 @php($current = $course->curriculumItems->keyBy('course_content_post_id'))
 @if($availablePosts->isEmpty())<p class="muted">{{ __('Publish content posts in the Content Studio before adding them to a course.') }}</p>@else
 <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">
-<thead><tr><th>Move</th><th>{{ __('Include') }}</th><th>{{ __('Content post') }}</th><th>{{ __('Section / module') }}</th><th>{{ __('Order') }}</th><th>{{ __('Duration (min)') }}</th><th>{{ __('Free preview') }}</th></tr></thead>
+<thead><tr><th>Move</th><th>{{ __('Include') }}</th><th>{{ __('Content post') }}</th><th>{{ __('Section / module') }}</th><th>{{ __('Order') }}</th><th>{{ __('Duration (min)') }}</th><th>{{ __('Free preview') }}</th><th>{{ __('Sequential unlock') }}</th><th>{{ __('Prerequisite lesson') }}</th></tr></thead>
 <tbody data-course-sortable="lessons">
 @foreach($availablePosts as $post)
 @php($item = $current->get($post->id))
@@ -17,7 +17,7 @@
 <td><input name="section_titles[{{ $post->id }}]" maxlength="120" value="{{ old('section_titles.'.$post->id, $item?->section_title) }}" placeholder="{{ __('e.g. Module 1') }}"></td>
 <td><input type="number" name="positions[{{ $post->id }}]" min="0" max="100000" value="{{ old('positions.'.$post->id, $item?->position ?? (($loop->iteration) * 10)) }}" style="width:90px;"></td>
 <td><input type="number" name="durations[{{ $post->id }}]" min="1" max="600" value="{{ old('durations.'.$post->id, $item?->duration_minutes) }}" style="width:90px;"></td>
-<td><input type="checkbox" name="previews[{{ $post->id }}]" value="1" @checked(old('previews.'.$post->id, $item?->is_preview ?? false)) style="width:auto;"></td></tr>
+<td><input type="checkbox" name="previews[{{ $post->id }}]" value="1" @checked(old('previews.'.$post->id, $item?->is_preview ?? false)) style="width:auto;"></td><td><input type="checkbox" name="unlock_after_previous[{{ $post->id }}]" value="1" @checked(old('unlock_after_previous.'.$post->id, $item?->unlock_after_previous ?? false)) style="width:auto;"></td><td><select name="prerequisites[{{ $post->id }}]" style="max-width:180px;"><option value="">{{ __('No prerequisite') }}</option>@foreach($availablePosts as $prerequisitePost) @if($prerequisitePost->id !== $post->id)<option value="{{ $prerequisitePost->id }}" @selected(old('prerequisites.'.$post->id, $item?->prerequisite_post_id) == $prerequisitePost->id)>{{ $prerequisitePost->title }}</option>@endif @endforeach</select></td></tr>
 @endforeach
 </tbody></table></div>
 @endif
