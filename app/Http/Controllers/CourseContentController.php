@@ -8,6 +8,7 @@ use App\Models\CourseContentProgress;
 use App\Models\DownloadPermission;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -129,6 +130,42 @@ class CourseContentController extends Controller
         return $response;
     }
 
+    public function saveProgress(Request $request, Course $course, CourseContentPost $post): JsonResponse
+    {
+        $student = $request->user();
+        abort_unless($student?->isStudent(), 403);
+        abort_unless($course->status === 'published', 404);
+        abort_unless($post->status === 'published' && $post->published_at && $post->published_at->lte(now()), 404);
+        abort_unless($course->enrollments()->where('user_id', $student->id)->whereIn('status', ['active', 'completed'])->exists(), 403);
+        $item = $course->curriculumItems()->where('course_content_post_id', $post->id)->firstOrFail();
+        $data = $request->validate([
+            'position_seconds' => ['required', 'integer', 'min:0', 'max:86400'],
+            'duration_seconds' => ['required', 'integer', 'min:1', 'max:86400'],
+        ]);
+        $position = min((int) $data['position_seconds'], (int) $data['duration_seconds']);
+        $duration = (int) $data['duration_seconds'];
+        $percent = min(100, round(($position / $duration) * 100, 2));
+        $progress = DB::transaction(function () use ($item, $student, $position, $duration, $percent): CourseContentProgress {
+            $record = CourseContentProgress::query()->where('course_curriculum_item_id', $item->id)
+                ->where('user_id', $student->id)->lockForUpdate()->first();
+            if (! $record) $record = new CourseContentProgress(['course_curriculum_item_id' => $item->id, 'user_id' => $student->id]);
+            $record->last_position_seconds = $position;
+            $record->duration_seconds = $duration;
+            $record->progress_percent = max((float) ($record->progress_percent ?? 0), $percent);
+            $record->last_viewed_at = now();
+            if ($record->progress_percent >= 90) $record->completed_at ??= now();
+            $record->save();
+            return $record;
+        }, 3);
+        return response()->json([
+            'saved' => true,
+            'position_seconds' => $progress->last_position_seconds,
+            'duration_seconds' => $progress->duration_seconds,
+            'progress_percent' => (float) $progress->progress_percent,
+            'completed' => $progress->completed_at !== null,
+        ]);
+    }
+
     public function complete(Request $request, Course $course, CourseContentPost $post): RedirectResponse
     {
         $student = $request->user();
@@ -158,6 +195,8 @@ class CourseContentController extends Controller
             }
 
             $progress->last_viewed_at = now();
+            $progress->progress_percent = 100;
+            if ($progress->duration_seconds) $progress->last_position_seconds = $progress->duration_seconds;
             $progress->completed_at ??= now();
             $progress->save();
         });
