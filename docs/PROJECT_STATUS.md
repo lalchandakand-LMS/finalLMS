@@ -428,3 +428,13 @@ Production deployment remains blocked until staging, backup/restore, rollback an
 - The course-payment refund lifecycle is still not linked to invoice refunds. Do not infer a relationship between `payments` and `invoice_payments`; referral payouts remain a production release blocker until an explicit source-payment refund ledger and partial/full reversal policy are implemented and tested.
 - Other known scope gaps remain: richer HR leave/staff-user/payslip workflows; physical-library member linking/reservations/lost-damaged/fine settlement; full plugin runtime deactivate/reactivate/uninstall acceptance; SSLCOMMERZ sandbox integration; isolated cPanel staging/backup/restore/rollback.
 - No production deployment, live payment activation, or production data changes were performed.
+
+
+## Exact-head verification — 2026-11-22
+
+- Latest code head: `70d8d3bce8e4c09a40dfa04516b5c1537721fe03` on `feat/aec-feature-parity-port` / PR #396.
+- Laravel CI run #8324 completed successfully: 1,082 PHPUnit tests / 7,965 assertions; PHP lint, strict Composer validation, Composer security audit, npm install/audit, migrations, SQLite plugin-route/rollback checks, MariaDB rollback safety, route listing and Vite production build all passed.
+- cPanel packaging job passed, including optimized production dependencies, config/view cache, ZIP assembly and artifact upload. Artifact `AlomsEnglishCenter-cpanel` is available from run #8324 (artifact ID `14741760857`; expires 2026-12-22).
+- CodeQL run #3214 completed successfully on the same exact head.
+- These checks validate the CI test environment and package assembly; they do not replace isolated cPanel staging, backup/restore, real mail delivery or payment-provider sandbox acceptance.
+- Referral refund-to-course-payment linkage remains unresolved. Keep referral payouts and live payment activation disabled until explicit partial/full refund, chargeback, reversal and paid-commission recovery are implemented and tested. PR remains Draft; no production deployment or production data changes were performed.
