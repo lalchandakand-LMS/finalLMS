@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Student profile | ' . $student->name)
 @section('content')
-<div class="page-header"><div><a href="{{ route('admin.students.index') }}">← Student Management</a><h1>{{ $student->name }}</h1><p class="muted">{{ $student->email }} · {{ $student->phone_number ?? 'No phone' }} · {{ $student->branch?->name ?? 'No branch' }}</p></div><span class="badge {{ $student->studentProfile?->lifecycle_status === 'suspended' ? 'warning' : 'success' }}">{{ ucfirst($student->studentProfile?->lifecycle_status ?? 'active') }}</span></div>
+<div class="page-header"><div><a href="{{ route($routePrefix) }}">← Student Management</a><h1>{{ $student->name }}</h1><p class="muted">{{ $student->email }} · {{ $student->phone_number ?? 'No phone' }} · {{ $student->branch?->name ?? 'No branch' }}</p></div><span class="badge {{ $student->studentProfile?->lifecycle_status === 'suspended' ? 'warning' : 'success' }}">{{ ucfirst($student->studentProfile?->lifecycle_status ?? 'active') }}</span></div>
 @if(session('success'))<div class="alert success">{{ session('success') }}</div>@endif
 <div class="grid grid-2">
 <section class="panel"><h2>Student Profile</h2><form method="POST" action="{{ route($routePrefix+'.profile.update', $student) }}">@csrf @method('PUT')
