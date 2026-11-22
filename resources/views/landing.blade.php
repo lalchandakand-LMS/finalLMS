@@ -40,7 +40,8 @@
             'pauseHover' => $hasSettingsTable ? \App\Models\Setting::value('home_slider_pause_hover', '1') === '1' : true,
             'height' => $hasSettingsTable ? max(320, min(720, (int) \App\Models\Setting::value('home_slider_height', 480))) : 480,
             'mobileHeight' => $hasSettingsTable ? max(220, min(520, (int) \App\Models\Setting::value('home_slider_mobile_height', 300))) : 300,
-            'overlay' => $hasSettingsTable ? max(20, min(90, (int) \App\Models\Setting::value('home_slider_overlay', 60))) : 60,
+            'overlay' => $hasSettingsTable ? max(0, min(90, (int) \App\Models\Setting::value('home_slider_overlay', 60))) : 60,
+            'transition' => $hasSettingsTable ? \App\Models\Setting::value('home_slider_transition', 'slide') : 'slide',
         ];
         $flashSales = \Illuminate\Support\Facades\Route::has('flash-sales.public')
             && \App\Models\FlashSale::isPluginActive()
@@ -74,6 +75,15 @@
                     'subtitle' => $slide['subtitle'] ?? '',
                     'button_label' => $slide['button_label'] ?? '',
                     'button_url' => $slide['button_url'] ?? '',
+                    'eyebrow' => $slide['eyebrow'] ?? '',
+                    'secondary_button_label' => $slide['secondary_button_label'] ?? '',
+                    'secondary_button_url' => $slide['secondary_button_url'] ?? '',
+                    'image_position_x' => max(0, min(100, (int) ($slide['image_position_x'] ?? 50))),
+                    'image_position_y' => max(0, min(100, (int) ($slide['image_position_y'] ?? 50))),
+                    'mobile_position_x' => max(0, min(100, (int) ($slide['mobile_position_x'] ?? 50))),
+                    'mobile_position_y' => max(0, min(100, (int) ($slide['mobile_position_y'] ?? 50))),
+                    'content_alignment' => in_array($slide['content_alignment'] ?? 'left', ['left','center','right'], true) ? $slide['content_alignment'] : 'left',
+                    'overlay_color' => preg_match('/^#[0-9A-Fa-f]{6}$/', $slide['overlay_color'] ?? '') ? $slide['overlay_color'] : '#050f23',
                 ] : null;
             })->filter()->values();
         $homepageTemplate = (string) ($hasSettingsTable ? \App\Models\Setting::value('homepage_template', 'redwans-method') : 'redwans-method');
@@ -112,6 +122,14 @@
         .home-carousel__slide img { position:absolute; inset:0; z-index:-2; width:100%; height:100%; object-fit:cover; }
         .home-carousel__shade { position:absolute; inset:0; z-index:-1; background:linear-gradient(90deg,rgba(5,15,35,var(--carousel-overlay)),rgba(5,15,35,calc(var(--carousel-overlay) * .7)) 58%,rgba(5,15,35,.08)); }
         .home-carousel__content { width:min(760px,85%); padding:clamp(24px,6vw,72px); }
+        .home-carousel__content--center { margin-inline:auto; text-align:center; }
+        .home-carousel__content--right { margin-left:auto; text-align:right; }
+        .home-carousel__secondary { display:inline-flex; margin-left:10px; padding:10px 18px; border:1px solid #ffffffa8; border-radius:10px; color:#fff; background:#ffffff18; text-decoration:none; font-weight:800; }
+        .home-carousel.is-fade .home-carousel__track,.home-carousel.is-zoom .home-carousel__track { position:relative; display:block; transform:none !important; }
+        .home-carousel.is-fade .home-carousel__slide,.home-carousel.is-zoom .home-carousel__slide { position:absolute; inset:0; opacity:0; pointer-events:none; transition:opacity .55s ease; }
+        .home-carousel.is-fade .home-carousel__slide.is-active,.home-carousel.is-zoom .home-carousel__slide.is-active { opacity:1; pointer-events:auto; }
+        .home-carousel.is-zoom .home-carousel__slide img { transform:scale(1.05); transition:transform .8s ease; }
+        .home-carousel.is-zoom .home-carousel__slide.is-active img { transform:scale(1); }
         .home-carousel__content h2 { margin:0 0 14px; color:#fff; font-size:clamp(28px,4.4vw,54px); line-height:1.1; letter-spacing:-.03em; }
         .home-carousel__content p { margin:0 0 24px; color:rgba(255,255,255,.94); font-size:clamp(15px,1.6vw,19px); line-height:1.7; }
         .home-carousel__arrow { position:absolute; top:50%; z-index:2; transform:translateY(-50%); width:46px; height:46px; border:1px solid #ffffff88; border-radius:50%; background:#0b1738aa; color:#fff; font-size:32px; line-height:1; cursor:pointer; backdrop-filter:blur(8px); }
@@ -121,7 +139,7 @@
         .home-carousel__dots { display:flex; justify-content:center; align-items:center; gap:9px; margin-top:14px; }
         .home-carousel__dots button { width:9px; height:9px; padding:0; border:0; border-radius:50px; background:var(--primary); opacity:.35; cursor:pointer; transition:width .2s,opacity .2s; }
         .home-carousel__dots button[aria-current="true"] { width:26px; opacity:1; }
-        @media(max-width:700px) { .home-carousel__viewport { height:var(--carousel-mobile-height); border-radius:16px; } .home-carousel__content { width:100%; padding:24px; } .home-carousel__arrow { width:36px;height:36px;font-size:25px; } .home-carousel__arrow--prev { left:10px; } .home-carousel__arrow--next { right:10px; } }
+        @media(max-width:700px) { .home-carousel__viewport { height:var(--carousel-mobile-height); border-radius:16px; } .home-carousel__content { width:100%; padding:24px; } .home-carousel__arrow { width:36px;height:36px;font-size:25px; } .home-carousel__arrow--prev { left:10px; } .home-carousel__arrow--next { right:10px; } .home-carousel__slide img { object-position:var(--mobile-image-position,50% 50%) !important; } }
         @media(prefers-reduced-motion:reduce) { .home-carousel__track,.home-carousel__dots button { transition:none; } }
 
         .home-welcome{display:grid;grid-template-columns:1.1fr .9fr;align-items:center;min-height:330px;margin-bottom:26px;padding:clamp(30px,5vw,66px);overflow:hidden;border-radius:24px;color:#fff;background:radial-gradient(circle at 78% 20%,#1b8eaa,transparent 34%),linear-gradient(120deg,#062f43,#07566b 58%,#073d5a);box-shadow:0 20px 45px #082b4430}.home-welcome__copy{position:relative;z-index:2}.home-eyebrow,.home-section-kicker,.home-heading-kicker{color:#8be5d1;font-size:.76rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.home-welcome h1{margin:14px 0;color:#fff;font-size:clamp(2.2rem,4.8vw,4.4rem);line-height:1.04}.home-welcome p{color:#d7edf3;line-height:1.75}.home-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:26px}.home-button{display:inline-flex;min-height:46px;align-items:center;justify-content:center;padding:12px 20px;border-radius:12px;font-weight:800;text-decoration:none}.home-button--light{color:#07384b;background:#fff}.home-button--outline{color:#fff;border:1px solid #ffffff70;background:#ffffff12}.home-button--primary{color:#fff;background:#087dbb}
@@ -257,17 +275,20 @@
     @include('partials.flash-sales', ['flashSales' => $flashSales])
 
     @if($hasHomeSlides)
-        <section class="home-carousel" aria-label="{{ __('Homepage highlights') }}" data-home-carousel data-autoplay="{{ $sliderOptions['autoplay'] ? 'true' : 'false' }}" data-interval="{{ $sliderOptions['interval'] }}" data-pause-hover="{{ $sliderOptions['pauseHover'] ? 'true' : 'false' }}" style="--carousel-height:{{ $sliderOptions['height'] }}px;--carousel-mobile-height:{{ $sliderOptions['mobileHeight'] }}px;--carousel-overlay:{{ $sliderOptions['overlay'] / 100 }};margin-bottom:28px;">
+        <section class="home-carousel home-carousel--{{ $sliderOptions['transition'] }}" aria-label="{{ __('Homepage highlights') }}" data-home-carousel data-transition="{{ $sliderOptions['transition'] }}" data-autoplay="{{ $sliderOptions['autoplay'] ? 'true' : 'false' }}" data-interval="{{ $sliderOptions['interval'] }}" data-pause-hover="{{ $sliderOptions['pauseHover'] ? 'true' : 'false' }}" style="--carousel-height:{{ $sliderOptions['height'] }}px;--carousel-mobile-height:{{ $sliderOptions['mobileHeight'] }}px;--carousel-overlay:{{ $sliderOptions['overlay'] / 100 }};margin-bottom:28px;">
             <div class="home-carousel__viewport" data-carousel-viewport tabindex="0" aria-roledescription="carousel">
                 <div class="home-carousel__track" data-carousel-track>
                     @foreach($homeSlides as $index => $slide)
-                        <article class="home-carousel__slide" data-carousel-slide aria-label="{{ $index + 1 }} {{ __('of') }} {{ $homeSlides->count() }}" aria-roledescription="slide" aria-hidden="{{ $index === 0 ? 'false' : 'true' }}">
-                            <picture><source media="(max-width: 700px)" srcset="{{ $slide['mobile_asset']->url }}"><img src="{{ $slide['asset']->url }}" alt="{{ $slide['asset']->alt_text ?: $slide['title'] }}" loading="{{ $index === 0 ? 'eager' : 'lazy' }}"></picture>
-                            <div class="home-carousel__content">
-                                <span class="home-carousel__eyebrow">{{ __('Online Course') }}</span>
+                        <article class="home-carousel__slide{{ $index === 0 ? ' is-active' : '' }}" data-carousel-slide aria-label="{{ $index + 1 }} {{ __('of') }} {{ $homeSlides->count() }}" aria-roledescription="slide" aria-hidden="{{ $index === 0 ? 'false' : 'true' }}" style="--slide-overlay:{{ $slide['overlay_color'] }};--mobile-image-position:{{ $slide['mobile_position_x'] }}% {{ $slide['mobile_position_y'] }}%;">
+                            <picture><source media="(max-width: 700px)" srcset="{{ $slide['mobile_asset']->url }}"><img src="{{ $slide['asset']->url }}" alt="{{ $slide['asset']->alt_text ?: $slide['title'] }}" loading="{{ $index === 0 ? 'eager' : 'lazy' }}" style="object-position:{{ $slide['image_position_x'] }}% {{ $slide['image_position_y'] }}%;"></picture>
+                            <div class="home-carousel__content home-carousel__content--{{ $slide['content_alignment'] }}">
+                                <span class="home-carousel__eyebrow">{{ $slide['eyebrow'] !== '' ? $slide['eyebrow'] : __('Online Course') }}</span>
                                 <h2>{{ $slide['title'] !== '' ? $slide['title'] : $homeBatchesTitle }}</h2>
                                 <p>{{ $slide['subtitle'] !== '' ? $slide['subtitle'] : __('Book your seat now! Choose an available batch and start learning with Alom’s English Center.') }}</p>
                                 <a class="btn primary" href="{{ $slide['button_url'] !== '' ? $slide['button_url'] : route('courses.index') }}" rel="noopener">{{ $slide['button_label'] !== '' ? $slide['button_label'] : __('Book your seat now!') }}</a>
+                                @if($slide['secondary_button_label'] !== '' && $slide['secondary_button_url'] !== '')
+                                    <a class="home-carousel__secondary" href="{{ $slide['secondary_button_url'] }}" rel="noopener">{{ $slide['secondary_button_label'] }}</a>
+                                @endif
                             </div>
                             <div class="home-carousel__batch-list" aria-label="{{ __('Available online batches') }}">
                                 @forelse($openBatches->take(2) as $batch)
@@ -531,15 +552,17 @@
     const interval = Math.max(3000, Math.min(12000, Number(root.dataset.interval) || 5000));
     const autoplay = root.dataset.autoplay === 'true' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const pauseOnHover = root.dataset.pauseHover === 'true';
+    const transition = ['slide','fade','zoom'].includes(root.dataset.transition) ? root.dataset.transition : 'slide';
     const render = (index) => {
         active = (index + slides.length) % slides.length;
-        track.style.transform = 'translate3d(' + (-active * 100) + '%,0,0)';
-        slides.forEach((slide, i) => slide.setAttribute('aria-hidden', i === active ? 'false' : 'true'));
+        if (transition === 'slide') track.style.transform = 'translate3d(' + (-active * 100) + '%,0,0)';
+        slides.forEach((slide, i) => { slide.setAttribute('aria-hidden', i === active ? 'false' : 'true'); slide.classList.toggle('is-active', i === active); });
         dots.forEach((dot, i) => dot.setAttribute('aria-current', i === active ? 'true' : 'false'));
     };
     const stop = () => { if (timer) window.clearInterval(timer); timer = null; };
-    const start = () => { stop(); if (autoplay) timer = window.setInterval(() => render(active + 1), interval); };
+    const start = () => { stop(); if (autoplay && !document.hidden) timer = window.setInterval(() => render(active + 1), interval); };
     const interact = (index) => { render(index); start(); };
+    document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
     previous?.addEventListener('click', () => interact(active - 1));
     next?.addEventListener('click', () => interact(active + 1));
     dots.forEach((dot) => dot.addEventListener('click', () => interact(Number(dot.dataset.carouselDot))));
