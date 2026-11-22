@@ -3,7 +3,7 @@
 @section('content')
 <div class="page-header">
     <div><span class="badge info">{{ __('Admin CMS') }}</span><h1>{{ __('Website Builder') }}</h1><p class="muted">Control your public website identity, homepage slider and content sections from one place.</p></div>
-    <div class="cta-row"><a href="{{ route('admin.media.index') }}" class="btn secondary">{{ __('Media Library') }}</a><a href="{{ route('landing') }}" class="btn secondary" target="_blank" rel="noopener">{{ __('Live website') }}</a>@if($draft)<a href="{{ route('admin.website-builder.preview') }}" class="btn primary" target="_blank" rel="noopener">Preview saved draft</a>@endif</div>
+    <div class="cta-row">@if(\Illuminate\Support\Facades\Route::has('admin.carousels.index'))<a href="{{ route('admin.carousels.index') }}" class="btn secondary">Carousel Builder</a>@endif<a href="{{ route('admin.media.index') }}" class="btn secondary">{{ __('Media Library') }}</a><a href="{{ route('landing') }}" class="btn secondary" target="_blank" rel="noopener">{{ __('Live website') }}</a>@if($draft)<a href="{{ route('admin.website-builder.preview') }}" class="btn primary" target="_blank" rel="noopener">Preview saved draft</a>@endif</div>
 </div>
 <nav class="cta-row" aria-label="Website content builder" style="margin:0 0 20px;flex-wrap:wrap;">
     <a class="btn primary" href="{{ route('admin.website-builder.index') }}" aria-current="page">Homepage Builder</a>
