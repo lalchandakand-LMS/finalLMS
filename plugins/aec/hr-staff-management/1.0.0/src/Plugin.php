@@ -15,6 +15,8 @@ require_once __DIR__.'/StaffAttendance.php';
 require_once __DIR__.'/StaffLeaveRequest.php';
 require_once __DIR__.'/StaffJobOpening.php';
 require_once __DIR__.'/StaffApplication.php';
+require_once __DIR__.'/StaffJobOpening.php';
+require_once __DIR__.'/StaffApplication.php';
 require_once __DIR__.'/HrController.php';
 
 return new class implements PluginContract {
