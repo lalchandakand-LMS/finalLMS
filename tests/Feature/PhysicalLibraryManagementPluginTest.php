@@ -13,6 +13,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\View;
 use Tests\TestCase;
 
 final class PhysicalLibraryManagementPluginTest extends TestCase
