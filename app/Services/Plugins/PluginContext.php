@@ -3,6 +3,7 @@
 namespace App\Services\Plugins;
 
 use App\Contracts\Payments\PaymentGateway;
+use App\Services\Payments\PaymentGatewayManager;
 use App\Models\PluginInstallation;
 use Closure;
 use Illuminate\Contracts\Foundation\Application;
