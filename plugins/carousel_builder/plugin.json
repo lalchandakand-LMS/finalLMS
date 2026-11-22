@@ -2,7 +2,7 @@
   "schema_version": 1,
   "key": "carousel_builder",
   "name": "Carousel Builder",
-  "description": "Reusable multi-item carousels for courses, teachers, testimonials and featured content with responsive layouts.",
+  "description": "Catalogue entry for the signed Carousel Builder package: reusable course, teacher, testimonial and manual carousels with responsive layouts.",
   "type": "first_party",
   "status": "metadata_only",
   "provider": null,
