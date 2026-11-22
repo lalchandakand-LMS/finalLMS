@@ -273,7 +273,7 @@ class WebsiteBuilderController extends Controller
         return [
             'homepage_template', 'site_name', 'site_logo_media_id', 'site_favicon_media_id',
             'site_primary_color', 'site_background_color', 'site_background_style', 'site_font_family', 'site_heading_scale', 'site_body_scale', 'home_title', 'home_subtitle', 'home_featured_title',
-            'home_slides', 'home_slider_autoplay', 'home_slider_interval', 'home_slider_arrows', 'home_slider_dots', 'home_slider_pause_hover', 'home_slider_height', 'home_slider_mobile_height', 'home_slider_overlay', 'home_course_carousel_enabled', 'home_course_carousel_items', 'home_course_carousel_cards', 'footer_title', 'footer_text', 'footer_links', 'header_links', 'website_sections',
+            'home_slides', 'home_slider_autoplay', 'home_slider_interval', 'home_slider_arrows', 'home_slider_dots', 'home_slider_pause_hover', 'home_slider_height', 'home_slider_mobile_height', 'home_slider_overlay', 'home_slider_transition', 'home_course_carousel_enabled', 'home_course_carousel_items', 'home_course_carousel_cards', 'footer_title', 'footer_text', 'footer_links', 'header_links', 'website_sections',
         ];
     }
 
@@ -331,7 +331,17 @@ class WebsiteBuilderController extends Controller
             'home_slider_pause_hover' => ['nullable', 'boolean'],
             'home_slider_height' => ['nullable', 'integer', 'min:320', 'max:720'],
             'home_slider_mobile_height' => ['nullable', 'integer', 'min:220', 'max:520'],
-            'home_slider_overlay' => ['nullable', 'integer', 'min:20', 'max:90'],
+            'home_slider_overlay' => ['nullable', 'integer', 'min:0', 'max:90'],
+            'home_slider_transition' => ['nullable', Rule::in(['slide', 'fade', 'zoom'])],
+            'home_slides.*.eyebrow' => ['nullable', 'string', 'max:80'],
+            'home_slides.*.secondary_button_label' => ['nullable', 'string', 'max:60'],
+            'home_slides.*.secondary_button_url' => ['nullable', 'string', 'max:500'],
+            'home_slides.*.image_position_x' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'home_slides.*.image_position_y' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'home_slides.*.mobile_position_x' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'home_slides.*.mobile_position_y' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'home_slides.*.content_alignment' => ['nullable', Rule::in(['left','center','right'])],
+            'home_slides.*.overlay_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'home_slides.*.enabled' => ['nullable', 'boolean'],
             'home_slides.*.image_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
             'home_slides.*.mobile_image_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
