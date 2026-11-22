@@ -44,7 +44,8 @@ class UniversalAiAgentSpecialistPromptTest extends TestCase
         $support = AssistantSettings::rolePrompt('support_staff');
 
         $this->assertStringContainsString('AI Admin Agent', $admin);
-        $this->assertStringContainsString('aggregate operational summaries', $admin);
+        $this->assertStringContainsString('aggregate reports', strtolower($admin));
+        $this->assertStringContainsString('operational summaries', strtolower($admin));
         $this->assertStringContainsString('never approve admissions', strtolower($admin));
         $this->assertStringContainsString('AI Support Agent', $support);
         $this->assertStringContainsString('24/7-style procedural guidance', $support);
