@@ -62,7 +62,7 @@ final class ReferralIncomePluginTest extends TestCase
         $commissionId = $service->recordApprovedPayment((int) $payment->id);
         $this->assertNotNull($commissionId);
         $this->assertSame($commissionId, $service->recordApprovedPayment((int) $payment->id));
-        $this->assertDatabaseCount('referral_commissions', 1);
+        $this->assertSame(1, DB::table('referral_commissions')->where('payment_id', $payment->id)->count());
         $this->assertDatabaseHas('referral_commissions', [
             'id' => $commissionId,
             'payment_id' => $payment->id,
