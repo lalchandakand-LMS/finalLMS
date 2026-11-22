@@ -127,14 +127,17 @@ final class ReferralIncomeService
             throw ValidationException::withMessages(['payout' => 'Enter a valid bKash, Nagad or bank payout destination.']);
         }
         return DB::transaction(function () use ($owner, $method, $account): int {
-            $commissions = DB::table('referral_commissions')->where('referrer_user_id', $owner->id)
+            // Serialize payout creation per account, including retries from concurrent browser submissions.
+            $lockedOwner = User::query()->lockForUpdate()->findOrFail($owner->id);
+            $this->ownerType($lockedOwner);
+            $commissions = DB::table('referral_commissions')->where('referrer_user_id', $lockedOwner->id)
                 ->where('currency', 'BDT')->where('status', 'approved')->orderBy('id')->lockForUpdate()->get();
             $amount = round((float) $commissions->sum('commission_amount'), 2);
             $rule = DB::table('referral_income_rules')->where('owner_type', $owner->role)->first();
             $minimum = (float) ($rule->minimum_payout ?? 500);
             if ($amount < $minimum) throw ValidationException::withMessages(['payout' => 'Your approved balance has not reached the minimum payout.']);
             $id = DB::table('referral_payout_requests')->insertGetId([
-                'user_id' => $owner->id, 'owner_type' => $owner->role, 'amount' => $amount,
+                'user_id' => $lockedOwner->id, 'owner_type' => $lockedOwner->role, 'amount' => $amount,
                 'currency' => 'BDT', 'method' => $method,
                 'account_details_encrypted' => Crypt::encryptString(trim($account)),
                 'status' => 'pending', 'created_at' => now(), 'updated_at' => now(),
@@ -173,6 +176,17 @@ final class ReferralIncomeService
             $row = DB::table('referral_payout_requests')->where('id', $id)->lockForUpdate()->first();
             abort_unless($row && in_array($row->status, ['pending', 'approved'], true), 409);
             if ($status === 'paid') abort_unless($row->status === 'approved', 409);
+
+            // A payout must still match the exact commission rows reserved for it.
+            // This catches ledger edits, partial release, or orphaned requests before money is marked paid.
+            $reserved = DB::table('referral_commissions')->where('payout_request_id', $id)
+                ->orderBy('id')->lockForUpdate()->get();
+            abort_unless($reserved->isNotEmpty()
+                && $reserved->every(fn ($commission) => $commission->status === 'payout_requested'
+                    && (int) $commission->referrer_user_id === (int) $row->user_id)
+                && round((float) $reserved->sum('commission_amount'), 2) === round((float) $row->amount, 2), 409,
+                'Payout ledger no longer matches its reserved commissions. Reconcile it before changing payout status.');
+
             DB::table('referral_payout_requests')->where('id', $id)->update([
                 'status' => $status, 'admin_note' => $note, 'reviewed_by' => $adminId,
                 'reviewed_at' => now(), 'paid_at' => $status === 'paid' ? now() : null, 'updated_at' => now(),
