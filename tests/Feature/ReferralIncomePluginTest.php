@@ -132,11 +132,11 @@ final class ReferralIncomePluginTest extends TestCase
             'status' => 'approved',
         ]);
 
-        $failingService = \\Mockery::mock(ReferralIncomeService::class);
+        $failingService = \Mockery::mock(ReferralIncomeService::class);
         $failingService->shouldReceive('recordApprovedPayment')
             ->once()
             ->with((int) $payment->id)
-            ->andThrow(new \\RuntimeException('Transient referral database failure.'));
+            ->andThrow(new \RuntimeException('Transient referral database failure.'));
         app()->instance(ReferralIncomeService::class, $failingService);
 
         $this->assertSame(1, Artisan::call('referral-income:reconcile-approved-payments'));
