@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Course;
 use App\Models\CourseContentPost;
 use App\Models\CourseContentProgress;
+use App\Models\CourseCurriculumItem;
+use App\Models\User;
 use App\Models\DownloadPermission;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\RedirectResponse;
