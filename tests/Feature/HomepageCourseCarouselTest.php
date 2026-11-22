@@ -37,7 +37,7 @@ class HomepageCourseCarouselTest extends TestCase
         $this->assertSame(3, substr_count($response->getContent(), 'class="home-course-tile"'));
 
         Setting::setValue('home_course_carousel_enabled', '0');
-        $this->get('/')->assertOk()->assertDontSee('data-course-carousel-track', false);
+        $this->get('/')->assertOk()->assertDontSee('class="home-course-grid"', false);
     }
 
     public function test_unpublished_courses_are_not_in_the_public_course_carousel(): void
