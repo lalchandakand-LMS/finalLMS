@@ -12,6 +12,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\View;
 use Tests\TestCase;
 
 final class HrStaffManagementPluginTest extends TestCase
@@ -25,10 +26,12 @@ final class HrStaffManagementPluginTest extends TestCase
         require_once base_path('plugins/aec/hr-staff-management/1.0.0/src/StaffProfile.php');
         require_once base_path('plugins/aec/hr-staff-management/1.0.0/src/StaffPayroll.php');
         require_once base_path('plugins/aec/hr-staff-management/1.0.0/src/HrController.php');
-        if (! Schema::hasTable('staff_profiles')) {
-            $migration = require base_path('plugins/aec/hr-staff-management/1.0.0/migrations/2026_11_21_020000_create_hr_staff_payroll_tables.php');
-            $migration->up();
-        }
+        Schema::disableForeignKeyConstraints();
+        Schema::dropIfExists('staff_payrolls');
+        Schema::dropIfExists('staff_profiles');
+        Schema::enableForeignKeyConstraints();
+        $migration = require base_path('plugins/aec/hr-staff-management/1.0.0/migrations/2026_11_21_020000_create_hr_staff_payroll_tables.php');
+        $migration->up();
         Route::get('/__hr', [HrController::class, 'index'])->name('branch.hr.index');
         Route::post('/__hr/staff', [HrController::class, 'storeStaff'])->name('branch.hr.staff.store');
         Route::post('/__hr/payroll', [HrController::class, 'recordPayroll'])->name('branch.hr.payrolls.store');
