@@ -51,7 +51,7 @@ class WebsiteBuilderController extends Controller
         $allowed = [
             'homepage_template', 'site_name', 'site_logo_media_id', 'site_favicon_media_id',
             'site_primary_color', 'site_background_color', 'site_background_style', 'site_font_family', 'site_heading_scale', 'site_body_scale', 'home_title', 'home_subtitle', 'home_featured_title', 'home_batches_title', 'home_stats_title', 'home_paths_title', 'home_reviews_title',
-            'home_slides', 'home_slider_autoplay', 'home_slider_interval', 'home_slider_arrows', 'home_slider_dots', 'home_slider_pause_hover', 'home_slider_height', 'home_slider_mobile_height', 'home_slider_overlay', 'home_slider_transition', 'home_course_carousel_enabled', 'home_course_carousel_items', 'home_course_carousel_cards', 'footer_title', 'footer_text', 'footer_links', 'header_links', 'sections',
+            'home_slides', 'home_slider_autoplay', 'home_slider_interval', 'home_slider_arrows', 'home_slider_dots', 'home_slider_pause_hover', 'home_slider_height', 'home_slider_mobile_height', 'home_slider_overlay', 'home_slider_transition', 'home_slider_progress', 'home_slider_play_pause', 'home_course_carousel_enabled', 'home_course_carousel_items', 'home_course_carousel_cards', 'footer_title', 'footer_text', 'footer_links', 'header_links', 'sections',
         ];
         $draft = $request->only($allowed);
         abort_if(strlen(json_encode($draft, JSON_THROW_ON_ERROR)) > 65536, 422, 'Homepage draft is too large.');
@@ -91,6 +91,8 @@ class WebsiteBuilderController extends Controller
             'home_slider_mobile_height' => ['nullable', 'integer', 'min:220', 'max:520'],
             'home_slider_overlay' => ['nullable', 'integer', 'min:0', 'max:90'],
             'home_slider_transition' => ['nullable', Rule::in(['slide', 'fade', 'zoom'])],
+            'home_slider_progress' => ['nullable', 'boolean'],
+            'home_slider_play_pause' => ['nullable', 'boolean'],
             'home_slides.*.eyebrow' => ['nullable', 'string', 'max:80'],
             'home_slides.*.secondary_button_label' => ['nullable', 'string', 'max:60'],
             'home_slides.*.secondary_button_url' => ['nullable', 'string', 'max:500'],
@@ -273,7 +275,7 @@ class WebsiteBuilderController extends Controller
         return [
             'homepage_template', 'site_name', 'site_logo_media_id', 'site_favicon_media_id',
             'site_primary_color', 'site_background_color', 'site_background_style', 'site_font_family', 'site_heading_scale', 'site_body_scale', 'home_title', 'home_subtitle', 'home_featured_title',
-            'home_slides', 'home_slider_autoplay', 'home_slider_interval', 'home_slider_arrows', 'home_slider_dots', 'home_slider_pause_hover', 'home_slider_height', 'home_slider_mobile_height', 'home_slider_overlay', 'home_slider_transition', 'home_course_carousel_enabled', 'home_course_carousel_items', 'home_course_carousel_cards', 'footer_title', 'footer_text', 'footer_links', 'header_links', 'website_sections',
+            'home_slides', 'home_slider_autoplay', 'home_slider_interval', 'home_slider_arrows', 'home_slider_dots', 'home_slider_pause_hover', 'home_slider_height', 'home_slider_mobile_height', 'home_slider_overlay', 'home_slider_transition', 'home_slider_progress', 'home_slider_play_pause', 'home_course_carousel_enabled', 'home_course_carousel_items', 'home_course_carousel_cards', 'footer_title', 'footer_text', 'footer_links', 'header_links', 'website_sections',
         ];
     }
 
@@ -333,6 +335,8 @@ class WebsiteBuilderController extends Controller
             'home_slider_mobile_height' => ['nullable', 'integer', 'min:220', 'max:520'],
             'home_slider_overlay' => ['nullable', 'integer', 'min:0', 'max:90'],
             'home_slider_transition' => ['nullable', Rule::in(['slide', 'fade', 'zoom'])],
+            'home_slider_progress' => ['nullable', 'boolean'],
+            'home_slider_play_pause' => ['nullable', 'boolean'],
             'home_slides.*.eyebrow' => ['nullable', 'string', 'max:80'],
             'home_slides.*.secondary_button_label' => ['nullable', 'string', 'max:60'],
             'home_slides.*.secondary_button_url' => ['nullable', 'string', 'max:500'],
@@ -450,7 +454,7 @@ class WebsiteBuilderController extends Controller
             return ['label' => $label, 'url' => $url];
         })->filter()->take(20)->values()->all();
 
-        foreach (['homepage_template', 'site_name', 'site_logo_media_id', 'site_favicon_media_id', 'site_primary_color', 'site_background_color', 'site_background_style', 'site_font_family', 'site_heading_scale', 'site_body_scale', 'home_title', 'home_subtitle', 'home_featured_title', 'home_batches_title', 'home_stats_title', 'home_paths_title', 'home_reviews_title', 'home_slider_autoplay', 'home_slider_interval', 'home_slider_arrows', 'home_slider_dots', 'home_slider_pause_hover', 'home_slider_height', 'home_slider_mobile_height', 'home_slider_overlay', 'home_slider_transition', 'home_course_carousel_enabled', 'home_course_carousel_items', 'home_course_carousel_cards', 'footer_title', 'footer_text'] as $key) {
+        foreach (['homepage_template', 'site_name', 'site_logo_media_id', 'site_favicon_media_id', 'site_primary_color', 'site_background_color', 'site_background_style', 'site_font_family', 'site_heading_scale', 'site_body_scale', 'home_title', 'home_subtitle', 'home_featured_title', 'home_batches_title', 'home_stats_title', 'home_paths_title', 'home_reviews_title', 'home_slider_autoplay', 'home_slider_interval', 'home_slider_arrows', 'home_slider_dots', 'home_slider_pause_hover', 'home_slider_height', 'home_slider_mobile_height', 'home_slider_overlay', 'home_slider_transition', 'home_slider_progress', 'home_slider_play_pause', 'home_course_carousel_enabled', 'home_course_carousel_items', 'home_course_carousel_cards', 'footer_title', 'footer_text'] as $key) {
             if (array_key_exists($key, $validated)) {
                 Setting::setValue($key, $validated[$key] ?? '');
             }
