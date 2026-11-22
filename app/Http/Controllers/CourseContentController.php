@@ -232,6 +232,17 @@ class CourseContentController extends Controller
         $item = $course->curriculumItems()->where('course_content_post_id', $post->id)->firstOrFail();
         abort_unless($this->isLessonUnlocked($course, $item, $student), 403, 'Complete the required lesson first.');
 
+        $isVideoLesson = $post->video_embed_url !== null || str_starts_with((string) $post->content_file_mime, 'video/');
+        if ($isVideoLesson) {
+            $observedProgress = CourseContentProgress::query()
+                ->where('course_curriculum_item_id', $item->id)
+                ->where('user_id', $student->id)
+                ->value('progress_percent');
+            if ((float) $observedProgress < 90) {
+                return back()->with('error', __('Watch at least 90% of this video before completing the lesson.'));
+            }
+        }
+
         DB::transaction(function () use ($item, $student): void {
             $progress = CourseContentProgress::query()
                 ->where('course_curriculum_item_id', $item->id)
