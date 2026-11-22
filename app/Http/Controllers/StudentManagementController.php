@@ -105,7 +105,7 @@ class StudentManagementController extends Controller
                     ->orWhere('phone_number', 'like', '%'.$term.'%'));
             })
             ->when($filters['branch_id'] ?? null, fn ($q, $id) => $q->where('branch_id', $id))
-            ->when($filters['status'] ?? null, function ($q, $status): void {\n                $q->whereHas('studentProfile', fn ($p) => $p->where('lifecycle_status', $status));\n                if ($status === 'active') $q->orWhere(fn ($missing) => $missing->where('role', 'student')->whereDoesntHave('studentProfile'));\n            })
+            ->when($filters['status'] ?? null, function ($q, $status): void {\n                $q->where(function ($statusQuery) use ($status): void {\n                    $statusQuery->whereHas('studentProfile', fn ($p) => $p->where('lifecycle_status', $status));\n                    if ($status === 'active') $statusQuery->orWhereDoesntHave('studentProfile');\n                });\n            })
             ->latest()->paginate(25)->withQueryString();
 
         $routePrefix = $branchManager ? 'branch.students.manage' : 'admin.students';\n        return view('admin.students.index', compact('students', 'filters', 'routePrefix'));
