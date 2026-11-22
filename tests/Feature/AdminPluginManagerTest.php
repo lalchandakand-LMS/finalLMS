@@ -115,6 +115,39 @@ PHP;
         ];
     }
 
+    public function test_admin_can_install_single_file_signed_aecplugin_bundle(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $legacy = $this->uploadData();
+        $release = json_encode([
+            'manifest' => $this->manifest,
+            'signature' => $legacy['signature'],
+            'key_id' => $legacy['key_id'],
+        ], JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        $bundlePath = storage_path('framework/testing/aec-bundle-'.bin2hex(random_bytes(6)).'.aecplugin');
+        $bundle = new ZipArchive();
+        $this->assertTrue($bundle->open($bundlePath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === true);
+        $this->assertTrue($bundle->addFromString('release.json', $release));
+        $this->assertTrue($bundle->addFile($this->archivePath, 'package.zip'));
+        $this->assertTrue($bundle->close());
+
+        try {
+            $bytes = file_get_contents($bundlePath);
+            $this->actingAs($admin)->post(route('admin.plugins.install'), [
+                'package' => UploadedFile::fake()->createWithContent('course-management.aecplugin', $bytes),
+            ])->assertRedirect(route('admin.plugins.index'))->assertSessionHas('success');
+
+            $this->assertDatabaseHas('plugin_registry', [
+                'plugin_key' => 'aec.course-management',
+                'status' => 'installed',
+                'signature_key_id' => 'test-release-key',
+            ]);
+            $this->assertFileExists($this->finalPath.'/src/Plugin.php');
+        } finally {
+            if (is_file($bundlePath)) unlink($bundlePath);
+        }
+    }
+
     public function test_admin_can_view_plugin_manager_and_install_a_signed_package(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
