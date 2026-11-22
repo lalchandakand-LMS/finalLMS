@@ -9,44 +9,25 @@ use App\Models\Course;
 use App\Models\Payment;
 use App\Models\PluginInstallation;
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Tests\Support\RefreshDatabaseWithPluginMigrations;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 final class ReferralIncomePluginTest extends TestCase
 {
-    use DatabaseMigrations;
+    use RefreshDatabaseWithPluginMigrations;
 
-    protected function tearDown(): void
+    protected function pluginMigrationPaths(): array
     {
-        Schema::disableForeignKeyConstraints();
-        Schema::dropIfExists('referral_audit_events');
-        Schema::dropIfExists('referral_payout_requests');
-        Schema::dropIfExists('referral_commissions');
-        Schema::dropIfExists('referral_attributions');
-        Schema::dropIfExists('referral_codes');
-        Schema::dropIfExists('referral_income_rules');
-        Schema::enableForeignKeyConstraints();
-        parent::tearDown();
+        return [base_path('plugins/aec/referral-income/1.0.0/migrations')];
     }
 
     protected function setUp(): void
     {
         parent::setUp();
         require_once base_path('plugins/aec/referral-income/1.0.0/src/ReferralIncomeService.php');
-        Schema::disableForeignKeyConstraints();
-        Schema::dropIfExists('referral_audit_events');
-        Schema::dropIfExists('referral_payout_requests');
-        Schema::dropIfExists('referral_commissions');
-        Schema::dropIfExists('referral_attributions');
-        Schema::dropIfExists('referral_codes');
-        Schema::dropIfExists('referral_income_rules');
-        Schema::enableForeignKeyConstraints();
-        $migration = require base_path('plugins/aec/referral-income/1.0.0/migrations/2026_11_21_040000_create_referral_income_tables.php');
-        $migration->up();
         $plugin = new PluginInstallation();
         $plugin->forceFill([
             'plugin_key' => 'aec.referral-income',
