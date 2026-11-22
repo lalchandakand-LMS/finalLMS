@@ -84,7 +84,7 @@ class GamificationService
 
     public function awardBadge(User $user, string $badgeKey, array $metadata = []): bool
     {
-        $badge = \\App\\Models\\GamificationBadge::query()
+        $badge = \App\Models\GamificationBadge::query()
             ->where('key', $badgeKey)->where('is_active', true)->firstOrFail();
 
         return DB::table('gamification_user_badges')->insertOrIgnore([
