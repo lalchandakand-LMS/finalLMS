@@ -32,6 +32,42 @@ final class HrController extends Controller
         ]);
     }
 
+    public function teacherIndex(Request $request): View
+    {
+        $teacher = $request->user();
+        abort_unless($teacher && $teacher->isTeacher(), 403);
+        $profile = StaffProfile::query()->where('user_id', $teacher->id)->firstOrFail();
+        $attendances = $profile->attendances()->latest('attendance_date')->limit(60)->get();
+        $leaveRequests = $profile->leaveRequests()->latest()->limit(30)->get();
+
+        return view('hr-staff-management::teacher', compact('profile', 'attendances', 'leaveRequests'));
+    }
+
+    public function teacherRequestLeave(Request $request): RedirectResponse
+    {
+        $teacher = $request->user();
+        abort_unless($teacher && $teacher->isTeacher(), 403);
+        $profile = StaffProfile::query()->where('user_id', $teacher->id)->firstOrFail();
+        $data = $request->validate([
+            'leave_type' => ['required', 'in:annual,sick,casual,unpaid,other'],
+            'starts_on' => ['required', 'date', 'after_or_equal:today'],
+            'ends_on' => ['required', 'date', 'after_or_equal:starts_on'],
+            'reason' => ['required', 'string', 'max:2000'],
+        ]);
+        $leave = DB::transaction(function () use ($profile, $data): StaffLeaveRequest {
+            $lockedProfile = StaffProfile::query()->lockForUpdate()->findOrFail($profile->id);
+            abort_unless($lockedProfile->status === 'active', 422, 'Only active teachers can request leave.');
+            $overlap = StaffLeaveRequest::query()->where('staff_profile_id', $lockedProfile->id)
+                ->whereIn('status', ['pending', 'approved'])
+                ->whereDate('starts_on', '<=', $data['ends_on'])
+                ->whereDate('ends_on', '>=', $data['starts_on'])->exists();
+            abort_if($overlap, 409, 'This leave period overlaps an existing pending or approved request.');
+            return StaffLeaveRequest::query()->create($data + ['branch_id' => $lockedProfile->branch_id, 'status' => 'pending']);
+        }, 3);
+        $this->audit($request, 'hr.teacher_leave_requested', 'Teacher submitted leave request #'.$leave->id);
+        return back()->with('success', 'Your leave request has been submitted.');
+    }
+
     public function storeStaff(Request $request): RedirectResponse
     {
         $actor = $request->user();
