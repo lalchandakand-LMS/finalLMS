@@ -33,6 +33,8 @@ final class HrStaffManagementPluginTest extends TestCase
             require_once base_path('plugins/aec/hr-staff-management/1.0.0/src/'.$file);
         }
         Route::get('/__hr', [HrController::class, 'index'])->name('branch.hr.index');
+        Route::get('/__hr/teacher', [HrController::class, 'teacherIndex'])->name('teacher.hr.index');
+        Route::post('/__hr/teacher/leave', [HrController::class, 'teacherRequestLeave'])->name('teacher.hr.leave.store');
         Route::post('/__hr/staff', [HrController::class, 'storeStaff'])->name('branch.hr.staff.store');
         Route::post('/__hr/attendance', [HrController::class, 'recordAttendance'])->name('branch.hr.attendance.store');
         Route::post('/__hr/leave', [HrController::class, 'requestLeave'])->name('branch.hr.leave.store');
@@ -76,6 +78,39 @@ final class HrStaffManagementPluginTest extends TestCase
         $payroll = StaffPayroll::query()->create(['staff_profile_id' => $staff->id, 'branch_id' => $branch->id, 'payroll_month' => '2026-11', 'gross_salary' => 25000, 'bonus' => 0, 'deductions' => 0, 'net_paid' => 25000, 'status' => 'pending']);
         $this->actingAs($manager)->post('/__hr/payroll/'.$payroll->id.'/paid', ['payment_reference' => 'BANK-REF'])->assertForbidden();
         $this->assertDatabaseHas('staff_payrolls', ['id' => $payroll->id, 'status' => 'pending']);
+    }
+
+    public function test_teacher_can_only_view_their_linked_hr_profile_and_apply_for_their_own_leave(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $otherTeacher = User::factory()->create(['role' => 'teacher']);
+        $profile = StaffProfile::query()->create([
+            'user_id' => $teacher->id,
+            'employee_code' => 'TEACHER-HR-01',
+            'full_name' => 'Linked Teacher',
+            'designation' => 'English Teacher',
+            'department' => 'Academic',
+            'base_salary' => 30000,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($teacher)->get('/__hr/teacher')->assertOk()->assertSee('Linked Teacher');
+        $payload = [
+            'leave_type' => 'casual',
+            'starts_on' => now()->addDays(3)->toDateString(),
+            'ends_on' => now()->addDays(4)->toDateString(),
+            'reason' => 'Personal matter',
+        ];
+        $this->post('/__hr/teacher/leave', $payload)->assertRedirect();
+        $this->assertDatabaseHas('staff_leave_requests', [
+            'staff_profile_id' => $profile->id,
+            'status' => 'pending',
+            'reason' => 'Personal matter',
+        ]);
+
+        $this->actingAs($otherTeacher)->get('/__hr/teacher')->assertNotFound();
+        $this->post('/__hr/teacher/leave', $payload)->assertNotFound();
+        $this->assertDatabaseCount('staff_leave_requests', 1);
     }
 
     public function test_branch_manager_attendance_is_branch_scoped_and_duplicate_dates_update_one_record(): void
