@@ -94,6 +94,10 @@ class HomepageSliderTest extends TestCase
             'uploaded_by' => $admin->id, 'disk' => 'public', 'path' => 'media/mobile.jpg',
             'original_name' => 'mobile.jpg', 'mime_type' => 'image/jpeg', 'size' => 1000,
         ]);
+        $ordered = MediaAsset::create([
+            'uploaded_by' => $admin->id, 'disk' => 'public', 'path' => 'media/ordered.jpg',
+            'original_name' => 'ordered.jpg', 'mime_type' => 'image/jpeg', 'size' => 1000,
+        ]);
         $hidden = MediaAsset::create([
             'uploaded_by' => $admin->id, 'disk' => 'public', 'path' => 'media/future.jpg',
             'original_name' => 'future.jpg', 'mime_type' => 'image/jpeg', 'size' => 1000,
@@ -101,12 +105,13 @@ class HomepageSliderTest extends TestCase
 
         Setting::setValue('home_slides', json_encode([
             ['enabled' => true, 'image_id' => $desktop->id, 'mobile_image_id' => $mobile->id, 'title' => 'Responsive hero', 'sort_order' => 2],
-            ['enabled' => true, 'image_id' => $hidden->id, 'title' => 'Not yet published', 'sort_order' => 1, 'starts_at' => now()->addDay()->format('Y-m-d H:i:s')],
+            ['enabled' => true, 'image_id' => $ordered->id, 'title' => 'Earlier order', 'sort_order' => 1],
+            ['enabled' => true, 'image_id' => $hidden->id, 'title' => 'Not yet published', 'sort_order' => 0, 'starts_at' => now()->addDay()->format('Y-m-d H:i:s')],
         ], JSON_THROW_ON_ERROR));
 
         $this->get('/')
             ->assertOk()
-            ->assertSee('Responsive hero')
+            ->assertSeeInOrder(['Earlier order', 'Responsive hero'])
             ->assertSee('/storage/media/mobile.jpg', false)
             ->assertDontSee('Not yet published');
     }
