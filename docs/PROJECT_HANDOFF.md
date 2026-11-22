@@ -317,3 +317,12 @@ Current work is on PR #116, branch `feature/aloms-premium-homepage-clean`. Keep 
 - Run the full Laravel CI/package workflow and CodeQL once on the final consolidated commit; do not trigger redundant full-suite runs for intermediate edits.
 - Refund-to-course-payment linkage remains unresolved because invoice refunds and course payments are separate ledgers. Never join by matching numeric IDs. Keep referral payouts out of production until explicit linkage, partial/full refund reversal, chargeback, and paid-commission recovery are implemented and tested.
 - Production deployment, live payment activation and cPanel installation remain blocked pending isolated staging, verified backup/restore, rollback and provider sandbox acceptance.
+
+
+## Exact-head verification update — 2026-11-22
+
+- Latest verified code head: `70d8d3bce8e4c09a40dfa04516b5c1537721fe03` (PR #396, `feat/aec-feature-parity-port`).
+- Exact-head Laravel CI #8324 passed: 1,082 tests / 7,965 assertions. PHP lint, Composer validation/audit, npm install/audit, migrations, SQLite plugin checks, MariaDB rollback safety, route listing and Vite build passed.
+- cPanel ZIP package job passed and uploaded artifact `AlomsEnglishCenter-cpanel` (artifact ID `14741760857`). CodeQL #3214 passed on the same head.
+- The prior referral payout test namespace typo was corrected in commit `70d8d3b` before these checks.
+- Continue to keep PR #396 Draft. The source-payment refund linkage and reversal policy, additional concurrency/branch-isolation/plugin lifecycle acceptance, SSLCOMMERZ sandbox, and real cPanel staging/backup/restore/rollback are still release gates. Do not enable referral payouts or live payment processing, and do not deploy to production.
