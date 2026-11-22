@@ -73,7 +73,6 @@ class AdminSettingsController extends Controller
             'home_slides.*.enabled' => ['nullable', 'boolean'],
             'home_slides.*.image_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
             'home_slides.*.mobile_image_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
-            'home_slides.*.mobile_image_id' => ['nullable', 'integer', 'exists:media_assets,id'],
             'home_slides.*.sort_order' => ['nullable', 'integer', 'min:0', 'max:1000'],
             'home_slides.*.starts_at' => ['nullable', 'date'],
             'home_slides.*.ends_at' => ['nullable', 'date', 'after_or_equal:home_slides.*.starts_at'],
