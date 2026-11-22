@@ -171,6 +171,9 @@ final class AdmissionController extends Controller
             if (! empty($data['assigned_to'])) {
                 $assignee = User::query()->findOrFail($data['assigned_to']);
                 abort_unless(in_array($assignee->role, ['admin', 'branch_manager', 'teacher'], true), 422, 'Invalid reviewer role.');
+                if ($assignee->role === 'branch_manager' || $assignee->branch_id !== null) {
+                    abort_unless((int) $assignee->branch_id === (int) $record->branch_id, 422, 'Reviewer must belong to the applicant branch.');
+                }
                 if ($actor->isBranchManager()) abort_unless((int) $assignee->branch_id === (int) $actor->branch_id, 403);
             }
 
