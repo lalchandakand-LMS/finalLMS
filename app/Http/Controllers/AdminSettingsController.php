@@ -151,7 +151,7 @@ class AdminSettingsController extends Controller
                 'button_url' => $buttonUrl,
                 'enabled' => true,
             ];
-        })->filter()->values()->all();
+        })->filter()->sortBy('sort_order')->values()->all();
         unset($validated['payment_methods'], $validated['home_slides']);
 
         foreach (['site_logo_media_id', 'site_favicon_media_id', 'loading_screen_logo_media_id'] as $mediaSetting) {
