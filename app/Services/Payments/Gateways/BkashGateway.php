@@ -5,6 +5,7 @@ namespace App\Services\Payments\Gateways;
 use App\Contracts\Payments\PaymentGateway;
 use App\Models\Payment;
 use App\Services\Payments\BkashCheckoutService;
+use App\Services\Payments\MfsMerchantConfigurationService;
 use RuntimeException;
 use Throwable;
 
@@ -17,7 +18,10 @@ class BkashGateway implements PaymentGateway
         'checkout.pay.bka.sh',
     ];
 
-    public function __construct(private readonly BkashCheckoutService $client)
+    public function __construct(
+        private readonly BkashCheckoutService $client,
+        private readonly MfsMerchantConfigurationService $merchantConfiguration
+    )
     {
     }
 
@@ -38,14 +42,7 @@ class BkashGateway implements PaymentGateway
 
     public function isConfigured(): bool
     {
-        return (bool) config('services.bkash.enabled')
-            && filled(config('services.bkash.base_url'))
-            && filled(config('services.bkash.username'))
-            && filled(config('services.bkash.password'))
-            && filled(config('services.bkash.app_key'))
-            && filled(config('services.bkash.app_secret'))
-            && parse_url((string) config('services.bkash.base_url'), PHP_URL_SCHEME) === 'https'
-            && (bool) config('services.bkash.verify_ssl', true);
+        return $this->merchantConfiguration->isBkashConfigured();
     }
 
     public function createCheckout(Payment $payment, string $callbackUrl, string $payerReference): array
