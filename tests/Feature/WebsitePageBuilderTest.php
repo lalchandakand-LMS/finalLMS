@@ -57,6 +57,25 @@ class WebsitePageBuilderTest extends TestCase
             ->assertDontSee('<script>alert(1)</script>', false);
     }
 
+    public function test_page_builder_supports_quote_and_divider_blocks(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($admin)->post(route('admin.website-pages.store'), [
+            'title' => 'Our teaching approach',
+            'template' => 'standard',
+            'status' => 'published',
+            'sections' => [
+                ['type' => 'quote', 'title' => 'Our students', 'body' => 'Practice makes progress.', 'enabled' => '1'],
+                ['type' => 'divider', 'enabled' => '1'],
+            ],
+        ])->assertRedirect(route('admin.website-pages.index'));
+
+        $this->get(route('website-pages.show', 'our-teaching-approach'))
+            ->assertOk()->assertSee('Practice makes progress.')->assertSee('Our students')->assertSee('<hr', false);
+        $this->actingAs($admin)->get(route('admin.website-pages.create'))
+            ->assertOk()->assertSee('Pull quote')->assertSee('Divider');
+    }
+
     public function test_draft_custom_pages_are_not_publicly_accessible_or_in_navigation(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);

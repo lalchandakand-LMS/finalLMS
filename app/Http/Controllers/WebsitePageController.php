@@ -243,7 +243,7 @@ class WebsitePageController extends Controller
             'seo_title' => ['nullable', 'string', 'max:255'],
             'seo_description' => ['nullable', 'string', 'max:320'],
             'sections' => ['nullable', 'array', 'max:30'],
-            'sections.*.type' => ['required', Rule::in(['text', 'image', 'hero', 'cta', 'feature'])],
+            'sections.*.type' => ['required', Rule::in(['text', 'image', 'hero', 'cta', 'feature', 'quote', 'divider'])],
             'sections.*.title' => ['nullable', 'string', 'max:180'],
             'sections.*.body' => ['nullable', 'string', 'max:5000'],
             'sections.*.image_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($q) => $q->where('mime_type', 'like', 'image/%'))],
