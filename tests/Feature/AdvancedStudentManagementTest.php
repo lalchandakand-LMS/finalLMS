@@ -35,7 +35,7 @@ class AdvancedStudentManagementTest extends TestCase
 
         $this->actingAs($admin)->put(route('admin.students.suspend', $student), ['reason' => 'Temporary disciplinary suspension.'])->assertRedirect();
         $this->assertDatabaseHas('student_lifecycle_events', ['student_id' => $student->id, 'event_type' => 'suspended']);
-        $this->actingAs($student)->get(route('student.courses.index'))->assertForbidden();
+        $this->actingAs($student)->get(route('dashboard'))->assertRedirect(route('login'));
 
         $this->actingAs($admin)->put(route('admin.students.reactivate', $student))->assertRedirect();
         $this->actingAs($admin)->put(route('admin.students.graduate', $student), ['reason' => 'Completed the full academic programme.'])->assertRedirect();
@@ -78,6 +78,17 @@ class AdvancedStudentManagementTest extends TestCase
         $this->post(route('admin.students.import-confirm'))->assertRedirect();
         $this->assertDatabaseHas('student_profiles', ['user_id' => $student->id, 'student_number' => 'AEC-CSV-01', 'academic_level' => 'Level 2']);
         $this->assertDatabaseHas('student_lifecycle_events', ['student_id' => $student->id, 'event_type' => 'bulk_profile_imported']);
+    }
+
+
+    public function test_inactive_student_cannot_start_a_new_login_session(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        StudentProfile::create(['user_id' => $student->id, 'lifecycle_status' => 'suspended']);
+
+        $this->post(route('login.post'), ['email' => $student->email, 'password' => 'password'])
+            ->assertSessionHasErrors('email');
+        $this->assertGuest();
     }
 
     public function test_csv_export_is_available_to_admins(): void
