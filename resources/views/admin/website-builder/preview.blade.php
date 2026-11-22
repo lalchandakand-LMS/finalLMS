@@ -49,6 +49,12 @@
     <div><span class="badge info">Homepage hero</span><h1>{{ $title }}</h1><p>{{ $subtitle }}</p><a class="btn primary" href="/courses">{{ $draft['home_cta_primary'] ?? 'Browse courses' }}</a></div>
     <div class="panel"><h2>Learn with confidence</h2><p class="muted">This preview reflects your saved draft content and layout selection.</p></div>
 </section>
+@if(($draft['home_course_carousel_enabled'] ?? '1') == '1')
+<section class="panel" style="margin-bottom:20px;">
+    <h2>{{ $draft['home_featured_title'] ?? 'Popular learning tracks' }}</h2>
+    <p class="muted">Featured course carousel preview: up to {{ max(3, min(12, (int) ($draft['home_course_carousel_items'] ?? 6))) }} published courses, with {{ max(2, min(4, (int) ($draft['home_course_carousel_cards'] ?? 3))) }} cards visible on desktop. Live course cards are populated from your published course catalog after publishing.</p>
+</section>
+@endif
 @if($slides->isNotEmpty())
 <section class="panel" style="margin-bottom:20px;"><h2>Homepage slider</h2><div class="grid grid-3">
     @foreach($slides as $slide)
