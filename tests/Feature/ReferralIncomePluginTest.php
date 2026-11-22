@@ -136,11 +136,11 @@ final class ReferralIncomePluginTest extends TestCase
         // Throw after the insert query executes but before its transaction commits.
         // This proves a transient failure rolls back the commission and is retried.
         $shouldFail = true;
-        DB::listen(function (\\Illuminate\\Database\\Events\\QueryExecuted $query) use (&$shouldFail): void {
+        DB::listen(function (\Illuminate\Database\Events\QueryExecuted $query) use (&$shouldFail): void {
             if ($shouldFail && str_contains(strtolower($query->sql), 'referral_commissions')
                 && str_starts_with(strtolower(ltrim($query->sql)), 'insert')) {
                 $shouldFail = false;
-                throw new \\RuntimeException('Transient referral database failure.');
+                throw new \RuntimeException('Transient referral database failure.');
             }
         });
 
