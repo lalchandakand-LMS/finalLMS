@@ -13,7 +13,8 @@ return new class extends Migration {
             Schema::create('library_books', function (Blueprint $table): void {
                 $table->id();
                 $table->foreignId('branch_id')->nullable()->constrained('branches')->nullOnDelete();
-                $table->string('isbn', 40);\n                $table->unique(['branch_id', 'isbn']);
+                $table->string('isbn', 40);
+                $table->unique(['branch_id', 'isbn']);
                 $table->string('title', 200);
                 $table->string('author', 160);
                 $table->string('category', 80)->default('IELTS & Academic');
