@@ -133,7 +133,7 @@ final class ReferralIncomeService
             $commissions = DB::table('referral_commissions')->where('referrer_user_id', $lockedOwner->id)
                 ->where('currency', 'BDT')->where('status', 'approved')->orderBy('id')->lockForUpdate()->get();
             $amount = round((float) $commissions->sum('commission_amount'), 2);
-            $rule = DB::table('referral_income_rules')->where('owner_type', $owner->role)->first();
+            $rule = DB::table('referral_income_rules')->where('owner_type', $lockedOwner->role)->first();
             $minimum = (float) ($rule->minimum_payout ?? 500);
             if ($amount < $minimum) throw ValidationException::withMessages(['payout' => 'Your approved balance has not reached the minimum payout.']);
             $id = DB::table('referral_payout_requests')->insertGetId([
