@@ -181,7 +181,7 @@ class AdminPluginManagerController extends Controller
 
         try {
             if (strtolower($request->file('package')->getClientOriginalExtension()) === 'aecplugin') {
-                $plugin = app(\\App\\Services\\Plugins\\PluginBundleInstaller::class)->update(
+                $plugin = app(\App\Services\Plugins\PluginBundleInstaller::class)->update(
                     $request->file('package'), $installer, $key, $integrityVerifier,
                 );
             } else {
