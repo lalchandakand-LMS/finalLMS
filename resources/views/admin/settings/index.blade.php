@@ -137,7 +137,7 @@
             <div style="margin-bottom: 18px;">
                 <span class="badge info">{{ __('Homepage slider') }}</span>
                 <h2 style="margin: 12px 0 6px;">{{ __('Hero image slides') }}</h2>
-                <p class="muted" style="margin: 0;">{{ __('Choose up to three images from Media Library. Upload images there first, then select them here. Only enabled slides with an image are shown.') }} <a href="{{ route('admin.media.index') }}">{{ __('Open Media Library') }}</a></p>
+                <p class="muted" style="margin: 0;">{{ __('Choose up to eight slides from Media Library. Set desktop and optional mobile images, display order and optional publication dates. Only enabled slides with a desktop image inside their publication window are shown.') }} <a href="{{ route('admin.media.index') }}">{{ __('Open Media Library') }}</a></p>
             </div>
 
             <div class="panel" style="padding:18px;margin-bottom:18px;">
@@ -161,7 +161,7 @@
                 <div><label>{{ __('Learning path section title') }}</label><input name="home_paths_title" maxlength="120" value="{{ old('home_paths_title',$settings['home_paths_title'] ?? 'Choose Your Learning Path') }}"></div>
                 <div><label>{{ __('Student reviews section title') }}</label><input name="home_reviews_title" maxlength="120" value="{{ old('home_reviews_title',$settings['home_reviews_title'] ?? 'What Our Students Say') }}"></div>
             </div>
-            @for($i = 0; $i < 3; $i++)
+            @for($i = 0; $i < 8; $i++)
                 @php($savedSlide = $savedSlides[$i] ?? [])
                 <section class="panel" style="padding:18px;margin-bottom:14px;">
                     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;">
@@ -183,6 +183,14 @@
                         @if($mediaAssets->isEmpty())
                             <small class="muted">{{ __('No images available. Upload JPG, PNG, WebP or GIF files in Media Library first.') }}</small>
                         @endif
+                    </div>
+                    <div class="grid grid-2" style="margin-bottom:14px;">
+                        <div><label for="home-slide-{{ $i }}-mobile-image">{{ __('Mobile image (optional)') }}</label>
+                            <select id="home-slide-{{ $i }}-mobile-image" name="home_slides[{{ $i }}][mobile_image_id]"><option value="">{{ __('Use desktop image') }}</option>@foreach($mediaAssets as $asset)<option value="{{ $asset->id }}" @selected((string) old("home_slides.$i.mobile_image_id", $savedSlide['mobile_image_id'] ?? '') === (string) $asset->id)>{{ $asset->original_name }}</option>@endforeach</select>
+                        </div>
+                        <div><label>{{ __('Display order') }}<input type="number" min="0" max="1000" name="home_slides[{{ $i }}][sort_order]" value="{{ old("home_slides.$i.sort_order", $savedSlide['sort_order'] ?? $i) }}"></label></div>
+                        <div><label>{{ __('Start showing (optional)') }}<input type="datetime-local" name="home_slides[{{ $i }}][starts_at]" value="{{ old("home_slides.$i.starts_at", !empty($savedSlide['starts_at']) ? \Illuminate\Support\Carbon::parse($savedSlide['starts_at'])->format('Y-m-d\\TH:i') : '') }}"></label></div>
+                        <div><label>{{ __('Stop showing (optional)') }}<input type="datetime-local" name="home_slides[{{ $i }}][ends_at]" value="{{ old("home_slides.$i.ends_at", !empty($savedSlide['ends_at']) ? \Illuminate\Support\Carbon::parse($savedSlide['ends_at'])->format('Y-m-d\\TH:i') : '') }}"></label></div>
                     </div>
                     <div class="grid grid-2">
                         <div>
