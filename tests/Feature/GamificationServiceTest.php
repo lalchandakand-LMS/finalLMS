@@ -48,7 +48,7 @@ class GamificationServiceTest extends TestCase
         $this->assertTrue($service->award($student, 'lesson_completed', 'lesson', 102, $dayOne->copy()->addHours(2)));
         $this->assertTrue($service->award($student, 'quiz_passed', 'quiz', 201, $dayOne->copy()->addDay()));
 
-        $this->assertSame(2, GamificationEvent::where('user_id', $student->id)->count());
+        $this->assertSame(3, GamificationEvent::where('user_id', $student->id)->count());
         $profile = GamificationProfile::where('user_id', $student->id)->firstOrFail();
         $this->assertSame(2, $profile->current_streak);
         $this->assertSame(2, $profile->longest_streak);
