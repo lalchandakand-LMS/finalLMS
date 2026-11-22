@@ -1,4 +1,6 @@
-<x-app-layout>
+@extends('layouts.app')
+
+@section('content')
 <div class="mx-auto max-w-7xl space-y-6 p-4 sm:p-6">
 <div><h1 class="text-2xl font-bold">Admission Management</h1><p class="text-sm text-gray-600">Review applicants, schedule interviews and convert approved applicants into student accounts.</p></div>
 @if(session('success'))<p class="rounded bg-green-50 p-3 text-green-800">{{ session('success') }}</p>@endif
@@ -13,4 +15,5 @@
 <td class="min-w-48 p-3">@foreach($application->documents as $document)<a class="block text-blue-700 underline" href="{{ route(request()->routeIs('branch.*')?'branch.admissions.documents.download':'admin.admissions.documents.download',[$application->id,$document->id]) }}">{{ $document->original_name }}</a>@endforeach<form method="POST" enctype="multipart/form-data" action="{{ route(request()->routeIs('branch.*')?'branch.admissions.documents.store':'admin.admissions.documents.store',$application->id) }}" class="mt-2 grid gap-1">@csrf<input type="file" name="document" accept=".pdf,.jpg,.jpeg,.png" required class="max-w-48 text-xs"><button class="w-fit rounded border px-2 py-1">Upload</button></form></td></tr>
 @empty<tr><td colspan="6" class="p-6 text-center text-gray-500">No admission applications found.</td></tr>@endforelse
 </tbody></table></div>{{ $applications->links() }}
-</div></x-app-layout>
+</div>
+@endsection
