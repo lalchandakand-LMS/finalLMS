@@ -9,24 +9,19 @@ use Aloms\AdmissionManagement\AdmissionController;
 use App\Models\Branch;
 use App\Models\PluginInstallation;
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Tests\Support\RefreshDatabaseWithPluginMigrations;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
 use Tests\TestCase;
 
 final class AdmissionManagementPluginTest extends TestCase
 {
-    use DatabaseMigrations;
+    use RefreshDatabaseWithPluginMigrations;
 
-    protected function tearDown(): void
+    protected function pluginMigrationPaths(): array
     {
-        Schema::disableForeignKeyConstraints();
-        Schema::dropIfExists('admission_documents');
-        Schema::dropIfExists('admission_applications');
-        Schema::enableForeignKeyConstraints();
-        parent::tearDown();
+        return [base_path('plugins/aec/admission-management/1.0.0/migrations')];
     }
 
     protected function setUp(): void
@@ -36,21 +31,6 @@ final class AdmissionManagementPluginTest extends TestCase
         require_once base_path('plugins/aec/admission-management/1.0.0/src/AdmissionApplication.php');
         require_once base_path('plugins/aec/admission-management/1.0.0/src/AdmissionDocument.php');
         require_once base_path('plugins/aec/admission-management/1.0.0/src/AdmissionController.php');
-        Schema::disableForeignKeyConstraints();
-            Schema::dropIfExists('admission_documents');
-            Schema::dropIfExists('admission_applications');
-        Schema::enableForeignKeyConstraints();
-        $migration = require base_path('plugins/aec/admission-management/1.0.0/migrations/2026_11_21_010000_create_admission_management_tables.php');
-        $migration->up();
-        $plugin = new PluginInstallation();
-        $plugin->forceFill([
-            'plugin_key' => 'aec.admission-management',
-            'name' => 'Admission Management',
-            'version' => '1.0.0',
-            'type' => 'module',
-            'status' => 'active',
-            'manifest' => ['settings_schema' => ['intake_status' => ['label' => 'Intake status', 'type' => 'select', 'options' => ['open', 'closed'], 'default' => 'open'], 'admission_fee_bdt' => ['label' => 'Admission fee', 'type' => 'integer', 'default' => 0]]],
-        ])->save();
         Route::post('/__admission/apply', [AdmissionController::class, 'applyPublic'])->name('admission.public.apply.store');
         Route::get('/__admission/track', [AdmissionController::class, 'trackForm'])->name('admission.public.track');
         Route::post('/__admission/track', [AdmissionController::class, 'track'])->name('admission.public.track.submit');
