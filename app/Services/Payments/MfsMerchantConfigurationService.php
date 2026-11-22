@@ -65,8 +65,17 @@ final class MfsMerchantConfigurationService
                 return false;
             }
         }
-        return filled(config('services.bkash.base_url'))
-            && parse_url((string) config('services.bkash.base_url'), PHP_URL_SCHEME) === 'https'
+
+        $baseUrl = (string) config('services.bkash.base_url');
+        $scheme = parse_url($baseUrl, PHP_URL_SCHEME);
+        $host = parse_url($baseUrl, PHP_URL_HOST);
+        $port = parse_url($baseUrl, PHP_URL_PORT);
+
+        // This configuration foundation is deliberately sandbox-only. Do not
+        // let a sandbox credential record activate a production API endpoint.
+        return $scheme === 'https'
+            && $host === 'tokenized.sandbox.bka.sh'
+            && ($port === null || $port === 443)
             && (bool) config('services.bkash.verify_ssl', true);
     }
 

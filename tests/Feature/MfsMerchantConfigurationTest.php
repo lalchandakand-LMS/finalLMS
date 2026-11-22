@@ -5,8 +5,11 @@ namespace Tests\Feature;
 use App\Models\ActivityLog;
 use App\Models\MfsMerchantConfiguration;
 use App\Models\User;
+use App\Services\Payments\BkashCheckoutService;
 use App\Services\Payments\MfsMerchantConfigurationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
+use RuntimeException;
 use Tests\TestCase;
 
 class MfsMerchantConfigurationTest extends TestCase
@@ -97,5 +100,28 @@ class MfsMerchantConfigurationTest extends TestCase
         $service = app(MfsMerchantConfigurationService::class);
         $this->assertSame('database-user', $service->credential('bkash', 'username'));
         $this->assertTrue($service->isBkashConfigured());
+    }
+
+    public function test_production_bkash_endpoint_is_never_accepted_by_sandbox_configuration(): void
+    {
+        config([
+            'services.bkash.enabled' => true,
+            'services.bkash.username' => 'legacy-user',
+            'services.bkash.password' => 'legacy-password',
+            'services.bkash.app_key' => 'legacy-app-key',
+            'services.bkash.app_secret' => 'legacy-app-secret',
+            'services.bkash.base_url' => 'https://tokenized.pay.bka.sh/v1.2.0',
+            'services.bkash.verify_ssl' => true,
+        ]);
+
+        $this->assertFalse(app(MfsMerchantConfigurationService::class)->isBkashConfigured());
+        Http::fake();
+        try {
+            app(BkashCheckoutService::class)->grantToken();
+            $this->fail('The checkout client must reject production endpoints before sending credentials.');
+        } catch (RuntimeException $exception) {
+            $this->assertStringContainsString('sandbox endpoint', $exception->getMessage());
+        }
+        Http::assertNothingSent();
     }
 }

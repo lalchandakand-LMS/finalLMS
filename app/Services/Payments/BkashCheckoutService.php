@@ -19,7 +19,17 @@ class BkashCheckoutService
 
     private function baseUrl(): string
     {
-        return rtrim((string) config('services.bkash.base_url'), '/');
+        $baseUrl = rtrim((string) config('services.bkash.base_url'), '/');
+        $scheme = parse_url($baseUrl, PHP_URL_SCHEME);
+        $host = parse_url($baseUrl, PHP_URL_HOST);
+        $port = parse_url($baseUrl, PHP_URL_PORT);
+
+        if ($scheme !== 'https' || $host !== 'tokenized.sandbox.bka.sh'
+            || ($port !== null && $port !== 443)) {
+            throw new RuntimeException('Only the verified bKash sandbox endpoint is allowed.');
+        }
+
+        return $baseUrl;
     }
 
     private function request(): PendingRequest

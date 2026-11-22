@@ -13,9 +13,7 @@ class BkashGateway implements PaymentGateway
 {
     private const ALLOWED_CHECKOUT_HOSTS = [
         'tokenized.sandbox.bka.sh',
-        'tokenized.pay.bka.sh',
         'checkout.sandbox.bka.sh',
-        'checkout.pay.bka.sh',
     ];
 
     public function __construct(
@@ -69,7 +67,7 @@ class BkashGateway implements PaymentGateway
             || ! is_string($checkoutUrl)
             || parse_url($checkoutUrl, PHP_URL_SCHEME) !== 'https'
             || ! in_array($host, self::ALLOWED_CHECKOUT_HOSTS, true)) {
-            throw new RuntimeException('bKash returned an invalid checkout response.');
+            throw new RuntimeException('bKash returned an invalid sandbox checkout response.');
         }
 
         return ['payment_id' => $paymentId, 'checkout_url' => $checkoutUrl];
