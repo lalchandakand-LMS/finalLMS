@@ -35,6 +35,8 @@
         $googleSearchConsoleVerification = $hasSettingsTable ? \App\Models\Setting::value('google_search_console_verification') : null;
         $marketingConsent = request()->cookie('marketing_consent') === 'accepted';
         $isBranchLayout = auth()->check() && auth()->user()->isBranchManager();
+    @endphp
+    @php
         $isAdminLayout = auth()->check() && in_array(auth()->user()->role, ['admin', 'branch_manager', 'accountant', 'teacher', 'student', 'guardian'], true);
         $studentTrackingPlugin = auth()->check() && \Illuminate\Support\Facades\Schema::hasTable('plugin_registry')
             ? \App\Models\PluginInstallation::query()->where('plugin_key', 'aec.student-tracking')->where('status', 'active')->first()
