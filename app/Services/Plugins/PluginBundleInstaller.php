@@ -1,9 +1,9 @@
 <?php
 
-namespace App\\Services\\Plugins;
+namespace App\Services\Plugins;
 
-use App\\Models\\PluginInstallation;
-use Illuminate\\Http\\UploadedFile;
+use App\Models\PluginInstallation;
+use Illuminate\Http\UploadedFile;
 use RuntimeException;
 use ZipArchive;
 
@@ -73,7 +73,7 @@ final class PluginBundleInstaller
             }
             try {
                 $release = json_decode($releaseBytes, true, 32, JSON_THROW_ON_ERROR);
-            } catch (\\JsonException $exception) {
+            } catch (\JsonException $exception) {
                 throw new RuntimeException('The plugin release metadata is not valid JSON.', previous: $exception);
             }
             if (! is_array($release) || array_is_list($release)

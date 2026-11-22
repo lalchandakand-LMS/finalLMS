@@ -87,7 +87,7 @@ class PluginContextTest extends TestCase
         $context = new PluginContext(app(), app('router'), $plugin);
         $context->registerPaymentGateway('test_gateway', TestPluginPaymentGateway::class);
 
-        $this->assertContains('test_gateway', app(\\App\\Services\\Payments\\PaymentGatewayManager::class)->installedKeys());
+        $this->assertContains('test_gateway', app(\App\Services\Payments\PaymentGatewayManager::class)->installedKeys());
     }
 
     public function test_plugin_without_payment_gateway_capability_cannot_register_adapter(): void
@@ -99,7 +99,7 @@ class PluginContextTest extends TestCase
         ]);
 
         $context = new PluginContext(app(), app('router'), $plugin);
-        $this->expectException(\\InvalidArgumentException::class);
+        $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('payments.gateway capability');
         $context->registerPaymentGateway('untrusted_gateway', TestPluginPaymentGateway::class);
     }
@@ -114,23 +114,23 @@ class PluginContextTest extends TestCase
         $context = new PluginContext(app(), app('router'), $plugin);
         $context->registerPaymentGateway('test_gateway', TestPluginPaymentGateway::class);
 
-        $this->expectException(\\InvalidArgumentException::class);
+        $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('already registered');
         $context->registerPaymentGateway('test_gateway', TestPluginPaymentGateway::class);
     }
 }
 
-class TestPluginPaymentGateway implements \\App\\Contracts\\Payments\\PaymentGateway
+class TestPluginPaymentGateway implements \App\Contracts\Payments\PaymentGateway
 {
     public function key(): string { return 'test_gateway'; }
     public function label(): string { return 'Test Plugin Gateway'; }
     public function supportedCurrencies(): array { return ['BDT']; }
     public function isConfigured(): bool { return false; }
-    public function createCheckout(\\App\\Models\\Payment $payment, string $callbackUrl, string $payerReference): array
+    public function createCheckout(\App\Models\Payment $payment, string $callbackUrl, string $payerReference): array
     {
         return ['payment_id' => 'test-payment', 'checkout_url' => 'https://payments.example.test/checkout'];
     }
-    public function verifyCallback(\\App\\Models\\Payment $payment, array $callback): array
+    public function verifyCallback(\App\Models\Payment $payment, array $callback): array
     {
         return ['verified' => [], 'executed' => []];
     }
