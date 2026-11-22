@@ -81,9 +81,9 @@ class AuthController extends Controller
         $data = $request->validate(['email' => ['required', 'email', 'max:255']]);
         $status = PasswordBroker::sendResetLink($data);
 
-        return $status === PasswordBroker::RESET_LINK_SENT
-            ? back()->with('success', __($status))
-            : back()->withErrors(['email' => __($status)]);
+        // Return the same response whether or not the email belongs to an account.
+        // This prevents the password-reset endpoint from becoming an account-enumeration oracle.
+        return back()->with('success', 'If an account matches that email address, a password reset link will be sent.');
     }
 
     public function resetPassword(Request $request): RedirectResponse
