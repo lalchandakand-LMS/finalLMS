@@ -18,7 +18,7 @@ class RoleMiddleware
         }
 
         if ($request->user()->role === 'student' && in_array('student', $roles, true)) {
-            $suspended = \App\Models\StudentProfile::query()
+            $suspended = StudentProfile::query()
                 ->where('user_id', $request->user()->id)
                 ->whereIn('lifecycle_status', ['suspended', 'graduated'])
                 ->exists();
