@@ -146,6 +146,20 @@ class StudentManagementController extends Controller
         return back()->with('success', 'Student suspended and recorded in history.');
     }
 
+    public function graduate(Request $request, User $student): RedirectResponse
+    {
+        abort_unless($student->isStudent(), 404);
+        $this->authorizeStudentScope($request, $student);
+        $data = $request->validate(['reason' => ['required', 'string', 'min:5', 'max:500']]);
+        DB::transaction(function () use ($student, $data, $request): void {
+            $profile = StudentProfile::query()->firstOrCreate(['user_id' => $student->id]);
+            abort_unless($profile->lifecycle_status === 'active', 409, 'Only active students can be graduated.');
+            $profile->forceFill(['lifecycle_status' => 'graduated'])->save();
+            $this->event($student, $request, 'graduated', ['lifecycle_status' => 'active'], ['lifecycle_status' => 'graduated'], $data['reason']);
+        });
+        return back()->with('success', 'Student graduation recorded.');
+    }
+
     public function reactivate(Request $request, User $student): RedirectResponse
     {
         abort_unless($student->isStudent(), 404);
