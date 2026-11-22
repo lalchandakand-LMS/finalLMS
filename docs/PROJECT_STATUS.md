@@ -416,3 +416,15 @@ Production deployment remains blocked until staging, backup/restore, rollback an
 - PR #389 merged as `d4b70a1caef9c1ccf168d99acf5c9ca1a336e976` after exact-head Laravel CI and CodeQL passed. Confirmed trust failures remain fail-closed; transient verification infrastructure errors no longer permanently demote an active plugin.
 - Post-merge workflow runs for these squash commits were not returned by the PR-run lookup; do not claim post-merge mainline CI has passed based on the pre-merge checks.
 - The uploaded `finalLMS-advanced.zip` feature bundle is not yet imported. It requires a three-way reconciliation against the updated mainline so its admission, cart, discussion, certificate, Guardian, plugin-health and localization work is retained without reverting the above fixes.
+
+
+## PR #396 consolidated hardening — 2026-11-22
+
+- Current work branch: `feat/aec-feature-parity-port`.
+- Referral payout creation now locks the owner account before reading and reserving approved commission rows, serializing duplicate submissions for one referrer.
+- Referral payout review now locks its reserved commission rows and fails closed unless every row is still reserved for the same owner and the commission total exactly matches the payout request amount.
+- Added feature coverage for duplicate payout attempts after payment and payout-review rejection when the reserved commission total has drifted.
+- Changes are committed in `72dc9fc94ced8b130ddd6c24bed82e94f0ef42ec`; CI and CodeQL for this exact final code head have not yet been observed. Run the complete Laravel CI/package workflow and CodeQL once after the consolidated changes.
+- The course-payment refund lifecycle is still not linked to invoice refunds. Do not infer a relationship between `payments` and `invoice_payments`; referral payouts remain a production release blocker until an explicit source-payment refund ledger and partial/full reversal policy are implemented and tested.
+- Other known scope gaps remain: richer HR leave/staff-user/payslip workflows; physical-library member linking/reservations/lost-damaged/fine settlement; full plugin runtime deactivate/reactivate/uninstall acceptance; SSLCOMMERZ sandbox integration; isolated cPanel staging/backup/restore/rollback.
+- No production deployment, live payment activation, or production data changes were performed.
