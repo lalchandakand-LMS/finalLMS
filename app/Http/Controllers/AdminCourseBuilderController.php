@@ -9,6 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class AdminCourseBuilderController extends Controller
@@ -72,6 +73,10 @@ class AdminCourseBuilderController extends Controller
             'previews.*' => ['nullable', 'boolean'],
             'durations' => ['nullable', 'array'],
             'durations.*' => ['nullable', 'integer', 'min:1', 'max:600'],
+            'unlock_after_previous' => ['nullable', 'array'],
+            'unlock_after_previous.*' => ['nullable', 'boolean'],
+            'prerequisites' => ['nullable', 'array'],
+            'prerequisites.*' => ['nullable', 'integer', 'exists:course_content_posts,id'],
             'question_set_ids' => ['nullable', 'array', 'max:100'],
             'question_set_ids.*' => ['integer', 'distinct', Rule::exists('question_sets', 'id')->where(fn ($query) => $query->where('status', 'published')->orWhereIn('id', $attachedQuestionSetIds))],
             'question_set_section_titles' => ['nullable', 'array'],
@@ -95,6 +100,32 @@ class AdminCourseBuilderController extends Controller
         $positions = $data['positions'] ?? [];
         $previews = $data['previews'] ?? [];
         $durations = $data['durations'] ?? [];
+        $unlockAfterPrevious = $data['unlock_after_previous'] ?? [];
+        $prerequisites = $data['prerequisites'] ?? [];
+        $selectedPostIds = $postIds->map(fn ($id) => (int) $id)->all();
+        $prerequisiteMap = [];
+        foreach ($prerequisites as $postId => $prerequisiteId) {
+            if ($prerequisiteId === null || $prerequisiteId === '') continue;
+            $postId = (int) $postId;
+            $prerequisiteId = (int) $prerequisiteId;
+            if (! in_array($postId, $selectedPostIds, true) || ! in_array($prerequisiteId, $selectedPostIds, true) || $postId === $prerequisiteId) {
+                throw ValidationException::withMessages(['prerequisites' => __('Prerequisites must reference a different lesson included in this course.')]);
+            }
+            $prerequisiteMap[$postId] = $prerequisiteId;
+        }
+        foreach ($prerequisiteMap as $start => $next) {
+            $visited = [$start => true];
+            while (isset($prerequisiteMap[$next])) {
+                if (isset($visited[$next])) {
+                    throw ValidationException::withMessages(['prerequisites' => __('Lesson prerequisites cannot contain a cycle.')]);
+                }
+                $visited[$next] = true;
+                $next = $prerequisiteMap[$next];
+            }
+            if (isset($visited[$next])) {
+                throw ValidationException::withMessages(['prerequisites' => __('Lesson prerequisites cannot contain a cycle.')]);
+            }
+        }
         $questionSetIds = collect($data['question_set_ids'] ?? [])->map(fn ($id) => (int) $id)->unique()->values();
         $questionSetSections = $data['question_set_section_titles'] ?? [];
         $questionSetPositions = $data['question_set_positions'] ?? [];
@@ -104,7 +135,7 @@ class AdminCourseBuilderController extends Controller
         $questionSetRandomize = $data['question_set_randomize'] ?? [];
         $questionSetAvailableFrom = $data['question_set_available_from'] ?? [];
 
-        DB::transaction(function () use ($course, $postIds, $sectionTitles, $positions, $previews, $durations, $questionSetIds, $questionSetSections, $questionSetPositions, $questionSetAttempts, $questionSetTimeLimits, $questionSetQuestionsPerAttempt, $questionSetRandomize, $questionSetAvailableFrom): void {
+        DB::transaction(function () use ($course, $postIds, $sectionTitles, $positions, $previews, $durations, $unlockAfterPrevious, $prerequisites, $questionSetIds, $questionSetSections, $questionSetPositions, $questionSetAttempts, $questionSetTimeLimits, $questionSetQuestionsPerAttempt, $questionSetRandomize, $questionSetAvailableFrom): void {
             $course->curriculumItems()->when($postIds->isNotEmpty(), fn ($query) => $query->whereNotIn('course_content_post_id', $postIds))->when($postIds->isEmpty(), fn ($query) => $query)->delete();
 
             foreach ($postIds as $index => $postId) {
@@ -115,6 +146,8 @@ class AdminCourseBuilderController extends Controller
                         'position' => (int) ($positions[$postId] ?? (($index + 1) * 10)),
                         'is_preview' => (bool) ($previews[$postId] ?? false),
                         'duration_minutes' => isset($durations[$postId]) ? (int) $durations[$postId] : null,
+                        'unlock_after_previous' => (bool) ($unlockAfterPrevious[$postId] ?? false),
+                        'prerequisite_post_id' => isset($prerequisites[$postId]) && $prerequisites[$postId] !== '' ? (int) $prerequisites[$postId] : null,
                     ]
                 );
             }
