@@ -15,6 +15,79 @@ use Illuminate\View\View;
 
 class StudentManagementController extends Controller
 {
+    public function export(Request $request): \\Symfony\\Component\\HttpFoundation\\StreamedResponse
+    {
+        $query = User::query()->where('role', 'student')->with(['studentProfile', 'branch'])
+            ->withCount(['guardianLinksAsStudent', 'enrollments'])
+            ->when($request->user()->isBranchManager(), fn ($q) => $q->where('branch_id', $request->user()->branch_id));
+        return response()->streamDownload(function () use ($query): void {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\\xEF\\xBB\\xBF");
+            fputcsv($out, ['name','email','phone','branch','student_number','status','academic_level','date_of_birth','admission_date','guardians','enrollments']);
+            $query->orderBy('id')->chunk(500, function ($students) use ($out): void {
+                foreach ($students as $student) {
+                    $profile = $student->studentProfile;
+                    $values = [$student->name,$student->email,$student->phone_number,$student->branch?->name,$profile?->student_number,$profile?->lifecycle_status ?? 'active',$profile?->academic_level,$profile?->date_of_birth?->format('Y-m-d'),$profile?->admission_date?->format('Y-m-d'),$student->guardian_links_as_student_count,$student->enrollments_count];
+                    fputcsv($out, array_map(fn ($value) => is_string($value) && preg_match('/^[=+@\\-\\t\\r]/', $value) ? "'".$value : $value, $values));
+                }
+            });
+            fclose($out);
+        }, 'students-export-'.now()->format('Ymd-His').'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    public function importPreview(Request $request): RedirectResponse
+    {
+        $request->validate(['file' => ['required','file','mimes:csv,txt','max:2048']]);
+        $stream = fopen($request->file('file')->getRealPath(), 'r');
+        $headers = array_map(fn ($h) => strtolower(trim((string) $h)), fgetcsv($stream) ?: []);
+        $allowed = ['email','student_number','date_of_birth','gender','blood_group','nationality','address_line','city','district','emergency_contact_name','emergency_contact_phone','previous_school','admission_date','academic_level'];
+        abort_unless(in_array('email', $headers, true), 422, 'CSV must contain an email column.');
+        $rows = []; $errors = []; $line = 1;
+        while (($values = fgetcsv($stream)) !== false && count($rows) + count($errors) < 500) {
+            $line++;
+            if (count($values) !== count($headers)) { $errors[] = "Row {$line}: column count mismatch."; continue; }
+            $row = array_combine($headers, $values);
+            $email = strtolower(trim((string) ($row['email'] ?? '')));
+            $student = User::query()->where('role','student')->where('email',$email)
+                ->when($request->user()->isBranchManager(), fn ($q) => $q->where('branch_id',$request->user()->branch_id))->first();
+            if (!$student) { $errors[] = "Row {$line}: no student account found for {$email} in your scope."; continue; }
+            $data = array_intersect_key($row, array_flip($allowed));
+            $validator = \\Illuminate\\Support\\Facades\\Validator::make($data, [
+                'student_number' => ['nullable','string','max:40',Rule::unique('student_profiles','student_number')->where(fn ($q) => $q->where('user_id','!=',$student->id))],
+                'date_of_birth' => ['nullable','date','before:today'], 'gender' => ['nullable','string','max:30'],
+                'blood_group' => ['nullable','in:A+,A-,B+,B-,AB+,AB-,O+,O-'], 'nationality' => ['nullable','string','max:80'],
+                'address_line' => ['nullable','string','max:255'], 'city' => ['nullable','string','max:100'], 'district' => ['nullable','string','max:100'],
+                'emergency_contact_name' => ['nullable','string','max:160'], 'emergency_contact_phone' => ['nullable','string','max:40'],
+                'previous_school' => ['nullable','string','max:180'], 'admission_date' => ['nullable','date'], 'academic_level' => ['nullable','string','max:100'],
+            ]);
+            if ($validator->fails()) { $errors[] = "Row {$line}: ".implode('; ', $validator->errors()->all()); continue; }
+            $rows[] = ['student_id' => $student->id, 'data' => $data];
+        }
+        fclose($stream);
+        $request->session()->put('student_import_preview', ['actor_id' => $request->user()->id, 'rows' => $rows, 'errors' => $errors, 'created_at' => now()->timestamp]);
+        return back()->with('student_import_summary', ['valid' => count($rows), 'errors' => $errors]);
+    }
+
+    public function importConfirm(Request $request): RedirectResponse
+    {
+        $preview = $request->session()->get('student_import_preview');
+        abort_unless(is_array($preview) && (int) ($preview['actor_id'] ?? 0) === (int) $request->user()->id
+            && now()->timestamp - (int) ($preview['created_at'] ?? 0) <= 1800, 419, 'Import preview expired. Upload the CSV again.');
+        DB::transaction(function () use ($preview, $request): void {
+            foreach ($preview['rows'] as $row) {
+                $student = User::query()->where('role','student')->whereKey($row['student_id'])
+                    ->when($request->user()->isBranchManager(), fn ($q) => $q->where('branch_id',$request->user()->branch_id))
+                    ->lockForUpdate()->firstOrFail();
+                $profile = StudentProfile::query()->firstOrNew(['user_id' => $student->id]);
+                $before = $profile->exists ? $profile->only(array_keys($row['data'])) : [];
+                $profile->fill($row['data'])->save();
+                $this->event($student, $request, 'bulk_profile_imported', $before, $profile->only(array_keys($row['data'])), 'Student profile imported from reviewed CSV.');
+            }
+        });
+        $request->session()->forget('student_import_preview');
+        return back()->with('success', count($preview['rows']).' student profiles imported. '.count($preview['errors']).' rows were skipped.');
+    }
+
     public function index(Request $request): View
     {
         $filters = $request->validate([
