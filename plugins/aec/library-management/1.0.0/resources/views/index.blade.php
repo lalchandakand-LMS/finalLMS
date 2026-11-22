@@ -4,7 +4,7 @@
 <div class="mx-auto max-w-7xl space-y-6 p-4 sm:p-6">
 <div><h1 class="text-2xl font-bold">Physical Library Management</h1><p class="text-sm text-gray-600">Book inventory, issue/return tracking and overdue fines.</p></div>
 @if(session('success'))<p class="rounded bg-green-50 p-3 text-green-800">{{ session('success') }}</p>@endif
-@if($errors->any())<p class="rounded bg-red-50 p-3 text-red-800">{{ $errors->first() }}</p>@endif
+@if(isset($errors) && $errors->any())<p class="rounded bg-red-50 p-3 text-red-800">{{ $errors->first() }}</p>@endif
 <div class="grid gap-6 lg:grid-cols-2">
 <section class="rounded border bg-white p-5"><h2 class="mb-3 font-semibold">Add book</h2><form method="POST" action="{{ route(request()->routeIs('branch.*')?'branch.library.books.store':'admin.library.books.store') }}" class="grid gap-3 sm:grid-cols-2">@csrf
 <input required name="isbn" maxlength="40" placeholder="ISBN / Catalog code" class="rounded border-gray-300"><input required name="title" maxlength="200" placeholder="Book title" class="rounded border-gray-300"><input required name="author" maxlength="160" placeholder="Author" class="rounded border-gray-300"><input required name="category" maxlength="80" value="IELTS & Academic" placeholder="Category" class="rounded border-gray-300"><input required name="total_copies" type="number" min="1" max="10000" value="1" placeholder="Copies" class="rounded border-gray-300"><input name="shelf_location" maxlength="60" placeholder="Shelf location" class="rounded border-gray-300">
