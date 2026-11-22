@@ -173,14 +173,14 @@ Artisan::command('system:health-check', function (): int {
 
 Artisan::command('referral-income:reconcile-approved-payments', function (): int {
     $tables = ['referral_attributions', 'referral_income_rules', 'referral_commissions'];
-    if (!class_exists(\\Aloms\\ReferralIncome\\ReferralIncomeService::class)
+    if (!class_exists(\Aloms\ReferralIncome\ReferralIncomeService::class)
         || collect($tables)->contains(fn (string $table): bool => !Schema::hasTable($table))) {
         $this->info('Referral income is not installed; no reconciliation is required.');
 
         return 0;
     }
 
-    $service = app(\\Aloms\\ReferralIncome\\ReferralIncomeService::class);
+    $service = app(\Aloms\ReferralIncome\ReferralIncomeService::class);
     $processed = 0;
     $failed = 0;
 
