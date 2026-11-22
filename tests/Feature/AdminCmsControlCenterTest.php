@@ -19,7 +19,7 @@ class AdminCmsControlCenterTest extends TestCase
             ->assertOk()
             ->assertSee('CMS Control Center')
             ->assertSee('Website management')
-            ->assertSee('Appearance &amp; extensions')
+            ->assertSee('Appearance & extensions')
             ->assertSee(route('admin.website-builder.index'))
             ->assertSee(route('admin.website-pages.index'))
             ->assertSee(route('admin.website-menu.index'))
