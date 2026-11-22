@@ -34,7 +34,8 @@
         $facebookPixelId = $hasSettingsTable ? \App\Models\Setting::value('facebook_pixel_id') : null;
         $googleSearchConsoleVerification = $hasSettingsTable ? \App\Models\Setting::value('google_search_console_verification') : null;
         $marketingConsent = request()->cookie('marketing_consent') === 'accepted';
-        $isBranchLayout = auth()->check() && auth()->user()->isBranchManager();\n        $isAdminLayout = auth()->check() && in_array(auth()->user()->role, ['admin', 'branch_manager', 'accountant', 'teacher', 'student', 'guardian'], true);
+        $isBranchLayout = auth()->check() && auth()->user()->isBranchManager();
+        $isAdminLayout = auth()->check() && in_array(auth()->user()->role, ['admin', 'branch_manager', 'accountant', 'teacher', 'student', 'guardian'], true);
         $studentTrackingPlugin = auth()->check() && \Illuminate\Support\Facades\Schema::hasTable('plugin_registry')
             ? \App\Models\PluginInstallation::query()->where('plugin_key', 'aec.student-tracking')->where('status', 'active')->first()
             : null;
