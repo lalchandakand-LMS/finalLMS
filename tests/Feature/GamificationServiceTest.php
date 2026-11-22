@@ -14,6 +14,29 @@ class GamificationServiceTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_non_student_accounts_cannot_receive_xp_or_badges(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $service = app(GamificationService::class);
+
+        try {
+            $service->award($teacher, 'lesson_completed', 'lesson', 901);
+            $this->fail('A teacher account must not receive learner XP.');
+        } catch (\\InvalidArgumentException $exception) {
+            $this->assertSame('Gamification rewards can only be awarded to students.', $exception->getMessage());
+        }
+
+        try {
+            $service->awardBadge($teacher, 'first_lesson');
+            $this->fail('A teacher account must not receive learner badges.');
+        } catch (\\InvalidArgumentException $exception) {
+            $this->assertSame('Gamification badges can only be awarded to students.', $exception->getMessage());
+        }
+
+        $this->assertDatabaseCount('gamification_events', 0);
+        $this->assertDatabaseCount('gamification_user_badges', 0);
+    }
+
     public function test_xp_award_is_idempotent_and_updates_daily_streak_once(): void
     {
         $student = User::factory()->create(['role' => 'student']);
