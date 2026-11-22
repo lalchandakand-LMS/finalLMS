@@ -450,7 +450,7 @@ class WebsiteBuilderController extends Controller
             return ['label' => $label, 'url' => $url];
         })->filter()->take(20)->values()->all();
 
-        foreach (['homepage_template', 'site_name', 'site_logo_media_id', 'site_favicon_media_id', 'site_primary_color', 'site_background_color', 'site_background_style', 'site_font_family', 'site_heading_scale', 'site_body_scale', 'home_title', 'home_subtitle', 'home_featured_title', 'home_batches_title', 'home_stats_title', 'home_paths_title', 'home_reviews_title', 'home_slider_autoplay', 'home_slider_interval', 'home_slider_arrows', 'home_slider_dots', 'home_slider_pause_hover', 'home_slider_height', 'home_slider_mobile_height', 'home_slider_overlay', 'home_course_carousel_enabled', 'home_course_carousel_items', 'home_course_carousel_cards', 'footer_title', 'footer_text'] as $key) {
+        foreach (['homepage_template', 'site_name', 'site_logo_media_id', 'site_favicon_media_id', 'site_primary_color', 'site_background_color', 'site_background_style', 'site_font_family', 'site_heading_scale', 'site_body_scale', 'home_title', 'home_subtitle', 'home_featured_title', 'home_batches_title', 'home_stats_title', 'home_paths_title', 'home_reviews_title', 'home_slider_autoplay', 'home_slider_interval', 'home_slider_arrows', 'home_slider_dots', 'home_slider_pause_hover', 'home_slider_height', 'home_slider_mobile_height', 'home_slider_overlay', 'home_slider_transition', 'home_course_carousel_enabled', 'home_course_carousel_items', 'home_course_carousel_cards', 'footer_title', 'footer_text'] as $key) {
             if (array_key_exists($key, $validated)) {
                 Setting::setValue($key, $validated[$key] ?? '');
             }
