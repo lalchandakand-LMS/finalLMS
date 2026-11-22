@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use Aloms\CarouselBuilder\Carousel;
 use Aloms\CarouselBuilder\CarouselBuilderController;
-use App\Models\Comment;
 use App\Models\Course;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
