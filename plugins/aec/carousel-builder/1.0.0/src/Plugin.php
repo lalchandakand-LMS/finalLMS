@@ -39,7 +39,7 @@ return new class implements PluginContract {
                 return;
             }
 
-            $carousels = Carousel::query()->visible()->orderBy('sort_order')->orderBy('id')->get()
+            $carousels = Carousel::query()->visible()->orderBy('sort_order')->orderBy('id')->limit(12)->get()
                 ->map(fn (Carousel $carousel): array => [
                     'id' => $carousel->id,
                     'title' => $carousel->title,
