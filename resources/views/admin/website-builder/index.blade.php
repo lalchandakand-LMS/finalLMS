@@ -96,7 +96,13 @@
         @php($slide = old("home_slides.$i", $slides[$i] ?? []))
         <section class="card" style="margin-bottom:14px;">
             <div class="page-header"><h3>Slide {{ $i + 1 }}</h3><label style="display:flex;gap:8px;align-items:center;"><input type="hidden" name="home_slides[{{ $i }}][enabled]" value="0"><input type="checkbox" name="home_slides[{{ $i }}][enabled]" value="1" style="width:auto;" @checked($slide['enabled'] ?? false)> Enabled</label></div>
-            <label>Image<select name="home_slides[{{ $i }}][image_id]"><option value="">Select image</option>@foreach($media as $asset)<option value="{{ $asset->id }}" @selected((string) ($slide['image_id'] ?? '') === (string) $asset->id)>{{ $asset->original_name }}</option>@endforeach</select></label>
+            <div class="grid grid-2">
+                <label>Desktop image<select name="home_slides[{{ $i }}][image_id]"><option value="">Select image</option>@foreach($media as $asset)<option value="{{ $asset->id }}" @selected((string) ($slide['image_id'] ?? '') === (string) $asset->id)>{{ $asset->original_name }}</option>@endforeach</select></label>
+                <label>Mobile image (optional)<select name="home_slides[{{ $i }}][mobile_image_id]"><option value="">Use desktop image</option>@foreach($media as $asset)<option value="{{ $asset->id }}" @selected((string) ($slide['mobile_image_id'] ?? '') === (string) $asset->id)>{{ $asset->original_name }}</option>@endforeach</select></label>
+                <label>Display order<input type="number" min="0" max="1000" name="home_slides[{{ $i }}][sort_order]" value="{{ $slide['sort_order'] ?? $i }}"></label>
+                <label>Start showing (optional)<input type="datetime-local" name="home_slides[{{ $i }}][starts_at]" value="{{ !empty($slide['starts_at']) ? \Illuminate\Support\Carbon::parse($slide['starts_at'])->format('Y-m-d\\TH:i') : '' }}"></label>
+                <label>Stop showing (optional)<input type="datetime-local" name="home_slides[{{ $i }}][ends_at]" value="{{ !empty($slide['ends_at']) ? \Illuminate\Support\Carbon::parse($slide['ends_at'])->format('Y-m-d\\TH:i') : '' }}"></label>
+            </div>
             <div class="grid grid-2">
                 <div><label>Slide title<input name="home_slides[{{ $i }}][title]" maxlength="180" value="{{ $slide['title'] ?? '' }}"></label></div>
                 <div><label>Slide subtitle<textarea name="home_slides[{{ $i }}][subtitle]" rows="2" maxlength="500">{{ $slide['subtitle'] ?? '' }}</textarea></label></div>
