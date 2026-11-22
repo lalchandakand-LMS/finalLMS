@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use Aloms\ReferralIncome\ReferralIncomeService;
 use App\Models\Course;
 use App\Models\Payment;
+use App\Models\PluginInstallation;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
@@ -46,6 +47,15 @@ final class ReferralIncomePluginTest extends TestCase
         Schema::enableForeignKeyConstraints();
         $migration = require base_path('plugins/aec/referral-income/1.0.0/migrations/2026_11_21_040000_create_referral_income_tables.php');
         $migration->up();
+        $plugin = new PluginInstallation();
+        $plugin->forceFill([
+            'plugin_key' => 'aec.referral-income',
+            'name' => 'Referral Income',
+            'version' => '1.0.0',
+            'type' => 'module',
+            'status' => 'active',
+            'manifest' => ['settings_schema' => []],
+        ])->save();
     }
 
     public function test_referral_attribution_and_verified_payment_commission_are_idempotent(): void
@@ -114,6 +124,33 @@ final class ReferralIncomePluginTest extends TestCase
 
         $this->assertSame(0, Artisan::call('referral-income:reconcile-approved-payments'));
         $this->assertDatabaseCount('referral_commissions', 1);
+    }
+
+    public function test_reconciliation_does_not_run_when_referral_plugin_is_deactivated(): void
+    {
+        $referrer = User::factory()->create(['role' => 'student']);
+        $buyer = User::factory()->create(['role' => 'student']);
+        $service = app(ReferralIncomeService::class);
+        $service->applyCode($buyer, $service->createOrGetCode($referrer));
+        $course = Course::factory()->create();
+        $payment = Payment::query()->create([
+            'user_id' => $buyer->id,
+            'course_id' => $course->id,
+            'method' => 'bkash',
+            'amount' => 1000,
+            'currency' => 'BDT',
+            'transaction_reference' => 'REF-DISABLED-'.strtoupper(bin2hex(random_bytes(5))),
+            'status' => 'approved',
+        ]);
+
+        PluginInstallation::query()->where('plugin_key', 'aec.referral-income')->update(['status' => 'inactive']);
+
+        $this->assertSame(0, Artisan::call('referral-income:reconcile-approved-payments'));
+        $this->assertDatabaseMissing('referral_commissions', ['payment_id' => $payment->id]);
+
+        PluginInstallation::query()->where('plugin_key', 'aec.referral-income')->update(['status' => 'active']);
+        $this->assertSame(0, Artisan::call('referral-income:reconcile-approved-payments'));
+        $this->assertDatabaseHas('referral_commissions', ['payment_id' => $payment->id]);
     }
 
     public function test_reconciliation_retries_a_transient_commission_failure_on_the_next_run(): void
