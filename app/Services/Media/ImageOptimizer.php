@@ -18,6 +18,12 @@ class ImageOptimizer
             return null;
         }
 
+        $dimensions = @getimagesize($file->getRealPath());
+        if (!is_array($dimensions) || empty($dimensions[0]) || empty($dimensions[1])
+            || ((int) $dimensions[0] * (int) $dimensions[1]) > 40000000) {
+            return null;
+        }
+
         $bytes = @file_get_contents($file->getRealPath());
         if (!is_string($bytes) || $bytes === '') {
             return null;
