@@ -14,7 +14,7 @@
         $homeSubtitle = $hasSettingsTable ? \App\Models\Setting::value('home_subtitle', 'Learn from expert-led courses, track your progress, enroll in structured programs, and earn certificates that help you move forward with confidence.') : 'Learn from expert-led courses, track your progress, enroll in structured programs, and earn certificates that help you move forward with confidence.';
         $homePrimaryLabel = $hasSettingsTable ? \App\Models\Setting::value('home_cta_primary', 'Browse courses') : 'Browse courses';
         $homeSecondaryLabel = $hasSettingsTable ? \App\Models\Setting::value('home_cta_secondary', 'Login') : 'Login';
-        $homeFeaturedTitle = $hasSettingsTable ? \App\Models\Setting::value('home_featured_title', 'Popular learning tracks') : 'Popular learning tracks';
+        $homeFeaturedTitle = $hasSettingsTable ? \App\Models\Setting::value('home_featured_title', \App\Models\Setting::value('home_paths_title', 'Popular learning tracks')) : 'Popular learning tracks';
         $courseCarouselEnabled = $hasSettingsTable ? \App\Models\Setting::value('home_course_carousel_enabled', '1') === '1' : true;
         $courseCarouselItems = $hasSettingsTable ? max(3, min(12, (int) \App\Models\Setting::value('home_course_carousel_items', 6))) : 6;
         $courseCarouselCards = $hasSettingsTable ? max(2, min(4, (int) \App\Models\Setting::value('home_course_carousel_cards', 3))) : 3;
@@ -287,7 +287,7 @@
         </div>
     </section>
     @if($courseCarouselEnabled)
-    <section class="home-paths"><div class="home-section-heading"><span class="home-heading-kicker">{{ __('Start learning today') }}</span><h2>{{ $homePathsTitle }}</h2><p>{{ __('Explore courses published by Alom’s English Center.') }}</p></div>
+    <section class="home-paths"><div class="home-section-heading"><span class="home-heading-kicker">{{ __('Start learning today') }}</span><h2>{{ $homeFeaturedTitle }}</h2><p>{{ __('Explore courses published by Alom’s English Center.') }}</p></div>
         @if($hasPublishedCourses)
             <div class="home-course-carousel">
                 <div class="home-course-carousel__controls" aria-label="{{ __('Course carousel controls') }}">
