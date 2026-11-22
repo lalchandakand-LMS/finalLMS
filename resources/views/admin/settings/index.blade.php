@@ -53,7 +53,7 @@
                     <div><label for="site-primary-color">{{ __('Primary brand color') }}</label><input id="site-primary-color" type="color" name="site_primary_color" value="{{ old('site_primary_color', $settings['site_primary_color'] ?? '#1546a8') }}"></div>
                     <div><label for="site-background-color">{{ __('Website background color') }}</label><input id="site-background-color" type="color" name="site_background_color" value="{{ old('site_background_color', $settings['site_background_color'] ?? '#f3f6fb') }}"></div>
                 </div>
-                <small class="muted">{{ __('Use HTTPS image URLs. Direct Media Library upload and selection will be integrated into the complete identity editor.') }}</small>
+                <small class="muted">{{ __('Choose an image from the Media Library or provide an HTTPS image URL. Upload new images through the Media Library.') }}</small>
             </section>
             <section class="panel" style="padding:20px;margin-bottom:24px;border:1px solid var(--border);">
                 <span class="badge info">{{ __('Brand experience') }}</span>
