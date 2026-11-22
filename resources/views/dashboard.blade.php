@@ -140,6 +140,41 @@
             <p class="muted" style="margin:12px 0 0;">{{ __('Keep momentum going with a clear set of next actions, from enrollment to course completion.') }}</p>
         </div>
 
+        @if($user->isGuardian())
+            <section class="panel" style="margin-bottom:20px;">
+                <div class="page-header" style="margin-bottom:10px;">
+                    <div>
+                        <span class="badge info">{{ __('Guardian portal') }}</span>
+                        <h2 style="margin:10px 0 0;">{{ __('Monitor your linked students') }}</h2>
+                        <p class="muted">{{ __('View approved student learning progress, attendance, exam results and fee records.') }}</p>
+                    </div>
+                    <a href="{{ route('guardian.dashboard') }}" class="btn primary">{{ __('Open guardian portal') }}</a>
+                </div>
+            </section>
+        @endif
+
+        @if($user->isStudent())
+            <section class="panel" style="margin-bottom:20px;">
+                <div class="page-header" style="margin-bottom:10px;">
+                    <div>
+                        <span class="badge info">{{ __('Student portal') }}</span>
+                        <h2 style="margin:10px 0 0;">{{ __('Your study tools') }}</h2>
+                        <p class="muted">{{ __('Continue lessons, take exams, check fees and manage guardian access requests.') }}</p>
+                    </div>
+                </div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap">
+                    <a href="{{ route('student.courses.index') }}" class="btn primary">{{ __('My courses') }}</a>
+                    <a href="{{ route('student.exams.index') }}" class="btn secondary">{{ __('My exams') }}</a>
+                    <a href="{{ route('student.invoices.index') }}" class="btn secondary">{{ __('My invoices') }}</a>
+                    <a href="{{ route('student.question-set-attempts.index') }}" class="btn secondary">{{ __('Quiz history') }}</a>
+                    <a href="{{ route('student.guardian-requests.page') }}" class="btn secondary">{{ __('Guardian requests') }}</a>
+                    @if(\Illuminate\Support\Facades\Route::has('student.attendance.index'))
+                        <a href="{{ route('student.attendance.index') }}" class="btn secondary">{{ __('My attendance') }}</a>
+                    @endif
+                </div>
+            </section>
+        @endif
+
         @if($user->isBranchManager() && ($user->hasAdminPermission('branch.batches') || $user->hasAdminPermission('branch.students')))
             <section class="panel" style="margin-bottom:20px;">
                 <div class="page-header" style="margin-bottom:10px;">
@@ -184,6 +219,7 @@
                         <h2 style="margin:10px 0 0;">{{ __('Your teaching overview') }}</h2>
                     </div>
                     <a href="{{ route('teacher.batches.index') }}" class="btn primary">{{ __('Manage my batches') }}</a>
+                    <a href="{{ route('live-classes.index') }}" class="btn secondary">{{ __('Live classes') }}</a>
                 </div>
                 <div class="dash-summary">
                     <div class="summary-box"><span class="muted">{{ __('Assigned courses') }}</span><strong>{{ number_format($teacherInsights['assigned_courses']) }}</strong></div>
