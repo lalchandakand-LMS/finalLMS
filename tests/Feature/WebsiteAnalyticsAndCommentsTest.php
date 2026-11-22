@@ -60,8 +60,8 @@ class WebsiteAnalyticsAndCommentsTest extends TestCase
         $student = User::factory()->create(['role' => 'student', 'name' => 'Filterable Student']);
         $course = Course::factory()->create(['teacher_id' => $teacher->id, 'status' => 'published']);
         $post = BlogPost::create(['author_id' => $author->id, 'title' => 'Moderation article', 'slug' => 'moderation-article', 'body' => 'Article text', 'status' => 'published', 'published_at' => now()->subMinute()]);
-        $courseComment = Comment::create(['commentable_type' => Course::class, 'commentable_id' => $course->id, 'author_id' => $student->id, 'body' => 'Pending course feedback', 'status' => 'pending']);
-        $postComment = Comment::create(['commentable_type' => BlogPost::class, 'commentable_id' => $post->id, 'author_id' => $student->id, 'body' => 'Approved article feedback', 'status' => 'approved']);
+        $courseComment = $course->comments()->create(['author_id' => $student->id, 'body' => 'Pending course feedback', 'status' => 'pending']);
+        $postComment = $post->comments()->create(['author_id' => $student->id, 'body' => 'Approved article feedback', 'status' => 'approved']);
 
         $admin = User::factory()->create(['role' => 'admin']);
         $this->actingAs($admin)->get(route('admin.comments.index', ['status' => 'pending', 'content_type' => 'course']))
