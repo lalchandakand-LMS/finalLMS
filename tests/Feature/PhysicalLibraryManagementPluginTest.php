@@ -27,6 +27,15 @@ final class PhysicalLibraryManagementPluginTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $plugin = new PluginInstallation();
+        $plugin->forceFill([
+            'plugin_key' => 'aec.library-management',
+            'name' => 'Physical Library Management',
+            'version' => '1.0.0',
+            'type' => 'module',
+            'status' => 'active',
+            'manifest' => ['settings_schema' => []],
+        ])->save();
         View::addNamespace('library-management', base_path('plugins/aec/library-management/1.0.0/resources/views'));
         require_once base_path('plugins/aec/library-management/1.0.0/src/LibraryBook.php');
         require_once base_path('plugins/aec/library-management/1.0.0/src/LibraryLoan.php');
