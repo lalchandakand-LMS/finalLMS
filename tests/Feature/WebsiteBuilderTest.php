@@ -130,6 +130,8 @@ class WebsiteBuilderTest extends TestCase
 
         $this->actingAs($admin)->post(route('admin.website-builder.update'), [
             'home_slider_transition' => 'fade',
+            'home_slider_progress' => '1',
+            'home_slider_play_pause' => '1',
             'home_slider_overlay' => 45,
             'home_slides' => [[
                 'enabled' => '1',
@@ -165,6 +167,8 @@ class WebsiteBuilderTest extends TestCase
         $this->assertSame('center', $slides[0]['content_alignment']);
         $this->assertSame('#123456', $slides[0]['overlay_color']);
         $this->assertDatabaseHas('settings', ['key' => 'home_slider_transition', 'value' => 'fade']);
+        $this->assertDatabaseHas('settings', ['key' => 'home_slider_progress', 'value' => '1']);
+        $this->assertDatabaseHas('settings', ['key' => 'home_slider_play_pause', 'value' => '1']);
         $this->assertDatabaseHas('settings', ['key' => 'home_slider_overlay', 'value' => '45']);
         $this->assertNotEmpty($slides[0]['starts_at']);
         $this->assertNotEmpty($slides[0]['ends_at']);
