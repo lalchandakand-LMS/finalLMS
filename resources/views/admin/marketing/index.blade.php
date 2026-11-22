@@ -13,6 +13,38 @@
     </div>
 
     <section class="panel" style="margin-bottom:20px;">
+        <div class="page-header">
+            <div>
+                <h2 style="margin:0;">{{ __('Campaign performance snapshot') }}</h2>
+                <p class="muted" style="margin:6px 0 0;">{{ __('Live totals from existing LMS campaign, support and announcement records. These are not external ad-platform analytics.') }}</p>
+            </div>
+            <a class="btn secondary" href="{{ route('admin.dashboard-announcements.index') }}">{{ __('Manage in-app announcements') }}</a>
+        </div>
+        <div class="grid grid-4">
+            <article class="panel">
+                <span class="muted">{{ __('SMS campaigns') }}</span>
+                <strong style="display:block;font-size:1.8rem;">{{ number_format($broadcastMetrics['sms_campaigns']) }}</strong>
+                <small class="muted">{{ number_format($broadcastMetrics['sms_sent']) }} {{ __('sent') }} · {{ number_format($broadcastMetrics['sms_failed']) }} {{ __('failed') }}</small>
+            </article>
+            <article class="panel">
+                <span class="muted">{{ __('Meta boost plans') }}</span>
+                <strong style="display:block;font-size:1.8rem;">{{ number_format($broadcastMetrics['meta_plans']) }}</strong>
+                <small class="muted">{{ number_format($broadcastMetrics['meta_drafts']) }} {{ __('drafts') }}</small>
+            </article>
+            <article class="panel">
+                <span class="muted">{{ __('Reported Meta spend') }}</span>
+                <strong style="display:block;font-size:1.8rem;">৳{{ number_format($broadcastMetrics['meta_spend_bdt'], 2) }}</strong>
+                <small class="muted">{{ __('Manually reported; not live synced spend') }}</small>
+            </article>
+            <article class="panel">
+                <span class="muted">{{ __('Open support tickets') }}</span>
+                <strong style="display:block;font-size:1.8rem;">{{ number_format($broadcastMetrics['open_support_tickets']) }}</strong>
+                <small class="muted">{{ number_format($broadcastMetrics['active_announcements']) }} {{ __('active in-app announcements') }}</small>
+            </article>
+        </div>
+    </section>
+
+    <section class="panel" style="margin-bottom:20px;">
         <div class="page-header" style="margin-bottom:12px;">
             <div>
                 <h2 style="margin:0;">{{ __('Broadcasting, Marketing & Automation') }}</h2>
