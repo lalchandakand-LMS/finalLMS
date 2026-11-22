@@ -26,6 +26,7 @@ use App\Http\Controllers\AdminAttendanceSyncReviewController;
 use App\Http\Controllers\AdminAttendanceAuditController;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\CourseController;
+use App\Http\Controllers\PublicInstructorController;
 use App\Http\Controllers\CourseComboController;
 use App\Http\Controllers\CourseWishlistController;
 use App\Http\Controllers\DashboardController;
@@ -142,6 +143,12 @@ Route::get('/contests/{contest}', [QuizContestController::class, 'show'])->name(
 Route::get('/ebooks', [EbookStoreController::class, 'index'])->name('ebooks.index');
 Route::get('/ebooks/{product:slug}/preview/{previewPage}', [EbookStoreController::class, 'preview'])->name('ebooks.preview');
 Route::get('/ebooks/{product:slug}', [EbookStoreController::class, 'show'])->name('ebooks.show');
+Route::get('/learn', function () {
+    return auth()->check() && auth()->user()->isStudent()
+        ? redirect()->route('student.courses.index')
+        : redirect()->route('courses.index');
+})->name('learn.index');
+Route::get('/instructors', [PublicInstructorController::class, 'index'])->name('instructors.index');
 Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
 Route::get('/course-combos', [CourseComboController::class, 'publicIndex'])->name('course-combos.index');
 Route::get('/course-combos/{courseCombo:slug}', [CourseComboController::class, 'show'])->name('course-combos.show');

@@ -21,6 +21,10 @@
         <div class="public-drawer-links">
             <a href="{{ route('landing') }}"><span class="menu-icon">⌂</span>{{ __('Home') }}</a>
             <a href="{{ route('courses.index') }}"><span class="menu-icon">▤</span>{{ __('Courses') }}</a>
+            <a href="{{ route('learn.index') }}"><span class="menu-icon">▶</span>{{ __('Learn') }}</a>
+            <a href="{{ route('instructors.index') }}"><span class="menu-icon">♙</span>{{ __('Instructors') }}</a>
+            <a href="{{ route('contests.index') }}"><span class="menu-icon">✓</span>{{ __('Exams') }}</a>
+            <a href="{{ route('ebooks.index') }}"><span class="menu-icon">▣</span>{{ __('E-Books') }}</a>
             @if(\Illuminate\Support\Facades\Route::has('flash-sales.public') && \App\Models\FlashSale::isPluginActive() && (bool) (int) \App\Models\Setting::value('flash_sale_page_enabled', '1'))
                 <a href="{{ route('flash-sales.public') }}"><span class="menu-icon">🔥</span>{{ __('Flash Sale') }}</a>
             @endif
