@@ -333,7 +333,7 @@
                 <div class="home-carousel__progress" aria-hidden="true"><span data-carousel-progress></span></div>
             @endif
             @if($sliderOptions['playPause'] && $homeSlides->count() > 1)
-                <div class="home-carousel__controls"><button type="button" class="home-carousel__toggle" data-carousel-toggle aria-pressed="{{ $sliderOptions['autoplay'] ? 'false' : 'true' }}">{{ $sliderOptions['autoplay'] ? __('Pause') : __('Play') }}</button></div>
+                <div class="home-carousel__controls"><button type="button" class="home-carousel__toggle" data-carousel-toggle aria-pressed="{{ $sliderOptions['autoplay'] ? 'true' : 'false' }}">{{ $sliderOptions['autoplay'] ? __('Pause') : __('Play') }}</button></div>
             @endif
             @if($showSliderDots)
                 <nav class="home-carousel__dots" aria-label="{{ __('Slider navigation') }}" data-carousel-dots>
@@ -563,9 +563,8 @@
     if (slides.length < 2 || !track) return;
     let active = 0;
     let timer = null;
-    let userPaused = false;
+    let playing = root.dataset.autoplay === 'true' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const interval = Math.max(3000, Math.min(12000, Number(root.dataset.interval) || 5000));
-    const autoplay = root.dataset.autoplay === 'true' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const pauseOnHover = root.dataset.pauseHover === 'true';
     const transition = ['slide','fade','zoom'].includes(root.dataset.transition) ? root.dataset.transition : 'slide';
     const progress = root.querySelector('[data-carousel-progress]');
@@ -580,15 +579,14 @@
     const stop = () => { if (timer) window.clearInterval(timer); timer = null; if (progress) progress.classList.remove('is-running'); };
     const start = () => {
         stop();
-        if (autoplay && !userPaused && !document.hidden) {
+        if (playing && !document.hidden) {
             if (progress) progress.classList.add('is-running');
             timer = window.setInterval(() => { render(active + 1); if (progress) progress.classList.add('is-running'); }, interval);
         }
-        if (toggle) { toggle.setAttribute('aria-pressed', userPaused ? 'true' : 'false'); toggle.textContent = userPaused ? 'Play' : 'Pause'; }
+        if (toggle) { toggle.setAttribute('aria-pressed', playing ? 'true' : 'false'); toggle.textContent = playing ? 'Pause' : 'Play'; }
     };
     const interact = (index) => { render(index); start(); };
-    toggle?.addEventListener('click', () => { userPaused = !userPaused; start(); });
-    document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
+    toggle?.addEventListener('click', () => { playing = !playing; start(); });
     document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
     previous?.addEventListener('click', () => interact(active - 1));
     next?.addEventListener('click', () => interact(active + 1));
