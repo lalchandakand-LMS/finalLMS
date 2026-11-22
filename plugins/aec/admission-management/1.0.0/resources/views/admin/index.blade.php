@@ -4,7 +4,7 @@
 <div class="mx-auto max-w-7xl space-y-6 p-4 sm:p-6">
 <div><h1 class="text-2xl font-bold">Admission Management</h1><p class="text-sm text-gray-600">Review applicants, schedule interviews and convert approved applicants into student accounts.</p></div>
 @if(session('success'))<p class="rounded bg-green-50 p-3 text-green-800">{{ session('success') }}</p>@endif
-@if($errors->any())<p class="rounded bg-red-50 p-3 text-red-800">{{ $errors->first() }}</p>@endif
+@if(isset($errors) && $errors->any())<p class="rounded bg-red-50 p-3 text-red-800">{{ $errors->first() }}</p>@endif
 <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">@foreach($statuses as $status)<div class="rounded border bg-white p-3"><p class="text-xs uppercase text-gray-500">{{ $status }}</p><p class="text-2xl font-semibold">{{ $statusCounts[$status] ?? 0 }}</p></div>@endforeach</div>
 <form method="GET" class="flex flex-wrap gap-2"><input name="q" value="{{ request('q') }}" placeholder="Name, email, phone or ID" class="rounded border-gray-300"><select name="status" class="rounded border-gray-300"><option value="">All statuses</option>@foreach($statuses as $status)<option value="{{ $status }}" @selected(request('status')===$status)>{{ ucfirst($status) }}</option>@endforeach</select><button class="rounded border px-4 py-2">Filter</button></form>
 <div class="overflow-x-auto rounded border bg-white"><table class="min-w-full text-sm"><thead class="bg-gray-50"><tr><th class="p-3 text-left">Applicant</th><th class="p-3 text-left">Course / Contact</th><th class="p-3 text-left">Branch</th><th class="p-3 text-left">Status</th><th class="p-3 text-left">Review</th><th class="p-3 text-left">Documents</th></tr></thead><tbody>
