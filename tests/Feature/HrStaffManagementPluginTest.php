@@ -9,18 +9,19 @@ use Aloms\HrStaffManagement\StaffPayroll;
 use Aloms\HrStaffManagement\StaffProfile;
 use App\Models\Branch;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 final class HrStaffManagementPluginTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseMigrations;
 
     protected function setUp(): void
     {
         parent::setUp();
+        View::addNamespace('hr-staff-management', base_path('plugins/aec/hr-staff-management/1.0.0/resources/views'));
         require_once base_path('plugins/aec/hr-staff-management/1.0.0/src/StaffProfile.php');
         require_once base_path('plugins/aec/hr-staff-management/1.0.0/src/StaffPayroll.php');
         require_once base_path('plugins/aec/hr-staff-management/1.0.0/src/HrController.php');
@@ -32,6 +33,7 @@ final class HrStaffManagementPluginTest extends TestCase
         Route::post('/__hr/staff', [HrController::class, 'storeStaff'])->name('branch.hr.staff.store');
         Route::post('/__hr/payroll', [HrController::class, 'recordPayroll'])->name('branch.hr.payrolls.store');
         Route::post('/__hr/payroll/{payroll}/paid', [HrController::class, 'markPayrollPaid'])->name('admin.hr.payroll.mark-paid');
+        app('router')->getRoutes()->refreshNameLookups();
     }
 
     public function test_branch_manager_can_only_see_and_prepare_payroll_for_their_branch(): void
