@@ -510,7 +510,7 @@
             @elseif(auth()->user()->isGuardian())
                 <div class="admin-sidebar-label">Guardian Panel</div>
                 <a class="{{ request()->routeIs('guardian.dashboard') ? 'active' : '' }}" href="{{ route('guardian.dashboard') }}"><span>▦</span><span class="nav-text">Guardian dashboard</span></a>
-                <a class="{{ request()->routeIs('guardian.links.*') ? 'active' : '' }}" href="{{ route('guardian.links.index') }}"><span>👨‍👩‍👧</span><span class="nav-text">Linked students</span></a>
+                <a class="{{ request()->routeIs('guardian.links.*') ? 'active' : '' }}" href="{{ route('guardian.dashboard') }}"><span>👨‍👩‍👧</span><span class="nav-text">My children</span></a>
             @elseif(auth()->user()->isAccountant())
                 <div class="admin-sidebar-label">Overview</div>
                 <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><span>▦</span><span class="nav-text">Dashboard</span></a>
