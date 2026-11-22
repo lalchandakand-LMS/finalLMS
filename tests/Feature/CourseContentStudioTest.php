@@ -6,6 +6,7 @@ use App\Models\AcademicLevel;
 use App\Models\Course;
 use App\Models\CourseCategory;
 use App\Models\CourseContentPost;
+use App\Models\CourseContentProgress;
 use App\Models\CourseCurriculumItem;
 use App\Models\DownloadPermission;
 use App\Models\Enrollment;
@@ -152,6 +153,36 @@ class CourseContentStudioTest extends TestCase
             'course_content_post_id' => $first->id,
         ]);
         $this->assertSame(1, $course->curriculumItems()->count());
+    }
+
+    public function test_course_builder_persists_prerequisites_and_rejects_prerequisite_cycles(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $course = Course::factory()->create(['teacher_id' => $teacher->id]);
+        $first = $this->makePost($admin, null, 'Prerequisite A');
+        $second = $this->makePost($admin, null, 'Prerequisite B');
+
+        $this->actingAs($admin)->from(route('admin.course-builder.edit', $course))
+            ->put(route('admin.course-builder.update', $course), [
+                'post_ids' => [$first->id, $second->id],
+                'prerequisites' => [$first->id => $second->id, $second->id => $first->id],
+            ])->assertSessionHasErrors('prerequisites');
+        $this->assertDatabaseCount('course_curriculum_items', 0);
+
+        $this->put(route('admin.course-builder.update', $course), [
+            'post_ids' => [$first->id, $second->id],
+            'positions' => [$first->id => 10, $second->id => 20],
+            'prerequisites' => [$second->id => $first->id],
+            'unlock_after_previous' => [$second->id => '1'],
+        ])->assertRedirect(route('admin.course-builder.edit', $course));
+
+        $this->assertDatabaseHas('course_curriculum_items', [
+            'course_id' => $course->id,
+            'course_content_post_id' => $second->id,
+            'prerequisite_post_id' => $first->id,
+            'unlock_after_previous' => 1,
+        ]);
     }
 
     public function test_preview_content_is_public_but_locked_curriculum_requires_enrollment(): void
