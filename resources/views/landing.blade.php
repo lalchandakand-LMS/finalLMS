@@ -42,6 +42,8 @@
             'mobileHeight' => $hasSettingsTable ? max(220, min(520, (int) \App\Models\Setting::value('home_slider_mobile_height', 300))) : 300,
             'overlay' => $hasSettingsTable ? max(0, min(90, (int) \App\Models\Setting::value('home_slider_overlay', 60))) : 60,
             'transition' => $hasSettingsTable && in_array(\App\Models\Setting::value('home_slider_transition', 'slide'), ['slide','fade','zoom'], true) ? \App\Models\Setting::value('home_slider_transition', 'slide') : 'slide',
+            'progress' => $hasSettingsTable ? \App\Models\Setting::value('home_slider_progress', '1') === '1' : true,
+            'playPause' => $hasSettingsTable ? \App\Models\Setting::value('home_slider_play_pause', '1') === '1' : true,
         ];
         $flashSales = \Illuminate\Support\Facades\Route::has('flash-sales.public')
             && \App\Models\FlashSale::isPluginActive()
@@ -125,6 +127,12 @@
         .home-carousel__content--center { margin-inline:auto; text-align:center; }
         .home-carousel__content--right { margin-left:auto; text-align:right; }
         .home-carousel__secondary { display:inline-flex; margin-left:10px; padding:10px 18px; border:1px solid #ffffffa8; border-radius:10px; color:#fff; background:#ffffff18; text-decoration:none; font-weight:800; }
+        .home-carousel__progress { height:3px; overflow:hidden; border-radius:5px; background:#0b173822; }
+        .home-carousel__progress span { display:block; width:100%; height:100%; transform:scaleX(0); transform-origin:left; background:var(--primary); }
+        .home-carousel__progress span.is-running { animation:home-carousel-progress var(--progress-duration,5s) linear forwards; }
+        @keyframes home-carousel-progress { to { transform:scaleX(1); } }
+        .home-carousel__controls { display:flex; justify-content:flex-end; margin-top:8px; }
+        .home-carousel__toggle { border:1px solid var(--border); border-radius:999px; padding:6px 12px; background:var(--surface,#fff); color:var(--text); cursor:pointer; }
         .home-carousel.is-fade .home-carousel__track,.home-carousel.is-zoom .home-carousel__track { position:relative; display:block; transform:none !important; }
         .home-carousel.is-fade .home-carousel__slide,.home-carousel.is-zoom .home-carousel__slide { position:absolute; inset:0; opacity:0; pointer-events:none; transition:opacity .55s ease; }
         .home-carousel.is-fade .home-carousel__slide.is-active,.home-carousel.is-zoom .home-carousel__slide.is-active { opacity:1; pointer-events:auto; }
@@ -275,7 +283,7 @@
     @include('partials.flash-sales', ['flashSales' => $flashSales])
 
     @if($hasHomeSlides)
-        <section class="home-carousel home-carousel--{{ $sliderOptions['transition'] }}" aria-label="{{ __('Homepage highlights') }}" data-home-carousel data-transition="{{ $sliderOptions['transition'] }}" data-autoplay="{{ $sliderOptions['autoplay'] ? 'true' : 'false' }}" data-interval="{{ $sliderOptions['interval'] }}" data-pause-hover="{{ $sliderOptions['pauseHover'] ? 'true' : 'false' }}" style="--carousel-height:{{ $sliderOptions['height'] }}px;--carousel-mobile-height:{{ $sliderOptions['mobileHeight'] }}px;--carousel-overlay:{{ $sliderOptions['overlay'] / 100 }};margin-bottom:28px;">
+        <section class="home-carousel home-carousel--{{ $sliderOptions['transition'] }}" aria-label="{{ __('Homepage highlights') }}" data-home-carousel data-transition="{{ $sliderOptions['transition'] }}" data-autoplay="{{ $sliderOptions['autoplay'] ? 'true' : 'false' }}" data-interval="{{ $sliderOptions['interval'] }}" data-pause-hover="{{ $sliderOptions['pauseHover'] ? 'true' : 'false' }}" style="--progress-duration:{{ $sliderOptions['interval'] }}ms;--carousel-height:{{ $sliderOptions['height'] }}px;--carousel-mobile-height:{{ $sliderOptions['mobileHeight'] }}px;--carousel-overlay:{{ $sliderOptions['overlay'] / 100 }};margin-bottom:28px;">
             <div class="home-carousel__viewport" data-carousel-viewport tabindex="0" aria-roledescription="carousel">
                 <div class="home-carousel__track" data-carousel-track>
                     @foreach($homeSlides as $index => $slide)
@@ -321,6 +329,12 @@
                     <button type="button" class="home-carousel__arrow home-carousel__arrow--next" data-carousel-next aria-label="{{ __('Next slide') }}">›</button>
                 @endif
             </div>
+            @if($sliderOptions['progress'])
+                <div class="home-carousel__progress" aria-hidden="true"><span data-carousel-progress></span></div>
+            @endif
+            @if($sliderOptions['playPause'])
+                <div class="home-carousel__controls"><button type="button" class="home-carousel__toggle" data-carousel-toggle aria-pressed="{{ $sliderOptions['autoplay'] ? 'false' : 'true' }}">{{ $sliderOptions['autoplay'] ? __('Pause') : __('Play') }}</button></div>
+            @endif
             @if($showSliderDots)
                 <nav class="home-carousel__dots" aria-label="{{ __('Slider navigation') }}" data-carousel-dots>
                     @foreach($homeSlides as $index => $slide)
@@ -549,19 +563,32 @@
     if (slides.length < 2 || !track) return;
     let active = 0;
     let timer = null;
+    let userPaused = false;
     const interval = Math.max(3000, Math.min(12000, Number(root.dataset.interval) || 5000));
     const autoplay = root.dataset.autoplay === 'true' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const pauseOnHover = root.dataset.pauseHover === 'true';
     const transition = ['slide','fade','zoom'].includes(root.dataset.transition) ? root.dataset.transition : 'slide';
+    const progress = root.querySelector('[data-carousel-progress]');
+    const toggle = root.querySelector('[data-carousel-toggle]');
     const render = (index) => {
         active = (index + slides.length) % slides.length;
         if (transition === 'slide') track.style.transform = 'translate3d(' + (-active * 100) + '%,0,0)';
         slides.forEach((slide, i) => { slide.setAttribute('aria-hidden', i === active ? 'false' : 'true'); slide.classList.toggle('is-active', i === active); });
         dots.forEach((dot, i) => dot.setAttribute('aria-current', i === active ? 'true' : 'false'));
+        if (progress) { progress.classList.remove('is-running'); void progress.offsetWidth; }
     };
-    const stop = () => { if (timer) window.clearInterval(timer); timer = null; };
-    const start = () => { stop(); if (autoplay && !document.hidden) timer = window.setInterval(() => render(active + 1), interval); };
+    const stop = () => { if (timer) window.clearInterval(timer); timer = null; if (progress) progress.classList.remove('is-running'); };
+    const start = () => {
+        stop();
+        if (autoplay && !userPaused && !document.hidden) {
+            if (progress) progress.classList.add('is-running');
+            timer = window.setInterval(() => { render(active + 1); if (progress) progress.classList.add('is-running'); }, interval);
+        }
+        if (toggle) { toggle.setAttribute('aria-pressed', userPaused ? 'true' : 'false'); toggle.textContent = userPaused ? 'Play' : 'Pause'; }
+    };
     const interact = (index) => { render(index); start(); };
+    toggle?.addEventListener('click', () => { userPaused = !userPaused; start(); });
+    document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
     document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
     previous?.addEventListener('click', () => interact(active - 1));
     next?.addEventListener('click', () => interact(active + 1));
