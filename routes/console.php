@@ -194,7 +194,7 @@ Artisan::command('referral-income:reconcile-approved-payments', function (): int
         ->where('p.status', 'approved')
         ->where('p.amount', '>', 0)
         ->whereRaw('UPPER(p.currency) = ?', ['BDT'])
-        ->whereNull('p.learn_earn_exam_id')
+        ->when(Schema::hasColumn('payments', 'learn_earn_exam_id'), fn ($query) => $query->whereNull('p.learn_earn_exam_id'))
         ->where(function ($query): void {
             $query->whereRaw("TRIM(COALESCE(p.gateway_provider, '')) = ''")
                 ->orWhere(function ($gateway): void {
