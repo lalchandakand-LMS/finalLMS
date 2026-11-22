@@ -24,7 +24,7 @@
                 <td>{{ $metrics['engaged_students'] }}</td>
                 <td>{{ number_format($metrics['average_progress'], 1) }}%</td>
                 <td>{{ number_format($metrics['completion_rate'], 1) }}%</td>
-                <td><span class="badge {{ $metrics['dropout_risk_count'] > 0 ? 'warning' : 'success' }}">{{ $metrics['dropout_risk_count'] }}</span></td>
+                <td><span class="badge {{ $metrics['dropout_risk_count'] > 0 ? 'warning' : 'success' }}" data-dropout-risk="{{ $metrics['dropout_risk_count'] }}">{{ $metrics['dropout_risk_count'] }}</span></td>
                 <td>{{ $metrics['last_activity'] ? \Illuminate\Support\Carbon::parse($metrics['last_activity'])->diffForHumans() : '—' }}</td>
             </tr>
         @empty
