@@ -194,9 +194,38 @@ class ExamController extends Controller
             ->latest('submitted_at')
             ->paginate(30);
 
+        $summary = $exam->attempts()
+            ->where('status', 'submitted')
+            ->selectRaw(
+                'COUNT(*) as total_submitted, AVG(score) as average_score, MAX(score) as highest_score, MIN(score) as lowest_score, SUM(CASE WHEN score >= ? THEN 1 ELSE 0 END) as passed_count',
+                [$exam->pass_marks]
+            )
+            ->first();
+
+        $totalSubmitted = (int) ($summary->total_submitted ?? 0);
+        $passRate = $totalSubmitted > 0 ? round(((int) $summary->passed_count / $totalSubmitted) * 100, 1) : 0;
+        $questionAnalytics = DB::table('exam_questions as questions')
+            ->leftJoin('exam_answers as answers', 'answers.exam_question_id', '=', 'questions.id')
+            ->leftJoin('exam_attempts as attempts', function ($join) use ($exam): void {
+                $join->on('attempts.id', '=', 'answers.exam_attempt_id')
+                    ->where('attempts.exam_id', '=', $exam->id)
+                    ->where('attempts.status', '=', 'submitted');
+            })
+            ->where('questions.exam_id', $exam->id)
+            ->groupBy('questions.id', 'questions.question', 'questions.position')
+            ->orderBy('questions.position')
+            ->selectRaw('questions.id, questions.question, questions.position, COUNT(attempts.id) as answered_count, SUM(CASE WHEN attempts.id IS NOT NULL AND answers.is_correct = 1 THEN 1 ELSE 0 END) as correct_count')
+            ->get()
+            ->map(function ($row) {
+                $row->accuracy = (int) $row->answered_count > 0
+                    ? round(((int) $row->correct_count / (int) $row->answered_count) * 100, 1)
+                    : 0;
+                return $row;
+            });
+
         $isAdmin = Auth::user()->isAdmin();
 
-        return view('teacher.exams.results', compact('exam', 'attempts', 'isAdmin'));
+        return view('teacher.exams.results', compact('exam', 'attempts', 'isAdmin', 'summary', 'totalSubmitted', 'passRate', 'questionAnalytics'));
     }
 
     public function studentExams(Request $request): View
