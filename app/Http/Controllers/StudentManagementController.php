@@ -92,7 +92,7 @@ class StudentManagementController extends Controller
     {
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
-            'status' => ['nullable', Rule::in(['active', 'suspended', 'graduated', 'transferred'])],
+            'status' => ['nullable', Rule::in(['active', 'suspended', 'graduated'])],
             'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
         ]);
 
@@ -182,10 +182,14 @@ class StudentManagementController extends Controller
             abort_unless($enrollment->status === 'active', 422, 'Only active enrollments can be transferred.');
             $target = Batch::query()->whereKey($data['batch_id'])->where('status', 'open')->lockForUpdate()->firstOrFail();
             abort_unless((int) $target->course_id === (int) $enrollment->course_id, 422, 'The target batch must belong to the same course.');
+            abort_unless($target->branch && $target->branch->is_active, 422, 'The target branch must be active.');
             $branchChanged = (int) $target->branch_id !== (int) $student->branch_id;
             if ($branchChanged) {
                 abort_unless($request->boolean('confirm_branch_change'), 422, 'Confirm the branch change before transferring this student.');
                 abort_if($request->user()->isBranchManager(), 403, 'Branch managers cannot transfer students outside their assigned branch.');
+                $otherBranchEnrollments = $student->enrollments()->where('status', 'active')->where('id', '!=', $enrollment->id)
+                    ->whereHas('batch', fn ($q) => $q->where('branch_id', '!=', $target->branch_id))->exists();
+                abort_if($otherBranchEnrollments, 422, 'Transfer the student’s other active enrollments to the target branch first.');
             }
             if ($target->capacity !== null) {
                 $occupied = $target->enrollments()->where('status', 'active')->where('id', '!=', $enrollment->id)->count();
