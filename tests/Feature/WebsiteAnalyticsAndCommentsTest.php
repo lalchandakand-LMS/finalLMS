@@ -53,6 +53,25 @@ class WebsiteAnalyticsAndCommentsTest extends TestCase
         $this->get(route('courses.show', $course))->assertSee('Very helpful course');
     }
 
+    public function test_admin_can_filter_comment_moderation_by_status_content_and_search(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $author = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student', 'name' => 'Filterable Student']);
+        $course = Course::factory()->create(['teacher_id' => $teacher->id, 'status' => 'published']);
+        $post = BlogPost::create(['author_id' => $author->id, 'title' => 'Moderation article', 'slug' => 'moderation-article', 'body' => 'Article text', 'status' => 'published', 'published_at' => now()->subMinute()]);
+        $courseComment = Comment::create(['commentable_type' => Course::class, 'commentable_id' => $course->id, 'author_id' => $student->id, 'body' => 'Pending course feedback', 'status' => 'pending']);
+        $postComment = Comment::create(['commentable_type' => BlogPost::class, 'commentable_id' => $post->id, 'author_id' => $student->id, 'body' => 'Approved article feedback', 'status' => 'approved']);
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($admin)->get(route('admin.comments.index', ['status' => 'pending', 'content_type' => 'course']))
+            ->assertOk()->assertSee('Pending course feedback')->assertDontSee('Approved article feedback')->assertSee('Search comments or authors');
+        $this->get(route('admin.comments.index', ['status' => 'approved', 'content_type' => 'post', 'search' => 'Filterable Student']))
+            ->assertOk()->assertSee('Approved article feedback')->assertDontSee('Pending course feedback');
+        $this->assertDatabaseHas('comments', ['id' => $courseComment->id, 'status' => 'pending']);
+        $this->assertDatabaseHas('comments', ['id' => $postComment->id, 'status' => 'approved']);
+    }
+
     public function test_admin_analytics_and_comment_moderation_are_admin_only(): void
     {
         $student = User::factory()->create(['role' => 'student']);
