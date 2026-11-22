@@ -81,6 +81,7 @@ use App\Http\Controllers\AdminDeviceSessionController;
 use App\Http\Controllers\AdminCourseCategoryController;
 use App\Http\Controllers\AdminCourseContentPostController;
 use App\Http\Controllers\AdminCourseBuilderController;
+use App\Http\Controllers\CourseEngagementAnalyticsController;
 use App\Http\Controllers\CourseContentController;
 use App\Http\Controllers\CommentController;
 use Illuminate\Support\Facades\Route;
@@ -395,6 +396,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::post('/ebook-refunds/{refund}/reconcile', [AdminEbookOrderController::class, 'reconcileRefund'])->middleware('throttle:5,1')->name('admin.ebooks.refunds.reconcile');
         Route::post('/ebook-download-permissions/{permission}/revoke', [AdminEbookOrderController::class, 'revokePermission'])->middleware('throttle:20,1')->name('admin.ebooks.permissions.revoke');
         Route::get('/analytics', [AdminAnalyticsController::class, 'index'])->name('admin.analytics.index');
+        Route::get('/course-analytics', [CourseEngagementAnalyticsController::class, 'index'])->name('admin.course-analytics.index');
         Route::get('/dashboard-announcements', [AdminDashboardAnnouncementController::class, 'index'])->name('admin.dashboard-announcements.index');
         Route::get('/dashboard-announcements/create', [AdminDashboardAnnouncementController::class, 'create'])->name('admin.dashboard-announcements.create');
         Route::post('/dashboard-announcements', [AdminDashboardAnnouncementController::class, 'store'])->name('admin.dashboard-announcements.store');
