@@ -21,10 +21,16 @@ final class ReferralIncomePluginTest extends TestCase
     {
         parent::setUp();
         require_once base_path('plugins/aec/referral-income/1.0.0/src/ReferralIncomeService.php');
-        if (!Schema::hasTable('referral_income_rules')) {
-            $migration = require base_path('plugins/aec/referral-income/1.0.0/migrations/2026_11_21_040000_create_referral_income_tables.php');
-            $migration->up();
-        }
+        Schema::disableForeignKeyConstraints();
+        Schema::dropIfExists('referral_audit_events');
+        Schema::dropIfExists('referral_payout_requests');
+        Schema::dropIfExists('referral_commissions');
+        Schema::dropIfExists('referral_attributions');
+        Schema::dropIfExists('referral_codes');
+        Schema::dropIfExists('referral_income_rules');
+        Schema::enableForeignKeyConstraints();
+        $migration = require base_path('plugins/aec/referral-income/1.0.0/migrations/2026_11_21_040000_create_referral_income_tables.php');
+        $migration->up();
     }
 
     public function test_referral_attribution_and_verified_payment_commission_are_idempotent(): void
