@@ -158,7 +158,27 @@ class AdminCourseContentPostController extends Controller
                     $data['content_file_size'] = null;
                 }
 
-                $post->update($data);
+                $before = $this->versionSnapshot($post);
+                $beforeCategories = $post->categories()->pluck('course_categories.id')->map(fn ($id) => (int) $id)->sort()->values()->all();
+                $post->fill($data);
+                $afterCategories = collect($categoryIds)->map(fn ($id) => (int) $id)->sort()->values()->all();
+                $trackedFields = [
+                    'title', 'slug', 'short_description', 'long_description', 'video_url',
+                    'access_type', 'regular_price', 'sale_price', 'academic_level_id',
+                    'seo_title', 'seo_description', 'tags', 'status', 'published_at',
+                ];
+                if ($post->isDirty($trackedFields) || $beforeCategories !== $afterCategories) {
+                    $nextVersion = ((int) CourseContentPostVersion::query()
+                        ->where('course_content_post_id', $post->id)->max('version_number')) + 1;
+                    CourseContentPostVersion::create([
+                        'course_content_post_id' => $post->id,
+                        'version_number' => $nextVersion,
+                        'snapshot' => $before,
+                        'created_by' => $request->user()->id,
+                        'change_type' => 'update',
+                    ]);
+                }
+                $post->save();
                 $post->categories()->sync($categoryIds);
                 $this->syncPaidProduct($post);
             });
@@ -175,6 +195,27 @@ class AdminCourseContentPostController extends Controller
         }
 
         return redirect()->route('admin.course-content-posts.index')->with('success', __('Course content post updated.'));
+    }
+
+    private function versionSnapshot(CourseContentPost $post): array
+    {
+        return [
+            'title' => $post->title,
+            'slug' => $post->slug,
+            'short_description' => $post->short_description,
+            'long_description' => $post->long_description,
+            'video_url' => $post->video_url,
+            'access_type' => $post->access_type,
+            'regular_price' => $post->regular_price,
+            'sale_price' => $post->sale_price,
+            'academic_level_id' => $post->academic_level_id,
+            'seo_title' => $post->seo_title,
+            'seo_description' => $post->seo_description,
+            'tags' => $post->tags ?? [],
+            'status' => $post->status,
+            'published_at' => $post->published_at?->toISOString(),
+            'category_ids' => $post->categories()->pluck('course_categories.id')->map(fn ($id) => (int) $id)->all(),
+        ];
     }
 
     private function createThumbnailMedia(Request $request, UploadedFile $file, string $title, ?string &$storedPath): MediaAsset
