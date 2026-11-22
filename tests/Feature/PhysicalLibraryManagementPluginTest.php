@@ -10,25 +10,28 @@ use Aloms\LibraryManagement\LibraryLoan;
 use App\Models\Branch;
 use App\Models\PluginInstallation;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 final class PhysicalLibraryManagementPluginTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseMigrations;
 
     protected function setUp(): void
     {
         parent::setUp();
+        View::addNamespace('library-management', base_path('plugins/aec/library-management/1.0.0/resources/views'));
         require_once base_path('plugins/aec/library-management/1.0.0/src/LibraryBook.php');
         require_once base_path('plugins/aec/library-management/1.0.0/src/LibraryLoan.php');
         require_once base_path('plugins/aec/library-management/1.0.0/src/LibraryController.php');
-        if (! Schema::hasTable('library_books')) {
-            $migration = require base_path('plugins/aec/library-management/1.0.0/migrations/2026_11_21_030000_create_physical_library_tables.php');
-            $migration->up();
-        }
+        Schema::disableForeignKeyConstraints();
+            Schema::dropIfExists('library_loans');
+            Schema::dropIfExists('library_books');
+        Schema::enableForeignKeyConstraints();
+        $migration = require base_path('plugins/aec/library-management/1.0.0/migrations/2026_11_21_030000_create_physical_library_tables.php');
+        $migration->up();
         $plugin = new PluginInstallation();
         $plugin->forceFill([
             'plugin_key' => 'aec.library-management',
@@ -42,6 +45,7 @@ final class PhysicalLibraryManagementPluginTest extends TestCase
         Route::post('/__library/books', [LibraryController::class, 'storeBook'])->name('branch.library.books.store');
         Route::post('/__library/loans', [LibraryController::class, 'issueLoan'])->name('branch.library.loans.issue');
         Route::post('/__library/loans/{loan}/return', [LibraryController::class, 'returnLoan'])->name('branch.library.loans.return');
+        app('router')->getRoutes()->refreshNameLookups();
     }
 
     public function test_branch_manager_is_scoped_to_books_and_cannot_issue_other_branch_inventory(): void
