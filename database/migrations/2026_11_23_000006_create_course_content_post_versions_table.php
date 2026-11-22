@@ -16,7 +16,7 @@ return new class extends Migration {
             $table->string('change_type', 30)->default('update');
             $table->timestamps();
             $table->unique(['course_content_post_id', 'version_number'], 'content_post_version_unique');
-            $table->index(['course_content_post_id', 'created_at']);
+            $table->index(['course_content_post_id', 'created_at'], 'ccpv_post_created_idx');
         });
     }
 
