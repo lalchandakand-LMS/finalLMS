@@ -15,20 +15,20 @@ use Illuminate\View\View;
 
 class StudentManagementController extends Controller
 {
-    public function export(Request $request): \\Symfony\\Component\\HttpFoundation\\StreamedResponse
+    public function export(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
     {
         $query = User::query()->where('role', 'student')->with(['studentProfile', 'branch'])
             ->withCount(['guardianLinksAsStudent', 'enrollments'])
             ->when($request->user()->isBranchManager(), fn ($q) => $q->where('branch_id', $request->user()->branch_id));
         return response()->streamDownload(function () use ($query): void {
             $out = fopen('php://output', 'w');
-            fwrite($out, "\\xEF\\xBB\\xBF");
+            fwrite($out, "\xEF\xBB\xBF");
             fputcsv($out, ['name','email','phone','branch','student_number','status','academic_level','date_of_birth','admission_date','guardians','enrollments']);
             $query->orderBy('id')->chunk(500, function ($students) use ($out): void {
                 foreach ($students as $student) {
                     $profile = $student->studentProfile;
                     $values = [$student->name,$student->email,$student->phone_number,$student->branch?->name,$profile?->student_number,$profile?->lifecycle_status ?? 'active',$profile?->academic_level,$profile?->date_of_birth?->format('Y-m-d'),$profile?->admission_date?->format('Y-m-d'),$student->guardian_links_as_student_count,$student->enrollments_count];
-                    fputcsv($out, array_map(fn ($value) => is_string($value) && preg_match('/^[=+@\\-\\t\\r]/', $value) ? "'".$value : $value, $values));
+                    fputcsv($out, array_map(fn ($value) => is_string($value) && preg_match('/^[=+@\-\t\r]/', $value) ? "'".$value : $value, $values));
                 }
             });
             fclose($out);
@@ -52,7 +52,7 @@ class StudentManagementController extends Controller
                 ->when($request->user()->isBranchManager(), fn ($q) => $q->where('branch_id',$request->user()->branch_id))->first();
             if (!$student) { $errors[] = "Row {$line}: no student account found for {$email} in your scope."; continue; }
             $data = array_intersect_key($row, array_flip($allowed));
-            $validator = \\Illuminate\\Support\\Facades\\Validator::make($data, [
+            $validator = \Illuminate\Support\Facades\Validator::make($data, [
                 'student_number' => ['nullable','string','max:40',Rule::unique('student_profiles','student_number')->where(fn ($q) => $q->where('user_id','!=',$student->id))],
                 'date_of_birth' => ['nullable','date','before:today'], 'gender' => ['nullable','string','max:30'],
                 'blood_group' => ['nullable','in:A+,A-,B+,B-,AB+,AB-,O+,O-'], 'nationality' => ['nullable','string','max:80'],
@@ -96,7 +96,10 @@ class StudentManagementController extends Controller
             'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
         ]);
 
-        $branchManager = $request->user()->isBranchManager();\n        abort_if($branchManager && !$request->user()->branch_id, 403, 'An active branch assignment is required.');\n        $students = User::query()->where('role', 'student')\n            ->when($branchManager, fn ($q) => $q->where('branch_id', $request->user()->branch_id))
+        $branchManager = $request->user()->isBranchManager();
+        abort_if($branchManager && !$request->user()->branch_id, 403, 'An active branch assignment is required.');
+        $students = User::query()->where('role', 'student')
+            ->when($branchManager, fn ($q) => $q->where('branch_id', $request->user()->branch_id))
             ->with(['branch', 'studentProfile'])
             ->withCount(['enrollments', 'guardianLinksAsStudent'])
             ->when($filters['search'] ?? null, function ($query, $term): void {
@@ -105,10 +108,16 @@ class StudentManagementController extends Controller
                     ->orWhere('phone_number', 'like', '%'.$term.'%'));
             })
             ->when($filters['branch_id'] ?? null, fn ($q, $id) => $q->where('branch_id', $id))
-            ->when($filters['status'] ?? null, function ($q, $status): void {\n                $q->where(function ($statusQuery) use ($status): void {\n                    $statusQuery->whereHas('studentProfile', fn ($p) => $p->where('lifecycle_status', $status));\n                    if ($status === 'active') $statusQuery->orWhereDoesntHave('studentProfile');\n                });\n            })
+            ->when($filters['status'] ?? null, function ($q, $status): void {
+                $q->where(function ($statusQuery) use ($status): void {
+                    $statusQuery->whereHas('studentProfile', fn ($p) => $p->where('lifecycle_status', $status));
+                    if ($status === 'active') $statusQuery->orWhereDoesntHave('studentProfile');
+                });
+            })
             ->latest()->paginate(25)->withQueryString();
 
-        $routePrefix = $branchManager ? 'branch.students.manage' : 'admin.students';\n        return view('admin.students.index', compact('students', 'filters', 'routePrefix'));
+        $routePrefix = $branchManager ? 'branch.students.manage' : 'admin.students';
+        return view('admin.students.index', compact('students', 'filters', 'routePrefix'));
     }
 
     public function show(User $student): View
@@ -117,7 +126,9 @@ class StudentManagementController extends Controller
         $student->load(['branch', 'studentProfile.suspendedBy', 'enrollments.batch.branch', 'enrollments.course', 'guardianLinksAsStudent.guardian']);
         $history = StudentLifecycleEvent::query()->where('student_id', $student->id)
             ->with('actor:id,name')->latest()->paginate(30);
-        $courseIds = $student->enrollments()->where('status', 'active')->pluck('course_id')->unique()->values();\n        $batches = Batch::query()->where('status', 'open')->whereIn('course_id', $courseIds)\n            ->when(request()->user()->isBranchManager(), fn ($q) => $q->where('branch_id', request()->user()->branch_id))
+        $courseIds = $student->enrollments()->where('status', 'active')->pluck('course_id')->unique()->values();
+        $batches = Batch::query()->where('status', 'open')->whereIn('course_id', $courseIds)
+            ->when(request()->user()->isBranchManager(), fn ($q) => $q->where('branch_id', request()->user()->branch_id))
             ->with('branch')->orderBy('starts_at')->get();
 
         return view('admin.students.show', compact('student', 'history', 'batches', 'routePrefix'));
