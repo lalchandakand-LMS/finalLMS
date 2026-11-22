@@ -571,6 +571,8 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::get('/course-content-posts/create', [AdminCourseContentPostController::class, 'create'])->name('admin.course-content-posts.create');
         Route::post('/course-content-posts', [AdminCourseContentPostController::class, 'store'])->name('admin.course-content-posts.store');
         Route::get('/course-content-posts/{courseContentPost}/edit', [AdminCourseContentPostController::class, 'edit'])->name('admin.course-content-posts.edit');
+        Route::get('/course-content-posts/{courseContentPost}/versions', [AdminCourseContentPostController::class, 'versions'])->name('admin.course-content-posts.versions');
+        Route::post('/course-content-posts/{courseContentPost}/versions/{version}/restore', [AdminCourseContentPostController::class, 'restoreVersion'])->middleware('throttle:10,1')->name('admin.course-content-posts.versions.restore');
         Route::put('/course-content-posts/{courseContentPost}', [AdminCourseContentPostController::class, 'update'])->name('admin.course-content-posts.update');
         Route::delete('/course-content-posts/{courseContentPost}', [AdminCourseContentPostController::class, 'destroy'])->name('admin.course-content-posts.destroy');
         Route::get('/course-combos', [CourseComboController::class, 'index'])->name('admin.course-combos.index');
