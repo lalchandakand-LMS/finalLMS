@@ -49,7 +49,7 @@
                         <div><button class="btn primary" type="submit">{{ __('Save batch') }}</button></div>
                     </form>
                 </details>
-                @if(auth()->user()->hasAdminPermission('branch.attendance') && app(\\App\\Services\\Modules\\ModuleRegistry::class)->isEnabled('attendance'))
+                @if(auth()->user()->hasAdminPermission('branch.attendance') && app(\App\Services\Modules\ModuleRegistry::class)->isEnabled('attendance'))
                     <a class="btn secondary" style="margin-top:12px" href="{{ route('branch.batches.attendance.index', $batch) }}">{{ __('Take attendance') }}</a>
                 @endif
             </article>
