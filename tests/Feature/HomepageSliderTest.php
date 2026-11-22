@@ -120,6 +120,17 @@ class HomepageSliderTest extends TestCase
             ->assertDontSee('Not yet published');
     }
 
+    public function test_redwans_method_homepage_has_batch_first_hero_even_before_slides_are_uploaded(): void
+    {
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('home-carousel--static', false)
+            ->assertSee('Online Course')
+            ->assertSee('Online Batches are ongoing!')
+            ->assertSee('Book your seat now!')
+            ->assertSee('Available online batches');
+    }
+
     public function test_settings_reject_non_image_mobile_slide_assets(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
