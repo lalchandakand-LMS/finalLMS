@@ -44,10 +44,35 @@
             && (bool) (int) \App\Models\Setting::value('flash_sale_page_enabled', '1')
             ? \App\Models\FlashSale::activeCampaigns()
             : collect();
-        $homeSlides = collect(is_array($storedSlides) ? $storedSlides : [])->filter(fn ($slide) => is_array($slide) && !empty($slide['enabled']) && !empty($slide['image_id']))->map(function ($slide) {
-            $asset = \App\Models\MediaAsset::query()->whereKey($slide['image_id'])->where('mime_type', 'like', 'image/%')->first();
-            return $asset ? ['asset' => $asset, 'title' => $slide['title'] ?? '', 'subtitle' => $slide['subtitle'] ?? '', 'button_label' => $slide['button_label'] ?? '', 'button_url' => $slide['button_url'] ?? ''] : null;
-        })->filter()->values();
+        $homeSlides = collect(is_array($storedSlides) ? $storedSlides : [])
+            ->filter(function ($slide) {
+                if (!is_array($slide) || empty($slide['enabled']) || empty($slide['image_id'])) {
+                    return false;
+                }
+
+                $now = now()->timestamp;
+                $startsAt = !empty($slide['starts_at']) ? strtotime((string) $slide['starts_at']) : null;
+                $endsAt = !empty($slide['ends_at']) ? strtotime((string) $slide['ends_at']) : null;
+
+                return ($startsAt === null || ($startsAt !== false && $startsAt <= $now))
+                    && ($endsAt === null || ($endsAt !== false && $endsAt >= $now));
+            })
+            ->sortBy(fn ($slide) => (int) ($slide['sort_order'] ?? 0))
+            ->map(function ($slide) {
+                $asset = \App\Models\MediaAsset::query()->whereKey($slide['image_id'])->where('mime_type', 'like', 'image/%')->first();
+                $mobileAsset = !empty($slide['mobile_image_id'])
+                    ? \App\Models\MediaAsset::query()->whereKey($slide['mobile_image_id'])->where('mime_type', 'like', 'image/%')->first()
+                    : null;
+
+                return $asset ? [
+                    'asset' => $asset,
+                    'mobile_asset' => $mobileAsset ?: $asset,
+                    'title' => $slide['title'] ?? '',
+                    'subtitle' => $slide['subtitle'] ?? '',
+                    'button_label' => $slide['button_label'] ?? '',
+                    'button_url' => $slide['button_url'] ?? '',
+                ] : null;
+            })->filter()->values();
         $homepageTemplate = (string) ($hasSettingsTable ? \App\Models\Setting::value('homepage_template', 'redwans-method') : 'redwans-method');
         $homepageTemplate = array_key_exists($homepageTemplate, \App\Http\Controllers\WebsiteBuilderController::homepageTemplates()) ? $homepageTemplate : 'redwans-method';
 
@@ -185,7 +210,7 @@
                 <div class="home-carousel__track" data-carousel-track>
                     @foreach($homeSlides as $index => $slide)
                         <article class="home-carousel__slide" data-carousel-slide aria-label="{{ $index + 1 }} {{ __('of') }} {{ $homeSlides->count() }}" aria-roledescription="slide" aria-hidden="{{ $index === 0 ? 'false' : 'true' }}">
-                            <img src="{{ $slide['asset']->url }}" alt="{{ $slide['asset']->alt_text ?: $slide['title'] }}" loading="{{ $index === 0 ? 'eager' : 'lazy' }}">
+                            <picture><source media="(max-width: 700px)" srcset="{{ $slide['mobile_asset']->url }}"><img src="{{ $slide['asset']->url }}" alt="{{ $slide['asset']->alt_text ?: $slide['title'] }}" loading="{{ $index === 0 ? 'eager' : 'lazy' }}"></picture>
                             <div class="home-carousel__shade"></div>
                             <div class="home-carousel__content">
                                 @php
