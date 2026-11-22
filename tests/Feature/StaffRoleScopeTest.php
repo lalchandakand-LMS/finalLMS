@@ -80,7 +80,7 @@ class StaffRoleScopeTest extends TestCase
         $this->actingAs($accountant)->get(route('admin.finance.invoices.index'))->assertForbidden();
     }
 
-    public function test_legacy_staff_urls_redirect_into_the_shared_admin_modules(): void
+    public function test_legacy_staff_urls_redirect_into_their_dedicated_workspaces(): void
     {
         $branch = Branch::create(['name' => 'Legacy Branch', 'slug' => 'legacy-branch']);
         $manager = User::factory()->create(['role' => 'branch_manager',
@@ -89,7 +89,7 @@ class StaffRoleScopeTest extends TestCase
             'admin_permissions' => ['finance.invoices', 'finance.refunds', 'finance.reports', 'finance.expenses'], 'branch_id' => $branch->id]);
 
         $this->actingAs($manager)->get('/branch-manager/batches')
-            ->assertRedirect(route('admin.branch-workspace.batches.index'));
+            ->assertRedirect(route('branch.batches.index'));
         $this->actingAs($accountant)->get('/accountant/invoices')
             ->assertRedirect(route('admin.finance.invoices.index'));
         $this->actingAs($accountant)->get('/accountant/finance-reports')
