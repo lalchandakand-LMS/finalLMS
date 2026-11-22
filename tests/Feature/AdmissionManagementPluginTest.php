@@ -115,7 +115,7 @@ final class AdmissionManagementPluginTest extends TestCase
         $this->post('/__admission/track', [
             'application_code' => strtolower($application->application_code),
             'email' => 'APPLICANT@example.com',
-        ])->assertOk()->assertSee('Applicant One')->assertSee('Pending')->assertDontSee('Confidential reviewer note');
+        ])->assertOk()->assertSee('Applicant One')->assertSee('Application received')->assertDontSee('Confidential reviewer note');
     }
 
     public function test_branch_manager_cannot_list_or_review_another_branch_application(): void
