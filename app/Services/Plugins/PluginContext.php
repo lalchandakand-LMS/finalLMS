@@ -171,6 +171,29 @@ final class PluginContext
         );
     }
 
+    /**
+     * Register a payment adapter from this active, signature-verified plugin.
+     * The signed manifest must declare the payments.gateway capability.
+     *
+     * @param class-string<PaymentGateway> $driver
+     */
+    public function registerPaymentGateway(string $key, string $driver): void
+    {
+        if (! $this->hasCapability('payments.gateway')) {
+            throw new InvalidArgumentException('The plugin manifest must declare the payments.gateway capability.');
+        }
+
+        if (! is_subclass_of($driver, PaymentGateway::class)) {
+            throw new InvalidArgumentException('Payment gateway plugins must implement the payment gateway contract.');
+        }
+
+        $this->app->make(PaymentGatewayManager::class)->registerPluginGateway(
+            (string) $this->plugin->plugin_key,
+            $key,
+            $driver,
+        );
+    }
+
     public function hasPermission(string $permission): bool
     {
         return in_array($permission, $this->plugin->manifest['permissions'] ?? [], true);
