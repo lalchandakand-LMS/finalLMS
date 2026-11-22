@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CourseContentPost extends Model
 {
@@ -24,6 +25,11 @@ class CourseContentPost extends Model
         'regular_price' => 'decimal:2',
         'sale_price' => 'decimal:2',
     ];
+
+    public function versions(): HasMany
+    {
+        return $this->hasMany(CourseContentPostVersion::class, 'course_content_post_id')->orderByDesc('version_number');
+    }
 
     public function author(): BelongsTo
     {
