@@ -7,6 +7,7 @@ use App\Models\AcademicLevel;
 use App\Models\Course;
 use App\Models\CourseCategory;
 use App\Models\CourseContentProgress;
+use App\Models\CourseVersion;
 use App\Models\Lesson;
 use App\Models\LessonProgress;
 use App\Models\PageView;
@@ -320,7 +321,25 @@ class CourseController extends Controller
         try {
             DB::transaction(function () use ($course, $validated, $categoryIds): void {
                 $locked = Course::query()->lockForUpdate()->findOrFail($course->id);
-                $locked->update($validated);
+                $before = $this->courseVersionSnapshot($locked);
+                $beforeCategories = $locked->categories()->pluck('course_categories.id')->map(fn ($id) => (int) $id)->sort()->values()->all();
+                $locked->fill($validated);
+                $afterCategories = collect($categoryIds)->map(fn ($id) => (int) $id)->sort()->values()->all();
+                $trackedFields = [
+                    'teacher_id', 'academic_level_id', 'title', 'slug', 'description', 'price',
+                    'status', 'short_description', 'tags', 'seo_title', 'seo_description',
+                    'learning_outcomes', 'requirements', 'level', 'language', 'duration_minutes',
+                ];
+                if ($locked->isDirty($trackedFields) || $beforeCategories !== $afterCategories) {
+                    CourseVersion::create([
+                        'course_id' => $locked->id,
+                        'version_number' => ((int) CourseVersion::query()->where('course_id', $locked->id)->max('version_number')) + 1,
+                        'snapshot' => $before,
+                        'created_by' => request()->user()->id,
+                        'change_type' => 'update',
+                    ]);
+                }
+                $locked->save();
                 $locked->categories()->sync($categoryIds);
             });
         } catch (Throwable $exception) {
@@ -335,6 +354,82 @@ class CourseController extends Controller
         }
 
         return redirect()->route('admin.courses.index')->with('success', __('Course updated successfully.'));
+    }
+
+    public function versions(Course $course): View
+    {
+        $versions = $course->versions()->with('creator')->paginate(20);
+        return view('admin.courses.versions', compact('course', 'versions'));
+    }
+
+    public function restoreVersion(Request $request, Course $course, CourseVersion $version): RedirectResponse
+    {
+        abort_unless($version->course_id === $course->id, 404);
+        $snapshot = $version->snapshot;
+        abort_unless(is_array($snapshot) && isset($snapshot['title'], $snapshot['slug'], $snapshot['description']), 422);
+        abort_if(Course::query()->where('slug', $snapshot['slug'])->whereKeyNot($course->id)->exists(), 422,
+            __('This historical course URL is now used by another course. Rename the other course before restoring this revision.'));
+
+        DB::transaction(function () use ($request, $course, $snapshot): void {
+            $locked = Course::query()->lockForUpdate()->findOrFail($course->id);
+            CourseVersion::create([
+                'course_id' => $locked->id,
+                'version_number' => ((int) CourseVersion::query()->where('course_id', $locked->id)->max('version_number')) + 1,
+                'snapshot' => $this->courseVersionSnapshot($locked),
+                'created_by' => $request->user()->id,
+                'change_type' => 'restore',
+            ]);
+
+            $locked->fill([
+                'teacher_id' => $snapshot['teacher_id'],
+                'academic_level_id' => $snapshot['academic_level_id'] ?? null,
+                'title' => $snapshot['title'],
+                'slug' => $snapshot['slug'],
+                'description' => $snapshot['description'],
+                'price' => $snapshot['price'] ?? 0,
+                'status' => in_array($snapshot['status'] ?? 'draft', ['draft', 'published', 'archived'], true) ? $snapshot['status'] : 'draft',
+                'short_description' => $snapshot['short_description'] ?? null,
+                'tags' => $snapshot['tags'] ?? [],
+                'seo_title' => $snapshot['seo_title'] ?? null,
+                'seo_description' => $snapshot['seo_description'] ?? null,
+                'learning_outcomes' => $snapshot['learning_outcomes'] ?? null,
+                'requirements' => $snapshot['requirements'] ?? null,
+                'level' => $snapshot['level'] ?? null,
+                'language' => $snapshot['language'] ?? null,
+                'duration_minutes' => $snapshot['duration_minutes'] ?? null,
+            ]);
+            $locked->save();
+            $locked->categories()->sync(array_values(array_filter(
+                $snapshot['category_ids'] ?? [],
+                fn ($id) => is_int($id) && DB::table('course_categories')->where('id', $id)->exists()
+            )));
+        });
+
+        return redirect()->route('admin.courses.versions', $course)
+            ->with('success', __('Course revision restored. Current state was saved as a new revision first.'));
+    }
+
+    private function courseVersionSnapshot(Course $course): array
+    {
+        return [
+            'teacher_id' => $course->teacher_id,
+            'academic_level_id' => $course->academic_level_id,
+            'title' => $course->title,
+            'slug' => $course->slug,
+            'description' => $course->description,
+            'price' => $course->price,
+            'status' => $course->status,
+            'short_description' => $course->short_description,
+            'tags' => $course->tags ?? [],
+            'seo_title' => $course->seo_title,
+            'seo_description' => $course->seo_description,
+            'learning_outcomes' => $course->learning_outcomes,
+            'requirements' => $course->requirements,
+            'level' => $course->level,
+            'language' => $course->language,
+            'duration_minutes' => $course->duration_minutes,
+            'category_ids' => $course->categories()->pluck('course_categories.id')->map(fn ($id) => (int) $id)->all(),
+        ];
     }
 
     public function destroy(Course $course): RedirectResponse
