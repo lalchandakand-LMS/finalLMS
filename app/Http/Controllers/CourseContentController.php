@@ -172,7 +172,7 @@ class CourseContentController extends Controller
         ]);
     }
 
-    private function isLessonUnlocked(Course $course, \\App\\Models\\CourseCurriculumItem $item, \\App\\Models\\User $student): bool
+    private function isLessonUnlocked(Course $course, CourseCurriculumItem $item, User $student): bool
     {
         if ($item->prerequisite_post_id) {
             $prerequisite = $course->curriculumItems()->where('course_content_post_id', $item->prerequisite_post_id)->first();
@@ -185,8 +185,10 @@ class CourseContentController extends Controller
         }
 
         if ($item->unlock_after_previous) {
-            $previous = $course->curriculumItems()->where('position', '<', $item->position)
-                ->orderByDesc('position')->orderByDesc('id')->first();
+            $previous = $course->curriculumItems()->where(function ($query) use ($item): void {
+                $query->where('position', '<', $item->position)
+                    ->orWhere(fn ($tie) => $tie->where('position', $item->position)->where('id', '<', $item->id));
+            })->orderByDesc('position')->orderByDesc('id')->first();
             if ($previous && ! CourseContentProgress::query()
                 ->where('course_curriculum_item_id', $previous->id)
                 ->where('user_id', $student->id)
