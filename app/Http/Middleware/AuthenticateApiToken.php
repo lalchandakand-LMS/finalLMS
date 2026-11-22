@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\ApiToken;
+use App\Models\StudentProfile;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -28,6 +29,12 @@ class AuthenticateApiToken
 
         if (! $token || ! $token->user) {
             return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        if ($token->user->isStudent() && StudentProfile::query()->where('user_id', $token->user_id)->whereIn('lifecycle_status', ['suspended', 'graduated'])->exists()) {
+            $token->forceFill(['revoked_at' => now()])->save();
+
+            return response()->json(['message' => 'This student account is inactive. Contact the administration.'], 403);
         }
 
         // Mobile tokens are valid only for the supported app roles and must
