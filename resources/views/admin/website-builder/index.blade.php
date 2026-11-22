@@ -113,6 +113,28 @@
     @endfor
 </section>
 <section class="panel" style="margin-bottom:20px;">
+    <h2>Featured course carousel</h2>
+    <p class="muted">Control the published-course carousel shown on the public homepage. Course cards are populated automatically from published courses; no course data is copied into website settings.</p>
+    <div class="grid grid-3">
+        <label>Show course carousel
+            <select name="home_course_carousel_enabled">
+                <option value="1" @selected(old('home_course_carousel_enabled', $settings['home_course_carousel_enabled'] ?? '1') == '1')>Enabled</option>
+                <option value="0" @selected(old('home_course_carousel_enabled', $settings['home_course_carousel_enabled'] ?? '1') == '0')>Disabled</option>
+            </select>
+        </label>
+        <label>Maximum course cards
+            <input type="number" name="home_course_carousel_items" min="3" max="12" value="{{ old('home_course_carousel_items', $settings['home_course_carousel_items'] ?? 6) }}">
+        </label>
+        <label>Cards visible on desktop
+            <select name="home_course_carousel_cards">
+                @foreach([2, 3, 4] as $cards)
+                    <option value="{{ $cards }}" @selected((int) old('home_course_carousel_cards', $settings['home_course_carousel_cards'] ?? 3) === $cards)>{{ $cards }} cards</option>
+                @endforeach
+            </select>
+        </label>
+    </div>
+</section>
+<section class="panel" style="margin-bottom:20px;">
     <div class="page-header"><div><h2>Homepage content sections</h2><p class="muted">Add, edit, remove, enable, disable and reorder up to 20 custom sections. HTML and scripts are not accepted.</p></div></div>
     <div class="card" style="margin-bottom:16px;">
         <h3>Reusable section block library</h3><p class="muted">Insert a ready-made content structure into the first empty section, then edit it before publishing.</p>
