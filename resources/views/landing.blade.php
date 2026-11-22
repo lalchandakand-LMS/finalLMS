@@ -304,6 +304,40 @@
                 </nav>
             @endif
         </section>
+    @else
+        <section class="home-carousel home-carousel--static" aria-label="{{ __('Online batches') }}" style="--carousel-height:460px;--carousel-mobile-height:auto;margin-bottom:28px;">
+            <div class="home-carousel__viewport">
+                <div class="home-carousel__track">
+                    <article class="home-carousel__slide">
+                        <div class="home-carousel__content">
+                            <span class="home-carousel__eyebrow">{{ __('Online Course') }}</span>
+                            <h2>{{ $homeBatchesTitle }}</h2>
+                            <p>{{ __('Book your seat now! Choose an available batch and start learning with Alom’s English Center.') }}</p>
+                            <a class="btn primary" href="{{ route('courses.index') }}">{{ __('Book your seat now!') }}</a>
+                        </div>
+                        <div class="home-carousel__batch-list" aria-label="{{ __('Available online batches') }}">
+                            @forelse($openBatches->take(2) as $batch)
+                                @if($batch->course)
+                                    <a class="home-carousel__batch-card" href="{{ route('courses.show', $batch->course) }}">
+                                        <small>{{ __('Online Batch') }}</small><strong>{{ $batch->title }}</strong>
+                                        <span>{{ $batch->course->title }}{{ $batch->teacher ? ' · '.$batch->teacher->name : '' }}</span><b aria-hidden="true">↗</b>
+                                    </a>
+                                @endif
+                            @empty
+                                @forelse($publishedCourses->take(2) as $course)
+                                    <a class="home-carousel__batch-card" href="{{ route('courses.show', $course) }}">
+                                        <small>{{ __('Featured Course') }}</small><strong>{{ $course->title }}</strong>
+                                        <span>{{ \Illuminate\Support\Str::limit(strip_tags($course->description), 76) }}</span><b aria-hidden="true">↗</b>
+                                    </a>
+                                @empty
+                                    <div class="home-carousel__batch-empty"><strong>{{ __('New batches are coming soon!') }}</strong><span>{{ __('Visit all courses to explore current learning opportunities.') }}</span><a href="{{ route('courses.index') }}">{{ __('See All Courses') }} →</a></div>
+                                @endforelse
+                            @endforelse
+                        </div>
+                    </article>
+                </div>
+            </div>
+        </section>
     @endif
 
 
