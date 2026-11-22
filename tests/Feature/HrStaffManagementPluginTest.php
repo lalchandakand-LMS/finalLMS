@@ -19,6 +19,15 @@ final class HrStaffManagementPluginTest extends TestCase
 {
     use DatabaseMigrations;
 
+    protected function tearDown(): void
+    {
+        Schema::disableForeignKeyConstraints();
+        Schema::dropIfExists('staff_payrolls');
+        Schema::dropIfExists('staff_profiles');
+        Schema::enableForeignKeyConstraints();
+        parent::tearDown();
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
