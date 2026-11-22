@@ -47,17 +47,41 @@ class CourseContentLearningProgressTest extends TestCase
             'position_seconds' => 0, 'duration_seconds' => 100,
         ])->assertOk()->assertJson(['saved' => true, 'progress_percent' => 0, 'completed' => false]);
 
-        $this->travel(45)->seconds();
-        $this->postJson(route('student.courses.content.progress', [$course, $post]), [
-            'position_seconds' => 45, 'duration_seconds' => 100,
-        ])->assertOk()->assertJson(['saved' => true, 'position_seconds' => 45, 'duration_seconds' => 100, 'progress_percent' => 45, 'completed' => false]);
+        foreach ([15, 30, 45] as $position) {
+            $this->travel(15)->seconds();
+            $this->postJson(route('student.courses.content.progress', [$course, $post]), [
+                'position_seconds' => $position, 'duration_seconds' => 100,
+            ])->assertOk();
+        }
         $this->assertDatabaseHas('course_content_progress', ['user_id' => $student->id, 'progress_percent' => 45, 'watched_seconds' => 45, 'last_position_seconds' => 45, 'duration_seconds' => 100]);
 
-        $this->travel(50)->seconds();
+        foreach ([60, 75, 90, 95] as $position) {
+            $this->travel($position === 95 ? 5 : 15)->seconds();
+            $response = $this->postJson(route('student.courses.content.progress', [$course, $post]), [
+                'position_seconds' => $position, 'duration_seconds' => 100,
+            ]);
+        }
+        $response->assertOk()->assertJson(['completed' => true, 'progress_percent' => 95]);
+        $this->assertNotNull(CourseContentProgress::query()->firstOrFail()->completed_at);
+    }
+
+    public function test_seeking_to_the_end_does_not_falsely_complete_a_video_lesson(): void
+    {
+        [$course, $post, $student] = $this->fixture();
+        $this->actingAs($student)->postJson(route('student.courses.content.progress', [$course, $post]), [
+            'position_seconds' => 0, 'duration_seconds' => 100,
+        ])->assertOk();
+
+        $this->travel(1)->seconds();
         $this->postJson(route('student.courses.content.progress', [$course, $post]), [
             'position_seconds' => 95, 'duration_seconds' => 100,
-        ])->assertOk()->assertJson(['completed' => true, 'progress_percent' => 95]);
-        $this->assertNotNull(CourseContentProgress::query()->firstOrFail()->completed_at);
+        ])->assertOk()->assertJson(['completed' => false, 'progress_percent' => 3]);
+
+        $this->assertDatabaseHas('course_content_progress', [
+            'user_id' => $student->id,
+            'watched_seconds' => 3,
+            'completed_at' => null,
+        ]);
     }
 
     public function test_course_completion_requires_all_published_curriculum_posts_and_issues_certificate_afterward(): void
