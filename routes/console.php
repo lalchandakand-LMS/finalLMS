@@ -171,5 +171,77 @@ Artisan::command('system:health-check', function (): int {
     return 0;
 })->purpose('Check application dependencies and send rate-limited email alerts');
 
+Artisan::command('referral-income:reconcile-approved-payments', function (): int {
+    $tables = ['referral_attributions', 'referral_income_rules', 'referral_commissions'];
+    if (!class_exists(\\Aloms\\ReferralIncome\\ReferralIncomeService::class)
+        || collect($tables)->contains(fn (string $table): bool => !Schema::hasTable($table))) {
+        $this->info('Referral income is not installed; no reconciliation is required.');
+
+        return 0;
+    }
+
+    $service = app(\\Aloms\\ReferralIncome\\ReferralIncomeService::class);
+    $processed = 0;
+    $failed = 0;
+
+    // The approved Payment row is the durable source of truth. If a synchronous
+    // commission write failed after payment approval, this query finds it again
+    // on the next scheduler run. recordApprovedPayment() is idempotent.
+    DB::table('payments as p')
+        ->select('p.id')
+        ->where('p.status', 'approved')
+        ->where('p.amount', '>', 0)
+        ->where('p.currency', 'BDT')
+        ->whereNull('p.learn_earn_exam_id')
+        ->where(function ($query): void {
+            $query->whereNull('p.gateway_provider')
+                ->orWhere('p.gateway_provider', '')
+                ->orWhere(function ($gateway): void {
+                    $gateway->where('p.gateway_provider', 'bkash')
+                        ->whereNotNull('p.gateway_transaction_id')
+                        ->where('p.gateway_transaction_id', '<>', '');
+                });
+        })
+        ->whereExists(function ($query): void {
+            $query->selectRaw('1')->from('referral_attributions as ra')
+                ->whereColumn('ra.referred_user_id', 'p.user_id')
+                ->where('ra.status', 'active')
+                ->whereExists(function ($rules): void {
+                    $rules->selectRaw('1')->from('referral_income_rules as rir')
+                        ->whereColumn('rir.owner_type', 'ra.referrer_type')
+                        ->where('rir.is_active', true)
+                        ->where('rir.commission_percent', '>', 0);
+                });
+        })
+        ->whereNotExists(function ($query): void {
+            $query->selectRaw('1')->from('referral_commissions as rc')
+                ->whereColumn('rc.payment_id', 'p.id');
+        })
+        ->orderBy('p.id')
+        ->chunkById(100, function ($payments) use ($service, &$processed, &$failed): void {
+            foreach ($payments as $payment) {
+                try {
+                    $service->recordApprovedPayment((int) $payment->id);
+                    $processed++;
+                } catch (Throwable $exception) {
+                    // Do not log payment or student data; the next run retries
+                    // because no commission row was committed.
+                    report($exception);
+                    $failed++;
+                }
+            }
+        }, 'p.id', 'id');
+
+    $this->info("Reconciled {$processed} eligible approved payment(s).");
+    if ($failed > 0) {
+        $this->warn("{$failed} payment(s) could not be reconciled and will be retried.");
+        return 1;
+    }
+
+    return 0;
+})->purpose('Retry missing referral commissions for approved payments');
+
+Schedule::command('referral-income:reconcile-approved-payments')->everyFiveMinutes()->withoutOverlapping();
+
 Schedule::command('system:heartbeat')->everyFiveMinutes()->withoutOverlapping();
 Schedule::command('system:health-check')->everyFiveMinutes()->withoutOverlapping();
