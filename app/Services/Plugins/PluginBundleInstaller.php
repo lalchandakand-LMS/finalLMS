@@ -3,13 +3,14 @@
 namespace App\Services\Plugins;
 
 use App\Models\PluginInstallation;
+use Closure;
 use Illuminate\Http\UploadedFile;
 use RuntimeException;
 use ZipArchive;
 
 final class PluginBundleInstaller
 {
-    public function install(UploadedFile $bundle, PluginUploadInstaller $installer): PluginInstallation
+    public function install(UploadedFile $bundle, PluginUploadInstaller $installer, ?Closure $operation = null): PluginInstallation
     {
         if (strtolower($bundle->getClientOriginalExtension()) !== 'aecplugin') {
             throw new RuntimeException('Upload a signed .aecplugin bundle.');
@@ -90,6 +91,10 @@ final class PluginBundleInstaller
             chmod($packagePath, 0600);
             $innerUpload = new UploadedFile($packagePath, 'plugin.zip', 'application/zip', UPLOAD_ERR_OK, true);
 
+            if ($operation !== null) {
+                return $operation($innerUpload, $release);
+            }
+
             return $installer->install(
                 $innerUpload,
                 json_encode($release['manifest'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
@@ -106,4 +111,22 @@ final class PluginBundleInstaller
             }
         }
     }
+    public function update(
+        UploadedFile $bundle,
+        PluginUploadInstaller $installer,
+        string $pluginKey,
+        PluginIntegrityVerifier $integrityVerifier,
+    ): PluginInstallation {
+        return $this->install($bundle, $installer, function (UploadedFile $innerUpload, array $release) use ($installer, $pluginKey, $integrityVerifier): PluginInstallation {
+            return $installer->update(
+                $innerUpload,
+                json_encode($release['manifest'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
+                $release['signature'],
+                $release['key_id'],
+                $pluginKey,
+                $integrityVerifier,
+            );
+        });
+    }
+
 }
