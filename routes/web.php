@@ -41,6 +41,7 @@ use App\Http\Controllers\BkashPaymentController;
 use App\Http\Controllers\PhoneVerificationController;
 use App\Http\Controllers\SmsCampaignController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\StudentManagementController;
 use App\Http\Controllers\LiveClassController;
 use App\Http\Controllers\ExamController;
 use App\Http\Controllers\ExamAnswerController;
@@ -134,8 +135,8 @@ Route::get('/student/invoices/{invoice}/payments/{payment}/print', [StudentInvoi
 Route::get('/themes/{slug}/{version}/assets/{file}', [ThemeManagerController::class, 'asset'])
     ->where([
         'slug' => '[a-z0-9][a-z0-9-]{1,79}',
-        'version' => '\\d+\\.\\d+\\.\\d+(?:-[A-Za-z0-9.-]+)?',
-        'file' => '[A-Za-z0-9][A-Za-z0-9._-]{0,100}\\.css',
+        'version' => '\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?',
+        'file' => '[A-Za-z0-9][A-Za-z0-9._-]{0,100}\.css',
     ])
     ->name('themes.asset');
 
@@ -207,7 +208,18 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
     Route::middleware('role:branch_manager')->prefix('branch')->name('branch.')->group(function () {
         Route::get('/dashboard', [BranchDashboardController::class, 'index'])->name('dashboard');
         Route::get('/batches', [BatchController::class, 'branchManagerIndex'])->middleware('admin.permission:branch.batches')->name('batches.index');
-        Route::get('/students', [BatchController::class, 'branchManagerStudents'])->middleware('admin.permission:branch.students')->name('students.index');\n        Route::get('/students/manage', [StudentManagementController::class, 'index'])->middleware('admin.permission:branch.students')->name('students.manage');\n        Route::get('/students/manage/export', [StudentManagementController::class, 'export'])->middleware('admin.permission:branch.students')->name('students.manage.export');\n        Route::post('/students/manage/import-preview', [StudentManagementController::class, 'importPreview'])->middleware('admin.permission:branch.students')->name('students.manage.import-preview');\n        Route::post('/students/manage/import-confirm', [StudentManagementController::class, 'importConfirm'])->middleware('admin.permission:branch.students')->name('students.manage.import-confirm');\n        Route::get('/students/manage/{student}', [StudentManagementController::class, 'show'])->middleware('admin.permission:branch.students')->name('students.manage.show');\n        Route::put('/students/manage/{student}/profile', [StudentManagementController::class, 'updateProfile'])->middleware('admin.permission:branch.students')->name('students.manage.profile.update');\n        Route::put('/students/manage/{student}/transfer', [StudentManagementController::class, 'transferBatch'])->middleware('admin.permission:branch.students')->name('students.manage.transfer');\n        Route::put('/students/manage/{student}/promote', [StudentManagementController::class, 'promote'])->middleware('admin.permission:branch.students')->name('students.manage.promote');\n        Route::put('/students/manage/{student}/suspend', [StudentManagementController::class, 'suspend'])->middleware('admin.permission:branch.students')->name('students.manage.suspend');\n        Route::put('/students/manage/{student}/reactivate', [StudentManagementController::class, 'reactivate'])->middleware('admin.permission:branch.students')->name('students.manage.reactivate');\n        Route::put('/students/manage/{student}/graduate', [StudentManagementController::class, 'graduate'])->middleware('admin.permission:branch.students')->name('students.manage.graduate');
+        Route::get('/students', [BatchController::class, 'branchManagerStudents'])->middleware('admin.permission:branch.students')->name('students.index');
+        Route::get('/students/manage', [StudentManagementController::class, 'index'])->middleware('admin.permission:branch.students')->name('students.manage');
+        Route::get('/students/manage/export', [StudentManagementController::class, 'export'])->middleware('admin.permission:branch.students')->name('students.manage.export');
+        Route::post('/students/manage/import-preview', [StudentManagementController::class, 'importPreview'])->middleware('admin.permission:branch.students')->name('students.manage.import-preview');
+        Route::post('/students/manage/import-confirm', [StudentManagementController::class, 'importConfirm'])->middleware('admin.permission:branch.students')->name('students.manage.import-confirm');
+        Route::get('/students/manage/{student}', [StudentManagementController::class, 'show'])->middleware('admin.permission:branch.students')->name('students.manage.show');
+        Route::put('/students/manage/{student}/profile', [StudentManagementController::class, 'updateProfile'])->middleware('admin.permission:branch.students')->name('students.manage.profile.update');
+        Route::put('/students/manage/{student}/transfer', [StudentManagementController::class, 'transferBatch'])->middleware('admin.permission:branch.students')->name('students.manage.transfer');
+        Route::put('/students/manage/{student}/promote', [StudentManagementController::class, 'promote'])->middleware('admin.permission:branch.students')->name('students.manage.promote');
+        Route::put('/students/manage/{student}/suspend', [StudentManagementController::class, 'suspend'])->middleware('admin.permission:branch.students')->name('students.manage.suspend');
+        Route::put('/students/manage/{student}/reactivate', [StudentManagementController::class, 'reactivate'])->middleware('admin.permission:branch.students')->name('students.manage.reactivate');
+        Route::put('/students/manage/{student}/graduate', [StudentManagementController::class, 'graduate'])->middleware('admin.permission:branch.students')->name('students.manage.graduate');
         Route::post('/batches', [BatchController::class, 'branchManagerStore'])->middleware('admin.permission:branch.batches')->name('batches.store');
         Route::put('/batches/{batch}', [BatchController::class, 'branchManagerUpdate'])->middleware('admin.permission:branch.batches')->name('batches.update');
         Route::get('/batches/{batch}/attendance', [AttendanceController::class, 'index'])->middleware(['admin.permission:branch.attendance', 'module.enabled:attendance'])->name('batches.attendance.index');
@@ -549,13 +561,17 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::get('/settings', [AdminSettingsController::class, 'index'])->name('admin.settings.index');
         Route::post('/settings', [AdminSettingsController::class, 'update'])->name('admin.settings.update');
 
-        Route::get('/students', [StudentManagementController::class, 'index'])->name('admin.students.index');\n        Route::get('/students/export', [StudentManagementController::class, 'export'])->name('admin.students.export');\n        Route::post('/students/import-preview', [StudentManagementController::class, 'importPreview'])->name('admin.students.import-preview');\n        Route::post('/students/import-confirm', [StudentManagementController::class, 'importConfirm'])->name('admin.students.import-confirm');
+        Route::get('/students', [StudentManagementController::class, 'index'])->name('admin.students.index');
+        Route::get('/students/export', [StudentManagementController::class, 'export'])->name('admin.students.export');
+        Route::post('/students/import-preview', [StudentManagementController::class, 'importPreview'])->name('admin.students.import-preview');
+        Route::post('/students/import-confirm', [StudentManagementController::class, 'importConfirm'])->name('admin.students.import-confirm');
         Route::get('/students/{student}', [StudentManagementController::class, 'show'])->name('admin.students.show');
         Route::put('/students/{student}/profile', [StudentManagementController::class, 'updateProfile'])->name('admin.students.profile.update');
         Route::put('/students/{student}/transfer', [StudentManagementController::class, 'transferBatch'])->name('admin.students.transfer');
         Route::put('/students/{student}/promote', [StudentManagementController::class, 'promote'])->name('admin.students.promote');
         Route::put('/students/{student}/suspend', [StudentManagementController::class, 'suspend'])->name('admin.students.suspend');
-        Route::put('/students/{student}/reactivate', [StudentManagementController::class, 'reactivate'])->name('admin.students.reactivate');\n        Route::put('/students/{student}/graduate', [StudentManagementController::class, 'graduate'])->name('admin.students.graduate');
+        Route::put('/students/{student}/reactivate', [StudentManagementController::class, 'reactivate'])->name('admin.students.reactivate');
+        Route::put('/students/{student}/graduate', [StudentManagementController::class, 'graduate'])->name('admin.students.graduate');
         Route::get('/users', [UserController::class, 'index'])->name('admin.users.index');
         Route::post('/users/{user}/role', [UserController::class, 'updateRole'])->name('admin.users.updateRole');
 
