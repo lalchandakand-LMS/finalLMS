@@ -14,6 +14,8 @@ class CourseContentProgress extends Model
         'last_position_seconds',
         'duration_seconds',
         'progress_percent',
+        'watched_seconds',
+        'last_progress_ping_at',
         'completed_at',
     ];
 
@@ -22,6 +24,8 @@ class CourseContentProgress extends Model
         'last_position_seconds' => 'integer',
         'duration_seconds' => 'integer',
         'progress_percent' => 'decimal:2',
+        'watched_seconds' => 'integer',
+        'last_progress_ping_at' => 'datetime',
         'completed_at' => 'datetime',
     ];
 
