@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AcademicLevel;
 use App\Models\CourseCategory;
 use App\Models\CourseContentPost;
+use App\Models\CourseContentPostVersion;
 use App\Models\MediaAsset;
 use App\Models\Product;
 use Illuminate\Http\RedirectResponse;
