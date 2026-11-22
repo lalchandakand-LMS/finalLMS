@@ -6,7 +6,7 @@
     $title = $draft['home_title'] ?? 'Your homepage headline';
     $subtitle = $draft['home_subtitle'] ?? '';
     $sections = collect($draft['sections'] ?? [])->filter(fn ($section) => is_array($section) && !empty($section['enabled']));
-    $slides = collect($draft['home_slides'] ?? [])->filter(fn ($slide) => is_array($slide) && !empty($slide['enabled']));
+    $slides = collect($draft['home_slides'] ?? [])->filter(fn ($slide) => is_array($slide) && !empty($slide['enabled']))->sortBy(fn ($slide) => (int) ($slide['sort_order'] ?? 0));
     $headerLinks = collect($draft['header_links'] ?? [])->filter(fn ($link) => is_array($link) && !empty($link['label']) && !empty($link['url']));
     $footerLinks = collect($draft['footer_links'] ?? [])->filter(fn ($link) => is_array($link) && !empty($link['label']) && !empty($link['url']));
     $previewPrimary = preg_match('/^#[0-9A-Fa-f]{6}$/', $draft['site_primary_color'] ?? '') ? $draft['site_primary_color'] : '#1546a8';
@@ -54,7 +54,12 @@
     @foreach($slides as $slide)
         <article class="card">
             @if(!empty($slide['image_id']) && $media->has($slide['image_id']))
-                <img src="{{ \Illuminate\Support\Facades\Storage::disk($media[$slide['image_id']]->disk)->url($media[$slide['image_id']]->path) }}" alt="{{ $slide['title'] ?? 'Homepage slide' }}" style="width:100%;max-height:180px;object-fit:cover;border-radius:12px;">
+                <picture>
+                    @if(!empty($slide['mobile_image_id']) && $media->has($slide['mobile_image_id']))
+                        <source media="(max-width: 700px)" srcset="{{ \Illuminate\Support\Facades\Storage::disk($media[$slide['mobile_image_id']]->disk)->url($media[$slide['mobile_image_id']]->path) }}">
+                    @endif
+                    <img src="{{ \Illuminate\Support\Facades\Storage::disk($media[$slide['image_id']]->disk)->url($media[$slide['image_id']]->path) }}" alt="{{ $slide['title'] ?? 'Homepage slide' }}" style="width:100%;max-height:180px;object-fit:cover;border-radius:12px;">
+                </picture>
             @endif
             <h3>{{ $slide['title'] ?? '' }}</h3><p>{{ $slide['subtitle'] ?? '' }}</p>
         </article>
