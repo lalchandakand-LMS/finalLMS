@@ -101,7 +101,9 @@ final class HrStaffManagementPluginTest extends TestCase
         $staff = StaffProfile::query()->create(['branch_id' => $branch->id, 'employee_code' => 'LEAVE-01', 'full_name' => 'Leave Staff', 'designation' => 'Teacher', 'department' => 'Academic', 'base_salary' => 20000, 'status' => 'active']);
         $payload = ['staff_profile_id' => $staff->id, 'leave_type' => 'sick', 'starts_on' => now()->addDay()->toDateString(), 'ends_on' => now()->addDays(2)->toDateString(), 'reason' => 'Medical rest'];
         $this->actingAs($manager)->post('/__hr/leave', $payload)->assertRedirect();
+        $this->post('/__hr/leave', [...$payload, 'starts_on' => now()->addDays(2)->toDateString()])->assertStatus(409);
         $leave = StaffLeaveRequest::query()->firstOrFail();
+        $this->assertDatabaseCount('staff_leave_requests', 1);
         $this->actingAs($manager)->post('/__hr/leave/'.$leave->id.'/review', ['decision' => 'approved'])->assertForbidden();
         $this->actingAs($admin)->post('/__hr/leave/'.$leave->id.'/review', ['decision' => 'approved', 'review_note' => 'Approved'])->assertRedirect();
         $this->assertDatabaseHas('staff_leave_requests', ['id' => $leave->id, 'status' => 'approved', 'reviewed_by' => $admin->id]);
