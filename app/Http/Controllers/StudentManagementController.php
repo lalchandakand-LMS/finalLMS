@@ -123,6 +123,8 @@ class StudentManagementController extends Controller
     public function show(User $student): View
     {
         abort_unless($student->isStudent(), 404);
+        $this->authorizeStudentScope(request(), $student);
+        $routePrefix = request()->user()->isBranchManager() ? 'branch.students.manage' : 'admin.students';
         $student->load(['branch', 'studentProfile.suspendedBy', 'enrollments.batch.branch', 'enrollments.course', 'guardianLinksAsStudent.guardian']);
         $history = StudentLifecycleEvent::query()->where('student_id', $student->id)
             ->with('actor:id,name')->latest()->paginate(30);
@@ -137,6 +139,7 @@ class StudentManagementController extends Controller
     public function updateProfile(Request $request, User $student): RedirectResponse
     {
         abort_unless($student->isStudent(), 404);
+        $this->authorizeStudentScope($request, $student);
         $data = $request->validate([
             'student_number' => ['nullable', 'string', 'max:40', Rule::unique('student_profiles', 'student_number')->ignore($student->studentProfile?->id)],
             'date_of_birth' => ['nullable', 'date', 'before:today'],
@@ -206,6 +209,7 @@ class StudentManagementController extends Controller
     public function promote(Request $request, User $student): RedirectResponse
     {
         abort_unless($student->isStudent(), 404);
+        $this->authorizeStudentScope($request, $student);
         $data = $request->validate(['level' => ['required', 'string', 'max:100'], 'reason' => ['required', 'string', 'min:5', 'max:500']]);
         DB::transaction(function () use ($student, $data, $request): void {
             $profile = StudentProfile::query()->firstOrCreate(['user_id' => $student->id]);
@@ -219,6 +223,7 @@ class StudentManagementController extends Controller
     public function suspend(Request $request, User $student): RedirectResponse
     {
         abort_unless($student->isStudent(), 404);
+        $this->authorizeStudentScope($request, $student);
         $data = $request->validate(['reason' => ['required', 'string', 'min:5', 'max:500']]);
         DB::transaction(function () use ($student, $data, $request): void {
             $profile = StudentProfile::query()->firstOrCreate(['user_id' => $student->id]);
