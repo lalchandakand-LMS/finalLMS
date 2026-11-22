@@ -114,6 +114,15 @@ class CarouselBuilderPluginTest extends TestCase
         ])->assertSessionHasErrors(['items.0.image_url', 'items.0.link_url']);
 
         $this->assertDatabaseMissing('website_carousels', ['slug' => 'unsafe']);
+
+        $this->actingAs($admin)->post('/__test-carousels', [
+            'title' => 'Malformed', 'slug' => 'malformed-items', 'source_type' => 'manual',
+            'item_limit' => 5, 'desktop_cards' => 2, 'mobile_cards' => 1,
+            'interval_ms' => 5000, 'status' => 'draft', 'sort_order' => 0,
+            'items' => ['not-an-item-object'],
+        ])->assertSessionHasErrors('items.0');
+
+        $this->assertDatabaseMissing('website_carousels', ['slug' => 'malformed-items']);
     }
 
     public function test_manual_carousel_cannot_be_published_without_any_items(): void
