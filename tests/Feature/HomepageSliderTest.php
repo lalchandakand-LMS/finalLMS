@@ -32,6 +32,15 @@ class HomepageSliderTest extends TestCase
             'subtitle' => 'Homepage message '.($index + 1),
             'button_label' => 'Explore',
             'button_url' => '/courses',
+            'eyebrow' => $index === 0 ? 'Admissions open' : '',
+            'secondary_button_label' => $index === 0 ? 'Login' : '',
+            'secondary_button_url' => $index === 0 ? '/login' : '',
+            'image_position_x' => $index === 0 ? 30 : 50,
+            'image_position_y' => $index === 0 ? 40 : 50,
+            'mobile_position_x' => $index === 0 ? 70 : 50,
+            'mobile_position_y' => $index === 0 ? 20 : 50,
+            'content_alignment' => $index === 0 ? 'center' : 'left',
+            'overlay_color' => $index === 0 ? '#123456' : '#050f23',
             'sort_order' => $index,
             'mobile_image_id' => $index === 0 ? $assets[1]->id : null,
             'starts_at' => $index === 0 ? now()->subHour()->format('Y-m-d H:i:s') : null,
@@ -47,6 +56,15 @@ class HomepageSliderTest extends TestCase
         $this->assertSame('Slide 1', $saved[0]['title']);
         $this->assertSame('/courses', $saved[0]['button_url']);
         $this->assertSame($assets[1]->id, $saved[0]['mobile_image_id']);
+        $this->assertSame('Admissions open', $saved[0]['eyebrow']);
+        $this->assertSame('Login', $saved[0]['secondary_button_label']);
+        $this->assertSame('/login', $saved[0]['secondary_button_url']);
+        $this->assertSame(30, $saved[0]['image_position_x']);
+        $this->assertSame(40, $saved[0]['image_position_y']);
+        $this->assertSame(70, $saved[0]['mobile_position_x']);
+        $this->assertSame(20, $saved[0]['mobile_position_y']);
+        $this->assertSame('center', $saved[0]['content_alignment']);
+        $this->assertSame('#123456', $saved[0]['overlay_color']);
         $this->assertSame(0, $saved[0]['sort_order']);
         $this->assertNotEmpty($saved[0]['starts_at']);
         $this->assertNotEmpty($saved[0]['ends_at']);
@@ -107,8 +125,9 @@ class HomepageSliderTest extends TestCase
             'original_name' => 'future.jpg', 'mime_type' => 'image/jpeg', 'size' => 1000,
         ]);
 
+        Setting::setValue('home_slider_transition', 'fade');
         Setting::setValue('home_slides', json_encode([
-            ['enabled' => true, 'image_id' => $desktop->id, 'mobile_image_id' => $mobile->id, 'title' => 'Responsive hero', 'sort_order' => 2],
+            ['enabled' => true, 'image_id' => $desktop->id, 'mobile_image_id' => $mobile->id, 'title' => 'Responsive hero', 'sort_order' => 2, 'image_position_x' => 30, 'image_position_y' => 40, 'mobile_position_x' => 70, 'mobile_position_y' => 20, 'content_alignment' => 'center', 'overlay_color' => '#123456', 'secondary_button_label' => 'Student login', 'secondary_button_url' => '/login'],
             ['enabled' => true, 'image_id' => $ordered->id, 'title' => 'Earlier order', 'sort_order' => 1],
             ['enabled' => true, 'image_id' => $hidden->id, 'title' => 'Not yet published', 'sort_order' => 0, 'starts_at' => now()->addDay()->format('Y-m-d H:i:s')],
         ], JSON_THROW_ON_ERROR));
@@ -117,6 +136,12 @@ class HomepageSliderTest extends TestCase
             ->assertOk()
             ->assertSeeInOrder(['Earlier order', 'Responsive hero'])
             ->assertSee('/storage/media/mobile.jpg', false)
+            ->assertSee('home-carousel--fade', false)
+            ->assertSee('home-carousel__content--center', false)
+            ->assertSee('--slide-overlay:#123456', false)
+            ->assertSee('object-position:30% 40%', false)
+            ->assertSee('--mobile-image-position:70% 20%', false)
+            ->assertSee('Student login')
             ->assertDontSee('Not yet published');
     }
 
