@@ -561,8 +561,10 @@ class CourseContentStudioTest extends TestCase
 
         $this->actingAs($admin)->put(route('admin.course-content-posts.update', $post->fresh()), [
             'title' => 'Updated lesson',
+            'short_description' => null,
             'long_description' => 'Updated lesson body.',
             'video_url' => 'https://youtu.be/dQw4w9WgXcQ',
+            'tags' => '',
             'status' => 'published',
             'category_ids' => [$category->id],
         ])->assertRedirect(route('admin.course-content-posts.index'));
