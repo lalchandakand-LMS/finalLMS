@@ -20,3 +20,8 @@ Submitting replaces the complete credential set. Secret values cannot be retriev
 ## Before production
 
 Obtain and follow the official merchant integration guide for each provider. Implement and test the provider-specific adapter, callback authentication and server-to-server transaction verification, exact amount/currency/order binding, idempotency, refunds and reconciliation. Complete sandbox acceptance and isolated cPanel backup/restore tests before any live activation.
+
+
+### Checkout redirect validation
+
+The sandbox checkout redirect must use HTTPS on the exact approved bKash sandbox hosts, with the default HTTPS port (443) and without URL user-info. Unexpected ports, embedded credentials, alternate hosts, or non-HTTPS URLs are rejected before redirecting the student. The checkout response is not trusted as an arbitrary redirect target.

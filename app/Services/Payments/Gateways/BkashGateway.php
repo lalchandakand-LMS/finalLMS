@@ -66,7 +66,10 @@ class BkashGateway implements PaymentGateway
             || ! is_string($paymentId) || $paymentId === ''
             || ! is_string($checkoutUrl)
             || parse_url($checkoutUrl, PHP_URL_SCHEME) !== 'https'
-            || ! in_array($host, self::ALLOWED_CHECKOUT_HOSTS, true)) {
+            || ! in_array($host, self::ALLOWED_CHECKOUT_HOSTS, true)
+            || ! in_array(parse_url($checkoutUrl, PHP_URL_PORT), [null, 443], true)
+            || parse_url($checkoutUrl, PHP_URL_USER) !== null
+            || parse_url($checkoutUrl, PHP_URL_PASS) !== null) {
             throw new RuntimeException('bKash returned an invalid sandbox checkout response.');
         }
 
