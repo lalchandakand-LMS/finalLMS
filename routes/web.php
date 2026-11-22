@@ -70,6 +70,7 @@ use App\Http\Controllers\TeacherQuestionSetGradingController;
 use App\Http\Controllers\EbookStoreController;
 use App\Http\Controllers\AdminEbookOrderController;
 use App\Http\Controllers\GuardianController;
+use App\Http\Controllers\BranchDashboardController;
 use App\Http\Controllers\StorageManagerController;
 use App\Http\Controllers\AdminAnalyticsController;
 use App\Http\Controllers\AdminCommentController;
@@ -246,8 +247,8 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         });
 
     // Legacy bookmarks now land inside the unified Admin Panel.
-    Route::middleware('role:branch_manager')->get('/branch-manager/batches', fn () => redirect()->route('admin.branch-workspace.batches.index', [], 301))->name('branch-manager.batches.index');
-    Route::middleware('role:branch_manager')->get('/branch-manager/students', fn () => redirect()->route('admin.branch-workspace.students.index', [], 301))->name('branch-manager.students.index');
+    Route::middleware('role:branch_manager')->get('/branch-manager/batches', fn () => redirect()->route('branch.batches.index', [], 301))->name('branch-manager.batches.index');
+    Route::middleware('role:branch_manager')->get('/branch-manager/students', fn () => redirect()->route('branch.students.index', [], 301))->name('branch-manager.students.index');
     Route::middleware('role:accountant')->get('/accountant/invoices', fn () => redirect()->route('admin.finance.invoices.index', [], 301))->name('accountant.invoices.index');
     Route::middleware('role:accountant')->get('/accountant/refunds', fn () => redirect()->route('admin.finance.refunds.index', [], 301))->name('accountant.refunds.index');
     Route::middleware('role:accountant')->get('/accountant/finance-reports', fn () => redirect()->route('admin.finance.reports.index', [], 301))->name('accountant.finance-reports.index');

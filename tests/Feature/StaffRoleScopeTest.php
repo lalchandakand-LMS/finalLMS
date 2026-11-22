@@ -24,8 +24,10 @@ class StaffRoleScopeTest extends TestCase
         $this->actingAs($manager)->get(route('dashboard'))
             ->assertOk()
             ->assertSee('admin-sidebar', false)
-            ->assertSee('Branch Panel')\n            ->assertSee('Branch dashboard')
-            ->assertSee('My branch batches')\n            ->assertSee('/branch/batches')
+            ->assertSee('Branch Panel')
+            ->assertSee('Branch dashboard')
+            ->assertSee('My branch batches')
+            ->assertSee('/branch/batches')
             ->assertDontSee('Finance workspace')
             ->assertDontSee('Admin users');
 

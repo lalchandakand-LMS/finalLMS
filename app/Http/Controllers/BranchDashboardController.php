@@ -1,13 +1,13 @@
 <?php
 
-namespace App\\Http\\Controllers;
+namespace App\Http\Controllers;
 
-use App\\Models\\Batch;
-use App\\Models\\Branch;
-use App\\Models\\Enrollment;
-use App\\Models\\User;
-use Illuminate\\Http\\Request;
-use Illuminate\\View\\View;
+use App\Models\Batch;
+use App\Models\Branch;
+use App\Models\Enrollment;
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 class BranchDashboardController extends Controller
 {
