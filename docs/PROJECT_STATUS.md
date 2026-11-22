@@ -4,11 +4,13 @@ Last consolidated: 2026-11-21
 Repository: https://github.com/lalchandakand-LMS/finalLMS
 Production domain: https://alomsenglishcenter.com
 
-## Current verified snapshot — 2026-11-21
+## Current verified snapshot — 2026-11-22
 
-**Main commit after latest merges:** `d4b70a1caef9c1ccf168d99acf5c9ca1a336e976` (PR #389 squash merge; PR #388 merged immediately before it).  
-**Open pull requests:** #387 (this status refresh) and #390 (combo-payment batch-capacity protection) are open. PR #390's initial Laravel CI exposed an escaped namespace syntax error in its regression test; the test was corrected and exact-head CI is rerunning. PR #388 (SMS recipient delivery concurrency) and #389 (plugin runtime transient-verification resilience) are merged after exact-head Laravel CI and CodeQL passed.  
-**Production deployment:** blocked; the last owner-provided hosting update did not include an isolated staging subdomain or separate test database. Do not deploy production.
+**Main commit:** `5fa0bef6d30d6ee8a949b39979c158b3a2bbbcfe` (PR #393 merged after exact-head Laravel CI and CodeQL passed).  
+**Open development PRs:** #402 (plugin runtime retry regression fix; Laravel CI and CodeQL running on current-main-based head), #394 (Draft: SCORM 1.2 validator and gamification; Laravel CI running, CodeQL passed), and #396 (Draft: Admission, HR/Payroll, Physical Library and Referral Income; Laravel CI running, CodeQL passed).  
+**Superseded PRs closed:** #395 was replaced by #402 after its branch diverged; duplicate rebased PRs #400 and #401 were closed.  
+**PR #391:** stale documentation snapshot; do not merge until its status data is reconciled with current main.  
+**Production deployment:** blocked. No isolated staging subdomain or separate staging database has been confirmed. Do not deploy to production or activate live payment providers.
 
 ### Recently merged
 
