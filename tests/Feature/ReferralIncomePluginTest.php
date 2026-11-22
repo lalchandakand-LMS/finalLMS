@@ -275,5 +275,44 @@ final class ReferralIncomePluginTest extends TestCase
         $service->reviewPayout($payoutId, (int) $admin->id, 'paid', 'BANK-REF-2026-001');
         $this->assertDatabaseHas('referral_payout_requests', ['id' => $payoutId, 'status' => 'paid']);
         $this->assertDatabaseHas('referral_commissions', ['id' => $commissionId, 'status' => 'paid']);
+
+        try {
+            $service->requestPayout($referrer, 'bkash', '01700000000');
+            $this->fail('The same approved commissions must not be paid out twice.');
+        } catch (ValidationException) {
+            $this->assertDatabaseCount('referral_payout_requests', 1);
+        }
+    }
+
+    public function test_payout_review_fails_closed_when_reserved_commission_total_changes(): void
+    {
+        $referrer = User::factory()->create(['role' => 'teacher']);
+        $buyer = User::factory()->create(['role' => 'student']);
+        $service = app(ReferralIncomeService::class);
+        $service->applyCode($buyer, $service->createOrGetCode($referrer));
+        $course = Course::factory()->create();
+        $payment = Payment::query()->create([
+            'user_id' => $buyer->id,
+            'course_id' => $course->id,
+            'method' => 'bkash',
+            'amount' => 10000,
+            'currency' => 'BDT',
+            'transaction_reference' => 'REF-PAYOUT-CHECK-'.strtoupper(bin2hex(random_bytes(5))),
+            'status' => 'approved',
+        ]);
+        $commissionId = $service->recordApprovedPayment((int) $payment->id);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $service->reviewCommission((int) $commissionId, (int) $admin->id, 'approved', null);
+        $payoutId = $service->requestPayout($referrer, 'bkash', '01700000000');
+
+        DB::table('referral_commissions')->where('id', $commissionId)->update(['commission_amount' => 600]);
+
+        try {
+            $service->reviewPayout($payoutId, (int) $admin->id, 'approved', 'Reviewed');
+            $this->fail('Payout review must fail if its reserved commission total no longer matches.');
+        } catch (\\Symfony\\Component\\HttpKernel\\Exception\\HttpException $exception) {
+            $this->assertSame(409, $exception->getStatusCode());
+            $this->assertDatabaseHas('referral_payout_requests', ['id' => $payoutId, 'status' => 'pending']);
+        }
     }
 }
