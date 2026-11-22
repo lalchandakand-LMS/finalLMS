@@ -68,15 +68,15 @@ class AdminPaymentGatewayController extends Controller
         try {
             $credentials = json_decode($validated['credentials_json'], true, 16, JSON_THROW_ON_ERROR);
         } catch (JsonException) {
-            return back()->withErrors(['credentials_json' => __('Enter valid JSON credentials.')])->withInput();
+            return back()->withErrors(['credentials_json' => __('Enter valid JSON credentials.')]);
         }
         if (! is_array($credentials) || array_is_list($credentials) || $credentials === []) {
-            return back()->withErrors(['credentials_json' => __('Credentials must be a non-empty JSON object.')])->withInput();
+            return back()->withErrors(['credentials_json' => __('Credentials must be a non-empty JSON object.')]);
         }
         foreach ($credentials as $key => $value) {
             if (! is_string($key) || preg_match('/^[a-z][a-z0-9_]{0,49}$/D', $key) !== 1
                 || ! is_string($value) || $value === '' || mb_strlen($value) > 4096) {
-                return back()->withErrors(['credentials_json' => __('Each credential must have a valid key and a non-empty string value (maximum 4096 characters).')])->withInput();
+                return back()->withErrors(['credentials_json' => __('Each credential must have a valid key and a non-empty string value (maximum 4096 characters).')]);
             }
         }
         $mfs->save($provider, $credentials, (int) $request->user()->id);
