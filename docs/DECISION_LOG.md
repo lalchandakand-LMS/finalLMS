@@ -126,3 +126,9 @@ This file records decisions that should not be casually reversed by a developer 
 - Flash Sale: Admin selects published courses, sets discounts and campaign windows, publishes campaigns to a public Flash Sale tab/page, and can independently disable the whole page or pause individual campaigns. Base course prices and completed order snapshots must remain unchanged.
 - Both plugins must preserve historical records on deactivation and use the verified backup/restore and data-retention safeguards before uninstall. Do not duplicate existing core workflows: audit and safely extract/reuse existing Question Bank, Exam, Question Set and Flash Sale capabilities.
 - Detailed acceptance criteria and delivery gates: `docs/LEARN_EARN_AND_FLASH_SALE_PLUGINS.md`. This records approved scope, not completed implementation.
+
+
+## D-019 — Consolidate changes before expensive CI runs (2026-11-22)
+- Owner requests that related fixes and tests be grouped before running expensive full CI/test workflows, because repeated full test runs consume significant time.
+- Developers should inspect and batch related changes, run local/static checks where available, then trigger the full Laravel CI/package and CodeQL checks once against the final consolidated commit. If that final run fails, fix the failure and rerun only the necessary validation.
+- This does not permit skipping tests or reporting unverified success.
