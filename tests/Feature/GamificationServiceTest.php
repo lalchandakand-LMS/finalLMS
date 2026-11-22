@@ -22,14 +22,14 @@ class GamificationServiceTest extends TestCase
         try {
             $service->award($teacher, 'lesson_completed', 'lesson', 901);
             $this->fail('A teacher account must not receive learner XP.');
-        } catch (\\InvalidArgumentException $exception) {
+        } catch (\InvalidArgumentException $exception) {
             $this->assertSame('Gamification rewards can only be awarded to students.', $exception->getMessage());
         }
 
         try {
             $service->awardBadge($teacher, 'first_lesson');
             $this->fail('A teacher account must not receive learner badges.');
-        } catch (\\InvalidArgumentException $exception) {
+        } catch (\InvalidArgumentException $exception) {
             $this->assertSame('Gamification badges can only be awarded to students.', $exception->getMessage());
         }
 
