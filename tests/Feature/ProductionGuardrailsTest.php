@@ -46,6 +46,53 @@ class ProductionGuardrailsTest extends TestCase
             ->assertDontSee('OTHER-CERTIFICATE');
     }
 
+    public function test_guardian_dashboard_only_shows_certificates_for_approved_linked_students(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $guardian = User::factory()->create(['role' => 'guardian']);
+        $linkedStudent = User::factory()->create(['role' => 'student']);
+        $unrelatedStudent = User::factory()->create(['role' => 'student']);
+        $course = $this->course($teacher, 'Guardian certificate course', 0);
+
+        GuardianStudentLink::create([
+            'guardian_id' => $guardian->id,
+            'student_id' => $linkedStudent->id,
+            'relationship' => 'Parent',
+            'status' => 'active',
+            'requested_by' => $guardian->id,
+            'reviewed_by' => $linkedStudent->id,
+            'requested_at' => now(),
+            'reviewed_at' => now(),
+        ]);
+
+        Certificate::create(['user_id' => $linkedStudent->id, 'course_id' => $course->id, 'certificate_number' => 'LINKED-CHILD-CERT', 'status' => 'issued', 'issued_at' => now()]);
+        Certificate::create(['user_id' => $unrelatedStudent->id, 'course_id' => $course->id, 'certificate_number' => 'UNRELATED-CHILD-CERT', 'status' => 'issued', 'issued_at' => now()->subMinute()]);
+
+        $this->actingAs($guardian)->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('LINKED-CHILD-CERT')
+            ->assertDontSee('UNRELATED-CHILD-CERT');
+    }
+
+    public function test_branch_manager_dashboard_only_shows_certificates_for_their_assigned_branch(): void
+    {
+        $ownBranch = Branch::create(['name' => 'Certificate Own Branch', 'slug' => 'certificate-own-branch', 'is_active' => true]);
+        $otherBranch = Branch::create(['name' => 'Certificate Other Branch', 'slug' => 'certificate-other-branch', 'is_active' => true]);
+        $manager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $ownBranch->id, 'admin_permissions' => ['branch.batches', 'branch.students']]);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $ownStudent = User::factory()->create(['role' => 'student', 'branch_id' => $ownBranch->id]);
+        $otherStudent = User::factory()->create(['role' => 'student', 'branch_id' => $otherBranch->id]);
+        $course = $this->course($teacher, 'Branch certificate course', 0);
+
+        Certificate::create(['user_id' => $ownStudent->id, 'course_id' => $course->id, 'certificate_number' => 'OWN-BRANCH-CERT', 'status' => 'issued', 'issued_at' => now()]);
+        Certificate::create(['user_id' => $otherStudent->id, 'course_id' => $course->id, 'certificate_number' => 'OTHER-BRANCH-CERT', 'status' => 'issued', 'issued_at' => now()->subMinute()]);
+
+        $this->actingAs($manager)->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('OWN-BRANCH-CERT')
+            ->assertDontSee('OTHER-BRANCH-CERT');
+    }
+
     public function test_admin_cannot_demote_themselves(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
