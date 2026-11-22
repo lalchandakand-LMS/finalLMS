@@ -93,7 +93,13 @@ final class HrController extends Controller
         }
         if (! empty($data['user_id'])) {
             $linkedUser = User::query()->findOrFail($data['user_id']);
-            abort_unless(in_array($linkedUser->role, ['teacher', 'branch_manager', 'admin', 'staff'], true), 422, 'Link only an eligible staff account.');
+            abort_unless(in_array($linkedUser->role, ['teacher', 'branch_manager', 'staff'], true), 422, 'Link only a teacher, branch manager or staff account.');
+            if ($actor->isBranchManager()) {
+                abort_unless($linkedUser->branch_id === null || (int) $linkedUser->branch_id === (int) $actor->branch_id, 422, 'You can only link an account assigned to your branch.');
+            }
+            if (! empty($data['branch_id'])) {
+                abort_unless($linkedUser->branch_id === null || (int) $linkedUser->branch_id === (int) $data['branch_id'], 422, 'The linked account belongs to another branch.');
+            }
         }
 
         $member = StaffProfile::query()->create($data + ['joined_at' => now()->toDateString()]);
