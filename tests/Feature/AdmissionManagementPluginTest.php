@@ -52,6 +52,25 @@ final class AdmissionManagementPluginTest extends TestCase
     }
 
 
+
+    public function test_inactive_branches_cannot_receive_admissions_or_be_used_by_branch_managers(): void
+    {
+        $inactive = Branch::query()->create(['name' => 'Inactive Branch', 'slug' => 'inactive-branch', 'is_active' => false]);
+
+        $this->post('/__admission/apply', [
+            'applicant_name' => 'Inactive Branch Applicant',
+            'email' => 'inactive-branch@example.com',
+            'phone' => '01700000008',
+            'desired_course' => 'Spoken English',
+            'branch_id' => $inactive->id,
+        ])->assertSessionHasErrors('branch_id');
+
+        $this->assertDatabaseCount('admission_applications', 0);
+
+        $manager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $inactive->id]);
+        $this->actingAs($manager)->get('/__admission/admin')->assertForbidden();
+    }
+
     public function test_public_intake_can_be_closed_from_plugin_settings(): void
     {
         $plugin = \App\Models\PluginInstallation::query()->where('plugin_key', 'aec.admission-management')->firstOrFail();
