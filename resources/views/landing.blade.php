@@ -41,7 +41,7 @@
             'height' => $hasSettingsTable ? max(320, min(720, (int) \App\Models\Setting::value('home_slider_height', 480))) : 480,
             'mobileHeight' => $hasSettingsTable ? max(220, min(520, (int) \App\Models\Setting::value('home_slider_mobile_height', 300))) : 300,
             'overlay' => $hasSettingsTable ? max(0, min(90, (int) \App\Models\Setting::value('home_slider_overlay', 60))) : 60,
-            'transition' => $hasSettingsTable ? \App\Models\Setting::value('home_slider_transition', 'slide') : 'slide',
+            'transition' => $hasSettingsTable && in_array(\App\Models\Setting::value('home_slider_transition', 'slide'), ['slide','fade','zoom'], true) ? \App\Models\Setting::value('home_slider_transition', 'slide') : 'slide',
         ];
         $flashSales = \Illuminate\Support\Facades\Route::has('flash-sales.public')
             && \App\Models\FlashSale::isPluginActive()
@@ -120,7 +120,7 @@
         .home-carousel__track { display:flex; height:100%; transition:transform .65s cubic-bezier(.22,.61,.36,1); will-change:transform; }
         .home-carousel__slide { position:relative; isolation:isolate; flex:0 0 100%; min-width:0; height:100%; display:flex; align-items:center; overflow:hidden; color:#fff; }
         .home-carousel__slide img { position:absolute; inset:0; z-index:-2; width:100%; height:100%; object-fit:cover; }
-        .home-carousel__shade { position:absolute; inset:0; z-index:-1; background:linear-gradient(90deg,rgba(5,15,35,var(--carousel-overlay)),rgba(5,15,35,calc(var(--carousel-overlay) * .7)) 58%,rgba(5,15,35,.08)); }
+        .home-carousel__shade { position:absolute; inset:0; z-index:-1; background:linear-gradient(90deg,color-mix(in srgb,var(--slide-overlay,#050f23) calc(var(--carousel-overlay) * 100%),transparent),color-mix(in srgb,var(--slide-overlay,#050f23) calc(var(--carousel-overlay) * 70%),transparent) 58%,transparent); }
         .home-carousel__content { width:min(760px,85%); padding:clamp(24px,6vw,72px); }
         .home-carousel__content--center { margin-inline:auto; text-align:center; }
         .home-carousel__content--right { margin-left:auto; text-align:right; }
