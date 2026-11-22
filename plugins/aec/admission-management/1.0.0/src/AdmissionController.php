@@ -311,14 +311,14 @@ final class AdmissionController extends Controller
                 foreach ($applications as $application) {
                     fputcsv($output, [
                         $application->application_code,
-                        $application->applicant_name,
-                        $application->email,
-                        $application->phone,
-                        $application->guardian_phone,
-                        $application->desired_course,
-                        $application->preferred_batch,
-                        $application->branch?->name,
-                        $application->application_source,
+                        $this->csvSafe($application->applicant_name),
+                        $this->csvSafe($application->email),
+                        $this->csvSafe($application->phone),
+                        $this->csvSafe($application->guardian_phone),
+                        $this->csvSafe($application->desired_course),
+                        $this->csvSafe($application->preferred_batch),
+                        $this->csvSafe($application->branch?->name),
+                        $this->csvSafe($application->application_source),
                         $application->status,
                         $application->document_verification_status,
                         $application->created_at?->toDateTimeString(),
@@ -523,6 +523,16 @@ final class AdmissionController extends Controller
         $query = AdmissionApplication::query();
         if ($actor->isBranchManager()) $query->where('branch_id', $actor->branch_id);
         return $query;
+    }
+
+    private function csvSafe(?string $value): string
+    {
+        $value = (string) $value;
+        if ($value !== '' && preg_match('/^[=+@\\-\\t\\r]/', $value) === 1) {
+            return "'".$value;
+        }
+
+        return $value;
     }
 
     private function newApplicationCode(): string
