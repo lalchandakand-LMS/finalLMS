@@ -41,6 +41,7 @@ final class AdmissionManagementPluginTest extends TestCase
         require_once base_path('plugins/aec/admission-management/1.0.0/src/AdmissionDocument.php');
         require_once base_path('plugins/aec/admission-management/1.0.0/src/AdmissionApplicationEvent.php');
         require_once base_path('plugins/aec/admission-management/1.0.0/src/AdmissionController.php');
+        Route::get('/__admission/apply', [AdmissionController::class, 'publicForm'])->name('admission.public.apply');
         Route::post('/__admission/apply', [AdmissionController::class, 'applyPublic'])->name('admission.public.apply.store');
         Route::get('/__admission/apply-form', [AdmissionController::class, 'publicForm']);
         Route::get('/__admission/track', [AdmissionController::class, 'trackForm'])->name('admission.public.track');
@@ -53,6 +54,7 @@ final class AdmissionManagementPluginTest extends TestCase
         Route::get('/__admission/reports', [AdmissionController::class, 'reports'])->name('admin.admissions.reports');
         Route::get('/__admission/reports/export', [AdmissionController::class, 'exportReport'])->name('admin.admissions.reports.export');
         Route::get('/__admission/admin-index', [AdmissionController::class, 'index'])->name('admin.admissions.index');
+        Route::post('/__admission/admin-index', [AdmissionController::class, 'store'])->name('admin.admissions.store');
         Route::get('/__admission/{application}/documents/{document}', [AdmissionController::class, 'downloadDocument']);
         app('router')->getRoutes()->refreshNameLookups();
     }
