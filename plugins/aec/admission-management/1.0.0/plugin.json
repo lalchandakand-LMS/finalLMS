@@ -26,7 +26,13 @@
     "branch-scoped-review",
     "screening-and-interview-workflow",
     "private-admission-document-storage",
-    "idempotent-student-account-conversion"
+    "idempotent-student-account-conversion",
+    "typed-online-document-upload",
+    "document-verification-and-correction-workflow",
+    "application-audit-timeline",
+    "branch-scoped-admission-analytics",
+    "filtered-admission-csv-export",
+    "walk-in-admission-registration"
   ],
   "migrations": "migrations",
   "settings_schema": {
