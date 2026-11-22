@@ -438,3 +438,14 @@ Production deployment remains blocked until staging, backup/restore, rollback an
 - CodeQL run #3214 completed successfully on the same exact head.
 - These checks validate the CI test environment and package assembly; they do not replace isolated cPanel staging, backup/restore, real mail delivery or payment-provider sandbox acceptance.
 - Referral refund-to-course-payment linkage remains unresolved. Keep referral payouts and live payment activation disabled until explicit partial/full refund, chargeback, reversal and paid-commission recovery are implemented and tested. PR remains Draft; no production deployment or production data changes were performed.
+
+
+## 2026-11-22 — Five-panel navigation and Branch Panel tranche
+
+- Active work: PR #396, branch `feat/aec-feature-parity-port`; latest code commit before this status update: `c87b322ba308ed42c5278737e93ff8c9f6330807`.
+- Added a dedicated Branch Panel entry at `/branch/dashboard`, with branch-only batch/student totals and recent batches; added `/branch/batches` and `/branch/students` route aliases and retained legacy URLs for compatibility.
+- Branch dashboard denies users without an assigned active branch. Existing controller queries continue to scope batches, students and teachers to the assigned branch; no cross-branch selector is exposed.
+- Added role-specific sidebar navigation for Admin, Branch, Teacher, Student and Guardian; added Student quick links for exams, invoices, quiz history, attendance and guardian requests; added Guardian portal entry and Teacher batch/live-class entry.
+- Added regression coverage for distinct role navigation and branch dashboard isolation in `tests/Feature/StaffRoleScopeTest.php`.
+- Status: implementation committed to the PR branch; **exact-head Laravel CI and CodeQL have not yet reported for the latest commit**. No test pass is claimed. Five-portal browser/mobile acceptance and real branch-staff operational validation remain open.
+- Release state: PR #396 remains Draft/Open; do not merge or deploy until exact-head checks, complete diff review, authorization regressions and remaining release gates pass.
