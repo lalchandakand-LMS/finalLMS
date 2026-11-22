@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "key": "aec.carousel-builder",
+  "name": "Carousel Builder",
+  "version": "1.0.0",
+  "type": "builder",
+  "entrypoint": "src/Plugin.php",
+  "requires": {"php": "^8.3", "laravel": "^12.0", "lms": "^1.0"},
+  "dependencies": [],
+  "conflicts": [],
+  "portals": ["admin"],
+  "permissions": ["carousels.manage"],
+  "capabilities": [
+    "carousels.create",
+    "carousels.edit",
+    "carousels.order",
+    "carousels.configure_responsive_layout",
+    "carousels.publish",
+    "carousels.dynamic_sources"
+  ],
+  "migrations": "migrations"
+}
