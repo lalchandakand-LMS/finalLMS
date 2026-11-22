@@ -137,6 +137,8 @@ class HomepageSliderTest extends TestCase
             ->assertSeeInOrder(['Earlier order', 'Responsive hero'])
             ->assertSee('/storage/media/mobile.jpg', false)
             ->assertSee('home-carousel--fade', false)
+            ->assertSee('data-carousel-progress', false)
+            ->assertSee('data-carousel-toggle', false)
             ->assertSee('home-carousel__content--center', false)
             ->assertSee('--slide-overlay:#123456', false)
             ->assertSee('object-position:30% 40%', false)
