@@ -45,7 +45,6 @@ final class PluginRuntime
         // Do not mark registration complete until the registry query succeeds.
         // A transient database outage must allow a long-lived worker to retry.
         $active = PluginInstallation::query()->where('status', 'active')->orderBy('plugin_key')->get();
-        $this->registered = true;
 
         /** @var array<string, array{plugin:PluginInstallation,entrypoint:string}> $verified */
         $verified = [];
@@ -66,6 +65,10 @@ final class PluginRuntime
                 $this->markFailed($plugin);
             }
         }
+
+        // Do not mark registration complete until every active package has been
+        // preflighted. A transient signature/filesystem failure must allow retry.
+        $this->registered = true;
 
         // Phase two: dependencies must themselves be active and verified.
         // Topological ordering ensures dependency entrypoints run before dependents.
