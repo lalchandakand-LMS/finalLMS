@@ -325,7 +325,11 @@
         }
     @endphp
     <section class="home-testimonials"><div class="home-section-heading home-section-heading--dark"><span class="home-heading-kicker">{{ __('Student reviews') }}</span><h2>{{ $homeReviewsTitle }}</h2><p>{{ __('Approved feedback from our learners') }}</p></div>
-        @if($hasLearnerVoices)
+        @foreach(($websiteCarousels ?? collect()) as $websiteCarousel)
+        @include('carousel-builder::public.carousel', ['carousel' => $websiteCarousel])
+    @endforeach
+
+    @if($hasLearnerVoices)
             @foreach($testimonialRows as $rowIndex => $row)
                 <div class="home-testimonial-viewport">
                     <div class="home-testimonial-track {{ $rowIndex === 1 ? 'home-testimonial-track--reverse' : '' }}">
