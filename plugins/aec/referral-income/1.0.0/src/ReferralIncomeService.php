@@ -94,6 +94,13 @@ final class ReferralIncomeService
             $amount = round((float) $payment->amount, 2);
             $commission = round($amount * ((float) $rule->commission_percent / 100), 2);
             if ($commission <= 0) return null;
+            // A payment may be approved by more than one trusted path (manual review,
+            // gateway callback, or scheduled reconciliation). Return the existing ledger
+            // row before attempting an insert so repeated sequential callbacks stay safe
+            // even on installations whose legacy table predates the unique index.
+            $existingId = DB::table('referral_commissions')->where('payment_id', $payment->id)->value('id');
+            if ($existingId) return (int) $existingId;
+
             $inserted = DB::table('referral_commissions')->insertOrIgnore([
                 'attribution_id' => $attribution->id,
                 'payment_id' => $payment->id,
