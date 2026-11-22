@@ -121,7 +121,7 @@ class CarouselBuilderController extends Controller
             'items.*.sort_order' => ['nullable', 'integer', 'between:0,100000'],
         ]);
 
-        $data['autoplay'] = $request->boolean('autoplay');
+        if ($data['source_type'] === 'manual' && $data['status'] === 'published'\n            && collect($data['items'] ?? [])->filter(fn (array $item): bool => trim((string) ($item['title'] ?? '')) !== '')->isEmpty()) {\n            throw ValidationException::withMessages(['items' => 'Add at least one titled item before publishing a manual carousel.']);\n        }\n\n        $data['autoplay'] = $request->boolean('autoplay');
         $data['show_arrows'] = $request->boolean('show_arrows');
         $data['show_dots'] = $request->boolean('show_dots');
         $data['starts_at'] = $data['starts_at'] ?? null;
