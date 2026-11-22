@@ -373,6 +373,47 @@ PHP,
         $this->assertSame('active', $plugin->fresh()->status);
     }
 
+
+    public function test_transient_signature_verification_failure_allows_registration_retry(): void
+    {
+        $plugin = $this->createPlugin($this->validEntrypoint());
+
+        $failedOnce = false;
+        $verifier = \\Mockery::mock(PluginSignatureVerifier::class);
+        $verifier->shouldReceive('verifyInstalledSignature')
+            ->twice()
+            ->andReturnUsing(function () use (&$failedOnce): bool {
+                if (! $failedOnce) {
+                    $failedOnce = true;
+                    throw new RuntimeException('Simulated temporary signing configuration failure');
+                }
+
+                return true;
+            });
+
+        app()->instance(PluginSignatureVerifier::class, $verifier);
+        app()->forgetInstance(PluginRuntime::class);
+        $runtime = app(PluginRuntime::class);
+
+        try {
+            $runtime->registerActivePlugins();
+            $this->fail('A transient signature-verification failure must interrupt registration.');
+        } catch (RuntimeException $exception) {
+            $this->assertSame('Simulated temporary signing configuration failure', $exception->getMessage());
+        }
+
+        $this->assertSame('active', $plugin->fresh()->status);
+        $this->assertFalse(app()->bound('plugin.runtime.registered'));
+
+        // The same long-lived runtime instance must retry preflight rather than
+        // returning early because a failed attempt marked itself registered.
+        $runtime->registerActivePlugins();
+
+        $this->assertSame('active', $plugin->fresh()->status);
+        $this->assertTrue(app('plugin.runtime.registered'));
+        $this->assertNotNull(app('router')->getRoutes()->getByName('plugins.runtime_check.health'));
+    }
+
     public function test_transient_registry_query_failure_does_not_permanently_disable_plugin_registration(): void
     {
         $this->createPlugin($this->validEntrypoint());
