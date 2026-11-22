@@ -40,18 +40,26 @@ class StudentManagementController extends Controller
         $request->validate(['file' => ['required','file','mimes:csv,txt','max:2048']]);
         $stream = fopen($request->file('file')->getRealPath(), 'r');
         $headers = array_map(fn ($h) => strtolower(trim((string) $h)), fgetcsv($stream) ?: []);
+        if (isset($headers[0])) $headers[0] = preg_replace('/^\xEF\xBB\xBF/', '', $headers[0]);
+        abort_if(count($headers) !== count(array_unique($headers)), 422, 'CSV contains duplicate column headers.');
         $allowed = ['email','student_number','date_of_birth','gender','blood_group','nationality','address_line','city','district','emergency_contact_name','emergency_contact_phone','previous_school','admission_date','academic_level'];
         abort_unless(in_array('email', $headers, true), 422, 'CSV must contain an email column.');
-        $rows = []; $errors = []; $line = 1;
+        $rows = []; $errors = []; $line = 1; $seenEmails = []; $seenStudentNumbers = [];
         while (($values = fgetcsv($stream)) !== false && count($rows) + count($errors) < 500) {
             $line++;
             if (count($values) !== count($headers)) { $errors[] = "Row {$line}: column count mismatch."; continue; }
-            $row = array_combine($headers, $values);
-            $email = strtolower(trim((string) ($row['email'] ?? '')));
+            $row = array_map(fn ($value) => trim((string) $value) === '' ? null : trim((string) $value), array_combine($headers, $values));
+            $email = strtolower((string) ($row['email'] ?? ''));
+            if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) { $errors[] = "Row {$line}: a valid email address is required."; continue; }
+            if (isset($seenEmails[$email])) { $errors[] = "Row {$line}: duplicate email address in this CSV."; continue; }
+            $seenEmails[$email] = true;
             $student = User::query()->where('role','student')->where('email',$email)
                 ->when($request->user()->isBranchManager(), fn ($q) => $q->where('branch_id',$request->user()->branch_id))->first();
             if (!$student) { $errors[] = "Row {$line}: no student account found for {$email} in your scope."; continue; }
-            $data = array_intersect_key($row, array_flip($allowed));
+            $data = array_intersect_key($row, array_flip(array_diff($allowed, ['email'])));
+            $studentNumber = $data['student_number'] ?? null;
+            if ($studentNumber !== null && isset($seenStudentNumbers[$studentNumber])) { $errors[] = "Row {$line}: duplicate student number in this CSV."; continue; }
+            if ($studentNumber !== null) $seenStudentNumbers[$studentNumber] = true;
             $validator = \Illuminate\Support\Facades\Validator::make($data, [
                 'student_number' => ['nullable','string','max:40',Rule::unique('student_profiles','student_number')->where(fn ($q) => $q->where('user_id','!=',$student->id))],
                 'date_of_birth' => ['nullable','date','before:today'], 'gender' => ['nullable','string','max:30'],
