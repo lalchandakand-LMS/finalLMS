@@ -9,6 +9,7 @@ use App\Models\Course;
 use App\Models\Payment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
@@ -81,6 +82,37 @@ final class ReferralIncomePluginTest extends TestCase
             'currency' => 'BDT',
             'status' => 'pending',
         ]);
+    }
+
+    public function test_scheduled_reconciliation_recovers_a_missing_commission_and_is_idempotent(): void
+    {
+        $referrer = User::factory()->create(['role' => 'student']);
+        $buyer = User::factory()->create(['role' => 'student']);
+        $service = app(ReferralIncomeService::class);
+        $service->applyCode($buyer, $service->createOrGetCode($referrer));
+        $course = Course::factory()->create();
+        $payment = Payment::query()->create([
+            'user_id' => $buyer->id,
+            'course_id' => $course->id,
+            'method' => 'bkash',
+            'amount' => 1000,
+            'currency' => 'BDT',
+            'transaction_reference' => 'REF-RETRY-'.strtoupper(bin2hex(random_bytes(6))),
+            'status' => 'approved',
+        ]);
+
+        // Simulate payment approval while the synchronous commission write was
+        // unavailable: the approved payment remains the durable retry source.
+        $this->assertDatabaseCount('referral_commissions', 0);
+        $this->assertSame(0, Artisan::call('referral-income:reconcile-approved-payments'));
+        $this->assertDatabaseHas('referral_commissions', [
+            'payment_id' => $payment->id,
+            'referrer_user_id' => $referrer->id,
+            'commission_amount' => 50,
+        ]);
+
+        $this->assertSame(0, Artisan::call('referral-income:reconcile-approved-payments'));
+        $this->assertDatabaseCount('referral_commissions', 1);
     }
 
     public function test_a_buyer_cannot_change_an_existing_referral_attribution(): void
