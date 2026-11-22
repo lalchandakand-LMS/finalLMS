@@ -27,6 +27,7 @@ use App\Http\Controllers\AdminAttendanceAuditController;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\PublicInstructorController;
+use App\Http\Controllers\PublicAchievementController;
 use App\Http\Controllers\CourseComboController;
 use App\Http\Controllers\CourseWishlistController;
 use App\Http\Controllers\DashboardController;
@@ -149,6 +150,8 @@ Route::get('/learn', function () {
         : redirect()->route('courses.index');
 })->name('learn.index');
 Route::get('/instructors', [PublicInstructorController::class, 'index'])->name('instructors.index');
+Route::get('/board-results', [PublicAchievementController::class, 'boardResults'])->name('board-results.index');
+Route::get('/achievements/{certificateNumber}', [PublicAchievementController::class, 'show'])->where('certificateNumber', '[A-Za-z0-9-]+')->name('achievements.show');
 Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
 Route::get('/course-combos', [CourseComboController::class, 'publicIndex'])->name('course-combos.index');
 Route::get('/course-combos/{courseCombo:slug}', [CourseComboController::class, 'show'])->name('course-combos.show');

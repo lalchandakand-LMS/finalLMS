@@ -22,4 +22,9 @@
             <span class="badge warning">{{ __('Issued:') }} {{ $certificate->issued_at?->format('F j, Y') }}</span>
         </div>
     </div>
+
+    <div class="meta-row" style="justify-content:center;margin-top:18px;">
+        <a class="btn primary" href="{{ route('achievements.show', ['certificateNumber' => $certificate->certificate_number]) }}">{{ __('Share achievement card') }}</a>
+    </div>
+
 @endsection
