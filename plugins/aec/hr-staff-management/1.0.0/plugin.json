@@ -10,6 +10,6 @@
   "conflicts": [],
   "portals": ["admin", "branch"],
   "permissions": ["hr.manage", "hr.payroll.disburse"],
-  "capabilities": ["staff-profiles", "department-and-designation-records", "staff-status-tracking", "monthly-payroll-ledger", "payroll-disbursement-reference", "branch-scoped-hr-data"],
+  "capabilities": ["staff-profiles", "linked-staff-user-accounts", "employment-contract-tracking", "daily-staff-attendance", "attendance-exceptions", "leave-request-and-approval-workflow", "monthly-payroll-ledger", "payroll-disbursement-reference", "branch-scoped-hr-data"],
   "migrations": "migrations"
 }
