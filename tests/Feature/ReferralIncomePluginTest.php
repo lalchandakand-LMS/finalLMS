@@ -310,7 +310,7 @@ final class ReferralIncomePluginTest extends TestCase
         try {
             $service->reviewPayout($payoutId, (int) $admin->id, 'approved', 'Reviewed');
             $this->fail('Payout review must fail if its reserved commission total no longer matches.');
-        } catch (\Symfony\\Component\\HttpKernel\\Exception\\HttpException $exception) {
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
             $this->assertSame(409, $exception->getStatusCode());
             $this->assertDatabaseHas('referral_payout_requests', ['id' => $payoutId, 'status' => 'pending']);
         }
