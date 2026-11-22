@@ -45,17 +45,27 @@ class MediaLibraryController extends Controller
     {
         abort_if($media->blogCover()->exists(), 422, 'This file is used as a published or draft article cover.');
         $sections = json_decode((string) Setting::value('website_sections', '[]'), true);
-        $usedByWebsite = collect(is_array($sections) ? $sections : [])->contains(
-            fn ($section) => is_array($section) && (int) ($section['image_id'] ?? 0) === $media->id
-        );
-        abort_if($usedByWebsite, 422, 'This file is used by a homepage section.');
+        $draft = json_decode((string) Setting::value('homepage_draft', ''), true);
+        $draftSections = is_array($draft) ? ($draft['sections'] ?? []) : [];
+        $usedByWebsite = collect(array_merge(
+            is_array($sections) ? $sections : [],
+            is_array($draftSections) ? $draftSections : [],
+        ))->contains(fn ($section) => is_array($section) && (int) ($section['image_id'] ?? 0) === $media->id);
+        abort_if($usedByWebsite, 422, 'This file is used by a homepage section or saved draft.');
+
         $slides = json_decode((string) Setting::value('home_slides', '[]'), true);
-        $usedBySlider = collect(is_array($slides) ? $slides : [])->contains(
-            fn ($slide) => is_array($slide) && (int) ($slide['image_id'] ?? 0) === $media->id
-        );
-        abort_if($usedBySlider, 422, 'This file is used by a homepage slider slide.');
+        $draftSlides = is_array($draft) ? ($draft['home_slides'] ?? []) : [];
+        $usedBySlider = collect(array_merge(
+            is_array($slides) ? $slides : [],
+            is_array($draftSlides) ? $draftSlides : [],
+        ))->contains(fn ($slide) => is_array($slide)
+            && ((int) ($slide['image_id'] ?? 0) === $media->id
+                || (int) ($slide['mobile_image_id'] ?? 0) === $media->id));
+        abort_if($usedBySlider, 422, 'This file is used by a homepage slider slide or saved draft.');
+
         $usedAsBranding = (int) Setting::value('site_logo_media_id', 0) === $media->id
-            || (int) Setting::value('site_favicon_media_id', 0) === $media->id;
+            || (int) Setting::value('site_favicon_media_id', 0) === $media->id
+            || (int) Setting::value('loading_screen_logo_media_id', 0) === $media->id;
         abort_if($usedAsBranding, 422, 'This file is currently used as the website logo or favicon.');
         Storage::disk($media->disk)->delete($media->path);
         $media->delete();
