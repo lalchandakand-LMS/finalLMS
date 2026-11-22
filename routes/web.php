@@ -549,6 +549,13 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::get('/settings', [AdminSettingsController::class, 'index'])->name('admin.settings.index');
         Route::post('/settings', [AdminSettingsController::class, 'update'])->name('admin.settings.update');
 
+        Route::get('/students', [StudentManagementController::class, 'index'])->name('admin.students.index');
+        Route::get('/students/{student}', [StudentManagementController::class, 'show'])->name('admin.students.show');
+        Route::put('/students/{student}/profile', [StudentManagementController::class, 'updateProfile'])->name('admin.students.profile.update');
+        Route::put('/students/{student}/transfer', [StudentManagementController::class, 'transferBatch'])->name('admin.students.transfer');
+        Route::put('/students/{student}/promote', [StudentManagementController::class, 'promote'])->name('admin.students.promote');
+        Route::put('/students/{student}/suspend', [StudentManagementController::class, 'suspend'])->name('admin.students.suspend');
+        Route::put('/students/{student}/reactivate', [StudentManagementController::class, 'reactivate'])->name('admin.students.reactivate');
         Route::get('/users', [UserController::class, 'index'])->name('admin.users.index');
         Route::post('/users/{user}/role', [UserController::class, 'updateRole'])->name('admin.users.updateRole');
 
