@@ -116,6 +116,41 @@ class WebsiteBuilderTest extends TestCase
             ->assertSee('Footer content & links', false);
     }
 
+    public function test_builder_saves_and_publishes_responsive_ordered_and_scheduled_slides(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $desktop = MediaAsset::create([
+            'uploaded_by' => $admin->id, 'disk' => 'public', 'path' => 'media/builder-desktop.jpg',
+            'original_name' => 'builder-desktop.jpg', 'mime_type' => 'image/jpeg', 'size' => 100,
+        ]);
+        $mobile = MediaAsset::create([
+            'uploaded_by' => $admin->id, 'disk' => 'public', 'path' => 'media/builder-mobile.jpg',
+            'original_name' => 'builder-mobile.jpg', 'mime_type' => 'image/jpeg', 'size' => 100,
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.website-builder.update'), [
+            'home_slides' => [[
+                'enabled' => '1',
+                'image_id' => $desktop->id,
+                'mobile_image_id' => $mobile->id,
+                'sort_order' => 4,
+                'starts_at' => now()->subHour()->format('Y-m-d H:i:s'),
+                'ends_at' => now()->addDay()->format('Y-m-d H:i:s'),
+                'title' => 'Builder responsive slide',
+            ]],
+        ])->assertRedirect(route('admin.website-builder.index'));
+
+        $slides = json_decode((string) Setting::value('home_slides'), true);
+        $this->assertSame($desktop->id, $slides[0]['image_id']);
+        $this->assertSame($mobile->id, $slides[0]['mobile_image_id']);
+        $this->assertSame(4, $slides[0]['sort_order']);
+        $this->assertNotEmpty($slides[0]['starts_at']);
+        $this->assertNotEmpty($slides[0]['ends_at']);
+
+        Auth::logout();
+        $this->get('/')->assertOk()->assertSee('Builder responsive slide')->assertSee('/storage/media/builder-mobile.jpg', false);
+    }
+
     public function test_non_admin_cannot_access_website_builder(): void
     {
         $student = User::factory()->create(['role' => 'student']);
