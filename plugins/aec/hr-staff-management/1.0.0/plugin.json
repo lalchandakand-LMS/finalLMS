@@ -15,12 +15,14 @@
   "portals": [
     "admin",
     "branch",
-    "teacher"
+    "teacher",
+    "public"
   ],
   "permissions": [
     "hr.manage",
     "hr.payroll.disburse",
-    "hr.self-service"
+    "hr.self-service",
+    "hr.recruitment.manage"
   ],
   "capabilities": [
     "staff-profiles",
@@ -33,7 +35,10 @@
     "payroll-disbursement-reference",
     "branch-scoped-hr-data",
     "teacher-self-service-attendance-and-leave-history",
-    "teacher-leave-applications"
+    "teacher-leave-applications",
+    "public-career-openings",
+    "private-resume-applications",
+    "recruitment-review-and-hire-conversion"
   ],
   "migrations": "migrations"
 }
