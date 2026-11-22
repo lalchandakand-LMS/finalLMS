@@ -570,6 +570,33 @@ class CourseContentStudioTest extends TestCase
         $this->assertDatabaseCount('course_content_post_versions', 1);
     }
 
+    public function test_admin_can_restore_a_previous_lesson_revision_without_rolling_back_paid_file_state(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $category = CourseCategory::create(['name' => 'Grammar', 'slug' => 'grammar']);
+        $post = $this->makePost($admin, $category, 'Original revision');
+
+        $this->actingAs($admin)->put(route('admin.course-content-posts.update', $post), [
+            'title' => 'Current revision',
+            'long_description' => 'Current lesson text.',
+            'status' => 'published',
+            'category_ids' => [$category->id],
+        ])->assertRedirect();
+
+        $version = CourseContentPostVersion::query()->where('course_content_post_id', $post->id)->firstOrFail();
+        $this->post(route('admin.course-content-posts.versions.restore', [$post, $version]))
+            ->assertRedirect(route('admin.course-content-posts.versions', $post));
+
+        $this->assertSame('Original revision', $post->fresh()->title);
+        $this->assertSame('Lesson content', $post->fresh()->long_description);
+        $this->assertDatabaseCount('course_content_post_versions', 2);
+        $this->assertDatabaseHas('course_content_post_versions', [
+            'course_content_post_id' => $post->id,
+            'version_number' => 2,
+            'change_type' => 'restore',
+        ]);
+    }
+
     private function makePost(User $author, ?CourseCategory $category, string $title): CourseContentPost
     {
         $post = CourseContentPost::create([
