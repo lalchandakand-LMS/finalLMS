@@ -28,13 +28,13 @@ class HomepageCourseCarouselTest extends TestCase
         Setting::setValue('home_course_carousel_enabled', '1');
         Setting::setValue('home_course_carousel_items', '3');
         Setting::setValue('home_course_carousel_cards', '2');
-        $courses = Course::factory()->count(4)->create(['status' => 'published']);
+        Course::factory()->count(4)->create(['status' => 'published']);
 
         $response = $this->get('/')->assertOk()
             ->assertSee('style="--course-cards:2;--course-gaps:16px;"', false)
             ->assertSee('data-course-carousel-track', false);
 
-        $response->assertDontSee($courses->first()->title);
+        $this->assertSame(3, substr_count($response->getContent(), 'class="home-course-tile"'));
 
         Setting::setValue('home_course_carousel_enabled', '0');
         $this->get('/')->assertOk()->assertDontSee('data-course-carousel-track', false);
