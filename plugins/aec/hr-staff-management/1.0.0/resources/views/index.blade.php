@@ -4,7 +4,7 @@
 <div class="mx-auto max-w-7xl space-y-6 p-4 sm:p-6">
 <div><h1 class="text-2xl font-bold">HR & Staff Management</h1><p class="text-sm text-gray-600">Staff profiles and monthly payroll ledger.</p></div>
 @if(session('success'))<p class="rounded bg-green-50 p-3 text-green-800">{{ session('success') }}</p>@endif
-@if($errors->any())<p class="rounded bg-red-50 p-3 text-red-800">{{ $errors->first() }}</p>@endif
+@if(isset($errors) && $errors->any())<p class="rounded bg-red-50 p-3 text-red-800">{{ $errors->first() }}</p>@endif
 <div class="grid gap-6 lg:grid-cols-2">
 <section class="rounded border bg-white p-5"><h2 class="mb-3 font-semibold">Register staff</h2><form method="POST" action="{{ route(request()->routeIs('branch.*')?'branch.hr.staff.store':'admin.hr.staff.store') }}" class="grid gap-3 sm:grid-cols-2">@csrf
 <input required name="employee_code" maxlength="40" placeholder="Employee code" class="rounded border-gray-300">
