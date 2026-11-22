@@ -66,6 +66,8 @@ class AdminSettingsController extends Controller
             'home_slider_mobile_height' => ['nullable', 'integer', 'min:220', 'max:520'],
             'home_slider_overlay' => ['nullable', 'integer', 'min:0', 'max:90'],
             'home_slider_transition' => ['nullable', Rule::in(['slide', 'fade', 'zoom'])],
+            'home_slider_progress' => ['nullable', 'boolean'],
+            'home_slider_play_pause' => ['nullable', 'boolean'],
             'home_slides.*.eyebrow' => ['nullable', 'string', 'max:80'],
             'home_slides.*.secondary_button_label' => ['nullable', 'string', 'max:60'],
             'home_slides.*.secondary_button_url' => ['nullable', 'string', 'max:500'],
