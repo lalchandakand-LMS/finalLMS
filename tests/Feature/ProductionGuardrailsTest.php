@@ -7,6 +7,7 @@ use App\Models\Branch;
 use App\Models\Certificate;
 use App\Models\Course;
 use App\Models\Enrollment;
+use App\Models\GuardianStudentLink;
 use App\Models\Payment;
 use App\Models\Setting;
 use App\Models\User;
