@@ -39,6 +39,7 @@ final class AdmissionManagementPluginTest extends TestCase
         View::addNamespace('admission-management', base_path('plugins/aec/admission-management/1.0.0/resources/views'));
         require_once base_path('plugins/aec/admission-management/1.0.0/src/AdmissionApplication.php');
         require_once base_path('plugins/aec/admission-management/1.0.0/src/AdmissionDocument.php');
+        require_once base_path('plugins/aec/admission-management/1.0.0/src/AdmissionApplicationEvent.php');
         require_once base_path('plugins/aec/admission-management/1.0.0/src/AdmissionController.php');
         Route::post('/__admission/apply', [AdmissionController::class, 'applyPublic'])->name('admission.public.apply.store');
         Route::get('/__admission/track', [AdmissionController::class, 'trackForm'])->name('admission.public.track');
@@ -47,6 +48,10 @@ final class AdmissionManagementPluginTest extends TestCase
         Route::post('/__admission/{application}/review', [AdmissionController::class, 'review']);
         Route::post('/__admission/{application}/convert', [AdmissionController::class, 'convertToStudent']);
         Route::post('/__admission/{application}/documents', [AdmissionController::class, 'storeDocument']);
+        Route::post('/__admission/{application}/documents/{document}/review', [AdmissionController::class, 'reviewDocument']);
+        Route::get('/__admission/reports', [AdmissionController::class, 'reports'])->name('admin.admissions.reports');
+        Route::get('/__admission/reports/export', [AdmissionController::class, 'exportReport'])->name('admin.admissions.reports.export');
+        Route::get('/__admission/admin-index', [AdmissionController::class, 'index'])->name('admin.admissions.index');
         Route::get('/__admission/{application}/documents/{document}', [AdmissionController::class, 'downloadDocument']);
         app('router')->getRoutes()->refreshNameLookups();
     }
@@ -278,4 +283,147 @@ final class AdmissionManagementPluginTest extends TestCase
         $this->actingAs($admin)->post('/__admission/'.$application->id.'/convert')->assertRedirect();
         $this->assertSame(1, User::query()->where('email', 'newstudent@example.com')->count());
     }
+
+
+    public function test_online_application_accepts_private_typed_documents_and_records_submission_audit(): void
+    {
+        Storage::fake('local');
+        $branch = Branch::query()->create(['name' => 'Online Branch', 'slug' => 'online-branch', 'is_active' => true]);
+
+        $this->get('/admission/apply')->assertOk()->assertSee('Online Admission Application')->assertSee('Online Branch');
+
+        $this->post('/__admission/apply', [
+            'applicant_name' => 'Online Applicant',
+            'email' => 'online@example.com',
+            'phone' => '01700000010',
+            'desired_course' => 'Spoken English',
+            'branch_id' => $branch->id,
+            'documents' => [
+                'photo' => \Illuminate\Http\UploadedFile::fake()->image('applicant.jpg'),
+                'nid' => \Illuminate\Http\UploadedFile::fake()->create('nid.pdf', 120, 'application/pdf'),
+            ],
+        ])->assertRedirect();
+
+        $application = AdmissionApplication::query()->where('email', 'online@example.com')->firstOrFail();
+        $this->assertSame('pending', $application->status);
+        $this->assertSame('pending', $application->document_verification_status);
+        $this->assertDatabaseCount('admission_documents', 2);
+        foreach ($application->documents as $document) {
+            $this->assertSame('local', $document->disk);
+            $this->assertSame('pending', $document->review_status);
+            Storage::disk('local')->assertExists($document->path);
+        }
+        $this->assertDatabaseHas('admission_application_events', [
+            'admission_application_id' => $application->id,
+            'event_key' => 'application_submitted',
+            'to_status' => 'pending',
+        ]);
+    }
+
+    public function test_document_review_requires_rejection_reason_and_all_documents_verified_before_approval(): void
+    {
+        Storage::fake('local');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $application = AdmissionApplication::query()->create([
+            'application_code' => 'ADM-DOCREVIEW01',
+            'applicant_name' => 'Document Review Applicant',
+            'email' => 'docreview@example.com',
+            'phone' => '01700000011',
+            'desired_course' => 'English',
+            'application_source' => 'website',
+            'status' => 'pending',
+            'document_verification_status' => 'pending',
+        ]);
+        $document = $application->documents()->create([
+            'disk' => 'local',
+            'path' => 'admission-documents/'.$application->id.'/sample.pdf',
+            'original_name' => 'sample.pdf',
+            'mime_type' => 'application/pdf',
+            'size_bytes' => 100,
+            'sha256' => str_repeat('a', 64),
+            'document_type' => 'previous_certificate',
+            'review_status' => 'pending',
+        ]);
+        Storage::disk('local')->put($document->path, 'private pdf');
+
+        $this->actingAs($admin)->post('/__admission/'.$application->id.'/review', ['status' => 'approved'])->assertStatus(422);
+        $this->actingAs($admin)->post('/__admission/'.$application->id.'/documents/'.$document->id.'/review', [
+            'review_status' => 'rejected',
+        ])->assertSessionHasErrors('review_notes');
+        $this->actingAs($admin)->post('/__admission/'.$application->id.'/documents/'.$document->id.'/review', [
+            'review_status' => 'rejected',
+            'review_notes' => 'Please upload a clearer certificate.',
+        ])->assertRedirect();
+
+        $application->refresh();
+        $document->refresh();
+        $this->assertSame('revision_required', $application->document_verification_status);
+        $this->assertSame('rejected', $document->review_status);
+
+        $this->actingAs($admin)->post('/__admission/'.$application->id.'/documents/'.$document->id.'/review', [
+            'review_status' => 'verified',
+            'review_notes' => 'Replacement document checked.',
+        ])->assertRedirect();
+        $application->refresh();
+        $this->assertSame('verified', $application->document_verification_status);
+
+        $this->actingAs($admin)->post('/__admission/'.$application->id.'/review', ['status' => 'approved'])->assertRedirect();
+        $this->assertDatabaseHas('admission_applications', ['id' => $application->id, 'status' => 'approved']);
+        $this->assertDatabaseHas('admission_application_events', [
+            'admission_application_id' => $application->id,
+            'event_key' => 'document_reviewed',
+        ]);
+        $this->assertGreaterThanOrEqual(3, $application->events()->count());
+    }
+
+    public function test_admission_reports_and_csv_export_obey_branch_scope_and_filters(): void
+    {
+        $branchA = Branch::query()->create(['name' => 'Report Branch A', 'slug' => 'report-branch-a', 'is_active' => true]);
+        $branchB = Branch::query()->create(['name' => 'Report Branch B', 'slug' => 'report-branch-b', 'is_active' => true]);
+        $manager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $branchA->id]);
+
+        $inside = AdmissionApplication::query()->create([
+            'branch_id' => $branchA->id,
+            'application_code' => 'ADM-REPORTA0001',
+            'applicant_name' => 'Branch A Applicant',
+            'email' => 'report-a@example.com',
+            'phone' => '01700000012',
+            'desired_course' => 'Spoken English',
+            'application_source' => 'website',
+            'status' => 'approved',
+            'document_verification_status' => 'verified',
+        ]);
+        AdmissionApplication::query()->create([
+            'branch_id' => $branchA->id,
+            'application_code' => 'ADM-REPORTA0002',
+            'applicant_name' => 'Branch A Walkin',
+            'email' => 'report-a2@example.com',
+            'phone' => '01700000013',
+            'desired_course' => 'Grammar',
+            'application_source' => 'walk_in',
+            'status' => 'pending',
+            'document_verification_status' => 'missing',
+        ]);
+        AdmissionApplication::query()->create([
+            'branch_id' => $branchB->id,
+            'application_code' => 'ADM-REPORTB0001',
+            'applicant_name' => 'Branch B Private Applicant',
+            'email' => 'report-b@example.com',
+            'phone' => '01700000014',
+            'desired_course' => 'Spoken English',
+            'application_source' => 'website',
+            'status' => 'approved',
+            'document_verification_status' => 'verified',
+        ]);
+
+        $this->actingAs($manager)->get('/__admission/reports')->assertOk()
+            ->assertSee('Admission Reports &amp; Analytics')
+            ->assertSee('Branch A Applicant')
+            ->assertDontSee('Branch B Private Applicant');
+        $this->actingAs($manager)->get('/__admission/reports/export?status=approved')->assertOk()
+            ->assertHeader('content-type', 'text/csv; charset=UTF-8');
+        $this->actingAs($manager)->get('/__admission/reports/export?status=approved')
+            ->assertStreamedContent(fn ($content) => str_contains($content, 'Branch A Applicant') && ! str_contains($content, 'Branch B Private Applicant'));
+    }
+
 }
