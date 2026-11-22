@@ -77,9 +77,14 @@ class CarouselBuilderController extends Controller
 
     private function validated(Request $request, ?int $ignoreId = null): array
     {
+        $slugRule = Rule::unique('website_carousels', 'slug');
+        if ($ignoreId !== null) {
+            $slugRule->ignore($ignoreId);
+        }
+
         $data = $request->validate([
             'title' => ['required', 'string', 'max:160'],
-            'slug' => ['required', 'alpha_dash', 'max:180', Rule::unique('website_carousels', 'slug')->ignore($ignoreId)],
+            'slug' => ['required', 'alpha_dash', 'max:180', $slugRule],
             'source_type' => ['required', Rule::in(['manual', 'courses', 'teachers', 'testimonials'])],
             'item_limit' => ['required', 'integer', 'between:1,30'],
             'desktop_cards' => ['required', 'integer', 'between:1,6'],
