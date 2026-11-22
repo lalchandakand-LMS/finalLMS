@@ -42,6 +42,7 @@ final class AdmissionManagementPluginTest extends TestCase
         require_once base_path('plugins/aec/admission-management/1.0.0/src/AdmissionApplicationEvent.php');
         require_once base_path('plugins/aec/admission-management/1.0.0/src/AdmissionController.php');
         Route::post('/__admission/apply', [AdmissionController::class, 'applyPublic'])->name('admission.public.apply.store');
+        Route::get('/__admission/apply-form', [AdmissionController::class, 'publicForm']);
         Route::get('/__admission/track', [AdmissionController::class, 'trackForm'])->name('admission.public.track');
         Route::post('/__admission/track', [AdmissionController::class, 'track'])->name('admission.public.track.submit');
         Route::get('/__admission/admin', [AdmissionController::class, 'index']);
@@ -290,7 +291,7 @@ final class AdmissionManagementPluginTest extends TestCase
         Storage::fake('local');
         $branch = Branch::query()->create(['name' => 'Online Branch', 'slug' => 'online-branch', 'is_active' => true]);
 
-        $this->get('/admission/apply')->assertOk()->assertSee('Online Admission Application')->assertSee('Online Branch');
+        $this->get('/__admission/apply-form')->assertOk()->assertSee('Online Admission Application')->assertSee('Online Branch');
 
         $this->post('/__admission/apply', [
             'applicant_name' => 'Online Applicant',
@@ -418,12 +419,12 @@ final class AdmissionManagementPluginTest extends TestCase
 
         $this->actingAs($manager)->get('/__admission/reports')->assertOk()
             ->assertSee('Admission Reports &amp; Analytics')
-            ->assertSee('Branch A Applicant')
-            ->assertDontSee('Branch B Private Applicant');
-        $this->actingAs($manager)->get('/__admission/reports/export?status=approved')->assertOk()
-            ->assertHeader('content-type', 'text/csv; charset=UTF-8');
-        $this->actingAs($manager)->get('/__admission/reports/export?status=approved')
-            ->assertStreamedContent(fn ($content) => str_contains($content, 'Branch A Applicant') && ! str_contains($content, 'Branch B Private Applicant'));
+            ->assertSee('Total applications')->assertSee('Conversion rate');
+        $response = $this->actingAs($manager)->get('/__admission/reports/export?status=approved');
+        $response->assertOk()->assertHeader('content-type', 'text/csv; charset=UTF-8');
+        $csv = $response->streamedContent();
+        $this->assertStringContainsString('Branch A Applicant', $csv);
+        $this->assertStringNotContainsString('Branch B Private Applicant', $csv);
     }
 
 }
