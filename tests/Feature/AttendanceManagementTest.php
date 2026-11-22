@@ -248,16 +248,16 @@ class AttendanceManagementTest extends TestCase
         }
 
         $this->actingAs($manager)
-            ->get(route('admin.branch-workspace.batches.attendance.index', $batch))
+            ->get(route('branch.batches.attendance.index', $batch))
             ->assertOk()
             ->assertSee('Assigned Branch Batch');
 
         $this->actingAs($manager)
-            ->post(route('admin.branch-workspace.batches.attendance.store', $batch), [
+            ->post(route('branch.batches.attendance.store', $batch), [
                 'attendance_date' => now()->toDateString(),
                 'records' => [['student_id' => $student->id, 'status' => 'present']],
             ])
-            ->assertRedirect();
+            ->assertRedirect(route('branch.batches.attendance.index', ['batch' => $batch, 'date' => now()->toDateString()]));
 
         $this->assertDatabaseHas('attendances', [
             'batch_id' => $batch->id,
@@ -266,7 +266,7 @@ class AttendanceManagementTest extends TestCase
         ]);
 
         $this->actingAs($manager)
-            ->get(route('admin.branch-workspace.batches.attendance.index', $otherBatch))
+            ->get(route('branch.batches.attendance.index', $otherBatch))
             ->assertForbidden();
     }
 
