@@ -12,6 +12,52 @@
         <a class="btn primary" href="{{ route('admin.settings.index') }}">{{ __('Configure integrations') }}</a>
     </div>
 
+    <section class="panel" style="margin-bottom:20px;">
+        <div class="page-header" style="margin-bottom:12px;">
+            <div>
+                <h2 style="margin:0;">{{ __('Broadcasting, Marketing & Automation') }}</h2>
+                <p class="muted" style="margin:6px 0 0;">{{ __('One place to manage learner communications, campaigns, engagement and future channel integrations.') }}</p>
+            </div>
+            <span class="badge info">{{ __('Alom’s English Center') }}</span>
+        </div>
+        <div class="grid grid-3">
+            <article class="panel" style="background:var(--surface-muted, #f7f8fc);">
+                <h3 style="margin-top:0;">{{ __('SMS Broadcast') }}</h3>
+                <p class="muted">{{ __('Create queued SMS campaigns for verified learners who have explicitly opted in. Delivery status and recipient reports are available.') }}</p>
+                <span class="badge success">{{ __('Available') }}</span>
+                <div style="margin-top:12px;"><a class="btn primary" href="{{ route('admin.sms-campaigns.index') }}">{{ __('Open SMS Campaigns') }}</a></div>
+            </article>
+            <article class="panel" style="background:var(--surface-muted, #f7f8fc);">
+                <h3 style="margin-top:0;">{{ __('Meta Campaigns') }}</h3>
+                <p class="muted">{{ __('Plan and review Meta promotion activity. Live ad creation and publishing remain dependent on approved platform access.') }}</p>
+                <span class="badge success">{{ __('Planner available') }}</span>
+                <div style="margin-top:12px;"><a class="btn primary" href="{{ route('admin.marketing.boost-campaigns.index') }}">{{ __('Open Campaign Planner') }}</a></div>
+            </article>
+            <article class="panel" style="background:var(--surface-muted, #f7f8fc);">
+                <h3 style="margin-top:0;">{{ __('Support Inbox') }}</h3>
+                <p class="muted">{{ __('Review and respond to learner support tickets from the existing support workflow.') }}</p>
+                <span class="badge success">{{ __('Available') }}</span>
+                <div style="margin-top:12px;"><a class="btn primary" href="{{ route('admin.support-tickets.index') }}">{{ __('Open Support Inbox') }}</a></div>
+            </article>
+            <article class="panel" style="background:var(--surface-muted, #f7f8fc);">
+                <h3 style="margin-top:0;">{{ __('Email & Notices') }}</h3>
+                <p class="muted">{{ __('Use configured transactional email and the LMS notice board for operational communication. Bulk email marketing needs a dedicated consent-aware campaign queue.') }}</p>
+                <span class="badge warning">{{ __('Partially available') }}</span>
+            </article>
+            <article class="panel" style="background:var(--surface-muted, #f7f8fc);">
+                <h3 style="margin-top:0;">{{ __('Omnichannel Inbox') }}</h3>
+                <p class="muted">{{ __('A unified conversation timeline for WhatsApp, Messenger, Instagram, Telegram, website chat and email, with assignment and hand-off to staff.') }}</p>
+                <span class="badge warning">{{ __('Planned — not connected') }}</span>
+            </article>
+            <article class="panel" style="background:var(--surface-muted, #f7f8fc);">
+                <h3 style="margin-top:0;">{{ __('Workflow Automation & APIs') }}</h3>
+                <p class="muted">{{ __('Event-triggered journeys, approved webhooks, API keys, delivery retries and campaign analytics with human review for sensitive actions.') }}</p>
+                <span class="badge warning">{{ __('Planned') }}</span>
+            </article>
+        </div>
+        <p class="muted" style="margin:14px 0 0;">{{ __('Channel integrations are never shown as connected until credentials, webhook verification, consent checks and a successful health check are completed. Do not paste provider secrets into campaign messages or public settings.') }}</p>
+    </section>
+
     <div class="grid grid-2" style="margin-bottom:20px;">
         @foreach($integrations as $integration)
             <section class="panel">
