@@ -229,7 +229,7 @@ final class AdmissionController extends Controller
             'phone' => ['required', 'string', 'max:40'], 'guardian_phone' => ['nullable', 'string', 'max:40'],
             'desired_course' => ['required', 'string', 'max:160'], 'preferred_batch' => ['nullable', 'string', 'max:80'],
             'previous_education' => ['nullable', 'string', 'max:160'], 'date_of_birth' => ['nullable', 'date', 'before:today'],
-            'address' => ['nullable', 'string', 'max:2000'], 'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
+            'address' => ['nullable', 'string', 'max:2000'], 'branch_id' => ['nullable', 'integer', Rule::exists('branches', 'id')->where('is_active', true)],
         ]);
     }
 
@@ -249,7 +249,11 @@ final class AdmissionController extends Controller
 
     private function assertBranchAssigned(User $actor): void
     {
-        if ($actor->isBranchManager()) abort_unless($actor->branch_id !== null, 403, 'Assign this account to a branch before reviewing admissions.');
+        if ($actor->isBranchManager()) {
+            abort_unless($actor->branch_id !== null
+                && DB::table('branches')->where('id', $actor->branch_id)->where('is_active', true)->exists(),
+                403, 'Assign this account to an active branch before reviewing admissions.');
+        }
     }
 
     private function assertApplicationBranch(User $actor, AdmissionApplication $application): void
