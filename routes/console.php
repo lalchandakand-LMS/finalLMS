@@ -174,8 +174,10 @@ Artisan::command('system:health-check', function (): int {
 Artisan::command('referral-income:reconcile-approved-payments', function (): int {
     $tables = ['referral_attributions', 'referral_income_rules', 'referral_commissions'];
     if (!class_exists(\Aloms\ReferralIncome\ReferralIncomeService::class)
+        || ! Schema::hasTable('plugin_registry')
+        || ! DB::table('plugin_registry')->where('plugin_key', 'aec.referral-income')->where('status', 'active')->exists()
         || collect($tables)->contains(fn (string $table): bool => !Schema::hasTable($table))) {
-        $this->info('Referral income is not installed; no reconciliation is required.');
+        $this->info('Referral income is not active; no reconciliation is required.');
 
         return 0;
     }
