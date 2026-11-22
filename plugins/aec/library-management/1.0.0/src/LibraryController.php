@@ -31,13 +31,13 @@ final class LibraryController extends Controller
         $actor = $request->user();
         $this->assertBranchAssigned($actor);
         $data = $request->validate([
-            'isbn' => ['required', 'string', 'max:40', 'regex:/^[A-Za-z0-9._-]+$/D', 'unique:library_books,isbn'],
+            'isbn' => ['required', 'string', 'max:40', 'regex:/^[A-Za-z0-9._-]+$/D', Rule::unique('library_books', 'isbn')->where(fn ($query) => $query->where('branch_id', $actor->isBranchManager() ? $actor->branch_id : $request->input('branch_id')))],
             'title' => ['required', 'string', 'max:200'],
             'author' => ['required', 'string', 'max:160'],
             'category' => ['required', 'string', 'max:80'],
             'total_copies' => ['required', 'integer', 'min:1', 'max:10000'],
             'shelf_location' => ['nullable', 'string', 'max:60'],
-            'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
+            'branch_id' => [$actor->isBranchManager() ? 'nullable' : 'required', 'integer', Rule::exists('branches', 'id')->where('is_active', true)],
         ]);
         if ($actor->isBranchManager()) {
             $data['branch_id'] = $actor->branch_id;
