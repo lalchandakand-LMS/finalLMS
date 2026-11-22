@@ -1,9 +1,9 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use Illuminate\\Support\\Facades\\Route;
-use Tests\\TestCase;
+use Illuminate\Support\Facades\Route;
+use Tests\TestCase;
 
 class AttendanceRouteRegistrationTest extends TestCase
 {
@@ -21,8 +21,7 @@ class AttendanceRouteRegistrationTest extends TestCase
             'admin.branch-workspace.batches.attendance.store',
         ];
 
-        $routes = Route::getRoutes();
-        $allRoutes = iterator_to_array($routes);
+        $allRoutes = iterator_to_array(Route::getRoutes());
 
         foreach ($routeNames as $name) {
             $matches = array_values(array_filter(
