@@ -16,6 +16,17 @@ class RoleMiddleware
             abort(403, 'You are not authorized to access this area.');
         }
 
+        if ($request->user()->role === 'student' && in_array('student', $roles, true)) {
+            $suspended = \\App\\Models\\StudentProfile::query()
+                ->where('user_id', $request->user()->id)
+                ->where('lifecycle_status', 'suspended')
+                ->exists();
+
+            if ($suspended) {
+                abort(403, 'This student account is suspended. Please contact the administration.');
+            }
+        }
+
         return $next($request);
     }
 }
