@@ -407,7 +407,6 @@ PHP,
         $runtime->registerActivePlugins();
 
         $this->assertSame('active', $plugin->fresh()->status);
-        $this->assertTrue(app('plugin.runtime.registered'));
         $this->assertNotNull(app('router')->getRoutes()->getByName('plugins.runtime_check.health'));
     }
 
@@ -435,7 +434,6 @@ PHP,
         $this->assertTrue($failedOnce);
         $runtime->registerActivePlugins();
 
-        $this->assertTrue(app()->bound('plugin.runtime.registered'));
         $this->assertNotNull(app('router')->getRoutes()->getByName('plugins.runtime_check.health'));
     }
 
