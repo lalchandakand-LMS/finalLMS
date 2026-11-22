@@ -115,7 +115,7 @@ class GamificationServiceTest extends TestCase
         try {
             $migration->down();
             $this->fail('Gamification rollback must preserve learner progress and privacy settings.');
-        } catch (\\RuntimeException $exception) {
+        } catch (\RuntimeException $exception) {
             $this->assertStringContainsString('learner progress or privacy settings', $exception->getMessage());
         }
 
