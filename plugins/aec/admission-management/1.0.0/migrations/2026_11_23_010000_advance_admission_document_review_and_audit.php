@@ -11,7 +11,7 @@ return new class extends Migration {
     {
         if (Schema::hasTable('admission_applications') && ! Schema::hasColumn('admission_applications', 'document_verification_status')) {
             Schema::table('admission_applications', function (Blueprint $table): void {
-                $table->string('document_verification_status', 32)->default('pending')->after('status');
+                $table->string('document_verification_status', 32)->default('missing')->after('status');
             });
         }
 
