@@ -96,6 +96,10 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::middleware('guest')->group(function () {
     Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
     Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1')->name('register.store');
+    Route::get('/forgot-password', [AuthController::class, 'showPasswordResetRequestForm'])->name('password.request');
+    Route::post('/forgot-password', [AuthController::class, 'sendPasswordResetLink'])->middleware('throttle:5,1')->name('password.email');
+    Route::get('/reset-password/{token}', [AuthController::class, 'showPasswordResetForm'])->name('password.reset');
+    Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:5,1')->name('password.update');
 });
 Route::post('/login', [StudentDeviceAccessController::class, 'beginLogin'])->middleware('throttle:5,1')->name('login.post');
 Route::get('/admin/mfa/bootstrap', [AdminMfaController::class, 'bootstrap'])->middleware('throttle:10,1')->name('admin.mfa.bootstrap');
