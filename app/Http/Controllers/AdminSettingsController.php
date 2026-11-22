@@ -6,6 +6,7 @@ use App\Models\Setting;
 use App\Models\MediaAsset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class AdminSettingsController extends Controller
@@ -70,7 +71,8 @@ class AdminSettingsController extends Controller
             'home_reviews_title' => ['nullable', 'string', 'max:120'],
             'home_slides' => ['nullable', 'array', 'max:8'],
             'home_slides.*.enabled' => ['nullable', 'boolean'],
-            'home_slides.*.image_id' => ['nullable', 'integer', 'exists:media_assets,id'],
+            'home_slides.*.image_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
+            'home_slides.*.mobile_image_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
             'home_slides.*.mobile_image_id' => ['nullable', 'integer', 'exists:media_assets,id'],
             'home_slides.*.sort_order' => ['nullable', 'integer', 'min:0', 'max:1000'],
             'home_slides.*.starts_at' => ['nullable', 'date'],
