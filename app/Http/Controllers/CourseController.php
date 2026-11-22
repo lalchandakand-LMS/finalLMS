@@ -220,7 +220,7 @@ class CourseController extends Controller
 
         $query = Course::query()
             ->with(['teacher', 'categories', 'academicLevel'])
-            ->withCount(['enrollments', 'lessons', 'curriculumItems'])
+            ->withCount(['enrollments', 'lessons', 'curriculumItems', 'versions'])
             ->latest();
 
         if (! empty($filters['search'])) {
