@@ -76,6 +76,41 @@ final class ReferralIncomePluginTest extends TestCase
         ]);
     }
 
+
+    public function test_ebook_order_payment_never_creates_a_referral_commission(): void
+    {
+        $referrer = User::factory()->create(['role' => 'student']);
+        $buyer = User::factory()->create(['role' => 'student']);
+        $service = app(ReferralIncomeService::class);
+        $service->applyCode($buyer, $service->createOrGetCode($referrer));
+
+        $order = \\App\\Models\\Order::query()->create([
+            'order_number' => 'AEC-REFERRAL-EBOOK-'.strtoupper(bin2hex(random_bytes(5))),
+            'user_id' => $buyer->id,
+            'status' => 'completed',
+            'payment_method' => 'bkash',
+            'payment_reference' => 'EBOOK-REF-'.strtoupper(bin2hex(random_bytes(5))),
+            'currency' => 'BDT',
+            'subtotal' => 1000,
+            'discount_total' => 0,
+            'total' => 1000,
+            'paid_at' => now(),
+            'completed_at' => now(),
+        ]);
+        $payment = Payment::query()->create([
+            'user_id' => $buyer->id,
+            'order_id' => $order->id,
+            'method' => 'bkash',
+            'amount' => 1000,
+            'currency' => 'BDT',
+            'transaction_reference' => 'REF-EBOOK-'.strtoupper(bin2hex(random_bytes(5))),
+            'status' => 'approved',
+        ]);
+
+        $this->assertNull($service->recordApprovedPayment((int) $payment->id));
+        $this->assertDatabaseMissing('referral_commissions', ['payment_id' => $payment->id]);
+    }
+
     public function test_scheduled_reconciliation_recovers_a_missing_commission_and_is_idempotent(): void
     {
         $referrer = User::factory()->create(['role' => 'student']);

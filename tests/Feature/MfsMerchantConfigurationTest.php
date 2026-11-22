@@ -63,14 +63,14 @@ class MfsMerchantConfigurationTest extends TestCase
         $this->put(route('admin.payment-gateways.mfs.update', 'bkash'), [
             'mode' => 'live', 'credentials_json' => '{"key":"value"}',
         ])->assertSessionHasErrors('mode');
-        $this->assertSessionMissing('_old_input.credentials_json');
+        $this->assertArrayNotHasKey('credentials_json', session()->get('_old_input', []));
         $this->put(route('admin.payment-gateways.mfs.update', 'bkash'), [
             'mode' => 'sandbox', 'credentials_json' => '[{"key":"value"}]',
         ])->assertSessionHasErrors('credentials_json');
         $this->put(route('admin.payment-gateways.mfs.update', 'bkash'), [
             'mode' => 'sandbox', 'credentials_json' => '{"nested":{"secret":"value"}}',
         ])->assertSessionHasErrors('credentials_json');
-        $this->assertSessionMissing('_old_input.credentials_json');
+        $this->assertArrayNotHasKey('credentials_json', session()->get('_old_input', []));
         $this->assertDatabaseCount('mfs_merchant_configurations', 0);
     }
 
