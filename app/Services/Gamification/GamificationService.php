@@ -93,7 +93,12 @@ class GamificationService
         }
 
         $badge = \App\Models\GamificationBadge::query()
-            ->where('key', $badgeKey)->where('is_active', true)->firstOrFail();
+            ->where('key', $badgeKey)->where('is_active', true)->first();
+
+        // Optional badge configuration must never prevent a verified XP award.
+        if (! $badge) {
+            return false;
+        }
 
         return DB::table('gamification_user_badges')->insertOrIgnore([
             'user_id' => $user->id,
