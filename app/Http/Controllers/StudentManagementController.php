@@ -81,23 +81,39 @@ class StudentManagementController extends Controller
     public function transferBatch(Request $request, User $student): RedirectResponse
     {
         abort_unless($student->isStudent(), 404);
+        $this->authorizeStudentScope($request, $student);
         $data = $request->validate([
             'enrollment_id' => ['required', 'integer'],
             'batch_id' => ['required', 'integer', 'exists:batches,id'],
             'reason' => ['required', 'string', 'min:5', 'max:500'],
+            'confirm_branch_change' => ['nullable', 'boolean'],
         ]);
 
         DB::transaction(function () use ($student, $data, $request): void {
-            $enrollment = Enrollment::query()->whereKey($data['enrollment_id'])->where('user_id', $student->id)->lockForUpdate()->firstOrFail();
-            abort_unless(in_array($enrollment->status, ['active', 'completed'], true), 422, 'Only active or completed enrollments can be transferred.');
+            $enrollment = Enrollment::query()->whereKey($data['enrollment_id'])
+                ->where('user_id', $student->id)->lockForUpdate()->firstOrFail();
+            abort_unless($enrollment->status === 'active', 422, 'Only active enrollments can be transferred.');
             $target = Batch::query()->whereKey($data['batch_id'])->where('status', 'open')->lockForUpdate()->firstOrFail();
             abort_unless((int) $target->course_id === (int) $enrollment->course_id, 422, 'The target batch must belong to the same course.');
-            abort_unless((int) $target->branch_id === (int) $student->branch_id || $student->branch_id === null, 422, 'Transfer requires an approved branch change.');
-            abort_if($target->enrollments()->whereIn('status', ['active', 'completed'])->count() >= $target->capacity, 422, 'The target batch is full.');
+            $branchChanged = (int) $target->branch_id !== (int) $student->branch_id;
+            if ($branchChanged) {
+                abort_unless($request->boolean('confirm_branch_change'), 422, 'Confirm the branch change before transferring this student.');
+                abort_if($request->user()->isBranchManager(), 403, 'Branch managers cannot transfer students outside their assigned branch.');
+            }
+            if ($target->capacity !== null) {
+                $occupied = $target->enrollments()->where('status', 'active')->whereKeyNot($enrollment->id)->count();
+                abort_if($occupied >= $target->capacity, 422, 'The target batch is full.');
+            }
             $old = ['batch_id' => $enrollment->batch_id, 'branch_id' => $student->branch_id, 'status' => $enrollment->status];
-            $enrollment->update(['batch_id' => $target->id, 'status' => 'active', 'completed_at' => null]);
-            if ($student->branch_id === null) $student->update(['branch_id' => $target->branch_id]);
-            $this->event($student, $request, 'batch_transferred', $old, ['batch_id' => $target->id, 'branch_id' => $target->branch_id], $data['reason']);
+            $enrollment->update(['batch_id' => $target->id]);
+            if ($branchChanged) {
+                $student->update(['branch_id' => $target->branch_id]);
+            }
+            $this->event($student, $request, 'batch_transferred', $old, [
+                'batch_id' => $target->id,
+                'branch_id' => $target->branch_id,
+                'branch_changed' => $branchChanged,
+            ], $data['reason']);
         });
 
         return back()->with('success', 'Student batch transfer completed.');
