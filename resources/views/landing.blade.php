@@ -142,6 +142,10 @@
         .homepage-template--redwans-method .home-carousel { max-width:1120px; margin:0 auto 24px !important; }
         .homepage-template--redwans-method .home-carousel__viewport { border-radius:18px; box-shadow:0 18px 44px #001b2b66; }
         .homepage-template--redwans-method .home-overview { max-width:1120px; margin:0 auto 22px; padding:0 0 22px; background:transparent; }
+        .homepage-template--redwans-method .home-overview { grid-template-columns:1fr; }
+        .homepage-template--redwans-method .home-overview__panel--batches { display:none; }
+        .homepage-template--redwans-method .home-overview__panel--stats { width:100%; }
+
         .homepage-template--redwans-method .home-overview__panel { border-color:#0b7180; background:linear-gradient(145deg,#084d55,#0a3c57); }
         .homepage-template--redwans-method .home-overview__panel--stats { background:linear-gradient(145deg,#08445a,#123b69); }
         .homepage-template--redwans-method .home-overview h2 { color:#fff; }
