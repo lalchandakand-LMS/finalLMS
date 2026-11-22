@@ -1,8 +1,8 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\\Database\\Migrations\\Migration;
+use Illuminate\\Database\\Schema\\Blueprint;
+use Illuminate\\Support\\Facades\\Schema;
 
 return new class extends Migration {
     public function up(): void
@@ -24,8 +24,10 @@ return new class extends Migration {
     public function down(): void
     {
         Schema::table('course_content_posts', function (Blueprint $table): void {
+            // The FK relies on the unique index; remove the constraint before its index.
+            $table->dropForeign(['product_id']);
             $table->dropUnique(['product_id']);
-            $table->dropConstrainedForeignId('product_id');
+            $table->dropColumn('product_id');
             $table->dropConstrainedForeignId('academic_level_id');
             $table->dropColumn([
                 'thumbnail_path', 'content_file_path', 'content_file_name',
