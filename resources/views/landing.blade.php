@@ -148,6 +148,51 @@
         .homepage-template--redwans-method .home-paths { background:linear-gradient(135deg,#f1edff,#f5f1ff 55%,#eaf5ff); }
         .homepage-template--redwans-method .home-testimonials { background:linear-gradient(135deg,#111d31,#17263e 55%,#0c1b30); }
         .homepage-template--redwans-method .home-testimonial-track { animation-duration:48s; }
+
+        /* Redwan's Method-inspired batch-first hero slider */
+        .homepage-template--redwans-method .home-carousel { max-width:1120px; }
+        .homepage-template--redwans-method .home-carousel__viewport { height:clamp(390px,42vw,500px); background:#071f3d; }
+        .homepage-template--redwans-method .home-carousel__slide { display:grid; grid-template-columns:minmax(0,1.05fr) minmax(320px,.95fr); align-items:stretch; gap:clamp(18px,3vw,38px); padding:clamp(28px,5vw,62px); color:#102b49; background:radial-gradient(circle at 82% 18%,#d8f4ff 0,transparent 35%),linear-gradient(115deg,#f7fbff 0%,#eaf5ff 58%,#dff4fb 100%); }
+        .homepage-template--redwans-method .home-carousel__slide::before { content:""; position:absolute; inset:0 auto 0 0; width:7px; background:#08a9c7; }
+        .homepage-template--redwans-method .home-carousel__slide picture { position:absolute; inset:0 0 0 auto; z-index:0; width:42%; opacity:.12; pointer-events:none; }
+        .homepage-template--redwans-method .home-carousel__slide picture img { position:static; width:100%; height:100%; object-fit:cover; }
+        .homepage-template--redwans-method .home-carousel__shade { display:none; }
+        .homepage-template--redwans-method .home-carousel__content { position:relative; z-index:1; width:auto; max-width:620px; padding:0; align-self:center; }
+        .homepage-template--redwans-method .home-carousel__eyebrow { display:inline-flex; align-items:center; gap:8px; margin-bottom:15px; padding:8px 13px; border-radius:999px; color:#087d9c; background:#d8f5fb; font-size:.76rem; font-weight:900; letter-spacing:.1em; text-transform:uppercase; }
+        .homepage-template--redwans-method .home-carousel__eyebrow::before { content:""; width:7px; height:7px; border-radius:50%; background:#09a8c7; box-shadow:0 0 0 4px #09a8c722; }
+        .homepage-template--redwans-method .home-carousel__content h2 { margin:0 0 13px; color:#102b49; font-size:clamp(30px,4vw,52px); font-weight:900; line-height:1.08; letter-spacing:-.04em; }
+        .homepage-template--redwans-method .home-carousel__content p { margin:0 0 22px; color:#526b82; font-size:clamp(15px,1.5vw,18px); line-height:1.65; }
+        .homepage-template--redwans-method .home-carousel__content .btn.primary { display:inline-flex; min-height:48px; align-items:center; padding:12px 22px; border:0; border-radius:10px; color:#fff; background:#087dbb; font-weight:850; box-shadow:0 9px 22px #087dbb30; }
+        .homepage-template--redwans-method .home-carousel__batch-list { position:relative; z-index:1; display:grid; grid-template-columns:1fr 1fr; align-content:center; gap:14px; min-width:0; }
+        .homepage-template--redwans-method .home-carousel__batch-card { display:flex; min-height:160px; flex-direction:column; justify-content:space-between; padding:clamp(16px,2vw,22px); border:1px solid #d8e7f4; border-radius:17px; color:#153653; background:#ffffffed; box-shadow:0 15px 35px #15365316; text-decoration:none; transition:transform .2s,box-shadow .2s; }
+        .homepage-template--redwans-method .home-carousel__batch-card:hover { transform:translateY(-4px); box-shadow:0 20px 38px #15365324; }
+        .homepage-template--redwans-method .home-carousel__batch-card small { color:#087da4; font-size:.72rem; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+        .homepage-template--redwans-method .home-carousel__batch-card strong { margin:9px 0 4px; color:#123451; font-size:clamp(17px,1.7vw,22px); line-height:1.2; }
+        .homepage-template--redwans-method .home-carousel__batch-card span { color:#657d91; font-size:.83rem; line-height:1.45; }
+        .homepage-template--redwans-method .home-carousel__batch-card b { align-self:flex-end; color:#0786b7; font-size:1.15rem; }
+        .homepage-template--redwans-method .home-carousel__batch-empty { grid-column:1/-1; display:grid; gap:8px; padding:24px; border:1px dashed #9bbbd0; border-radius:16px; color:#153653; background:#ffffffd9; }
+        .homepage-template--redwans-method .home-carousel__batch-empty span { color:#60788d; font-size:.86rem; }
+        .homepage-template--redwans-method .home-carousel__arrow { border-color:#c5d9e8; color:#16415f; background:#ffffffed; box-shadow:0 5px 15px #15365318; }
+        .homepage-template--redwans-method .home-carousel__arrow:hover { background:#fff; }
+        .homepage-template--redwans-method .home-carousel__dots button { background:#0787b7; }
+        .homepage-template--redwans-method .home-welcome { display:none; }
+        @media(max-width:760px) {
+            .homepage-template--redwans-method .home-carousel__viewport { height:auto; min-height:0; }
+            .homepage-template--redwans-method .home-carousel__track { height:auto; }
+            .homepage-template--redwans-method .home-carousel__slide { grid-template-columns:1fr; gap:18px; min-height:0; padding:26px 22px 30px; }
+            .homepage-template--redwans-method .home-carousel__slide picture { width:100%; opacity:.08; }
+            .homepage-template--redwans-method .home-carousel__content { padding:0 16px; }
+            .homepage-template--redwans-method .home-carousel__content h2 { font-size:clamp(28px,8vw,38px); }
+            .homepage-template--redwans-method .home-carousel__batch-list { grid-template-columns:1fr 1fr; gap:9px; padding:0 8px 8px; }
+            .homepage-template--redwans-method .home-carousel__batch-card { min-height:128px; padding:13px; border-radius:13px; }
+            .homepage-template--redwans-method .home-carousel__batch-card strong { font-size:16px; }
+            .homepage-template--redwans-method .home-carousel__batch-card span { font-size:.74rem; }
+            .homepage-template--redwans-method .home-carousel__arrow { top:18px; transform:none; width:32px; height:32px; font-size:22px; }
+            .homepage-template--redwans-method .home-carousel__arrow--prev { left:auto; right:52px; }
+            .homepage-template--redwans-method .home-carousel__arrow--next { right:12px; }
+        }
+        @media(max-width:380px) { .homepage-template--redwans-method .home-carousel__batch-list { grid-template-columns:1fr; } .homepage-template--redwans-method .home-carousel__batch-card { min-height:112px; } }
+
         @media(max-width:820px) { .homepage-template--redwans-method { padding:12px 12px 0; } .homepage-template--redwans-method .home-overview { padding-bottom:16px; } }
         .homepage-template--academy-modern { --template-accent:#2457c5; --template-radius:20px; }
         .homepage-template--academy-modern .hero { background:linear-gradient(135deg,#eff6ff,#fff 60%); border-radius:26px; padding:clamp(18px,3vw,32px); }
@@ -214,22 +259,34 @@
                     @foreach($homeSlides as $index => $slide)
                         <article class="home-carousel__slide" data-carousel-slide aria-label="{{ $index + 1 }} {{ __('of') }} {{ $homeSlides->count() }}" aria-roledescription="slide" aria-hidden="{{ $index === 0 ? 'false' : 'true' }}">
                             <picture><source media="(max-width: 700px)" srcset="{{ $slide['mobile_asset']->url }}"><img src="{{ $slide['asset']->url }}" alt="{{ $slide['asset']->alt_text ?: $slide['title'] }}" loading="{{ $index === 0 ? 'eager' : 'lazy' }}"></picture>
-                            <div class="home-carousel__shade"></div>
                             <div class="home-carousel__content">
-                                @php
-                                    $hasSlideTitle = $slide['title'] !== '';
-                                    $hasSlideSubtitle = $slide['subtitle'] !== '';
-                                    $hasSlideButton = $slide['button_label'] !== '' && $slide['button_url'] !== '';
-                                @endphp
-                                @if($hasSlideTitle)
-                                    <h2>{{ $slide['title'] }}</h2>
-                                @endif
-                                @if($hasSlideSubtitle)
-                                    <p>{{ $slide['subtitle'] }}</p>
-                                @endif
-                                @if($hasSlideButton)
-                                    <a class="btn primary" href="{{ $slide['button_url'] }}" rel="noopener">{{ $slide['button_label'] }}</a>
-                                @endif
+                                <span class="home-carousel__eyebrow">{{ __('Online Course') }}</span>
+                                <h2>{{ $slide['title'] !== '' ? $slide['title'] : $homeBatchesTitle }}</h2>
+                                <p>{{ $slide['subtitle'] !== '' ? $slide['subtitle'] : __('Book your seat now! Choose an available batch and start learning with Alom’s English Center.') }}</p>
+                                <a class="btn primary" href="{{ $slide['button_url'] !== '' ? $slide['button_url'] : route('courses.index') }}" rel="noopener">{{ $slide['button_label'] !== '' ? $slide['button_label'] : __('Book your seat now!') }}</a>
+                            </div>
+                            <div class="home-carousel__batch-list" aria-label="{{ __('Available online batches') }}">
+                                @forelse($openBatches->take(2) as $batch)
+                                    @if($batch->course)
+                                        <a class="home-carousel__batch-card" href="{{ route('courses.show', $batch->course) }}">
+                                            <small>{{ __('Online Batch') }}</small>
+                                            <strong>{{ $batch->title }}</strong>
+                                            <span>{{ $batch->course->title }}{{ $batch->teacher ? ' · '.$batch->teacher->name : '' }}</span>
+                                            <b aria-hidden="true">↗</b>
+                                        </a>
+                                    @endif
+                                @empty
+                                    @forelse($publishedCourses->take(2) as $course)
+                                        <a class="home-carousel__batch-card" href="{{ route('courses.show', $course) }}">
+                                            <small>{{ __('Featured Course') }}</small>
+                                            <strong>{{ $course->title }}</strong>
+                                            <span>{{ \Illuminate\Support\Str::limit(strip_tags($course->description), 76) }}</span>
+                                            <b aria-hidden="true">↗</b>
+                                        </a>
+                                    @empty
+                                        <div class="home-carousel__batch-empty"><strong>{{ __('New batches are coming soon!') }}</strong><span>{{ __('Visit all courses to explore current learning opportunities.') }}</span><a href="{{ route('courses.index') }}">{{ __('See All Courses') }} →</a></div>
+                                    @endforelse
+                                @endforelse
                             </div>
                         </article>
                     @endforeach
@@ -250,6 +307,7 @@
     @endif
 
 
+    @if($homepageTemplate !== 'redwans-method')
     <section class="home-welcome">
         <div class="home-welcome__copy"><span class="home-eyebrow">{{ $siteName }}</span><h1>{{ $homeTitle }}</h1><p>{{ $homeSubtitle }}</p>
             <div class="home-actions"><a href="{{ route('courses.index') }}" class="home-button home-button--light">{{ $homePrimaryLabel }}</a>
@@ -262,6 +320,7 @@
         </div>
         <div class="home-welcome__art" aria-hidden="true"><div class="home-orbit"></div><div class="home-orbit home-orbit--two"></div><div class="home-book"><span>ABC</span><strong>{{ __('Learn') }}</strong><small>{{ __('Practice · Improve · Succeed') }}</small></div><div class="home-floating home-floating--one">Aa</div><div class="home-floating home-floating--two">✓</div></div>
     </section>
+    @endif
     <section class="home-overview">
         <div class="home-overview__panel home-overview__panel--batches"><span class="home-section-kicker">{{ __('Admissions & batches') }}</span><h2>{{ $homeBatchesTitle }}</h2><p>{{ __('Book your seat in an available class.') }}</p>
             @forelse($openBatches as $batch)
