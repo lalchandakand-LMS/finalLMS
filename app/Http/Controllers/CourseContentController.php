@@ -153,13 +153,30 @@ class CourseContentController extends Controller
         $position = min((int) $data['position_seconds'], (int) $data['duration_seconds']);
         $duration = (int) $data['duration_seconds'];
         $percent = min(100, round(($position / $duration) * 100, 2));
-        $progress = DB::transaction(function () use ($item, $student, $position, $duration, $percent): CourseContentProgress {
+        $progress = DB::transaction(function () use ($item, $student, $position, $duration): CourseContentProgress {
             $record = CourseContentProgress::query()->where('course_curriculum_item_id', $item->id)
                 ->where('user_id', $student->id)->lockForUpdate()->first();
-            if (! $record) $record = new CourseContentProgress(['course_curriculum_item_id' => $item->id, 'user_id' => $student->id]);
+            if (! $record) {
+                $record = new CourseContentProgress([
+                    'course_curriculum_item_id' => $item->id,
+                    'user_id' => $student->id,
+                    'watched_seconds' => 0,
+                ]);
+            }
+
+            // The first request establishes a playback baseline. Later requests only
+            // credit forward playback bounded by elapsed server time, not a seek jump.
+            if ($record->last_progress_ping_at) {
+                $elapsed = min(30, max(0, now()->timestamp - $record->last_progress_ping_at->timestamp));
+                $positionAdvance = max(0, $position - (int) ($record->last_position_seconds ?? 0));
+                $record->watched_seconds = (int) ($record->watched_seconds ?? 0) + min($positionAdvance, $elapsed + 2);
+            }
+
             $record->last_position_seconds = $position;
             $record->duration_seconds = $duration;
-            $record->progress_percent = max((float) ($record->progress_percent ?? 0), $percent);
+            $observedPercent = min(100, round(((int) ($record->watched_seconds ?? 0) / $duration) * 100, 2));
+            $record->progress_percent = max((float) ($record->progress_percent ?? 0), $observedPercent);
+            $record->last_progress_ping_at = now();
             $record->last_viewed_at = now();
             if ($record->progress_percent >= 90) $record->completed_at ??= now();
             $record->save();
