@@ -76,8 +76,6 @@ class WebsiteBuilderTest extends TestCase
                 ['label' => 'Admissions', 'url' => '/admissions'],
                 ['label' => 'Unsafe menu', 'url' => 'javascript:alert(1)'],
             ],
-            'home_slider_transition' => 'fade',
-            'home_slider_overlay' => 45,
             'home_slides' => [[
                 'enabled' => '1', 'image_id' => $slide->id, 'title' => 'New batch',
                 'subtitle' => 'Admission is open', 'button_label' => 'Apply now', 'button_url' => '/courses',
@@ -131,6 +129,8 @@ class WebsiteBuilderTest extends TestCase
         ]);
 
         $this->actingAs($admin)->post(route('admin.website-builder.update'), [
+            'home_slider_transition' => 'fade',
+            'home_slider_overlay' => 45,
             'home_slides' => [[
                 'enabled' => '1',
                 'image_id' => $desktop->id,
