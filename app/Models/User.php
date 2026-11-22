@@ -23,6 +23,16 @@ class User extends Authenticatable implements MustVerifyEmail
 
     protected $fillable = ['name', 'email', 'password', 'role', 'phone_number', 'sms_marketing_opt_in', 'branch_id', 'admin_permissions'];
 
+    public function studentProfile(): \\Illuminate\\Database\\Eloquent\\Relations\\HasOne
+    {
+        return $this->hasOne(StudentProfile::class);
+    }
+
+    public function studentLifecycleEvents(): HasMany
+    {
+        return $this->hasMany(StudentLifecycleEvent::class, 'student_id');
+    }
+
     public function apiTokens(): HasMany
     {
         return $this->hasMany(ApiToken::class);
