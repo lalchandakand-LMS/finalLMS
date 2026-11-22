@@ -10,23 +10,18 @@ use Aloms\LibraryManagement\LibraryLoan;
 use App\Models\Branch;
 use App\Models\PluginInstallation;
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Tests\Support\RefreshDatabaseWithPluginMigrations;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
 use Tests\TestCase;
 
 final class PhysicalLibraryManagementPluginTest extends TestCase
 {
-    use DatabaseMigrations;
+    use RefreshDatabaseWithPluginMigrations;
 
-    protected function tearDown(): void
+    protected function pluginMigrationPaths(): array
     {
-        Schema::disableForeignKeyConstraints();
-        Schema::dropIfExists('library_loans');
-        Schema::dropIfExists('library_books');
-        Schema::enableForeignKeyConstraints();
-        parent::tearDown();
+        return [base_path('plugins/aec/library-management/1.0.0/migrations')];
     }
 
     protected function setUp(): void
@@ -36,21 +31,6 @@ final class PhysicalLibraryManagementPluginTest extends TestCase
         require_once base_path('plugins/aec/library-management/1.0.0/src/LibraryBook.php');
         require_once base_path('plugins/aec/library-management/1.0.0/src/LibraryLoan.php');
         require_once base_path('plugins/aec/library-management/1.0.0/src/LibraryController.php');
-        Schema::disableForeignKeyConstraints();
-            Schema::dropIfExists('library_loans');
-            Schema::dropIfExists('library_books');
-        Schema::enableForeignKeyConstraints();
-        $migration = require base_path('plugins/aec/library-management/1.0.0/migrations/2026_11_21_030000_create_physical_library_tables.php');
-        $migration->up();
-        $plugin = new PluginInstallation();
-        $plugin->forceFill([
-            'plugin_key' => 'aec.library-management',
-            'name' => 'Physical Library Management',
-            'version' => '1.0.0',
-            'type' => 'module',
-            'status' => 'active',
-            'manifest' => ['settings_schema' => ['daily_fine_bdt' => ['label' => 'Daily fine', 'type' => 'integer', 'default' => 10]]],
-        ])->save();
         Route::get('/__library', [LibraryController::class, 'index'])->name('branch.library.index');
         Route::post('/__library/books', [LibraryController::class, 'storeBook'])->name('branch.library.books.store');
         Route::post('/__library/loans', [LibraryController::class, 'issueLoan'])->name('branch.library.loans.issue');
