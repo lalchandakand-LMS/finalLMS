@@ -23,7 +23,7 @@ class StudentManagementController extends Controller
             'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
         ]);
 
-        $students = User::query()->where('role', 'student')
+        $branchManager = $request->user()->isBranchManager();\n        abort_if($branchManager && !$request->user()->branch_id, 403, 'An active branch assignment is required.');\n        $students = User::query()->where('role', 'student')\n            ->when($branchManager, fn ($q) => $q->where('branch_id', $request->user()->branch_id))
             ->with(['branch', 'studentProfile'])
             ->withCount(['enrollments', 'guardianLinksAsStudent'])
             ->when($filters['search'] ?? null, function ($query, $term): void {
@@ -35,7 +35,7 @@ class StudentManagementController extends Controller
             ->when($filters['status'] ?? null, fn ($q, $status) => $q->whereHas('studentProfile', fn ($p) => $p->where('lifecycle_status', $status)))
             ->latest()->paginate(25)->withQueryString();
 
-        return view('admin.students.index', compact('students', 'filters'));
+        $routePrefix = $branchManager ? 'branch.students.manage' : 'admin.students';\n        return view('admin.students.index', compact('students', 'filters', 'routePrefix'));
     }
 
     public function show(User $student): View
@@ -47,7 +47,7 @@ class StudentManagementController extends Controller
         $batches = Batch::query()->where('status', 'open')->where('course_id', $student->enrollments()->whereIn('status', ['active', 'completed'])->value('course_id'))
             ->with('branch')->orderBy('starts_at')->get();
 
-        return view('admin.students.show', compact('student', 'history', 'batches'));
+        return view('admin.students.show', compact('student', 'history', 'batches', 'routePrefix'));
     }
 
     public function updateProfile(Request $request, User $student): RedirectResponse
@@ -140,6 +140,13 @@ class StudentManagementController extends Controller
             $this->event($student, $request, 'reactivated', ['lifecycle_status' => 'suspended'], ['lifecycle_status' => 'active'], 'Student reactivated by administrator.');
         });
         return back()->with('success', 'Student account reactivated.');
+    }
+
+    private function authorizeStudentScope(Request $request, User $student): void
+    {
+        if ($request->user()->isBranchManager()) {
+            abort_if(!$request->user()->branch_id || (int) $student->branch_id !== (int) $request->user()->branch_id, 404);
+        }
     }
 
     private function event(User $student, Request $request, string $type, array $before, array $after, string $reason): void
