@@ -29,12 +29,17 @@ return new class implements PluginContract {
                 Route::post('/payrolls', [HrController::class, 'recordPayroll'])->middleware('throttle:20,1')->name('payrolls.store');
             }, 'hr.manage');
         }
+        $context->routesForPortal('teacher', 'teacher/hr', 'teacher.hr.', function (): void {
+            Route::get('/', [HrController::class, 'teacherIndex'])->name('index');
+            Route::post('/leave-requests', [HrController::class, 'teacherRequestLeave'])->middleware('throttle:10,1')->name('leave.store');
+        }, 'hr.self-service');
         $context->routesForPortal('admin', 'admin/hr/payroll', 'admin.hr.payroll.', function (): void {
             Route::post('/{payroll}/mark-paid', [HrController::class, 'markPayrollPaid'])->whereNumber('payroll')->middleware('throttle:10,1')->name('mark-paid');
         }, 'hr.payroll.disburse');
         $context->routesForPortal('admin', 'admin/hr/leave', 'admin.hr.leave.', function (): void {
             Route::post('/{leave}/review', [HrController::class, 'reviewLeave'])->whereNumber('leave')->middleware('throttle:20,1')->name('review');
         }, 'hr.manage');
+        $context->registerPortalNavigation('teacher', 'My HR & Leave', 'teacher.hr.index', ['icon' => 'calendar', 'permission' => 'hr.self-service']);
         $context->registerPortalNavigation('admin', 'HR & Payroll', 'admin.hr.index', ['icon' => 'users', 'permission' => 'hr.manage']);
         $context->registerPortalNavigation('branch', 'HR & Payroll', 'branch.hr.index', ['icon' => 'users', 'permission' => 'hr.manage']);
     }
