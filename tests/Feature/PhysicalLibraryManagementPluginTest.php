@@ -20,6 +20,15 @@ final class PhysicalLibraryManagementPluginTest extends TestCase
 {
     use DatabaseMigrations;
 
+    protected function tearDown(): void
+    {
+        Schema::disableForeignKeyConstraints();
+        Schema::dropIfExists('library_loans');
+        Schema::dropIfExists('library_books');
+        Schema::enableForeignKeyConstraints();
+        parent::tearDown();
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
