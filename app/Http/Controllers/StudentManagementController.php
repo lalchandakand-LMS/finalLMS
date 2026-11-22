@@ -105,7 +105,7 @@ class StudentManagementController extends Controller
                     ->orWhere('phone_number', 'like', '%'.$term.'%'));
             })
             ->when($filters['branch_id'] ?? null, fn ($q, $id) => $q->where('branch_id', $id))
-            ->when($filters['status'] ?? null, fn ($q, $status) => $q->whereHas('studentProfile', fn ($p) => $p->where('lifecycle_status', $status)))
+            ->when($filters['status'] ?? null, function ($q, $status): void {\n                $q->whereHas('studentProfile', fn ($p) => $p->where('lifecycle_status', $status));\n                if ($status === 'active') $q->orWhere(fn ($missing) => $missing->where('role', 'student')->whereDoesntHave('studentProfile'));\n            })
             ->latest()->paginate(25)->withQueryString();
 
         $routePrefix = $branchManager ? 'branch.students.manage' : 'admin.students';\n        return view('admin.students.index', compact('students', 'filters', 'routePrefix'));
@@ -117,7 +117,7 @@ class StudentManagementController extends Controller
         $student->load(['branch', 'studentProfile.suspendedBy', 'enrollments.batch.branch', 'enrollments.course', 'guardianLinksAsStudent.guardian']);
         $history = StudentLifecycleEvent::query()->where('student_id', $student->id)
             ->with('actor:id,name')->latest()->paginate(30);
-        $batches = Batch::query()->where('status', 'open')->where('course_id', $student->enrollments()->where('status', 'active')->value('course_id'))\n            ->when(request()->user()->isBranchManager(), fn ($q) => $q->where('branch_id', request()->user()->branch_id))
+        $courseIds = $student->enrollments()->where('status', 'active')->pluck('course_id')->unique()->values();\n        $batches = Batch::query()->where('status', 'open')->whereIn('course_id', $courseIds)\n            ->when(request()->user()->isBranchManager(), fn ($q) => $q->where('branch_id', request()->user()->branch_id))
             ->with('branch')->orderBy('starts_at')->get();
 
         return view('admin.students.show', compact('student', 'history', 'batches', 'routePrefix'));
