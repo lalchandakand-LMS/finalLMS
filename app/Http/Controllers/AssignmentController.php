@@ -48,23 +48,39 @@ class AssignmentController extends Controller
             'max_marks' => ['required', 'integer', 'min:1', 'max:10000'],
             'question_set_id' => ['nullable', 'integer', 'exists:question_sets,id'],
         ]);
-        if (! empty($validated['question_set_id'])) {
-            abort_unless(QuestionSet::published()->whereKey($validated['question_set_id'])->exists(), 422, __('Only published question sets can be assigned.'));
-        }
+        $assignment = DB::transaction(function () use ($batch, $request, $validated): Assignment {
+            $questionSetId = $validated['question_set_id'] ?? null;
 
-        $assignment = $batch->assignments()->create([
-            'title' => $validated['title'],
-            'instructions' => $validated['instructions'],
-            'due_at' => $validated['due_at'],
-            'allow_late' => $request->boolean('allow_late'),
-            'max_marks' => $validated['max_marks'],
-            // Explicit assignment avoids silently dropping the optional relation
-            // when mass-assignment configuration changes.
-            'question_set_id' => $validated['question_set_id'] ?? null,
-            // Admins manage the batch on behalf of its assigned teacher.
-            'teacher_id' => $batch->teacher_id,
-            'status' => 'published',
-        ]);
+            if ($questionSetId) {
+                // Lock the set while checking and attaching it. This serializes
+                // assignment creation with edits/archival in QuestionSetController.
+                $questionSet = QuestionSet::query()
+                    ->whereKey($questionSetId)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                abort_unless(
+                    $questionSet->status === 'published'
+                        && $questionSet->questions()->exists(),
+                    422,
+                    __('Only published question sets containing questions can be assigned.')
+                );
+            }
+
+            return $batch->assignments()->create([
+                'title' => $validated['title'],
+                'instructions' => $validated['instructions'],
+                'due_at' => $validated['due_at'],
+                'allow_late' => $request->boolean('allow_late'),
+                'max_marks' => $validated['max_marks'],
+                // Explicit assignment avoids silently dropping the optional relation
+                // when mass-assignment configuration changes.
+                'question_set_id' => $questionSetId,
+                // Admins manage the batch on behalf of its assigned teacher.
+                'teacher_id' => $batch->teacher_id,
+                'status' => 'published',
+            ]);
+        });
 
         return back()->with('success', __('Assignment published to the batch.'));
     }
