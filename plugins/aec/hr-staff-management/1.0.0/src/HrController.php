@@ -232,7 +232,7 @@ final class HrController extends Controller
             'working_days_per_month' => ['nullable', 'integer', 'min:1', 'max:31'],
             'status' => ['required', 'in:active,on_leave,inactive'],
             'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
-            'user_id' => ['nullable', 'integer', 'exists:users,id', 'unique:staff_profiles,user_id'],
+            'user_id' => ['nullable', 'integer', 'exists:users,id', 'unique:staff_profiles,user_id', 'required_if:compensation_basis,per_class'],
             'employment_type' => ['required', 'in:full_time,part_time,contract,temporary'],
             'contract_ends_at' => ['nullable', 'date', 'after_or_equal:today'],
         ]);
@@ -243,6 +243,7 @@ final class HrController extends Controller
         }
         if (! empty($data['user_id'])) {
             $linkedUser = User::query()->findOrFail($data['user_id']);
+            abort_unless(($data['compensation_basis'] ?? 'monthly') !== 'per_class' || $linkedUser->role === 'teacher', 422, 'Per-class compensation can only be linked to a teacher account.');
             abort_unless(in_array($linkedUser->role, ['teacher', 'branch_manager', 'staff'], true), 422, 'Link only a teacher, branch manager or staff account.');
             if ($actor->isBranchManager()) {
                 abort_unless($linkedUser->branch_id === null || (int) $linkedUser->branch_id === (int) $actor->branch_id, 422, 'You can only link an account assigned to your branch.');
