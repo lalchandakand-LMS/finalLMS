@@ -79,6 +79,7 @@ use App\Http\Controllers\AdminCourseContentPostController;
 use App\Http\Controllers\AdminCourseBuilderController;
 use App\Http\Controllers\CourseContentController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\GamificationController;
 use App\Http\Controllers\LandingPageController;
 use Illuminate\Support\Facades\Route;
 
@@ -158,6 +159,9 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group(function () {
     Route::middleware('role:student')->group(function () {
+        Route::get('/my/gamification', [GamificationController::class, 'index'])->name('student.gamification.index');
+        Route::put('/my/gamification/preferences', [GamificationController::class, 'updatePreferences'])->middleware('throttle:10,1')->name('student.gamification.preferences');
+        Route::get('/my/gamification/leaderboard', [GamificationController::class, 'leaderboard'])->name('student.gamification.leaderboard');
         Route::post('/ebooks/{product:slug}/checkout', [EbookStoreController::class, 'checkout'])->middleware('throttle:5,1')->name('ebooks.checkout');
         Route::post('/ebooks/{product:slug}/checkout/bkash', [BkashPaymentController::class, 'initiateEbook'])->middleware('throttle:5,1')->name('ebooks.checkout.bkash');
         Route::get('/my/ebooks/orders', [EbookStoreController::class, 'orders'])->name('ebooks.orders');
