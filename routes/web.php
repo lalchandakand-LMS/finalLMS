@@ -80,6 +80,7 @@ use App\Http\Controllers\AdminCourseBuilderController;
 use App\Http\Controllers\CourseContentController;
 use App\Http\Controllers\CommentController;
 use App\Modules\Admissions\AdmissionController;
+use App\Modules\Hr\HrController;
 use App\Http\Controllers\GamificationController;
 use App\Http\Controllers\LandingPageController;
 use Illuminate\Support\Facades\Route;
@@ -139,6 +140,9 @@ Route::get('/ebooks', [EbookStoreController::class, 'index'])->name('ebooks.inde
 Route::get('/ebooks/{product:slug}/preview/{previewPage}', [EbookStoreController::class, 'preview'])->name('ebooks.preview');
 Route::get('/ebooks/{product:slug}', [EbookStoreController::class, 'show'])->name('ebooks.show');
 
+Route::get('/careers', [HrController::class, 'publicCareers'])->name('careers.index');
+Route::get('/careers/{opening}', [HrController::class, 'publicCareerShow'])->whereNumber('opening')->name('careers.show');
+Route::post('/careers/{opening}/apply', [HrController::class, 'applyCareer'])->whereNumber('opening')->middleware('throttle:5,10')->name('careers.apply');
 Route::get('/admission/apply', [AdmissionController::class, 'publicForm'])->name('admission.public.apply');
 Route::post('/admission/apply', [AdmissionController::class, 'applyPublic'])->middleware('throttle:3,10')->name('admission.public.apply.store');
 Route::get('/admission/track', [AdmissionController::class, 'trackForm'])->name('admission.public.track');
@@ -162,6 +166,34 @@ Route::middleware('auth')->group(function () {
     Route::post('/email/verification-notification', [EmailVerificationController::class, 'resend'])
         ->middleware('throttle:6,1')
         ->name('verification.send');
+});
+
+Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('admin/hr')->name('admin.hr.')->group(function () {
+    Route::get('/', [HrController::class, 'index'])->name('index');
+    Route::post('/staff', [HrController::class, 'storeStaff'])->middleware('throttle:20,1')->name('staff.store');
+    Route::put('/staff/{staff}', [HrController::class, 'updateStaff'])->whereNumber('staff')->middleware('throttle:20,1')->name('staff.update');
+    Route::post('/attendance', [HrController::class, 'recordAttendance'])->middleware('throttle:60,1')->name('attendance.store');
+    Route::post('/leave-requests', [HrController::class, 'requestLeave'])->middleware('throttle:20,1')->name('leave.store');
+    Route::post('/leave-requests/{leave}/review', [HrController::class, 'reviewLeave'])->whereNumber('leave')->middleware('throttle:20,1')->name('leave.review');
+    Route::post('/payrolls', [HrController::class, 'recordPayroll'])->middleware('throttle:20,1')->name('payrolls.store');
+    Route::post('/payrolls/{payroll}/mark-paid', [HrController::class, 'markPayrollPaid'])->whereNumber('payroll')->middleware('throttle:10,1')->name('payrolls.mark-paid');
+    Route::get('/recruitment', [HrController::class, 'recruitmentIndex'])->name('recruitment.index');
+    Route::post('/recruitment/openings', [HrController::class, 'storeJobOpening'])->middleware('throttle:20,1')->name('recruitment.openings.store');
+    Route::patch('/recruitment/openings/{opening}/status', [HrController::class, 'updateJobOpeningStatus'])->whereNumber('opening')->name('recruitment.openings.status');
+    Route::post('/recruitment/applications/{application}/review', [HrController::class, 'reviewApplication'])->whereNumber('application')->middleware('throttle:20,1')->name('recruitment.applications.review');
+    Route::get('/recruitment/applications/{application}/resume', [HrController::class, 'downloadApplicationResume'])->whereNumber('application')->name('recruitment.applications.resume');
+});
+Route::middleware(['auth', 'verified', 'activity.log', 'role:branch_manager'])->prefix('branch/hr')->name('branch.hr.')->group(function () {
+    Route::get('/', [HrController::class, 'index'])->name('index');
+    Route::post('/staff', [HrController::class, 'storeStaff'])->middleware('throttle:20,1')->name('staff.store');
+    Route::put('/staff/{staff}', [HrController::class, 'updateStaff'])->whereNumber('staff')->middleware('throttle:20,1')->name('staff.update');
+    Route::post('/attendance', [HrController::class, 'recordAttendance'])->middleware('throttle:60,1')->name('attendance.store');
+    Route::post('/leave-requests', [HrController::class, 'requestLeave'])->middleware('throttle:20,1')->name('leave.store');
+    Route::post('/payrolls', [HrController::class, 'recordPayroll'])->middleware('throttle:20,1')->name('payrolls.store');
+});
+Route::middleware(['auth', 'verified', 'activity.log', 'role:teacher'])->prefix('teacher/hr')->name('teacher.hr.')->group(function () {
+    Route::get('/', [HrController::class, 'teacherIndex'])->name('index');
+    Route::post('/leave-requests', [HrController::class, 'teacherRequestLeave'])->middleware('throttle:10,1')->name('leave.store');
 });
 
 Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('admin/admissions')->name('admin.admissions.')->group(function () {
