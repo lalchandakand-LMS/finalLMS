@@ -1,11 +1,12 @@
 <?php
 
-namespace App\\Providers;
+namespace App\Providers;
 
-use App\\Models\\PluginInstallation;
-use App\\Services\\Plugins\\PluginRuntime;
-use Illuminate\\Support\\Facades\\Schema;
-use Illuminate\\Support\\ServiceProvider;
+use App\Models\PluginInstallation;
+use App\Services\Plugins\PluginHookRegistry;
+use App\Services\Plugins\PluginRuntime;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\ServiceProvider;
 use RuntimeException;
 use Throwable;
 
