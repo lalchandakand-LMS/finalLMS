@@ -221,6 +221,9 @@ final class HrController extends Controller
             'phone' => ['nullable', 'string', 'max:40'],
             'email' => ['nullable', 'email:rfc', 'max:160'],
             'base_salary' => ['required', 'numeric', 'min:0', 'max:9999999999.99'],
+            'compensation_basis' => ['required', 'in:monthly,monthly_attendance,per_class'],
+            'per_class_rate' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99', 'required_if:compensation_basis,per_class'],
+            'working_days_per_month' => ['nullable', 'integer', 'min:1', 'max:31'],
             'status' => ['required', 'in:active,on_leave,inactive'],
             'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
             'user_id' => ['nullable', 'integer', 'exists:users,id', 'unique:staff_profiles,user_id'],
@@ -385,7 +388,7 @@ final class HrController extends Controller
             $overtimeAmount = round($overtimeHours * $overtimeRate, 2);
             $bonus = round((float) ($data['bonus'] ?? 0), 2);
             $manualDeductions = round((float) ($data['deductions'] ?? 0), 2);
-            $gross = round(max(0, $basic - $attendanceDeduction) + $allowances + $overtimeAmount, 2);
+            $gross = round($basic + $allowances + $overtimeAmount, 2);
             $totalDeductions = round($attendanceDeduction + $manualDeductions, 2);
             abort_if($totalDeductions > $basic + $allowances + $overtimeAmount + $bonus, 422, 'Total deductions cannot exceed the payable salary.');
 
@@ -401,7 +404,7 @@ final class HrController extends Controller
                 'gross_salary' => $gross,
                 'bonus' => $bonus,
                 'deductions' => $totalDeductions,
-                'net_paid' => round($gross + $bonus - $manualDeductions, 2),
+                'net_paid' => round($gross + $bonus - $totalDeductions, 2),
                 'compensation_basis_snapshot' => $basis,
                 'present_days' => $presentDays,
                 'absent_days' => $absentDays,
