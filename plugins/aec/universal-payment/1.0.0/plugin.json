@@ -18,5 +18,4 @@
     "payments.gateway",
     "provider-adapter.bkash"
   ],
-  "migrations": "migrations"
 }
