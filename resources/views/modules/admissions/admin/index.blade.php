@@ -74,7 +74,7 @@
                             <button class="rounded-lg bg-blue-700 px-3 py-2 text-sm font-semibold text-white">Save review decision</button>
                         </form>
                         @if($application->status==='approved' && !$application->converted_student_id && !$branchPortal)
-                            <form method="POST" action="{{ route('admin.admissions.convert',$application->id) }}">@csrf<button class="w-full rounded-lg bg-green-700 px-3 py-2 text-sm font-semibold text-white">Convert approved applicant to student</button></form>
+                            <form method="POST" action="{{ route($admissionRoutePrefix.'.convert', $application->id) }}">@csrf<button class="w-full rounded-lg bg-green-700 px-3 py-2 text-sm font-semibold text-white">Convert approved applicant to student</button></form>
                         @elseif($application->converted_student_id)<p class="rounded-lg bg-green-50 p-2 text-sm text-green-800">Student account created: #{{ $application->converted_student_id }}</p>@endif
                     </section>
                     <section class="space-y-3">
