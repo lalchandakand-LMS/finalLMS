@@ -119,6 +119,49 @@ class StudentDashboardInsightsTest extends TestCase
                 && $insights['progress_percent'] === 50);
     }
 
+    public function test_student_dashboard_includes_partial_video_watch_time_in_progress_percentage(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $course = Course::factory()->create(['teacher_id' => $teacher->id, 'status' => 'published']);
+        Enrollment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'status' => 'active',
+        ]);
+        $post = CourseContentPost::create([
+            'author_id' => $teacher->id,
+            'title' => 'Partially watched video',
+            'slug' => 'partial-video-'.uniqid(),
+            'long_description' => 'Video content',
+            'status' => 'published',
+            'published_at' => now()->subMinute(),
+        ]);
+        $item = $course->curriculumItems()->create([
+            'course_content_post_id' => $post->id,
+            'position' => 10,
+            'is_preview' => false,
+        ]);
+        CourseContentProgress::create([
+            'user_id' => $student->id,
+            'course_curriculum_item_id' => $item->id,
+            'progress_percent' => 45,
+            'watched_seconds' => 45,
+            'duration_seconds' => 100,
+            'last_position_seconds' => 45,
+            'last_progress_ping_at' => now(),
+        ]);
+
+        $this->actingAs($student)
+            ->get('/dashboard')
+            ->assertOk()
+            ->assertSee('45%')
+            ->assertSee('0 / 1')
+            ->assertViewHas('studentInsights', fn (array $insights) => $insights['progress_percent'] === 45
+                && $insights['completed_lessons'] === 0
+                && $insights['total_lessons'] === 1);
+    }
+
     public function test_student_dashboard_does_not_count_lessons_from_unenrolled_courses(): void
     {
         $student = User::factory()->create(['role' => 'student']);
