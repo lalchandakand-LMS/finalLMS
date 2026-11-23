@@ -406,7 +406,11 @@ final class HrController extends Controller
 
             $periodStart = \Carbon\CarbonImmutable::createFromFormat('!Y-m-d', $data['payroll_month'].'-01');
             $periodEnd = $periodStart->endOfMonth();
-            $attendance = StaffAttendance::query()
+            $attendanceQuery = StaffAttendance::query()
+                ->where('staff_profile_id', $member->id)
+                ->whereBetween('attendance_date', [$periodStart->toDateString(), $periodEnd->toDateString()]);
+            $attendanceRecordCount = (int) (clone $attendanceQuery)->count();
+            $attendance = $attendanceQuery
                 ->where('staff_profile_id', $member->id)
                 ->whereBetween('attendance_date', [$periodStart->toDateString(), $periodEnd->toDateString()])
                 ->selectRaw("SUM(CASE WHEN status IN ('present','late') THEN 1 ELSE 0 END) as present_days")
@@ -452,6 +456,12 @@ final class HrController extends Controller
             $attendanceDeduction = 0.0;
             if ($basis === 'monthly_attendance') {
                 $workingDays = max(1, (int) ($member->working_days_per_month ?: 26));
+                abort_if($periodEnd->isFuture(), 422, 'Attendance-based payroll can only be finalized after the selected month ends.');
+                abort_unless(
+                    $attendanceRecordCount === $workingDays,
+                    422,
+                    'Attendance is incomplete for '.$data['payroll_month'].': '.$attendanceRecordCount.' of '.$workingDays.' expected working-day records are saved.'
+                );
                 $dailyRate = round((float) $member->base_salary / $workingDays, 6);
                 // Only recorded absences and half-days affect pay. Approved unpaid
                 // leave must be marked as on_leave in the staff attendance register.
@@ -489,6 +499,7 @@ final class HrController extends Controller
                 'payable_days' => max(0, $presentDays + ($halfDays * 0.5)),
                 'classes_delivered' => $classesDelivered,
                 'attendance_deduction' => $attendanceDeduction,
+                'attendance_records_count' => $attendanceRecordCount,
                 'status' => 'pending',
             ]);
         }, 3);
