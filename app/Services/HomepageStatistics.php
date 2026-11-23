@@ -20,6 +20,7 @@ class HomepageStatistics
             $hasEnrollments = Schema::hasTable('enrollments');
             $hasLessons = Schema::hasTable('lessons');
             $hasBatches = Schema::hasTable('batches');
+            $hasBranches = Schema::hasTable('branches');
             $hasCertificates = Schema::hasTable('certificates');
 
             $students = $hasUsers
@@ -38,8 +39,12 @@ class HomepageStatistics
                     ->count('lessons.id')
                 : 0;
 
-            $activeEnrollments = $hasEnrollments
-                ? DB::table('enrollments')->where('status', 'active')->count()
+            $activeEnrollments = $hasEnrollments && $hasUsers
+                ? DB::table('enrollments')
+                    ->join('users', 'users.id', '=', 'enrollments.user_id')
+                    ->where('users.role', 'student')
+                    ->where('enrollments.status', 'active')
+                    ->count('enrollments.id')
                 : 0;
             $uniqueEnrolledStudents = $hasEnrollments && $hasUsers
                 ? DB::table('enrollments')
@@ -49,19 +54,32 @@ class HomepageStatistics
                     ->distinct()
                     ->count('enrollments.user_id')
                 : 0;
-            $completedEnrollments = $hasEnrollments
+            $completedEnrollments = $hasEnrollments && $hasUsers
                 ? DB::table('enrollments')
+                    ->join('users', 'users.id', '=', 'enrollments.user_id')
+                    ->where('users.role', 'student')
                     ->where(function ($query) {
-                        $query->where('status', 'completed')
-                            ->orWhereNotNull('completed_at');
+                        $query->where('enrollments.status', 'completed')
+                            ->orWhereNotNull('enrollments.completed_at');
                     })
-                    ->count()
+                    ->count('enrollments.id')
                 : 0;
-            $openBatches = $hasBatches
-                ? DB::table('batches')->where('status', 'open')->count()
+            $openBatches = $hasBatches && $hasBranches && $hasCourses
+                ? DB::table('batches')
+                    ->join('branches', 'branches.id', '=', 'batches.branch_id')
+                    ->join('courses', 'courses.id', '=', 'batches.course_id')
+                    ->where('batches.status', 'open')
+                    ->where('batches.ends_at', '>=', now())
+                    ->where('branches.is_active', true)
+                    ->where('courses.status', 'published')
+                    ->count('batches.id')
                 : 0;
-            $issuedCertificates = $hasCertificates
-                ? DB::table('certificates')->where('status', 'issued')->count()
+            $issuedCertificates = $hasCertificates && $hasUsers
+                ? DB::table('certificates')
+                    ->join('users', 'users.id', '=', 'certificates.user_id')
+                    ->where('users.role', 'student')
+                    ->where('certificates.status', 'issued')
+                    ->count('certificates.id')
                 : 0;
             $newStudentsThisMonth = $hasUsers
                 ? DB::table('users')->where('role', 'student')
