@@ -420,7 +420,7 @@ final class AdmissionManagementPluginTest extends TestCase
         ]);
 
         $this->actingAs($manager)->get('/__admission/reports')->assertOk()
-            ->assertSee('Admission Reports &amp; Analytics')
+            ->assertSee('Admission Reports & Analytics')
             ->assertSee('Total applications')->assertSee('Conversion rate');
         $response = $this->actingAs($manager)->get('/__admission/reports/export?status=approved');
         $response->assertOk()->assertHeader('content-type', 'text/csv; charset=UTF-8');
