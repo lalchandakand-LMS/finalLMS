@@ -89,7 +89,6 @@ use App\Modules\Library\LibraryController;
 use App\Modules\Referral\ReferralIncomeController;
 use App\Modules\Ai\AssistantController;
 use App\Modules\Ai\AdminSettingsController;
-use App\Http\Controllers\AdminApiConnectionController;
 use App\Modules\Ai\AgentActionController;
 use App\Modules\Ai\AgentContentController;
 use App\Modules\Carousel\CarouselBuilderController;
@@ -689,10 +688,10 @@ Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('a
 });
 
 Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('admin/integrations')->name('admin.integrations.')->group(function () {
-    Route::get('/', [AdminApiConnectionController::class, 'index'])->name('index');
-    Route::post('/', [AdminApiConnectionController::class, 'store'])->middleware('throttle:10,1')->name('store');
-    Route::post('/{connection}/pause', [AdminApiConnectionController::class, 'pause'])->whereNumber('connection')->middleware('throttle:10,1')->name('pause');
-    Route::post('/{connection}/disconnect', [AdminApiConnectionController::class, 'disconnect'])->whereNumber('connection')->middleware('throttle:5,1')->name('disconnect');
+    Route::get('/', [ApiConnectorAdminController::class, 'index'])->name('index');
+    Route::post('/{provider}/connect', [ApiConnectorAdminController::class, 'connect'])->where('provider', '[a-z][a-z0-9_]{1,79}')->middleware('throttle:10,1')->name('connect');
+    Route::post('/{provider}/pause', [ApiConnectorAdminController::class, 'pause'])->where('provider', '[a-z][a-z0-9_]{1,79}')->middleware('throttle:10,1')->name('pause');
+    Route::post('/{provider}/disconnect', [ApiConnectorAdminController::class, 'disconnect'])->where('provider', '[a-z][a-z0-9_]{1,79}')->middleware('throttle:5,1')->name('disconnect');
 });
 
 // Native AI assistant, specialist agents and human-reviewed actions.
