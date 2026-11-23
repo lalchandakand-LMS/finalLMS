@@ -78,10 +78,10 @@ class BkashPaymentFlowTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        app(\App\\Services\\Payments\\PaymentGatewayManager::class)->registerPluginGateway(
+        app(\App\Services\Payments\\PaymentGatewayManager::class)->registerPluginGateway(
             'aec.universal-payment',
             'bkash',
-            \Aloms\\UniversalPayment\\Gateways\\BkashGateway::class,
+            \Aloms\UniversalPayment\Gateways\\BkashGateway::class,
         );
     }
 
