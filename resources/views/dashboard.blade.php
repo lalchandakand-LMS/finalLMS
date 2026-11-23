@@ -95,7 +95,13 @@
                         <a class="aec-hero-btn secondary" href="{{ route('admin.users.index') }}">{{ __('Manage students') }}</a>
                     </div>
                 </div>
-                <div class="aec-hero-mark" aria-hidden="true">🎓</div>
+                <div class="aec-hero-mark" aria-hidden="true">
+                    @if($dashboardAppearance['brand_logo'])
+                        <img src="{{ $dashboardAppearance['brand_logo'] }}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:contain;padding:12px;">
+                    @else
+                        🎓
+                    @endif
+                </div>
             </section>
 
             @endif
