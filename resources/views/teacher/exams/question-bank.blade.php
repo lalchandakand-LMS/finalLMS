@@ -19,6 +19,8 @@
             </div>
             <label>{{ __('Question type') }}<select name="type" class="question-type"><option value="mcq">Multiple choice</option><option value="true_false">True / False</option><option value="short_answer">Short answer</option><option value="written">Written response</option></select></label>
             <label>{{ __('Question') }}<textarea name="question" required maxlength="3000"></textarea></label>
+            <label>{{ __('Explanation') }}<textarea name="explanation" maxlength="3000"></textarea></label>
+            <label>{{ __('Tags (up to 30)') }}<input name="tags[]" maxlength="40" placeholder="e.g. tenses"></label>
             <div class="grid grid-2 question-options">
                 <label>Option A<input name="options[0]" required maxlength="500"></label>
                 <label>Option B<input name="options[1]" required maxlength="500"></label>
@@ -42,6 +44,8 @@
             <label>{{ __('Subject') }}<select name="subject"><option value="">{{ __('All subjects') }}</option>@foreach($subjects as $subject)<option value="{{ $subject }}" @selected(request('subject') === $subject)>{{ $subject }}</option>@endforeach</select></label>
             <label>{{ __('Category') }}<select name="category"><option value="">{{ __('All categories') }}</option>@foreach($categories as $category)<option value="{{ $category }}" @selected(request('category') === $category)>{{ $category }}</option>@endforeach</select></label>
             <label>{{ __('Difficulty') }}<select name="difficulty"><option value="">{{ __('All levels') }}</option>@foreach(['easy','medium','hard'] as $level)<option value="{{ $level }}" @selected(request('difficulty') === $level)>{{ ucfirst($level) }}</option>@endforeach</select></label>
+            <label>{{ __('Question type') }}<select name="type"><option value="">{{ __('All types') }}</option>@foreach(['mcq','true_false','short_answer','written'] as $type)<option value="{{ $type }}" @selected(request('type') === $type)>{{ ucfirst(str_replace('_', ' ', $type)) }}</option>@endforeach</select></label>
+            <label>{{ __('Tag') }}<select name="tag"><option value="">{{ __('All tags') }}</option>@foreach($tags as $tag)<option value="{{ $tag }}" @selected(request('tag') === $tag)>{{ $tag }}</option>@endforeach</select></label>
         </div>
         <button class="btn primary" type="submit">{{ __('Filter questions') }}</button>
         <a class="btn secondary" href="{{ $isAdmin ? route('admin.batches.question-bank.index', $batch) : route('teacher.batches.question-bank.index', $batch) }}">{{ __('Clear') }}</a>
@@ -62,6 +66,8 @@
                         <label>{{ __('Difficulty') }}<select name="difficulty">@foreach(['easy','medium','hard'] as $level)<option value="{{ $level }}" @selected(($question->difficulty ?? 'medium') === $level)>{{ ucfirst($level) }}</option>@endforeach</select></label>
                                                 <label>{{ __('Question type') }}<select name="type" class="question-type">@foreach(['mcq'=>'Multiple choice','true_false'=>'True / False','short_answer'=>'Short answer','written'=>'Written response'] as $type => $label)<option value="{{ $type }}" @selected(($question->type ?: 'mcq') === $type)>{{ $label }}</option>@endforeach</select></label>
                         <label>{{ __('Question') }}<textarea name="question" required>{{ $question->question }}</textarea></label>
+                        <label>{{ __('Explanation') }}<textarea name="explanation">{{ $question->explanation }}</textarea></label>
+                        <label>{{ __('Add tag') }}<input name="tags[]" maxlength="40" placeholder="e.g. tenses"></label>
                         <div class="grid grid-2 question-options">@foreach($question->options ?? [] as $i => $option)<label>Option {{ ['A','B','C','D'][$i] ?? $i+1 }}<input name="options[{{ $i }}]" value="{{ $option }}" required></label>@endforeach</div>
                         <div class="grid grid-2 question-answer"><label>{{ __('Correct option') }}<select name="correct_option">@foreach(['A','B','C','D'] as $i => $letter)<option value="{{ $i }}" @selected($question->correct_option === $i)>{{ $letter }}</option>@endforeach</select></label></div>
                         <label class="question-correct-answer" hidden>{{ __('Expected short answer') }}<input name="correct_answer" value="{{ $question->correct_answer }}" maxlength="2000"></label>
