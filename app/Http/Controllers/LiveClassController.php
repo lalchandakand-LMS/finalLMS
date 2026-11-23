@@ -19,8 +19,12 @@ class LiveClassController extends Controller
         $user = Auth::user();
         abort_unless($user && ($user->isAdmin() || $user->isTeacher() || $user->isStudent() || $user->isGuardian()), 403);
 
-        $query = LiveClass::with(['batch.course', 'batch.branch', 'batch.teacher'])
+        $query = LiveClass::with(['batch.course', 'batch.branch', 'batch.teacher', 'attendances'])
             ->orderBy('starts_at');
+
+        if ($user->isAdmin() || $user->isTeacher()) {
+            $query->with(['batch.enrollments' => fn ($enrollments) => $enrollments->where('status', 'active')->with('user')]);
+        }
 
         if ($user->isTeacher()) {
             $query->whereHas('batch', fn ($batches) => $batches->where('teacher_id', $user->id));
@@ -140,6 +144,39 @@ class LiveClassController extends Controller
         $liveClass->update($validated);
 
         return back()->with('success', 'Live class updated successfully.');
+    }
+
+
+    public function storeAttendance(LiveClass $liveClass, Request $request): RedirectResponse
+    {
+        $this->authorizeBatch($liveClass->batch);
+        abort_unless($liveClass->ends_at->isPast() || $liveClass->status === 'completed', 422, 'Attendance can be finalized after the class ends.');
+        $data = $request->validate([
+            'records' => ['required', 'array', 'min:1'],
+            'records.*.student_id' => ['required', 'integer', 'distinct'],
+            'records.*.status' => ['required', Rule::in(['present', 'late', 'absent', 'excused'])],
+            'records.*.note' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        DB::transaction(function () use ($liveClass, $data): void {
+            $session = LiveClass::query()->lockForUpdate()->findOrFail($liveClass->id);
+            $activeStudentIds = $session->batch->enrollments()
+                ->where('status', 'active')
+                ->lockForUpdate()
+                ->pluck('user_id')
+                ->map(static fn ($id): int => (int) $id)
+                ->all();
+
+            foreach ($data['records'] as $record) {
+                abort_unless(in_array((int) $record['student_id'], $activeStudentIds, true), 422, 'Only currently enrolled students can be marked for this class.');
+                LiveClassAttendance::query()->updateOrCreate(
+                    ['live_class_id' => $session->id, 'student_id' => $record['student_id']],
+                    ['marked_by' => Auth::id(), 'status' => $record['status'], 'note' => $record['note'] ?? null]
+                );
+            }
+        }, 3);
+
+        return back()->with('success', 'Class-session attendance saved successfully.');
     }
 
     public function destroy(LiveClass $liveClass): RedirectResponse
