@@ -3,11 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\Certificate;
+use App\Models\CourseContentPost;
+use App\Models\CourseContentProgress;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\LessonProgress;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class StudentTranscriptTest extends TestCase
