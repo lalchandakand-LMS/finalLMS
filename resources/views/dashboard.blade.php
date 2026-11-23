@@ -11,112 +11,136 @@
 
     @if($isAdmin)
         <style>
-            .aec-admin { --aec-navy:#102b63; --aec-blue:#1769e8; --aec-muted:#64748b; color:#14213d; }
+            .aec-admin { --aec-ink:#10234e; --aec-muted:#687895; --aec-line:#e4ebfa; color:var(--aec-ink); }
             .aec-admin * { box-sizing:border-box; }
-            .aec-hero { display:flex; justify-content:space-between; align-items:center; gap:20px; padding:28px 30px; margin-bottom:22px; border-radius:20px; color:#fff; background:linear-gradient(115deg,#0d2b68,#0759c8 65%,#2388f5); box-shadow:0 14px 32px rgba(20,83,170,.18); }
-            .aec-hero h1 { margin:8px 0; font-size:clamp(1.45rem,3vw,2.15rem); color:#fff; }
-            .aec-hero p { margin:0; color:#e2edff; }
-            .aec-hero-mark { font-size:58px; opacity:.9; }
-            .aec-eyebrow { font-size:.76rem; text-transform:uppercase; letter-spacing:.13em; font-weight:800; color:#d8e7ff; }
-            .aec-heading { display:flex; justify-content:space-between; align-items:end; gap:12px; margin:22px 0 13px; }
-            .aec-heading h2 { margin:0; color:#142b55; font-size:1.18rem; }
-            .aec-heading p { margin:4px 0 0; color:var(--aec-muted); font-size:.9rem; }
+            .aec-admin-shell { display:grid; gap:18px; }
+            .aec-hero { position:relative; isolation:isolate; overflow:hidden; display:flex; align-items:center; justify-content:space-between; gap:24px; min-height:190px; padding:30px clamp(22px,4vw,42px); border-radius:24px; color:#fff; background:radial-gradient(circle at 80% 20%,rgba(54,178,255,.4),transparent 28%),linear-gradient(115deg,#071b54 0%,#0c3f9f 55%,#126ce2 100%); box-shadow:0 18px 42px rgba(14,62,151,.22); }
+            .aec-hero:after { content:""; position:absolute; z-index:-1; width:330px; height:330px; right:8%; top:-190px; border:1px solid rgba(255,255,255,.2); border-radius:50%; box-shadow:0 0 0 34px rgba(255,255,255,.04),0 0 0 72px rgba(255,255,255,.035); }
+            .aec-hero-copy { max-width:760px; }
+            .aec-eyebrow { display:inline-flex; align-items:center; gap:8px; padding:6px 11px; border:1px solid rgba(255,255,255,.25); border-radius:999px; background:rgba(255,255,255,.1); color:#dbeafe; font-size:.74rem; font-weight:800; letter-spacing:.09em; text-transform:uppercase; }
+            .aec-hero h1 { margin:13px 0 7px; color:#fff; font-size:clamp(1.55rem,3vw,2.45rem); line-height:1.12; letter-spacing:-.035em; }
+            .aec-hero p { max-width:650px; margin:0; color:#dbeafe; font-size:.98rem; }
+            .aec-hero-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:20px; }
+            .aec-hero-btn { display:inline-flex; align-items:center; justify-content:center; min-height:42px; padding:10px 17px; border-radius:999px; background:#ffd52f; color:#14234b; font-weight:800; text-decoration:none; box-shadow:0 6px 18px rgba(0,0,0,.14); }
+            .aec-hero-btn.secondary { border:1px solid rgba(255,255,255,.35); background:rgba(255,255,255,.12); color:#fff; box-shadow:none; }
+            .aec-hero-mark { flex:0 0 auto; display:grid; place-items:center; width:112px; height:112px; border:1px solid rgba(255,255,255,.22); border-radius:30px; background:rgba(255,255,255,.12); font-size:3.8rem; transform:rotate(5deg); }
+            .aec-heading { display:flex; align-items:end; justify-content:space-between; gap:12px; margin:2px 0 12px; }
+            .aec-heading h2 { margin:0; color:#142b55; font-size:1.12rem; letter-spacing:-.02em; }
+            .aec-heading p { margin:4px 0 0; color:var(--aec-muted); font-size:.86rem; }
             .aec-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
-            .aec-stat { padding:18px; border:1px solid #e1eaf8; border-radius:16px; background:#fff; box-shadow:0 5px 18px rgba(15,42,90,.045); }
-            .aec-stat-top { display:flex; justify-content:space-between; align-items:center; gap:8px; color:#536782; font-size:.88rem; }
-            .aec-stat-icon { display:grid; place-items:center; width:40px; height:40px; border-radius:12px; background:#eaf2ff; font-size:1.25rem; }
-            .aec-stat strong { display:block; margin-top:11px; color:#102b63; font-size:1.85rem; line-height:1.1; }
-            .aec-stat small { display:block; margin-top:6px; color:#7b8ba3; }
-            .aec-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:13px; }
-            .aec-link { display:flex; flex-direction:column; min-height:138px; padding:17px; border:1px solid #e1eaf8; border-radius:15px; background:#fff; color:#152b50; text-decoration:none; box-shadow:0 5px 18px rgba(15,42,90,.04); transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease; }
-            .aec-link:hover { transform:translateY(-3px); border-color:#9bbdf5; box-shadow:0 12px 24px rgba(15,42,90,.09); }
-            .aec-link-icon { display:grid; place-items:center; width:39px; height:39px; border-radius:12px; background:#edf4ff; font-size:1.25rem; }
-            .aec-link strong { margin-top:12px; font-size:.98rem; }
-            .aec-link span:last-child { margin-top:5px; color:#71819a; font-size:.82rem; line-height:1.4; }
-            .aec-bottom { display:grid; grid-template-columns:1.2fr .8fr; gap:15px; margin-top:18px; }
-            .aec-panel { padding:20px; border:1px solid #e1eaf8; border-radius:16px; background:#fff; }
-            .aec-panel h3 { margin:0 0 13px; color:#142b55; font-size:1.05rem; }
-            .aec-row { display:flex; justify-content:space-between; gap:12px; padding:11px 0; border-top:1px solid #edf1f7; }
-            .aec-row:first-of-type { border-top:0; }
-            .aec-row span { color:#71819a; font-size:.88rem; }
-            .aec-row strong { color:#18335f; font-size:.9rem; text-align:right; }
+            .aec-stat { position:relative; overflow:hidden; min-width:0; padding:18px; border:1px solid var(--aec-line); border-radius:19px; background:linear-gradient(145deg,#fff,#f7faff); box-shadow:0 8px 22px rgba(18,48,102,.055); }
+            .aec-stat:after { content:""; position:absolute; right:-28px; bottom:-44px; width:125px; height:125px; border:18px solid rgba(35,112,235,.055); border-radius:50%; }
+            .aec-stat-top { display:flex; align-items:center; justify-content:space-between; gap:10px; color:#5d6f8d; font-size:.84rem; font-weight:700; }
+            .aec-stat-icon { display:grid; place-items:center; flex:0 0 auto; width:43px; height:43px; border-radius:14px; background:#e8f1ff; font-size:1.35rem; }
+            .aec-stat strong { display:block; margin-top:12px; color:#102b63; font-size:clamp(1.65rem,2.4vw,2.15rem); line-height:1; letter-spacing:-.04em; }
+            .aec-stat small { display:block; margin-top:8px; color:#8190a8; font-size:.76rem; }
+            .aec-stat.blue { background:linear-gradient(135deg,#eaf3ff,#fff); } .aec-stat.green .aec-stat-icon { background:#ddf8ed; } .aec-stat.purple .aec-stat-icon { background:#f0e7ff; } .aec-stat.gold .aec-stat-icon { background:#fff2d8; }
+            .aec-content-grid { display:grid; grid-template-columns:minmax(0,1.45fr) minmax(270px,.85fr); gap:15px; }
+            .aec-panel { min-width:0; padding:20px; border:1px solid var(--aec-line); border-radius:19px; background:#fff; box-shadow:0 7px 22px rgba(18,48,102,.045); }
+            .aec-panel h3 { display:flex; align-items:center; gap:9px; margin:0 0 15px; color:#172e5b; font-size:1rem; }
+            .aec-panel-head { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:13px; }
+            .aec-panel-head h3 { margin:0; }
+            .aec-pill { display:inline-flex; align-items:center; padding:5px 9px; border-radius:999px; background:#e9f2ff; color:#1858b5; font-size:.72rem; font-weight:800; }
+            .aec-action-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:11px; }
+            .aec-action { display:flex; flex-direction:column; align-items:flex-start; min-height:112px; padding:14px; border:1px solid #e6edfa; border-radius:15px; background:linear-gradient(145deg,#fff,#f8faff); color:#17305f; text-decoration:none; transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease; }
+            .aec-action:hover { transform:translateY(-2px); border-color:#a9c7f8; box-shadow:0 9px 20px rgba(22,83,171,.09); }
+            .aec-action-icon { display:grid; place-items:center; width:36px; height:36px; border-radius:11px; background:#eaf2ff; font-size:1.15rem; }
+            .aec-action strong { margin-top:10px; font-size:.83rem; }
+            .aec-action small { margin-top:3px; color:#7c8ba5; font-size:.72rem; line-height:1.35; }
+            .aec-module-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
+            .aec-module { display:flex; align-items:center; gap:10px; min-width:0; padding:11px 12px; border:1px solid #edf1f8; border-radius:12px; color:#24395f; text-decoration:none; font-size:.83rem; font-weight:700; }
+            .aec-module:hover { border-color:#b6cdf4; background:#f7faff; }
+            .aec-module span { font-size:1.1rem; }
+            .aec-snapshot { display:grid; gap:0; }
+            .aec-snapshot-row { display:flex; justify-content:space-between; gap:12px; padding:11px 0; border-top:1px solid #edf1f7; }
+            .aec-snapshot-row:first-child { border-top:0; }
+            .aec-snapshot-row span { color:#71819a; font-size:.83rem; }
+            .aec-snapshot-row strong { color:#18335f; font-size:.83rem; text-align:right; overflow-wrap:anywhere; }
             .aec-admin .btn { border-radius:10px; }
-            @media(max-width:900px) { .aec-stats,.aec-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-            @media(max-width:600px) { .aec-hero { padding:22px; } .aec-hero-mark { display:none; } .aec-stats,.aec-grid,.aec-bottom { grid-template-columns:1fr; } .aec-stat { padding:15px; } }
+            @media(max-width:1050px) { .aec-stats { grid-template-columns:repeat(2,minmax(0,1fr)); } .aec-action-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+            @media(max-width:760px) { .aec-content-grid { grid-template-columns:1fr; } .aec-hero-mark { width:82px;height:82px;font-size:2.7rem;border-radius:23px; } }
+            @media(max-width:520px) { .aec-hero { min-height:0; padding:22px; } .aec-hero-mark { display:none; } .aec-stats { gap:9px; } .aec-stat { padding:14px; } .aec-stat-icon { width:36px;height:36px; } .aec-module-list { grid-template-columns:1fr; } .aec-panel { padding:16px; } }
+            @media(prefers-reduced-motion:reduce) { .aec-action { transition:none; } .aec-action:hover { transform:none; } }
         </style>
 
-        <div class="aec-admin">
+        <div class="aec-admin aec-admin-shell">
             <section class="aec-hero">
-                <div>
+                <div class="aec-hero-copy">
                     <span class="aec-eyebrow">{{ $institutionName }} · {{ __('Learning Management System') }}</span>
-                    <h1>{{ __('Welcome back,') }} {{ $user->name }}!</h1>
-                    <p>{{ __('Manage your academy, courses, learners and daily operations from one place.') }}</p>
+                    <h1>{{ __('Welcome back,') }} {{ $user->name }}! 👋</h1>
+                    <p>{{ __('Your success is our mission. Manage students, teachers, courses and daily learning operations from one dashboard.') }}</p>
+                    <div class="aec-hero-actions">
+                        <a class="aec-hero-btn" href="{{ route('admin.courses.index') }}">{{ __('View courses') }} →</a>
+                        <a class="aec-hero-btn secondary" href="{{ route('admin.users.index') }}">{{ __('Manage students') }}</a>
+                    </div>
                 </div>
-                <div class="aec-hero-mark" aria-hidden="true">📘</div>
+                <div class="aec-hero-mark" aria-hidden="true">🎓</div>
             </section>
 
             @if($setupWizardPending)
-                <section class="aec-panel" style="margin-bottom:20px;border-color:#9bbdf5;background:#f5f9ff">
+                <section class="aec-panel" style="border-color:#9bbdf5;background:#f5f9ff">
                     <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
-                        <div>
-                            <strong>{{ __('Finish setting up your institution') }}</strong>
-                            <p class="muted" style="margin:5px 0 0">{{ __('Your setup is saved step by step. Complete the institution profile, academic year and payment methods when ready.') }}</p>
-                        </div>
+                        <div><strong>{{ __('Finish setting up your institution') }}</strong><p class="muted" style="margin:5px 0 0">{{ __('Your setup is saved step by step. Complete the institution profile, academic year and payment methods when ready.') }}</p></div>
                         <a class="btn primary" href="{{ route('admin.setup-wizard.index') }}">{{ __('Continue setup') }}</a>
                     </div>
                 </section>
             @endif
 
-            <div class="aec-heading">
-                <div><h2>{{ __('Analytics & academy overview') }}</h2><p>{{ __('Live totals from your current LMS records') }}</p></div>
-                <span class="badge success">{{ $roleLabel }}</span>
+            <section>
+                <div class="aec-heading"><div><h2>{{ __('Academy overview') }}</h2><p>{{ __('Live totals from your current LMS records') }}</p></div><span class="badge success">{{ $roleLabel }}</span></div>
+                <div class="aec-stats" aria-label="{{ __('Academy statistics') }}">
+                    <article class="aec-stat blue"><div class="aec-stat-top"><span>{{ __('Total students') }}</span><span class="aec-stat-icon" aria-hidden="true">👥</span></div><strong>{{ number_format($stats['students']) }}</strong><small>{{ __('Registered student accounts') }}</small></article>
+                    <article class="aec-stat green"><div class="aec-stat-top"><span>{{ __('Total teachers') }}</span><span class="aec-stat-icon" aria-hidden="true">👨‍🏫</span></div><strong>{{ number_format($stats['teachers']) }}</strong><small>{{ __('Teacher accounts') }}</small></article>
+                    <article class="aec-stat purple"><div class="aec-stat-top"><span>{{ __('Total courses') }}</span><span class="aec-stat-icon" aria-hidden="true">📚</span></div><strong>{{ number_format($stats['courses']) }}</strong><small>{{ __('All courses in the catalog') }}</small></article>
+                    <article class="aec-stat gold"><div class="aec-stat-top"><span>{{ __('Certificates issued') }}</span><span class="aec-stat-icon" aria-hidden="true">🏅</span></div><strong>{{ number_format($stats['certificates']) }}</strong><small>{{ __('Certificates generated by the LMS') }}</small></article>
+                </div>
+            </section>
+
+            <div class="aec-content-grid">
+                <section class="aec-panel">
+                    <div class="aec-panel-head"><h3>⚡ {{ __('Quick actions') }}</h3><span class="aec-pill">{{ __('Frequently used') }}</span></div>
+                    <div class="aec-action-grid">
+                        <a class="aec-action" href="{{ route('admin.users.index') }}"><span class="aec-action-icon">👥</span><strong>{{ __('Add / manage students') }}</strong><small>{{ __('Student and staff accounts') }}</small></a>
+                        <a class="aec-action" href="{{ route('admin.courses.create') }}"><span class="aec-action-icon">📘</span><strong>{{ __('Create course') }}</strong><small>{{ __('Build a learning course') }}</small></a>
+                        <a class="aec-action" href="{{ route('admin.batches.index') }}"><span class="aec-action-icon">🗓️</span><strong>{{ __('Manage batches') }}</strong><small>{{ __('Class groups and schedules') }}</small></a>
+                        <a class="aec-action" href="{{ route('admin.payments.index') }}"><span class="aec-action-icon">💳</span><strong>{{ __('Review payments') }}</strong><small>{{ __('Payment records and review') }}</small></a>
+                        <a class="aec-action" href="{{ route('live-classes.index') }}"><span class="aec-action-icon">🎥</span><strong>{{ __('Live classes') }}</strong><small>{{ __('Open online class area') }}</small></a>
+                        <a class="aec-action" href="{{ route('admin.invoices.index') }}"><span class="aec-action-icon">🧾</span><strong>{{ __('Invoices & fees') }}</strong><small>{{ __('Manage fee records') }}</small></a>
+                        <a class="aec-action" href="{{ route('admin.backups.index') }}"><span class="aec-action-icon">💾</span><strong>{{ __('Create backup') }}</strong><small>{{ __('Protect LMS data') }}</small></a>
+                        <a class="aec-action" href="{{ route('admin.analytics.index') }}"><span class="aec-action-icon">📊</span><strong>{{ __('View analytics') }}</strong><small>{{ __('Website and course insights') }}</small></a>
+                    </div>
+                </section>
+
+                <section class="aec-panel">
+                    <h3>🏆 {{ __('System snapshot') }}</h3>
+                    <div class="aec-snapshot">
+                        <div class="aec-snapshot-row"><span>{{ __('Signed-in account') }}</span><strong>{{ $user->name }}</strong></div>
+                        <div class="aec-snapshot-row"><span>{{ __('Access role') }}</span><strong>{{ $roleLabel }}</strong></div>
+                        <div class="aec-snapshot-row"><span>{{ __('Published course list') }}</span><strong>{{ number_format($courses->count()) }}</strong></div>
+                        <div class="aec-snapshot-row"><span>{{ __('Recent certificates shown') }}</span><strong>{{ number_format($recentCertificates->count()) }}</strong></div>
+                    </div>
+                    <div style="margin-top:16px;padding:13px;border-radius:13px;background:#f1f6ff;color:#31517f;font-size:.82rem;line-height:1.5">
+                        <strong>{{ __('Keep your academy running smoothly') }}</strong><br>{{ __('Review system health, recent activity and payment records regularly.') }}
+                    </div>
+                    <a class="btn secondary" style="margin-top:14px" href="{{ route('admin.system-health.index') }}">🩺 {{ __('Check website health') }}</a>
+                </section>
             </div>
 
-            <section class="aec-stats" aria-label="{{ __('Academy statistics') }}">
-                <article class="aec-stat"><div class="aec-stat-top"><span>{{ __('Total students') }}</span><span class="aec-stat-icon">🎓</span></div><strong>{{ number_format($stats['students']) }}</strong><small>{{ __('Registered student accounts') }}</small></article>
-                <article class="aec-stat"><div class="aec-stat-top"><span>{{ __('Total teachers') }}</span><span class="aec-stat-icon">👩‍🏫</span></div><strong>{{ number_format($stats['teachers']) }}</strong><small>{{ __('Teacher accounts') }}</small></article>
-                <article class="aec-stat"><div class="aec-stat-top"><span>{{ __('Total courses') }}</span><span class="aec-stat-icon">📚</span></div><strong>{{ number_format($stats['courses']) }}</strong><small>{{ __('All courses in the catalog') }}</small></article>
-                <article class="aec-stat"><div class="aec-stat-top"><span>{{ __('Certificates') }}</span><span class="aec-stat-icon">🏅</span></div><strong>{{ number_format($stats['certificates']) }}</strong><small>{{ __('Certificates issued') }}</small></article>
-            </section>
-
-            <div class="aec-heading"><div><h2>{{ __('Administration') }}</h2><p>{{ __('Open a module to manage that part of your academy') }}</p></div></div>
-            <section class="aec-grid">
-                <a class="aec-link" href="{{ route('admin.system-health.index') }}"><span class="aec-link-icon">🩺</span><strong>{{ __('Website health') }}</strong><span>{{ __('Check database, cache, storage and queue health') }}</span></a>
-                <a class="aec-link" href="{{ route('admin.courses.index') }}"><span class="aec-link-icon">📚</span><strong>{{ __('Courses & lessons') }}</strong><span>{{ __('Create courses and manage learning content') }}</span></a>
-                <a class="aec-link" href="{{ route('admin.users.index') }}"><span class="aec-link-icon">👥</span><strong>{{ __('Users & roles') }}</strong><span>{{ __('Manage student, teacher and staff accounts') }}</span></a>
-                <a class="aec-link" href="{{ route('admin.batches.index') }}"><span class="aec-link-icon">🗓️</span><strong>{{ __('Batches & branches') }}</strong><span>{{ __('Organize classes, batches and branches') }}</span></a>
-                <a class="aec-link" href="{{ route('admin.payments.index') }}"><span class="aec-link-icon">💳</span><strong>{{ __('Payments') }}</strong><span>{{ __('Review submitted course payments') }}</span></a>
-                <a class="aec-link" href="{{ route('live-classes.index') }}"><span class="aec-link-icon">🎥</span><strong>{{ __('Live classes') }}</strong><span>{{ __('View scheduled online classes') }}</span></a>
-                <a class="aec-link" href="{{ route('admin.website-builder.index') }}"><span class="aec-link-icon">🖥️</span><strong>{{ __('Website builder') }}</strong><span>{{ __('Manage public website content') }}</span></a>
-                <a class="aec-link" href="{{ route('admin.website-menu.index') }}"><span class="aec-link-icon">☷</span><strong>{{ __('Main menu builder') }}</strong><span>{{ __('Manage public navigation and submenu links') }}</span></a>
-                <a class="aec-link" href="{{ route('admin.media.index') }}"><span class="aec-link-icon">🖼️</span><strong>{{ __('Media library') }}</strong><span>{{ __('Upload and organize media files') }}</span></a>
-                <a class="aec-link" href="{{ route('admin.news.index') }}"><span class="aec-link-icon">📰</span><strong>{{ __('Blog & news') }}</strong><span>{{ __('Publish academy news and articles') }}</span></a>
-                <a class="aec-link" href="{{ route('admin.backups.index') }}"><span class="aec-link-icon">💾</span><strong>{{ __('Backup & restore') }}</strong><span>{{ __('Create and manage system backups') }}</span></a>
-                <a class="aec-link" href="{{ route('admin.updates.index') }}"><span class="aec-link-icon">🔄</span><strong>{{ __('System updates') }}</strong><span>{{ __('Check trusted LMS releases and update history') }}</span></a>
-                <a class="aec-link" href="{{ route('admin.addons.index') }}"><span class="aec-link-icon">🧩</span><strong>{{ __('Add-on registry') }}</strong><span>{{ __('Review allow-listed integrations and configuration readiness') }}</span></a>
-                <a class="aec-link" href="{{ route('admin.payment-gateways.index') }}"><span class="aec-link-icon">💳</span><strong>{{ __('Payment gateways') }}</strong><span>{{ __('Manage installed payment gateway adapters') }}</span></a>
-                <a class="aec-link" href="{{ route('admin.activity-logs.index') }}"><span class="aec-link-icon">📋</span><strong>{{ __('Activity logs') }}</strong><span>{{ __('Review recorded account activity') }}</span></a>
-                <a class="aec-link" href="{{ route('admin.security.sessions.index') }}"><span class="aec-link-icon">🔐</span><strong>{{ __('Device sessions') }}</strong><span>{{ __('Review sign-ins and revoke suspicious sessions') }}</span></a>
-                <a class="aec-link" href="{{ route('admin.invoices.index') }}"><span class="aec-link-icon">🧾</span><strong>{{ __('Invoices') }}</strong><span>{{ __('Manage invoices and fee records') }}</span></a>
-                <a class="aec-link" href="{{ route('admin.settings.index') }}"><span class="aec-link-icon">⚙️</span><strong>{{ __('System settings') }}</strong><span>{{ __('Configure academy and platform settings') }}</span></a>
-                <a class="aec-link" href="{{ route('admin.sms-campaigns.index') }}"><span class="aec-link-icon">✉️</span><strong>{{ __('SMS campaigns') }}</strong><span>{{ __('Manage learner communication campaigns') }}</span></a>
-                <a class="aec-link" href="{{ route('landing') }}"><span class="aec-link-icon">🌐</span><strong>{{ __('Homepage / Public website') }}</strong><span>{{ __('Open the visitor-facing homepage') }}</span></a>
-            </section>
-
-            <section class="aec-bottom">
-                <div class="aec-panel">
-                    <h3>{{ __('Quick actions') }}</h3>
-                    <div class="aec-row"><span>{{ __('Create a course') }}</span><strong><a href="{{ route('admin.courses.create') }}">{{ __('Open') }} →</a></strong></div>
-                    <div class="aec-row"><span>{{ __('Manage learners and staff') }}</span><strong><a href="{{ route('admin.users.index') }}">{{ __('Open') }} →</a></strong></div>
-                    <div class="aec-row"><span>{{ __('Review pending payments') }}</span><strong><a href="{{ route('admin.payments.index') }}">{{ __('Open') }} →</a></strong></div>
-                    <div class="aec-row"><span>{{ __('Create a system backup') }}</span><strong><a href="{{ route('admin.backups.index') }}">{{ __('Open') }} →</a></strong></div>
-                </div>
-                <div class="aec-panel">
-                    <h3>{{ __('System snapshot') }}</h3>
-                    <div class="aec-row"><span>{{ __('Signed-in account') }}</span><strong>{{ $user->name }}</strong></div>
-                    <div class="aec-row"><span>{{ __('Access role') }}</span><strong>{{ $roleLabel }}</strong></div>
-                    <div class="aec-row"><span>{{ __('Published course list') }}</span><strong>{{ number_format($courses->count()) }}</strong></div>
-                    <div class="aec-row"><span>{{ __('Recent certificates shown') }}</span><strong>{{ number_format($recentCertificates->count()) }}</strong></div>
+            <section class="aec-panel">
+                <div class="aec-panel-head"><h3>🧭 {{ __('Learning operations') }}</h3><span class="aec-pill">{{ __('Administration') }}</span></div>
+                <div class="aec-module-list">
+                    <a class="aec-module" href="{{ route('admin.courses.index') }}"><span>📚</span>{{ __('Courses & lessons') }}</a>
+                    <a class="aec-module" href="{{ route('admin.users.index') }}"><span>👥</span>{{ __('Students, teachers & roles') }}</a>
+                    <a class="aec-module" href="{{ route('admin.batches.index') }}"><span>🗓️</span>{{ __('Batches & branches') }}</a>
+                    <a class="aec-module" href="{{ route('admin.payments.index') }}"><span>💳</span>{{ __('Payments') }}</a>
+                    <a class="aec-module" href="{{ route('admin.website-builder.index') }}"><span>🖥️</span>{{ __('Website builder') }}</a>
+                    <a class="aec-module" href="{{ route('admin.website-menu.index') }}"><span>☷</span>{{ __('Main menu builder') }}</a>
+                    <a class="aec-module" href="{{ route('admin.media.index') }}"><span>🖼️</span>{{ __('Media library') }}</a>
+                    <a class="aec-module" href="{{ route('admin.news.index') }}"><span>📰</span>{{ __('Blog & news') }}</a>
+                    <a class="aec-module" href="{{ route('admin.activity-logs.index') }}"><span>📋</span>{{ __('Activity logs') }}</a>
+                    <a class="aec-module" href="{{ route('admin.security.sessions.index') }}"><span>🔐</span>{{ __('Device sessions') }}</a>
+                    <a class="aec-module" href="{{ route('admin.settings.index') }}"><span>⚙️</span>{{ __('System settings') }}</a>
+                    <a class="aec-module" href="{{ route('admin.updates.index') }}"><span>🔄</span>{{ __('System updates') }}</a>
                 </div>
             </section>
         </div>
