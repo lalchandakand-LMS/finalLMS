@@ -10,10 +10,16 @@ return new class extends Migration {
         Schema::table('question_set_questions', function (Blueprint $table): void {
             $table->json('grading_rubric')->nullable()->after('explanation');
         });
+        Schema::table('question_set_attempt_questions', function (Blueprint $table): void {
+            $table->json('grading_rubric')->nullable()->after('explanation');
+        });
     }
 
     public function down(): void
     {
+        Schema::table('question_set_attempt_questions', function (Blueprint $table): void {
+            $table->dropColumn('grading_rubric');
+        });
         Schema::table('question_set_questions', function (Blueprint $table): void {
             $table->dropColumn('grading_rubric');
         });
