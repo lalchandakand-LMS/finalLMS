@@ -23,7 +23,7 @@ return new class extends Migration
             $table->unsignedSmallInteger('attended_classes');
             $table->decimal('per_class_fee', 10, 2);
             $table->decimal('amount', 10, 2);
-            $table->foreignId('invoice_id')->nullable()->constrained('invoices')->nullOnDelete();
+            $table->foreignId('invoice_id')->nullable()->constrained('invoices')->restrictOnDelete();
             $table->foreignId('generated_by')->constrained('users')->restrictOnDelete();
             $table->timestamp('generated_at');
             $table->timestamps();
