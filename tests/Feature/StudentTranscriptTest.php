@@ -279,6 +279,7 @@ class StudentTranscriptTest extends TestCase
             ->assertSee('4.00')
             ->assertSee('2', false)
             ->assertSee('80.00%')
+            ->assertSee('Passed')
             ->assertSee('Writing Assignment')
             ->assertSee('8.00');
     }
