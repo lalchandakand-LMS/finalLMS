@@ -43,29 +43,34 @@ class StudentTranscriptController extends Controller
             ->groupBy(fn ($progress) => $progress->lesson?->course_id)
             ->map(fn ($progress) => $progress->count());
 
-        $completedContentCounts = CourseContentProgress::query()
+        $contentProgressByCourse = CourseContentProgress::query()
             ->with('curriculumItem:id,course_id')
             ->where('user_id', $student->id)
-            ->whereNotNull('completed_at')
             ->whereHas('curriculumItem', fn ($items) => $items
                 ->whereIn('course_id', $courseIds)
                 ->whereHas('post', fn ($posts) => $posts->where('status', 'published')
                     ->whereNotNull('published_at')->where('published_at', '<=', now())))
             ->get()
-            ->groupBy(fn ($progress) => $progress->curriculumItem?->course_id)
-            ->map(fn ($progress) => $progress->count());
+            ->groupBy(fn ($progress) => $progress->curriculumItem?->course_id);
 
-        $courseProgress = $enrollments->mapWithKeys(function ($enrollment) use ($completedLessonCounts, $completedContentCounts): array {
+        $completedContentCounts = $contentProgressByCourse
+            ->map(fn ($progress) => $progress->whereNotNull('completed_at')->count());
+        $contentProgressPoints = $contentProgressByCourse->map(fn ($progress) => $progress->sum(
+            fn ($item) => $item->completed_at ? 100 : (float) ($item->progress_percent ?? 0)
+        ));
+
+        $courseProgress = $enrollments->mapWithKeys(function ($enrollment) use ($completedLessonCounts, $completedContentCounts, $contentProgressPoints): array {
             $courseId = $enrollment->course_id;
             $total = ($enrollment->course?->lessons->count() ?? 0)
                 + ($enrollment->course?->curriculumItems->count() ?? 0);
-            $completed = (int) ($completedLessonCounts[$courseId] ?? 0)
-                + (int) ($completedContentCounts[$courseId] ?? 0);
+            $completedLegacy = (int) ($completedLessonCounts[$courseId] ?? 0);
+            $completed = $completedLegacy + (int) ($completedContentCounts[$courseId] ?? 0);
+            $progressPoints = ($completedLegacy * 100) + (float) ($contentProgressPoints[$courseId] ?? 0);
 
             return [$courseId => [
                 'completed' => min($completed, $total),
                 'total' => $total,
-                'percent' => $total > 0 ? min(100, (int) round(($completed / $total) * 100)) : 0,
+                'percent' => $total > 0 ? min(100, (int) round($progressPoints / $total)) : 0,
             ]];
         });
 
