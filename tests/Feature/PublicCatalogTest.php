@@ -39,4 +39,17 @@ class PublicCatalogTest extends TestCase
         $this->get(route('courses.show', 'public-english-course'))->assertOk();
         $this->get(route('courses.show', 'secret-draft-course'))->assertNotFound();
     }
+    public function test_public_navigation_exposes_existing_learning_and_teacher_entry_points(): void
+    {
+        $this->get(route('courses.index'))
+            ->assertOk()
+            ->assertSee(route('course-combos.index'), false)
+            ->assertSee(route('ebooks.index'), false)
+            ->assertSee(route('contests.index'), false)
+            ->assertSee(route('teacher.apply'), false)
+            ->assertSee(route('pages.about'), false)
+            ->assertSee(route('pages.contact'), false)
+            ->assertSee(route('pages.faq'), false);
+    }
+
 }
