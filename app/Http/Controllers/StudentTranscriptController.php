@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\AssignmentSubmission;
+use App\Models\Certificate;
 use App\Models\Enrollment;
 use App\Models\ExamAttempt;
+use App\Models\LessonProgress;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
@@ -16,11 +18,21 @@ class StudentTranscriptController extends Controller
         abort_unless($student && $student->isStudent(), 403);
 
         $enrollments = Enrollment::query()
-            ->with('course:id,title')
+            ->with(['course:id,title', 'course.lessons:id,course_id'])
             ->where('user_id', $student->id)
             ->whereIn('status', ['active', 'completed'])
             ->latest('created_at')
             ->get();
+
+        $courseIds = $enrollments->pluck('course_id')->filter()->unique()->values();
+        $completedLessonsByCourse = LessonProgress::query()
+            ->with('lesson:id,course_id')
+            ->where('user_id', $student->id)
+            ->whereNotNull('completed_at')
+            ->whereHas('lesson', fn ($lessons) => $lessons->whereIn('course_id', $courseIds))
+            ->get()
+            ->groupBy(fn ($progress) => $progress->lesson?->course_id)
+            ->map(fn ($progress) => $progress->count());
 
         $examAttempts = ExamAttempt::query()
             ->with(['exam.batch.course:id,title', 'exam.questions:id,exam_id,marks'])
@@ -38,6 +50,13 @@ class StudentTranscriptController extends Controller
             ->latest('submitted_at')
             ->get();
 
+        $certificates = Certificate::query()
+            ->with('course:id,title')
+            ->where('user_id', $student->id)
+            ->where('status', 'issued')
+            ->latest('issued_at')
+            ->get();
+
         $gradedExamAttempts = $examAttempts->filter(fn ($attempt) =>
             $attempt->score !== null && (int) $attempt->exam->questions->sum('marks') > 0
         );
@@ -51,8 +70,10 @@ class StudentTranscriptController extends Controller
         return view('student.transcript', compact(
             'student',
             'enrollments',
+            'completedLessonsByCourse',
             'examAttempts',
             'assignmentSubmissions',
+            'certificates',
             'examAverage'
         ));
     }
