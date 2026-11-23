@@ -99,7 +99,6 @@ use Illuminate\Support\Facades\Route;
 Route::get('/install', [InstallController::class, 'index'])->name('install.index');
 Route::post('/install', [InstallController::class, 'install'])->middleware('throttle:5,1')->name('install.store');
 
-Route::post('/webhooks/api-connectors/{provider}', [ApiConnectorWebhookController::class, 'receive'])->where('provider', '[a-z][a-z0-9_]{1,79}')->middleware('throttle:120,1')->name('webhooks.api-connectors.receive');
 
 Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('seo.sitemap');
 Route::get('/robots.txt', [SeoController::class, 'robots'])->name('seo.robots');
