@@ -37,7 +37,7 @@ final class AttendanceFeeBillingController extends Controller
 
             $periodStart = \Carbon\CarbonImmutable::createFromFormat('!Y-m-d', $data['billing_period'].'-01');
             $periodEnd = $periodStart->endOfMonth();
-            abort_if($periodStart->isAfter(now()->endOfMonth()), 422, 'You cannot bill a future attendance period.');
+            abort_if($periodEnd->isFuture(), 422, 'Class-fee billing can only be generated after the selected month ends, so all sessions are included.');
             $enrollments = $lockedBatch->enrollments()
                 ->with('user')
                 ->lockForUpdate()
