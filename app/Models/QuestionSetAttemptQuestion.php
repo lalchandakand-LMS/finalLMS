@@ -19,6 +19,7 @@ class QuestionSetAttemptQuestion extends Model
         'correct_option' => 'integer',
         'grading_rubric' => 'array',
         'marks' => 'integer',
+        'negative_marks' => 'integer',
         'position' => 'integer',
         'selected_option' => 'integer',
         'is_correct' => 'boolean',
