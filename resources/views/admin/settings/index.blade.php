@@ -284,6 +284,10 @@
                         </div>
                     </div>
                     <style>
+                        .dashboard-preview-frame[data-preview-theme="dark"] { background:#0b1530!important; color:#e8efff; border-color:#26385e!important; }
+                        .dashboard-preview-frame[data-preview-theme="dark"] .dashboard-preview-stats > div { background:#101d3b!important; border-color:#26385e!important; color:#e8efff; }
+                        .dashboard-preview-frame[data-preview-shadow="medium"] .dashboard-preview-stats > div { box-shadow:0 10px 24px rgba(12,35,82,.16); }
+                        .dashboard-preview-frame[data-preview-shadow="glow"] .dashboard-preview-stats > div { box-shadow:0 0 0 1px rgba(7,89,200,.2),0 8px 24px rgba(7,89,200,.2); }
                         .dashboard-preview-frame[data-preview-mode="desktop"] { max-width:100%; }
                         .dashboard-preview-frame[data-preview-mode="tablet"] { max-width:768px; }
                         .dashboard-preview-frame[data-preview-mode="mobile"] { max-width:390px; }
@@ -654,6 +658,7 @@
                 panel.querySelectorAll('.dashboard-preview-stats > div').forEach((card,index) => {
                     card.style.borderTop = '3px solid ' + (value(accents[index]) || ['#1675f5','#08b978','#8525e8','#f59e0b'][index]);
                     card.style.background = value('dashboard_surface_color') || '#ffffff';
+                    card.style.borderRadius = (Number(value('dashboard_card_radius')) || 19) + 'px';
                 });
                 frame.style.background = value('dashboard_background_color') || '#f3f6ff';
             };
@@ -695,6 +700,7 @@
             restore.addEventListener('click', () => {
                 const form = restore.closest('form');
                 if (!form) return;
+                if (palettePicker) palettePicker.value = '';
                 Object.entries(defaults).forEach(([name, value]) => {
                     Array.from(form.elements).filter(field => field.name === name).forEach(field => {
                         if (field.type === 'checkbox') field.checked = value === '1';
