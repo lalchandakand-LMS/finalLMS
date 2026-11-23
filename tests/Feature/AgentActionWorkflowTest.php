@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use Aloms\UniversalAiAssistant\AgentActionWorkflow;
 use Aloms\UniversalAiAssistant\AssistantAudit;
 use App\Models\Course;
+use App\Models\Enrollment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -196,13 +197,7 @@ class AgentActionWorkflowTest extends TestCase
         $teacher = User::factory()->create(['role' => 'teacher']);
         $student = User::factory()->create(['role' => 'student']);
         $course = Course::factory()->create(['teacher_id' => $teacher->id]);
-        DB::table('enrollments')->insert([
-            'user_id' => $student->id,
-            'course_id' => $course->id,
-            'status' => 'active',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        Enrollment::query()->create(['user_id' => $student->id, 'course_id' => $course->id, 'status' => 'active']);
         $workflow = app(AgentActionWorkflow::class);
         $proposal = $workflow->proposeStudyPlan($student, [
             'title' => 'Teacher reviewed study plan',
