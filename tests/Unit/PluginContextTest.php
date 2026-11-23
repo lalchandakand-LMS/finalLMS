@@ -9,6 +9,26 @@ use Tests\TestCase;
 
 class PluginContextTest extends TestCase
 {
+    use RefreshDatabase;
+
+    private function signedGatewayPlugin(string $key, array $capabilities): PluginInstallation
+    {
+        $plugin = new PluginInstallation();
+        $plugin->forceFill([
+            'plugin_key' => $key,
+            'name' => 'Gateway test plugin',
+            'version' => '1.0.0',
+            'type' => 'provider',
+            'status' => 'active',
+            'manifest' => ['capabilities' => $capabilities],
+            'package_sha256' => str_repeat('a', 64),
+            'signature_key_id' => 'unit-test-key',
+            'signature_verified_at' => now(),
+            'metadata' => [],
+        ])->save();
+
+        return $plugin;
+    }
     public function test_mobile_api_routes_require_device_token_role_and_declared_permission(): void
     {
         $plugin = new PluginInstallation();
@@ -78,12 +98,7 @@ class PluginContextTest extends TestCase
     }
     public function test_only_plugins_declaring_payment_gateway_capability_can_register_adapters(): void
     {
-        $plugin = new PluginInstallation();
-        $plugin->forceFill([
-            'plugin_key' => 'aec.test-gateway',
-            'manifest' => ['capabilities' => ['payments.gateway']],
-        ]);
-
+        $plugin = $this->signedGatewayPlugin('aec.test-gateway', ['payments.gateway']);
         $context = new PluginContext(app(), app('router'), $plugin);
         $context->registerPaymentGateway('test_gateway', TestPluginPaymentGateway::class);
 
@@ -106,11 +121,7 @@ class PluginContextTest extends TestCase
 
     public function test_duplicate_gateway_keys_are_rejected(): void
     {
-        $plugin = new PluginInstallation();
-        $plugin->forceFill([
-            'plugin_key' => 'aec.test-gateway',
-            'manifest' => ['capabilities' => ['payments.gateway']],
-        ]);
+        $plugin = $this->signedGatewayPlugin('aec.test-gateway', ['payments.gateway']);
         $context = new PluginContext(app(), app('router'), $plugin);
         $context->registerPaymentGateway('test_gateway', TestPluginPaymentGateway::class);
 
