@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Assignment;
 use App\Models\AssignmentSubmission;
+use App\Models\ActivityLog;
 use App\Models\Attendance;
 use App\Models\Batch;
 use App\Models\ExamAttempt;
@@ -176,6 +177,10 @@ class DashboardController extends Controller
                 ->first()
             : null;
 
+        $recentActivity = $user->isAdmin()
+            ? ActivityLog::query()->with('user:id,name')->latest()->take(8)->get()
+            : collect();
+
         $stats = [
             'courses' => Course::count(),
             'students' => \App\Models\User::where('role', 'student')->count(),
@@ -183,7 +188,7 @@ class DashboardController extends Controller
             'certificates' => Certificate::count(),
         ];
 
-        return view('dashboard', compact('user', 'courses', 'enrolledCourses', 'recentCertificates', 'stats', 'announcementSlides', 'studentInsights', 'teacherInsights', 'institutionName', 'setupWizardPending', 'dashboardAppearance', 'nextLiveClass'));
+        return view('dashboard', compact('user', 'courses', 'enrolledCourses', 'recentCertificates', 'stats', 'announcementSlides', 'studentInsights', 'teacherInsights', 'institutionName', 'setupWizardPending', 'dashboardAppearance', 'nextLiveClass', 'recentActivity'));
     }
 
     public function certificate(Certificate $certificate): View
