@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Batch;
 use App\Models\Course;
 use App\Models\Invoice;
 use App\Models\InvoicePayment;
@@ -40,8 +41,10 @@ class InvoiceController extends Controller
             })->orderBy('name')->get();
         $courses = Course::query()->whereHas('batches', fn ($batch) => $batch->where('branch_id', $branchId))
             ->orderBy('title')->get();
+        $batches = Batch::query()->where('branch_id', $branchId)->where('fee_calculation_mode', 'per_class')
+            ->with('course')->orderBy('title')->get();
 
-        return view('admin.invoices.index', compact('invoices', 'students', 'courses'));
+        return view('admin.invoices.index', compact('invoices', 'students', 'courses', 'batches'));
     }
 
     public function adminIndex(): View
