@@ -1,12 +1,12 @@
 <?php
 
-namespace App\\Http\\Controllers;
+namespace App\Http\Controllers;
 
-use App\\Models\\AssignmentSubmission;
-use App\\Models\\Enrollment;
-use App\\Models\\ExamAttempt;
-use Illuminate\\Support\\Facades\\Auth;
-use Illuminate\\View\\View;
+use App\Models\AssignmentSubmission;
+use App\Models\Enrollment;
+use App\Models\ExamAttempt;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\View\View;
 
 class StudentTranscriptController extends Controller
 {
