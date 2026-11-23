@@ -153,7 +153,7 @@
             const rubric = card.querySelector('.rubric-text');
             if (rubric && rubric.value.trim()) {
                 const prefix = card.querySelector('.question-type').name.replace('[type]', '');
-                rubric.value.split('\\n').map(value => value.trim()).filter(Boolean).forEach((value, index) => {
+                rubric.value.split('\n').map(value => value.trim()).filter(Boolean).forEach((value, index) => {
                     const hidden = document.createElement('input'); hidden.type = 'hidden';
                     hidden.name = prefix + '[grading_rubric][' + index + ']';
                     hidden.value = value; form.appendChild(hidden);
