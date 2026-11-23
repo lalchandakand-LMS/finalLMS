@@ -47,7 +47,12 @@
     "idempotent-action-execution",
     "version-checked-proposals",
     "payload-integrity-verification",
-    "audited-learning-plan-execution"
+    "audited-learning-plan-execution",
+    "teacher-draft-library",
+    "independent-admin-draft-review",
+    "published-support-knowledge-base",
+    "cited-support-agent-retrieval",
+    "private-in-app-agent-notifications"
   ],
   "migrations": "migrations"
 }
