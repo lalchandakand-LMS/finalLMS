@@ -1036,6 +1036,40 @@ class ExaminationWorkflowTest extends TestCase
             ->assertOk()->assertSee('Merit list and result sheet')->assertSee($student->name);
     }
 
+    public function test_teacher_can_create_exam_with_all_supported_question_types_and_custom_rules(): void
+    {
+        [$teacher, , $batch] = $this->makeBatchWithStudent();
+        $this->actingAs($teacher)->post(route('teacher.batches.exams.store', $batch), [
+            'title' => 'Complete question type exam',
+            'starts_at' => now()->addMinutes(5)->format('Y-m-d H:i:s'),
+            'ends_at' => now()->addHours(2)->format('Y-m-d H:i:s'),
+            'duration_minutes' => 45,
+            'pass_marks' => 5,
+            'grading_rules' => [
+                'negative_marking_enabled' => '1',
+                'negative_marking_multiplier' => '1.5',
+                'score_floor_zero' => '0',
+                'short_answer_case_sensitive' => '1',
+            ],
+            'allow_result_review' => '1',
+            'review_until' => now()->addDays(3)->format('Y-m-d H:i:s'),
+            'questions' => [
+                ['type' => 'mcq', 'question' => 'Choose a noun.', 'options' => ['Run','Book','Quickly','Blue'], 'correct_option' => 1, 'marks' => 2, 'negative_marks' => 1],
+                ['type' => 'true_false', 'question' => 'A verb can show action.', 'correct_option' => 0, 'marks' => 1, 'negative_marks' => 0],
+                ['type' => 'short_answer', 'question' => 'Past tense of see?', 'correct_answer' => 'saw', 'marks' => 2, 'negative_marks' => 1],
+                ['type' => 'written', 'question' => 'Write a paragraph about your school.', 'grading_rubric' => ['Structure', 'Grammar'], 'marks' => 5, 'negative_marks' => 0],
+            ],
+        ])->assertRedirect();
+
+        $exam = Exam::where('title', 'Complete question type exam')->firstOrFail();
+        $this->assertSame(4, $exam->questions()->count());
+        $this->assertSame(['mcq', 'true_false', 'short_answer', 'written'], $exam->questions()->pluck('type')->all());
+        $this->assertSame(1.5, (float) $exam->grading_rules['negative_marking_multiplier']);
+        $this->assertFalse($exam->grading_rules['score_floor_zero']);
+        $this->assertTrue($exam->allow_result_review);
+        $this->assertDatabaseHas('exam_questions', ['exam_id' => $exam->id, 'type' => 'written', 'options' => null]);
+    }
+
     public function test_exam_builder_can_copy_questions_from_reusable_published_question_sets(): void
     {
         [$teacher, , $batch] = $this->makeBatchWithStudent();
