@@ -88,17 +88,37 @@ class DashboardController extends Controller
                 ->unique()
                 ->values();
 
-            $totalLessons = $studentCourseIds->isEmpty()
+            $totalLegacyLessons = $studentCourseIds->isEmpty()
                 ? 0
                 : Lesson::query()->whereIn('course_id', $studentCourseIds)->count();
 
-            $completedLessons = $studentCourseIds->isEmpty()
+            $totalVideoLessons = $studentCourseIds->isEmpty()
+                ? 0
+                : CourseCurriculumItem::query()
+                    ->whereIn('course_id', $studentCourseIds)
+                    ->whereHas('post', fn ($posts) => $posts->published())
+                    ->count();
+
+            $completedLegacyLessons = $studentCourseIds->isEmpty()
                 ? 0
                 : LessonProgress::query()
                     ->where('user_id', $user->id)
                     ->whereNotNull('completed_at')
                     ->whereHas('lesson', fn ($query) => $query->whereIn('course_id', $studentCourseIds))
                     ->count();
+
+            $completedVideoLessons = $studentCourseIds->isEmpty()
+                ? 0
+                : CourseContentProgress::query()
+                    ->where('user_id', $user->id)
+                    ->whereNotNull('completed_at')
+                    ->whereHas('curriculumItem', fn ($items) => $items
+                        ->whereIn('course_id', $studentCourseIds)
+                        ->whereHas('post', fn ($posts) => $posts->published()))
+                    ->count();
+
+            $totalLessons = $totalLegacyLessons + $totalVideoLessons;
+            $completedLessons = min($totalLessons, $completedLegacyLessons + $completedVideoLessons);
 
             $studentInsights = [
                 'enrolled_courses' => $studentCourseIds->count(),
