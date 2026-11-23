@@ -257,6 +257,7 @@ Route::middleware(['auth', 'verified', 'activity.log', 'role:branch_manager'])->
     Route::get('/reports', [AdmissionController::class, 'reports'])->name('reports');
     Route::get('/reports/export', [AdmissionController::class, 'exportReport'])->middleware('throttle:10,1')->name('reports.export');
     Route::post('/{application}/review', [AdmissionController::class, 'review'])->whereNumber('application')->middleware('throttle:20,1')->name('review');
+    Route::post('/{application}/convert-to-student', [AdmissionController::class, 'convertToStudent'])->whereNumber('application')->middleware('throttle:5,1')->name('convert');
     Route::post('/{application}/documents', [AdmissionController::class, 'storeDocument'])->whereNumber('application')->middleware('throttle:10,1')->name('documents.store');
     Route::post('/{application}/documents/{document}/review', [AdmissionController::class, 'reviewDocument'])->whereNumber('application')->whereNumber('document')->middleware('throttle:20,1')->name('documents.review');
     Route::get('/{application}/documents/{document}', [AdmissionController::class, 'downloadDocument'])->whereNumber('document')->name('documents.download');
