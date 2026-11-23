@@ -70,7 +70,7 @@ final class AgentContentController
     public function notifications(Request $request): View
     {
         $items = DB::table('ai_agent_notifications')->where('user_id', $request->user()->id)->latest()->limit(100)->get();
-        $routePrefix = match ((string) $request->user()->role) { 'admin' => 'admin.ai-assistant.', 'teacher' => 'teacher.ai-assistant.', 'student' => 'student.ai-assistant.', 'guardian' => 'guardian.ai-assistant.', default => 'support.ai-assistant.' };
+        $routePrefix = match ((string) $request->user()->role) { 'admin' => 'admin.ai-assistant.', 'branch_manager' => 'branch.ai-assistant.', 'teacher' => 'teacher.ai-assistant.', 'student' => 'student.ai-assistant.', 'guardian' => 'guardian.ai-assistant.', default => 'support.ai-assistant.' };
         return view('universal-ai-assistant::notifications', compact('items', 'routePrefix'));
     }
 
