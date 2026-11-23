@@ -88,7 +88,7 @@ use App\Modules\Hr\HrController;
 use App\Modules\Library\LibraryController;
 use App\Modules\Referral\ReferralIncomeController;
 use App\Modules\Ai\AssistantController;
-use App\Modules\Ai\AdminSettingsController;
+use App\Modules\Ai\AdminSettingsController as AiAdminSettingsController;
 use App\Modules\Ai\AgentActionController;
 use App\Modules\Ai\AgentContentController;
 use App\Modules\Carousel\CarouselBuilderController;
@@ -740,7 +740,7 @@ Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('a
 });
 
 Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('admin/ai-assistant')->name('admin.ai-assistant.')->group(function () {
-    Route::get('/settings', [AdminSettingsController::class, 'index'])->name('settings');
-    Route::get('/models', [AdminSettingsController::class, 'models'])->middleware('throttle:10,1')->name('models');
-    Route::put('/settings', [AdminSettingsController::class, 'update'])->middleware('throttle:10,1')->name('settings.update');
+    Route::get('/settings', [AiAdminSettingsController::class, 'index'])->name('settings');
+    Route::get('/models', [AiAdminSettingsController::class, 'models'])->middleware('throttle:10,1')->name('models');
+    Route::put('/settings', [AiAdminSettingsController::class, 'update'])->middleware('throttle:10,1')->name('settings.update');
 });
