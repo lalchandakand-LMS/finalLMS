@@ -258,7 +258,10 @@ class StudentQuestionSetAttemptController extends Controller
             $autoScore = 0;
             $hasManualQuestions = false;
             foreach ($questions as $question) {
-                $answer = $answers[$question->id] ?? [];
+                $answer = $answers[$question->id] ?? [
+                    'selected_option' => $question->selected_option,
+                    'answer_text' => $question->answer_text,
+                ];
                 if (in_array($question->type, ['mcq', 'true_false'], true)) {
                     $selected = isset($answer['selected_option']) ? (int) $answer['selected_option'] : null;
                     $correct = $selected !== null && $selected === (int) $question->correct_option;
