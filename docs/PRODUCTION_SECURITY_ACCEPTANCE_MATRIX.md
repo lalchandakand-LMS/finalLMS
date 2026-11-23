@@ -23,6 +23,7 @@ This document is an evidence checklist, not a declaration that production accept
 - Confirm installation refuses a non-empty database without dropping or truncating existing tables.
 
 ### Upgrade and rollback
+- **Current updater limitation:** the in-app update center currently supports signed release check, package staging/extraction, pre-activation backup and preflight only. It has no live activation/switch route yet; do not treat it as an automatic production updater or claim end-to-end upgrade completion.
 - Start from a production-like copy of the previous supported release and a verified backup.
 - Upgrade using the exact packaged release artifact and documented maintenance mode/cache steps.
 - Verify migrations, existing users/enrollments/payments/files, plugin compatibility, queue/cron behavior and login.
