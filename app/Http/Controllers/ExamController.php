@@ -496,7 +496,9 @@ class ExamController extends Controller
 
                 $type = $question->type ?: 'mcq';
                 if ($type === 'written') {
-                    $manualPending = true;
+                    if (trim((string) $answer->answer_text) !== '') {
+                        $manualPending = true;
+                    }
                     continue;
                 }
                 if ($type === 'short_answer') {
