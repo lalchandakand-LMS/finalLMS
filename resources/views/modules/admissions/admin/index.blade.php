@@ -1,6 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
+@php($admissionRoutePrefix = request()->routeIs('branch.*') ? 'branch.admissions' : 'admin.admissions')
 @php
     $branchPortal = request()->routeIs('branch.*');
     $routePrefix = $branchPortal ? 'branch.admissions.' : 'admin.admissions.';
