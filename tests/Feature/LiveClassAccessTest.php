@@ -8,6 +8,7 @@ use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\GuardianStudentLink;
 use App\Models\LiveClass;
+use App\Models\LiveClassAttendance;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -160,6 +161,51 @@ class LiveClassAccessTest extends TestCase
             ->assertOk()
             ->assertSee('Tomorrow live lesson')
             ->assertDontSee('https://meet.example.com/tomorrow-secret');
+    }
+
+
+    public function test_assigned_teacher_records_per_session_attendance_for_active_students_only(): void
+    {
+        [$teacher, $batch, $course] = $this->makeBatch();
+        $student = User::factory()->create(['role' => 'student']);
+        $cancelledStudent = User::factory()->create(['role' => 'student']);
+        Enrollment::create(['user_id' => $student->id, 'course_id' => $course->id, 'batch_id' => $batch->id, 'status' => 'active']);
+        Enrollment::create(['user_id' => $cancelledStudent->id, 'course_id' => $course->id, 'batch_id' => $batch->id, 'status' => 'cancelled']);
+        $session = LiveClass::create([
+            'batch_id' => $batch->id,
+            'title' => 'Completed attendance session',
+            'meeting_url' => 'https://meet.example.com/attendance-session',
+            'starts_at' => now()->subHours(2),
+            'ends_at' => now()->subHour(),
+            'status' => 'completed',
+            'created_by' => $teacher->id,
+        ]);
+
+        $this->actingAs($teacher)->post(route('live-classes.attendance.store', $session), [
+            'records' => [
+                ['student_id' => $student->id, 'status' => 'present'],
+            ],
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('live_class_attendances', [
+            'live_class_id' => $session->id,
+            'student_id' => $student->id,
+            'status' => 'present',
+            'marked_by' => $teacher->id,
+        ]);
+
+        $this->post(route('live-classes.attendance.store', $session), [
+            'records' => [
+                ['student_id' => $cancelledStudent->id, 'status' => 'present'],
+            ],
+        ])->assertStatus(422);
+
+        $otherTeacher = User::factory()->create(['role' => 'teacher']);
+        $this->actingAs($otherTeacher)->post(route('live-classes.attendance.store', $session), [
+            'records' => [['student_id' => $student->id, 'status' => 'late']],
+        ])->assertForbidden();
+
+        $this->assertSame(1, LiveClassAttendance::query()->where('live_class_id', $session->id)->count());
     }
 
     private function makeBatch(): array
