@@ -49,6 +49,7 @@ final class HrStaffManagementPluginTest extends TestCase
         Route::get('/__hr/teacher', [HrController::class, 'teacherIndex'])->name('teacher.hr.index');
         Route::post('/__hr/teacher/leave', [HrController::class, 'teacherRequestLeave'])->name('teacher.hr.leave.store');
         Route::post('/__hr/staff', [HrController::class, 'storeStaff'])->name('branch.hr.staff.store');
+        Route::put('/__hr/staff/{staff}', [HrController::class, 'updateStaff'])->name('branch.hr.staff.update');
         Route::post('/__hr/attendance', [HrController::class, 'recordAttendance'])->name('branch.hr.attendance.store');
         Route::post('/__hr/leave', [HrController::class, 'requestLeave'])->name('branch.hr.leave.store');
         Route::post('/__hr/leave/{leave}/review', [HrController::class, 'reviewLeave'])->name('admin.hr.leave.review');
@@ -140,6 +141,28 @@ final class HrStaffManagementPluginTest extends TestCase
         $this->actingAs($manager)->post('/__hr/payroll', ['staff_profile_id' => $remoteStaff->id, 'payroll_month' => '2026-11'])->assertNotFound();
         $this->actingAs($manager)->post('/__hr/payroll', ['staff_profile_id' => $localStaff->id, 'payroll_month' => '2026-11', 'bonus' => 1000, 'deductions' => 500])->assertRedirect();
         $this->assertDatabaseHas('staff_payrolls', ['staff_profile_id' => $localStaff->id, 'net_paid' => 30500, 'status' => 'pending']);
+
+        $this->put('/__hr/staff/'.$localStaff->id, [
+            'employee_code' => 'EMP-LOCAL',
+            'full_name' => 'Local Staff Updated',
+            'designation' => 'Senior Teacher',
+            'department' => 'Academic',
+            'base_salary' => 36000,
+            'compensation_basis' => 'monthly_attendance',
+            'per_class_rate' => 0,
+            'working_days_per_month' => 22,
+            'status' => 'active',
+            'employment_type' => 'full_time',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('staff_profiles', [
+            'id' => $localStaff->id,
+            'full_name' => 'Local Staff Updated',
+            'compensation_basis' => 'monthly_attendance',
+            'base_salary' => 36000,
+        ]);
+        // A later salary-profile change must not rewrite an already prepared payroll.
+        $this->assertDatabaseHas('staff_payrolls', ['staff_profile_id' => $localStaff->id, 'net_paid' => 30500, 'status' => 'pending']);
     }
 
     public function test_staff_linking_rejects_admin_accounts_and_cross_branch_teacher_accounts(): void
@@ -192,6 +215,175 @@ final class HrStaffManagementPluginTest extends TestCase
         $this->assertSame('1000.00', $payroll->bonus);
         $this->assertSame('1500.00', $payroll->deductions);
         $this->assertSame('33000.00', $payroll->net_paid);
+    }
+
+
+    public function test_attendance_based_monthly_payroll_uses_absence_half_day_and_approved_unpaid_leave_snapshots(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $staff = StaffProfile::query()->create([
+            'employee_code' => 'ATT-PAY-001',
+            'full_name' => 'Attendance Payroll Staff',
+            'designation' => 'Teacher',
+            'department' => 'Academic',
+            'base_salary' => 26000,
+            'compensation_basis' => 'monthly_attendance',
+            'working_days_per_month' => 26,
+            'status' => 'active',
+        ]);
+        $monthStart = now()->subMonth()->startOfMonth();
+        foreach ([
+            [$monthStart->copy()->addDays(1), 'present'],
+            [$monthStart->copy()->addDays(2), 'present'],
+            [$monthStart->copy()->addDays(3), 'absent'],
+            [$monthStart->copy()->addDays(4), 'half_day'],
+            [$monthStart->copy()->addDays(5), 'on_leave'],
+        ] as [$date, $status]) {
+            StaffAttendance::query()->create([
+                'staff_profile_id' => $staff->id,
+                'attendance_date' => $date->toDateString(),
+                'status' => $status,
+                'recorded_by' => $admin->id,
+            ]);
+        }
+        for ($day = 7; $day <= 27; $day++) {
+            StaffAttendance::query()->create([
+                'staff_profile_id' => $staff->id,
+                'attendance_date' => $monthStart->copy()->addDays($day - 1)->toDateString(),
+                'status' => 'present',
+                'recorded_by' => $admin->id,
+            ]);
+        }
+        StaffLeaveRequest::query()->create([
+            'staff_profile_id' => $staff->id,
+            'leave_type' => 'unpaid',
+            'starts_on' => $monthStart->copy()->addDays(5)->toDateString(),
+            'ends_on' => $monthStart->copy()->addDays(5)->toDateString(),
+            'reason' => 'Approved unpaid leave',
+            'status' => 'approved',
+            'reviewed_by' => $admin->id,
+            'reviewed_at' => now(),
+        ]);
+
+        $this->actingAs($admin)->post('/__hr/payroll', [
+            'staff_profile_id' => $staff->id,
+            'payroll_month' => now()->subMonth()->format('Y-m'),
+        ])->assertRedirect();
+
+        $payroll = StaffPayroll::query()->firstOrFail();
+        $this->assertSame('monthly_attendance', $payroll->compensation_basis_snapshot);
+        $this->assertSame('23.00', $payroll->present_days);
+        $this->assertSame('1.00', $payroll->absent_days);
+        $this->assertSame('1.00', $payroll->half_days);
+        $this->assertSame('1.00', $payroll->unpaid_leave_days);
+        $this->assertSame('2500.00', $payroll->attendance_deduction);
+        $this->assertSame('23500.00', $payroll->net_paid);
+        $this->assertSame(26, $payroll->attendance_records_count);
+        $this->assertSame(26, $payroll->expected_working_days);
+        $this->assertSame('pending', $payroll->status);
+    }
+
+
+
+    public function test_attendance_payroll_refuses_to_finalize_when_working_day_records_are_incomplete(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $staff = StaffProfile::query()->create([
+            'employee_code' => 'ATT-INCOMPLETE-01',
+            'full_name' => 'Incomplete Attendance Staff',
+            'designation' => 'Teacher',
+            'department' => 'Academic',
+            'base_salary' => 26000,
+            'compensation_basis' => 'monthly_attendance',
+            'working_days_per_month' => 26,
+            'status' => 'active',
+        ]);
+        StaffAttendance::query()->create([
+            'staff_profile_id' => $staff->id,
+            'attendance_date' => now()->subMonth()->startOfMonth()->toDateString(),
+            'status' => 'present',
+            'recorded_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->post('/__hr/payroll', [
+            'staff_profile_id' => $staff->id,
+            'payroll_month' => now()->subMonth()->format('Y-m'),
+        ])->assertStatus(422);
+
+        $this->assertDatabaseCount('staff_payrolls', 0);
+    }
+
+    public function test_per_class_teacher_payroll_counts_only_completed_classes_assigned_to_the_linked_teacher(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $otherTeacher = User::factory()->create(['role' => 'teacher']);
+        $branch = Branch::query()->create(['name' => 'Per Class Payroll', 'slug' => 'per-class-payroll']);
+        $monthStart = now()->subMonth()->startOfMonth();
+        $course = \App\Models\Course::query()->create([
+            'teacher_id' => $teacher->id,
+            'title' => 'Per Class Payroll Course',
+            'slug' => 'per-class-payroll-course',
+            'description' => 'Teacher compensation test.',
+            'price' => 0,
+            'status' => 'published',
+        ]);
+        $batch = \App\Models\Batch::query()->create([
+            'branch_id' => $branch->id,
+            'course_id' => $course->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Teacher Payroll Batch',
+            'capacity' => 20,
+            'starts_at' => $monthStart,
+            'ends_at' => $monthStart->copy()->endOfMonth(),
+            'fee' => 0,
+            'status' => 'open',
+        ]);
+        $otherBatch = \App\Models\Batch::query()->create([
+            'branch_id' => $branch->id,
+            'course_id' => $course->id,
+            'teacher_id' => $otherTeacher->id,
+            'title' => 'Other Teacher Batch',
+            'capacity' => 20,
+            'starts_at' => now()->startOfMonth(),
+            'ends_at' => now()->endOfMonth(),
+            'fee' => 0,
+            'status' => 'open',
+        ]);
+        $staff = StaffProfile::query()->create([
+            'user_id' => $teacher->id,
+            'branch_id' => $branch->id,
+            'employee_code' => 'PER-CLASS-TEACHER',
+            'full_name' => 'Per Class Teacher',
+            'designation' => 'Teacher',
+            'department' => 'Academic',
+            'base_salary' => 0,
+            'compensation_basis' => 'per_class',
+            'per_class_rate' => 1200,
+            'status' => 'active',
+        ]);
+        foreach ([[$batch, 'completed'], [$batch, 'completed'], [$batch, 'scheduled'], [$otherBatch, 'completed']] as $index => [$classBatch, $status]) {
+            \App\Models\LiveClass::query()->create([
+                'batch_id' => $classBatch->id,
+                'title' => 'Payroll Class '.$index,
+                'meeting_url' => 'https://example.test/meeting/'.$index,
+                'starts_at' => $monthStart->copy()->addDays($index + 1)->setTime(10, 0),
+                'ends_at' => $monthStart->copy()->addDays($index + 1)->setTime(11, 0),
+                'status' => $status,
+                'created_by' => $admin->id,
+            ]);
+        }
+
+        $this->actingAs($admin)->post('/__hr/payroll', [
+            'staff_profile_id' => $staff->id,
+            'payroll_month' => now()->subMonth()->format('Y-m'),
+        ])->assertRedirect();
+
+        $payroll = StaffPayroll::query()->firstOrFail();
+        $this->assertSame('per_class', $payroll->compensation_basis_snapshot);
+        $this->assertSame(2, $payroll->classes_delivered);
+        $this->assertSame('2400.00', $payroll->basic_salary);
+        $this->assertSame('2400.00', $payroll->net_paid);
     }
 
     public function test_branch_manager_cannot_mark_payroll_paid(): void

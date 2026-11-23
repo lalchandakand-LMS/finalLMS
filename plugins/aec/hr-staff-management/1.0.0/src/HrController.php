@@ -23,8 +23,14 @@ final class HrController extends Controller
         $payrollQuery = $this->scoped(StaffPayroll::query()->with('staff'), $actor);
         $attendanceQuery = $this->scoped(StaffAttendance::query()->with('staff'), $actor);
         $leaveQuery = $this->scoped(StaffLeaveRequest::query()->with('staff'), $actor);
+        $linkableUsers = User::query()->whereIn('role', ['teacher', 'branch_manager', 'staff'])
+            ->when($actor->isBranchManager(), fn ($query) => $query->where(function ($builder) use ($actor): void {
+                $builder->whereNull('branch_id')->orWhere('branch_id', $actor->branch_id);
+            }))
+            ->orderBy('name')->get(['id', 'name', 'email', 'role']);
 
         return view('hr-staff-management::index', [
+            'linkableUsers' => $linkableUsers,
             'staff' => $staffQuery->orderBy('full_name')->paginate(25, ['*'], 'staff_page')->withQueryString(),
             'payrolls' => $payrollQuery->latest()->limit(60)->get(),
             'attendances' => $attendanceQuery->whereDate('attendance_date', '>=', now()->subDays(30)->toDateString())->latest('attendance_date')->limit(100)->get(),
@@ -221,9 +227,12 @@ final class HrController extends Controller
             'phone' => ['nullable', 'string', 'max:40'],
             'email' => ['nullable', 'email:rfc', 'max:160'],
             'base_salary' => ['required', 'numeric', 'min:0', 'max:9999999999.99'],
+            'compensation_basis' => ['nullable', 'in:monthly,monthly_attendance,per_class'],
+            'per_class_rate' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
+            'working_days_per_month' => ['nullable', 'integer', 'min:1', 'max:31'],
             'status' => ['required', 'in:active,on_leave,inactive'],
             'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
-            'user_id' => ['nullable', 'integer', 'exists:users,id', 'unique:staff_profiles,user_id'],
+            'user_id' => ['nullable', 'integer', 'exists:users,id', 'unique:staff_profiles,user_id', 'required_if:compensation_basis,per_class'],
             'employment_type' => ['required', 'in:full_time,part_time,contract,temporary'],
             'contract_ends_at' => ['nullable', 'date', 'after_or_equal:today'],
         ]);
@@ -234,6 +243,7 @@ final class HrController extends Controller
         }
         if (! empty($data['user_id'])) {
             $linkedUser = User::query()->findOrFail($data['user_id']);
+            abort_unless(($data['compensation_basis'] ?? 'monthly') !== 'per_class' || $linkedUser->role === 'teacher', 422, 'Per-class compensation can only be linked to a teacher account.');
             abort_unless(in_array($linkedUser->role, ['teacher', 'branch_manager', 'staff'], true), 422, 'Link only a teacher, branch manager or staff account.');
             if ($actor->isBranchManager()) {
                 abort_unless($linkedUser->branch_id === null || (int) $linkedUser->branch_id === (int) $actor->branch_id, 422, 'You can only link an account assigned to your branch.');
@@ -243,10 +253,66 @@ final class HrController extends Controller
             }
         }
 
+        $data['compensation_basis'] = $data['compensation_basis'] ?? 'monthly';
+        $data['per_class_rate'] = $data['per_class_rate'] ?? 0;
+        $data['working_days_per_month'] = $data['working_days_per_month'] ?? 26;
+        abort_if($data['compensation_basis'] === 'per_class' && (float) $data['per_class_rate'] <= 0, 422, 'Set a per-class rate greater than zero.');
         $member = StaffProfile::query()->create($data + ['joined_at' => now()->toDateString()]);
         $this->audit($request, 'hr.staff_created', 'Created staff profile '.$member->employee_code);
 
         return back()->with('success', 'Staff profile created.');
+    }
+
+
+    public function updateStaff(Request $request, int $staff): RedirectResponse
+    {
+        $actor = $request->user();
+        $this->assertBranchAssigned($actor);
+        $member = StaffProfile::query()->findOrFail($staff);
+        $this->assertRecordBranch($actor, $member->branch_id);
+
+        $data = $request->validate([
+            'employee_code' => ['required', 'string', 'max:40', 'regex:/^[A-Za-z0-9._-]+$/D', Rule::unique('staff_profiles', 'employee_code')->ignore($member->id)],
+            'full_name' => ['required', 'string', 'max:160'],
+            'designation' => ['required', 'string', 'max:120'],
+            'department' => ['required', 'string', 'max:100'],
+            'phone' => ['nullable', 'string', 'max:40'],
+            'email' => ['nullable', 'email:rfc', 'max:160'],
+            'base_salary' => ['required', 'numeric', 'min:0', 'max:9999999999.99'],
+            'compensation_basis' => ['required', 'in:monthly,monthly_attendance,per_class'],
+            'per_class_rate' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
+            'working_days_per_month' => ['nullable', 'integer', 'min:1', 'max:31'],
+            'status' => ['required', 'in:active,on_leave,inactive'],
+            'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
+            'user_id' => ['nullable', 'integer', 'exists:users,id', Rule::unique('staff_profiles', 'user_id')->ignore($member->id), 'required_if:compensation_basis,per_class'],
+            'employment_type' => ['required', 'in:full_time,part_time,contract,temporary'],
+            'contract_ends_at' => ['nullable', 'date'],
+        ]);
+
+        if ($actor->isBranchManager()) {
+            $data['branch_id'] = $actor->branch_id;
+        } elseif (! empty($data['branch_id'])) {
+            abort_unless(DB::table('branches')->where('id', $data['branch_id'])->where('is_active', true)->exists(), 422, 'Select an active branch.');
+        }
+        if (! empty($data['user_id'])) {
+            $linkedUser = User::query()->findOrFail($data['user_id']);
+            abort_unless(in_array($linkedUser->role, ['teacher', 'branch_manager', 'staff'], true), 422, 'Link only a teacher, branch manager or staff account.');
+            abort_unless($data['compensation_basis'] !== 'per_class' || $linkedUser->role === 'teacher', 422, 'Per-class compensation can only be linked to a teacher account.');
+            if ($actor->isBranchManager()) {
+                abort_unless($linkedUser->branch_id === null || (int) $linkedUser->branch_id === (int) $actor->branch_id, 422, 'You can only link an account assigned to your branch.');
+            }
+            if (! empty($data['branch_id'])) {
+                abort_unless($linkedUser->branch_id === null || (int) $linkedUser->branch_id === (int) $data['branch_id'], 422, 'The linked account belongs to another branch.');
+            }
+        }
+        $data['per_class_rate'] = $data['per_class_rate'] ?? 0;
+        $data['working_days_per_month'] = $data['working_days_per_month'] ?? 26;
+        abort_if($data['compensation_basis'] === 'per_class' && (float) $data['per_class_rate'] <= 0, 422, 'Set a per-class rate greater than zero.');
+
+        $member->update($data);
+        $this->audit($request, 'hr.staff_updated', 'Updated staff profile '.$member->employee_code.'; existing payroll snapshots remain unchanged.');
+
+        return back()->with('success', 'Staff profile updated. Existing payroll records are unchanged.');
     }
 
     public function recordAttendance(Request $request): RedirectResponse
@@ -331,30 +397,116 @@ final class HrController extends Controller
             'bonus' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
             'deductions' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
         ]);
+
         $payroll = DB::transaction(function () use ($actor, $data): StaffPayroll {
             $member = StaffProfile::query()->lockForUpdate()->findOrFail($data['staff_profile_id']);
             $this->assertRecordBranch($actor, $member->branch_id);
             abort_unless($member->status === 'active', 422, 'Payroll can only be prepared for active staff.');
-            $basic = round((float) $member->base_salary, 2);
+            abort_if(StaffPayroll::query()->where('staff_profile_id', $member->id)->where('payroll_month', $data['payroll_month'])->exists(), 409, 'Payroll already exists for this staff member and month.');
+
+            $periodStart = \Carbon\CarbonImmutable::createFromFormat('!Y-m-d', $data['payroll_month'].'-01');
+            $periodEnd = $periodStart->endOfMonth();
+            $attendanceQuery = StaffAttendance::query()
+                ->where('staff_profile_id', $member->id)
+                ->whereBetween('attendance_date', [$periodStart->toDateString(), $periodEnd->toDateString()]);
+            $attendanceRecordCount = (int) (clone $attendanceQuery)->count();
+            $attendance = $attendanceQuery
+                ->where('staff_profile_id', $member->id)
+                ->whereBetween('attendance_date', [$periodStart->toDateString(), $periodEnd->toDateString()])
+                ->selectRaw("SUM(CASE WHEN status IN ('present','late') THEN 1 ELSE 0 END) as present_days")
+                ->selectRaw("SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent_days")
+                ->selectRaw("SUM(CASE WHEN status = 'half_day' THEN 1 ELSE 0 END) as half_days")
+                ->selectRaw("SUM(CASE WHEN status = 'on_leave' THEN 1 ELSE 0 END) as leave_days")
+                ->first();
+
+            $presentDays = (float) ($attendance->present_days ?? 0);
+            $absentDays = (float) ($attendance->absent_days ?? 0);
+            $halfDays = (float) ($attendance->half_days ?? 0);
+            $leaveDays = (float) DB::table('staff_attendances as attendance')
+                ->join('staff_leave_requests as leave_requests', function ($join): void {
+                    $join->on('leave_requests.staff_profile_id', '=', 'attendance.staff_profile_id')
+                        ->where('leave_requests.status', '=', 'approved')
+                        ->where('leave_requests.leave_type', '=', 'unpaid')
+                        ->whereColumn('leave_requests.starts_on', '<=', 'attendance.attendance_date')
+                        ->whereColumn('leave_requests.ends_on', '>=', 'attendance.attendance_date');
+                })
+                ->where('attendance.staff_profile_id', $member->id)
+                ->where('attendance.status', 'on_leave')
+                ->whereBetween('attendance.attendance_date', [$periodStart->toDateString(), $periodEnd->toDateString()])
+                ->distinct('attendance.attendance_date')
+                ->count('attendance.attendance_date');
+            $classesDelivered = 0;
+            $basis = $member->compensation_basis ?: 'monthly';
+            $workingDays = max(1, (int) ($member->working_days_per_month ?: 26));
+
+            if ($basis === 'per_class') {
+                abort_if($periodEnd->isFuture(), 422, 'Class-based payroll can only be finalized after the selected month ends.');
+                abort_unless($member->user_id, 422, 'Per-class payroll requires this staff profile to be linked to a teacher user account.');
+                abort_if((float) $member->per_class_rate <= 0, 422, 'Set a per-class rate greater than zero before preparing payroll.');
+                $classesDelivered = (int) DB::table('live_classes')
+                    ->join('batches', 'batches.id', '=', 'live_classes.batch_id')
+                    ->where('batches.teacher_id', $member->user_id)
+                    ->where('live_classes.status', 'completed')
+                    ->whereBetween('live_classes.starts_at', [$periodStart->toDateTimeString(), $periodEnd->toDateTimeString()])
+                    ->count();
+                abort_if($classesDelivered === 0, 422, 'No completed classes were found for this teacher in the selected payroll month.');
+                $basic = round($classesDelivered * (float) $member->per_class_rate, 2);
+            } else {
+                $basic = round((float) $member->base_salary, 2);
+            }
+
+            $attendanceDeduction = 0.0;
+            if ($basis === 'monthly_attendance') {
+                abort_if($periodEnd->isFuture(), 422, 'Attendance-based payroll can only be finalized after the selected month ends.');
+                abort_unless(
+                    $attendanceRecordCount === $workingDays,
+                    422,
+                    'Attendance is incomplete for '.$data['payroll_month'].': '.$attendanceRecordCount.' of '.$workingDays.' expected working-day records are saved.'
+                );
+                $dailyRate = round((float) $member->base_salary / $workingDays, 6);
+                // Only recorded absences and half-days affect pay. Approved unpaid
+                // leave must be marked as on_leave in the staff attendance register.
+                $attendanceDeduction = round(($absentDays + ($halfDays * 0.5) + $leaveDays) * $dailyRate, 2);
+            }
+
             $allowances = round((float) ($data['allowances'] ?? 0), 2);
             $overtimeHours = round((float) ($data['overtime_hours'] ?? 0), 2);
             $overtimeRate = round((float) ($data['overtime_rate'] ?? 0), 2);
             $overtimeAmount = round($overtimeHours * $overtimeRate, 2);
             $bonus = round((float) ($data['bonus'] ?? 0), 2);
-            $deductions = round((float) ($data['deductions'] ?? 0), 2);
+            $manualDeductions = round((float) ($data['deductions'] ?? 0), 2);
             $gross = round($basic + $allowances + $overtimeAmount, 2);
-            abort_if($deductions > $gross + $bonus, 422, 'Deductions cannot exceed gross salary plus bonus.');
-            abort_if(StaffPayroll::query()->where('staff_profile_id', $member->id)->where('payroll_month', $data['payroll_month'])->exists(), 409, 'Payroll already exists for this staff member and month.');
+            $totalDeductions = round($attendanceDeduction + $manualDeductions, 2);
+            abort_if($totalDeductions > $basic + $allowances + $overtimeAmount + $bonus, 422, 'Total deductions cannot exceed the payable salary.');
+
             return StaffPayroll::query()->create([
-                'staff_profile_id' => $member->id, 'branch_id' => $member->branch_id, 'payroll_month' => $data['payroll_month'],
-                'basic_salary' => $basic, 'allowances' => $allowances, 'overtime_hours' => $overtimeHours,
-                'overtime_rate' => $overtimeRate, 'overtime_amount' => $overtimeAmount,
-                'gross_salary' => $gross, 'bonus' => $bonus, 'deductions' => $deductions,
-                'net_paid' => round($gross + $bonus - $deductions, 2), 'status' => 'pending',
+                'staff_profile_id' => $member->id,
+                'branch_id' => $member->branch_id,
+                'payroll_month' => $data['payroll_month'],
+                'basic_salary' => $basic,
+                'allowances' => $allowances,
+                'overtime_hours' => $overtimeHours,
+                'overtime_rate' => $overtimeRate,
+                'overtime_amount' => $overtimeAmount,
+                'gross_salary' => $gross,
+                'bonus' => $bonus,
+                'deductions' => $totalDeductions,
+                'net_paid' => round($gross + $bonus - $totalDeductions, 2),
+                'compensation_basis_snapshot' => $basis,
+                'present_days' => $presentDays,
+                'absent_days' => $absentDays,
+                'half_days' => $halfDays,
+                'unpaid_leave_days' => $leaveDays,
+                'payable_days' => max(0, $presentDays + ($halfDays * 0.5)),
+                'classes_delivered' => $classesDelivered,
+                'attendance_deduction' => $attendanceDeduction,
+                'attendance_records_count' => $attendanceRecordCount,
+                'expected_working_days' => $basis === 'monthly_attendance' ? $workingDays : 0,
+                'status' => 'pending',
             ]);
         }, 3);
-        $this->audit($request, 'hr.payroll_recorded', 'Prepared payroll #'.$payroll->id.' for '.$payroll->payroll_month);
-        return back()->with('success', 'Payroll recorded as pending; payment must be confirmed separately.');
+        $this->audit($request, 'hr.payroll_recorded', 'Prepared payroll #'.$payroll->id.' for '.$payroll->payroll_month.' using '.$payroll->compensation_basis_snapshot.' calculation.');
+        return back()->with('success', 'Payroll calculated from the saved attendance and class records; awaiting disbursement confirmation.');
     }
 
     public function markPayrollPaid(Request $request, int $payroll): RedirectResponse
