@@ -231,7 +231,7 @@ final class HrStaffManagementPluginTest extends TestCase
             'working_days_per_month' => 26,
             'status' => 'active',
         ]);
-        $monthStart = now()->startOfMonth();
+        $monthStart = now()->subMonth()->startOfMonth();
         foreach ([
             [$monthStart->copy()->addDays(1), 'present'],
             [$monthStart->copy()->addDays(2), 'present'],
@@ -243,6 +243,14 @@ final class HrStaffManagementPluginTest extends TestCase
                 'staff_profile_id' => $staff->id,
                 'attendance_date' => $date->toDateString(),
                 'status' => $status,
+                'recorded_by' => $admin->id,
+            ]);
+        }
+        for ($day = 7; $day <= 27; $day++) {
+            StaffAttendance::query()->create([
+                'staff_profile_id' => $staff->id,
+                'attendance_date' => $monthStart->copy()->addDays($day - 1)->toDateString(),
+                'status' => 'present',
                 'recorded_by' => $admin->id,
             ]);
         }
@@ -259,17 +267,18 @@ final class HrStaffManagementPluginTest extends TestCase
 
         $this->actingAs($admin)->post('/__hr/payroll', [
             'staff_profile_id' => $staff->id,
-            'payroll_month' => now()->format('Y-m'),
+            'payroll_month' => now()->subMonth()->format('Y-m'),
         ])->assertRedirect();
 
         $payroll = StaffPayroll::query()->firstOrFail();
         $this->assertSame('monthly_attendance', $payroll->compensation_basis_snapshot);
-        $this->assertSame('2.00', $payroll->present_days);
+        $this->assertSame('23.00', $payroll->present_days);
         $this->assertSame('1.00', $payroll->absent_days);
         $this->assertSame('1.00', $payroll->half_days);
         $this->assertSame('1.00', $payroll->unpaid_leave_days);
         $this->assertSame('2500.00', $payroll->attendance_deduction);
         $this->assertSame('23500.00', $payroll->net_paid);
+        $this->assertSame(26, $payroll->attendance_records_count);
         $this->assertSame('pending', $payroll->status);
     }
 
