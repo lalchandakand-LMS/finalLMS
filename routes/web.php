@@ -79,6 +79,7 @@ use App\Http\Controllers\AdminCourseContentPostController;
 use App\Http\Controllers\AdminCourseBuilderController;
 use App\Http\Controllers\CourseContentController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\LandingPageController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/install', [InstallController::class, 'index'])->name('install.index');
@@ -88,7 +89,7 @@ Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('seo.sitemap
 Route::get('/robots.txt', [SeoController::class, 'robots'])->name('seo.robots');
 
 Route::get('/', function () {
-    return auth()->check() ? redirect('/dashboard') : view('landing');
+    return auth()->check() ? redirect('/dashboard') : app(LandingPageController::class)();
 })->name('landing');
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
