@@ -158,6 +158,14 @@ class StudentTranscriptTest extends TestCase
             'marks' => 2,
             'position' => 1,
         ]);
+        $secondIncludedQuestion = ExamQuestion::create([
+            'exam_id' => $exam->id,
+            'question' => 'Second included question',
+            'options' => ['A', 'B', 'C', 'D'],
+            'correct_option' => 0,
+            'marks' => 3,
+            'position' => 2,
+        ]);
         $otherQuestion = ExamQuestion::create([
             'exam_id' => $exam->id,
             'question' => 'Not assigned to this attempt',
@@ -171,13 +179,18 @@ class StudentTranscriptTest extends TestCase
             'student_id' => $student->id,
             'started_at' => now()->subMinutes(30),
             'submitted_at' => now()->subMinutes(5),
-            'score' => 2,
+            'score' => 4,
             'status' => 'submitted',
         ]);
         ExamAttemptQuestion::create([
             'exam_attempt_id' => $attempt->id,
             'exam_question_id' => $includedQuestion->id,
             'position' => 1,
+        ]);
+        ExamAttemptQuestion::create([
+            'exam_attempt_id' => $attempt->id,
+            'exam_question_id' => $secondIncludedQuestion->id,
+            'position' => 2,
         ]);
 
         $assignment = Assignment::create([
@@ -202,7 +215,7 @@ class StudentTranscriptTest extends TestCase
             ->get(route('student.transcript'))
             ->assertOk()
             ->assertSee('Randomized Grammar Exam')
-            ->assertSee('2.00')
+            ->assertSee('4.00')
             ->assertSee('2', false)
             ->assertSee('80.00%')
             ->assertSee('Writing Assignment')
