@@ -15,6 +15,80 @@ class InvoiceManagementTest extends TestCase
 {
     use RefreshDatabase;
 
+
+    public function test_attendance_fee_billing_creates_one_invoice_per_student_from_present_and_late_records_and_is_idempotent(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $student = User::factory()->create(['role' => 'student']);
+        $noAttendanceStudent = User::factory()->create(['role' => 'student']);
+        $branch = Branch::create(['name' => 'Class Fee Branch', 'slug' => 'class-fee-branch']);
+        $course = Course::create([
+            'teacher_id' => $teacher->id,
+            'title' => 'Per Class English',
+            'slug' => 'per-class-english',
+            'description' => 'Class attendance fee test.',
+            'price' => 0,
+            'status' => 'published',
+        ]);
+        $batch = Batch::create([
+            'branch_id' => $branch->id,
+            'course_id' => $course->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Per Class Batch',
+            'capacity' => 20,
+            'starts_at' => now()->subMonth(),
+            'ends_at' => now()->addMonth(),
+            'fee' => 0,
+            'fee_calculation_mode' => 'per_class',
+            'per_class_fee' => 150,
+            'status' => 'open',
+        ]);
+        foreach ([$student, $noAttendanceStudent] as $enrolled) {
+            Enrollment::create([
+                'user_id' => $enrolled->id,
+                'course_id' => $course->id,
+                'batch_id' => $batch->id,
+                'status' => 'active',
+            ]);
+        }
+        $period = now()->subMonth()->format('Y-m');
+        foreach (['present', 'late', 'absent', 'present'] as $index => $status) {
+            Attendance::create([
+                'batch_id' => $batch->id,
+                'student_id' => $student->id,
+                'marked_by' => $teacher->id,
+                'attendance_date' => now()->subMonth()->startOfMonth()->addDays($index)->toDateString(),
+                'status' => $status,
+            ]);
+        }
+
+        $payload = ['billing_period' => $period, 'due_date' => now()->addDays(7)->toDateString()];
+        $this->actingAs($admin)
+            ->post(route('admin.batches.attendance-fees.generate', $batch), $payload)
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $invoice = Invoice::query()->where('user_id', $student->id)->firstOrFail();
+        $this->assertSame('300.00', $invoice->amount);
+        $this->assertSame('Per Class Batch class fee — '.$period, $invoice->title);
+        $this->assertDatabaseHas('attendance_fee_periods', [
+            'batch_id' => $batch->id,
+            'student_id' => $student->id,
+            'billing_period' => $period,
+            'attended_classes' => 2,
+            'per_class_fee' => 150,
+            'amount' => 300,
+            'invoice_id' => $invoice->id,
+        ]);
+        $this->assertSame(1, Invoice::query()->where('user_id', $student->id)->count());
+
+        $this->post(route('admin.batches.attendance-fees.generate', $batch), $payload)->assertRedirect();
+        $this->assertSame(1, Invoice::query()->where('user_id', $student->id)->count());
+        $this->assertSame(1, AttendanceFeePeriod::query()->where('batch_id', $batch->id)->where('billing_period', $period)->count());
+        $this->assertSame(0, Invoice::query()->where('user_id', $noAttendanceStudent->id)->count());
+    }
+
     public function test_admin_can_create_an_invoice_and_student_can_only_see_their_own(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
