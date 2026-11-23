@@ -395,6 +395,23 @@
         @keyframes aec-loader-spin { to { transform:rotate(360deg); } }
         @keyframes aec-loader-pulse { 0%,100% { transform:scale(.9); opacity:.72; } 50% { transform:scale(1.06); opacity:1; } }
         @media(prefers-reduced-motion:reduce) { .aec-brand-loader,.aec-brand-loader * { animation:none!important; transition:none!important; } }
+        @if(auth()->check() && auth()->user()->role === 'admin')
+        .admin-shell {
+            --aec-sidebar-start:{{ preg_match('/^#[0-9A-Fa-f]{6}$/', (string) \App\Models\Setting::value('dashboard_sidebar_start_color', '#102b63')) ? \App\Models\Setting::value('dashboard_sidebar_start_color', '#102b63') : '#102b63' }};
+            --aec-sidebar-end:{{ preg_match('/^#[0-9A-Fa-f]{6}$/', (string) \App\Models\Setting::value('dashboard_sidebar_end_color', '#0b1d42')) ? \App\Models\Setting::value('dashboard_sidebar_end_color', '#0b1d42') : '#0b1d42' }};
+            --aec-sidebar-text:{{ preg_match('/^#[0-9A-Fa-f]{6}$/', (string) \App\Models\Setting::value('dashboard_sidebar_text_color', '#dbe7ff')) ? \App\Models\Setting::value('dashboard_sidebar_text_color', '#dbe7ff') : '#dbe7ff' }};
+            --aec-topbar-bg:{{ preg_match('/^#[0-9A-Fa-f]{6}$/', (string) \App\Models\Setting::value('dashboard_topbar_background', '#ffffff')) ? \App\Models\Setting::value('dashboard_topbar_background', '#ffffff') : '#ffffff' }};
+            --aec-topbar-text:{{ preg_match('/^#[0-9A-Fa-f]{6}$/', (string) \App\Models\Setting::value('dashboard_topbar_text_color', '#102b63')) ? \App\Models\Setting::value('dashboard_topbar_text_color', '#102b63') : '#102b63' }};
+            --admin-sidebar-width:{{ max(220, min(320, (int) \App\Models\Setting::value('dashboard_sidebar_width', 270))) }}px;
+        }
+        .admin-shell .admin-sidebar { background:linear-gradient(180deg,var(--aec-sidebar-start),var(--aec-sidebar-end)); color:var(--aec-sidebar-text); }
+        .admin-shell .admin-sidebar a,.admin-shell .admin-sidebar-brand { color:var(--aec-sidebar-text); }
+        .admin-shell .admin-sidebar-label { color:color-mix(in srgb,var(--aec-sidebar-text) 68%,transparent); }
+        .admin-shell .topbar { background:var(--aec-topbar-bg); color:var(--aec-topbar-text); }
+        .admin-shell .topbar .brand,.admin-shell .topbar .nav-links { color:var(--aec-topbar-text); }
+        .admin-shell .topbar .nav-links > a,.admin-shell .topbar .nav-links > button,.admin-shell .topbar .nav-links form button { color:var(--aec-topbar-text); border-color:color-mix(in srgb,var(--aec-topbar-text) 22%,transparent); }
+        .admin-shell .topbar .nav-links > a:hover,.admin-shell .topbar .nav-links > button:hover,.admin-shell .topbar .nav-links form button:hover { color:var(--aec-topbar-text); background:color-mix(in srgb,var(--aec-topbar-text) 8%,var(--aec-topbar-bg)); }
+        @endif
     </style>
 </head>
 <body class="{{ $isAdminLayout ? 'admin-shell' : '' }}">

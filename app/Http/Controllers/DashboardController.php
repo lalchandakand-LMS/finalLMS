@@ -4,16 +4,19 @@ namespace App\Http\Controllers;
 
 use App\Models\Assignment;
 use App\Models\AssignmentSubmission;
+use App\Models\ActivityLog;
 use App\Models\Attendance;
 use App\Models\Batch;
 use App\Models\ExamAttempt;
 use App\Models\Lesson;
 use App\Models\LessonProgress;
+use App\Models\LiveClass;
 use App\Models\Certificate;
 use App\Models\Course;
 use App\Models\DashboardAnnouncement;
 use App\Models\Enrollment;
 use App\Models\Setting;
+use App\Models\MediaAsset;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
@@ -24,6 +27,54 @@ class DashboardController extends Controller
         $user = Auth::user();
         $institutionName = Setting::value('institution_name', config('app.name'));
         $setupWizardPending = $user->isAdmin() && ! Setting::value('setup_wizard_completed_at');
+        $dashboardAppearance = [
+            'primary' => (Setting::value('dashboard_primary_color') ?: '#102b63'),
+            'secondary' => (Setting::value('dashboard_secondary_color') ?: '#0759c8'),
+            'accent' => (Setting::value('dashboard_accent_color') ?: '#ffd52f'),
+            'background' => (Setting::value('dashboard_background_color') ?: '#f3f6ff'),
+            'surface' => (Setting::value('dashboard_surface_color') ?: '#ffffff'),
+            'students_color' => (Setting::value('dashboard_students_color') ?: '#1675f5'),
+            'teachers_color' => (Setting::value('dashboard_teachers_color') ?: '#08b978'),
+            'courses_color' => (Setting::value('dashboard_courses_color') ?: '#8525e8'),
+            'certificates_color' => (Setting::value('dashboard_certificates_color') ?: '#f59e0b'),
+            'theme_mode' => (Setting::value('dashboard_theme_mode') ?: 'light'),
+            'card_radius' => max(12, min(32, (int) (Setting::value('dashboard_card_radius') ?: 19))),
+            'card_shadow' => (Setting::value('dashboard_card_shadow') ?: 'soft'),
+            'hero_eyebrow' => Setting::value('dashboard_hero_eyebrow', ''),
+            'hero_cta_label' => Setting::value('dashboard_hero_cta_label', ''),
+            'hero_image_position' => (Setting::value('dashboard_hero_image_position') ?: 'center'),
+            'hero_title' => Setting::value('dashboard_hero_title', ''),
+            'hero_subtitle' => Setting::value('dashboard_hero_subtitle', ''),
+            'hero_quote' => Setting::value('dashboard_hero_quote', ''),
+            'hero_image' => null,
+            'brand_logo' => null,
+            'live_class_image' => null,
+            'show_hero' => (bool) (int) (Setting::value('dashboard_show_hero') ?? 1),
+            'show_statistics' => (bool) (int) (Setting::value('dashboard_show_statistics') ?? 1),
+            'show_live_class' => (bool) (int) (Setting::value('dashboard_show_live_class') ?? 1),
+            'show_quick_actions' => (bool) (int) (Setting::value('dashboard_show_quick_actions') ?? 1),
+            'show_system_snapshot' => (bool) (int) (Setting::value('dashboard_show_system_snapshot') ?? 1),
+            'show_learning_operations' => (bool) (int) (Setting::value('dashboard_show_learning_operations') ?? 1),
+            'order_hero' => (int) (Setting::value('dashboard_order_hero') ?: 1),
+            'order_statistics' => (int) (Setting::value('dashboard_order_statistics') ?: 2),
+            'order_live_class' => (int) (Setting::value('dashboard_order_live_class') ?: 3),
+            'order_quick_actions' => (int) (Setting::value('dashboard_order_quick_actions') ?: 4),
+            'order_system_snapshot' => (int) (Setting::value('dashboard_order_system_snapshot') ?: 5),
+            'order_learning_operations' => (int) (Setting::value('dashboard_order_learning_operations') ?: 6),
+        ];
+        $brandLogo = Setting::value('dashboard_brand_logo_media_id')
+            ? MediaAsset::query()->whereKey((int) Setting::value('dashboard_brand_logo_media_id'))->where('mime_type', 'like', 'image/%')->first()
+            : null;
+        $heroImage = Setting::value('dashboard_hero_image_media_id')
+            ? MediaAsset::query()->whereKey((int) Setting::value('dashboard_hero_image_media_id'))->where('mime_type', 'like', 'image/%')->first()
+            : null;
+        $liveClassImage = Setting::value('dashboard_live_class_image_media_id')
+            ? MediaAsset::query()->whereKey((int) Setting::value('dashboard_live_class_image_media_id'))->where('mime_type', 'like', 'image/%')->first()
+            : null;
+        $dashboardAppearance['brand_logo'] = $brandLogo?->url;
+        $dashboardAppearance['hero_image'] = $heroImage?->url;
+        $dashboardAppearance['live_class_image'] = $liveClassImage?->url;
+
         $announcementSlides = DashboardAnnouncement::currentlyActive()
             ->whereIn('audience', ['all', $user->role])
             ->where(fn ($query) => $query->whereNull('branch_id')->orWhere('branch_id', $user->branch_id))
@@ -117,6 +168,19 @@ class DashboardController extends Controller
             ];
         }
 
+        $nextLiveClass = $user->isAdmin()
+            ? LiveClass::query()
+                ->with(['batch.course', 'batch.teacher'])
+                ->where('status', 'scheduled')
+                ->where('starts_at', '>=', now())
+                ->orderBy('starts_at')
+                ->first()
+            : null;
+
+        $recentActivity = $user->isAdmin()
+            ? ActivityLog::query()->with('user:id,name')->latest()->take(8)->get()
+            : collect();
+
         $stats = [
             'courses' => Course::count(),
             'students' => \App\Models\User::where('role', 'student')->count(),
@@ -124,7 +188,7 @@ class DashboardController extends Controller
             'certificates' => Certificate::count(),
         ];
 
-        return view('dashboard', compact('user', 'courses', 'enrolledCourses', 'recentCertificates', 'stats', 'announcementSlides', 'studentInsights', 'teacherInsights', 'institutionName', 'setupWizardPending'));
+        return view('dashboard', compact('user', 'courses', 'enrolledCourses', 'recentCertificates', 'stats', 'announcementSlides', 'studentInsights', 'teacherInsights', 'institutionName', 'setupWizardPending', 'dashboardAppearance', 'nextLiveClass', 'recentActivity'));
     }
 
     public function certificate(Certificate $certificate): View

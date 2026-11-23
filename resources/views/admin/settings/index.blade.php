@@ -250,6 +250,195 @@
 
             <hr style="border: 0; border-top: 1px solid var(--border); margin: 28px 0;">
             <div style="margin-bottom: 18px;">
+            <section class="panel" style="padding:20px;margin-bottom:24px;border:1px solid var(--border);">
+                <span class="badge info">{{ __('Dashboard appearance') }}</span>
+                <h2 style="margin:12px 0 6px;">{{ __('Customize the admin dashboard') }}</h2>
+                <p class="muted">{{ __('Keep the dashboard layout while changing its colors, banner artwork, live-class image and welcome text. Select images already uploaded to the Media Library.') }}</p>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:14px 0;">
+                    <button type="button" class="btn secondary" data-dashboard-restore>{{ __('Restore dashboard defaults') }}</button>
+                    <span class="muted" data-dashboard-restore-status role="status" aria-live="polite"></span>
+                </div>
+                <div class="panel" style="padding:16px;margin:16px 0;background:var(--panel-alt);" data-dashboard-preview>
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                        <strong>{{ __('Responsive dashboard preview') }}</strong>
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                            <button type="button" class="btn secondary" data-dashboard-preview-mode="desktop" aria-pressed="true">Desktop</button>
+                            <button type="button" class="btn secondary" data-dashboard-preview-mode="tablet" aria-pressed="false">Tablet</button>
+                            <button type="button" class="btn secondary" data-dashboard-preview-mode="mobile" aria-pressed="false">Mobile</button>
+                        </div>
+                    </div>
+                    <div class="dashboard-preview-frame" data-dashboard-preview-frame data-preview-mode="desktop" style="margin:14px auto 0;padding:12px;border:1px solid var(--border);border-radius:14px;background:var(--bg);transition:max-width .2s ease;">
+                        <div data-dashboard-preview-hero style="padding:18px;border-radius:var(--dashboard-preview-radius,10px);color:#fff;background:linear-gradient(115deg,var(--dashboard-preview-primary,#102b63),var(--dashboard-preview-secondary,#0759c8));box-shadow:0 8px 22px rgba(18,48,102,.12);">
+                            <small data-dashboard-preview-eyebrow style="display:block;color:#dbeafe;font-weight:700;">Alom’s English Center LMS</small>
+                            <strong data-dashboard-preview-title>{{ __('Welcome back,') }} {{ __('Administrator') }}</strong>
+                            <p data-dashboard-preview-subtitle style="margin:5px 0 0;color:#e7efff;font-size:.85rem;">{{ __('Your academy overview at a glance') }}</p>
+                            <span data-dashboard-preview-button style="display:inline-block;margin-top:10px;padding:7px 13px;border-radius:999px;background:#ffd52f;color:#14234b;font-weight:800;font-size:.78rem;">{{ __('View courses') }}</span>
+                        </div>
+                        <div class="dashboard-preview-stats" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:10px;">
+                            @foreach(['Students','Teachers','Courses','Certificates'] as $previewMetric)
+                                <div style="padding:12px 8px;border:1px solid var(--border);border-radius:9px;background:var(--panel);text-align:center;">
+                                    <strong style="display:block;font-size:1.1rem;">{{ $loop->iteration * 128 }}</strong>
+                                    <small class="muted">{{ __($previewMetric) }}</small>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                    <style>
+                        .dashboard-preview-frame[data-preview-theme="dark"] { background:#0b1530!important; color:#e8efff; border-color:#26385e!important; }
+                        .dashboard-preview-frame[data-preview-theme="dark"] .dashboard-preview-stats > div { background:#101d3b!important; border-color:#26385e!important; color:#e8efff; }
+                        .dashboard-preview-frame[data-preview-shadow="medium"] .dashboard-preview-stats > div { box-shadow:0 10px 24px rgba(12,35,82,.16); }
+                        .dashboard-preview-frame[data-preview-shadow="glow"] .dashboard-preview-stats > div { box-shadow:0 0 0 1px rgba(7,89,200,.2),0 8px 24px rgba(7,89,200,.2); }
+                        .dashboard-preview-frame[data-preview-mode="desktop"] { max-width:100%; }
+                        .dashboard-preview-frame[data-preview-mode="tablet"] { max-width:768px; }
+                        .dashboard-preview-frame[data-preview-mode="mobile"] { max-width:390px; }
+                        .dashboard-preview-frame[data-preview-mode="tablet"] .dashboard-preview-stats { grid-template-columns:repeat(2,minmax(0,1fr))!important; }
+                        .dashboard-preview-frame[data-preview-mode="mobile"] .dashboard-preview-stats { grid-template-columns:repeat(2,minmax(0,1fr))!important; }
+                        @media(max-width:560px) { .dashboard-preview-frame .dashboard-preview-stats { grid-template-columns:repeat(2,minmax(0,1fr))!important; } }
+                    </style>
+                </div>
+                <div class="grid grid-2">
+                    <div><label for="dashboard-primary-color">{{ __('Primary navy') }}</label><input id="dashboard-primary-color" type="color" name="dashboard_primary_color" value="{{ old('dashboard_primary_color', $settings['dashboard_primary_color'] ?? '#102b63') }}"></div>
+                    <div><label for="dashboard-secondary-color">{{ __('Banner blue') }}</label><input id="dashboard-secondary-color" type="color" name="dashboard_secondary_color" value="{{ old('dashboard_secondary_color', $settings['dashboard_secondary_color'] ?? '#0759c8') }}"></div>
+                    <div><label for="dashboard-accent-color">{{ __('Highlight / button color') }}</label><input id="dashboard-accent-color" type="color" name="dashboard_accent_color" value="{{ old('dashboard_accent_color', $settings['dashboard_accent_color'] ?? '#ffd52f') }}"></div>
+                    <div><label for="dashboard-background-color">{{ __('Dashboard background') }}</label><input id="dashboard-background-color" type="color" name="dashboard_background_color" value="{{ old('dashboard_background_color', $settings['dashboard_background_color'] ?? '#f3f6ff') }}"></div>
+                    <div><label for="dashboard-surface-color">{{ __('Card surface color') }}</label><input id="dashboard-surface-color" type="color" name="dashboard_surface_color" value="{{ old('dashboard_surface_color', $settings['dashboard_surface_color'] ?? '#ffffff') }}"></div>
+                    <div><label for="dashboard-students-color">{{ __('Students card accent') }}</label><input id="dashboard-students-color" type="color" name="dashboard_students_color" value="{{ old('dashboard_students_color', $settings['dashboard_students_color'] ?? '#1675f5') }}"></div>
+                    <div><label for="dashboard-teachers-color">{{ __('Teachers card accent') }}</label><input id="dashboard-teachers-color" type="color" name="dashboard_teachers_color" value="{{ old('dashboard_teachers_color', $settings['dashboard_teachers_color'] ?? '#08b978') }}"></div>
+                    <div><label for="dashboard-courses-color">{{ __('Courses card accent') }}</label><input id="dashboard-courses-color" type="color" name="dashboard_courses_color" value="{{ old('dashboard_courses_color', $settings['dashboard_courses_color'] ?? '#8525e8') }}"></div>
+                    <div><label for="dashboard-certificates-color">{{ __('Certificates card accent') }}</label><input id="dashboard-certificates-color" type="color" name="dashboard_certificates_color" value="{{ old('dashboard_certificates_color', $settings['dashboard_certificates_color'] ?? '#f59e0b') }}"></div>
+                    <div>
+                        <label for="dashboard-palette-preset">{{ __('Quick color palette') }}</label>
+                        <select id="dashboard-palette-preset" data-dashboard-palette-preset>
+                            <option value="">{{ __('Choose a palette') }}</option>
+                            <option value="blue">{{ __('Electric blue') }}</option>
+                            <option value="emerald">{{ __('Emerald teal') }}</option>
+                            <option value="purple">{{ __('Royal purple') }}</option>
+                            <option value="sunset">{{ __('Sunset amber') }}</option>
+                        </select>
+                        <small class="muted">{{ __('Selecting a palette updates the color controls; save to publish it.') }}</small>
+                    </div>
+                    <div>
+                        <label for="dashboard-theme-mode">{{ __('Dashboard theme') }}</label>
+                        <select id="dashboard-theme-mode" name="dashboard_theme_mode">
+                            <option value="light" @selected(old('dashboard_theme_mode', $settings['dashboard_theme_mode'] ?? 'light') === 'light')>{{ __('Futuristic glass light') }}</option>
+                            <option value="dark" @selected(old('dashboard_theme_mode', $settings['dashboard_theme_mode'] ?? 'light') === 'dark')>{{ __('Midnight dark') }}</option>
+                        </select>
+                    </div>
+                    <div><label for="dashboard-sidebar-start">{{ __('Sidebar gradient start') }}</label><input id="dashboard-sidebar-start" type="color" name="dashboard_sidebar_start_color" value="{{ old('dashboard_sidebar_start_color', $settings['dashboard_sidebar_start_color'] ?? '#102b63') }}"></div>
+                    <div><label for="dashboard-sidebar-end">{{ __('Sidebar gradient end') }}</label><input id="dashboard-sidebar-end" type="color" name="dashboard_sidebar_end_color" value="{{ old('dashboard_sidebar_end_color', $settings['dashboard_sidebar_end_color'] ?? '#0b1d42') }}"></div>
+                    <div><label for="dashboard-sidebar-text">{{ __('Sidebar text color') }}</label><input id="dashboard-sidebar-text" type="color" name="dashboard_sidebar_text_color" value="{{ old('dashboard_sidebar_text_color', $settings['dashboard_sidebar_text_color'] ?? '#dbe7ff') }}"></div>
+                    <div><label for="dashboard-sidebar-width">{{ __('Sidebar width (desktop)') }}</label><input id="dashboard-sidebar-width" type="number" name="dashboard_sidebar_width" min="220" max="320" value="{{ old('dashboard_sidebar_width', $settings['dashboard_sidebar_width'] ?? 270) }}"></div>
+                    <div><label for="dashboard-topbar-background">{{ __('Topbar background') }}</label><input id="dashboard-topbar-background" type="color" name="dashboard_topbar_background" value="{{ old('dashboard_topbar_background', $settings['dashboard_topbar_background'] ?? '#ffffff') }}"></div>
+                    <div><label for="dashboard-topbar-text">{{ __('Topbar text color') }}</label><input id="dashboard-topbar-text" type="color" name="dashboard_topbar_text_color" value="{{ old('dashboard_topbar_text_color', $settings['dashboard_topbar_text_color'] ?? '#102b63') }}"></div>
+                    <div>
+                        <label for="dashboard-card-radius">{{ __('Card corner radius') }}</label>
+                        <input id="dashboard-card-radius" type="number" name="dashboard_card_radius" min="12" max="32" value="{{ old('dashboard_card_radius', $settings['dashboard_card_radius'] ?? 19) }}">
+                    </div>
+                    <div>
+                        <label for="dashboard-card-shadow">{{ __('Card shadow style') }}</label>
+                        <select id="dashboard-card-shadow" name="dashboard_card_shadow">
+                            @foreach(['soft' => __('Soft'), 'medium' => __('Medium'), 'glow' => __('Glow')] as $value => $label)
+                                <option value="{{ $value }}" @selected(old('dashboard_card_shadow', $settings['dashboard_card_shadow'] ?? 'soft') === $value)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div><label for="dashboard-hero-eyebrow">{{ __('Welcome banner eyebrow') }}</label><input id="dashboard-hero-eyebrow" name="dashboard_hero_eyebrow" maxlength="80" value="{{ old('dashboard_hero_eyebrow', $settings['dashboard_hero_eyebrow'] ?? '') }}" placeholder="{{ __('Alom’s English Center LMS') }}"></div>
+                    <div><label for="dashboard-hero-cta-label">{{ __('Welcome banner primary button') }}</label><input id="dashboard-hero-cta-label" name="dashboard_hero_cta_label" maxlength="60" value="{{ old('dashboard_hero_cta_label', $settings['dashboard_hero_cta_label'] ?? '') }}" placeholder="{{ __('View Dashboard') }}"></div>
+                    <div>
+                        <label for="dashboard-hero-image-position">{{ __('Welcome banner image position') }}</label>
+                        <select id="dashboard-hero-image-position" name="dashboard_hero_image_position">
+                            @foreach(['center' => __('Center'), 'left' => __('Left'), 'right' => __('Right'), 'top' => __('Top'), 'bottom' => __('Bottom')] as $value => $label)
+                                <option value="{{ $value }}" @selected(old('dashboard_hero_image_position', $settings['dashboard_hero_image_position'] ?? 'center') === $value)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div><label for="dashboard-hero-title">{{ __('Welcome banner title') }}</label><input id="dashboard-hero-title" name="dashboard_hero_title" maxlength="180" value="{{ old('dashboard_hero_title', $settings['dashboard_hero_title'] ?? '') }}" placeholder="{{ __('Welcome back,') }}"></div>
+                    <div><label for="dashboard-hero-subtitle">{{ __('Welcome banner subtitle') }}</label><input id="dashboard-hero-subtitle" name="dashboard_hero_subtitle" maxlength="300" value="{{ old('dashboard_hero_subtitle', $settings['dashboard_hero_subtitle'] ?? '') }}"></div>
+                    <div><label for="dashboard-hero-quote">{{ __('Banner quote / slogan') }}</label><input id="dashboard-hero-quote" name="dashboard_hero_quote" maxlength="180" value="{{ old('dashboard_hero_quote', $settings['dashboard_hero_quote'] ?? '') }}" placeholder="{{ __('Your Success, Our Mission') }}"></div>
+                    <div>
+                        <label for="dashboard-brand-logo">{{ __('Dashboard brand mark / logo') }}</label>
+                        <select id="dashboard-brand-logo" name="dashboard_brand_logo_media_id">
+                            <option value="">{{ __('Use graduation cap icon') }}</option>
+                            @foreach($mediaAssets as $asset)
+                                <option value="{{ $asset->id }}" @selected((string) old('dashboard_brand_logo_media_id', $settings['dashboard_brand_logo_media_id'] ?? '') === (string) $asset->id)>{{ $asset->original_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label for="dashboard-hero-image">{{ __('Dashboard welcome banner image') }}</label>
+                        <select id="dashboard-hero-image" name="dashboard_hero_image_media_id">
+                            <option value="">{{ __('Use built-in gradient banner') }}</option>
+                            @foreach($mediaAssets as $asset)
+                                <option value="{{ $asset->id }}" @selected((string) old('dashboard_hero_image_media_id', $settings['dashboard_hero_image_media_id'] ?? '') === (string) $asset->id)>{{ $asset->original_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label for="dashboard-live-image">{{ __('Live class thumbnail') }}</label>
+                        <select id="dashboard-live-image" name="dashboard_live_class_image_media_id">
+                            <option value="">{{ __('Use default live class artwork') }}</option>
+                            @foreach($mediaAssets as $asset)
+                                <option value="{{ $asset->id }}" @selected((string) old('dashboard_live_class_image_media_id', $settings['dashboard_live_class_image_media_id'] ?? '') === (string) $asset->id)>{{ $asset->original_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <h3 style="margin:20px 0 10px;">{{ __('Dashboard sections') }}</h3>
+                <p class="muted">{{ __('Choose which dashboard sections are visible. Hiding a section never deletes its records.') }}</p>
+                <div class="grid grid-2">
+                    @foreach([
+                        'dashboard_show_hero' => 'Welcome banner',
+                        'dashboard_show_statistics' => 'Statistics cards',
+                        'dashboard_show_live_class' => 'Upcoming live class',
+                        'dashboard_show_quick_actions' => 'Quick actions',
+                        'dashboard_show_system_snapshot' => 'System snapshot',
+                        'dashboard_show_learning_operations' => 'Learning operations'
+                    ] as $key => $label)
+                        <div>
+                            <input type="hidden" name="{{ $key }}" value="0">
+                            <label style="display:flex;align-items:center;gap:10px;">
+                                <input type="checkbox" name="{{ $key }}" value="1" style="width:auto;" @checked((bool) (int) old($key, $settings[$key] ?? '1'))>
+                                {{ __($label) }}
+                            </label>
+                        </div>
+                    @endforeach
+                </div>
+                <h3 style="margin:20px 0 10px;">{{ __('Dashboard widget order') }}</h3>
+                <p class="muted">{{ __('Set a position from 1 to 6. Lower numbers appear earlier. Quick actions and system snapshot can be reordered independently.') }}</p>
+                <style>
+                    .dashboard-widget-order-list { display:grid; gap:9px; }
+                    .dashboard-widget-order-item { display:flex; align-items:center; gap:12px; padding:12px 14px; border:1px solid var(--border); border-radius:12px; background:var(--panel); }
+                    .dashboard-widget-order-item[aria-grabbed="true"] { opacity:.55; border-style:dashed; }
+                    .dashboard-widget-order-item [data-widget-drag-handle] { cursor:grab; user-select:none; touch-action:pan-y; font-size:1.2rem; }
+                    .dashboard-widget-order-item label { flex:1; margin:0; }
+                    .dashboard-widget-order-item input[type="number"] { width:76px; margin:0; }
+                    .dashboard-widget-order-controls { display:flex; gap:5px; }
+                    .dashboard-widget-order-controls button { min-width:34px; min-height:34px; border:1px solid var(--border); border-radius:8px; background:var(--panel-alt); cursor:pointer; }
+                    .dashboard-widget-order-controls button:disabled { opacity:.4; cursor:not-allowed; }
+                </style>
+                <div class="dashboard-widget-order-list" data-dashboard-widget-order-list>
+                    @foreach([
+                        'dashboard_order_hero' => ['Welcome banner', 1],
+                        'dashboard_order_statistics' => ['Statistics cards', 2],
+                        'dashboard_order_live_class' => ['Upcoming live class', 3],
+                        'dashboard_order_quick_actions' => ['Quick actions', 4],
+                        'dashboard_order_system_snapshot' => ['System snapshot', 5],
+                        'dashboard_order_learning_operations' => ['Learning operations', 6],
+                    ] as $key => [$label, $defaultOrder])
+                        <div class="dashboard-widget-order-item" data-dashboard-widget-order-item draggable="true">
+                            <span data-widget-drag-handle aria-hidden="true" title="{{ __('Drag to reorder') }}">⠿</span>
+                            <label for="{{ $key }}">{{ __($label) }}</label>
+                            <input id="{{ $key }}" type="number" name="{{ $key }}" min="1" max="6" step="1" value="{{ old($key, $settings[$key] ?? $defaultOrder) }}" aria-label="{{ __('Position for') }} {{ __($label) }}">
+                            <div class="dashboard-widget-order-controls">
+                                <button type="button" data-widget-move-up aria-label="{{ __('Move up') }}">↑</button>
+                                <button type="button" data-widget-move-down aria-label="{{ __('Move down') }}">↓</button>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+                <p class="muted" data-dashboard-order-status role="status" aria-live="polite">{{ __('Drag widgets to reorder, or use the up and down buttons. Position numbers update automatically.') }}</p>
+                <p class="muted" style="margin-top:14px;">{{ __('Need another image? Upload it in the Media Library first. Changes apply to the admin dashboard after saving. Dashboard counts continue to come from real LMS records.') }} <a href="{{ route('admin.media.index') }}">{{ __('Open Media Library') }}</a></p>
+            </section>
                 <span class="badge info">{{ __('Search and marketing') }}</span>
 
             <hr style="border: 0; border-top: 1px solid var(--border); margin: 28px 0;">
@@ -365,4 +554,190 @@
             </div>
         </form>
     </div>
+@push('scripts')
+    <script>
+        (() => {
+            const list = document.querySelector('[data-dashboard-widget-order-list]');
+            if (!list) return;
+            const status = document.querySelector('[data-dashboard-order-status]');
+            let dragged = null;
+            const items = () => Array.from(list.querySelectorAll('[data-dashboard-widget-order-item]'));
+            const announce = message => { if (status) status.textContent = message; };
+            const refresh = () => {
+                items().forEach((item, index) => {
+                    const position = item.querySelector('input[type="number"]');
+                    const up = item.querySelector('[data-widget-move-up]');
+                    const down = item.querySelector('[data-widget-move-down]');
+                    if (position) position.value = String(index + 1);
+                    if (up) up.disabled = index === 0;
+                    if (down) down.disabled = index === items().length - 1;
+                    item.setAttribute('aria-posinset', String(index + 1));
+                    item.setAttribute('aria-setsize', String(items().length));
+                    item.setAttribute('aria-grabbed', item === dragged ? 'true' : 'false');
+                });
+            };
+            list.addEventListener('dragstart', event => {
+                const item = event.target.closest('[data-dashboard-widget-order-item]');
+                if (!item) return;
+                dragged = item;
+                event.dataTransfer.effectAllowed = 'move';
+                event.dataTransfer.setData('text/plain', item.querySelector('label')?.textContent?.trim() || 'widget');
+                refresh();
+            });
+            list.addEventListener('dragover', event => {
+                if (!dragged) return;
+                event.preventDefault();
+                const target = event.target.closest('[data-dashboard-widget-order-item]');
+                if (!target || target === dragged) return;
+                const bounds = target.getBoundingClientRect();
+                list.insertBefore(dragged, event.clientY > bounds.top + bounds.height / 2 ? target.nextSibling : target);
+            });
+            list.addEventListener('drop', event => {
+                if (!dragged) return;
+                event.preventDefault();
+                const name = dragged.querySelector('label')?.textContent?.trim() || 'Widget';
+                dragged = null;
+                refresh();
+                announce(name + ' reordered.');
+            });
+            list.addEventListener('dragend', () => { dragged = null; refresh(); });
+            list.addEventListener('click', event => {
+                const button = event.target.closest('[data-widget-move-up], [data-widget-move-down]');
+                if (!button) return;
+                const item = button.closest('[data-dashboard-widget-order-item]');
+                if (!item) return;
+                if (button.hasAttribute('data-widget-move-up') && item.previousElementSibling) {
+                    list.insertBefore(item, item.previousElementSibling);
+                } else if (button.hasAttribute('data-widget-move-down') && item.nextElementSibling) {
+                    list.insertBefore(item.nextElementSibling, item);
+                }
+                refresh();
+                announce((item.querySelector('label')?.textContent?.trim() || 'Widget') + ' reordered.');
+            });
+            refresh();
+        })();
+    </script>
+@endpush
+
+@push('scripts')
+    <script>
+        (() => {
+            const panel = document.querySelector('[data-dashboard-preview]');
+            if (!panel) return;
+            const frame = panel.querySelector('[data-dashboard-preview-frame]');
+            const form = panel.closest('form');
+            const previewTitle = panel.querySelector('[data-dashboard-preview-title]');
+            const previewSubtitle = panel.querySelector('[data-dashboard-preview-subtitle]');
+            const palettePicker = panel.querySelector('[data-dashboard-palette-preset]');
+            const paletteColors = {
+                blue: { dashboard_primary_color:'#102b63', dashboard_secondary_color:'#0759c8', dashboard_accent_color:'#ffd52f', dashboard_background_color:'#f3f6ff', dashboard_surface_color:'#ffffff', dashboard_students_color:'#1675f5', dashboard_teachers_color:'#08b978', dashboard_courses_color:'#8525e8', dashboard_certificates_color:'#f59e0b' },
+                emerald: { dashboard_primary_color:'#064e3b', dashboard_secondary_color:'#059669', dashboard_accent_color:'#a7f3d0', dashboard_background_color:'#ecfdf5', dashboard_surface_color:'#ffffff', dashboard_students_color:'#059669', dashboard_teachers_color:'#0d9488', dashboard_courses_color:'#0f766e', dashboard_certificates_color:'#d97706' },
+                purple: { dashboard_primary_color:'#312e81', dashboard_secondary_color:'#7c3aed', dashboard_accent_color:'#f5d0fe', dashboard_background_color:'#f5f3ff', dashboard_surface_color:'#ffffff', dashboard_students_color:'#4f46e5', dashboard_teachers_color:'#0d9488', dashboard_courses_color:'#9333ea', dashboard_certificates_color:'#c026d3' },
+                sunset: { dashboard_primary_color:'#7c2d12', dashboard_secondary_color:'#ea580c', dashboard_accent_color:'#fde68a', dashboard_background_color:'#fff7ed', dashboard_surface_color:'#ffffff', dashboard_students_color:'#ea580c', dashboard_teachers_color:'#16a34a', dashboard_courses_color:'#9333ea', dashboard_certificates_color:'#d97706' }
+            };
+            if (palettePicker && form) {
+                palettePicker.addEventListener('change', () => {
+                    const colors = paletteColors[palettePicker.value];
+                    if (!colors) return;
+                    Object.entries(colors).forEach(([name, color]) => {
+                        const field = form.elements.namedItem(name);
+                        if (field) field.value = color;
+                    });
+                    updatePreview();
+                });
+            }
+            const updatePreview = () => {
+                if (!form || !frame) return;
+                const value = name => form.elements.namedItem(name)?.value || '';
+                frame.style.setProperty('--dashboard-preview-primary', value('dashboard_primary_color') || '#102b63');
+                frame.style.setProperty('--dashboard-preview-secondary', value('dashboard_secondary_color') || '#0759c8');
+                if (previewTitle) previewTitle.textContent = value('dashboard_hero_title') || 'Welcome back, Administrator';
+                if (previewSubtitle) previewSubtitle.textContent = value('dashboard_hero_subtitle') || 'Your academy overview at a glance';
+                const previewEyebrow = panel.querySelector('[data-dashboard-preview-eyebrow]');
+                const previewButton = panel.querySelector('[data-dashboard-preview-button]');
+                if (previewEyebrow) previewEyebrow.textContent = value('dashboard_hero_eyebrow') || 'Alom’s English Center LMS';
+                if (previewButton) previewButton.textContent = value('dashboard_hero_cta_label') || 'View courses';
+                frame.dataset.previewTheme = value('dashboard_theme_mode') || 'light';
+                frame.style.setProperty('--dashboard-preview-radius', (Number(value('dashboard_card_radius')) || 19) + 'px');
+                frame.dataset.previewShadow = value('dashboard_card_shadow') || 'soft';
+                const accents = ['dashboard_students_color','dashboard_teachers_color','dashboard_courses_color','dashboard_certificates_color'];
+                panel.querySelectorAll('.dashboard-preview-stats > div').forEach((card,index) => {
+                    card.style.borderTop = '3px solid ' + (value(accents[index]) || ['#1675f5','#08b978','#8525e8','#f59e0b'][index]);
+                    card.style.background = value('dashboard_surface_color') || '#ffffff';
+                    card.style.borderRadius = (Number(value('dashboard_card_radius')) || 19) + 'px';
+                });
+                frame.style.background = value('dashboard_background_color') || '#f3f6ff';
+            };
+            if (form) {
+                form.addEventListener('input', updatePreview);
+                form.addEventListener('change', updatePreview);
+                updatePreview();
+            }
+            panel.querySelectorAll('[data-dashboard-preview-mode]').forEach(button => {
+                button.addEventListener('click', () => {
+                    const mode = button.getAttribute('data-dashboard-preview-mode');
+                    frame.setAttribute('data-preview-mode', mode);
+                    panel.querySelectorAll('[data-dashboard-preview-mode]').forEach(option => {
+                        option.setAttribute('aria-pressed', String(option === button));
+                    });
+                });
+            });
+            const restore = document.querySelector('[data-dashboard-restore]');
+            const status = document.querySelector('[data-dashboard-restore-status]');
+            if (!restore) return;
+            const defaults = {
+                dashboard_primary_color:'#102b63', dashboard_secondary_color:'#0759c8',
+                dashboard_accent_color:'#ffd52f', dashboard_background_color:'#f3f6ff',
+                dashboard_surface_color:'#ffffff', dashboard_students_color:'#1675f5',
+                dashboard_teachers_color:'#08b978', dashboard_courses_color:'#8525e8',
+                dashboard_certificates_color:'#f59e0b', dashboard_theme_mode:'light',
+                dashboard_card_radius:'19', dashboard_card_shadow:'soft',
+                dashboard_sidebar_start_color:'#102b63', dashboard_sidebar_end_color:'#0b1d42',
+                dashboard_sidebar_text_color:'#dbe7ff', dashboard_sidebar_width:'270',
+                dashboard_topbar_background:'#ffffff', dashboard_topbar_text_color:'#102b63',
+                dashboard_hero_eyebrow:'', dashboard_hero_cta_label:'',
+                dashboard_hero_image_position:'center', dashboard_hero_title:'',
+                dashboard_hero_subtitle:'', dashboard_hero_quote:'',
+                dashboard_brand_logo_media_id:'', dashboard_hero_image_media_id:'', dashboard_live_class_image_media_id:'',
+                dashboard_show_hero:'1', dashboard_show_statistics:'1',
+                dashboard_show_live_class:'1', dashboard_show_quick_actions:'1',
+                dashboard_show_system_snapshot:'1', dashboard_show_learning_operations:'1',
+                dashboard_order_hero:'1', dashboard_order_statistics:'2',
+                dashboard_order_live_class:'3', dashboard_order_quick_actions:'4',
+                dashboard_order_system_snapshot:'5', dashboard_order_learning_operations:'6'
+            };
+            restore.addEventListener('click', () => {
+                const form = restore.closest('form');
+                if (!form) return;
+                if (palettePicker) palettePicker.value = '';
+                Object.entries(defaults).forEach(([name, value]) => {
+                    Array.from(form.elements).filter(field => field.name === name).forEach(field => {
+                        if (field.type === 'checkbox') field.checked = value === '1';
+                        else if (field.type === 'hidden' && name.startsWith('dashboard_show_')) field.value = '0';
+                        else field.value = value;
+                    });
+                });
+                const list = form.querySelector('[data-dashboard-widget-order-list]');
+                if (list) {
+                    const order = ['dashboard_order_hero','dashboard_order_statistics','dashboard_order_live_class','dashboard_order_quick_actions','dashboard_order_system_snapshot','dashboard_order_learning_operations'];
+                    order.forEach(name => {
+                        const input = Array.from(list.querySelectorAll('input[type="number"]')).find(field => field.name === name);
+                        if (input) list.appendChild(input.closest('[data-dashboard-widget-order-item]'));
+                    });
+                    list.querySelectorAll('[data-dashboard-widget-order-item]').forEach((item,index) => {
+                        const input = item.querySelector('input[type="number"]');
+                        if (input) input.value = String(index + 1);
+                        const up = item.querySelector('[data-widget-move-up]');
+                        const down = item.querySelector('[data-widget-move-down]');
+                        if (up) up.disabled = index === 0;
+                        if (down) down.disabled = index === order.length - 1;
+                    });
+                }
+                if (typeof updatePreview === 'function') updatePreview();
+                if (status) status.textContent = 'Dashboard defaults restored. Save settings to apply them.';
+            });
+        })();
+    </script>
+@endpush
+
 @endsection

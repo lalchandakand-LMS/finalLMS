@@ -7,6 +7,7 @@ use App\Models\MediaAsset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Illuminate\Validation\Rule;
 
 class AdminSettingsController extends Controller
 {
@@ -33,12 +34,51 @@ class AdminSettingsController extends Controller
             'institution_favicon_url' => ['nullable', 'url', 'max:500'],
             'site_primary_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'site_background_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'dashboard_primary_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'dashboard_secondary_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'dashboard_accent_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'dashboard_background_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'dashboard_surface_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'dashboard_students_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'dashboard_teachers_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'dashboard_courses_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'dashboard_certificates_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'dashboard_theme_mode' => ['nullable', 'in:light,dark'],
+            'dashboard_card_radius' => ['nullable', 'integer', 'min:12', 'max:32'],
+            'dashboard_card_shadow' => ['nullable', 'in:soft,medium,glow'],
+            'dashboard_hero_eyebrow' => ['nullable', 'string', 'max:80'],
+            'dashboard_hero_cta_label' => ['nullable', 'string', 'max:60'],
+            'dashboard_hero_image_position' => ['nullable', 'in:center,left,right,top,bottom'],
+            'dashboard_sidebar_start_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'dashboard_sidebar_end_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'dashboard_sidebar_text_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'dashboard_topbar_background' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'dashboard_topbar_text_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'dashboard_sidebar_width' => ['nullable', 'integer', 'min:220', 'max:320'],
+            'dashboard_brand_logo_media_id' => ['nullable', 'integer', 'min:1', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
+            'dashboard_hero_image_media_id' => ['nullable', 'integer', 'min:1', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
+            'dashboard_live_class_image_media_id' => ['nullable', 'integer', 'min:1', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
+            'dashboard_hero_title' => ['nullable', 'string', 'max:180'],
+            'dashboard_hero_subtitle' => ['nullable', 'string', 'max:300'],
+            'dashboard_hero_quote' => ['nullable', 'string', 'max:180'],
+            'dashboard_show_hero' => ['nullable', 'boolean'],
+            'dashboard_show_statistics' => ['nullable', 'boolean'],
+            'dashboard_show_live_class' => ['nullable', 'boolean'],
+            'dashboard_show_quick_actions' => ['nullable', 'boolean'],
+            'dashboard_show_system_snapshot' => ['nullable', 'boolean'],
+            'dashboard_show_learning_operations' => ['nullable', 'boolean'],
+            'dashboard_order_hero' => ['nullable', 'integer', 'min:1', 'max:6'],
+            'dashboard_order_statistics' => ['nullable', 'integer', 'min:1', 'max:6'],
+            'dashboard_order_live_class' => ['nullable', 'integer', 'min:1', 'max:6'],
+            'dashboard_order_quick_actions' => ['nullable', 'integer', 'min:1', 'max:6'],
+            'dashboard_order_system_snapshot' => ['nullable', 'integer', 'min:1', 'max:6'],
+            'dashboard_order_learning_operations' => ['nullable', 'integer', 'min:1', 'max:6'],
             'institution_default_locale' => ['sometimes', 'required', 'in:en,bn'],
             'institution_timezone' => ['sometimes', 'required', 'timezone'],
-            'site_logo_media_id' => ['nullable', 'integer', 'min:1'],
-            'site_favicon_media_id' => ['nullable', 'integer', 'min:1'],
+            'site_logo_media_id' => ['nullable', 'integer', 'min:1', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
+            'site_favicon_media_id' => ['nullable', 'integer', 'min:1', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
             'loading_screen_enabled' => ['nullable', 'boolean'],
-            'loading_screen_logo_media_id' => ['nullable', 'integer', 'min:1'],
+            'loading_screen_logo_media_id' => ['nullable', 'integer', 'min:1', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
             'loading_screen_style' => ['nullable', 'in:orbit,pulse,ring'],
             'loading_screen_text' => ['nullable', 'string', 'max:60'],
             'loading_screen_background' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
@@ -140,7 +180,7 @@ class AdminSettingsController extends Controller
         })->filter()->values()->all();
         unset($validated['payment_methods'], $validated['home_slides']);
 
-        foreach (['site_logo_media_id', 'site_favicon_media_id', 'loading_screen_logo_media_id'] as $mediaSetting) {
+        foreach (['site_logo_media_id', 'site_favicon_media_id', 'loading_screen_logo_media_id', 'dashboard_brand_logo_media_id', 'dashboard_hero_image_media_id', 'dashboard_live_class_image_media_id'] as $mediaSetting) {
             $mediaId = $validated[$mediaSetting] ?? null;
             if ($mediaId !== null && !MediaAsset::query()->whereKey($mediaId)->where('mime_type', 'like', 'image/%')->exists()) {
                 return back()->withErrors([$mediaSetting => 'Please select a valid image from the Media Library.'])->withInput();
