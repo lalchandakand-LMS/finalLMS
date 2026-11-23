@@ -12,7 +12,7 @@ class PaymentGatewayPluginSystemTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_admin_can_view_gateway_catalog_without_exposing_bkash_secrets(): void
+    public function test_gateway_catalog_does_not_advertise_provider_adapters_until_a_trusted_plugin_registers_them(): void
     {
         config([
             'services.bkash.enabled' => true,
@@ -28,15 +28,15 @@ class PaymentGatewayPluginSystemTest extends TestCase
         $this->actingAs($admin)->get(route('admin.payment-gateways.index'))
             ->assertOk()
             ->assertSee('Universal Payment Gateways')
-            ->assertSee('bKash Tokenized Checkout')
-            ->assertSee('BDT')
+            ->assertDontSee('bKash Tokenized Checkout')
+            ->assertDontSee('BDT')
             ->assertDontSee('private-merchant-user')
             ->assertDontSee('private-merchant-password')
             ->assertDontSee('private-app-key')
             ->assertDontSee('private-app-secret');
     }
 
-    public function test_admin_can_enable_a_configured_gateway_and_change_is_audited(): void
+    public function test_admin_cannot_enable_a_gateway_without_an_installed_adapter(): void
     {
         config([
             'services.bkash.enabled' => true,
@@ -50,14 +50,10 @@ class PaymentGatewayPluginSystemTest extends TestCase
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
 
         $this->actingAs($admin)->patch(route('admin.payment-gateways.update', 'bkash'), ['enabled' => true])
-            ->assertRedirect(route('admin.payment-gateways.index'));
+            ->assertNotFound();
 
-        $registry = json_decode((string) Setting::value('payment_gateway_registry'), true);
-        $this->assertTrue($registry['bkash']);
-        $this->assertDatabaseHas('activity_logs', [
-            'user_id' => $admin->id,
-            'event' => 'admin.payment_gateways.updated',
-        ]);
+        $this->assertNull(Setting::value('payment_gateway_registry'));
+        $this->assertDatabaseCount('activity_logs', 0);
     }
 
     public function test_unconfigured_gateway_cannot_be_enabled(): void
@@ -65,8 +61,8 @@ class PaymentGatewayPluginSystemTest extends TestCase
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
 
         $this->actingAs($admin)->patch(route('admin.payment-gateways.update', 'bkash'), ['enabled' => true])
-            ->assertStatus(422);
-        $this->assertSame([], json_decode((string) Setting::value('payment_gateway_registry', '[]'), true));
+            ->assertNotFound();
+        $this->assertNull(Setting::value('payment_gateway_registry'));
     }
 
     public function test_non_admin_cannot_view_or_change_payment_gateways(): void
