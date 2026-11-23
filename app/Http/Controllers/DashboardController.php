@@ -14,6 +14,7 @@ use App\Models\Course;
 use App\Models\DashboardAnnouncement;
 use App\Models\Enrollment;
 use App\Models\Setting;
+use App\Models\MediaAsset;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
@@ -24,6 +25,27 @@ class DashboardController extends Controller
         $user = Auth::user();
         $institutionName = Setting::value('institution_name', config('app.name'));
         $setupWizardPending = $user->isAdmin() && ! Setting::value('setup_wizard_completed_at');
+        $dashboardAppearance = [
+            'primary' => Setting::value('dashboard_primary_color', '#102b63'),
+            'secondary' => Setting::value('dashboard_secondary_color', '#0759c8'),
+            'accent' => Setting::value('dashboard_accent_color', '#ffd52f'),
+            'background' => Setting::value('dashboard_background_color', '#f3f6ff'),
+            'surface' => Setting::value('dashboard_surface_color', '#ffffff'),
+            'hero_title' => Setting::value('dashboard_hero_title', ''),
+            'hero_subtitle' => Setting::value('dashboard_hero_subtitle', ''),
+            'hero_quote' => Setting::value('dashboard_hero_quote', ''),
+            'hero_image' => null,
+            'live_class_image' => null,
+        ];
+        $heroImage = Setting::value('dashboard_hero_image_media_id')
+            ? MediaAsset::query()->whereKey((int) Setting::value('dashboard_hero_image_media_id'))->where('mime_type', 'like', 'image/%')->first()
+            : null;
+        $liveClassImage = Setting::value('dashboard_live_class_image_media_id')
+            ? MediaAsset::query()->whereKey((int) Setting::value('dashboard_live_class_image_media_id'))->where('mime_type', 'like', 'image/%')->first()
+            : null;
+        $dashboardAppearance['hero_image'] = $heroImage?->url;
+        $dashboardAppearance['live_class_image'] = $liveClassImage?->url;
+
         $announcementSlides = DashboardAnnouncement::currentlyActive()
             ->whereIn('audience', ['all', $user->role])
             ->where(fn ($query) => $query->whereNull('branch_id')->orWhere('branch_id', $user->branch_id))
@@ -124,7 +146,7 @@ class DashboardController extends Controller
             'certificates' => Certificate::count(),
         ];
 
-        return view('dashboard', compact('user', 'courses', 'enrolledCourses', 'recentCertificates', 'stats', 'announcementSlides', 'studentInsights', 'teacherInsights', 'institutionName', 'setupWizardPending'));
+        return view('dashboard', compact('user', 'courses', 'enrolledCourses', 'recentCertificates', 'stats', 'announcementSlides', 'studentInsights', 'teacherInsights', 'institutionName', 'setupWizardPending', 'dashboardAppearance'));
     }
 
     public function certificate(Certificate $certificate): View
