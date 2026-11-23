@@ -35,7 +35,7 @@ class StudentTranscriptController extends Controller
             ->map(fn ($progress) => $progress->count());
 
         $examAttempts = ExamAttempt::query()
-            ->with(['exam.batch.course:id,title', 'exam.questions:id,exam_id,marks'])
+            ->with(['exam.batch.course:id,title', 'attemptQuestions.question:id,marks'])
             ->where('student_id', $student->id)
             ->where('status', 'submitted')
             ->whereHas('exam')
@@ -57,12 +57,17 @@ class StudentTranscriptController extends Controller
             ->latest('issued_at')
             ->get();
 
+        $examAttempts->each(function ($attempt): void {
+            $attempt->setAttribute('maximum_score', (int) $attempt->attemptQuestions
+                ->sum(fn ($attemptQuestion) => (int) ($attemptQuestion->question?->marks ?? 0)));
+        });
+
         $gradedExamAttempts = $examAttempts->filter(fn ($attempt) =>
-            $attempt->score !== null && (int) $attempt->exam->questions->sum('marks') > 0
+            $attempt->score !== null && $attempt->maximum_score > 0
         );
         $examAverage = $gradedExamAttempts->isNotEmpty()
             ? round($gradedExamAttempts->avg(function ($attempt) {
-                $maximum = (int) $attempt->exam->questions->sum('marks');
+                $maximum = (int) $attempt->maximum_score;
                 return min(100, ((float) $attempt->score / $maximum) * 100);
             }), 2)
             : null;
