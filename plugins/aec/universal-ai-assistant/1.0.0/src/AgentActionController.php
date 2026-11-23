@@ -91,6 +91,7 @@ final class AgentActionController
     public function reject(Request $request, int $proposal, AgentActionWorkflow $workflow): RedirectResponse
     {
         abort_unless(in_array($request->user()->role, ['admin', 'teacher'], true), 403);
+        $this->assertAgentEnabled((string) $request->user()->role);
         $validated = $request->validate([
             'version' => ['required', 'integer', 'min:1'],
             'review_note' => ['nullable', 'string', 'max:500'],
