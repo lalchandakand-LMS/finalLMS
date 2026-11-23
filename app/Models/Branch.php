@@ -7,9 +7,17 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Branch extends Model
 {
-    protected $fillable = ['name', 'slug', 'address', 'phone', 'is_active'];
+    protected $fillable = ['name', 'slug', 'address', 'phone', 'is_active', 'status', 'registration_open'];
 
-    protected $casts = ['is_active' => 'boolean'];
+    protected $casts = [
+        'is_active' => 'boolean',
+        'registration_open' => 'boolean',
+    ];
+
+    public function isOperational(): bool
+    {
+        return $this->status === 'active' && $this->is_active;
+    }
 
     public function batches(): HasMany
     {
