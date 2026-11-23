@@ -18,8 +18,8 @@ final class AttendanceFeeBillingController extends Controller
     public function generate(Batch $batch, Request $request): RedirectResponse
     {
         $actor = $request->user();
-        abort_unless($actor && ($actor->isAdmin() || $actor->isBranchManager()), 403);
-        if ($actor->isBranchManager()) {
+        abort_unless($actor && ($actor->isAdmin() || $actor->isBranchManager() || $actor->isAccountant()), 403);
+        if ($actor->isBranchManager() || $actor->isAccountant()) {
             abort_unless($actor->hasAdminPermission('finance.invoices'), 403);
             abort_unless($actor->branch_id && DB::table('branches')->where('id', $actor->branch_id)->where('is_active', true)->exists(), 403);
             abort_unless((int) $batch->branch_id === (int) $actor->branch_id, 404);
