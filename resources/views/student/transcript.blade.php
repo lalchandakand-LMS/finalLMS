@@ -6,7 +6,7 @@
 <div class="panel" style="max-width:1100px;margin:24px auto;">
     <div class="meta-row" style="justify-content:space-between;align-items:center;">
         <div>
-            <span class="badge info">{{ __('Official student record') }}</span>
+            <span class="badge info">{{ __('Student academic record') }}</span>
             <h1 style="margin:10px 0 4px;">{{ __('Academic Transcript') }}</h1>
             <p class="muted">{{ __('Student:') }} <strong>{{ $student->name }}</strong> · {{ __('Generated:') }} {{ now()->format('d M Y, h:i A') }}</p>
         </div>
