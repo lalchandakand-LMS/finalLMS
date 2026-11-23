@@ -20,7 +20,7 @@
             <label>{{ __('Question type') }}<select name="type" class="question-type"><option value="mcq">Multiple choice</option><option value="true_false">True / False</option><option value="short_answer">Short answer</option><option value="written">Written response</option></select></label>
             <label>{{ __('Question') }}<textarea name="question" required maxlength="3000"></textarea></label>
             <label>{{ __('Explanation') }}<textarea name="explanation" maxlength="3000"></textarea></label>
-            <label>{{ __('Tags (up to 30)') }}<input name="tags[]" maxlength="40" placeholder="e.g. tenses"></label>
+            <div class="grid grid-2"><label>{{ __('Tag 1') }}<input name="tags[]" maxlength="40" placeholder="e.g. tenses"></label><label>{{ __('Tag 2') }}<input name="tags[]" maxlength="40"></label><label>{{ __('Tag 3') }}<input name="tags[]" maxlength="40"></label></div>
             <div class="grid grid-2 question-options">
                 <label>Option A<input name="options[0]" required maxlength="500"></label>
                 <label>Option B<input name="options[1]" required maxlength="500"></label>
@@ -58,6 +58,7 @@
                 <h3>{{ $question->question }}</h3>
                 @if(in_array($question->type ?: 'mcq', ['mcq','true_false'], true))<ol type="A">@foreach($question->options ?? [] as $option)<li>{{ $option }}</li>@endforeach</ol>@endif
                 <p class="muted">{{ __('Answer key:') }} {{ in_array($question->type ?: 'mcq', ['mcq','true_false'], true) ? ($question->options[$question->correct_option] ?? '—') : ($question->correct_answer ?: __('Manual grading')) }} · {{ $question->marks }} marks · {{ $question->negative_marks }} negative · {{ ucfirst($question->difficulty ?? 'medium') }}</p>
+                @if($question->tags)<p class="muted">{{ __('Tags:') }} {{ implode(', ', $question->tags) }}</p>@endif
                 <details><summary>{{ __('Edit question') }}</summary>
                     <form method="POST" action="{{ $isAdmin ? route('admin.batches.question-bank.update', [$batch, $question]) : route('teacher.batches.question-bank.update', [$batch, $question]) }}">
                         @csrf @method('PUT')
@@ -67,7 +68,7 @@
                                                 <label>{{ __('Question type') }}<select name="type" class="question-type">@foreach(['mcq'=>'Multiple choice','true_false'=>'True / False','short_answer'=>'Short answer','written'=>'Written response'] as $type => $label)<option value="{{ $type }}" @selected(($question->type ?: 'mcq') === $type)>{{ $label }}</option>@endforeach</select></label>
                         <label>{{ __('Question') }}<textarea name="question" required>{{ $question->question }}</textarea></label>
                         <label>{{ __('Explanation') }}<textarea name="explanation">{{ $question->explanation }}</textarea></label>
-                        <label>{{ __('Add tag') }}<input name="tags[]" maxlength="40" placeholder="e.g. tenses"></label>
+                        <div class="grid grid-2">@foreach($question->tags ?? [] as $tag)<label>{{ __('Tag') }}<input name="tags[]" value="{{ $tag }}" maxlength="40"></label>@endforeach<label>{{ __('Add tag') }}<input name="tags[]" maxlength="40" placeholder="e.g. tenses"></label></div>
                         <div class="grid grid-2 question-options">@foreach($question->options ?? [] as $i => $option)<label>Option {{ ['A','B','C','D'][$i] ?? $i+1 }}<input name="options[{{ $i }}]" value="{{ $option }}" required></label>@endforeach</div>
                         <div class="grid grid-2 question-answer"><label>{{ __('Correct option') }}<select name="correct_option">@foreach(['A','B','C','D'] as $i => $letter)<option value="{{ $i }}" @selected($question->correct_option === $i)>{{ $letter }}</option>@endforeach</select></label></div>
                         <label class="question-correct-answer" hidden>{{ __('Expected short answer') }}<input name="correct_answer" value="{{ $question->correct_answer }}" maxlength="2000"></label>
