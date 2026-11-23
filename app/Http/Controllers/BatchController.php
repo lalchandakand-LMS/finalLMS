@@ -19,7 +19,7 @@ class BatchController extends Controller
     public function index(Request $request): View
     {
         $filters = $request->validate(['academic_level_id' => ['nullable', 'integer', 'exists:academic_levels,id']]);
-        $branches = Branch::withCount('batches')->orderBy('name')->get();
+        $branches = Branch::withCount(['batches', 'users'])->orderBy('name')->get();
         $batches = Batch::with(['branch', 'course.academicLevel', 'teacher'])
             ->when($filters['academic_level_id'] ?? null, fn ($query, $levelId) => $query->whereHas('course', fn ($courses) => $courses->where('academic_level_id', $levelId)))
             ->latest('starts_at')->get();
