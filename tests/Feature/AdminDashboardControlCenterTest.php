@@ -19,7 +19,7 @@ class AdminDashboardControlCenterTest extends TestCase
         $this->actingAs($admin)
             ->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('Homepage')
+            ->assertSee('Academy overview')
             ->assertSee('Users')
             ->assertSee('Courses')
             ->assertSee('Settings')
