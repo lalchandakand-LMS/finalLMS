@@ -117,6 +117,20 @@ PHP;
         $this->assertSame('failed', $plugin->fresh()->status);
         $this->assertNotContains('fixture_gateway', app(PaymentGatewayManager::class)->installedKeys());
     }
+
+    public function test_deactivated_gateway_plugin_is_removed_from_catalog_and_cannot_be_resolved(): void
+    {
+        $plugin = $this->installSignedFixture();
+        app(PluginRuntime::class)->registerActivePlugins();
+        $manager = app(PaymentGatewayManager::class);
+
+        $this->assertArrayHasKey('fixture_gateway', $manager->catalog());
+        $plugin->update(['status' => 'inactive']);
+
+        $this->assertArrayNotHasKey('fixture_gateway', $manager->catalog());
+        $this->expectException(\\InvalidArgumentException::class);
+        $manager->driver('fixture_gateway');
+    }
 }
 
 class TestPaymentGatewayAdapter implements PaymentGateway
