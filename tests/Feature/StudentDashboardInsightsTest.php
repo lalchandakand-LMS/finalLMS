@@ -7,6 +7,8 @@ use App\Models\AssignmentSubmission;
 use App\Models\Batch;
 use App\Models\Branch;
 use App\Models\Course;
+use App\Models\CourseContentPost;
+use App\Models\CourseContentProgress;
 use App\Models\Enrollment;
 use App\Models\LessonProgress;
 use App\Models\User;
@@ -62,6 +64,59 @@ class StudentDashboardInsightsTest extends TestCase
             ->assertViewHas('studentInsights', fn (array $insights) => $insights['enrolled_courses'] === 1
                 && $insights['completed_lessons'] === 1
                 && $insights['total_lessons'] === 2);
+    }
+
+    public function test_student_dashboard_combines_legacy_lesson_and_video_progress(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $course = Course::factory()->create(['teacher_id' => $teacher->id, 'status' => 'published']);
+
+        $course->lessons()->create([
+            'title' => 'Classroom lesson',
+            'content' => 'Lesson content',
+            'duration_minutes' => 15,
+            'order' => 1,
+        ]);
+        Enrollment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'status' => 'active',
+        ]);
+
+        $post = CourseContentPost::create([
+            'author_id' => $teacher->id,
+            'title' => 'Video lesson',
+            'slug' => 'dashboard-video-'.uniqid(),
+            'long_description' => 'Video lesson content',
+            'status' => 'published',
+            'published_at' => now()->subMinute(),
+        ]);
+        $item = $course->curriculumItems()->create([
+            'course_content_post_id' => $post->id,
+            'section_title' => 'Video module',
+            'position' => 10,
+            'is_preview' => false,
+        ]);
+        CourseContentProgress::create([
+            'user_id' => $student->id,
+            'course_curriculum_item_id' => $item->id,
+            'progress_percent' => 100,
+            'watched_seconds' => 100,
+            'duration_seconds' => 100,
+            'completed_at' => now(),
+        ]);
+
+        $this->actingAs($student)
+            ->get('/dashboard')
+            ->assertOk()
+            ->assertSee('Your learning progress')
+            ->assertSee('50%')
+            ->assertSee('1 / 2')
+            ->assertSee('Lessons & videos completed')
+            ->assertViewHas('studentInsights', fn (array $insights) => $insights['total_lessons'] === 2
+                && $insights['completed_lessons'] === 1
+                && $insights['progress_percent'] === 50);
     }
 
     public function test_student_dashboard_does_not_count_lessons_from_unenrolled_courses(): void
