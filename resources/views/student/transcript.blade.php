@@ -58,7 +58,7 @@
         <p class="muted">{{ __('No submitted exam attempts found.') }}</p>
     @else
         <div class="table-responsive"><table class="table">
-            <thead><tr><th>{{ __('Exam') }}</th><th>{{ __('Course') }}</th><th>{{ __('Score') }}</th><th>{{ __('Maximum') }}</th><th>{{ __('Submitted') }}</th></tr></thead>
+            <thead><tr><th>{{ __('Exam') }}</th><th>{{ __('Course') }}</th><th>{{ __('Score') }}</th><th>{{ __('Maximum') }}</th><th>{{ __('Result') }}</th><th>{{ __('Submitted') }}</th></tr></thead>
             <tbody>@foreach($examAttempts as $attempt)
                 @php($maximum = (int) $attempt->maximum_score)
                 <tr>
@@ -66,6 +66,7 @@
                     <td>{{ $attempt->exam->batch?->course?->title ?? '—' }}</td>
                     <td>{{ $attempt->transcript_score === null ? __('Pending') : number_format((float) $attempt->transcript_score, 2) }}</td>
                     <td>{{ $maximum ?: '—' }}</td>
+                    <td>{{ $attempt->transcript_score === null ? __('Pending') : ($attempt->transcript_score >= $attempt->exam->pass_marks ? __('Passed') : __('Not passed')) }}</td>
                     <td>{{ $attempt->submitted_at?->format('d M Y') ?? '—' }}</td>
                 </tr>
             @endforeach</tbody>
