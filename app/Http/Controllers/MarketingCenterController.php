@@ -2,7 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DashboardAnnouncement;
+use App\Models\MetaBoostCampaign;
 use App\Models\Setting;
+use App\Models\SmsCampaign;
+use App\Models\SupportTicket;
 use Illuminate\View\View;
 
 class MarketingCenterController extends Controller
@@ -56,8 +60,20 @@ class MarketingCenterController extends Controller
             ],
         ];
 
+        $broadcastMetrics = [
+            'sms_campaigns' => SmsCampaign::count(),
+            'sms_sent' => (int) SmsCampaign::sum('sent_count'),
+            'sms_failed' => (int) SmsCampaign::sum('failed_count'),
+            'meta_plans' => MetaBoostCampaign::count(),
+            'meta_drafts' => MetaBoostCampaign::where('status', 'draft')->count(),
+            'meta_spend_bdt' => (float) MetaBoostCampaign::sum('actual_spend_bdt'),
+            'open_support_tickets' => SupportTicket::whereIn('status', ['open', 'in_progress'])->count(),
+            'active_announcements' => DashboardAnnouncement::currentlyActive()->count(),
+        ];
+
         return view('admin.marketing.index', [
             'integrations' => $integrations,
+            'broadcastMetrics' => $broadcastMetrics,
             'sitemapUrl' => route('seo.sitemap'),
             'robotsUrl' => route('seo.robots'),
         ]);
