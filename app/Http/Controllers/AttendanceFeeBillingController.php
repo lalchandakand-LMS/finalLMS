@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
 use App\Models\AttendanceFeePeriod;
 use App\Models\Batch;
 use App\Models\Invoice;
@@ -72,6 +73,7 @@ final class AttendanceFeeBillingController extends Controller
                 }
 
                 $amount = round($attendedClasses * $rate, 2);
+                abort_if($amount > 99999999.99, 422, 'The calculated class fee exceeds the maximum supported invoice amount.');
                 $invoice = Invoice::query()->create([
                     'user_id' => $studentId,
                     'course_id' => $lockedBatch->course_id,
@@ -102,6 +104,20 @@ final class AttendanceFeeBillingController extends Controller
 
             return compact('created', 'alreadyBilled', 'noAttendance');
         }, 3);
+
+        try {
+            ActivityLog::query()->create([
+                'user_id' => $actor->id,
+                'event' => 'finance.attendance_fee_invoices_generated',
+                'description' => 'Generated '.$result['created'].' attendance-based class fee invoice(s) for batch #'.$batch->id.' in '.$data['billing_period'].'.',
+                'method' => $request->method(),
+                'route' => optional($request->route())->getName(),
+                'ip_address' => $request->ip(),
+                'user_agent' => mb_substr((string) $request->userAgent(), 0, 1000),
+            ]);
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
 
         return back()->with('success', sprintf(
             'Class-fee billing complete: %d invoice(s) created, %d already billed, %d student(s) had no payable attendance.',
