@@ -130,6 +130,7 @@ class TestPluginPaymentGateway implements \App\Contracts\Payments\PaymentGateway
     {
         return ['payment_id' => 'test-payment', 'checkout_url' => 'https://payments.example.test/checkout'];
     }
+    public function callbackPaymentId(array $callback): ?string { return $callback['paymentID'] ?? null; }
     public function verifyCallback(\App\Models\Payment $payment, array $callback): array
     {
         return ['verified' => [], 'executed' => []];
