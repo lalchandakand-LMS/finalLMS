@@ -148,6 +148,8 @@
         * { box-sizing: border-box; }
         /* Keep off-canvas fixed navigation drawers from expanding the document's scrollable width. */
         html { overflow-x: clip; }
+        body { max-width:100%; overflow-x:clip; }
+        img, video, iframe, canvas, svg { max-width:100%; }
         body.admin-shell { background:#f5f7fb; }
         .admin-shell .topbar { margin-left:252px; }
         .admin-shell .nav { max-width:none; padding:14px 26px; }
