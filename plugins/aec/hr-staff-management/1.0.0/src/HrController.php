@@ -23,8 +23,14 @@ final class HrController extends Controller
         $payrollQuery = $this->scoped(StaffPayroll::query()->with('staff'), $actor);
         $attendanceQuery = $this->scoped(StaffAttendance::query()->with('staff'), $actor);
         $leaveQuery = $this->scoped(StaffLeaveRequest::query()->with('staff'), $actor);
+        $linkableUsers = User::query()->whereIn('role', ['teacher', 'branch_manager', 'staff'])
+            ->when($actor->isBranchManager(), fn ($query) => $query->where(function ($builder) use ($actor): void {
+                $builder->whereNull('branch_id')->orWhere('branch_id', $actor->branch_id);
+            }))
+            ->orderBy('name')->get(['id', 'name', 'email', 'role']);
 
         return view('hr-staff-management::index', [
+            'linkableUsers' => $linkableUsers,
             'staff' => $staffQuery->orderBy('full_name')->paginate(25, ['*'], 'staff_page')->withQueryString(),
             'payrolls' => $payrollQuery->latest()->limit(60)->get(),
             'attendances' => $attendanceQuery->whereDate('attendance_date', '>=', now()->subDays(30)->toDateString())->latest('attendance_date')->limit(100)->get(),
