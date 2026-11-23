@@ -30,7 +30,7 @@ final class ReferralIncomeController extends Controller
             ->selectRaw("SUM(CASE WHEN status = 'approved' THEN commission_amount ELSE 0 END) as available")
             ->selectRaw("SUM(CASE WHEN status = 'paid' THEN commission_amount ELSE 0 END) as paid")->first();
         $referralCount = DB::table('referral_attributions')->where('referrer_user_id', $user->id)->where('status', 'active')->count();
-        return view('referral-income::dashboard', compact('code', 'commissions', 'payouts', 'stats', 'referralCount'));
+        return view('modules.referral.dashboard', compact('code', 'commissions', 'payouts', 'stats', 'referralCount'));
     }
 
     public function track(string $code, Request $request): RedirectResponse
@@ -70,7 +70,7 @@ final class ReferralIncomeController extends Controller
             return $row;
         });
         $rules = DB::table('referral_income_rules')->orderBy('owner_type')->get();
-        return view('referral-income::admin', compact('commissions', 'payouts', 'rules'));
+        return view('modules.referral.admin', compact('commissions', 'payouts', 'rules'));
     }
 
     public function updateRules(Request $request, ReferralIncomeService $service): RedirectResponse
