@@ -1020,7 +1020,7 @@ class ExaminationWorkflowTest extends TestCase
         $this->actingAs($teacher)->get(route('teacher.exams.results', $exam))
             ->assertOk()->assertSee('Student result review requests')
             ->assertSee('Please review the marks awarded for my written explanation.');
-        $review = \\App\\Models\\ExamResultReview::where('exam_attempt_id', $attempt->id)->firstOrFail();
+        $review = \App\\Models\\ExamResultReview::where('exam_attempt_id', $attempt->id)->firstOrFail();
         $this->post(route('teacher.exam-result-reviews.respond', $review), [
             'status' => 'approved',
             'teacher_response' => 'We reviewed your response and confirm the published marks.',
@@ -1050,11 +1050,11 @@ class ExaminationWorkflowTest extends TestCase
         $this->postJson(route('student.exams.answers.save', $attempt), ['answers' => [$question->id => 0]])->assertOk();
 
         $this->travelTo($attempt->started_at->copy()->addMinutes(1)->addSecond());
-        $this->assertTrue(app(\\App\\Services\\ExamAttemptFinalizer::class)->autoSubmitExpired($attempt->id));
+        $this->assertTrue(app(\App\\Services\\ExamAttemptFinalizer::class)->autoSubmitExpired($attempt->id));
         $this->assertDatabaseHas('exam_attempts', [
             'id' => $attempt->id, 'status' => 'submitted', 'score' => 1, 'auto_submitted' => true,
         ]);
-        $this->assertFalse(app(\\App\\Services\\ExamAttemptFinalizer::class)->autoSubmitExpired($attempt->id));
+        $this->assertFalse(app(\App\\Services\\ExamAttemptFinalizer::class)->autoSubmitExpired($attempt->id));
     }
 
     public function test_question_bank_accepts_reusable_true_false_and_short_answer_items(): void
