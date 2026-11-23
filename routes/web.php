@@ -675,7 +675,7 @@ Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('a
 
 // Native AI assistant, specialist agents and human-reviewed actions.
 foreach (['admin' => 'admin', 'branch_manager' => 'branch', 'teacher' => 'teacher', 'student' => 'student', 'guardian' => 'guardian', 'support_staff' => 'support'] as $aiRole => $aiPrefix) {
-    Route::middleware(['auth', 'verified', 'activity.log', 'role:'.$aiRole])
+    Route::middleware(array_merge(['auth', 'verified', 'activity.log', 'role:'.$aiRole], $aiRole === 'student' ? ['student.device'] : []))
         ->prefix($aiPrefix.'/ai-assistant')->name($aiPrefix.'.ai-assistant.')->group(function () {
             Route::get('/', [AssistantController::class, 'index'])->name('index');
             Route::post('/messages', [AssistantController::class, 'send'])->middleware('throttle:10,1')->name('messages.store');
