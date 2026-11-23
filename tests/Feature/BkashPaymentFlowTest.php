@@ -120,14 +120,15 @@ class BkashPaymentFlowTest extends TestCase
         ]);
 
         $this->actingAs($student)
-            ->post(route('courses.payments.bkash', $course))
+            ->post(route('courses.payments.gateway', ['course' => $course, 'provider' => 'bkash']))
             ->assertRedirect('https://tokenized.sandbox.bka.sh/checkout/pay/BKASH-PAY-001');
 
         $payment = Payment::query()->where('course_id', $course->id)->firstOrFail();
         $this->assertSame('pending', $payment->status);
         $this->assertDatabaseMissing('enrollments', ['user_id' => $student->id, 'course_id' => $course->id]);
 
-        $this->get(route('payments.bkash.callback', [
+        $this->get(route('payments.gateway.callback', [
+            'provider' => 'bkash',
             'paymentID' => 'BKASH-PAY-001',
             'status' => 'success',
         ]))->assertRedirect(route('courses.show', $course));
