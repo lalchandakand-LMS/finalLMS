@@ -71,6 +71,9 @@ final class AgentActionWorkflow
                 'action_key' => self::STUDY_PLAN_ACTION,
                 'payload_hash' => hash('sha256', $json),
             ]);
+            foreach (DB::table('users')->where('role', 'admin')->pluck('id') as $adminId) {
+                $this->notify((int) $adminId, 'agent_action_pending', 'AI action needs review', 'A student study plan is waiting for approval.', ['proposal_id' => $proposalId]);
+            }
 
             return DB::table('ai_agent_action_proposals')->where('id', $proposalId)->first();
         }, 3);
@@ -136,6 +139,7 @@ final class AgentActionWorkflow
                 'result_id' => $planId,
                 'requester_id' => (int) $proposal->requester_id,
             ]);
+            $this->notify((int) $proposal->requester_id, 'agent_action_executed', 'Study plan approved', 'Your study plan has been approved and is now active.', ['proposal_id' => $proposalId, 'plan_id' => $planId]);
 
             return DB::table('ai_agent_action_proposals')->where('id', $proposalId)->first();
         }, 3);
@@ -175,9 +179,19 @@ final class AgentActionWorkflow
                 'action_key' => (string) $proposal->action_key,
                 'requester_id' => (int) $proposal->requester_id,
             ]);
+            $this->notify((int) $proposal->requester_id, 'agent_action_rejected', 'Study plan not approved', 'Your study plan proposal was not approved. Review the note in your AI workspace.', ['proposal_id' => $proposalId]);
 
             return DB::table('ai_agent_action_proposals')->where('id', $proposalId)->first();
         }, 3);
+    }
+
+    private function notify(int $userId, string $event, string $title, string $body, array $data): void
+    {
+        if (! DB::getSchemaBuilder()->hasTable('ai_agent_notifications')) return;
+        DB::table('ai_agent_notifications')->insert([
+            'user_id' => $userId, 'event' => $event, 'title' => $title, 'body' => $body,
+            'data' => json_encode($data, JSON_THROW_ON_ERROR), 'created_at' => now(), 'updated_at' => now(),
+        ]);
     }
 
     private function teacherOwnsStudentCourse(int $teacherId, int $studentId): bool
