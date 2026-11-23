@@ -68,7 +68,9 @@
                 <label>Capacity<input type="number" name="capacity" min="1" max="1000" required></label>
                 <label>Start<input type="datetime-local" name="starts_at" required></label>
                 <label>End<input type="datetime-local" name="ends_at" required></label>
-                <label>Fee (BDT)<input type="number" name="fee" min="0" step="0.01" value="0" required></label>
+                <label>Fee mode<select name="fee_calculation_mode"><option value="fixed">Fixed course fee</option><option value="per_class">Per attended class</option></select></label>
+                <label>Per-class fee (BDT)<input type="number" name="per_class_fee" min="0.01" step="0.01"></label>
+                <label>Fixed fee (BDT)<input type="number" name="fee" min="0" step="0.01" value="0" required></label>
                 <button class="btn primary" type="submit" @disabled($branches->isEmpty() || $courses->isEmpty() || $teachers->isEmpty())>Create batch</button>
             </form>
         </section>
@@ -85,6 +87,7 @@
                         <div class="muted">{{ $batch->course->title }} · {{ $batch->branch->name }} · Teacher: {{ $batch->teacher->name }}</div>
                         <div class="muted">{{ $batch->starts_at->format('M j, Y H:i') }} to {{ $batch->ends_at->format('M j, Y H:i') }} · Capacity {{ $batch->capacity }} · BDT {{ number_format($batch->fee, 2) }}</div>
                         <a href="{{ route('admin.batches.attendance.index', $batch) }}" class="btn secondary" style="margin-top:10px;">Attendance</a>
+                        @if($batch->fee_calculation_mode === 'per_class')<form method="POST" action="{{ route('admin.batches.attendance-fees.generate', $batch) }}" style="display:inline-flex;gap:8px;align-items:center;margin-top:10px;">@csrf<input type="month" name="billing_period" value="{{ now()->subMonth()->format('Y-m') }}" required><input type="date" name="due_date" value="{{ now()->addDays(7)->toDateString() }}"><button class="btn primary" type="submit">Generate class-fee invoices</button></form>@endif
                         <a href="{{ route('admin.batches.exams.index', $batch) }}" class="btn secondary" style="margin-top:10px;">Exams & Question Bank</a>
                     </div>
                 </div>
@@ -98,7 +101,9 @@
                         <label>Course<select name="course_id" required>@foreach($courses as $course)<option value="{{ $course->id }}" @selected($batch->course_id === $course->id)>{{ $course->title }}</option>@endforeach</select></label>
                         <label>Teacher<select name="teacher_id" required>@foreach($teachers as $teacher)<option value="{{ $teacher->id }}" @selected($batch->teacher_id === $teacher->id)>{{ $teacher->name }}</option>@endforeach</select></label>
                         <label>Capacity<input type="number" name="capacity" min="1" max="1000" value="{{ $batch->capacity }}" required></label>
-                        <label>Fee (BDT)<input type="number" name="fee" min="0" step="0.01" value="{{ $batch->fee }}" required></label>
+                        <label>Fee mode<select name="fee_calculation_mode"><option value="fixed" @selected(($batch->fee_calculation_mode ?? 'fixed') === 'fixed')>Fixed course fee</option><option value="per_class" @selected($batch->fee_calculation_mode === 'per_class')>Per attended class</option></select></label>
+                        <label>Per-class fee (BDT)<input type="number" name="per_class_fee" min="0.01" step="0.01" value="{{ $batch->per_class_fee }}"></label>
+                        <label>Fixed fee (BDT)<input type="number" name="fee" min="0" step="0.01" value="{{ $batch->fee }}" required></label>
                         <label>Start<input type="datetime-local" name="starts_at" value="{{ $batch->starts_at->format('Y-m-d\TH:i') }}" required></label>
                         <label>End<input type="datetime-local" name="ends_at" value="{{ $batch->ends_at->format('Y-m-d\TH:i') }}" required></label>
                         <label>Status<select name="status"><option value="open" @selected($batch->status === 'open')>Open</option><option value="closed" @selected($batch->status === 'closed')>Closed</option><option value="completed" @selected($batch->status === 'completed')>Completed</option></select></label>
