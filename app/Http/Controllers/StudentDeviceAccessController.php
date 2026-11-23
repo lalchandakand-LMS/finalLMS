@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\DeviceSession;
 use App\Models\StudentDevice;
+use App\Models\StudentProfile;
 use App\Models\User;
 use App\Services\SmsGateway;
 use App\Notifications\AdminMfaBootstrapCodeNotification;
@@ -272,6 +273,11 @@ class StudentDeviceAccessController extends Controller
             $request->session()->invalidate();
             $request->session()->regenerateToken();
         }
+
+        if ($user->isStudent() && StudentProfile::query()->where('user_id', $user->id)->whereIn('lifecycle_status', ['suspended', 'graduated'])->exists()) {
+            return back()->withErrors(['email' => 'This student account is inactive. Please contact the administration.'])->onlyInput('email');
+        }
+
 
         // Never carry a pending MFA or device-verification challenge from a
         // previous identity into a new successful password-authentication flow.

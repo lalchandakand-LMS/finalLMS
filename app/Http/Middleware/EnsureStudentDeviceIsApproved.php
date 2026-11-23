@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\StudentDevice;
+use App\Models\StudentProfile;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -17,6 +18,14 @@ class EnsureStudentDeviceIsApproved
 
         if (! $user) {
             return $next($request);
+        }
+
+        if ($user->isStudent() && StudentProfile::query()->where('user_id', $user->id)->whereIn('lifecycle_status', ['suspended', 'graduated'])->exists()) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login')->with('error', 'This student account is inactive. Please contact the administration.');
         }
 
         if ($user->isAdmin()) {

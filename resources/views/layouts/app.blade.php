@@ -436,6 +436,7 @@
             @if(\Illuminate\Support\Facades\Route::has('admin.flash-sales.index') && \App\Models\FlashSale::isPluginActive())
                 <a href="{{ route('admin.flash-sales.index') }}"><span>🔥</span><span class="nav-text">Flash Sale</span></a>
             @endif
+            <a href="{{ route('admin.students.index') }}" class="{{ request()->routeIs('admin.students.*') ? 'active' : '' }}"><span>🎓</span><span class="nav-text">Student Management</span></a>
             <a href="{{ route('admin.users.index') }}"><span>👥</span><span class="nav-text">Students & teachers</span></a>
             @if($studentTrackingAvailable && \Illuminate\Support\Facades\Route::has('admin.student-tracking.index'))
                 <a class="{{ request()->routeIs('admin.student-tracking.*') ? 'active' : '' }}" href="{{ route('admin.student-tracking.index') }}"><span>📊</span><span class="nav-text">Student Tracking</span></a>
@@ -488,6 +489,7 @@
                     @endif
                     @if(auth()->user()->hasAdminPermission('branch.students'))
                         <a class="{{ request()->routeIs('branch.students.*') ? 'active' : '' }}" href="{{ route('branch.students.index') }}"><span>👥</span><span class="nav-text">Branch students</span></a>
+                        <a class="{{ request()->routeIs('branch.students.manage*') ? 'active' : '' }}" href="{{ route('branch.students.manage') }}"><span>🎓</span><span class="nav-text">Student Management</span></a>
                     @endif
                     @if($studentTrackingAvailable && \Illuminate\Support\Facades\Route::has('branch.student-tracking.index'))
                         <a class="{{ request()->routeIs('branch.student-tracking.*') ? 'active' : '' }}" href="{{ route('branch.student-tracking.index') }}"><span>📊</span><span class="nav-text">Student Tracking</span></a>
