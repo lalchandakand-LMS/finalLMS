@@ -3,7 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Invoice;
-use App\Models\Attendance;
+use App\Models\LiveClass;
+use App\Models\LiveClassAttendance;
 use App\Models\AttendanceFeePeriod;
 use App\Models\Batch;
 use App\Models\Branch;
@@ -60,11 +61,20 @@ class InvoiceManagementTest extends TestCase
         }
         $period = now()->subMonth()->format('Y-m');
         foreach (['present', 'late', 'absent', 'present'] as $index => $status) {
-            Attendance::create([
+            $classDate = now()->subMonth()->startOfMonth()->addDays($index + 1);
+            $liveClass = LiveClass::create([
                 'batch_id' => $batch->id,
+                'title' => 'Billable Session '.$index,
+                'meeting_url' => 'https://example.test/class/'.$index,
+                'starts_at' => $classDate->copy()->setTime(10, 0),
+                'ends_at' => $classDate->copy()->setTime(11, 0),
+                'status' => 'completed',
+                'created_by' => $teacher->id,
+            ]);
+            LiveClassAttendance::create([
+                'live_class_id' => $liveClass->id,
                 'student_id' => $student->id,
                 'marked_by' => $teacher->id,
-                'attendance_date' => now()->subMonth()->startOfMonth()->addDays($index)->toDateString(),
                 'status' => $status,
             ]);
         }
