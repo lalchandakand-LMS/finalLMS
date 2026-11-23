@@ -569,7 +569,7 @@
     let inViewport = true;
     const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
     let reducedMotion = motionPreference.matches;
-    let playing = root.dataset.autoplay === 'true' && !reducedMotion;
+    let playing = root.dataset.autoplay === 'true';
     const interval = Math.max(3000, Math.min(12000, Number(root.dataset.interval) || 5000));
     const pauseOnHover = root.dataset.pauseHover === 'true';
     const transition = ['slide','fade','zoom'].includes(root.dataset.transition) ? root.dataset.transition : 'slide';
@@ -690,7 +690,7 @@
 
     render(active);
     start();
-})();;
+})();
 </script>
 @endpush
 
