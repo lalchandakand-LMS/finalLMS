@@ -143,6 +143,8 @@ jobs:
         run: |
           mysql -h 127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS aloms_lms_browser_test"
           DB_DATABASE=aloms_lms_browser_test php artisan migrate:fresh --force
+      - name: Clear cached Laravel bootstrap before browser smoke tests
+        run: php artisan optimize:clear
       - name: Start Laravel browser-test server
         env:
           APP_ENV: testing
