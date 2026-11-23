@@ -6,6 +6,7 @@
 <div class="container" style="max-width:1100px;">
     <div class="page-header"><div><span class="badge info">{{ __('Core integrations') }}</span><h1>{{ __('Official API Connector Framework') }}</h1><p class="muted">{{ __('Credentials are encrypted. A connector is not marked connected until its webhook is authenticated.') }}</p></div></div>
     @if(session('success'))<div class="alert success">{{ session('success') }}</div>@endif
+    @if(session('error'))<div class="alert error">{{ session('error') }}</div>@endif
     @if($errors->any())<div class="alert error">{{ $errors->first() }}</div>@endif
     @foreach($connectors as $key => $connector)
         <section class="panel" style="margin:16px 0;">
@@ -26,6 +27,7 @@
             </form>
             @if($connector['configured'])
                 <div style="display:flex;gap:8px;margin-top:12px;">
+                    <form method="POST" action="{{ route('admin.integrations.health-check', $key) }}">@csrf<button class="btn secondary" type="submit">{{ __('Test connection') }}</button></form>
                     <form method="POST" action="{{ route('admin.integrations.pause', $key) }}">@csrf<button class="btn secondary" type="submit">{{ __('Pause') }}</button></form>
                     <form method="POST" action="{{ route('admin.integrations.disconnect', $key) }}" onsubmit="return confirm('{{ __('Disconnect this provider?') }}')">@csrf<button class="btn danger" type="submit">{{ __('Disconnect') }}</button></form>
                 </div>
