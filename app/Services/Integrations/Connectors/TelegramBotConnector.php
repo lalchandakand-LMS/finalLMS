@@ -58,7 +58,7 @@ final class TelegramBotConnector implements ApiConnector
             'event_id' => (string) $updateId,
             'event_type' => isset($payload['message']) ? 'message' : (isset($payload['edited_message']) ? 'edited_message' : 'update'),
             'external_account_id' => isset($message['chat']['id']) ? (string) $message['chat']['id'] : null,
-            'payload' => ['message_id' => $message['message_id'] ?? null, 'chat_id' => $message['chat']['id'] ?? null, 'text' => isset($message['text']) ? mb_substr((string) $message['text'], 0, 4000) : null],
+            'payload' => ['message_id' => $message['message_id'] ?? null, 'chat_id' => $message['chat']['id'] ?? null, 'has_text' => isset($message['text'])],
         ];
     }
 
