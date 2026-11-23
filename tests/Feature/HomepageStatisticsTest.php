@@ -28,11 +28,17 @@ class HomepageStatisticsTest extends TestCase
     {
         $student = User::factory()->create(['role' => 'student']);
         $course = Course::factory()->create(['status' => 'published']);
+        $secondActiveCourse = Course::factory()->create(['status' => 'published']);
         $completedCourse = Course::factory()->create(['status' => 'published']);
 
         Enrollment::create([
             'user_id' => $student->id,
             'course_id' => $course->id,
+            'status' => 'active',
+        ]);
+        Enrollment::create([
+            'user_id' => $student->id,
+            'course_id' => $secondActiveCourse->id,
             'status' => 'active',
         ]);
         Enrollment::create([
@@ -77,10 +83,10 @@ class HomepageStatisticsTest extends TestCase
         $statistics = app(HomepageStatistics::class)->get();
 
         $this->assertSame(1, $statistics['students']);
-        $this->assertSame(2, $statistics['teachers']);
-        $this->assertSame(2, $statistics['courses']);
+        $this->assertSame(3, $statistics['teachers']);
+        $this->assertSame(3, $statistics['courses']);
         $this->assertSame(1, $statistics['lessons']);
-        $this->assertSame(1, $statistics['enrollments']);
+        $this->assertSame(2, $statistics['enrollments']);
         $this->assertSame(1, $statistics['enrolled_students']);
         $this->assertSame(1, $statistics['completed_enrollments']);
         $this->assertSame(1, $statistics['open_batches']);
