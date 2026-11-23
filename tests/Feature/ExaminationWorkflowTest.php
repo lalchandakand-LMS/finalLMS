@@ -11,6 +11,8 @@ use App\Models\Exam;
 use App\Models\ExamAttempt;
 use App\Models\ExamQuestion;
 use App\Models\QuestionBankQuestion;
+use App\Models\QuestionSet;
+use App\Models\QuestionSetQuestion;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -1031,6 +1033,54 @@ class ExaminationWorkflowTest extends TestCase
 
         $this->actingAs($teacher)->get(route('teacher.exams.result-sheet', $exam))
             ->assertOk()->assertSee('Merit list and result sheet')->assertSee($student->name);
+    }
+
+    public function test_exam_builder_can_copy_questions_from_reusable_published_question_sets(): void
+    {
+        [$teacher, , $batch] = $this->makeBatchWithStudent();
+        $set = QuestionSet::create([
+            'title' => 'Reusable English Grammar Set',
+            'description' => 'Core grammar questions',
+            'status' => 'published',
+            'created_by' => $teacher->id,
+        ]);
+        $trueFalse = QuestionSetQuestion::create([
+            'question_set_id' => $set->id,
+            'type' => 'true_false',
+            'question' => 'A verb expresses an action or state.',
+            'options' => ['True', 'False'],
+            'correct_option' => 0,
+            'marks' => 2,
+            'position' => 1,
+        ]);
+        $written = QuestionSetQuestion::create([
+            'question_set_id' => $set->id,
+            'type' => 'written',
+            'question' => 'Write a short paragraph about your daily routine.',
+            'marks' => 5,
+            'position' => 2,
+        ]);
+
+        $this->actingAs($teacher)->post(route('teacher.batches.exams.store', $batch), [
+            'title' => 'Exam from reusable set',
+            'starts_at' => now()->addMinutes(5)->format('Y-m-d H:i:s'),
+            'ends_at' => now()->addHours(2)->format('Y-m-d H:i:s'),
+            'duration_minutes' => 30,
+            'pass_marks' => 3,
+            'question_set_ids' => [$set->id],
+        ])->assertRedirect();
+
+        $exam = Exam::where('title', 'Exam from reusable set')->firstOrFail();
+        $this->assertDatabaseHas('exam_questions', [
+            'exam_id' => $exam->id,
+            'question_set_question_id' => $trueFalse->id,
+            'type' => 'true_false',
+        ]);
+        $this->assertDatabaseHas('exam_questions', [
+            'exam_id' => $exam->id,
+            'question_set_question_id' => $written->id,
+            'type' => 'written',
+        ]);
     }
 
     public function test_scheduler_finalizes_expired_attempts_server_side(): void
