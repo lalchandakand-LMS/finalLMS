@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
 use App\Models\AttendanceFeePeriod;
 use App\Models\Batch;
 use App\Models\LiveClass;
@@ -190,6 +191,20 @@ class LiveClassController extends Controller
 
             $session->update(['status' => 'completed']);
         }, 3);
+
+        try {
+            ActivityLog::query()->create([
+                'user_id' => Auth::id(),
+                'event' => 'live_class.attendance_recorded',
+                'description' => 'Recorded attendance for live class #'.$liveClass->id.' ('.count($data['records']).' student record(s)).',
+                'method' => $request->method(),
+                'route' => optional($request->route())->getName(),
+                'ip_address' => $request->ip(),
+                'user_agent' => mb_substr((string) $request->userAgent(), 0, 1000),
+            ]);
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
 
         return back()->with('success', 'Class-session attendance saved successfully.');
     }
