@@ -1,14 +1,14 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use App\\Models\\Course;
-use App\\Models\\Enrollment;
-use App\\Models\\User;
-use App\\Services\\HomepageStatistics;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Illuminate\\Support\\Facades\\Cache;
-use Tests\\TestCase;
+use App\Models\Course;
+use App\Models\Enrollment;
+use App\Models\User;
+use App\Services\HomepageStatistics;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
+use Tests\TestCase;
 
 class HomepageStatisticsTest extends TestCase
 {
