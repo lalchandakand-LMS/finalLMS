@@ -9,6 +9,7 @@ use App\Services\Payments\PaymentGatewayManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Validator;
 use JsonException;
 
 class AdminPaymentGatewayController extends Controller
@@ -61,10 +62,14 @@ class AdminPaymentGatewayController extends Controller
     public function updateMfs(Request $request, string $provider, MfsMerchantConfigurationService $mfs): RedirectResponse
     {
         abort_unless(array_key_exists($provider, $mfs->providers()), 404);
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'mode' => ['required', 'in:sandbox'],
             'credentials_json' => ['required', 'string', 'max:12000'],
         ]);
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput($request->except('credentials_json'));
+        }
+        $validated = $validator->validated();
         try {
             $credentials = json_decode($validated['credentials_json'], true, 16, JSON_THROW_ON_ERROR);
         } catch (JsonException) {
