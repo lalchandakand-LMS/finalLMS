@@ -15,7 +15,7 @@ final class AdminSettingsController
 {
     public function index(): View
     {
-        return view('universal-ai-assistant::settings', [
+        return view('modules.ai.settings', [
             'settings' => AssistantSettings::publicSettings(),
             'roles' => AssistantSettings::ROLES,
             'modelsUrl' => route('admin.ai-assistant.models'),
