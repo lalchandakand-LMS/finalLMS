@@ -509,6 +509,10 @@ class ExamController extends Controller
                 if ($type === 'short_answer') {
                     $expected = trim((string) $question->correct_answer);
                     $actual = trim((string) $answer->answer_text);
+                    if ($actual === '') {
+                        $answer->update(['is_correct' => false, 'marks_awarded' => 0]);
+                        continue;
+                    }
                     if (! ($rules['short_answer_case_sensitive'] ?? false)) {
                         $expected = mb_strtolower(preg_replace('/\\s+/u', ' ', $expected));
                         $actual = mb_strtolower(preg_replace('/\\s+/u', ' ', $actual));
