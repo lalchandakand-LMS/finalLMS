@@ -289,4 +289,29 @@ class HomepageSliderTest extends TestCase
         $saved = json_decode((string) Setting::value('home_slides'), true);
         $this->assertSame('', $saved[0]['button_url']);
     }
+
+    public function test_legacy_homepage_slide_without_alignment_uses_safe_default(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $asset = MediaAsset::create([
+            'uploaded_by' => $admin->id,
+            'disk' => 'public',
+            'path' => 'media/legacy-slide.jpg',
+            'original_name' => 'legacy-slide.jpg',
+            'mime_type' => 'image/jpeg',
+            'size' => 1000,
+        ]);
+
+        Setting::setValue('home_slides', json_encode([[
+            'enabled' => true,
+            'image_id' => $asset->id,
+            'title' => 'Legacy slide without alignment',
+        ]], JSON_THROW_ON_ERROR));
+
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('Legacy slide without alignment')
+            ->assertSee('home-carousel__content--left', false);
+    }
+
 }
