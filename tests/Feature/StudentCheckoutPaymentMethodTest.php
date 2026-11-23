@@ -2,12 +2,14 @@
 
 namespace Tests\Feature;
 
+use Aloms\UniversalPayment\Gateways\BkashGateway;
 use App\Models\Course;
 use App\Models\Setting;
 use App\Models\StudentDevice;
-use App\Services\Payments\PaymentGatewayManager;
 use App\Models\User;
+use App\Services\Payments\PaymentGatewayManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -36,7 +38,7 @@ class StudentCheckoutPaymentMethodTest extends TestCase
             'services.bkash.app_key' => 'test-app-key',
             'services.bkash.app_secret' => 'test-app-secret',
         ]);
-        \\Illuminate\\Support\\Facades\\DB::table('plugin_registry')->insert([
+        DB::table('plugin_registry')->insert([
             'plugin_key' => 'aec.universal-payment',
             'name' => 'Universal Payment',
             'version' => '1.0.0',
@@ -56,7 +58,7 @@ class StudentCheckoutPaymentMethodTest extends TestCase
         app(PaymentGatewayManager::class)->registerPluginGateway(
             'aec.universal-payment',
             'bkash',
-            \\Aloms\\UniversalPayment\\Gateways\\BkashGateway::class,
+            BkashGateway::class,
         );
         Setting::setValue('payment_gateway_registry', json_encode(['bkash' => true], JSON_THROW_ON_ERROR));
 
