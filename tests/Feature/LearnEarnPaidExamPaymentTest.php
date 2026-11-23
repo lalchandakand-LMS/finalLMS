@@ -64,7 +64,7 @@ class LearnEarnPaidExamPaymentTest extends TestCase
         app(PaymentGatewayManager::class)->registerPluginGateway(
             'aec.universal-payment',
             'bkash',
-            \Aloms\\UniversalPayment\\Gateways\\BkashGateway::class,
+            \Aloms\UniversalPayment\Gateways\\BkashGateway::class,
         );
 
         // Plugin migrations create tables at runtime. MySQL implicitly commits DDL,
