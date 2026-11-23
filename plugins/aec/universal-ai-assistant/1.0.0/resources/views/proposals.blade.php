@@ -36,6 +36,20 @@
             <button class="btn primary" type="submit">{{ __('Send for human approval') }}</button>
         </form>
     </section>
+@if($role === 'student' && $learningPlans->isNotEmpty())
+    <section class="panel">
+        <h2>{{ __('Approved learning plans') }}</h2>
+        @foreach($learningPlans as $plan)
+            <article style="padding:12px 0;border-bottom:1px solid var(--border-color, #ddd);">
+                <strong>{{ $plan->title }}</strong>
+                <p>{{ $plan->goals }}</p>
+                @foreach(json_decode($plan->schedule, true) ?: [] as $slot)
+                    <p class="muted">{{ $slot['day'] ?? '' }} — {{ $slot['focus'] ?? '' }} ({{ $slot['minutes'] ?? 0 }} {{ __('minutes') }})</p>
+                @endforeach
+            </article>
+        @endforeach
+    </section>
+@endif
 @else
     <section class="panel">
         <h2>{{ __('Pending approval inbox') }}</h2>
