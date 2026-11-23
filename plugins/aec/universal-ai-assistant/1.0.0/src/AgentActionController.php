@@ -75,8 +75,10 @@ final class AgentActionController
         $validated = $request->validate(['version' => ['required', 'integer', 'min:1']]);
         try {
             $workflow->approve($request->user(), $proposal, (int) $validated['version']);
-        } catch (Throwable $exception) {
+        } catch (RuntimeException $exception) {
             return back()->withErrors(['proposal' => $exception->getMessage()]);
+        } catch (Throwable) {
+            return back()->withErrors(['proposal' => __('The proposal could not be processed. No action was executed; contact an administrator if the problem continues.')]);
         }
 
         return back()->with('success', __('The approved action was executed and recorded in the audit trail.'));
