@@ -7,7 +7,7 @@ The LMS uses a provider-neutral payment contract. Checkout and fulfillment code 
 ## Security model
 
 - Gateway PHP code is installed and reviewed as application code. Admin users cannot upload or execute arbitrary PHP plugins.
-- Provider secrets stay in deployment environment variables or a secret manager. They are never returned to the Admin UI, stored in ordinary settings, committed to Git, or sent to mobile clients.
+- Provider secrets stay in deployment environment variables or the encrypted Admin merchant-credential store (`mfs_merchant_configurations.credentials`). They are never returned to the Admin UI, flashed into session input, included in audit descriptions, committed to Git, or sent to mobile clients.
 - Admin registry enablement is separate from provider configuration. A provider is available only when both are true.
 - Browser redirects and callback query parameters are untrusted. Adapters must fetch authoritative status server-to-server.
 - Every adapter must validate provider payment ID, exact amount, currency, merchant/order reference and terminal success status before the application fulfills an order.
@@ -32,8 +32,10 @@ Payment gateway packages use the same central Laravel Plugin Manager as every ot
 
 ## Current adapter status
 
-- bKash Tokenized Checkout: first adapter, BDT only. Uses the existing server-side token/create/execute/status client.
-- Nagad, SSLCommerz, Stripe and PayPal: not registered yet. They require official merchant/API documentation, credentials and provider-specific sandbox tests before an adapter can be enabled.
+- bKash Tokenized Checkout: first adapter, BDT only. Uses the existing server-side token/create/execute/status client and encrypted Admin credentials; current endpoint policy is sandbox-only.
+- Nagad and Rocket: encrypted Admin credential records are supported; direct checkout adapters are not registered until official merchant protocol specifications and provider sandbox tests are available.
+- SSLCOMMERZ: encrypted Admin store ID/password records support sandbox and live credential storage. No checkout adapter is registered until hosted-session, IPN, server-side validation, amount/currency binding, replay protection, reconciliation and sandbox acceptance tests are implemented.
+- Stripe and PayPal: not registered.
 
 ## Admin enablement
 
