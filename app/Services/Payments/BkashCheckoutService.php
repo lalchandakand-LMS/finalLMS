@@ -23,9 +23,12 @@ class BkashCheckoutService
         $scheme = parse_url($baseUrl, PHP_URL_SCHEME);
         $host = parse_url($baseUrl, PHP_URL_HOST);
         $port = parse_url($baseUrl, PHP_URL_PORT);
+        $hasUserInfo = parse_url($baseUrl, PHP_URL_USER) !== null || parse_url($baseUrl, PHP_URL_PASS) !== null;
+        $hasQueryOrFragment = parse_url($baseUrl, PHP_URL_QUERY) !== null || parse_url($baseUrl, PHP_URL_FRAGMENT) !== null;
 
         if ($scheme !== 'https' || $host !== 'tokenized.sandbox.bka.sh'
-            || ($port !== null && $port !== 443)) {
+            || ($port !== null && $port !== 443) || $hasUserInfo || $hasQueryOrFragment
+            || ! (bool) config('services.bkash.verify_ssl', true)) {
             throw new RuntimeException('Only the verified bKash sandbox endpoint is allowed.');
         }
 
