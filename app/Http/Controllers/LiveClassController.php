@@ -27,7 +27,7 @@ class LiveClassController extends Controller
             ->orderBy('starts_at');
 
         if ($user->isAdmin() || $user->isTeacher()) {
-            $query->with(['batch.enrollments' => fn ($enrollments) => $enrollments->where('status', 'active')->with('user')]);
+            $query->with(['batch.enrollments' => fn ($enrollments) => $enrollments->whereIn('status', ['active', 'completed'])->with('user')]);
         }
 
         if ($user->isTeacher()) {
@@ -178,7 +178,7 @@ class LiveClassController extends Controller
             }
 
             $activeStudentIds = $lockedBatch->enrollments()
-                ->where('status', 'active')
+                ->whereIn('status', ['active', 'completed'])
                 ->lockForUpdate()
                 ->pluck('user_id')
                 ->map(static fn ($id): int => (int) $id)
