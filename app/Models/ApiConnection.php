@@ -16,6 +16,7 @@ class ApiConnection extends Model
     protected function casts(): array
     {
         return [
+            'credentials_encrypted' => 'encrypted:array',
             'granted_scopes' => 'array',
             'capabilities' => 'array',
             'webhook_verified' => 'boolean',
@@ -23,6 +24,11 @@ class ApiConnection extends Model
             'last_webhook_event_at' => 'datetime',
             'last_successful_operation_at' => 'datetime',
         ];
+    }
+
+    public function isConnected(): bool
+    {
+        return $this->status === 'connected' && (bool) $this->webhook_verified;
     }
 
     public function hasStoredCredentials(): bool
