@@ -6,6 +6,14 @@ use App\Models\Certificate;
 use App\Models\CourseContentPost;
 use App\Models\CourseContentProgress;
 use App\Models\Course;
+use App\Models\AssignmentSubmission;
+use App\Models\Assignment;
+use App\Models\Batch;
+use App\Models\Branch;
+use App\Models\Exam;
+use App\Models\ExamAttempt;
+use App\Models\ExamAttemptQuestion;
+use App\Models\ExamQuestion;
 use App\Models\Enrollment;
 use App\Models\LessonProgress;
 use App\Models\User;
@@ -106,6 +114,99 @@ class StudentTranscriptTest extends TestCase
             ->assertSee('AEC-TRANSCRIPT-001')
             ->assertDontSee('Private Other Course')
             ->assertDontSee('OTHER-STUDENT-SECRET');
+    }
+
+    public function test_transcript_uses_frozen_random_exam_paper_and_includes_graded_assignment_results(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $course = Course::factory()->create(['teacher_id' => $teacher->id, 'title' => 'Assessment English']);
+        $branch = Branch::create(['name' => 'Transcript Branch', 'slug' => 'transcript-branch']);
+        $batch = Batch::create([
+            'branch_id' => $branch->id,
+            'course_id' => $course->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Assessment Batch',
+            'capacity' => 20,
+            'starts_at' => now()->subDay(),
+            'ends_at' => now()->addMonth(),
+            'fee' => 0,
+            'status' => 'open',
+        ]);
+        Enrollment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'batch_id' => $batch->id,
+            'status' => 'active',
+        ]);
+
+        $exam = Exam::create([
+            'batch_id' => $batch->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Randomized Grammar Exam',
+            'starts_at' => now()->subHour(),
+            'ends_at' => now()->addHour(),
+            'duration_minutes' => 30,
+            'pass_marks' => 3,
+            'status' => 'published',
+        ]);
+        $includedQuestion = ExamQuestion::create([
+            'exam_id' => $exam->id,
+            'question' => 'Included question',
+            'options' => ['A', 'B', 'C', 'D'],
+            'correct_option' => 0,
+            'marks' => 2,
+            'position' => 1,
+        ]);
+        $otherQuestion = ExamQuestion::create([
+            'exam_id' => $exam->id,
+            'question' => 'Not assigned to this attempt',
+            'options' => ['A', 'B', 'C', 'D'],
+            'correct_option' => 0,
+            'marks' => 10,
+            'position' => 2,
+        ]);
+        $attempt = ExamAttempt::create([
+            'exam_id' => $exam->id,
+            'student_id' => $student->id,
+            'started_at' => now()->subMinutes(30),
+            'submitted_at' => now()->subMinutes(5),
+            'score' => 2,
+            'status' => 'submitted',
+        ]);
+        ExamAttemptQuestion::create([
+            'exam_attempt_id' => $attempt->id,
+            'exam_question_id' => $includedQuestion->id,
+            'position' => 1,
+        ]);
+
+        $assignment = Assignment::create([
+            'batch_id' => $batch->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Writing Assignment',
+            'instructions' => 'Write a paragraph.',
+            'due_at' => now()->addDay(),
+            'max_marks' => 10,
+            'status' => 'published',
+        ]);
+        AssignmentSubmission::create([
+            'assignment_id' => $assignment->id,
+            'student_id' => $student->id,
+            'answer' => 'My paragraph.',
+            'submitted_at' => now()->subDay(),
+            'score' => 8,
+            'status' => 'graded',
+        ]);
+
+        $this->actingAs($student)
+            ->get(route('student.transcript'))
+            ->assertOk()
+            ->assertSee('Randomized Grammar Exam')
+            ->assertSee('2.00')
+            ->assertSee('2', false)
+            ->assertSee('80.00%')
+            ->assertSee('Writing Assignment')
+            ->assertSee('8.00');
     }
 
     public function test_non_student_cannot_open_student_transcript(): void
