@@ -17,6 +17,7 @@ use App\Models\DashboardAnnouncement;
 use App\Models\Enrollment;
 use App\Models\Setting;
 use App\Models\MediaAsset;
+use App\Models\Payment;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
@@ -181,12 +182,16 @@ class DashboardController extends Controller
             ? ActivityLog::query()->with('user:id,name')->latest()->take(8)->get()
             : collect();
 
-        $stats = [
+        $stats = $user->isAdmin() ? [
             'courses' => Course::count(),
             'students' => \App\Models\User::where('role', 'student')->count(),
             'teachers' => \App\Models\User::where('role', 'teacher')->count(),
             'certificates' => Certificate::count(),
-        ];
+            'active_enrollments' => Enrollment::query()->where('status', 'active')->count(),
+            'new_enrollments_this_month' => Enrollment::query()->where('created_at', '>=', now()->startOfMonth())->count(),
+            'pending_payments' => Payment::query()->where('status', 'pending')->count(),
+            'approved_course_payments' => (float) Payment::query()->where('status', 'approved')->sum('amount'),
+        ] : [];
 
         return view('dashboard', compact('user', 'courses', 'enrolledCourses', 'recentCertificates', 'stats', 'announcementSlides', 'studentInsights', 'teacherInsights', 'institutionName', 'setupWizardPending', 'dashboardAppearance', 'nextLiveClass', 'recentActivity'));
     }
