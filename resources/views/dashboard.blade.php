@@ -96,6 +96,23 @@
                 </div>
             </section>
 
+            @if($nextLiveClass)
+                <section class="aec-panel" style="display:grid;grid-template-columns:minmax(180px,280px) minmax(0,1fr);align-items:center;gap:18px;">
+                    @if($dashboardAppearance['live_class_image'])
+                        <img src="{{ $dashboardAppearance['live_class_image'] }}" alt="{{ $nextLiveClass->title }}" loading="lazy" style="width:100%;height:150px;object-fit:cover;border-radius:14px;">
+                    @else
+                        <div aria-hidden="true" style="display:grid;place-items:center;width:100%;height:150px;border-radius:14px;background:linear-gradient(135deg,var(--aec-primary),var(--aec-secondary));color:#fff;font-size:3rem;">🎥</div>
+                    @endif
+                    <div>
+                        <div class="aec-panel-head"><h3>🎥 {{ __('Upcoming live class') }}</h3><span class="aec-pill">{{ __('Scheduled') }}</span></div>
+                        <h2 style="margin:0 0 7px;color:var(--aec-primary);font-size:1.2rem;">{{ $nextLiveClass->title }}</h2>
+                        <p class="muted" style="margin:0 0 7px;">{{ optional($nextLiveClass->batch)->title }} · {{ optional(optional($nextLiveClass->batch)->teacher)->name }}</p>
+                        <p class="muted" style="margin:0 0 13px;">{{ $nextLiveClass->starts_at?->format('d M Y · h:i A') }}</p>
+                        <a class="btn primary" href="{{ route('live-classes.index') }}">{{ __('Open live classes') }} →</a>
+                    </div>
+                </section>
+            @endif
+
             <div class="aec-content-grid">
                 <section class="aec-panel">
                     <div class="aec-panel-head"><h3>⚡ {{ __('Quick actions') }}</h3><span class="aec-pill">{{ __('Frequently used') }}</span></div>
