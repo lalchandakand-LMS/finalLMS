@@ -45,6 +45,7 @@ final class ApiConnectorManager
                 'key' => $key,
                 'label' => $driver->label(),
                 'status' => $connection?->status ?? 'not_configured',
+                'configured' => $connection !== null,
                 'external_account_id' => $connection?->external_account_id,
                 'capabilities' => $connection?->capabilities ?? $driver->capabilities(),
                 'credential_schema' => $driver->credentialSchema(),
