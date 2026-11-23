@@ -24,7 +24,7 @@
         $metricThreeValue = $hasSettingsTable ? \App\Models\Setting::value('home_metric_3_value', '24/7') : '24/7';
         $metricThreeLabel = $hasSettingsTable ? \App\Models\Setting::value('home_metric_3_label', 'Support') : 'Support';
 
-                $storedSlides = $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('home_slides', '[]'), true) : [];
+        $storedSlides = $hasSettingsTable ? json_decode((string) \App\Models\Setting::value('home_slides', '[]'), true) : [];
         $sliderOptions = [
             'autoplay' => $hasSettingsTable ? \App\Models\Setting::value('home_slider_autoplay', '1') === '1' : true,
             'interval' => $hasSettingsTable ? max(3000, min(12000, (int) \App\Models\Setting::value('home_slider_interval', 5000))) : 5000,
@@ -55,9 +55,6 @@
             ? \App\Models\Batch::query()->with(['course','teacher'])->where('status','open')->orderBy('starts_at')->take(4)->get()
             : collect();
         $publishedCourses = $hasCoursesTable ? \App\Models\Course::where('status','published')->with('teacher')->withCount('lessons')->latest()->take(6)->get() : collect();
-         $activeStudentCount = $hasUsersTable ? \App\Models\User::where('role','student')->count() : 0;
-        $teacherCount = $hasUsersTable ? \App\Models\User::where('role','teacher')->count() : 0;
-        $publishedLessonCount = $hasCoursesTable && \Illuminate\Support\Facades\Schema::hasTable('lessons') ? \App\Models\Lesson::whereHas('course',fn($q)=>$q->where('status','published'))->count() : 0;
         $learnerVoices = \Illuminate\Support\Facades\Schema::hasTable('comments') && $hasCoursesTable
             ? \App\Models\Comment::with('author')->where('commentable_type',\App\Models\Course::class)->where('status','approved')->whereIn('commentable_id',\App\Models\Course::where('status','published')->select('id'))->latest()->take(12)->get()
             : collect();
