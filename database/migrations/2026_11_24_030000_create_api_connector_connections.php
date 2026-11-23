@@ -13,7 +13,7 @@ return new class extends Migration
             $table->string('provider_key', 80);
             $table->foreignId('branch_id')->nullable()->constrained()->nullOnDelete();
             $table->string('external_account_id', 190)->nullable();
-            $table->longText('credentials');
+            $table->longText('credentials')->nullable();
             $table->json('granted_scopes')->nullable();
             $table->json('capabilities')->nullable();
             $table->string('status', 32)->default('needs_setup');
