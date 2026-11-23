@@ -55,6 +55,10 @@ class CourseContentLearningProgressTest extends TestCase
         }
         $this->assertDatabaseHas('course_content_progress', ['user_id' => $student->id, 'progress_percent' => 45, 'watched_seconds' => 45, 'last_position_seconds' => 45, 'duration_seconds' => 100]);
 
+        $this->get(route('student.courses.index'))
+            ->assertOk()
+            ->assertSee('45%');
+
         foreach ([60, 75, 90, 95] as $position) {
             $this->travel($position === 95 ? 5 : 15)->seconds();
             $response = $this->postJson(route('student.courses.content.progress', [$course, $post]), [
