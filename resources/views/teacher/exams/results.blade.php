@@ -10,6 +10,16 @@
             <p class="muted">{{ __('Pass marks:') }} {{ $exam->pass_marks }} · {{ $attempts->total() }} {{ __('submitted attempts') }}</p>
         </div>
         <a href="{{ $isAdmin ? route('admin.batches.exams.index', $exam->batch_id) : route('teacher.batches.exams.index', $exam->batch_id) }}" class="btn secondary">{{ __('Back to exams') }}</a>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <a class="btn secondary" href="{{ $isAdmin ? route('admin.exams.result-sheet', $exam) : route('teacher.exams.result-sheet', $exam) }}">{{ __('Merit list / Print sheet') }}</a>
+            @if($exam->result_status !== 'published')
+                <form method="POST" action="{{ $isAdmin ? route('admin.exams.results.publish', $exam) : route('teacher.exams.results.publish', $exam) }}" onsubmit="return confirm('{{ __('Publish results to students now?') }}')">
+                    @csrf<button class="btn primary" type="submit">{{ __('Publish results') }}</button>
+                </form>
+            @else
+                <span class="badge success">{{ __('Results published') }}</span>
+            @endif
+        </div>
     </div>
 
     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" style="margin-bottom:18px;">
@@ -34,7 +44,7 @@
                         <th style="padding:12px;border-bottom:1px solid var(--border);">{{ __('Student') }}</th>
                         <th style="padding:12px;border-bottom:1px solid var(--border);">{{ __('Email') }}</th>
                         <th style="padding:12px;border-bottom:1px solid var(--border);">{{ __('Score') }}</th>
-                        <th style="padding:12px;border-bottom:1px solid var(--border);">{{ __('Result') }}</th>
+                        <th style="padding:12px;border-bottom:1px solid var(--border);">{{ __('Result / Review') }}</th>
                         <th style="padding:12px;border-bottom:1px solid var(--border);">{{ __('Submitted') }}</th>
                     </tr>
                 </thead>
@@ -43,12 +53,31 @@
                         <tr>
                             <td style="padding:12px;border-bottom:1px solid var(--border);">{{ $attempt->student->name }}</td>
                             <td style="padding:12px;border-bottom:1px solid var(--border);">{{ $attempt->student->email }}</td>
-                            <td style="padding:12px;border-bottom:1px solid var(--border);">{{ $attempt->score }}</td>
+                            <td style="padding:12px;border-bottom:1px solid var(--border);">{{ $attempt->score ?? '—' }}</td>
                             <td style="padding:12px;border-bottom:1px solid var(--border);">
-                                @if($attempt->score >= $exam->pass_marks)
-                                    <span class="badge success">{{ __('Passed') }}</span>
-                                @else
-                                    <span class="badge warning">{{ __('Not passed') }}</span>
+                                @if($attempt->status === 'awaiting_manual')
+                                    <span class="badge warning">{{ __('Awaiting written grading') }}</span>
+                                    @foreach($attempt->answers->where('question.type', 'written')->whereNull('graded_at') as $answer)
+                                        <div class="course-item" style="margin-top:10px;padding:12px;">
+                                            <strong>{{ $answer->question->question }}</strong>
+                                            <p style="white-space:pre-wrap;">{{ $answer->answer_text }}</p>
+                                            @if($answer->question->grading_rubric)
+                                                <p class="muted">{{ __('Rubric:') }} {{ implode(' · ', $answer->question->grading_rubric) }}</p>
+                                            @endif
+                                            <form method="POST" action="{{ $isAdmin ? route('admin.exam-answers.grade', $answer) : route('teacher.exam-answers.grade', $answer) }}">
+                                                @csrf
+                                                <label>{{ __('Marks awarded (max :max)', ['max' => $answer->question->marks]) }}<input type="number" name="marks_awarded" min="0" max="{{ $answer->question->marks }}" required></label>
+                                                <label>{{ __('Feedback') }}<textarea name="teacher_feedback" maxlength="3000"></textarea></label>
+                                                <button class="btn primary" type="submit">{{ __('Save grading') }}</button>
+                                            </form>
+                                        </div>
+                                    @endforeach
+                                @elseif($attempt->status === 'submitted')
+                                    @if($attempt->score >= $exam->pass_marks)
+                                        <span class="badge success">{{ __('Passed') }}</span>
+                                    @else
+                                        <span class="badge warning">{{ __('Not passed') }}</span>
+                                    @endif
                                 @endif
                             </td>
                             <td style="padding:12px;border-bottom:1px solid var(--border);">{{ optional($attempt->submitted_at)->format('M j, Y H:i') }}</td>
