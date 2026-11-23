@@ -133,6 +133,33 @@ final class ApiConnectorManager
         $this->audit($key, 'disconnected');
     }
 
+    public function healthCheck(string $key): array
+    {
+        $connection = $this->connection($key);
+        $health = $this->driver($key)->healthCheck($connection->credentials_encrypted ?? []);
+        $connection->forceFill([
+            'last_credential_check_at' => now(),
+            'last_error' => ($health['credentials'] && $health['api']) ? null : 'Provider health check failed.',
+        ])->save();
+        return $health + ['webhook_verified' => (bool) $connection->webhook_verified, 'status' => $connection->status];
+    }
+
+    public function sendTemplate(string $key, array $message): array
+    {
+        $connection = $this->connection($key);
+        abort_unless($connection->isConnected(), 409, 'The connector is not connected and verified.');
+        $result = $this->driver($key)->sendTemplate($connection->credentials_encrypted ?? [], $message);
+        $this->audit($key, 'template_send_attempted', ['supported' => (bool) ($result['supported'] ?? false), 'status' => $result['status'] ?? 'unknown']);
+        return $result;
+    }
+
+    public function getDeliveryStatus(string $key, string $providerMessageId): array
+    {
+        $connection = $this->connection($key);
+        abort_unless($connection->isConnected(), 409, 'The connector is not connected and verified.');
+        return $this->driver($key)->getDeliveryStatus($connection->credentials_encrypted ?? [], $providerMessageId);
+    }
+
     public function sendMessage(string $key, array $message): array
     {
         $connection = $this->connection($key);
