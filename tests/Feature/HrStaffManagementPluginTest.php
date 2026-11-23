@@ -283,6 +283,35 @@ final class HrStaffManagementPluginTest extends TestCase
     }
 
 
+
+    public function test_attendance_payroll_refuses_to_finalize_when_working_day_records_are_incomplete(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $staff = StaffProfile::query()->create([
+            'employee_code' => 'ATT-INCOMPLETE-01',
+            'full_name' => 'Incomplete Attendance Staff',
+            'designation' => 'Teacher',
+            'department' => 'Academic',
+            'base_salary' => 26000,
+            'compensation_basis' => 'monthly_attendance',
+            'working_days_per_month' => 26,
+            'status' => 'active',
+        ]);
+        StaffAttendance::query()->create([
+            'staff_profile_id' => $staff->id,
+            'attendance_date' => now()->subMonth()->startOfMonth()->toDateString(),
+            'status' => 'present',
+            'recorded_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->post('/__hr/payroll', [
+            'staff_profile_id' => $staff->id,
+            'payroll_month' => now()->subMonth()->format('Y-m'),
+        ])->assertStatus(422);
+
+        $this->assertDatabaseCount('staff_payrolls', 0);
+    }
+
     public function test_per_class_teacher_payroll_counts_only_completed_classes_assigned_to_the_linked_teacher(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
