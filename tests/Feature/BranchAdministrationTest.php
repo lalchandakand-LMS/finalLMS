@@ -48,6 +48,24 @@ class BranchAdministrationTest extends TestCase
         }
     }
 
+    public function test_public_registration_only_accepts_branches_open_for_registration(): void
+    {
+        $open = Branch::query()->create(['name' => 'Open Center', 'slug' => 'open-center', 'is_active' => true, 'status' => 'active', 'registration_open' => true]);
+        $closed = Branch::query()->create(['name' => 'Closed Center', 'slug' => 'closed-center', 'is_active' => true, 'status' => 'active', 'registration_open' => false]);
+
+        $this->get(route('register'))->assertOk()->assertSee('Open Center')->assertDontSee('Closed Center');
+
+        $payload = [
+            'name' => 'Branch Student', 'email' => 'branch-student@example.com',
+            'phone_number' => '+8801712345678', 'password' => 'StrongPassword123!',
+            'password_confirmation' => 'StrongPassword123!', 'branch_id' => $closed->id,
+        ];
+        $this->post(route('register.store'), $payload)->assertSessionHasErrors('branch_id');
+        $payload['branch_id'] = $open->id;
+        $this->post(route('register.store'), $payload)->assertRedirect(route('login'));
+        $this->assertDatabaseHas('users', ['email' => 'branch-student@example.com', 'branch_id' => $open->id]);
+    }
+
     public function test_non_admin_cannot_manage_branch_lifecycle(): void
     {
         $teacher = User::factory()->create(['role' => 'teacher']);
