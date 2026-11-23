@@ -250,6 +250,79 @@ final class HrStaffManagementPluginTest extends TestCase
         $this->assertSame('pending', $payroll->status);
     }
 
+
+    public function test_per_class_teacher_payroll_counts_only_completed_classes_assigned_to_the_linked_teacher(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $otherTeacher = User::factory()->create(['role' => 'teacher']);
+        $branch = Branch::query()->create(['name' => 'Per Class Payroll', 'slug' => 'per-class-payroll']);
+        $course = \App\Models\Course::query()->create([
+            'teacher_id' => $teacher->id,
+            'title' => 'Per Class Payroll Course',
+            'slug' => 'per-class-payroll-course',
+            'description' => 'Teacher compensation test.',
+            'price' => 0,
+            'status' => 'published',
+        ]);
+        $batch = \App\Models\Batch::query()->create([
+            'branch_id' => $branch->id,
+            'course_id' => $course->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Teacher Payroll Batch',
+            'capacity' => 20,
+            'starts_at' => now()->startOfMonth(),
+            'ends_at' => now()->endOfMonth(),
+            'fee' => 0,
+            'status' => 'open',
+        ]);
+        $otherBatch = \App\Models\Batch::query()->create([
+            'branch_id' => $branch->id,
+            'course_id' => $course->id,
+            'teacher_id' => $otherTeacher->id,
+            'title' => 'Other Teacher Batch',
+            'capacity' => 20,
+            'starts_at' => now()->startOfMonth(),
+            'ends_at' => now()->endOfMonth(),
+            'fee' => 0,
+            'status' => 'open',
+        ]);
+        $staff = StaffProfile::query()->create([
+            'user_id' => $teacher->id,
+            'branch_id' => $branch->id,
+            'employee_code' => 'PER-CLASS-TEACHER',
+            'full_name' => 'Per Class Teacher',
+            'designation' => 'Teacher',
+            'department' => 'Academic',
+            'base_salary' => 0,
+            'compensation_basis' => 'per_class',
+            'per_class_rate' => 1200,
+            'status' => 'active',
+        ]);
+        foreach ([[$batch, 'completed'], [$batch, 'completed'], [$batch, 'scheduled'], [$otherBatch, 'completed']] as $index => [$classBatch, $status]) {
+            \App\Models\LiveClass::query()->create([
+                'batch_id' => $classBatch->id,
+                'title' => 'Payroll Class '.$index,
+                'meeting_url' => 'https://example.test/meeting/'.$index,
+                'starts_at' => now()->startOfMonth()->addDays($index + 1)->setTime(10, 0),
+                'ends_at' => now()->startOfMonth()->addDays($index + 1)->setTime(11, 0),
+                'status' => $status,
+                'created_by' => $admin->id,
+            ]);
+        }
+
+        $this->actingAs($admin)->post('/__hr/payroll', [
+            'staff_profile_id' => $staff->id,
+            'payroll_month' => now()->format('Y-m'),
+        ])->assertRedirect();
+
+        $payroll = StaffPayroll::query()->firstOrFail();
+        $this->assertSame('per_class', $payroll->compensation_basis_snapshot);
+        $this->assertSame(2, $payroll->classes_delivered);
+        $this->assertSame('2400.00', $payroll->basic_salary);
+        $this->assertSame('2400.00', $payroll->net_paid);
+    }
+
     public function test_branch_manager_cannot_mark_payroll_paid(): void
     {
         $branch = Branch::query()->create(['name' => 'Branch', 'slug' => 'hr-branch', 'is_active' => true]);
