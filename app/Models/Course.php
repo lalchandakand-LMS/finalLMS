@@ -109,6 +109,11 @@ class Course extends Model
         return $this->hasMany(Batch::class);
     }
 
+    public function scormPackages(): HasMany
+    {
+        return $this->hasMany(ScormPackage::class);
+    }
+
     public function getRouteKeyName(): string
     {
         return 'slug';
