@@ -56,9 +56,11 @@ final class MfsMerchantConfigurationService
 
     public function isBkashConfigured(): bool
     {
-        if (! $this->hasStoredConfiguration('bkash') && ! (bool) config('services.bkash.enabled')) {
+        $configuration = $this->configuration('bkash');
+        if ($configuration === null && ! (bool) config('services.bkash.enabled')) {
             return false;
         }
+
         $credentials = $this->credentials('bkash');
         foreach (['username', 'password', 'app_key', 'app_secret'] as $key) {
             if (! isset($credentials[$key]) || $credentials[$key] === '') {
@@ -70,13 +72,19 @@ final class MfsMerchantConfigurationService
         $scheme = parse_url($baseUrl, PHP_URL_SCHEME);
         $host = parse_url($baseUrl, PHP_URL_HOST);
         $port = parse_url($baseUrl, PHP_URL_PORT);
+        $allowedHosts = ['tokenized.sandbox.bka.sh', 'tokenized.pay.bka.sh'];
+        if ($scheme !== 'https' || ! in_array($host, $allowedHosts, true)
+            || ($port !== null && $port !== 443)
+            || ! (bool) config('services.bkash.verify_ssl', true)) {
+            return false;
+        }
 
-        // This configuration foundation is deliberately sandbox-only. Do not
-        // let a sandbox credential record activate a production API endpoint.
-        return $scheme === 'https'
-            && $host === 'tokenized.sandbox.bka.sh'
-            && ($port === null || $port === 443)
-            && (bool) config('services.bkash.verify_ssl', true);
+        // A stored sandbox credential set can never be sent to the production host.
+        if ($configuration !== null && $configuration->mode === 'sandbox' && $host !== 'tokenized.sandbox.bka.sh') {
+            return false;
+        }
+
+        return true;
     }
 
     public function save(string $provider, array $credentials, int $userId): MfsMerchantConfiguration
