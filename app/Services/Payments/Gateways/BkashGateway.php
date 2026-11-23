@@ -13,9 +13,7 @@ class BkashGateway implements PaymentGateway
 {
     private const ALLOWED_CHECKOUT_HOSTS = [
         'tokenized.sandbox.bka.sh',
-        'tokenized.pay.bka.sh',
         'checkout.sandbox.bka.sh',
-        'checkout.pay.bka.sh',
     ];
 
     public function __construct(
