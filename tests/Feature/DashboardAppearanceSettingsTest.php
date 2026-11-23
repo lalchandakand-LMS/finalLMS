@@ -102,6 +102,21 @@ class DashboardAppearanceSettingsTest extends TestCase
             ->assertSee('Drag widgets to reorder');
     }
 
+    public function test_dashboard_settings_offer_responsive_preview_and_restore_defaults(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->get(route('admin.settings.index'))
+            ->assertOk()
+            ->assertSee('data-dashboard-preview', false)
+            ->assertSee('data-dashboard-preview-mode="desktop"', false)
+            ->assertSee('data-dashboard-preview-mode="tablet"', false)
+            ->assertSee('data-dashboard-preview-mode="mobile"', false)
+            ->assertSee('data-dashboard-restore', false)
+            ->assertSee('Restore dashboard defaults');
+    }
+
     public function test_invalid_dashboard_widget_positions_are_rejected(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
