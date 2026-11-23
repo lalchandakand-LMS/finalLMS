@@ -437,6 +437,7 @@ final class HrController extends Controller
                 ->count('attendance.attendance_date');
             $classesDelivered = 0;
             $basis = $member->compensation_basis ?: 'monthly';
+            $workingDays = max(1, (int) ($member->working_days_per_month ?: 26));
 
             if ($basis === 'per_class') {
                 abort_if($periodEnd->isFuture(), 422, 'Class-based payroll can only be finalized after the selected month ends.');
@@ -456,7 +457,6 @@ final class HrController extends Controller
 
             $attendanceDeduction = 0.0;
             if ($basis === 'monthly_attendance') {
-                $workingDays = max(1, (int) ($member->working_days_per_month ?: 26));
                 abort_if($periodEnd->isFuture(), 422, 'Attendance-based payroll can only be finalized after the selected month ends.');
                 abort_unless(
                     $attendanceRecordCount === $workingDays,
@@ -501,6 +501,7 @@ final class HrController extends Controller
                 'classes_delivered' => $classesDelivered,
                 'attendance_deduction' => $attendanceDeduction,
                 'attendance_records_count' => $attendanceRecordCount,
+                'expected_working_days' => $basis === 'monthly_attendance' ? $workingDays : 0,
                 'status' => 'pending',
             ]);
         }, 3);
