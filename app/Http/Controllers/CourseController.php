@@ -178,7 +178,9 @@ class CourseController extends Controller
             $enrollment->completed_lessons_count = $completedLessons + $completedItems;
             $enrollment->total_lessons_count = $lessons->count() + $items->count();
             $learningProgressPoints = ($completedLessons * 100) + $items->sum(
-                fn ($item) => (float) ($progressByCurriculumItem->get($item->id)?->progress_percent ?? 0)
+                fn ($item) => $completedByCurriculumItem->has($item->id)
+                    ? 100
+                    : (float) ($progressByCurriculumItem->get($item->id)?->progress_percent ?? 0)
             );
             $enrollment->progress_percent = $enrollment->total_lessons_count === 0
                 ? 0
