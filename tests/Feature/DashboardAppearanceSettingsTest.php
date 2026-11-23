@@ -111,6 +111,7 @@ class DashboardAppearanceSettingsTest extends TestCase
             ->assertOk()
             ->assertSee('data-dashboard-preview', false)
             ->assertSee('name="dashboard_theme_mode"', false)
+            ->assertSee('name="dashboard_brand_logo_media_id"', false)
             ->assertSee('data-dashboard-palette-preset', false)
             ->assertSee('value="blue"', false)
             ->assertSee('value="emerald"', false)
