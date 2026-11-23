@@ -40,6 +40,7 @@ class AgentActionWorkflowTest extends TestCase
 
     public function test_student_proposal_is_idempotent_and_waits_for_human_approval(): void
     {
+        User::factory()->create(['role' => 'admin']);
         $student = User::factory()->create(['role' => 'student']);
         $workflow = app(AgentActionWorkflow::class);
         $payload = [
