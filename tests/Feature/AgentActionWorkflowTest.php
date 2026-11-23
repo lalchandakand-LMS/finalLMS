@@ -32,6 +32,10 @@ class AgentActionWorkflowTest extends TestCase
             $migration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_23_100000_create_ai_agent_action_workflow.php');
             $migration->up();
         }
+        if (! Schema::hasTable('ai_teacher_drafts')) {
+            $migration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_23_110000_create_ai_agent_content_tables.php');
+            $migration->up();
+        }
     }
 
     public function test_student_proposal_is_idempotent_and_waits_for_human_approval(): void
@@ -53,6 +57,10 @@ class AgentActionWorkflowTest extends TestCase
         $this->assertDatabaseHas('ai_assistant_audit_events', [
             'event' => 'agent_action_proposed',
             'user_id' => $student->id,
+        ]);
+        $this->assertDatabaseHas('ai_agent_notifications', [
+            'event' => 'agent_action_pending',
+            'user_id' => DB::table('users')->where('role', 'admin')->value('id'),
         ]);
     }
 
