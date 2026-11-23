@@ -136,6 +136,53 @@ class DashboardAppearanceSettingsTest extends TestCase
             ]);
     }
 
+    public function test_admin_can_customize_dashboard_theme_cards_and_hero_content(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->post(route('admin.settings.update'), [
+            'dashboard_theme_mode' => 'dark',
+            'dashboard_card_radius' => 26,
+            'dashboard_card_shadow' => 'glow',
+            'dashboard_hero_eyebrow' => 'Alom’s English Center LMS',
+            'dashboard_hero_cta_label' => 'Open Admin Workspace',
+            'dashboard_hero_image_position' => 'right',
+        ])->assertRedirect(route('admin.settings.index'));
+
+        $this->assertDatabaseHas('settings', ['key' => 'dashboard_theme_mode', 'value' => 'dark']);
+        $this->assertDatabaseHas('settings', ['key' => 'dashboard_card_radius', 'value' => '26']);
+        $this->assertDatabaseHas('settings', ['key' => 'dashboard_card_shadow', 'value' => 'glow']);
+        $this->assertDatabaseHas('settings', ['key' => 'dashboard_hero_cta_label', 'value' => 'Open Admin Workspace']);
+
+        $this->actingAs($admin)->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('data-theme="dark"', false)
+            ->assertSee('data-shadow="glow"', false)
+            ->assertSee('--aec-radius:26px', false)
+            ->assertSee('Open Admin Workspace');
+    }
+
+    public function test_dashboard_customizer_rejects_unsafe_style_values(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->from(route('admin.settings.index'))
+            ->post(route('admin.settings.update'), [
+                'dashboard_theme_mode' => 'external',
+                'dashboard_card_radius' => 90,
+                'dashboard_card_shadow' => 'url-javascript',
+                'dashboard_hero_image_position' => 'expression(alert(1))',
+            ])
+            ->assertRedirect(route('admin.settings.index'))
+            ->assertSessionHasErrors([
+                'dashboard_theme_mode',
+                'dashboard_card_radius',
+                'dashboard_card_shadow',
+                'dashboard_hero_image_position',
+            ]);
+    }
+
     public function test_non_admin_cannot_change_dashboard_appearance_settings(): void
     {
         $student = User::factory()->create(['role' => 'student']);
