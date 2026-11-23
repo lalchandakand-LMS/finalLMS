@@ -16,6 +16,16 @@
             <label>{{ __('Full name') }}<input type="text" name="name" value="{{ old('name') }}" autocomplete="name" required></label>
             <label>{{ __('Email address') }}<input type="email" name="email" value="{{ old('email') }}" autocomplete="email" required></label>
             <label>{{ __('Mobile number (E.164 format, for example +8801XXXXXXXXX)') }}<input type="tel" name="phone_number" value="{{ old('phone_number') }}" autocomplete="tel" pattern="[+][1-9][0-9]{7,14}" placeholder="+8801XXXXXXXXX" required></label>
+            @if($branches->isNotEmpty())
+                <label>{{ __('Preferred branch (optional)') }}
+                    <select name="branch_id">
+                        <option value="">{{ __('Online / no branch preference') }}</option>
+                        @foreach($branches as $branch)
+                            <option value="{{ $branch->id }}" @selected((string) old('branch_id') === (string) $branch->id)>{{ $branch->name }}</option>
+                        @endforeach
+                    </select>
+                </label>
+            @endif
             <label>{{ __('Password') }}<input type="password" name="password" autocomplete="new-password" required></label>
             <label>{{ __('Confirm password') }}<input type="password" name="password_confirmation" autocomplete="new-password" required></label>
             <button type="submit" class="btn primary" style="width:100%; margin-top:12px;">{{ __('Create account') }}</button>
