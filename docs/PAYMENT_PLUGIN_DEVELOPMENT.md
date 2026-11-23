@@ -32,7 +32,7 @@ Payment gateway packages use the same central Laravel Plugin Manager as every ot
 
 ## Current adapter status
 
-- The Payment Core no longer registers provider adapters in `AppServiceProvider`. It exposes only the provider-neutral `PaymentGatewayManager` registry.
+- The Payment Core no longer registers provider adapters in `AppServiceProvider`. It exposes only the provider-neutral `PaymentGatewayManager` registry. Course and eBook checkout pages render only currently available plugin adapters; checkout and callback routes carry the provider key, and callback verification returns normalized payment fields to the shared fulfillment flow.
 - `plugins/aec/universal-payment/1.0.0` contains the signed-package source manifest and entrypoint for the bKash adapter. Its entrypoint registers through `PluginContext::registerPaymentGateway()` and requires the `payments.gateway` capability. The package must be built, signed by a trusted release key, installed and activated by an Admin before bKash appears in the catalog.
 - bKash Tokenized Checkout: BDT only. Uses server-side token/create/execute/status calls and encrypted Admin credentials; endpoint policy remains sandbox-only.
 - Nagad and Rocket: encrypted Admin credential records are supported; no signed runtime adapter is shipped yet. Add each as its own provider plugin after official merchant protocol specifications and provider sandbox tests are available.
