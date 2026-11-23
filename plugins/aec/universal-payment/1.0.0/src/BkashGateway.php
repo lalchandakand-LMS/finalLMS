@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Services\Payments\Gateways;
+namespace Aloms\UniversalPayment\Gateways;
 
 use App\Contracts\Payments\PaymentGateway;
 use App\Models\Payment;
-use App\Services\Payments\BkashCheckoutService;
+use Aloms\UniversalPayment\Gateways\BkashCheckoutService;
 use App\Services\Payments\MfsMerchantConfigurationService;
 use RuntimeException;
 use Throwable;
