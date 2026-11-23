@@ -290,6 +290,9 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::put('/teacher/batches/{batch}/question-bank/{question}', [ExamController::class, 'updateBankQuestion'])->name('teacher.batches.question-bank.update');
         Route::delete('/teacher/batches/{batch}/question-bank/{question}', [ExamController::class, 'destroyBankQuestion'])->name('teacher.batches.question-bank.destroy');
         Route::get('/teacher/exams/{exam}/results', [ExamController::class, 'teacherResults'])->name('teacher.exams.results');
+        Route::post('/teacher/exams/{exam}/results/publish', [ExamController::class, 'publishResults'])->middleware('throttle:10,1')->name('teacher.exams.results.publish');
+        Route::get('/teacher/exams/{exam}/result-sheet', [ExamController::class, 'resultSheet'])->name('teacher.exams.result-sheet');
+        Route::post('/teacher/exam-answers/{answer}/grade', [ExamController::class, 'gradeAnswer'])->middleware('throttle:60,1')->name('teacher.exam-answers.grade');
         Route::post('/teacher/batches/{batch}/exams', [ExamController::class, 'store'])->name('teacher.batches.exams.store');
         Route::post('/teacher/batches/{batch}/assignments', [AssignmentController::class, 'store'])->middleware('throttle:10,1')->name('teacher.batches.assignments.store');
         Route::post('/teacher/assignments/{assignment}/submissions/{submission}/grade', [AssignmentController::class, 'grade'])->middleware('throttle:30,1')->name('teacher.assignments.grade');
@@ -466,6 +469,9 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::put('/batches/{batch}/question-bank/{question}', [ExamController::class, 'updateBankQuestion'])->middleware('throttle:30,1')->name('admin.batches.question-bank.update');
         Route::delete('/batches/{batch}/question-bank/{question}', [ExamController::class, 'destroyBankQuestion'])->middleware('throttle:20,1')->name('admin.batches.question-bank.destroy');
         Route::get('/exams/{exam}/results', [ExamController::class, 'teacherResults'])->name('admin.exams.results');
+        Route::post('/exams/{exam}/results/publish', [ExamController::class, 'publishResults'])->middleware('throttle:10,1')->name('admin.exams.results.publish');
+        Route::get('/exams/{exam}/result-sheet', [ExamController::class, 'resultSheet'])->name('admin.exams.result-sheet');
+        Route::post('/exam-answers/{answer}/grade', [ExamController::class, 'gradeAnswer'])->middleware('throttle:60,1')->name('admin.exam-answers.grade');
         Route::get('/batches/{batch}/assignments', [AssignmentController::class, 'index'])->name('admin.batches.assignments.index');
         Route::post('/batches/{batch}/assignments', [AssignmentController::class, 'store'])->middleware('throttle:10,1')->name('admin.batches.assignments.store');
         Route::post('/assignments/{assignment}/submissions/{submission}/grade', [AssignmentController::class, 'grade'])->middleware('throttle:30,1')->name('admin.assignments.grade');
