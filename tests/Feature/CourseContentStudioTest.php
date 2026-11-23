@@ -587,7 +587,7 @@ class CourseContentStudioTest extends TestCase
         ])->assertRedirect();
 
         $version = CourseContentPostVersion::query()->where('course_content_post_id', $post->id)->firstOrFail();
-        $this->post(route('admin.course-content-posts.versions.restore', [$post, $version]))
+        $this->post(route('admin.course-content-posts.versions.restore', [$post->fresh(), $version]))
             ->assertRedirect(route('admin.course-content-posts.versions', $post));
 
         $this->assertSame('Original revision', $post->fresh()->title);
