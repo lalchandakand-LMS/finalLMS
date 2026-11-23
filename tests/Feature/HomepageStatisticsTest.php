@@ -23,11 +23,7 @@ class HomepageStatisticsTest extends TestCase
     public function test_public_statistics_use_real_published_and_enrollment_data(): void
     {
         $student = User::factory()->create(['role' => 'student']);
-        $teacher = User::factory()->create(['role' => 'teacher']);
-        $course = Course::factory()->create([
-            'teacher_id' => $teacher->id,
-            'status' => 'published',
-        ]);
+        $course = Course::factory()->create(['status' => 'published']);
         Enrollment::create([
             'user_id' => $student->id,
             'course_id' => $course->id,
