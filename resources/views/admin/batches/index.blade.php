@@ -22,7 +22,7 @@
 @forelse($branches as $branch)
 <div class="panel" style="margin:12px 0;padding:14px;">
 <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;"><strong>{{ $branch->name }}</strong><span class="badge {{ $branch->status === 'active' ? 'success' : ($branch->status === 'suspended' ? 'danger' : 'warning') }}">{{ ucfirst($branch->status) }}</span></div>
-<div class="muted" style="margin:6px 0;">{{ $branch->batches_count }} batches · Registration {{ $branch->registration_open ? 'Open' : 'Closed' }}</div>
+<div class="muted" style="margin:6px 0;">{{ $branch->batches_count }} batches · {{ $branch->users_count }} assigned users · Registration {{ $branch->registration_open ? 'Open' : 'Closed' }}</div>
 <details><summary>Edit branch settings</summary>
 <form method="POST" action="{{ route('admin.branches.update', $branch) }}" style="margin-top:10px;">@csrf @method('PUT')
 <label>Name<input name="name" value="{{ $branch->name }}" maxlength="120" required></label>
@@ -31,7 +31,7 @@
 <label>Branch status<select name="status" required><option value="active" @selected($branch->status === 'active')>Active</option><option value="inactive" @selected($branch->status === 'inactive')>Deactivated</option><option value="suspended" @selected($branch->status === 'suspended')>Suspended</option></select></label>
 <input type="hidden" name="registration_open" value="0"><label><input type="checkbox" name="registration_open" value="1" style="width:auto;" @checked($branch->registration_open)> Allow new registrations</label>
 <button class="btn primary" type="submit">Save branch settings</button></form>
-@if($branch->batches_count === 0)<form method="POST" action="{{ route('admin.branches.destroy', $branch) }}" style="margin-top:8px;">@csrf @method('DELETE')<button class="btn secondary" type="submit">Delete branch</button></form>@endif
+@if($branch->batches_count === 0 && $branch->users_count === 0)<form method="POST" action="{{ route('admin.branches.destroy', $branch) }}" style="margin-top:8px;">@csrf @method('DELETE')<button class="btn secondary" type="submit">Delete branch</button></form>@else<p class="muted" style="margin-top:8px;">Reassign assigned users and remove batches before deleting this branch.</p>@endif
 </details></div>
 @empty<p class="muted">No branches created.</p>@endforelse
 </section>
