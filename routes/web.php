@@ -340,6 +340,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::get('/certificates/{certificate}', [DashboardController::class, 'certificate'])->name('certificates.show');
+    Route::get('/my/transcript', [\App\Http\Controllers\StudentTranscriptController::class, 'show'])->middleware('role:student')->name('student.transcript');
 
     Route::post('/course-combos/{courseCombo:slug}/enroll', [PaymentController::class, 'submitCombo'])->middleware('role:student')->name('course-combos.enroll');
     Route::post('/courses/{course}/enroll', [PaymentController::class, 'submit'])->name('courses.enroll');
