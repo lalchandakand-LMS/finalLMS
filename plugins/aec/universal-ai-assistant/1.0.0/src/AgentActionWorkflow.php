@@ -72,7 +72,7 @@ final class AgentActionWorkflow
             throw new RuntimeException('Only an administrator or an authorized teacher can approve agent actions.');
         }
 
-        return DB::transaction(function () use ($approver, $proposalId, $expectedVersion): object {
+        $result = DB::transaction(function () use ($approver, $proposalId, $expectedVersion): object|array {
             $proposal = DB::table('ai_agent_action_proposals')->where('id', $proposalId)->lockForUpdate()->first();
             if (! $proposal || $proposal->status !== 'pending' || (int) $proposal->version !== $expectedVersion) {
                 throw new RuntimeException('This proposal is no longer pending or has changed. Refresh the approval inbox.');
@@ -82,7 +82,7 @@ final class AgentActionWorkflow
                     'status' => 'expired', 'version' => DB::raw('version + 1'), 'updated_at' => now(),
                 ]);
                 AssistantAudit::record('agent_action_expired', (int) $approver->id, null, null, (string) $approver->role, 'internal', 'agent-workflow-v1', ['proposal_id' => $proposalId]);
-                throw new RuntimeException('This proposal has expired and must be submitted again.');
+                return ['expired' => true];
             }
             if ((int) $proposal->requester_id === (int) $approver->id) {
                 throw new RuntimeException('Separation of duties: the requester cannot approve their own proposal.');
@@ -129,6 +129,10 @@ final class AgentActionWorkflow
 
             return DB::table('ai_agent_action_proposals')->where('id', $proposalId)->first();
         }, 3);
+        if (is_array($result) && ($result['expired'] ?? false)) {
+            throw new RuntimeException('This proposal has expired and must be submitted again.');
+        }
+        return $result;
     }
 
     public function reject(User $approver, int $proposalId, int $expectedVersion, ?string $note = null): object
