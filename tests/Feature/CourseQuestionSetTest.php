@@ -21,7 +21,7 @@ class CourseQuestionSetTest extends TestCase
         $this->actingAs($admin)->get(route('admin.question-sets.index'))
             ->assertOk()->assertSee('Question sets');
         $this->get(route('admin.question-sets.create'))
-            ->assertOk()->assertSee('Reuse Question Bank MCQs')
+            ->assertOk()->assertSee('Reuse Question Bank questions')
             ->assertSee('Short answer');
     }
 
