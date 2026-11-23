@@ -28,7 +28,7 @@
     @endif
     @if($role === 'support_staff' && \Illuminate\Support\Facades\Route::has('support.ai-assistant.knowledge.index')) <a class="btn secondary" href="{{ route('support.ai-assistant.knowledge.index') }}">{{ __('Verified Support FAQs') }}</a> @endif
     @php($notificationPrefix = match($role) { 'admin' => 'admin', 'branch_manager' => 'branch', 'teacher' => 'teacher', 'student' => 'student', 'guardian' => 'guardian', default => 'support' })
-    @if(\\Illuminate\\Support\\Facades\\Route::has($notificationPrefix.'.ai-assistant.notifications.index'))
+    @if(\Illuminate\Support\Facades\Route::has($notificationPrefix.'.ai-assistant.notifications.index'))
         <a class="btn secondary" href="{{ route($notificationPrefix.'.ai-assistant.notifications.index') }}">{{ __('AI notifications') }}</a>
     @endif
 </div>
