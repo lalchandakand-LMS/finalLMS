@@ -24,31 +24,33 @@
 </div>
 
 <section class="panel" style="margin-bottom:24px;">
-    <h2>{{ __('Install a signed plugin') }}</h2>
-    <p class="muted">{{ __('Upload the ZIP, paste its exact signed manifest JSON, select the trusted release key ID and provide the detached Base64 signature.') }}</p>
+    <h2>{{ __('Install a plugin') }}</h2>
+    <p class="muted">{{ __('Choose one signed .aecplugin package. The release manifest, trusted signing key ID and signature are included in the bundle and verified automatically.') }}</p>
     <form method="POST" action="{{ route('admin.plugins.install') }}" enctype="multipart/form-data">
         @csrf
         <div class="form-grid">
-            <div>
-                <label for="plugin-package">{{ __('Plugin ZIP package') }}</label>
-                <input id="plugin-package" type="file" name="package" accept=".zip,application/zip" required>
-                <small class="muted">{{ __('Maximum size:') }} {{ number_format($maxPackageBytes / 1048576, 0) }} MiB</small>
-            </div>
-            <div>
-                <label for="plugin-key-id">{{ __('Trusted release key ID') }}</label>
-                <input id="plugin-key-id" type="text" name="key_id" value="{{ old('key_id') }}" maxlength="120" required>
-            </div>
             <div class="full-width">
-                <label for="plugin-manifest">{{ __('Signed manifest JSON') }}</label>
-                <textarea id="plugin-manifest" name="manifest" rows="12" spellcheck="false" required>{{ old('manifest') }}</textarea>
-            </div>
-            <div class="full-width">
-                <label for="plugin-signature">{{ __('Detached signature (Base64)') }}</label>
-                <textarea id="plugin-signature" name="signature" rows="3" spellcheck="false" required>{{ old('signature') }}</textarea>
+                <label for="plugin-bundle">{{ __('Signed plugin bundle') }}</label>
+                <input id="plugin-bundle" type="file" name="package" accept=".aecplugin,application/zip" required>
+                <small class="muted">{{ __('Maximum upload size:') }} {{ number_format($maxPackageBytes / 1048576, 0) }} MiB. Installation verifies trust and integrity; it does not activate the plugin.</small>
             </div>
         </div>
-        <button class="btn primary" type="submit">{{ __('Verify and install plugin') }}</button>
+        <button class="btn primary" type="submit">{{ __('Verify and install') }}</button>
     </form>
+    <details style="margin-top:18px;">
+        <summary>{{ __('Advanced: legacy detached-signature ZIP import') }}</summary>
+        <p class="muted">{{ __('For maintainers migrating existing ZIP releases only. New releases should use a single .aecplugin bundle.') }}</p>
+        <form method="POST" action="{{ route('admin.plugins.install') }}" enctype="multipart/form-data">
+            @csrf
+            <div class="form-grid">
+                <div><label for="legacy-plugin-package">{{ __('Plugin ZIP package') }}</label><input id="legacy-plugin-package" type="file" name="package" accept=".zip,application/zip" required></div>
+                <div><label for="plugin-key-id">{{ __('Trusted release key ID') }}</label><input id="plugin-key-id" type="text" name="key_id" maxlength="120" required></div>
+                <div class="full-width"><label for="plugin-manifest">{{ __('Signed manifest JSON') }}</label><textarea id="plugin-manifest" name="manifest" rows="8" spellcheck="false" required></textarea></div>
+                <div class="full-width"><label for="plugin-signature">{{ __('Detached signature (Base64)') }}</label><textarea id="plugin-signature" name="signature" rows="3" spellcheck="false" required></textarea></div>
+            </div>
+            <button class="btn secondary" type="submit">{{ __('Verify legacy package') }}</button>
+        </form>
+    </details>
 </section>
 
 <section class="panel">
@@ -212,24 +214,26 @@
                             @if(in_array($plugin->status, ['installed', 'inactive'], true))
                                 <details style="margin-top:8px;">
                                     <summary>{{ __('Update signed package') }}</summary>
-                                    <p class="muted">{{ __('Only a newer signed version can be installed. Deactivate first; the previous package and its version metadata are retained.') }}</p>
+                                    <p class="muted">{{ __('Upload one signed .aecplugin bundle for the new version. The previous package and its version metadata are retained. The plugin must be inactive.') }}</p>
                                     <form method="POST" action="{{ route('admin.plugins.update-package', $plugin->plugin_key) }}" enctype="multipart/form-data" style="display:grid;gap:8px;max-width:520px;" onsubmit="return confirm('{{ __('Update this plugin? The plugin must be inactive. Review the signed release and take a database backup first.') }}')">
                                         @csrf
                                         <input type="hidden" name="confirm_update" value="1">
-                                        <label>{{ __('New plugin ZIP') }}
-                                            <input type="file" name="package" accept=".zip,application/zip" required>
-                                        </label>
-                                        <label>{{ __('Trusted release key ID') }}
-                                            <input type="text" name="key_id" maxlength="120" value="{{ $plugin->signature_key_id }}" required>
-                                        </label>
-                                        <label>{{ __('New signed manifest JSON') }}
-                                            <textarea name="manifest" rows="8" spellcheck="false" required>{{ json_encode($plugin->manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) }}</textarea>
-                                        </label>
-                                        <label>{{ __('New detached signature (Base64)') }}
-                                            <textarea name="signature" rows="3" maxlength="512" spellcheck="false" required></textarea>
+                                        <label>{{ __('New signed plugin bundle') }}
+                                            <input type="file" name="package" accept=".aecplugin,application/zip" required>
                                         </label>
                                         <button class="btn primary" type="submit">{{ __('Verify and update package') }}</button>
                                     </form>
+                                    <details style="margin-top:10px;"><summary>{{ __('Advanced: legacy detached-signature ZIP update') }}</summary>
+                                        <form method="POST" action="{{ route('admin.plugins.update-package', $plugin->plugin_key) }}" enctype="multipart/form-data" style="display:grid;gap:8px;max-width:520px;">
+                                            @csrf
+                                            <input type="hidden" name="confirm_update" value="1">
+                                            <label>{{ __('New plugin ZIP') }}<input type="file" name="package" accept=".zip,application/zip" required></label>
+                                            <label>{{ __('Trusted release key ID') }}<input type="text" name="key_id" maxlength="120" value="{{ $plugin->signature_key_id }}" required></label>
+                                            <label>{{ __('New signed manifest JSON') }}<textarea name="manifest" rows="8" spellcheck="false" required>{{ json_encode($plugin->manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) }}</textarea></label>
+                                            <label>{{ __('New detached signature (Base64)') }}<textarea name="signature" rows="3" maxlength="512" spellcheck="false" required></textarea></label>
+                                            <button class="btn secondary" type="submit">{{ __('Verify legacy update') }}</button>
+                                        </form>
+                                    </details>
                                 </details>
                             @endif
                             @if(in_array($plugin->status, ['installed', 'inactive'], true) && $plugin->versionHistory->contains(fn ($history) => $history->action === 'package_update_snapshot' && $history->version !== $plugin->version))

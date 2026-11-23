@@ -8,9 +8,28 @@ use RuntimeException;
 
 class BkashCheckoutService
 {
+    public function __construct(private readonly MfsMerchantConfigurationService $merchantConfiguration)
+    {
+    }
+
+    private function credential(string $key): string
+    {
+        return (string) ($this->merchantConfiguration->credential('bkash', $key) ?? '');
+    }
+
     private function baseUrl(): string
     {
-        return rtrim((string) config('services.bkash.base_url'), '/');
+        $baseUrl = rtrim((string) config('services.bkash.base_url'), '/');
+        $scheme = parse_url($baseUrl, PHP_URL_SCHEME);
+        $host = parse_url($baseUrl, PHP_URL_HOST);
+        $port = parse_url($baseUrl, PHP_URL_PORT);
+
+        if ($scheme !== 'https' || $host !== 'tokenized.sandbox.bka.sh'
+            || ($port !== null && $port !== 443)) {
+            throw new RuntimeException('Only the verified bKash sandbox endpoint is allowed.');
+        }
+
+        return $baseUrl;
     }
 
     private function request(): PendingRequest
@@ -25,13 +44,13 @@ class BkashCheckoutService
     {
         $response = $this->request()
             ->withHeaders([
-                'username' => (string) config('services.bkash.username'),
-                'password' => (string) config('services.bkash.password'),
-                'X-APP-Key' => (string) config('services.bkash.app_key'),
+                'username' => (string) $this->credential('username'),
+                'password' => (string) $this->credential('password'),
+                'X-APP-Key' => (string) $this->credential('app_key'),
             ])
             ->post($this->baseUrl().'/tokenized/checkout/token/grant', [
-                'app_key' => (string) config('services.bkash.app_key'),
-                'app_secret' => (string) config('services.bkash.app_secret'),
+                'app_key' => (string) $this->credential('app_key'),
+                'app_secret' => (string) $this->credential('app_secret'),
             ])
             ->throw()
             ->json();
@@ -48,7 +67,7 @@ class BkashCheckoutService
     {
         return $this->request()
             ->withToken($token)
-            ->withHeader('X-APP-Key', (string) config('services.bkash.app_key'))
+            ->withHeader('X-APP-Key', (string) $this->credential('app_key'))
             ->post($this->baseUrl().'/tokenized/checkout/create', [
                 'mode' => '0011',
                 'payerReference' => $payerReference,
@@ -66,7 +85,7 @@ class BkashCheckoutService
     {
         return $this->request()
             ->withToken($token)
-            ->withHeader('X-APP-Key', (string) config('services.bkash.app_key'))
+            ->withHeader('X-APP-Key', (string) $this->credential('app_key'))
             ->post($this->baseUrl().'/tokenized/checkout/execute', [
                 'paymentID' => $paymentId,
             ])
@@ -77,7 +96,7 @@ class BkashCheckoutService
     public function refundPayment(string $token, string $paymentId, string $amount, string $transactionId, string $reason): array
     {
         return $this->request()->withToken($token)
-            ->withHeader('X-APP-Key', (string) config('services.bkash.app_key'))
+            ->withHeader('X-APP-Key', (string) $this->credential('app_key'))
             ->post($this->baseUrl().'/tokenized/checkout/payment/refund', [
                 'paymentID' => $paymentId, 'amount' => $amount, 'trxID' => $transactionId,
                 'sku' => 'LMS-REFUND', 'reason' => mb_substr($reason, 0, 200),
@@ -87,7 +106,7 @@ class BkashCheckoutService
     public function queryRefund(string $token, string $paymentId, string $originalTransactionId): array
     {
         return $this->request()->withToken($token)
-            ->withHeader('X-APP-Key', (string) config('services.bkash.app_key'))
+            ->withHeader('X-APP-Key', (string) $this->credential('app_key'))
             ->post($this->baseUrl().'/tokenized/checkout/payment/refund/status', [
                 'paymentID' => $paymentId, 'trxID' => $originalTransactionId,
             ])->throw()->json();
@@ -97,7 +116,7 @@ class BkashCheckoutService
     {
         return $this->request()
             ->withToken($token)
-            ->withHeader('X-APP-Key', (string) config('services.bkash.app_key'))
+            ->withHeader('X-APP-Key', (string) $this->credential('app_key'))
             ->post($this->baseUrl().'/tokenized/checkout/payment/status', [
                 'paymentID' => $paymentId,
             ])

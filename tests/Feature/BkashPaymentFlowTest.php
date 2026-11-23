@@ -839,4 +839,33 @@ class BkashPaymentFlowTest extends TestCase
         Http::assertNothingSent();
     }
 
+
+    public function test_bkash_checkout_rejects_sandbox_host_on_unapproved_port(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $course = $this->paidCourse();
+
+        Http::fake([
+            '*/tokenized/checkout/token/grant' => Http::response(['id_token' => 'unsafe-url-token'], 200),
+            '*/tokenized/checkout/create' => Http::response([
+                'statusCode' => '0000',
+                'paymentID' => 'BKASH-UNSAFE-PORT',
+                'bkashURL' => 'https://tokenized.sandbox.bka.sh:8443/checkout/pay/BKASH-UNSAFE-PORT',
+            ], 200),
+        ]);
+
+        $this->actingAs($student)
+            ->post(route('courses.payments.bkash', $course))
+            ->assertRedirect(route('courses.show', $course))
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseHas('payments', [
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'gateway_payment_id' => null,
+            'status' => 'rejected',
+        ]);
+        Http::assertSent(fn (Request $request) => str_ends_with($request->url(), '/tokenized/checkout/create'));
+    }
+
 }

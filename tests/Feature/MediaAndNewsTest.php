@@ -56,6 +56,26 @@ class MediaAndNewsTest extends TestCase
         $this->get(route('news.show', 'private-draft'))->assertNotFound();
     }
 
+    public function test_admin_can_assign_categories_and_tags_and_public_visitors_can_filter_by_category(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($admin)->post(route('admin.news.store'), [
+            'title' => 'Grammar learning tips',
+            'body' => 'Useful grammar lessons.',
+            'status' => 'published',
+            'categories_text' => 'Learning Tips, Grammar',
+            'tags_text' => 'Tense, Spoken English',
+        ])->assertRedirect(route('admin.news.index'));
+
+        $post = BlogPost::with(['categories', 'tags'])->where('slug', 'grammar-learning-tips')->firstOrFail();
+        $this->assertSame(['Grammar', 'Learning Tips'], $post->categories->pluck('name')->sort()->values()->all());
+        $this->assertSame(['Spoken English', 'Tense'], $post->tags->pluck('name')->sort()->values()->all());
+
+        auth()->logout();
+        $this->get(route('news.index', ['category' => 'grammar']))->assertOk()->assertSee('Grammar learning tips');
+        $this->get(route('news.show', $post->slug))->assertOk()->assertSee('Spoken English')->assertSee('Grammar');
+    }
+
     public function test_only_admin_can_access_media_and_news_management(): void
     {
         $student = User::factory()->create(['role' => 'student']);

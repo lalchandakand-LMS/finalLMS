@@ -126,18 +126,28 @@ class AdminPluginManagerController extends Controller
     {
         $validated = $request->validate([
             'package' => ['required', 'file', 'max:51200'],
-            'manifest' => ['required', 'string', 'max:32768'],
-            'signature' => ['required', 'string', 'max:512'],
-            'key_id' => ['required', 'string', 'max:120'],
+            'manifest' => ['nullable', 'string', 'max:32768'],
+            'signature' => ['nullable', 'string', 'max:512'],
+            'key_id' => ['nullable', 'string', 'max:120'],
         ]);
 
         try {
-            $plugin = $installer->install(
-                $request->file('package'),
-                $validated['manifest'],
-                $validated['signature'],
-                $validated['key_id'],
-            );
+            if (strtolower($request->file('package')->getClientOriginalExtension()) === 'aecplugin') {
+                $plugin = app(\App\Services\Plugins\PluginBundleInstaller::class)
+                    ->install($request->file('package'), $installer);
+            } else {
+                foreach (['manifest', 'signature', 'key_id'] as $field) {
+                    if (! is_string($validated[$field] ?? null) || trim($validated[$field]) === '') {
+                        throw new InvalidArgumentException('Upload a signed .aecplugin bundle, or provide all advanced ZIP signature fields.');
+                    }
+                }
+                $plugin = $installer->install(
+                    $request->file('package'),
+                    $validated['manifest'],
+                    $validated['signature'],
+                    $validated['key_id'],
+                );
+            }
         } catch (InvalidArgumentException $exception) {
             $this->recordFailure($request);
             return back()->withInput($request->except('package'))->with('error', $exception->getMessage());
@@ -164,21 +174,28 @@ class AdminPluginManagerController extends Controller
     ): RedirectResponse {
         $validated = $request->validate([
             'package' => ['required', 'file', 'max:51200'],
-            'manifest' => ['required', 'string', 'max:32768'],
-            'signature' => ['required', 'string', 'max:512'],
-            'key_id' => ['required', 'string', 'max:120'],
+            'manifest' => ['nullable', 'string', 'max:32768'],
+            'signature' => ['nullable', 'string', 'max:512'],
+            'key_id' => ['nullable', 'string', 'max:120'],
             'confirm_update' => ['required', 'accepted'],
         ]);
 
         try {
-            $plugin = $installer->update(
-                $request->file('package'),
-                $validated['manifest'],
-                $validated['signature'],
-                $validated['key_id'],
-                $key,
-                $integrityVerifier,
-            );
+            if (strtolower($request->file('package')->getClientOriginalExtension()) === 'aecplugin') {
+                $plugin = app(\App\Services\Plugins\PluginBundleInstaller::class)->update(
+                    $request->file('package'), $installer, $key, $integrityVerifier,
+                );
+            } else {
+                foreach (['manifest', 'signature', 'key_id'] as $field) {
+                    if (! is_string($validated[$field] ?? null) || trim($validated[$field]) === '') {
+                        throw new InvalidArgumentException('Upload a signed .aecplugin bundle, or provide all advanced ZIP signature fields.');
+                    }
+                }
+                $plugin = $installer->update(
+                    $request->file('package'), $validated['manifest'], $validated['signature'],
+                    $validated['key_id'], $key, $integrityVerifier,
+                );
+            }
         } catch (InvalidArgumentException $exception) {
             $this->recordFailure($request, 'admin.plugins.update_failed');
             return back()->withInput($request->except('package'))->with('error', $exception->getMessage());

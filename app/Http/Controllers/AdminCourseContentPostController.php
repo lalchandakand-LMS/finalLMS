@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AcademicLevel;
 use App\Models\CourseCategory;
 use App\Models\CourseContentPost;
+use App\Models\CourseContentPostVersion;
 use App\Models\MediaAsset;
 use App\Models\Product;
 use Illuminate\Http\RedirectResponse;
@@ -29,7 +30,7 @@ class AdminCourseContentPostController extends Controller
             'access_type' => ['nullable', Rule::in(['free', 'paid', 'course_enrollment'])],
         ]);
 
-        $posts = CourseContentPost::query()->with(['author', 'thumbnail', 'categories', 'academicLevel', 'product'])
+        $posts = CourseContentPost::query()->with(['author', 'thumbnail', 'categories', 'academicLevel', 'product'])->withCount('versions')
             ->when($filters['q'] ?? null, function ($query, string $term): void {
                 $query->where(fn ($builder) => $builder
                     ->where('title', 'like', '%'.$term.'%')
@@ -158,7 +159,27 @@ class AdminCourseContentPostController extends Controller
                     $data['content_file_size'] = null;
                 }
 
-                $post->update($data);
+                $before = $this->versionSnapshot($post);
+                $beforeCategories = $post->categories()->pluck('course_categories.id')->map(fn ($id) => (int) $id)->sort()->values()->all();
+                $post->fill($data);
+                $afterCategories = collect($categoryIds)->map(fn ($id) => (int) $id)->sort()->values()->all();
+                $trackedFields = [
+                    'title', 'slug', 'short_description', 'long_description', 'video_url',
+                    'access_type', 'regular_price', 'sale_price', 'academic_level_id',
+                    'seo_title', 'seo_description', 'tags', 'status', 'published_at',
+                ];
+                if ($post->isDirty($trackedFields) || $beforeCategories !== $afterCategories) {
+                    $nextVersion = ((int) CourseContentPostVersion::query()
+                        ->where('course_content_post_id', $post->id)->max('version_number')) + 1;
+                    CourseContentPostVersion::create([
+                        'course_content_post_id' => $post->id,
+                        'version_number' => $nextVersion,
+                        'snapshot' => $before,
+                        'created_by' => $request->user()->id,
+                        'change_type' => 'update',
+                    ]);
+                }
+                $post->save();
                 $post->categories()->sync($categoryIds);
                 $this->syncPaidProduct($post);
             });
@@ -175,6 +196,78 @@ class AdminCourseContentPostController extends Controller
         }
 
         return redirect()->route('admin.course-content-posts.index')->with('success', __('Course content post updated.'));
+    }
+
+    public function versions(CourseContentPost $courseContentPost): View
+    {
+        $versions = $courseContentPost->versions()->with('creator')->paginate(20);
+        return view('admin.course-content-posts.versions', compact('courseContentPost', 'versions'));
+    }
+
+    public function restoreVersion(Request $request, CourseContentPost $courseContentPost, CourseContentPostVersion $version): RedirectResponse
+    {
+        abort_unless((int) $version->course_content_post_id === (int) $courseContentPost->id, 404);
+        $snapshot = $version->snapshot;
+        abort_unless(is_array($snapshot) && isset($snapshot['title'], $snapshot['slug'], $snapshot['long_description']), 422);
+
+        DB::transaction(function () use ($request, $courseContentPost, $version, $snapshot): void {
+            $post = CourseContentPost::query()->lockForUpdate()->findOrFail($courseContentPost->id);
+            $slugTaken = CourseContentPost::query()->where('slug', $snapshot['slug'])->whereKeyNot($post->id)->exists();
+            abort_if($slugTaken, 422, __('This historical slug is now used by another lesson. Rename the other lesson before restoring this revision.'));
+
+            CourseContentPostVersion::create([
+                'course_content_post_id' => $post->id,
+                'version_number' => ((int) CourseContentPostVersion::query()->where('course_content_post_id', $post->id)->max('version_number')) + 1,
+                'snapshot' => $this->versionSnapshot($post),
+                'created_by' => $request->user()->id,
+                'change_type' => 'restore',
+            ]);
+
+            $post->fill([
+                'title' => $snapshot['title'],
+                'slug' => $snapshot['slug'],
+                'short_description' => $snapshot['short_description'] ?? null,
+                'long_description' => $snapshot['long_description'],
+                'video_url' => $snapshot['video_url'] ?? null,
+                'academic_level_id' => $snapshot['academic_level_id'] ?? null,
+                'seo_title' => $snapshot['seo_title'] ?? null,
+                'seo_description' => $snapshot['seo_description'] ?? null,
+                'tags' => $snapshot['tags'] ?? [],
+                'status' => in_array($snapshot['status'] ?? 'draft', ['draft', 'published', 'archived'], true) ? $snapshot['status'] : 'draft',
+                'published_at' => $snapshot['published_at'] ?? null,
+            ]);
+            $post->save();
+            $post->categories()->sync(array_values(array_filter(
+                $snapshot['category_ids'] ?? [],
+                fn ($id) => is_int($id) && DB::table('course_categories')->where('id', $id)->exists()
+            )));
+            $this->syncPaidProduct($post);
+        });
+
+        $courseContentPost->refresh();
+        return redirect()->route('admin.course-content-posts.versions', $courseContentPost)
+            ->with('success', __('Lesson revision restored. Current state was saved as a new revision first.'));
+    }
+
+    private function versionSnapshot(CourseContentPost $post): array
+    {
+        return [
+            'title' => $post->title,
+            'slug' => $post->slug,
+            'short_description' => $post->short_description,
+            'long_description' => $post->long_description,
+            'video_url' => $post->video_url,
+            'access_type' => $post->access_type,
+            'regular_price' => $post->regular_price,
+            'sale_price' => $post->sale_price,
+            'academic_level_id' => $post->academic_level_id,
+            'seo_title' => $post->seo_title,
+            'seo_description' => $post->seo_description,
+            'tags' => $post->tags ?? [],
+            'status' => $post->status,
+            'published_at' => $post->published_at?->toISOString(),
+            'category_ids' => $post->categories()->pluck('course_categories.id')->map(fn ($id) => (int) $id)->all(),
+        ];
     }
 
     private function createThumbnailMedia(Request $request, UploadedFile $file, string $title, ?string &$storedPath): MediaAsset

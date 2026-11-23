@@ -26,9 +26,12 @@ use App\Http\Controllers\AdminAttendanceSyncReviewController;
 use App\Http\Controllers\AdminAttendanceAuditController;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\CourseController;
+use App\Http\Controllers\PublicInstructorController;
+use App\Http\Controllers\PublicAchievementController;
 use App\Http\Controllers\CourseComboController;
 use App\Http\Controllers\CourseWishlistController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\AdminCmsDashboardController;
 use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PaymentController;
@@ -67,6 +70,7 @@ use App\Http\Controllers\TeacherQuestionSetGradingController;
 use App\Http\Controllers\EbookStoreController;
 use App\Http\Controllers\AdminEbookOrderController;
 use App\Http\Controllers\GuardianController;
+use App\Http\Controllers\BranchDashboardController;
 use App\Http\Controllers\StorageManagerController;
 use App\Http\Controllers\AdminAnalyticsController;
 use App\Http\Controllers\AdminCommentController;
@@ -77,6 +81,7 @@ use App\Http\Controllers\AdminDeviceSessionController;
 use App\Http\Controllers\AdminCourseCategoryController;
 use App\Http\Controllers\AdminCourseContentPostController;
 use App\Http\Controllers\AdminCourseBuilderController;
+use App\Http\Controllers\CourseEngagementAnalyticsController;
 use App\Http\Controllers\CourseContentController;
 use App\Http\Controllers\CommentController;
 use Illuminate\Support\Facades\Route;
@@ -96,6 +101,10 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::middleware('guest')->group(function () {
     Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
     Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1')->name('register.store');
+    Route::get('/forgot-password', [AuthController::class, 'showPasswordResetRequestForm'])->name('password.request');
+    Route::post('/forgot-password', [AuthController::class, 'sendPasswordResetLink'])->middleware('throttle:5,1')->name('password.email');
+    Route::get('/reset-password/{token}', [AuthController::class, 'showPasswordResetForm'])->name('password.reset');
+    Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:5,1')->name('password.update');
 });
 Route::post('/login', [StudentDeviceAccessController::class, 'beginLogin'])->middleware('throttle:5,1')->name('login.post');
 Route::get('/admin/mfa/bootstrap', [AdminMfaController::class, 'bootstrap'])->middleware('throttle:10,1')->name('admin.mfa.bootstrap');
@@ -137,6 +146,14 @@ Route::get('/contests/{contest}', [QuizContestController::class, 'show'])->name(
 Route::get('/ebooks', [EbookStoreController::class, 'index'])->name('ebooks.index');
 Route::get('/ebooks/{product:slug}/preview/{previewPage}', [EbookStoreController::class, 'preview'])->name('ebooks.preview');
 Route::get('/ebooks/{product:slug}', [EbookStoreController::class, 'show'])->name('ebooks.show');
+Route::get('/learn', function () {
+    return auth()->check() && auth()->user()->isStudent()
+        ? redirect()->route('student.courses.index')
+        : redirect()->route('courses.index');
+})->name('learn.index');
+Route::get('/instructors', [PublicInstructorController::class, 'index'])->name('instructors.index');
+Route::get('/board-results', [PublicAchievementController::class, 'boardResults'])->name('board-results.index');
+Route::get('/achievements/{certificateNumber}', [PublicAchievementController::class, 'show'])->where('certificateNumber', '[A-Za-z0-9-]+')->name('achievements.show');
 Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
 Route::get('/course-combos', [CourseComboController::class, 'publicIndex'])->name('course-combos.index');
 Route::get('/course-combos/{courseCombo:slug}', [CourseComboController::class, 'show'])->name('course-combos.show');
@@ -187,6 +204,17 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         ->name('invoice-payments.receipt');
 
     // Staff subroles use the shared Admin shell and only their scoped modules.
+    // Dedicated Branch Panel: all records are scoped to the manager's assigned active branch.
+    Route::middleware('role:branch_manager')->prefix('branch')->name('branch.')->group(function () {
+        Route::get('/dashboard', [BranchDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/batches', [BatchController::class, 'branchManagerIndex'])->middleware('admin.permission:branch.batches')->name('batches.index');
+        Route::get('/students', [BatchController::class, 'branchManagerStudents'])->middleware('admin.permission:branch.students')->name('students.index');
+        Route::post('/batches', [BatchController::class, 'branchManagerStore'])->middleware('admin.permission:branch.batches')->name('batches.store');
+        Route::put('/batches/{batch}', [BatchController::class, 'branchManagerUpdate'])->middleware('admin.permission:branch.batches')->name('batches.update');
+        Route::get('/batches/{batch}/attendance', [AttendanceController::class, 'index'])->middleware(['admin.permission:branch.attendance', 'module.enabled:attendance'])->name('batches.attendance.index');
+        Route::post('/batches/{batch}/attendance', [AttendanceController::class, 'store'])->middleware(['admin.permission:branch.attendance', 'module.enabled:attendance'])->name('batches.attendance.store');
+    });
+
     Route::middleware('role:branch_manager')
         ->prefix('admin/branch-workspace')
         ->name('admin.branch-workspace.')
@@ -220,8 +248,8 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         });
 
     // Legacy bookmarks now land inside the unified Admin Panel.
-    Route::middleware('role:branch_manager')->get('/branch-manager/batches', fn () => redirect()->route('admin.branch-workspace.batches.index', [], 301))->name('branch-manager.batches.index');
-    Route::middleware('role:branch_manager')->get('/branch-manager/students', fn () => redirect()->route('admin.branch-workspace.students.index', [], 301))->name('branch-manager.students.index');
+    Route::middleware('role:branch_manager')->get('/branch-manager/batches', fn () => redirect()->route('branch.batches.index', [], 301))->name('branch-manager.batches.index');
+    Route::middleware('role:branch_manager')->get('/branch-manager/students', fn () => redirect()->route('branch.students.index', [], 301))->name('branch-manager.students.index');
     Route::middleware('role:accountant')->get('/accountant/invoices', fn () => redirect()->route('admin.finance.invoices.index', [], 301))->name('accountant.invoices.index');
     Route::middleware('role:accountant')->get('/accountant/refunds', fn () => redirect()->route('admin.finance.refunds.index', [], 301))->name('accountant.refunds.index');
     Route::middleware('role:accountant')->get('/accountant/finance-reports', fn () => redirect()->route('admin.finance.reports.index', [], 301))->name('accountant.finance-reports.index');
@@ -262,6 +290,10 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::put('/teacher/batches/{batch}/question-bank/{question}', [ExamController::class, 'updateBankQuestion'])->name('teacher.batches.question-bank.update');
         Route::delete('/teacher/batches/{batch}/question-bank/{question}', [ExamController::class, 'destroyBankQuestion'])->name('teacher.batches.question-bank.destroy');
         Route::get('/teacher/exams/{exam}/results', [ExamController::class, 'teacherResults'])->name('teacher.exams.results');
+        Route::post('/teacher/exams/{exam}/results/publish', [ExamController::class, 'publishResults'])->middleware('throttle:10,1')->name('teacher.exams.results.publish');
+        Route::get('/teacher/exams/{exam}/result-sheet', [ExamController::class, 'resultSheet'])->name('teacher.exams.result-sheet');
+        Route::post('/teacher/exam-answers/{answer}/grade', [ExamController::class, 'gradeAnswer'])->middleware('throttle:60,1')->name('teacher.exam-answers.grade');
+        Route::post('/teacher/exam-result-reviews/{review}/respond', [ExamController::class, 'respondToResultReview'])->middleware('throttle:30,1')->name('teacher.exam-result-reviews.respond');
         Route::post('/teacher/batches/{batch}/exams', [ExamController::class, 'store'])->name('teacher.batches.exams.store');
         Route::post('/teacher/batches/{batch}/assignments', [AssignmentController::class, 'store'])->middleware('throttle:10,1')->name('teacher.batches.assignments.store');
         Route::post('/teacher/assignments/{assignment}/submissions/{submission}/grade', [AssignmentController::class, 'grade'])->middleware('throttle:30,1')->name('teacher.assignments.grade');
@@ -273,6 +305,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::delete('/courses/{course}/wishlist', [CourseWishlistController::class, 'destroy'])->middleware('throttle:30,1')->name('student.wishlist.destroy');
         Route::post('/courses/{course}/payments/bkash', [BkashPaymentController::class, 'initiate'])->middleware('throttle:10,1')->name('courses.payments.bkash');
         Route::get('/my/courses', [CourseController::class, 'myCourses'])->name('student.courses.index');
+        Route::post('/courses/{course}/content/{post:slug}/progress', [CourseContentController::class, 'saveProgress'])->middleware('throttle:120,1')->name('student.courses.content.progress');
         Route::post('/courses/{course}/content/{post:slug}/complete', [CourseContentController::class, 'complete'])->middleware('throttle:30,1')->name('student.courses.content.complete');
         Route::get('/my/invoices', [InvoiceController::class, 'studentIndex'])->name('student.invoices.index');
         Route::get('/assignments/{assignment}', [AssignmentController::class, 'show'])->name('student.assignments.show');
@@ -281,6 +314,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::post('/exams/{exam}/start', [ExamController::class, 'start'])->name('student.exams.start');
         Route::post('/exam-attempts/{attempt}/answers', [ExamAnswerController::class, 'save'])->middleware('throttle:120,1')->name('student.exams.answers.save');
         Route::post('/exam-attempts/{attempt}/submit', [ExamController::class, 'submit'])->name('student.exams.submit');
+        Route::post('/exam-attempts/{attempt}/result-review', [ExamController::class, 'requestResultReview'])->middleware('throttle:5,1')->name('student.exams.result-review');
         Route::get('/student/quiz-attempts', [StudentQuestionSetAttemptHistoryController::class, 'index'])
         ->middleware('role:student')
         ->name('student.question-set-attempts.index');
@@ -315,6 +349,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         ->name('courses.lessons.complete');
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
+        Route::get('/cms', [AdminCmsDashboardController::class, 'index'])->name('admin.cms.index');
         Route::get('/system-health', [AdminSystemHealthController::class, 'index'])->name('admin.system-health.index');
         Route::post('/system-health/run', [AdminSystemHealthController::class, 'run'])->middleware('throttle:3,1')->name('admin.system-health.run');
         Route::get('/academic-levels', [AcademicLevelController::class, 'index'])->name('admin.academic-levels.index');
@@ -366,6 +401,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::post('/ebook-refunds/{refund}/reconcile', [AdminEbookOrderController::class, 'reconcileRefund'])->middleware('throttle:5,1')->name('admin.ebooks.refunds.reconcile');
         Route::post('/ebook-download-permissions/{permission}/revoke', [AdminEbookOrderController::class, 'revokePermission'])->middleware('throttle:20,1')->name('admin.ebooks.permissions.revoke');
         Route::get('/analytics', [AdminAnalyticsController::class, 'index'])->name('admin.analytics.index');
+        Route::get('/course-analytics', [CourseEngagementAnalyticsController::class, 'index'])->name('admin.course-analytics.index');
         Route::get('/dashboard-announcements', [AdminDashboardAnnouncementController::class, 'index'])->name('admin.dashboard-announcements.index');
         Route::get('/dashboard-announcements/create', [AdminDashboardAnnouncementController::class, 'create'])->name('admin.dashboard-announcements.create');
         Route::post('/dashboard-announcements', [AdminDashboardAnnouncementController::class, 'store'])->name('admin.dashboard-announcements.store');
@@ -392,6 +428,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::get('/addons', [AddonRegistryController::class, 'index'])->name('admin.addons.index');
         Route::get('/payment-gateways', [AdminPaymentGatewayController::class, 'index'])->name('admin.payment-gateways.index');
         Route::patch('/payment-gateways/{key}', [AdminPaymentGatewayController::class, 'update'])->middleware('throttle:20,1')->name('admin.payment-gateways.update');
+        Route::put('/payment-gateways/mfs/{provider}', [AdminPaymentGatewayController::class, 'updateMfs'])->middleware('throttle:10,1')->name('admin.payment-gateways.mfs.update');
         Route::get('/ai-developer', [AiDeveloperController::class, 'index'])->name('admin.ai-developer.index');
         Route::post('/ai-developer/analyze', [AiDeveloperController::class, 'analyze'])->middleware('throttle:3,1')->name('admin.ai-developer.analyze');
         Route::patch('/addons/{key}', [AddonRegistryController::class, 'update'])->middleware('throttle:20,1')->name('admin.addons.update');
@@ -434,6 +471,10 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::put('/batches/{batch}/question-bank/{question}', [ExamController::class, 'updateBankQuestion'])->middleware('throttle:30,1')->name('admin.batches.question-bank.update');
         Route::delete('/batches/{batch}/question-bank/{question}', [ExamController::class, 'destroyBankQuestion'])->middleware('throttle:20,1')->name('admin.batches.question-bank.destroy');
         Route::get('/exams/{exam}/results', [ExamController::class, 'teacherResults'])->name('admin.exams.results');
+        Route::post('/exams/{exam}/results/publish', [ExamController::class, 'publishResults'])->middleware('throttle:10,1')->name('admin.exams.results.publish');
+        Route::get('/exams/{exam}/result-sheet', [ExamController::class, 'resultSheet'])->name('admin.exams.result-sheet');
+        Route::post('/exam-answers/{answer}/grade', [ExamController::class, 'gradeAnswer'])->middleware('throttle:60,1')->name('admin.exam-answers.grade');
+        Route::post('/exam-result-reviews/{review}/respond', [ExamController::class, 'respondToResultReview'])->middleware('throttle:30,1')->name('admin.exam-result-reviews.respond');
         Route::get('/batches/{batch}/assignments', [AssignmentController::class, 'index'])->name('admin.batches.assignments.index');
         Route::post('/batches/{batch}/assignments', [AssignmentController::class, 'store'])->middleware('throttle:10,1')->name('admin.batches.assignments.store');
         Route::post('/assignments/{assignment}/submissions/{submission}/grade', [AssignmentController::class, 'grade'])->middleware('throttle:30,1')->name('admin.assignments.grade');
@@ -539,6 +580,8 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::get('/course-content-posts/create', [AdminCourseContentPostController::class, 'create'])->name('admin.course-content-posts.create');
         Route::post('/course-content-posts', [AdminCourseContentPostController::class, 'store'])->name('admin.course-content-posts.store');
         Route::get('/course-content-posts/{courseContentPost}/edit', [AdminCourseContentPostController::class, 'edit'])->name('admin.course-content-posts.edit');
+        Route::get('/course-content-posts/{courseContentPost}/versions', [AdminCourseContentPostController::class, 'versions'])->name('admin.course-content-posts.versions');
+        Route::post('/course-content-posts/{courseContentPost}/versions/{version}/restore', [AdminCourseContentPostController::class, 'restoreVersion'])->middleware('throttle:10,1')->name('admin.course-content-posts.versions.restore');
         Route::put('/course-content-posts/{courseContentPost}', [AdminCourseContentPostController::class, 'update'])->name('admin.course-content-posts.update');
         Route::delete('/course-content-posts/{courseContentPost}', [AdminCourseContentPostController::class, 'destroy'])->name('admin.course-content-posts.destroy');
         Route::get('/course-combos', [CourseComboController::class, 'index'])->name('admin.course-combos.index');
@@ -552,6 +595,8 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::put('/courses/{course}/builder', [AdminCourseBuilderController::class, 'update'])->name('admin.course-builder.update');
         Route::get('/courses/create', [CourseController::class, 'create'])->name('admin.courses.create');
         Route::post('/courses', [CourseController::class, 'store'])->name('admin.courses.store');
+        Route::get('/courses/{course}/versions', [CourseController::class, 'versions'])->name('admin.courses.versions');
+        Route::post('/courses/{course}/versions/{version}/restore', [CourseController::class, 'restoreVersion'])->middleware('throttle:10,1')->name('admin.courses.versions.restore');
         Route::get('/courses/{course}/edit', [CourseController::class, 'edit'])->name('admin.courses.edit');
         Route::put('/courses/{course}', [CourseController::class, 'update'])->name('admin.courses.update');
         Route::delete('/courses/{course}', [CourseController::class, 'destroy'])->name('admin.courses.destroy');

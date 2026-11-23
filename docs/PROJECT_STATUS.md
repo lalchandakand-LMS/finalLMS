@@ -418,3 +418,36 @@ Production deployment remains blocked until staging, backup/restore, rollback an
 - PR #389 merged as `d4b70a1caef9c1ccf168d99acf5c9ca1a336e976` after exact-head Laravel CI and CodeQL passed. Confirmed trust failures remain fail-closed; transient verification infrastructure errors no longer permanently demote an active plugin.
 - Post-merge workflow runs for these squash commits were not returned by the PR-run lookup; do not claim post-merge mainline CI has passed based on the pre-merge checks.
 - The uploaded `finalLMS-advanced.zip` feature bundle is not yet imported. It requires a three-way reconciliation against the updated mainline so its admission, cart, discussion, certificate, Guardian, plugin-health and localization work is retained without reverting the above fixes.
+
+
+## PR #396 consolidated hardening — 2026-11-22
+
+- Current work branch: `feat/aec-feature-parity-port`.
+- Referral payout creation now locks the owner account before reading and reserving approved commission rows, serializing duplicate submissions for one referrer.
+- Referral payout review now locks its reserved commission rows and fails closed unless every row is still reserved for the same owner and the commission total exactly matches the payout request amount.
+- Added feature coverage for duplicate payout attempts after payment and payout-review rejection when the reserved commission total has drifted.
+- Changes are committed in `72dc9fc94ced8b130ddd6c24bed82e94f0ef42ec`; CI and CodeQL for this exact final code head have not yet been observed. Run the complete Laravel CI/package workflow and CodeQL once after the consolidated changes.
+- The course-payment refund lifecycle is still not linked to invoice refunds. Do not infer a relationship between `payments` and `invoice_payments`; referral payouts remain a production release blocker until an explicit source-payment refund ledger and partial/full reversal policy are implemented and tested.
+- Other known scope gaps remain: richer HR leave/staff-user/payslip workflows; physical-library member linking/reservations/lost-damaged/fine settlement; full plugin runtime deactivate/reactivate/uninstall acceptance; SSLCOMMERZ sandbox integration; isolated cPanel staging/backup/restore/rollback.
+- No production deployment, live payment activation, or production data changes were performed.
+
+
+## Exact-head verification — 2026-11-22
+
+- Latest code head: `70d8d3bce8e4c09a40dfa04516b5c1537721fe03` on `feat/aec-feature-parity-port` / PR #396.
+- Laravel CI run #8324 completed successfully: 1,082 PHPUnit tests / 7,965 assertions; PHP lint, strict Composer validation, Composer security audit, npm install/audit, migrations, SQLite plugin-route/rollback checks, MariaDB rollback safety, route listing and Vite production build all passed.
+- cPanel packaging job passed, including optimized production dependencies, config/view cache, ZIP assembly and artifact upload. Artifact `AlomsEnglishCenter-cpanel` is available from run #8324 (artifact ID `14741760857`; expires 2026-12-22).
+- CodeQL run #3214 completed successfully on the same exact head.
+- These checks validate the CI test environment and package assembly; they do not replace isolated cPanel staging, backup/restore, real mail delivery or payment-provider sandbox acceptance.
+- Referral refund-to-course-payment linkage remains unresolved. Keep referral payouts and live payment activation disabled until explicit partial/full refund, chargeback, reversal and paid-commission recovery are implemented and tested. PR remains Draft; no production deployment or production data changes were performed.
+
+
+## 2026-11-22 — Five-panel navigation and Branch Panel tranche
+
+- Active work: PR #396, branch `feat/aec-feature-parity-port`; latest code commit before this status update: `c87b322ba308ed42c5278737e93ff8c9f6330807`.
+- Added a dedicated Branch Panel entry at `/branch/dashboard`, with branch-only batch/student totals and recent batches; added `/branch/batches` and `/branch/students` route aliases and retained legacy URLs for compatibility.
+- Branch dashboard denies users without an assigned active branch. Existing controller queries continue to scope batches, students and teachers to the assigned branch; no cross-branch selector is exposed.
+- Added role-specific sidebar navigation for Admin, Branch, Teacher, Student and Guardian; added Student quick links for exams, invoices, quiz history, attendance and guardian requests; added Guardian portal entry and Teacher batch/live-class entry.
+- Added regression coverage for distinct role navigation and branch dashboard isolation in `tests/Feature/StaffRoleScopeTest.php`.
+- Status: implementation committed to the PR branch; **exact-head Laravel CI and CodeQL have not yet reported for the latest commit**. No test pass is claimed. Five-portal browser/mobile acceptance and real branch-staff operational validation remain open.
+- Release state: PR #396 remains Draft/Open; do not merge or deploy until exact-head checks, complete diff review, authorization regressions and remaining release gates pass.

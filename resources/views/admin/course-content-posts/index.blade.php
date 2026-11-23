@@ -30,7 +30,7 @@
 <td>{{ $post->academicLevel?->name ?: '—' }}<div class="muted">{{ $post->categories->pluck('name')->join(', ') ?: '—' }}</div></td>
 <td>{{ __(ucwords(str_replace('_',' ',$post->access_type))) }}@if($post->access_type === 'paid')<div class="muted">৳{{ number_format((float)$post->regular_price,2) }} @if($post->sale_price) · {{ __('Sale') }} ৳{{ number_format((float)$post->sale_price,2) }} @endif</div>@endif</td>
 <td><span class="badge {{ $post->status === 'published' ? 'success' : 'warning' }}">{{ __(ucfirst($post->status)) }}</span></td>
-<td><a class="btn secondary" href="{{ route('admin.course-content-posts.edit', $post) }}">{{ __('Edit') }}</a>
+<td><a class="btn secondary" href="{{ route('admin.course-content-posts.edit', $post) }}">{{ __('Edit') }}</a> <a class="btn secondary" href="{{ route('admin.course-content-posts.versions', $post) }}">{{ __('Revisions') }} ({{ $post->versions_count }})</a>
 <form method="POST" action="{{ route('admin.course-content-posts.destroy', $post) }}" style="display:inline;" onsubmit="return confirm('{{ __('Delete this post?') }}')">@csrf @method('DELETE')<button class="btn secondary" type="submit">{{ __('Delete') }}</button></form>
 @if($post->product_id)<a class="btn secondary" href="{{ route('admin.ebooks.orders.index') }}">{{ __('Sales / Orders') }}</a>@endif
 </td></tr>

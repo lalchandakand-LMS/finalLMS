@@ -2,6 +2,8 @@
 
 namespace App\Services\Plugins;
 
+use App\Contracts\Payments\PaymentGateway;
+use App\Services\Payments\PaymentGatewayManager;
 use App\Models\PluginInstallation;
 use Closure;
 use Illuminate\Contracts\Foundation\Application;
@@ -168,6 +170,29 @@ final class PluginContext
             $label,
             $routeName,
             $options,
+        );
+    }
+
+    /**
+     * Register a payment adapter from this active, signature-verified plugin.
+     * The signed manifest must declare the payments.gateway capability.
+     *
+     * @param class-string<PaymentGateway> $driver
+     */
+    public function registerPaymentGateway(string $key, string $driver): void
+    {
+        if (! $this->hasCapability('payments.gateway')) {
+            throw new InvalidArgumentException('The plugin manifest must declare the payments.gateway capability.');
+        }
+
+        if (! is_subclass_of($driver, PaymentGateway::class)) {
+            throw new InvalidArgumentException('Payment gateway plugins must implement the payment gateway contract.');
+        }
+
+        $this->app->make(PaymentGatewayManager::class)->registerPluginGateway(
+            (string) $this->plugin->plugin_key,
+            $key,
+            $driver,
         );
     }
 

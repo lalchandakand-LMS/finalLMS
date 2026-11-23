@@ -1,7 +1,8 @@
 @extends('layouts.app')
 @section('title', __('Website analytics'))
 @section('content')
-<div class="page-header"><div><span class="badge info">{{ __('Admin') }}</span><h1>{{ __('Website analytics') }}</h1><p class="muted">{{ __('Unique visitor estimates and content engagement.') }}</p></div><a class="btn secondary" href="{{ route('admin.comments.index') }}">{{ __('Moderate comments') }}</a></div>
+<div class="page-header"><div><span class="badge info">{{ __('Admin') }}</span><h1>{{ __('Website analytics') }}</h1><p class="muted">{{ __('Unique visitor estimates and content engagement.') }}</p> <a class="btn secondary" href="{{ route('admin.course-analytics.index') }}">{{ __('Course engagement analytics') }}</a>
+</div><a class="btn secondary" href="{{ route('admin.comments.index') }}">{{ __('Moderate comments') }}</a></div>
 <div class="dash-summary">
 @foreach([__('Total unique visitors') => $stats['unique_visitors'], __('Visitors today') => $stats['visitors_today'], __('Visitors in 7 days') => $stats['visitors_7_days'], __('Course views') => $stats['course_views'], __('Post views') => $stats['post_views'], __('Pending comments') => $stats['pending_comments'], __('Approved comments') => $stats['approved_comments']] as $label => $value)
 <div class="summary-box"><span class="muted">{{ $label }}</span><strong>{{ number_format($value) }}</strong></div>

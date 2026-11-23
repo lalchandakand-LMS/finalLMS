@@ -8,16 +8,16 @@
 @php($current = $course->curriculumItems->keyBy('course_content_post_id'))
 @if($availablePosts->isEmpty())<p class="muted">{{ __('Publish content posts in the Content Studio before adding them to a course.') }}</p>@else
 <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">
-<thead><tr><th>{{ __('Include') }}</th><th>{{ __('Content post') }}</th><th>{{ __('Section / module') }}</th><th>{{ __('Order') }}</th><th>{{ __('Duration (min)') }}</th><th>{{ __('Free preview') }}</th></tr></thead>
-<tbody>
+<thead><tr><th>Move</th><th>{{ __('Include') }}</th><th>{{ __('Content post') }}</th><th>{{ __('Section / module') }}</th><th>{{ __('Order') }}</th><th>{{ __('Duration (min)') }}</th><th>{{ __('Free preview') }}</th><th>{{ __('Sequential unlock') }}</th><th>{{ __('Prerequisite lesson') }}</th></tr></thead>
+<tbody data-course-sortable="lessons">
 @foreach($availablePosts as $post)
 @php($item = $current->get($post->id))
-<tr style="border-top:1px solid var(--border);"><td style="padding:12px;"><input type="checkbox" name="post_ids[]" value="{{ $post->id }}" @checked($item) style="width:auto;"></td>
-<td><strong>{{ $post->title }}</strong><div class="muted">{{ $post->academicLevel?->name ?: __('All levels') }} · {{ $post->categories->pluck('name')->join(', ') }} · {{ __(ucwords(str_replace('_', ' ', $post->access_type))) }} · {{ __(ucfirst($post->status)) }}</div></td>
+<tr data-sortable-row style="border-top:1px solid var(--border);"><td style="padding:12px;"><button type="button" draggable="true" data-drag-handle aria-label="Drag to reorder lesson" title="Drag to reorder" style="cursor:grab;padding:6px;">⠿</button></td><td style="padding:12px;"><input type="checkbox" name="post_ids[]" value="{{ $post->id }}" @checked($item) style="width:auto;"></td>
+<td><strong>{{ $post->title }}</strong><div class="muted">{{ $post->academicLevel?->name ?: __('All levels') }} · {{ $post->categories->pluck('name')->join(', ') }} · {{ __(ucwords(str_replace('_', ' ', $post->access_type))) }} · {{ __(ucfirst($post->status)) }}</div>@if($item && $post->status === 'published' && $post->published_at?->lte(now()))<a class="muted" target="_blank" rel="noopener" href="{{ route('courses.content.show', [$course, $post]) }}">{{ __('Preview lesson') }} ↗</a>@endif</td>
 <td><input name="section_titles[{{ $post->id }}]" maxlength="120" value="{{ old('section_titles.'.$post->id, $item?->section_title) }}" placeholder="{{ __('e.g. Module 1') }}"></td>
 <td><input type="number" name="positions[{{ $post->id }}]" min="0" max="100000" value="{{ old('positions.'.$post->id, $item?->position ?? (($loop->iteration) * 10)) }}" style="width:90px;"></td>
 <td><input type="number" name="durations[{{ $post->id }}]" min="1" max="600" value="{{ old('durations.'.$post->id, $item?->duration_minutes) }}" style="width:90px;"></td>
-<td><input type="checkbox" name="previews[{{ $post->id }}]" value="1" @checked(old('previews.'.$post->id, $item?->is_preview ?? false)) style="width:auto;"></td></tr>
+<td><input type="checkbox" name="previews[{{ $post->id }}]" value="1" @checked(old('previews.'.$post->id, $item?->is_preview ?? false)) style="width:auto;"></td><td><input type="checkbox" name="unlock_after_previous[{{ $post->id }}]" value="1" @checked(old('unlock_after_previous.'.$post->id, $item?->unlock_after_previous ?? false)) style="width:auto;"></td><td><select name="prerequisites[{{ $post->id }}]" style="max-width:180px;"><option value="">{{ __('No prerequisite') }}</option>@foreach($availablePosts as $prerequisitePost) @if($prerequisitePost->id !== $post->id)<option value="{{ $prerequisitePost->id }}" @selected(old('prerequisites.'.$post->id, $item?->prerequisite_post_id) == $prerequisitePost->id)>{{ $prerequisitePost->title }}</option>@endif @endforeach</select></td></tr>
 @endforeach
 </tbody></table></div>
 @endif
@@ -30,11 +30,12 @@
     @else
         <div style="overflow-x:auto;">
             <table style="width:100%;border-collapse:collapse;">
-                <thead><tr><th>{{ __('Include') }}</th><th>{{ __('Question set') }}</th><th>{{ __('Module / section') }}</th><th>{{ __('Order') }}</th><th>{{ __('Max attempts') }}</th><th>{{ __('Time limit (minutes)') }}</th><th>{{ __('Questions per attempt') }}</th><th>{{ __('Available from') }}</th><th>{{ __('Shuffle') }}</th></tr></thead>
-                <tbody>
+                <thead><tr><th>Move</th><th>{{ __('Include') }}</th><th>{{ __('Question set') }}</th><th>{{ __('Module / section') }}</th><th>{{ __('Order') }}</th><th>{{ __('Max attempts') }}</th><th>{{ __('Time limit (minutes)') }}</th><th>{{ __('Questions per attempt') }}</th><th>{{ __('Available from') }}</th><th>{{ __('Shuffle') }}</th></tr></thead>
+                <tbody data-course-sortable="question-sets">
                 @foreach($availableQuestionSets as $set)
                     @php($attached = $currentQuestionSets->get($set->id))
-                    <tr style="border-top:1px solid var(--border);">
+                    <tr data-sortable-row style="border-top:1px solid var(--border);">
+                        <td style="padding:10px;"><button type="button" draggable="true" data-drag-handle aria-label="Drag to reorder question set" title="Drag to reorder" style="cursor:grab;padding:6px;">⠿</button></td>
                         <td style="padding:10px;"><input type="checkbox" name="question_set_ids[]" value="{{ $set->id }}" @checked($attached) style="width:auto;"></td>
                         <td><strong>{{ $set->title }}</strong><div class="muted">{{ $set->questions_count }} {{ __('questions') }} · {{ __(ucfirst($set->status)) }}</div></td>
                         <td><input name="question_set_section_titles[{{ $set->id }}]" maxlength="120" value="{{ old('question_set_section_titles.'.$set->id, $attached?->pivot?->section_title) }}" placeholder="{{ __('e.g. Module 1 quiz') }}"></td>
@@ -53,4 +54,36 @@
 </div>
 <button class="btn primary" type="submit" style="margin-top:18px;">{{ __('Save course curriculum') }}</button>
 </form></div>
+<script>
+(() => {
+    document.querySelectorAll('[data-course-sortable]').forEach((body) => {
+        let dragged = null;
+        const rows = () => [...body.querySelectorAll('[data-sortable-row]')];
+        const persistVisualOrder = () => rows().forEach((row, index) => {
+            const position = row.querySelector('input[name^="positions["], input[name^="question_set_positions["]');
+            if (position) position.value = (index + 1) * 10;
+        });
+        rows().forEach((row) => {
+            row.addEventListener('dragstart', (event) => {
+                if (!event.target.closest('[data-drag-handle]')) { event.preventDefault(); return; }
+                dragged = row;
+                row.style.opacity = '0.45';
+                event.dataTransfer.effectAllowed = 'move';
+            });
+            row.addEventListener('dragend', () => {
+                if (!dragged) return;
+                dragged.style.opacity = '';
+                dragged = null;
+                persistVisualOrder();
+            });
+            row.addEventListener('dragover', (event) => {
+                if (!dragged || dragged === row) return;
+                event.preventDefault();
+                const bounds = row.getBoundingClientRect();
+                body.insertBefore(dragged, event.clientY < bounds.top + bounds.height / 2 ? row : row.nextSibling);
+            });
+        });
+    });
+})();
+</script>
 @endsection

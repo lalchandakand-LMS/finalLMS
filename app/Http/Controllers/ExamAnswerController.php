@@ -20,14 +20,11 @@ class ExamAnswerController extends Controller
             abort_unless($lockedAttempt->status === 'in_progress', 409, 'This exam attempt is no longer accepting answers.');
 
             $exam = $lockedAttempt->exam()->firstOrFail();
-            abort_unless(
-                Enrollment::query()
-                    ->where('batch_id', $exam->batch_id)
-                    ->where('user_id', $request->user()->id)
-                    ->where('status', 'active')
-                    ->exists(),
-                403
-            );
+            abort_unless(Enrollment::query()
+                ->where('batch_id', $exam->batch_id)
+                ->where('user_id', $request->user()->id)
+                ->where('status', 'active')
+                ->exists(), 403);
 
             $deadline = min(
                 $exam->ends_at->getTimestamp(),
@@ -35,26 +32,34 @@ class ExamAnswerController extends Controller
             );
             abort_if(now()->getTimestamp() > $deadline + 15, 409, 'The exam submission window has closed.');
 
-            $validated = $request->validate([
-                'answers' => ['sometimes', 'array', 'max:100'],
-                'answers.*' => ['required', 'integer', 'between:0,3'],
-            ]);
+            $validated = $request->validate(['answers' => ['sometimes', 'array', 'max:100']]);
             $answers = $validated['answers'] ?? [];
-            $allowedQuestions = $lockedAttempt->attemptQuestions()
-                ->whereIn('exam_question_id', array_keys($answers))
-                ->pluck('exam_question_id')
-                ->map(fn ($id) => (string) $id)
-                ->all();
-            $submittedIds = array_map('strval', array_keys($answers));
-
-            abort_unless(count($allowedQuestions) === count($submittedIds), 422, 'An answer references a question outside this attempt.');
-
-            foreach ($answers as $questionId => $selectedOption) {
-                $lockedAttempt->answers()->updateOrCreate(
-                    ['exam_question_id' => $questionId],
-                    ['selected_option' => $selectedOption, 'is_correct' => false, 'marks_awarded' => 0]
-                );
+            $allowed = $lockedAttempt->attemptQuestions()->with('question')->get()->keyBy(fn ($row) => (string) $row->exam_question_id);
+            foreach ($answers as $questionId => $value) {
+                abort_unless(isset($allowed[(string) $questionId]), 422, 'An answer references a question outside this attempt.');
+                abort_unless(is_string($value) || is_int($value), 422, 'Invalid answer format.');
+                $question = $allowed[(string) $questionId]->question;
+                abort_unless($question, 422);
+                $type = $question->type ?: 'mcq';
+                if (in_array($type, ['mcq', 'true_false'], true)) {
+                    abort_unless(filter_var($value, FILTER_VALIDATE_INT) !== false
+                        && (int) $value >= 0
+                        && (int) $value < count($question->options ?? []), 422, 'Invalid option selected.');
+                    $lockedAttempt->answers()->updateOrCreate(
+                        ['exam_question_id' => $question->id],
+                        ['selected_option' => (int) $value, 'answer_text' => null, 'is_correct' => false, 'marks_awarded' => 0]
+                    );
+                } else {
+                    $text = trim((string) $value);
+                    abort_if(mb_strlen($text) > 10000, 422, 'Answer is too long.');
+                    $lockedAttempt->answers()->updateOrCreate(
+                        ['exam_question_id' => $question->id],
+                        ['selected_option' => null, 'answer_text' => $text, 'is_correct' => false, 'marks_awarded' => 0]
+                    );
+                }
             }
+
+            $lockedAttempt->update(['last_saved_at' => now()]);
 
             return response()->json([
                 'saved' => count($answers),

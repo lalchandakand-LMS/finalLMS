@@ -37,5 +37,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'password',
             'password_confirmation',
             'setting_value',
+            'credentials_json',
         ]);
     })->create();

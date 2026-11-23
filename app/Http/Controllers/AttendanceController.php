@@ -39,12 +39,12 @@ class AttendanceController extends Controller
         $user = Auth::user();
         $allowExcused = filter_var(Setting::value('attendance_allow_excused', '0'), FILTER_VALIDATE_BOOLEAN);
         $attendanceStoreRoute = match (true) {
-            $user->isBranchManager() => 'admin.branch-workspace.batches.attendance.store',
+            $user->isBranchManager() => 'branch.batches.attendance.store',
             $user->isAdmin() => 'admin.batches.attendance.store',
             default => 'teacher.batches.attendance.store',
         };
         $attendanceBackRoute = match (true) {
-            $user->isBranchManager() => 'admin.branch-workspace.batches.index',
+            $user->isBranchManager() => 'branch.batches.index',
             $user->isAdmin() => 'admin.batches.index',
             default => 'teacher.batches.index',
         };
@@ -145,7 +145,11 @@ class AttendanceController extends Controller
             }
         });
 
-        return redirect()->route('teacher.batches.attendance.index', ['batch' => $batch, 'date' => $validated['attendance_date']])
+        $attendanceRoute = Auth::user()->isBranchManager()
+            ? 'branch.batches.attendance.index'
+            : (Auth::user()->isAdmin() ? 'admin.batches.attendance.index' : 'teacher.batches.attendance.index');
+
+        return redirect()->route($attendanceRoute, ['batch' => $batch, 'date' => $validated['attendance_date']])
             ->with('success', 'Attendance saved successfully.');
     }
 
