@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "key": "aec.universal-payment",
+  "name": "Universal Payment",
+  "version": "1.0.0",
+  "type": "provider",
+  "entrypoint": "src/Plugin.php",
+  "requires": {
+    "php": "^8.3",
+    "laravel": "^12.0",
+    "lms": "^1.0"
+  },
+  "dependencies": [],
+  "conflicts": [],
+  "portals": [],
+  "permissions": [],
+  "capabilities": [
+    "payments.gateway",
+    "provider-adapter.bkash"
+  ],
+  "migrations": "migrations"
+}
