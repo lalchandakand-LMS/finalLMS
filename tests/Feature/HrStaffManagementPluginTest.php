@@ -318,6 +318,7 @@ final class HrStaffManagementPluginTest extends TestCase
         $teacher = User::factory()->create(['role' => 'teacher']);
         $otherTeacher = User::factory()->create(['role' => 'teacher']);
         $branch = Branch::query()->create(['name' => 'Per Class Payroll', 'slug' => 'per-class-payroll']);
+        $monthStart = now()->subMonth()->startOfMonth();
         $course = \App\Models\Course::query()->create([
             'teacher_id' => $teacher->id,
             'title' => 'Per Class Payroll Course',
@@ -332,8 +333,8 @@ final class HrStaffManagementPluginTest extends TestCase
             'teacher_id' => $teacher->id,
             'title' => 'Teacher Payroll Batch',
             'capacity' => 20,
-            'starts_at' => now()->startOfMonth(),
-            'ends_at' => now()->endOfMonth(),
+            'starts_at' => $monthStart,
+            'ends_at' => $monthStart->copy()->endOfMonth(),
             'fee' => 0,
             'status' => 'open',
         ]);
@@ -365,8 +366,8 @@ final class HrStaffManagementPluginTest extends TestCase
                 'batch_id' => $classBatch->id,
                 'title' => 'Payroll Class '.$index,
                 'meeting_url' => 'https://example.test/meeting/'.$index,
-                'starts_at' => now()->startOfMonth()->addDays($index + 1)->setTime(10, 0),
-                'ends_at' => now()->startOfMonth()->addDays($index + 1)->setTime(11, 0),
+                'starts_at' => $monthStart->copy()->addDays($index + 1)->setTime(10, 0),
+                'ends_at' => $monthStart->copy()->addDays($index + 1)->setTime(11, 0),
                 'status' => $status,
                 'created_by' => $admin->id,
             ]);
@@ -374,7 +375,7 @@ final class HrStaffManagementPluginTest extends TestCase
 
         $this->actingAs($admin)->post('/__hr/payroll', [
             'staff_profile_id' => $staff->id,
-            'payroll_month' => now()->format('Y-m'),
+            'payroll_month' => now()->subMonth()->format('Y-m'),
         ])->assertRedirect();
 
         $payroll = StaffPayroll::query()->firstOrFail();
