@@ -22,6 +22,7 @@ class CoreNativeModulesTest extends TestCase
             'admin.carousels.index',
             'admin.integrations.index',
             'admin.marketing.index',
+            'admin.payment-gateways.index',
             'admin.ai-assistant.settings',
         ];
 
