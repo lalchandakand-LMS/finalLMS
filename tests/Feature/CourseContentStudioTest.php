@@ -586,6 +586,7 @@ class CourseContentStudioTest extends TestCase
             'category_ids' => [$category->id],
         ])->assertRedirect();
 
+        $post->refresh(); // The update may regenerate the slug used by route-model binding.
         $version = CourseContentPostVersion::query()->where('course_content_post_id', $post->id)->firstOrFail();
         $this->post(route('admin.course-content-posts.versions.restore', [$post, $version]))
             ->assertRedirect(route('admin.course-content-posts.versions', $post));
