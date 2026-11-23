@@ -695,6 +695,7 @@ Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('a
 Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('admin/integrations')->name('admin.integrations.')->group(function () {
     Route::get('/', [ApiConnectorAdminController::class, 'index'])->name('index');
     Route::post('/{provider}/connect', [ApiConnectorAdminController::class, 'connect'])->where('provider', '[a-z][a-z0-9_]{1,79}')->middleware('throttle:10,1')->name('connect');
+    Route::post('/{provider}/health-check', [ApiConnectorAdminController::class, 'healthCheck'])->where('provider', '[a-z][a-z0-9_]{1,79}')->middleware('throttle:10,1')->name('health-check');
     Route::post('/{provider}/pause', [ApiConnectorAdminController::class, 'pause'])->where('provider', '[a-z][a-z0-9_]{1,79}')->middleware('throttle:10,1')->name('pause');
     Route::post('/{provider}/disconnect', [ApiConnectorAdminController::class, 'disconnect'])->where('provider', '[a-z][a-z0-9_]{1,79}')->middleware('throttle:5,1')->name('disconnect');
 });
