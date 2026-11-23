@@ -486,6 +486,7 @@
             <a class="{{ request()->routeIs('admin.carousels.*') ? 'active' : '' }}" href="{{ route('admin.carousels.index') }}"><span>🎞️</span><span class="nav-text">Slider & Carousel Builder</span></a>
             <a href="{{ route('admin.website-pages.index') }}"><span>📄</span><span class="nav-text">Custom pages</span></a>
             <a href="{{ route('admin.media.index') }}"><span>🖼️</span><span class="nav-text">Media library</span></a>
+            <a class="{{ request()->routeIs('admin.integrations.*') ? 'active' : '' }}" href="{{ route('admin.integrations.index') }}"><span>🔌</span><span class="nav-text">API Integrations</span></a>
             <a href="{{ route('admin.storage.index') }}"><span>🗄️</span><span class="nav-text">Storage manager</span></a>
             <a href="{{ route('admin.news.index') }}"><span>📰</span><span class="nav-text">Blog & news</span></a>
             <a class="{{ request()->routeIs('admin.analytics.*') ? 'active' : '' }}" href="{{ route('admin.analytics.index') }}"><span>📈</span><span class="nav-text">Website analytics</span></a>
