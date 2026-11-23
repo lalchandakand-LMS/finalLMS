@@ -103,6 +103,16 @@ class InvoiceManagementTest extends TestCase
         $this->assertSame(1, Invoice::query()->where('user_id', $student->id)->count());
         $this->assertSame(1, AttendanceFeePeriod::query()->where('batch_id', $batch->id)->where('billing_period', $period)->count());
         $this->assertSame(0, Invoice::query()->where('user_id', $noAttendanceStudent->id)->count());
+
+        $firstSession = LiveClass::query()->where('batch_id', $batch->id)->orderBy('starts_at')->firstOrFail();
+        $this->actingAs($teacher)->post(route('live-classes.attendance.store', $firstSession), [
+            'records' => [['student_id' => $student->id, 'status' => 'absent']],
+        ])->assertStatus(409);
+        $this->assertDatabaseHas('live_class_attendances', [
+            'live_class_id' => $firstSession->id,
+            'student_id' => $student->id,
+            'status' => 'present',
+        ]);
     }
 
     public function test_admin_can_create_an_invoice_and_student_can_only_see_their_own(): void
