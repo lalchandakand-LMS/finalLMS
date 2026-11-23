@@ -43,7 +43,7 @@
 </div>
 <section class="panel" style="margin-top:20px;">
     <h2>{{ __('Bangladesh MFS merchant configuration') }}</h2>
-    <p class="muted">{{ __('Store sandbox merchant credentials for bKash, Nagad and Rocket. Values are encrypted at rest and never shown again after saving. This configuration foundation does not install or activate checkout adapters.') }}</p>
+    <p class="muted">{{ __('Store encrypted merchant credentials for bKash, Nagad, Rocket and SSLCOMMERZ. Values are encrypted at rest and never shown again after saving. This configuration foundation does not install or activate checkout adapters.') }}</p>
     <div class="grid grid-2">
         @foreach($mfsConfigurations as $provider => $configuration)
             <article class="panel" style="margin:0;">
@@ -56,10 +56,14 @@
                 @endif
                 <form method="POST" action="{{ route('admin.payment-gateways.mfs.update', $provider) }}">
                     @csrf @method('PUT')
-                    <input type="hidden" name="mode" value="sandbox">
+                    <label for="mfs-mode-{{ $provider }}">{{ __('Environment') }}</label>
+                    <select id="mfs-mode-{{ $provider }}" name="mode" required>
+                        <option value="sandbox">{{ __('Sandbox / Test') }}</option>
+                        @if($provider === 'sslcommerz') <option value="live">{{ __('Live merchant credentials (stored; activation separately gated)') }}</option> @endif
+                    </select>
                     <label for="mfs-credentials-{{ $provider }}">{{ __('Merchant credentials (JSON)') }}</label>
                     <textarea id="mfs-credentials-{{ $provider }}" name="credentials_json" rows="5" required maxlength="12000" autocomplete="off" spellcheck="false"
-                        placeholder="{{ $provider === 'bkash' ? '{&#10;  &quot;username&quot;: &quot;SANDBOX_USERNAME&quot;,&#10;  &quot;password&quot;: &quot;SANDBOX_PASSWORD&quot;,&#10;  &quot;app_key&quot;: &quot;SANDBOX_APP_KEY&quot;,&#10;  &quot;app_secret&quot;: &quot;SANDBOX_APP_SECRET&quot;&#10;}' : '{&#10;  &quot;credential_name&quot;: &quot;SANDBOX_VALUE&quot;&#10;}' }}"></textarea>
+                        placeholder="{{ $provider === 'bkash' ? '{&#10;  &quot;username&quot;: &quot;SANDBOX_USERNAME&quot;,&#10;  &quot;password&quot;: &quot;SANDBOX_PASSWORD&quot;,&#10;  &quot;app_key&quot;: &quot;SANDBOX_APP_KEY&quot;,&#10;  &quot;app_secret&quot;: &quot;SANDBOX_APP_SECRET&quot;&#10;}' : ($provider === 'sslcommerz' ? '{&#10;  &quot;store_id&quot;: &quot;YOUR_STORE_ID&quot;,&#10;  &quot;store_password&quot;: &quot;YOUR_STORE_PASSWORD&quot;&#10;}' : '{&#10;  &quot;credential_name&quot;: &quot;SANDBOX_VALUE&quot;&#10;}') }}"></textarea>
                     <p class="muted">{{ __('Submitting replaces the complete stored credential set. Secrets are never included in the page response or activity log.') }}</p>
                     <button class="btn primary" type="submit">{{ __('Save encrypted sandbox credentials') }}</button>
                 </form>
