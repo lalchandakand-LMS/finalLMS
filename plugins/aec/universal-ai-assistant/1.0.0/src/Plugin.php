@@ -44,7 +44,7 @@ return new class implements PluginContract
             'guardian' => ['guardian/ai-assistant', 'guardian.ai-assistant.'],
             'support_staff' => ['support/ai-assistant', 'support.ai-assistant.'],
         ] as $portal => [$prefix, $namePrefix]) {
-            $context->routesForPortal($portal, $prefix, $namePrefix, function (): void {
+            $context->routesForPortal($portal, $prefix, $namePrefix, function () use ($portal): void {
                 Route::get('/', [AssistantController::class, 'index'])->name('index');
                 Route::post('/messages', [AssistantController::class, 'send'])->middleware('throttle:10,1')->name('messages.store');
                 if ($portal === 'teacher') {
