@@ -9,6 +9,8 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('exam_questions', function (Blueprint $table): void {
+            $table->json('options')->nullable()->change();
+            $table->unsignedTinyInteger('correct_option')->nullable()->change();
             $table->string('type', 24)->default('mcq')->after('question');
             $table->text('correct_answer')->nullable()->after('correct_option');
             $table->text('explanation')->nullable();
@@ -16,6 +18,8 @@ return new class extends Migration {
         });
 
         Schema::table('question_bank_questions', function (Blueprint $table): void {
+            $table->json('options')->nullable()->change();
+            $table->unsignedTinyInteger('correct_option')->nullable()->change();
             $table->string('type', 24)->default('mcq')->after('question');
             $table->text('correct_answer')->nullable()->after('correct_option');
             $table->text('explanation')->nullable();
@@ -66,10 +70,18 @@ return new class extends Migration {
             $table->dropConstrainedForeignId('graded_by');
             $table->dropColumn(['answer_text', 'teacher_feedback', 'graded_at']);
         });
+        if (DB::table('exam_questions')->whereNull('options')->orWhereNull('correct_option')->exists()
+            || DB::table('question_bank_questions')->whereNull('options')->orWhereNull('correct_option')->exists()) {
+            throw new RuntimeException('Cannot roll back advanced question types while non-choice questions exist.');
+        }
         Schema::table('question_bank_questions', function (Blueprint $table): void {
+            $table->json('options')->nullable(false)->change();
+            $table->unsignedTinyInteger('correct_option')->nullable(false)->change();
             $table->dropColumn(['type', 'correct_answer', 'explanation', 'grading_rubric', 'tags']);
         });
         Schema::table('exam_questions', function (Blueprint $table): void {
+            $table->json('options')->nullable(false)->change();
+            $table->unsignedTinyInteger('correct_option')->nullable(false)->change();
             $table->dropColumn(['type', 'correct_answer', 'explanation', 'grading_rubric']);
         });
     }
