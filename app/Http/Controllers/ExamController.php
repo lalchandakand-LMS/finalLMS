@@ -625,8 +625,16 @@ class ExamController extends Controller
         abort_unless(Auth::user()->isAdmin() || (int) $exam->batch->teacher_id === (int) Auth::id(), 403);
         $attempts = $exam->attempts()->with('student:id,name,email')
             ->where('status', 'submitted')->orderByDesc('score')->orderBy('submitted_at')->get();
-        $attempts = $attempts->values()->map(function ($attempt, $index) use ($exam) {
-            $attempt->merit_position = $index + 1;
+        $rank = 0;
+        $position = 0;
+        $previousScore = null;
+        $attempts = $attempts->values()->map(function ($attempt) use ($exam, &$rank, &$position, &$previousScore) {
+            $position++;
+            if ($previousScore === null || (int) $previousScore !== (int) $attempt->score) {
+                $rank = $position;
+            }
+            $previousScore = $attempt->score;
+            $attempt->merit_position = $rank;
             $attempt->result_label = $attempt->score >= $exam->pass_marks ? 'Passed' : 'Not passed';
             return $attempt;
         });
