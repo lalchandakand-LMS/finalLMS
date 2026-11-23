@@ -17,6 +17,8 @@ class Batch extends Model
         'starts_at',
         'ends_at',
         'fee',
+        'fee_calculation_mode',
+        'per_class_fee',
         'status',
     ];
 
@@ -24,6 +26,7 @@ class Batch extends Model
         'starts_at' => 'datetime',
         'ends_at' => 'datetime',
         'fee' => 'decimal:2',
+        'per_class_fee' => 'decimal:2',
         'capacity' => 'integer',
     ];
 
