@@ -241,7 +241,7 @@ class StudentQuestionSetAttemptController extends Controller
                 if (in_array($question->type, ['mcq', 'true_false'], true)) {
                     $maxOption = max(0, count($question->options ?? []) - 1);
                     $rules['answers.'.$question->id.'.selected_option'] = ['nullable', 'integer', 'min:0', 'max:'.$maxOption];
-                } elseif ($question->type === 'short_answer') {
+                } elseif (in_array($question->type, ['short_answer', 'written'], true)) {
                     $rules['answers.'.$question->id.'.answer_text'] = ['nullable', 'string', 'max:5000'];
                 }
             }
