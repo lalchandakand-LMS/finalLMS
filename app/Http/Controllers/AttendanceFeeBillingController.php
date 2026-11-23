@@ -34,7 +34,7 @@ final class AttendanceFeeBillingController extends Controller
             $rate = round((float) $lockedBatch->per_class_fee, 2);
             abort_if($rate <= 0, 422, 'Set a per-class fee greater than zero before generating invoices.');
 
-            $periodStart = \Carbon\Carbon\CarbonImmutable::createFromFormat('!Y-m-d', $data['billing_period'].'-01');
+            $periodStart = \Carbon\CarbonImmutable::createFromFormat('!Y-m-d', $data['billing_period'].'-01');
             $periodEnd = $periodStart->endOfMonth();
             $enrollments = $lockedBatch->enrollments()
                 ->whereIn('status', ['active', 'completed'])
