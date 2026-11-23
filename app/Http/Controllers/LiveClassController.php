@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AttendanceFeePeriod;
 use App\Models\Batch;
 use App\Models\LiveClass;
 use App\Models\LiveClassAttendance;
@@ -23,10 +24,6 @@ class LiveClassController extends Controller
 
         $query = LiveClass::with(['batch.course', 'batch.branch', 'batch.teacher', 'attendances'])
             ->orderBy('starts_at');
-
-        if ($user->isAdmin() || $user->isTeacher()) {
-            $query->with(['batch.enrollments' => fn ($enrollments) => $enrollments->where('status', 'active')->with('user')]);
-        }
 
         if ($user->isAdmin() || $user->isTeacher()) {
             $query->with(['batch.enrollments' => fn ($enrollments) => $enrollments->where('status', 'active')->with('user')]);
@@ -166,6 +163,15 @@ class LiveClassController extends Controller
 
         DB::transaction(function () use ($liveClass, $data): void {
             $session = LiveClass::query()->lockForUpdate()->findOrFail($liveClass->id);
+            if ($session->batch->fee_calculation_mode === 'per_class') {
+                $billingPeriod = $session->starts_at->format('Y-m');
+                abort_if(
+                    AttendanceFeePeriod::query()->where('batch_id', $session->batch_id)->where('billing_period', $billingPeriod)->exists(),
+                    409,
+                    'Class attendance is locked because this billing period has already been invoiced. Use a finance adjustment instead of changing billed attendance.'
+                );
+            }
+
             $activeStudentIds = $session->batch->enrollments()
                 ->where('status', 'active')
                 ->lockForUpdate()
