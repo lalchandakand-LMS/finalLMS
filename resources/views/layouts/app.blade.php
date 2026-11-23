@@ -496,7 +496,7 @@
             @elseif(auth()->user()->isTeacher())
                 <div class="admin-sidebar-label">Teacher Panel</div>
                 <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><span>▦</span><span class="nav-text">Teacher dashboard</span></a>
-                <a class="{{ request()->routeIs('teacher.batches.*') ? 'active' : '' }}" href="{{ route('teacher.batches.index') }}"><span>🗓️</span><span class="nav-text">My batches & classes</span></a>
+                <a class="{{ request()->routeIs('teacher.batches.*') ? 'active' : '' }}" href="{{ route('teacher.batches.index') }}"><span>🗓️</span><span class="nav-text">{{ __('My batches & classes') }}</span></a>
                 <a class="{{ request()->routeIs('live-classes.*') ? 'active' : '' }}" href="{{ route('live-classes.index') }}"><span>🎥</span><span class="nav-text">Live classes</span></a>
             @elseif(auth()->user()->isStudent())
                 <div class="admin-sidebar-label">Student Panel</div>
