@@ -24,6 +24,7 @@ class ExamController extends Controller
         abort_unless(Auth::user()->isAdmin() || $batch->teacher_id === Auth::id(), 403);
         $exams = $batch->exams()->withCount(['questions', 'attempts'])->latest()->get();
         $bankQuestions = QuestionBankQuestion::where('teacher_id', $batch->teacher_id)->latest()->get();
+        $isAdmin = Auth::user()->isAdmin();
         $questionSetQuery = QuestionSet::query()->published()->withCount('questions');
         if (! $isAdmin) {
             $questionSetQuery->where(function ($query) use ($batch): void {
@@ -32,7 +33,6 @@ class ExamController extends Controller
             });
         }
         $questionSets = $questionSetQuery->latest()->get();
-        $isAdmin = Auth::user()->isAdmin();
 
         return view('teacher.exams.index', compact('batch', 'exams', 'bankQuestions', 'questionSets', 'isAdmin'));
     }
