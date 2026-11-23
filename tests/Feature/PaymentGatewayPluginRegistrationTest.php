@@ -143,6 +143,7 @@ class TestPaymentGatewayAdapter implements PaymentGateway
     {
         return ['payment_id' => 'fixture-payment', 'checkout_url' => 'https://payments.example.test/checkout'];
     }
+    public function callbackPaymentId(array $callback): ?string { return $callback['paymentID'] ?? null; }
     public function verifyCallback(Payment $payment, array $callback): array
     {
         return ['verified' => [], 'executed' => []];
