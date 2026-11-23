@@ -82,6 +82,7 @@ use App\Http\Controllers\CommentController;
 use App\Modules\Admissions\AdmissionController;
 use App\Modules\Hr\HrController;
 use App\Modules\Library\LibraryController;
+use App\Modules\Referral\ReferralIncomeController;
 use App\Http\Controllers\GamificationController;
 use App\Http\Controllers\LandingPageController;
 use Illuminate\Support\Facades\Route;
@@ -141,6 +142,7 @@ Route::get('/ebooks', [EbookStoreController::class, 'index'])->name('ebooks.inde
 Route::get('/ebooks/{product:slug}/preview/{previewPage}', [EbookStoreController::class, 'preview'])->name('ebooks.preview');
 Route::get('/ebooks/{product:slug}', [EbookStoreController::class, 'show'])->name('ebooks.show');
 
+Route::get('/r/{code}', [ReferralIncomeController::class, 'track'])->where('code', '[A-Za-z0-9]{6,32}')->name('referral.public.track');
 Route::get('/careers', [HrController::class, 'publicCareers'])->name('careers.index');
 Route::get('/careers/{opening}', [HrController::class, 'publicCareerShow'])->whereNumber('opening')->name('careers.show');
 Route::post('/careers/{opening}/apply', [HrController::class, 'applyCareer'])->whereNumber('opening')->middleware('throttle:5,10')->name('careers.apply');
@@ -167,6 +169,23 @@ Route::middleware('auth')->group(function () {
     Route::post('/email/verification-notification', [EmailVerificationController::class, 'resend'])
         ->middleware('throttle:6,1')
         ->name('verification.send');
+});
+
+Route::middleware(['auth', 'verified', 'student.device', 'activity.log', 'role:student'])->prefix('student/referrals')->name('student.referrals.')->group(function () {
+    Route::get('/', [ReferralIncomeController::class, 'dashboard'])->name('dashboard');
+    Route::post('/apply', [ReferralIncomeController::class, 'apply'])->middleware('throttle:5,1')->name('apply');
+    Route::post('/payout', [ReferralIncomeController::class, 'requestPayout'])->middleware('throttle:3,1')->name('payout');
+});
+Route::middleware(['auth', 'verified', 'activity.log', 'role:teacher'])->prefix('teacher/referrals')->name('teacher.referrals.')->group(function () {
+    Route::get('/', [ReferralIncomeController::class, 'dashboard'])->name('dashboard');
+    Route::post('/apply', [ReferralIncomeController::class, 'apply'])->middleware('throttle:5,1')->name('apply');
+    Route::post('/payout', [ReferralIncomeController::class, 'requestPayout'])->middleware('throttle:3,1')->name('payout');
+});
+Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('admin/referrals')->name('admin.referrals.')->group(function () {
+    Route::get('/', [ReferralIncomeController::class, 'adminIndex'])->name('index');
+    Route::put('/rules', [ReferralIncomeController::class, 'updateRules'])->middleware('throttle:10,1')->name('rules.update');
+    Route::post('/commissions/{commission}/review', [ReferralIncomeController::class, 'reviewCommission'])->whereNumber('commission')->middleware('throttle:20,1')->name('commissions.review');
+    Route::post('/payouts/{payout}/review', [ReferralIncomeController::class, 'reviewPayout'])->whereNumber('payout')->middleware('throttle:10,1')->name('payouts.review');
 });
 
 Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('admin/library')->name('admin.library.')->group(function () {
