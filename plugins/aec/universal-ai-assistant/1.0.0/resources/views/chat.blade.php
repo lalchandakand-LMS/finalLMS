@@ -27,7 +27,7 @@
     @endif
     @if($role === 'teacher') <a class="btn secondary" href="{{ route('teacher.ai-assistant.drafts.index') }}">{{ __('My AI teaching drafts') }}</a> @endif
     @if($role === 'support_staff') <a class="btn secondary" href="{{ route('support.ai-assistant.knowledge.index') }}">{{ __('Verified Support FAQs') }}</a> @endif
-    @php($notificationPrefix = match($role) { 'admin' => 'admin', 'teacher' => 'teacher', 'student' => 'student', 'guardian' => 'guardian', default => 'support' })
+    @php($notificationPrefix = match($role) { 'admin' => 'admin', 'branch_manager' => 'branch', 'teacher' => 'teacher', 'student' => 'student', 'guardian' => 'guardian', default => 'support' })
     <a class="btn secondary" href="{{ route($notificationPrefix.'.ai-assistant.notifications.index') }}">{{ __('AI notifications') }}</a>
 </div>
 <div class="grid grid-2">
