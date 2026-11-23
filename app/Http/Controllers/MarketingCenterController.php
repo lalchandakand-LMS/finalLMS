@@ -7,11 +7,12 @@ use App\Models\MetaBoostCampaign;
 use App\Models\Setting;
 use App\Models\SmsCampaign;
 use App\Models\SupportTicket;
+use App\Services\Integrations\ApiConnectorManager;
 use Illuminate\View\View;
 
 class MarketingCenterController extends Controller
 {
-    public function index(): View
+    public function index(ApiConnectorManager $connectorManager): View
     {
         $settings = Setting::query()
             ->whereIn('key', [
@@ -74,6 +75,7 @@ class MarketingCenterController extends Controller
         return view('admin.marketing.index', [
             'integrations' => $integrations,
             'broadcastMetrics' => $broadcastMetrics,
+            'apiConnectors' => $connectorManager->catalog(),
             'sitemapUrl' => route('seo.sitemap'),
             'robotsUrl' => route('seo.robots'),
         ]);
