@@ -227,4 +227,48 @@ class CourseMetadataAndCategoriesTest extends TestCase
             ->assertSee('Basic English literacy')
             ->assertSee('General English');
     }
+
+    public function test_public_catalog_filters_free_paid_and_course_duration(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $free = $this->course($teacher, [
+            'title' => 'Free Short Course', 'slug' => 'free-short-course',
+            'price' => 0, 'duration_minutes' => 90,
+        ]);
+        $paid = $this->course($teacher, [
+            'title' => 'Paid Long Course', 'slug' => 'paid-long-course',
+            'price' => 2500, 'duration_minutes' => 600,
+        ]);
+
+        $this->get(route('courses.index', [
+            'price_type' => 'free', 'min_duration' => 60, 'max_duration' => 120,
+        ]))->assertOk()
+            ->assertSee('Free Short Course')
+            ->assertDontSee('Paid Long Course');
+
+        $this->get(route('courses.index', [
+            'price_type' => 'paid', 'min_duration' => 500,
+        ]))->assertOk()
+            ->assertSee('Paid Long Course')
+            ->assertDontSee('Free Short Course');
+    }
+
+    public function test_public_catalog_supports_popularity_sort_and_rejects_invalid_duration_range(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $popular = $this->course($teacher, ['title' => 'Popular Course', 'slug' => 'popular-course']);
+        $newer = $this->course($teacher, ['title' => 'New Course', 'slug' => 'new-course']);
+        $student = User::factory()->create(['role' => 'student']);
+        Enrollment::create(['user_id' => $student->id, 'course_id' => $popular->id, 'status' => 'active']);
+
+        $response = $this->get(route('courses.index', ['sort' => 'popular']))->assertOk();
+        $this->assertLessThan(
+            strpos($response->getContent(), 'New Course'),
+            strpos($response->getContent(), 'Popular Course')
+        );
+
+        $this->get(route('courses.index', ['min_duration' => 500, 'max_duration' => 100]))
+            ->assertSessionHasErrors('max_duration');
+    }
+
 }

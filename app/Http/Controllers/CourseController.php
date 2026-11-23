@@ -36,7 +36,10 @@ class CourseController extends Controller
             'language' => ['nullable', 'string', 'max:40'],
             'min_price' => ['nullable', 'numeric', 'min:0', 'max:100000000'],
             'max_price' => ['nullable', 'numeric', 'min:0', 'max:100000000', 'gte:min_price'],
-            'sort' => ['nullable', 'in:latest,oldest,price_low,price_high,title'],
+            'price_type' => ['nullable', 'in:free,paid'],
+            'min_duration' => ['nullable', 'integer', 'min:0', 'max:100000'],
+            'max_duration' => ['nullable', 'integer', 'min:0', 'max:100000', 'gte:min_duration'],
+            'sort' => ['nullable', 'in:latest,oldest,price_low,price_high,popular,title'],
         ]);
 
         $query = Course::query()
@@ -92,11 +95,23 @@ class CourseController extends Controller
         if (isset($validated['max_price'])) {
             $query->where('price', '<=', $validated['max_price']);
         }
+        if (($validated['price_type'] ?? null) === 'free') {
+            $query->where('price', '<=', 0);
+        } elseif (($validated['price_type'] ?? null) === 'paid') {
+            $query->where('price', '>', 0);
+        }
+        if (isset($validated['min_duration'])) {
+            $query->where('duration_minutes', '>=', $validated['min_duration']);
+        }
+        if (isset($validated['max_duration'])) {
+            $query->where('duration_minutes', '<=', $validated['max_duration']);
+        }
 
         match ($validated['sort'] ?? 'latest') {
             'oldest' => $query->oldest(),
             'price_low' => $query->orderBy('price')->orderByDesc('id'),
             'price_high' => $query->orderByDesc('price')->orderByDesc('id'),
+            'popular' => $query->orderByDesc('students_count')->orderByDesc('id'),
             'title' => $query->orderBy('title')->orderBy('id'),
             default => $query->latest(),
         };

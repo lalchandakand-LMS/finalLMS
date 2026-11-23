@@ -1557,5 +1557,15 @@
     "Flash sale campaign deleted.": "ফ্ল্যাশ সেল ক্যাম্পেইন মুছে ফেলা হয়েছে।",
     "(hidden)": "(গোপন)",
     "General guidance only. This assistant cannot access private LMS records or perform actions.": "শুধু সাধারণ দিকনির্দেশনা। এই সহকারী ব্যক্তিগত LMS রেকর্ডে প্রবেশ করতে পারে না বা কোনো কাজ সম্পাদন করতে পারে না।",
-    "This assistant may use read-only, role-scoped LMS context authorized for your account. It cannot perform actions.": "এই সহকারী আপনার অ্যাকাউন্টের জন্য অনুমোদিত, ভূমিকা-সীমাবদ্ধ LMS তথ্য শুধু পড়ার জন্য ব্যবহার করতে পারে। এটি কোনো কাজ সম্পাদন করতে পারে না।"
+    "This assistant may use read-only, role-scoped LMS context authorized for your account. It cannot perform actions.": "এই সহকারী আপনার অ্যাকাউন্টের জন্য অনুমোদিত, ভূমিকা-সীমাবদ্ধ LMS তথ্য শুধু পড়ার জন্য ব্যবহার করতে পারে। এটি কোনো কাজ সম্পাদন করতে পারে না।",
+    "Price type": "মূল্যের ধরন",
+    "Any price": "যেকোনো মূল্য",
+    "Free courses": "ফ্রি কোর্স",
+    "Paid courses": "পেইড কোর্স",
+    "Minimum duration (minutes)": "সর্বনিম্ন সময়কাল (মিনিট)",
+    "Maximum duration (minutes)": "সর্বোচ্চ সময়কাল (মিনিট)",
+    "Most popular": "জনপ্রিয়তার ভিত্তিতে",
+    "Showing": "দেখানো হচ্ছে",
+    "of": "এর মধ্যে",
+    "Filters applied": "ফিল্টার প্রয়োগ করা হয়েছে"
 }

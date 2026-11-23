@@ -94,6 +94,19 @@
             <label>{{ __('Maximum price (BDT)') }}
                 <input type="number" name="max_price" min="0" max="100000000" step="0.01" value="{{ request('max_price') }}">
             </label>
+            <label>{{ __('Price type') }}
+                <select name="price_type">
+                    <option value="">{{ __('Any price') }}</option>
+                    <option value="free" @selected(request('price_type') === 'free')>{{ __('Free courses') }}</option>
+                    <option value="paid" @selected(request('price_type') === 'paid')>{{ __('Paid courses') }}</option>
+                </select>
+            </label>
+            <label>{{ __('Minimum duration (minutes)') }}
+                <input type="number" name="min_duration" min="0" max="100000" step="1" value="{{ request('min_duration') }}">
+            </label>
+            <label>{{ __('Maximum duration (minutes)') }}
+                <input type="number" name="max_duration" min="0" max="100000" step="1" value="{{ request('max_duration') }}">
+            </label>
         </div>
         <div class="meta-row" style="margin-top:14px;align-items:end;">
             <label style="max-width:240px;">{{ __('Sort by') }}
@@ -102,6 +115,7 @@
                     <option value="oldest" @selected(request('sort') === 'oldest')>{{ __('Oldest first') }}</option>
                     <option value="price_low" @selected(request('sort') === 'price_low')>{{ __('Price: low to high') }}</option>
                     <option value="price_high" @selected(request('sort') === 'price_high')>{{ __('Price: high to low') }}</option>
+                    <option value="popular" @selected(request('sort') === 'popular')>{{ __('Most popular') }}</option>
                     <option value="title" @selected(request('sort') === 'title')>{{ __('Course title') }}</option>
                 </select>
             </label>
@@ -110,6 +124,12 @@
         </div>
     </form>
 
+    <div class="meta-row" style="justify-content:space-between;margin:0 0 14px;">
+        <span class="muted">{{ __('Showing') }} {{ $courses->firstItem() ?? 0 }}–{{ $courses->lastItem() ?? 0 }} {{ __('of') }} {{ number_format($courses->total()) }} {{ __('courses') }}</span>
+        @if(request()->hasAny(['q','teacher','category','level','academic_level_id','language','min_price','max_price','price_type','min_duration','max_duration']))
+            <span class="muted">{{ __('Filters applied') }}</span>
+        @endif
+    </div>
     <div class="course-catalog-grid">
         @foreach($courses as $course)
             @php
