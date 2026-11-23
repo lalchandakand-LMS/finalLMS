@@ -3,6 +3,12 @@
 namespace Tests\Feature;
 
 use App\Models\Invoice;
+use App\Models\Attendance;
+use App\Models\AttendanceFeePeriod;
+use App\Models\Batch;
+use App\Models\Branch;
+use App\Models\Course;
+use App\Models\Enrollment;
 use App\Models\InvoicePayment;
 use App\Models\InvoiceRefund;
 use App\Services\Payments\BkashRefundService;
