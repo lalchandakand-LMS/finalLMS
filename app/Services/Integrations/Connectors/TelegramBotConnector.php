@@ -28,7 +28,9 @@ final class TelegramBotConnector implements ApiConnector
     public function validateCredentials(array $credentials): array
     {
         $token = trim((string) ($credentials['bot_token'] ?? ''));
-        if ($token === '' || strlen($token) > 256) {
+        $webhookSecret = (string) ($credentials['webhook_secret'] ?? '');
+        if ($token === '' || strlen($token) > 256
+            || preg_match('/^[A-Za-z0-9_-]{1,256}$/D', $webhookSecret) !== 1) {
             return ['valid' => false];
         }
         $response = Http::timeout(10)->acceptJson()->get('https://api.telegram.org/bot'.$token.'/getMe');
