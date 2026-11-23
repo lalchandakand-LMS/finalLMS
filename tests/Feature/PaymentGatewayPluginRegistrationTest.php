@@ -43,12 +43,12 @@ class PaymentGatewayPluginRegistrationTest extends TestCase
         File::ensureDirectoryExists($directory);
         $entrypoint = <<<'PHP'
 <?php
-return new class implements \\App\\Contracts\\Plugins\\PluginContract {
-    public function register(\\App\\Services\\Plugins\\PluginContext $context): void
+return new class implements \App\Contracts\Plugins\PluginContract {
+    public function register(\App\Services\Plugins\PluginContext $context): void
     {
-        $context->registerPaymentGateway('fixture_gateway', \\Tests\\Feature\\TestPaymentGatewayAdapter::class);
+        $context->registerPaymentGateway('fixture_gateway', \Tests\Feature\TestPaymentGatewayAdapter::class);
     }
-    public function boot(\\App\\Services\\Plugins\\PluginContext $context): void {}
+    public function boot(\App\Services\Plugins\PluginContext $context): void {}
 };
 PHP;
         $file = $directory.'/Plugin.php';
