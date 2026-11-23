@@ -95,7 +95,7 @@
         if (rubric) rubric.hidden = type !== 'written';
         options?.querySelectorAll('input').forEach((field, index) => {
             field.disabled = !choice || type === 'true_false';
-            field.required = type === 'mcq';
+            field.required = type === 'mcq' && (!bankToggle.checked || Boolean(card.querySelector('textarea[name$=\"[question]\"]')?.value.trim()));
         });
         answer?.querySelectorAll('select').forEach(field => { field.disabled = !choice; });
         if (expected) {
@@ -141,9 +141,10 @@
         manualArea.querySelectorAll('.exam-question').forEach(card => {
             const rubric = card.querySelector('.rubric-text');
             if (rubric && rubric.value.trim()) {
+                const prefix = card.querySelector('.question-type').name.replace('[type]', '');
                 rubric.value.split('\\n').map(value => value.trim()).filter(Boolean).forEach((value, index) => {
                     const hidden = document.createElement('input'); hidden.type = 'hidden';
-                    hidden.name = rubric.name.replace('rubric-text', 'grading_rubric') + '[' + index + ']';
+                    hidden.name = prefix + '[grading_rubric][' + index + ']';
                     hidden.value = value; form.appendChild(hidden);
                 });
             }
