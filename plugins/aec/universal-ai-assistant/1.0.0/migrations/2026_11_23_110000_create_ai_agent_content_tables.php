@@ -4,7 +4,6 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
-use RuntimeException;
 
 return new class extends Migration
 {
@@ -64,7 +63,7 @@ return new class extends Migration
     {
         foreach (['ai_teacher_drafts', 'ai_support_knowledge', 'ai_agent_notifications'] as $table) {
             if (Schema::hasTable($table) && DB::table($table)->exists()) {
-                throw new RuntimeException('AI agent content or notification data exists; export or retain it before rollback.');
+                throw new \RuntimeException('AI agent content or notification data exists; export or retain it before rollback.');
             }
         }
         Schema::dropIfExists('ai_agent_notifications');
