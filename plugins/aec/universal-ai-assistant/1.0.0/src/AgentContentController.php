@@ -76,8 +76,11 @@ final class AgentContentController
 
     public function markRead(Request $request, int $notification): RedirectResponse
     {
-        DB::table('ai_agent_notifications')->where('id', $notification)->where('user_id', $request->user()->id)
+        $updated = DB::table('ai_agent_notifications')->where('id', $notification)->where('user_id', $request->user()->id)
             ->whereNull('read_at')->update(['read_at' => now(), 'updated_at' => now()]);
+        if ($updated > 0) {
+            AssistantAudit::record('agent_notification_read', (int) $request->user()->id, null, null, (string) $request->user()->role, 'internal', 'agent-content-v1', ['notification_id' => $notification]);
+        }
         return back();
     }
 }
