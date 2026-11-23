@@ -3,6 +3,7 @@
 namespace App\Services\Payments;
 
 use App\Contracts\Payments\PaymentGateway;
+use App\Models\PluginInstallation;
 use App\Models\Setting;
 use Illuminate\Contracts\Container\Container;
 use InvalidArgumentException;
