@@ -584,6 +584,8 @@
                     <a href="{{ route('live-classes.index') }}">{{ __('Live classes') }}</a>
                     @if(auth()->user()->isStudent())
                         <a href="{{ route('ebooks.orders') }}">My eBook library</a>
+                        <a href="{{ route('student.transcript') }}">{{ __('Academic transcript') }}</a>
+                        <a href="{{ route('student.gamification.index') }}">{{ __('Learning achievements') }}</a>
                     @endif
                     @if(auth()->user()->isAdmin())
                         <a href="{{ route('admin.batches.index') }}">Batches</a>
