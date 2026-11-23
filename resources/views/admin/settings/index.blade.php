@@ -268,9 +268,9 @@
                         </div>
                     </div>
                     <div class="dashboard-preview-frame" data-dashboard-preview-frame data-preview-mode="desktop" style="margin:14px auto 0;padding:12px;border:1px solid var(--border);border-radius:14px;background:var(--bg);transition:max-width .2s ease;">
-                        <div style="padding:18px;border-radius:10px;color:#fff;background:linear-gradient(115deg,#102b63,#0759c8);">
-                            <strong>{{ __('Welcome back,') }} {{ __('Administrator') }}</strong>
-                            <p style="margin:5px 0 0;color:#e7efff;font-size:.85rem;">{{ __('Your academy overview at a glance') }}</p>
+                        <div data-dashboard-preview-hero style="padding:18px;border-radius:10px;color:#fff;background:linear-gradient(115deg,var(--dashboard-preview-primary,#102b63),var(--dashboard-preview-secondary,#0759c8));">
+                            <strong data-dashboard-preview-title>{{ __('Welcome back,') }} {{ __('Administrator') }}</strong>
+                            <p data-dashboard-preview-subtitle style="margin:5px 0 0;color:#e7efff;font-size:.85rem;">{{ __('Your academy overview at a glance') }}</p>
                         </div>
                         <div class="dashboard-preview-stats" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:10px;">
                             @foreach(['Students','Teachers','Courses','Certificates'] as $previewMetric)
@@ -564,6 +564,28 @@
             const panel = document.querySelector('[data-dashboard-preview]');
             if (!panel) return;
             const frame = panel.querySelector('[data-dashboard-preview-frame]');
+            const form = panel.closest('form');
+            const previewTitle = panel.querySelector('[data-dashboard-preview-title]');
+            const previewSubtitle = panel.querySelector('[data-dashboard-preview-subtitle]');
+            const updatePreview = () => {
+                if (!form || !frame) return;
+                const value = name => form.elements.namedItem(name)?.value || '';
+                frame.style.setProperty('--dashboard-preview-primary', value('dashboard_primary_color') || '#102b63');
+                frame.style.setProperty('--dashboard-preview-secondary', value('dashboard_secondary_color') || '#0759c8');
+                if (previewTitle) previewTitle.textContent = value('dashboard_hero_title') || 'Welcome back, Administrator';
+                if (previewSubtitle) previewSubtitle.textContent = value('dashboard_hero_subtitle') || 'Your academy overview at a glance';
+                const accents = ['dashboard_students_color','dashboard_teachers_color','dashboard_courses_color','dashboard_certificates_color'];
+                panel.querySelectorAll('.dashboard-preview-stats > div').forEach((card,index) => {
+                    card.style.borderTop = '3px solid ' + (value(accents[index]) || ['#1675f5','#08b978','#8525e8','#f59e0b'][index]);
+                    card.style.background = value('dashboard_surface_color') || '#ffffff';
+                });
+                frame.style.background = value('dashboard_background_color') || '#f3f6ff';
+            };
+            if (form) {
+                form.addEventListener('input', updatePreview);
+                form.addEventListener('change', updatePreview);
+                updatePreview();
+            }
             panel.querySelectorAll('[data-dashboard-preview-mode]').forEach(button => {
                 button.addEventListener('click', () => {
                     const mode = button.getAttribute('data-dashboard-preview-mode');
@@ -617,6 +639,7 @@
                         if (down) down.disabled = index === order.length - 1;
                     });
                 }
+                if (typeof updatePreview === 'function') updatePreview();
                 if (status) status.textContent = 'Dashboard defaults restored. Save settings to apply them.';
             });
         })();
