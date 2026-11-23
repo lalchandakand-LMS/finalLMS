@@ -306,6 +306,23 @@
                         </div>
                     @endforeach
                 </div>
+                <h3 style="margin:20px 0 10px;">{{ __('Dashboard widget order') }}</h3>
+                <p class="muted">{{ __('Set a position from 1 to 6. Lower numbers appear earlier. Quick actions and system snapshot can be reordered independently.') }}</p>
+                <div class="grid grid-2">
+                    @foreach([
+                        'dashboard_order_hero' => ['Welcome banner', 1],
+                        'dashboard_order_statistics' => ['Statistics cards', 2],
+                        'dashboard_order_live_class' => ['Upcoming live class', 3],
+                        'dashboard_order_quick_actions' => ['Quick actions', 4],
+                        'dashboard_order_system_snapshot' => ['System snapshot', 5],
+                        'dashboard_order_learning_operations' => ['Learning operations', 6],
+                    ] as $key => [$label, $defaultOrder])
+                        <div>
+                            <label for="{{ $key }}">{{ __($label) }}</label>
+                            <input id="{{ $key }}" type="number" name="{{ $key }}" min="1" max="6" step="1" value="{{ old($key, $settings[$key] ?? $defaultOrder) }}">
+                        </div>
+                    @endforeach
+                </div>
                 <p class="muted" style="margin-top:14px;">{{ __('Need another image? Upload it in the Media Library first. Changes apply to the admin dashboard after saving. Dashboard counts continue to come from real LMS records.') }} <a href="{{ route('admin.media.index') }}">{{ __('Open Media Library') }}</a></p>
             </section>
                 <span class="badge info">{{ __('Search and marketing') }}</span>
