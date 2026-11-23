@@ -101,8 +101,8 @@ class StudentDashboardInsightsTest extends TestCase
         CourseContentProgress::create([
             'user_id' => $student->id,
             'course_curriculum_item_id' => $item->id,
-            'progress_percent' => 100,
-            'watched_seconds' => 100,
+            'progress_percent' => 90,
+            'watched_seconds' => 90,
             'duration_seconds' => 100,
             'completed_at' => now(),
         ]);
