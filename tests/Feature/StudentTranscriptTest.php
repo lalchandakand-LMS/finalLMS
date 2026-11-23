@@ -84,6 +84,29 @@ class StudentTranscriptTest extends TestCase
             'completed_at' => now(),
         ]);
 
+        $partialPost = CourseContentPost::create([
+            'author_id' => $teacher->id,
+            'title' => 'Partially watched lesson',
+            'slug' => 'partial-transcript-video-'.Str::random(8),
+            'long_description' => 'Video lesson content',
+            'status' => 'published',
+            'published_at' => now()->subMinute(),
+        ]);
+        $partialItem = $course->curriculumItems()->create([
+            'course_content_post_id' => $partialPost->id,
+            'section_title' => 'Module 2',
+            'position' => 2,
+            'is_preview' => false,
+        ]);
+        CourseContentProgress::create([
+            'user_id' => $student->id,
+            'course_curriculum_item_id' => $partialItem->id,
+            'progress_percent' => 40,
+            'watched_seconds' => 40,
+            'duration_seconds' => 100,
+            'last_position_seconds' => 40,
+        ]);
+
         Certificate::create([
             'user_id' => $student->id,
             'course_id' => $course->id,
@@ -110,7 +133,8 @@ class StudentTranscriptTest extends TestCase
             ->get(route('student.transcript'))
             ->assertOk()
             ->assertSee('My English Course')
-            ->assertSee('2 / 2')
+            ->assertSee('2 / 3')
+            ->assertSee('80%')
             ->assertSee('AEC-TRANSCRIPT-001')
             ->assertDontSee('Private Other Course')
             ->assertDontSee('OTHER-STUDENT-SECRET');
