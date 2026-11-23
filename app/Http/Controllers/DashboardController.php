@@ -182,8 +182,46 @@ class DashboardController extends Controller
             ? ActivityLog::query()->with('user:id,name')->latest()->take(8)->get()
             : collect();
 
+        $upcomingLiveClasses = $user->isAdmin()
+            ? LiveClass::query()->with(['batch.course', 'batch.teacher'])
+                ->where('status', 'scheduled')->where('starts_at', '>=', now())
+                ->orderBy('starts_at')->take(3)->get()
+            : collect();
+
+        $courseProgress = $user->isAdmin() ? [
+            'completed' => Enrollment::query()->where('status', 'completed')->count(),
+            'in_progress' => Enrollment::query()->where('status', 'active')->count(),
+            'not_started' => Enrollment::query()->whereIn('status', ['pending', 'approved'])->count(),
+        ] : ['completed' => 0, 'in_progress' => 0, 'not_started' => 0];
+        $courseProgressTotal = array_sum($courseProgress);
+        $courseProgressPercent = $courseProgressTotal > 0
+            ? (int) round(($courseProgress['completed'] / $courseProgressTotal) * 100)
+            : 0;
+
+        $topStudents = $user->isAdmin()
+            ? User::query()->where('role', 'student')
+                ->withCount('enrollments')
+                ->withCount(['enrollments as completed_enrollments_count' => fn ($query) => $query->where('status', 'completed')])
+                ->orderByDesc('completed_enrollments_count')
+                ->orderByDesc('enrollments_count')
+                ->orderBy('name')->take(3)->get()
+            : collect();
+
+        $analyticsMonths = [];
+        if ($user->isAdmin()) {
+            for ($monthOffset = 5; $monthOffset >= 0; $monthOffset--) {
+                $month = now()->copy()->startOfMonth()->subMonths($monthOffset);
+                $analyticsMonths[] = [
+                    'label' => $month->format('M'),
+                    'students' => User::query()->where('role', 'student')->whereBetween('created_at', [$month->copy()->startOfMonth(), $month->copy()->endOfMonth()])->count(),
+                    'enrollments' => Enrollment::query()->whereBetween('created_at', [$month->copy()->startOfMonth(), $month->copy()->endOfMonth()])->count(),
+                    'course_views' => 0,
+                ];
+            }
+        }
+
         $stats = $user->isAdmin() ? [
-            'courses' => Course::count(),
+            'courses' => Course::count(),\n            'batches' => Batch::count(),
             'students' => \App\Models\User::where('role', 'student')->count(),
             'teachers' => \App\Models\User::where('role', 'teacher')->count(),
             'certificates' => Certificate::count(),
@@ -193,7 +231,7 @@ class DashboardController extends Controller
             'approved_course_payments' => (float) Payment::query()->where('status', 'approved')->sum('amount'),
         ] : [];
 
-        return view('dashboard', compact('user', 'courses', 'enrolledCourses', 'recentCertificates', 'stats', 'announcementSlides', 'studentInsights', 'teacherInsights', 'institutionName', 'setupWizardPending', 'dashboardAppearance', 'nextLiveClass', 'recentActivity'));
+        return view('dashboard', compact('user', 'courses', 'enrolledCourses', 'recentCertificates', 'stats', 'announcementSlides', 'studentInsights', 'teacherInsights', 'institutionName', 'setupWizardPending', 'dashboardAppearance', 'nextLiveClass', 'recentActivity', 'upcomingLiveClasses', 'courseProgress', 'courseProgressTotal', 'courseProgressPercent', 'topStudents', 'analyticsMonths'));
     }
 
     public function certificate(Certificate $certificate): View
