@@ -72,7 +72,7 @@ final class MfsMerchantConfigurationService
         $scheme = parse_url($baseUrl, PHP_URL_SCHEME);
         $host = parse_url($baseUrl, PHP_URL_HOST);
         $port = parse_url($baseUrl, PHP_URL_PORT);
-        $allowedHosts = ['tokenized.sandbox.bka.sh', 'tokenized.pay.bka.sh'];
+        $allowedHosts = ['tokenized.sandbox.bka.sh'];
         if ($scheme !== 'https' || ! in_array($host, $allowedHosts, true)
             || ($port !== null && $port !== 443)
             || ! (bool) config('services.bkash.verify_ssl', true)) {
@@ -80,7 +80,7 @@ final class MfsMerchantConfigurationService
         }
 
         // A stored sandbox credential set can never be sent to the production host.
-        if ($configuration !== null && $configuration->mode === 'sandbox' && $host !== 'tokenized.sandbox.bka.sh') {
+        if ($host !== 'tokenized.sandbox.bka.sh' || ($configuration !== null && $configuration->mode !== 'sandbox')) {
             return false;
         }
 
