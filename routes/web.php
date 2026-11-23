@@ -83,6 +83,10 @@ use App\Modules\Admissions\AdmissionController;
 use App\Modules\Hr\HrController;
 use App\Modules\Library\LibraryController;
 use App\Modules\Referral\ReferralIncomeController;
+use App\Modules\Ai\AssistantController;
+use App\Modules\Ai\AdminSettingsController;
+use App\Modules\Ai\AgentActionController;
+use App\Modules\Ai\AgentContentController;
 use App\Http\Controllers\GamificationController;
 use App\Http\Controllers\LandingPageController;
 use Illuminate\Support\Facades\Route;
@@ -227,6 +231,55 @@ Route::middleware(['auth', 'verified', 'activity.log', 'role:branch_manager'])->
 Route::middleware(['auth', 'verified', 'activity.log', 'role:teacher'])->prefix('teacher/hr')->name('teacher.hr.')->group(function () {
     Route::get('/', [HrController::class, 'teacherIndex'])->name('index');
     Route::post('/leave-requests', [HrController::class, 'teacherRequestLeave'])->middleware('throttle:10,1')->name('leave.store');
+});
+
+Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('admin/ai-assistant')->name('admin.ai-assistant.')->group(function () {
+    Route::get('/settings', [AdminSettingsController::class, 'index'])->name('settings');
+    Route::get('/models', [AdminSettingsController::class, 'models'])->middleware('throttle:10,1')->name('models');
+    Route::put('/settings', [AdminSettingsController::class, 'update'])->middleware('throttle:10,1')->name('settings.update');
+    Route::get('/', [AssistantController::class, 'index'])->name('index');
+    Route::post('/messages', [AssistantController::class, 'send'])->middleware('throttle:10,1')->name('messages.store');
+    Route::get('/proposals', [AgentActionController::class, 'index'])->name('proposals.index');
+    Route::post('/proposals/{proposal}/approve', [AgentActionController::class, 'approve'])->middleware('throttle:20,1')->name('proposals.approve');
+    Route::post('/proposals/{proposal}/reject', [AgentActionController::class, 'reject'])->middleware('throttle:20,1')->name('proposals.reject');
+    Route::get('/drafts', [AgentContentController::class, 'drafts'])->name('drafts.index');
+    Route::post('/drafts/{draft}/review', [AgentContentController::class, 'reviewDraft'])->middleware('throttle:20,1')->name('drafts.review');
+    Route::get('/knowledge', [AgentContentController::class, 'knowledge'])->name('knowledge.index');
+    Route::post('/knowledge', [AgentContentController::class, 'saveKnowledge'])->middleware('throttle:10,1')->name('knowledge.store');
+    Route::get('/notifications', [AgentContentController::class, 'notifications'])->name('notifications.index');
+    Route::post('/notifications/{notification}/read', [AgentContentController::class, 'markRead'])->name('notifications.read');
+});
+Route::middleware(['auth', 'verified', 'activity.log', 'role:branch_manager'])->prefix('branch/ai-assistant')->name('branch.ai-assistant.')->group(function () {
+    Route::get('/', [AssistantController::class, 'index'])->name('index');
+    Route::post('/messages', [AssistantController::class, 'send'])->middleware('throttle:10,1')->name('messages.store');
+    Route::get('/notifications', [AgentContentController::class, 'notifications'])->name('notifications.index');
+    Route::post('/notifications/{notification}/read', [AgentContentController::class, 'markRead'])->name('notifications.read');
+});
+Route::middleware(['auth', 'verified', 'activity.log', 'role:teacher'])->prefix('teacher/ai-assistant')->name('teacher.ai-assistant.')->group(function () {
+    Route::get('/', [AssistantController::class, 'index'])->name('index');
+    Route::post('/messages', [AssistantController::class, 'send'])->middleware('throttle:10,1')->name('messages.store');
+    Route::get('/notifications', [AgentContentController::class, 'notifications'])->name('notifications.index');
+    Route::post('/notifications/{notification}/read', [AgentContentController::class, 'markRead'])->name('notifications.read');
+});
+Route::middleware(['auth', 'verified', 'student.device', 'activity.log', 'role:student'])->prefix('student/ai-assistant')->name('student.ai-assistant.')->group(function () {
+    Route::get('/', [AssistantController::class, 'index'])->name('index');
+    Route::post('/messages', [AssistantController::class, 'send'])->middleware('throttle:10,1')->name('messages.store');
+    Route::get('/proposals', [AgentActionController::class, 'index'])->name('proposals.index');
+    Route::post('/proposals', [AgentActionController::class, 'storeStudyPlan'])->middleware('throttle:10,1')->name('proposals.store');
+    Route::get('/notifications', [AgentContentController::class, 'notifications'])->name('notifications.index');
+    Route::post('/notifications/{notification}/read', [AgentContentController::class, 'markRead'])->name('notifications.read');
+});
+Route::middleware(['auth', 'verified', 'activity.log', 'role:guardian'])->prefix('guardian/ai-assistant')->name('guardian.ai-assistant.')->group(function () {
+    Route::get('/', [AssistantController::class, 'index'])->name('index');
+    Route::post('/messages', [AssistantController::class, 'send'])->middleware('throttle:10,1')->name('messages.store');
+    Route::get('/notifications', [AgentContentController::class, 'notifications'])->name('notifications.index');
+    Route::post('/notifications/{notification}/read', [AgentContentController::class, 'markRead'])->name('notifications.read');
+});
+Route::middleware(['auth', 'verified', 'activity.log', 'role:support_staff'])->prefix('support/ai-assistant')->name('support.ai-assistant.')->group(function () {
+    Route::get('/', [AssistantController::class, 'index'])->name('index');
+    Route::post('/messages', [AssistantController::class, 'send'])->middleware('throttle:10,1')->name('messages.store');
+    Route::get('/notifications', [AgentContentController::class, 'notifications'])->name('notifications.index');
+    Route::post('/notifications/{notification}/read', [AgentContentController::class, 'markRead'])->name('notifications.read');
 });
 
 Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('admin/admissions')->name('admin.admissions.')->group(function () {
