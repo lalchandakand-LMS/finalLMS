@@ -121,6 +121,7 @@ class AdminQuestionSetController extends Controller
             'questions.*.difficulty' => ['nullable', Rule::in(['easy', 'medium', 'hard'])],
             'questions.*.tags' => ['nullable', 'string', 'max:1000'],
             'questions.*.marks' => ['required', 'integer', 'min:1', 'max:100'],
+            'questions.*.negative_marks' => ['nullable', 'integer', 'min:0', 'max:100'],
         ]);
 
         $sourceIds = array_values($data['source_question_ids'] ?? []);
@@ -146,6 +147,7 @@ class AdminQuestionSetController extends Controller
                     $source->tags ?? []
                 )))),
                 'marks' => $source->marks,
+                'negative_marks' => $source->negative_marks ?? 0,
                 'position' => (int) ($sourcePositions[$id] ?? (($index + 1) * 10)),
             ];
         }
@@ -200,6 +202,7 @@ class AdminQuestionSetController extends Controller
                 'difficulty' => $question['difficulty'] ?? 'medium',
                 'tags' => $tags,
                 'marks' => (int) $question['marks'],
+                'negative_marks' => (int) ($question['negative_marks'] ?? 0),
                 'position' => (int) ($question['position'] ?? ((count($items) + 1) * 10)),
             ];
         }
