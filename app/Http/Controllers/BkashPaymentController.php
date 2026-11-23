@@ -245,7 +245,7 @@ class BkashPaymentController extends Controller
         }
 
         // The browser callback query string is not proof of payment success or failure.
-        // Always ask bKash for the authoritative server-side transaction status before
+        // Always ask the selected adapter for authoritative server-side transaction status before
         // changing the local payment state. Only attempt execute on a success callback;
         // queryPayment remains mandatory in either case.
         try {
@@ -308,11 +308,11 @@ class BkashPaymentController extends Controller
                         'merchant_reference' => $invoice,
                     ], JSON_THROW_ON_ERROR)),
                     'verified_payload' => [
-                        'paymentID' => $verifiedPaymentId,
-                        'trxID' => $transactionId,
+                        'payment_id' => $verifiedPaymentId,
+                        'transaction_id' => $transactionId,
                         'amount' => $verifiedAmount,
                         'currency' => $verified['currency'] ?? null,
-                        'merchantInvoiceNumber' => $invoice,
+                        'merchant_reference' => $invoice,
                     ],
                     'received_at' => now(),
                     'verified_at' => now(),
@@ -323,7 +323,7 @@ class BkashPaymentController extends Controller
                 throw new \RuntimeException('This gateway transaction has already been recorded in the invoice ledger.');
             }
 
-            $result = DB::transaction(function () use ($payment, $transactionId): string {
+            $result = DB::transaction(function () use ($payment, $transactionId, $provider): string {
                 $lockedPayment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
 
                 if ($lockedPayment->status === 'approved') {
@@ -525,7 +525,7 @@ class BkashPaymentController extends Controller
                 ['correlation_id' => hash('sha256', $eventKey)],
                 [
                     'payment_id' => $payment->id,
-                    'provider' => 'bkash',
+                    'provider' => $provider,
                     'event' => 'gateway_callback_processed',
                     'source' => $provider.'_callback',
                     'before_state' => ['status' => 'pending'],
