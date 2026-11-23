@@ -1086,6 +1086,7 @@ class ExaminationWorkflowTest extends TestCase
             'options' => ['True', 'False'],
             'correct_option' => 0,
             'marks' => 2,
+            'negative_marks' => 1,
             'position' => 1,
         ]);
         $written = QuestionSetQuestion::create([
@@ -1111,6 +1112,11 @@ class ExaminationWorkflowTest extends TestCase
             'exam_id' => $exam->id,
             'question_set_question_id' => $trueFalse->id,
             'type' => 'true_false',
+        ]);
+        $this->assertDatabaseHas('exam_questions', [
+            'exam_id' => $exam->id,
+            'question_set_question_id' => $trueFalse->id,
+            'negative_marks' => 1,
         ]);
         $this->assertDatabaseHas('exam_questions', [
             'exam_id' => $exam->id,
