@@ -279,6 +279,7 @@ final class HrStaffManagementPluginTest extends TestCase
         $this->assertSame('2500.00', $payroll->attendance_deduction);
         $this->assertSame('23500.00', $payroll->net_paid);
         $this->assertSame(26, $payroll->attendance_records_count);
+        $this->assertSame(26, $payroll->expected_working_days);
         $this->assertSame('pending', $payroll->status);
     }
 
