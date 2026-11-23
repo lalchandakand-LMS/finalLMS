@@ -293,6 +293,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::post('/teacher/exams/{exam}/results/publish', [ExamController::class, 'publishResults'])->middleware('throttle:10,1')->name('teacher.exams.results.publish');
         Route::get('/teacher/exams/{exam}/result-sheet', [ExamController::class, 'resultSheet'])->name('teacher.exams.result-sheet');
         Route::post('/teacher/exam-answers/{answer}/grade', [ExamController::class, 'gradeAnswer'])->middleware('throttle:60,1')->name('teacher.exam-answers.grade');
+        Route::post('/teacher/exam-result-reviews/{review}/respond', [ExamController::class, 'respondToResultReview'])->middleware('throttle:30,1')->name('teacher.exam-result-reviews.respond');
         Route::post('/teacher/batches/{batch}/exams', [ExamController::class, 'store'])->name('teacher.batches.exams.store');
         Route::post('/teacher/batches/{batch}/assignments', [AssignmentController::class, 'store'])->middleware('throttle:10,1')->name('teacher.batches.assignments.store');
         Route::post('/teacher/assignments/{assignment}/submissions/{submission}/grade', [AssignmentController::class, 'grade'])->middleware('throttle:30,1')->name('teacher.assignments.grade');
@@ -313,6 +314,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::post('/exams/{exam}/start', [ExamController::class, 'start'])->name('student.exams.start');
         Route::post('/exam-attempts/{attempt}/answers', [ExamAnswerController::class, 'save'])->middleware('throttle:120,1')->name('student.exams.answers.save');
         Route::post('/exam-attempts/{attempt}/submit', [ExamController::class, 'submit'])->name('student.exams.submit');
+        Route::post('/exam-attempts/{attempt}/result-review', [ExamController::class, 'requestResultReview'])->middleware('throttle:5,1')->name('student.exams.result-review');
         Route::get('/student/quiz-attempts', [StudentQuestionSetAttemptHistoryController::class, 'index'])
         ->middleware('role:student')
         ->name('student.question-set-attempts.index');
@@ -472,6 +474,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::post('/exams/{exam}/results/publish', [ExamController::class, 'publishResults'])->middleware('throttle:10,1')->name('admin.exams.results.publish');
         Route::get('/exams/{exam}/result-sheet', [ExamController::class, 'resultSheet'])->name('admin.exams.result-sheet');
         Route::post('/exam-answers/{answer}/grade', [ExamController::class, 'gradeAnswer'])->middleware('throttle:60,1')->name('admin.exam-answers.grade');
+        Route::post('/exam-result-reviews/{review}/respond', [ExamController::class, 'respondToResultReview'])->middleware('throttle:30,1')->name('admin.exam-result-reviews.respond');
         Route::get('/batches/{batch}/assignments', [AssignmentController::class, 'index'])->name('admin.batches.assignments.index');
         Route::post('/batches/{batch}/assignments', [AssignmentController::class, 'store'])->middleware('throttle:10,1')->name('admin.batches.assignments.store');
         Route::post('/assignments/{assignment}/submissions/{submission}/grade', [AssignmentController::class, 'grade'])->middleware('throttle:30,1')->name('admin.assignments.grade');
