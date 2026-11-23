@@ -5,15 +5,19 @@ namespace Tests\Feature;
 use Aloms\UniversalAiAssistant\AgentActionWorkflow;
 use Aloms\UniversalAiAssistant\AssistantAudit;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\RefreshDatabaseWithPluginMigrations;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use RuntimeException;
 use Tests\TestCase;
 
 class AgentActionWorkflowTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithPluginMigrations;
+
+    protected function pluginMigrationPaths(): array
+    {
+        return [base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations')];
+    }
 
     protected function setUp(): void
     {
@@ -22,14 +26,7 @@ class AgentActionWorkflowTest extends TestCase
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantAudit.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AgentActionWorkflow.php');
 
-        if (! Schema::hasTable('ai_assistant_audit_events')) {
-            $migration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_16_150000_create_ai_assistant_audit_events.php');
-            $migration->up();
-        }
-        if (! Schema::hasTable('ai_agent_action_proposals')) {
-            $migration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_23_100000_create_ai_agent_action_workflow.php');
-            $migration->up();
-        }
+
     }
 
     public function test_student_proposal_is_idempotent_and_waits_for_human_approval(): void
