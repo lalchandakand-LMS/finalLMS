@@ -409,6 +409,8 @@
         .admin-shell .admin-sidebar-label { color:color-mix(in srgb,var(--aec-sidebar-text) 68%,transparent); }
         .admin-shell .topbar { background:var(--aec-topbar-bg); color:var(--aec-topbar-text); }
         .admin-shell .topbar .brand,.admin-shell .topbar .nav-links { color:var(--aec-topbar-text); }
+        .admin-shell .topbar .nav-links > a,.admin-shell .topbar .nav-links > button,.admin-shell .topbar .nav-links form button { color:var(--aec-topbar-text); border-color:color-mix(in srgb,var(--aec-topbar-text) 22%,transparent); }
+        .admin-shell .topbar .nav-links > a:hover,.admin-shell .topbar .nav-links > button:hover,.admin-shell .topbar .nav-links form button:hover { color:var(--aec-topbar-text); background:color-mix(in srgb,var(--aec-topbar-text) 8%,var(--aec-topbar-bg)); }
         @endif
     </style>
 </head>
