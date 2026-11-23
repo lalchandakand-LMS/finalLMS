@@ -98,8 +98,10 @@ final class AgentActionController
         ]);
         try {
             $workflow->reject($request->user(), $proposal, (int) $validated['version'], $validated['review_note'] ?? null);
-        } catch (Throwable $exception) {
+        } catch (RuntimeException $exception) {
             return back()->withErrors(['proposal' => $exception->getMessage()]);
+        } catch (Throwable) {
+            return back()->withErrors(['proposal' => __('The proposal could not be processed. No action was executed; contact an administrator if the problem continues.')]);
         }
 
         return back()->with('success', __('The proposal was rejected and audited.'));
