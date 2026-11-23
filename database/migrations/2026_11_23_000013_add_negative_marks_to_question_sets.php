@@ -13,6 +13,7 @@ return new class extends Migration {
         });
         Schema::table('question_set_attempt_questions', function (Blueprint $table): void {
             $table->unsignedSmallInteger('negative_marks')->default(0)->after('marks');
+            $table->integer('marks_awarded')->default(0)->change();
         });
     }
 
@@ -22,7 +23,11 @@ return new class extends Migration {
             || DB::table('question_set_attempt_questions')->where('negative_marks', '>', 0)->exists()) {
             throw new RuntimeException('Cannot remove reusable question-set negative marks while configured penalties exist.');
         }
+        if (DB::table('question_set_attempt_questions')->where('marks_awarded', '<', 0)->exists()) {
+            throw new RuntimeException('Cannot remove signed quiz marks while negative results exist.');
+        }
         Schema::table('question_set_attempt_questions', function (Blueprint $table): void {
+            $table->unsignedSmallInteger('marks_awarded')->default(0)->change();
             $table->dropColumn('negative_marks');
         });
         Schema::table('question_set_questions', function (Blueprint $table): void {
