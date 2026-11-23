@@ -1010,6 +1010,7 @@ class ExaminationWorkflowTest extends TestCase
 
         $this->actingAs($student)->get(route('student.exams.show', $exam))
             ->assertOk()->assertSee('Result pending')->assertDontSee('Your score: 9');
+        $this->travelTo($exam->ends_at->copy()->addSecond());
         $this->actingAs($teacher)->post(route('teacher.exams.results.publish', $exam))
             ->assertRedirect()->assertSessionHas('success');
         $this->actingAs($student)->get(route('student.exams.show', $exam))
