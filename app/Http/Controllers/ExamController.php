@@ -553,7 +553,7 @@ class ExamController extends Controller
         $exam = $answer->attempt->exam()->with('batch')->firstOrFail();
         abort_unless(Auth::user()->isAdmin() || (int) $exam->batch->teacher_id === (int) Auth::id(), 403);
         abort_unless($answer->question?->type === 'written', 422);
-        abort_unless($answer->attempt->status === 'awaiting_manual', 409);
+        abort_unless($answer->attempt->status === 'awaiting_manual' && $answer->graded_at === null, 409);
         $validated = $request->validate([
             'marks_awarded' => ['required', 'integer', 'min:0', 'max:'.$answer->question->marks],
             'teacher_feedback' => ['nullable', 'string', 'max:3000'],
