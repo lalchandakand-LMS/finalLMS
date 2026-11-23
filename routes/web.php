@@ -89,6 +89,7 @@ use App\Modules\Ai\AdminSettingsController;
 use App\Http\Controllers\AdminApiConnectionController;
 use App\Modules\Ai\AgentActionController;
 use App\Modules\Ai\AgentContentController;
+use App\Modules\Carousel\CarouselBuilderController;
 use App\Http\Controllers\GamificationController;
 use App\Http\Controllers\LandingPageController;
 use Illuminate\Support\Facades\Route;
@@ -695,6 +696,15 @@ foreach (['admin' => 'admin', 'branch_manager' => 'branch', 'teacher' => 'teache
             Route::post('/notifications/{notification}/read', [AgentContentController::class, 'markRead'])->whereNumber('notification')->middleware('throttle:30,1')->name('notifications.read');
         });
 }
+Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('admin/carousels')->name('admin.carousels.')->group(function () {
+    Route::get('/', [CarouselBuilderController::class, 'index'])->name('index');
+    Route::get('/create', [CarouselBuilderController::class, 'create'])->name('create');
+    Route::post('/', [CarouselBuilderController::class, 'store'])->middleware('throttle:20,1')->name('store');
+    Route::get('/{carousel}/edit', [CarouselBuilderController::class, 'edit'])->whereNumber('carousel')->name('edit');
+    Route::put('/{carousel}', [CarouselBuilderController::class, 'update'])->whereNumber('carousel')->middleware('throttle:20,1')->name('update');
+    Route::delete('/{carousel}', [CarouselBuilderController::class, 'destroy'])->whereNumber('carousel')->middleware('throttle:10,1')->name('destroy');
+});
+
 Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('admin/ai-assistant')->name('admin.ai-assistant.')->group(function () {
     Route::get('/settings', [AdminSettingsController::class, 'index'])->name('settings');
     Route::get('/models', [AdminSettingsController::class, 'models'])->middleware('throttle:10,1')->name('models');
