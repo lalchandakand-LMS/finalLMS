@@ -1356,7 +1356,7 @@
     "Attendance, course participation and learning progress from the LMS records.": "LMS-এর উপস্থিতি, কোর্সে অংশগ্রহণ ও শেখার অগ্রগতির তথ্য।",
     "Configure risk rules": "ঝুঁকি নির্ধারণের নিয়ম",
     "Students in scope": "অন্তর্ভুক্ত শিক্ষার্থী",
-    "Active enrollments": "সক্রিয় ভর্তি",
+    "Active enrollments": "সক্রিয় ভর্তি",
     "Attendance records today": "আজকের উপস্থিতি",
     "Needs attention on this page": "এই পাতায় পর্যালোচনা প্রয়োজন",
     "Search student": "শিক্ষার্থী খুঁজুন",
@@ -1568,5 +1568,14 @@
     "Showing": "দেখানো হচ্ছে",
     "of": "এর মধ্যে",
     "Filters applied": "ফিল্টার প্রয়োগ করা হয়েছে",
-    "Academic level": "শিক্ষাগত স্তর"
+    "Academic level": "শিক্ষাগত স্তর",
+    "Live platform statistics": "লাইভ প্ল্যাটফর্ম পরিসংখ্যান",
+    "Academy statistics": "একাডেমির পরিসংখ্যান",
+    "Published courses": "প্রকাশিত কোর্স",
+    "Published lessons": "প্রকাশিত লেসন",
+    "Enrolled learners": "ভর্তিকৃত শিক্ষার্থী",
+    "Open batches": "চলমান ব্যাচ",
+    "Certificates issued": "প্রদানকৃত সার্টিফিকেট",
+    "New students this month": "এই মাসে নতুন শিক্ষার্থী",
+    "Completed courses": "সম্পন্ন কোর্স"
 }
