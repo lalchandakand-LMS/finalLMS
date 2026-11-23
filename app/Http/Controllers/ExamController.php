@@ -189,12 +189,16 @@ class ExamController extends Controller
             'search' => ['nullable', 'string', 'max:120'],
             'category' => ['nullable', 'string', 'max:80'],
             'difficulty' => ['nullable', 'in:easy,medium,hard'],
+            'type' => ['nullable', 'in:mcq,true_false,short_answer,written'],
+            'tag' => ['nullable', 'string', 'max:40'],
         ]);
         $ownerId = $batch->teacher_id;
         $query = QuestionBankQuestion::where('teacher_id', $ownerId)
             ->when($filters['subject'] ?? null, fn ($builder, string $subject) => $builder->where('subject', $subject))
             ->when($filters['category'] ?? null, fn ($builder, string $category) => $builder->where('category', $category))
             ->when($filters['difficulty'] ?? null, fn ($builder, string $difficulty) => $builder->where('difficulty', $difficulty))
+            ->when($filters['type'] ?? null, fn ($builder, string $type) => $builder->where('type', $type))
+            ->when($filters['tag'] ?? null, fn ($builder, string $tag) => $builder->whereJsonContains('tags', $tag))
             ->when($filters['search'] ?? null, function ($builder, string $term): void {
                 $term = trim($term);
                 if ($term !== '') {
@@ -209,10 +213,11 @@ class ExamController extends Controller
         $categories = QuestionBankQuestion::where('teacher_id', $ownerId)
             ->whereNotNull('category')->where('category', '<>', '')
             ->select('category')->distinct()->orderBy('category')->pluck('category');
+        $tags = QuestionBankQuestion::where('teacher_id', $ownerId)->whereNotNull('tags')->pluck('tags')->flatten()->filter()->unique()->sort()->values();
 
         $isAdmin = Auth::user()->isAdmin();
 
-        return view('teacher.exams.question-bank', compact('batch', 'questions', 'subjects', 'categories', 'isAdmin'));
+        return view('teacher.exams.question-bank', compact('batch', 'questions', 'subjects', 'categories', 'tags', 'isAdmin'));
     }
 
     public function storeBankQuestion(Batch $batch, Request $request): RedirectResponse
