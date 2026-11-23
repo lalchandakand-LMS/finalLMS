@@ -39,7 +39,15 @@
     "user-owned-conversation-history",
     "role-scoped-read-only-context",
     "no-autonomous-actions",
-    "future-actions-require-human-approval"
+    "future-actions-require-human-approval",
+    "ai-agent-workspace",
+    "structured-action-proposals",
+    "human-approval-inbox",
+    "separation-of-duties",
+    "idempotent-action-execution",
+    "version-checked-proposals",
+    "payload-integrity-verification",
+    "audited-learning-plan-execution"
   ],
   "migrations": "migrations"
 }
