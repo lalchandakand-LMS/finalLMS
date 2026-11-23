@@ -15,6 +15,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ExamController extends Controller
@@ -229,7 +230,16 @@ class ExamController extends Controller
             'difficulty' => ['sometimes', 'in:easy,medium,hard'],
             'type' => ['nullable', 'in:mcq,true_false,short_answer,written'],
             'question' => ['required', 'string', 'max:3000'],
-            'options' => ['nullable', 'array'],
+            'options' => [
+                Rule::requiredIf(fn () => ($request->input('type') ?? 'mcq') === 'mcq'),
+                'nullable',
+                'array',
+                function ($attribute, $value, $fail) use ($request): void {
+                    if (($request->input('type') ?? 'mcq') === 'mcq' && count($value ?? []) !== 4) {
+                        $fail(__('MCQ questions must include exactly four options.'));
+                    }
+                },
+            ],
             'options.*' => ['required', 'string', 'max:500', 'distinct'],
             'correct_option' => ['nullable', 'integer', 'between:0,3'],
             'correct_answer' => ['nullable', 'string', 'max:2000'],
@@ -258,7 +268,16 @@ class ExamController extends Controller
             'difficulty' => ['sometimes', 'in:easy,medium,hard'],
             'type' => ['nullable', 'in:mcq,true_false,short_answer,written'],
             'question' => ['required', 'string', 'max:3000'],
-            'options' => ['nullable', 'array'],
+            'options' => [
+                Rule::requiredIf(fn () => ($request->input('type') ?? 'mcq') === 'mcq'),
+                'nullable',
+                'array',
+                function ($attribute, $value, $fail) use ($request): void {
+                    if (($request->input('type') ?? 'mcq') === 'mcq' && count($value ?? []) !== 4) {
+                        $fail(__('MCQ questions must include exactly four options.'));
+                    }
+                },
+            ],
             'options.*' => ['required', 'string', 'max:500', 'distinct'],
             'correct_option' => ['nullable', 'integer', 'between:0,3'],
             'correct_answer' => ['nullable', 'string', 'max:2000'],
