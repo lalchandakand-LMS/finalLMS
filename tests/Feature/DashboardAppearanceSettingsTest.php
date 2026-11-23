@@ -111,6 +111,12 @@ class DashboardAppearanceSettingsTest extends TestCase
             ->assertOk()
             ->assertSee('data-dashboard-preview', false)
             ->assertSee('name="dashboard_theme_mode"', false)
+            ->assertSee('name="dashboard_sidebar_start_color"', false)
+            ->assertSee('name="dashboard_sidebar_end_color"', false)
+            ->assertSee('name="dashboard_sidebar_text_color"', false)
+            ->assertSee('name="dashboard_sidebar_width"', false)
+            ->assertSee('name="dashboard_topbar_background"', false)
+            ->assertSee('name="dashboard_topbar_text_color"', false)
             ->assertSee('name="dashboard_brand_logo_media_id"', false)
             ->assertSee('data-dashboard-palette-preset', false)
             ->assertSee('value="blue"', false)
@@ -172,6 +178,24 @@ class DashboardAppearanceSettingsTest extends TestCase
             ->assertSee('data-shadow="glow"', false)
             ->assertSee('--aec-radius:26px', false)
             ->assertSee('Open Admin Workspace');
+    }
+
+    public function test_dashboard_sidebar_and_topbar_customization_values_are_validated_and_saved(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->post(route('admin.settings.update'), [
+            'dashboard_sidebar_start_color' => '#123456',
+            'dashboard_sidebar_end_color' => '#234567',
+            'dashboard_sidebar_text_color' => '#fefefe',
+            'dashboard_sidebar_width' => 290,
+            'dashboard_topbar_background' => '#f8fafc',
+            'dashboard_topbar_text_color' => '#102030',
+        ])->assertRedirect(route('admin.settings.index'));
+
+        $this->assertDatabaseHas('settings', ['key' => 'dashboard_sidebar_start_color', 'value' => '#123456']);
+        $this->assertDatabaseHas('settings', ['key' => 'dashboard_sidebar_width', 'value' => '290']);
+        $this->assertDatabaseHas('settings', ['key' => 'dashboard_topbar_background', 'value' => '#f8fafc']);
     }
 
     public function test_dashboard_customizer_rejects_unsafe_style_values(): void
