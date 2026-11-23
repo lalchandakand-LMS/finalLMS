@@ -22,6 +22,7 @@ use App\Http\Controllers\LessonMediaController;
 use App\Http\Controllers\TeacherApplicationController;
 use App\Http\Controllers\BatchController;
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\AttendanceFeeBillingController;
 use App\Http\Controllers\AdminAttendanceSyncReviewController;
 use App\Http\Controllers\AdminAttendanceAuditController;
 use App\Http\Controllers\AssignmentController;
@@ -213,6 +214,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::put('/batches/{batch}', [BatchController::class, 'branchManagerUpdate'])->middleware('admin.permission:branch.batches')->name('batches.update');
         Route::get('/batches/{batch}/attendance', [AttendanceController::class, 'index'])->middleware(['admin.permission:branch.attendance', 'module.enabled:attendance'])->name('batches.attendance.index');
         Route::post('/batches/{batch}/attendance', [AttendanceController::class, 'store'])->middleware(['admin.permission:branch.attendance', 'module.enabled:attendance'])->name('batches.attendance.store');
+        Route::post('/batches/{batch}/attendance-fees/generate', [AttendanceFeeBillingController::class, 'generate'])->middleware(['admin.permission:finance.invoices', 'throttle:10,1'])->name('batches.attendance-fees.generate');
     });
 
     Route::middleware('role:branch_manager')
@@ -480,6 +482,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::post('/assignments/{assignment}/submissions/{submission}/grade', [AssignmentController::class, 'grade'])->middleware('throttle:30,1')->name('admin.assignments.grade');
         Route::get('/batches/{batch}/attendance', [AttendanceController::class, 'index'])->middleware('module.enabled:attendance')->name('admin.batches.attendance.index');
         Route::post('/batches/{batch}/attendance', [AttendanceController::class, 'store'])->middleware('module.enabled:attendance')->name('admin.batches.attendance.store');
+        Route::post('/batches/{batch}/attendance-fees/generate', [AttendanceFeeBillingController::class, 'generate'])->middleware('throttle:10,1')->name('admin.batches.attendance-fees.generate');
         Route::post('/branches', [BatchController::class, 'storeBranch'])->name('admin.branches.store');
         Route::put('/branches/{branch}', [BatchController::class, 'updateBranch'])->name('admin.branches.update');
         Route::delete('/branches/{branch}', [BatchController::class, 'destroyBranch'])->name('admin.branches.destroy');
