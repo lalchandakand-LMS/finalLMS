@@ -49,7 +49,12 @@ return new class extends Migration {
 
     public function down(): void
     {
+        if (DB::table('exam_attempts')->where('score', '<', 0)->exists()) {
+            throw new RuntimeException('Cannot roll back custom negative total scores without preserving those results.');
+        }
+
         Schema::table('exam_attempts', function (Blueprint $table): void {
+            $table->unsignedInteger('score')->nullable()->change();
             $table->dropConstrainedForeignId('graded_by');
             $table->dropColumn(['auto_submitted', 'last_saved_at', 'graded_at']);
         });
