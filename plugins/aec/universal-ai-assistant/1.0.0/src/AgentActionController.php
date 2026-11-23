@@ -42,6 +42,7 @@ final class AgentActionController
             'role' => $role,
             'proposals' => $proposals,
             'canReview' => in_array($role, ['admin', 'teacher'], true),
+            'learningPlans' => $role === 'student' ? DB::table('ai_learning_plans')->where('student_id', $request->user()->id)->latest('created_at')->limit(50)->get() : collect(),
         ]);
     }
 
@@ -59,8 +60,10 @@ final class AgentActionController
 
         try {
             $workflow->proposeStudyPlan($request->user(), $validated, $request->header('Idempotency-Key'));
-        } catch (Throwable $exception) {
+        } catch (RuntimeException $exception) {
             return back()->withErrors(['proposal' => $exception->getMessage()]);
+        } catch (Throwable) {
+            return back()->withErrors(['proposal' => __('The proposal could not be processed. No action was executed; contact an administrator if the problem continues.')]);
         }
 
         return redirect()->route('student.ai-assistant.proposals.index')->with('success', __('Your study plan has been sent for teacher or admin approval.'));
