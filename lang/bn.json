@@ -953,7 +953,7 @@
     "Select language": "ভাষা নির্বাচন করুন",
     "Learning outcomes": "শেখার ফলাফল",
     "Requirements / prerequisites": "পূর্বশর্ত / প্রয়োজনীয় যোগ্যতা",
-    "All levels": "সব লেভেল",
+    "All levels": "সব স্তর",
     "All languages": "সব ভাষা",
     "Search courses": "কোর্স খুঁজুন",
     "Course title or slug": "কোর্সের নাম বা স্লাগ",
@@ -1567,5 +1567,6 @@
     "Most popular": "জনপ্রিয়তার ভিত্তিতে",
     "Showing": "দেখানো হচ্ছে",
     "of": "এর মধ্যে",
-    "Filters applied": "ফিল্টার প্রয়োগ করা হয়েছে"
+    "Filters applied": "ফিল্টার প্রয়োগ করা হয়েছে",
+    "Academic level": "শিক্ষাগত স্তর"
 }
