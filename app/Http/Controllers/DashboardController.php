@@ -9,6 +9,7 @@ use App\Models\Batch;
 use App\Models\ExamAttempt;
 use App\Models\Lesson;
 use App\Models\LessonProgress;
+use App\Models\LiveClass;
 use App\Models\Certificate;
 use App\Models\Course;
 use App\Models\DashboardAnnouncement;
@@ -139,6 +140,15 @@ class DashboardController extends Controller
             ];
         }
 
+        $nextLiveClass = $user->isAdmin()
+            ? LiveClass::query()
+                ->with(['batch.course', 'batch.teacher'])
+                ->where('status', 'scheduled')
+                ->where('starts_at', '>=', now())
+                ->orderBy('starts_at')
+                ->first()
+            : null;
+
         $stats = [
             'courses' => Course::count(),
             'students' => \App\Models\User::where('role', 'student')->count(),
@@ -146,7 +156,7 @@ class DashboardController extends Controller
             'certificates' => Certificate::count(),
         ];
 
-        return view('dashboard', compact('user', 'courses', 'enrolledCourses', 'recentCertificates', 'stats', 'announcementSlides', 'studentInsights', 'teacherInsights', 'institutionName', 'setupWizardPending', 'dashboardAppearance'));
+        return view('dashboard', compact('user', 'courses', 'enrolledCourses', 'recentCertificates', 'stats', 'announcementSlides', 'studentInsights', 'teacherInsights', 'institutionName', 'setupWizardPending', 'dashboardAppearance', 'nextLiveClass'));
     }
 
     public function certificate(Certificate $certificate): View
