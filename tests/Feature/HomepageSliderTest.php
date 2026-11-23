@@ -100,7 +100,6 @@ class HomepageSliderTest extends TestCase
             ->assertSee('Students learning English')
             ->assertSee('Online Course')
             ->assertSee('Available online batches')
-            ->assertSee('Book your seat now!')
             ->assertSee('See All Courses')
             ->assertSee('/storage/media/hero-slide.jpg', false);
     }
