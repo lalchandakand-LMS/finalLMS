@@ -109,26 +109,28 @@ class DashboardController extends Controller
                     ->whereHas('lesson', fn ($query) => $query->whereIn('course_id', $studentCourseIds))
                     ->count();
 
-            $completedVideoLessons = $studentCourseIds->isEmpty()
-                ? 0
-                : CourseContentProgress::query()
-                    ->where('user_id', $user->id)
-                    ->whereNotNull('completed_at')
-                    ->whereHas('curriculumItem', fn ($items) => $items
-                        ->whereIn('course_id', $studentCourseIds)
-                        ->whereHas('post', fn ($posts) => $posts->published()))
-                    ->count();
+            $videoProgressQuery = CourseContentProgress::query()
+                ->where('user_id', $user->id)
+                ->whereHas('curriculumItem', fn ($items) => $items
+                    ->whereIn('course_id', $studentCourseIds)
+                    ->whereHas('post', fn ($posts) => $posts->published()));
+
+            $completedVideoLessons = (clone $videoProgressQuery)
+                ->whereNotNull('completed_at')
+                ->count();
+            $videoProgressPoints = (float) (clone $videoProgressQuery)->sum('progress_percent');
 
             $totalLessons = $totalLegacyLessons + $totalVideoLessons;
             $completedLessons = min($totalLessons, $completedLegacyLessons + $completedVideoLessons);
+            $learningProgressPercent = $totalLessons > 0
+                ? min(100, (int) round((($completedLegacyLessons * 100) + $videoProgressPoints) / $totalLessons))
+                : 0;
 
             $studentInsights = [
                 'enrolled_courses' => $studentCourseIds->count(),
                 'total_lessons' => $totalLessons,
                 'completed_lessons' => $completedLessons,
-                'progress_percent' => $totalLessons > 0
-                    ? min(100, (int) round(($completedLessons / $totalLessons) * 100))
-                    : 0,
+                'progress_percent' => $learningProgressPercent,
                 'assignments_submitted' => AssignmentSubmission::query()
                     ->where('student_id', $user->id)
                     ->whereIn('status', ['submitted', 'graded'])
