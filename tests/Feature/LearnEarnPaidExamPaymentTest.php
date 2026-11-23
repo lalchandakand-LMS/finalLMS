@@ -11,6 +11,7 @@ use Aloms\LearnEarn\LearnEarnExamAnswer;
 use Aloms\LearnEarn\LearnEarnScorer;
 use Aloms\LearnEarn\StudentLearnEarnController;
 use App\Models\Payment;
+use App\Models\Setting;
 use App\Models\User;
 use App\Services\Payments\PaymentGatewayManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -29,6 +30,9 @@ class LearnEarnPaidExamPaymentTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        // The adapter must be both configured and explicitly enabled in the Admin gateway registry.
+        Setting::setValue('payment_gateway_registry', json_encode(['bkash' => true], JSON_THROW_ON_ERROR));
 
         config([
             'services.bkash.enabled' => true,
