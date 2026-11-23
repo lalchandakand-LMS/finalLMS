@@ -235,7 +235,7 @@ class ExamController extends Controller
                 'nullable',
                 'array',
                 function ($attribute, $value, $fail) use ($request): void {
-                    if (($request->input('type') ?? 'mcq') === 'mcq' && count($value ?? []) !== 4) {
+                    if (($request->input('type') ?? 'mcq') === 'mcq' && (! is_array($value) || count($value) !== 4)) {
                         $fail(__('MCQ questions must include exactly four options.'));
                     }
                 },
@@ -273,7 +273,7 @@ class ExamController extends Controller
                 'nullable',
                 'array',
                 function ($attribute, $value, $fail) use ($request): void {
-                    if (($request->input('type') ?? 'mcq') === 'mcq' && count($value ?? []) !== 4) {
+                    if (($request->input('type') ?? 'mcq') === 'mcq' && (! is_array($value) || count($value) !== 4)) {
                         $fail(__('MCQ questions must include exactly four options.'));
                     }
                 },
