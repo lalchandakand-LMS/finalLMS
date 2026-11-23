@@ -243,9 +243,9 @@ Artisan::command('referral-income:reconcile-approved-payments', function (): int
 })->purpose('Retry missing referral commissions for approved payments');
 
 Artisan::command('exams:auto-submit-expired', function (): int {
-    $finalizer = app(\\App\\Services\\ExamAttemptFinalizer::class);
+    $finalizer = app(\App\\Services\\ExamAttemptFinalizer::class);
     $processed = 0;
-    \\App\\Models\\ExamAttempt::query()
+    \App\\Models\\ExamAttempt::query()
         ->where('status', 'in_progress')
         ->where('started_at', '<=', now()->subMinutes(1))
         ->orderBy('id')
