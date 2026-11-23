@@ -88,6 +88,7 @@ final class ApiConnectorManager
     {
         $driver = $this->driver($key);
         $connection = ApiConnection::query()->where('provider_key', $key)->whereNull('branch_id')->firstOrFail();
+        abort_unless(in_array($connection->status, ['pending_verification', 'connected', 'degraded'], true), 409, 'This connector is paused or disconnected.');
         $credentials = $connection->credentials_encrypted ?? [];
         abort_unless($driver->verifyWebhook($request, $credentials), 401, 'Webhook authentication failed.');
         $event = $driver->normalizeWebhook($request);
