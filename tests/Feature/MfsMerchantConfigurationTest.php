@@ -50,7 +50,8 @@ class MfsMerchantConfigurationTest extends TestCase
             ])->assertRedirect(route('admin.payment-gateways.index'));
         }
         $this->assertDatabaseCount('mfs_merchant_configurations', 2);
-        $this->assertSame(['bkash'], app(\App\Services\Payments\PaymentGatewayManager::class)->installedKeys());
+        // Storing credentials is deliberately separate from installing a signed gateway adapter.
+        $this->assertSame([], app(\App\Services\Payments\PaymentGatewayManager::class)->installedKeys());
     }
 
     public function test_admin_can_store_sslcommerz_sandbox_and_live_credentials_without_exposing_secrets(): void
