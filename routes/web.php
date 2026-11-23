@@ -682,13 +682,14 @@ foreach (['admin' => 'admin', 'branch_manager' => 'branch', 'teacher' => 'teache
             if (in_array($aiRole, ['admin', 'teacher', 'student'], true)) {
                 Route::get('/proposals', [AgentActionController::class, 'index'])->name('proposals.index');
                 Route::post('/proposals/study-plan', [AgentActionController::class, 'storeStudyPlan'])->middleware('throttle:5,1')->name('proposals.study-plan');
+                Route::post('/proposals', [AgentActionController::class, 'storeStudyPlan'])->middleware('throttle:5,1')->name('proposals.store');
                 Route::post('/proposals/{proposal}/approve', [AgentActionController::class, 'approve'])->whereNumber('proposal')->middleware('throttle:10,1')->name('proposals.approve');
                 Route::post('/proposals/{proposal}/reject', [AgentActionController::class, 'reject'])->whereNumber('proposal')->middleware('throttle:10,1')->name('proposals.reject');
             }
             if ($aiRole === 'support_staff') {
                 Route::get('/knowledge', [AgentContentController::class, 'knowledge'])->name('knowledge.index');
             }
-            if (in_array($aiRole, ['admin', 'teacher'], true)) {
+            if (in_array($aiRole, ['admin', 'teacher', 'support_staff'], true)) {
                 Route::get('/drafts', [AgentContentController::class, 'drafts'])->name('drafts.index');
                 Route::post('/drafts', [AgentContentController::class, 'saveDraft'])->middleware('throttle:10,1')->name('drafts.store');
                 Route::post('/drafts/{draft}/review', [AgentContentController::class, 'reviewDraft'])->whereNumber('draft')->middleware('throttle:10,1')->name('drafts.review');
