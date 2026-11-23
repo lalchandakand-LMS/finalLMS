@@ -117,6 +117,10 @@ class PaymentGatewayManager
     /** @return list<string> */
     public function installedKeys(): array
     {
-        return array_keys($this->drivers);
+        return array_values(array_filter(array_keys($this->drivers), function (string $key): bool {
+            $owner = $this->pluginOwners[$key] ?? null;
+            return $owner === null
+                || PluginInstallation::query()->where('plugin_key', $owner)->where('status', 'active')->exists();
+        }));
     }
 }
