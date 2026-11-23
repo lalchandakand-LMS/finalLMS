@@ -158,7 +158,7 @@ jobs:
         run: |
           php artisan serve --host=127.0.0.1 --port=8000 > "$RUNNER_TEMP/lms-browser-server.log" 2>&1 &
           for attempt in $(seq 1 30); do
-            if curl --fail --silent http://127.0.0.1:8000/login > /dev/null; then exit 0; fi
+            if curl --fail --silent http://127.0.0.1:8000/up > /dev/null; then exit 0; fi
             if [ "$attempt" -eq 30 ]; then
               cat "$RUNNER_TEMP/lms-browser-server.log"
               exit 1
