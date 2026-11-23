@@ -86,15 +86,15 @@ class InvoiceManagementTest extends TestCase
             ->assertSessionHas('success');
 
         $invoice = Invoice::query()->where('user_id', $student->id)->firstOrFail();
-        $this->assertSame('300.00', $invoice->amount);
+        $this->assertSame('450.00', $invoice->amount);
         $this->assertSame('Per Class Batch class fee — '.$period, $invoice->title);
         $this->assertDatabaseHas('attendance_fee_periods', [
             'batch_id' => $batch->id,
             'student_id' => $student->id,
             'billing_period' => $period,
-            'attended_classes' => 2,
+            'attended_classes' => 3,
             'per_class_fee' => 150,
-            'amount' => 300,
+            'amount' => 450,
             'invoice_id' => $invoice->id,
         ]);
         $this->assertSame(1, Invoice::query()->where('user_id', $student->id)->count());
