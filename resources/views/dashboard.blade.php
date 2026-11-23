@@ -13,7 +13,7 @@
         <style>
             .aec-admin { --aec-primary:{{ $dashboardAppearance['primary'] }}; --aec-secondary:{{ $dashboardAppearance['secondary'] }}; --aec-accent:{{ $dashboardAppearance['accent'] }}; --aec-background:{{ $dashboardAppearance['background'] }}; --aec-surface:{{ $dashboardAppearance['surface'] }}; --aec-stat-students:{{ $dashboardAppearance['students_color'] }}; --aec-stat-teachers:{{ $dashboardAppearance['teachers_color'] }}; --aec-stat-courses:{{ $dashboardAppearance['courses_color'] }}; --aec-stat-certificates:{{ $dashboardAppearance['certificates_color'] }}; --aec-ink:#10234e; --aec-muted:#687895; --aec-line:#e4ebfa; color:var(--aec-ink); background:var(--aec-background); padding:4px; border-radius:22px; }
             .aec-admin * { box-sizing:border-box; }
-            .aec-admin[data-theme="dark"] { --aec-ink:#e8efff; --aec-muted:#a7b7d6; --aec-line:#26385e; color:var(--aec-ink); }
+            .aec-admin[data-theme="dark"] { --aec-ink:#e8efff; --aec-muted:#a7b7d6; --aec-line:#26385e; color:var(--aec-ink); background:#0b1530; }
             .aec-admin[data-theme="dark"] .aec-panel,
             .aec-admin[data-theme="dark"] .aec-stat { background:#101d3b; border-color:var(--aec-line); color:var(--aec-ink); }
             .aec-admin[data-theme="dark"] .aec-heading h2,
