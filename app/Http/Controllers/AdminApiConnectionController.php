@@ -37,8 +37,7 @@ class AdminApiConnectionController extends Controller
             'external_account_id' => ['nullable', 'string', 'max:190'],
             'credentials' => ['required', 'array', 'min:1'],
             'credentials.*' => ['nullable', 'string', 'max:10000'],
-            'granted_scopes' => ['nullable', 'array', 'max:50'],
-            'granted_scopes.*' => ['string', 'max:160'],
+            'scope_input' => ['nullable', 'string', 'max:4000'],
         ]);
 
         $credentials = array_filter($data['credentials'], static fn ($value): bool => is_string($value) && trim($value) !== '');
@@ -49,15 +48,20 @@ class AdminApiConnectionController extends Controller
             'display_name' => $data['display_name'],
             'external_account_id' => $data['external_account_id'] ?? null,
             'credentials_encrypted' => Crypt::encryptString(json_encode($credentials, JSON_THROW_ON_ERROR)),
-            'granted_scopes' => array_values($data['granted_scopes'] ?? []),
+            'granted_scopes' => array_values(array_filter(array_map('trim', explode(',', (string) ($data['scope_input'] ?? ''))))),
             'status' => 'pending_verification',
             'webhook_verified' => false,
             'created_by' => $request->user()->id,
         ]);
 
-        ActivityLog::record($request->user()->id, 'api_connection.created', 'api_connection', $connection->id, [
-            'provider_key' => $connection->provider_key,
-            'status' => $connection->status,
+        ActivityLog::query()->create([
+            'user_id' => $request->user()->id,
+            'event' => 'api_connection.created',
+            'description' => 'Created API connection '.$connection->provider_key.' ('.$connection->status.').',
+            'method' => $request->method(),
+            'route' => optional($request->route())->getName(),
+            'ip_address' => $request->ip(),
+            'user_agent' => substr((string) $request->userAgent(), 0, 1000),
         ]);
 
         return back()->with('success', 'Credentials saved securely. Verify provider permissions and webhook before enabling this connection.');
@@ -66,9 +70,7 @@ class AdminApiConnectionController extends Controller
     public function pause(ApiConnection $connection, Request $request): RedirectResponse
     {
         $connection->update(['status' => 'paused']);
-        ActivityLog::record($request->user()->id, 'api_connection.paused', 'api_connection', $connection->id, [
-            'provider_key' => $connection->provider_key,
-        ]);
+        ActivityLog::query()->create(['user_id' => $request->user()->id, 'event' => 'api_connection.paused', 'description' => 'Paused API connection '.$connection->provider_key.'.', 'method' => $request->method(), 'route' => optional($request->route())->getName(), 'ip_address' => $request->ip(), 'user_agent' => substr((string) $request->userAgent(), 0, 1000)]);
 
         return back()->with('success', 'Connection paused. Existing credentials and audit history were preserved.');
     }
@@ -81,9 +83,7 @@ class AdminApiConnectionController extends Controller
             'webhook_verified' => false,
             'capabilities' => null,
         ]);
-        ActivityLog::record($request->user()->id, 'api_connection.disconnected', 'api_connection', $connection->id, [
-            'provider_key' => $connection->provider_key,
-        ]);
+        ActivityLog::query()->create(['user_id' => $request->user()->id, 'event' => 'api_connection.disconnected', 'description' => 'Disconnected API connection '.$connection->provider_key.'.', 'method' => $request->method(), 'route' => optional($request->route())->getName(), 'ip_address' => $request->ip(), 'user_agent' => substr((string) $request->userAgent(), 0, 1000)]);
 
         return back()->with('success', 'Connection credentials removed. Provider-side token revocation may still be required.');
     }
