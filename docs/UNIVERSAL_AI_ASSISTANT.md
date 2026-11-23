@@ -23,11 +23,12 @@ permissions, expose new records, or bypass portal authorization.
 
 ## Mandatory safety boundary
 
-Phase 1 is advice and draft generation only. There are no autonomous action tools. The
+The assistant chat itself remains advice and draft generation only; it has no direct autonomous
+mutation tools. The separate Agent Workspace currently supports one narrow action: a student
+study-plan proposal, which becomes active only after an authorized human approves it. The
 assistant must not claim to have enrolled a learner, approved an admission, changed a fee,
 issued a refund, graded/published an assignment, sent a message, or modified an LMS record.
-
-Every future action-capable agent must use a proposal-and-approval lifecycle:
+All other action-capable agent workflows must use the same proposal-and-approval lifecycle:
 
 1. Agent creates a typed, bounded action proposal; it does not execute it.
 2. Server validates the actor, role permission, resource ownership, branch scope, current
