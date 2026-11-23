@@ -153,7 +153,8 @@ class LiveClassController extends Controller
     public function storeAttendance(LiveClass $liveClass, Request $request): RedirectResponse
     {
         $this->authorizeBatch($liveClass->batch);
-        abort_unless($liveClass->ends_at->isPast() || $liveClass->status === 'completed', 422, 'Attendance can be finalized after the class ends.');
+        abort_if($liveClass->status === 'cancelled', 422, 'Cancelled classes cannot receive attendance.');
+        abort_unless($liveClass->ends_at->isPast(), 422, 'Attendance can be finalized after the class ends.');
         $data = $request->validate([
             'records' => ['required', 'array', 'min:1'],
             'records.*.student_id' => ['required', 'integer', 'distinct'],
@@ -186,6 +187,8 @@ class LiveClassController extends Controller
                     ['marked_by' => Auth::id(), 'status' => $record['status'], 'note' => $record['note'] ?? null]
                 );
             }
+
+            $session->update(['status' => 'completed']);
         }, 3);
 
         return back()->with('success', 'Class-session attendance saved successfully.');
