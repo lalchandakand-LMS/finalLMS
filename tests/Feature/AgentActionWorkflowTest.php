@@ -21,6 +21,14 @@ class AgentActionWorkflowTest extends TestCase
     {
         parent::setUp();
 
+        // Plugin migrations execute DDL. MySQL implicitly commits DDL and invalidates
+        // RefreshDatabase's nested savepoints, so install plugin tables outside the
+        // test transaction and begin a fresh transaction afterwards.
+        $connection = DB::connection();
+        while ($connection->transactionLevel() > 0) {
+            $connection->rollBack();
+        }
+
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantAudit.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AgentActionWorkflow.php');
 
@@ -36,6 +44,8 @@ class AgentActionWorkflowTest extends TestCase
             $migration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_23_110000_create_ai_agent_content_tables.php');
             $migration->up();
         }
+
+        $connection->beginTransaction();
     }
 
     public function test_student_proposal_is_idempotent_and_waits_for_human_approval(): void
