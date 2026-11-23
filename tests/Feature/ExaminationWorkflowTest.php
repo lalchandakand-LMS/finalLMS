@@ -1092,6 +1092,7 @@ class ExaminationWorkflowTest extends TestCase
             'question_set_id' => $set->id,
             'type' => 'written',
             'question' => 'Write a short paragraph about your daily routine.',
+            'grading_rubric' => ['Structure', 'Grammar'],
             'marks' => 5,
             'position' => 2,
         ]);
@@ -1116,6 +1117,8 @@ class ExaminationWorkflowTest extends TestCase
             'question_set_question_id' => $written->id,
             'type' => 'written',
         ]);
+        $copiedWritten = $exam->questions()->where('question_set_question_id', $written->id)->firstOrFail();
+        $this->assertSame(['Structure', 'Grammar'], $copiedWritten->grading_rubric);
     }
 
     public function test_scheduler_finalizes_expired_attempts_server_side(): void
