@@ -36,6 +36,28 @@
         </table></div>
     </div>
 
+    @if($reviews->isNotEmpty())
+    <div class="panel" style="margin-bottom:18px;">
+        <h2>{{ __('Student result review requests') }}</h2>
+        @foreach($reviews as $review)
+            <article class="course-item" style="margin:12px 0;">
+                <strong>{{ $review->student->name }}</strong><span class="badge {{ $review->status === 'pending' ? 'warning' : 'success' }}">{{ ucfirst($review->status) }}</span>
+                <p>{{ $review->message }}</p>
+                @if($review->status === 'pending')
+                    <form method="POST" action="{{ $isAdmin ? route('admin.exam-result-reviews.respond', $review) : route('teacher.exam-result-reviews.respond', $review) }}">
+                        @csrf
+                        <label>{{ __('Decision') }}<select name="status" required><option value="approved">{{ __('Review accepted') }}</option><option value="rejected">{{ __('Review rejected') }}</option></select></label>
+                        <label>{{ __('Response') }}<textarea name="teacher_response" minlength="5" maxlength="2000" required></textarea></label>
+                        <button class="btn primary" type="submit">{{ __('Save response') }}</button>
+                    </form>
+                @else
+                    <p class="muted">{{ $review->teacher_response }}</p>
+                @endif
+            </article>
+        @endforeach
+    </div>
+    @endif
+
     <div class="panel">
         <div style="overflow-x:auto;">
             <table style="width:100%;border-collapse:collapse;text-align:left;">
