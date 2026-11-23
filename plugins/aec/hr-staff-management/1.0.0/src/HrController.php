@@ -201,7 +201,7 @@ final class HrController extends Controller
                 ->whereDate('starts_on', '<=', $data['ends_on'])
                 ->whereDate('ends_on', '>=', $data['starts_on'])->exists();
             abort_if($overlap, 409, 'This leave period overlaps an existing pending or approved request.');
-            return StaffLeaveRequest::query()->create($data + ['branch_id' => $lockedProfile->branch_id, 'status' => 'pending']);
+            return StaffLeaveRequest::query()->create($data + ['staff_profile_id' => $lockedProfile->id, 'branch_id' => $lockedProfile->branch_id, 'status' => 'pending']);
         }, 3);
         $this->audit($request, 'hr.teacher_leave_requested', 'Teacher submitted leave request #'.$leave->id);
         return back()->with('success', 'Your leave request has been submitted.');
