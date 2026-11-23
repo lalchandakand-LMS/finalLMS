@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Exam extends Model
 {
-    protected $fillable = ['batch_id', 'teacher_id', 'title', 'instructions', 'starts_at', 'ends_at', 'duration_minutes', 'pass_marks', 'questions_per_attempt', 'status'];
+    protected $fillable = ['batch_id', 'teacher_id', 'title', 'instructions', 'starts_at', 'ends_at', 'duration_minutes', 'pass_marks', 'questions_per_attempt', 'status', 'grading_rules', 'result_status', 'results_published_at', 'allow_result_review', 'review_until'];
 
     protected $casts = [
         'starts_at' => 'datetime',
@@ -16,6 +16,10 @@ class Exam extends Model
         'duration_minutes' => 'integer',
         'pass_marks' => 'integer',
         'questions_per_attempt' => 'integer',
+        'grading_rules' => 'array',
+        'results_published_at' => 'datetime',
+        'allow_result_review' => 'boolean',
+        'review_until' => 'datetime',
     ];
 
     public function batch(): BelongsTo
