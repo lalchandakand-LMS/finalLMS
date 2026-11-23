@@ -240,6 +240,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
             Route::get('/invoices', [InvoiceController::class, 'accountantIndex'])->middleware('admin.permission:finance.invoices')->name('invoices.index');
             Route::post('/invoices', [InvoiceController::class, 'store'])->middleware('admin.permission:finance.invoices')->name('invoices.store');
             Route::post('/invoices/{invoice}/payments', [InvoiceController::class, 'receivePayment'])->middleware('admin.permission:finance.invoices')->name('invoices.payments.store');
+            Route::post('/batches/{batch}/attendance-fees/generate', [AttendanceFeeBillingController::class, 'generate'])->middleware(['admin.permission:finance.invoices', 'module.enabled:attendance', 'throttle:10,1'])->name('batches.attendance-fees.generate');
             Route::get('/refunds', [InvoiceRefundController::class, 'index'])->middleware('admin.permission:finance.refunds')->name('refunds.index');
             Route::post('/refunds', [InvoiceRefundController::class, 'store'])->middleware('admin.permission:finance.refunds')->name('refunds.store');
             Route::get('/reports', [FinanceReportController::class, 'index'])->middleware('admin.permission:finance.reports')->name('reports.index');
