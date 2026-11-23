@@ -60,7 +60,7 @@
         <div class="table-responsive"><table class="table">
             <thead><tr><th>{{ __('Exam') }}</th><th>{{ __('Course') }}</th><th>{{ __('Score') }}</th><th>{{ __('Maximum') }}</th><th>{{ __('Submitted') }}</th></tr></thead>
             <tbody>@foreach($examAttempts as $attempt)
-                @php($maximum = (int) $attempt->exam->questions->sum('marks'))
+                @php($maximum = (int) $attempt->maximum_score)
                 <tr>
                     <td>{{ $attempt->exam->title }}</td>
                     <td>{{ $attempt->exam->batch?->course?->title ?? '—' }}</td>
