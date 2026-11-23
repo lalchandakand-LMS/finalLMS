@@ -25,7 +25,7 @@
                 @if(!request()->routeIs('branch.*'))
                     <select name="branch_id" class="rounded border-gray-300"><option value="">No branch</option>@foreach(\App\Models\Branch::query()->where('is_active',true)->orderBy('name')->get() as $branch)<option value="{{ $branch->id }}">{{ $branch->name }}</option>@endforeach</select>
                 @endif
-                <input type="number" min="1" name="user_id" placeholder="Link existing user ID (optional)" class="rounded border-gray-300">
+                <select name="user_id" class="rounded border-gray-300"><option value="">Do not link a login account</option>@foreach($linkableUsers as $linkedUser)<option value="{{ $linkedUser->id }}">{{ $linkedUser->name }} · {{ $linkedUser->role }} · {{ $linkedUser->email }}</option>@endforeach</select>
                 <button class="rounded bg-blue-700 px-4 py-2 text-white sm:col-span-2">Save staff profile</button>
             </form>
         </section>
