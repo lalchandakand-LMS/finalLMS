@@ -955,6 +955,8 @@ class ExaminationWorkflowTest extends TestCase
             'pass_marks' => 6,
             'status' => 'published',
             'result_status' => 'draft',
+            'allow_result_review' => true,
+            'review_until' => now()->addDays(2),
         ]);
         $trueFalse = $exam->questions()->create([
             'type' => 'true_false', 'question' => 'English is a language.', 'options' => ['True', 'False'],
@@ -1009,10 +1011,50 @@ class ExaminationWorkflowTest extends TestCase
         $this->actingAs($teacher)->post(route('teacher.exams.results.publish', $exam))
             ->assertRedirect()->assertSessionHas('success');
         $this->actingAs($student)->get(route('student.exams.show', $exam))
-            ->assertOk()->assertSee('Your score: 9')->assertSee('Passed');
+            ->assertOk()->assertSee('Your score: 9')->assertSee('Passed')->assertSee('Request a result review');
+
+        $this->post(route('student.exams.result-review', $attempt), [
+            'message' => 'Please review the marks awarded for my written explanation.',
+        ])->assertRedirect()->assertSessionHas('success');
+
+        $this->actingAs($teacher)->get(route('teacher.exams.results', $exam))
+            ->assertOk()->assertSee('Student result review requests')
+            ->assertSee('Please review the marks awarded for my written explanation.');
+        $review = \\App\\Models\\ExamResultReview::where('exam_attempt_id', $attempt->id)->firstOrFail();
+        $this->post(route('teacher.exam-result-reviews.respond', $review), [
+            'status' => 'approved',
+            'teacher_response' => 'We reviewed your response and confirm the published marks.',
+        ])->assertRedirect();
+
+        $this->actingAs($student)->get(route('student.exams.show', $exam))
+            ->assertOk()->assertSee('Approved')->assertSee('We reviewed your response');
 
         $this->actingAs($teacher)->get(route('teacher.exams.result-sheet', $exam))
             ->assertOk()->assertSee('Merit list and result sheet')->assertSee($student->name);
+    }
+
+    public function test_scheduler_finalizes_expired_attempts_server_side(): void
+    {
+        [$teacher, $student, $batch] = $this->makeBatchWithStudent();
+        $exam = Exam::create([
+            'batch_id' => $batch->id, 'teacher_id' => $teacher->id, 'title' => 'Auto submit',
+            'starts_at' => now()->subMinute(), 'ends_at' => now()->addHour(), 'duration_minutes' => 1,
+            'pass_marks' => 1, 'status' => 'published',
+        ]);
+        $question = $exam->questions()->create([
+            'type' => 'mcq', 'question' => 'Auto score this answer?', 'options' => ['Yes','No','Maybe','Later'],
+            'correct_option' => 0, 'marks' => 1, 'position' => 1,
+        ]);
+        $this->actingAs($student)->post(route('student.exams.start', $exam));
+        $attempt = ExamAttempt::where('exam_id', $exam->id)->firstOrFail();
+        $this->postJson(route('student.exams.answers.save', $attempt), ['answers' => [$question->id => 0]])->assertOk();
+
+        $this->travelTo($attempt->started_at->copy()->addMinutes(1)->addSecond());
+        $this->assertTrue(app(\\App\\Services\\ExamAttemptFinalizer::class)->autoSubmitExpired($attempt->id));
+        $this->assertDatabaseHas('exam_attempts', [
+            'id' => $attempt->id, 'status' => 'submitted', 'score' => 1, 'auto_submitted' => true,
+        ]);
+        $this->assertFalse(app(\\App\\Services\\ExamAttemptFinalizer::class)->autoSubmitExpired($attempt->id));
     }
 
     public function test_question_bank_accepts_reusable_true_false_and_short_answer_items(): void
