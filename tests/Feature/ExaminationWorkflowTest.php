@@ -992,7 +992,7 @@ class ExaminationWorkflowTest extends TestCase
         ]);
 
         $this->actingAs($teacher)->post(route('teacher.exams.results.publish', $exam))
-            ->assertSessionHasErrors();
+            ->assertStatus(409);
         $writtenAnswer = $attempt->answers()->where('exam_question_id', $written->id)->firstOrFail();
         $this->post(route('teacher.exam-answers.grade', $writtenAnswer), [
             'marks_awarded' => 4,
