@@ -36,8 +36,8 @@ final class AttendanceFeeBillingController extends Controller
 
             $periodStart = \Carbon\CarbonImmutable::createFromFormat('!Y-m-d', $data['billing_period'].'-01');
             $periodEnd = $periodStart->endOfMonth();
+            abort_if($periodStart->isAfter(now()->endOfMonth()), 422, 'You cannot bill a future attendance period.');
             $enrollments = $lockedBatch->enrollments()
-                ->whereIn('status', ['active', 'completed'])
                 ->with('user')
                 ->lockForUpdate()
                 ->get();
@@ -57,11 +57,13 @@ final class AttendanceFeeBillingController extends Controller
                     continue;
                 }
 
-                $attendedClasses = (int) DB::table('attendances')
-                    ->where('batch_id', $lockedBatch->id)
-                    ->where('student_id', $studentId)
-                    ->whereBetween('attendance_date', [$periodStart->toDateString(), $periodEnd->toDateString()])
-                    ->whereIn('status', ['present', 'late'])
+                $attendedClasses = (int) DB::table('live_class_attendances as class_attendance')
+                    ->join('live_classes', 'live_classes.id', '=', 'class_attendance.live_class_id')
+                    ->where('live_classes.batch_id', $lockedBatch->id)
+                    ->where('live_classes.status', 'completed')
+                    ->where('class_attendance.student_id', $studentId)
+                    ->whereBetween('live_classes.starts_at', [$periodStart->startOfDay()->toDateTimeString(), $periodEnd->endOfDay()->toDateTimeString()])
+                    ->whereIn('class_attendance.status', ['present', 'late'])
                     ->count();
 
                 if ($attendedClasses < 1) {
