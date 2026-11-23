@@ -35,13 +35,10 @@ class BatchController extends Controller
     public function branchManagerIndex(Request $request): View
     {
         $branchId = $request->user()->branch_id;
-        abort_unless($branchId && Branch::whereKey($branchId)->where('is_active', true)->exists(), 403, 'No active branch is assigned to this account.');
+        abort_unless($branchId && Branch::whereKey($branchId)->where('is_active', true)->where('status', 'active')->exists(), 403, 'No active branch is assigned to this account.');
 
         $batches = Batch::with(['branch', 'course', 'teacher'])->withCount('enrollments')
-            ->where('branch_id', $branchId)
-            ->latest('starts_at')
-            ->paginate(25);
-
+            ->where('branch_id', $branchId)->latest('starts_at')->paginate(25);
         $courses = Course::where('status', 'published')->orderBy('title')->get();
         $teachers = User::where('role', 'teacher')->where('branch_id', $branchId)->orderBy('name')->get();
 
@@ -51,7 +48,7 @@ class BatchController extends Controller
     public function branchManagerStore(Request $request): RedirectResponse
     {
         $branchId = $request->user()->branch_id;
-        abort_unless($branchId && Branch::whereKey($branchId)->where('is_active', true)->exists(), 403, 'No active branch is assigned to this account.');
+        abort_unless($branchId && Branch::whereKey($branchId)->where('is_active', true)->where('status', 'active')->exists(), 403, 'No active branch is assigned to this account.');
         $validated = $request->validate([
             'course_id' => ['required', Rule::exists('courses', 'id')->where(fn ($query) => $query->where('status', 'published'))],
             'teacher_id' => ['required', Rule::exists('users', 'id')->where(fn ($query) => $query->where('role', 'teacher')->where('branch_id', $branchId))],
@@ -68,13 +65,9 @@ class BatchController extends Controller
     public function branchManagerUpdate(Batch $batch, Request $request): RedirectResponse
     {
         $branchId = $request->user()->branch_id;
-        abort_unless(
-            $branchId
-            && (int) $batch->branch_id === (int) $branchId
-            && Branch::whereKey($branchId)->where('is_active', true)->exists(),
-            404,
-            'The batch is not available to this active branch.'
-        );
+        abort_unless($branchId && (int) $batch->branch_id === (int) $branchId
+            && Branch::whereKey($branchId)->where('is_active', true)->where('status', 'active')->exists(),
+            404, 'The batch is not available to this active branch.');
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:160'],
             'capacity' => ['required', 'integer', 'min:1', 'max:1000'],
@@ -91,46 +84,27 @@ class BatchController extends Controller
     public function branchManagerStudents(Request $request): View
     {
         $branchId = $request->user()->branch_id;
-        abort_unless($branchId && Branch::whereKey($branchId)->where('is_active', true)->exists(), 403, 'No active branch is assigned to this account.');
-
-        $validated = $request->validate([
-            'search' => ['nullable', 'string', 'max:120'],
-        ]);
-
-        $students = User::query()
-            ->where('role', 'student')
+        abort_unless($branchId && Branch::whereKey($branchId)->where('is_active', true)->where('status', 'active')->exists(), 403, 'No active branch is assigned to this account.');
+        $validated = $request->validate(['search' => ['nullable', 'string', 'max:120']]);
+        $students = User::query()->where('role', 'student')
             ->where(function ($query) use ($branchId): void {
-                $query->where('branch_id', $branchId)
-                    ->orWhereHas('enrollments', fn ($enrollments) => $enrollments
-                        ->whereIn('status', ['active', 'completed'])
-                        ->whereHas('batch', fn ($batch) => $batch->where('branch_id', $branchId)));
+                $query->where('branch_id', $branchId)->orWhereHas('enrollments', fn ($enrollments) => $enrollments
+                    ->whereIn('status', ['active', 'completed'])->whereHas('batch', fn ($batch) => $batch->where('branch_id', $branchId)));
             })
             ->with(['enrollments' => function ($query) use ($branchId): void {
-                $query->whereIn('status', ['active', 'completed'])
-                    ->whereHas('batch', fn ($batch) => $batch->where('branch_id', $branchId))
-                    ->with(['batch.course']);
+                $query->whereIn('status', ['active', 'completed'])->whereHas('batch', fn ($batch) => $batch->where('branch_id', $branchId))->with(['batch.course']);
             }])
             ->when($validated['search'] ?? null, function ($query, string $search): void {
-                $query->where(function ($builder) use ($search): void {
-                    $builder->where('name', 'like', '%'.$search.'%')
-                        ->orWhere('email', 'like', '%'.$search.'%')
-                        ->orWhere('phone_number', 'like', '%'.$search.'%');
-                });
-            })
-            ->orderBy('name')
-            ->paginate(25)
-            ->withQueryString();
+                $query->where(fn ($builder) => $builder->where('name', 'like', '%'.$search.'%')
+                    ->orWhere('email', 'like', '%'.$search.'%')->orWhere('phone_number', 'like', '%'.$search.'%'));
+            })->orderBy('name')->paginate(25)->withQueryString();
 
         return view('branch-manager.students.index', compact('students'));
     }
 
     public function teacherIndex(): View
     {
-        $batches = Batch::with(['branch', 'course'])
-            ->where('teacher_id', Auth::id())
-            ->latest('starts_at')
-            ->get();
-
+        $batches = Batch::with(['branch', 'course'])->where('teacher_id', Auth::id())->latest('starts_at')->get();
         return view('teacher.batches.index', compact('batches'));
     }
 
@@ -140,14 +114,14 @@ class BatchController extends Controller
             'name' => ['required', 'string', 'max:120', 'unique:branches,name'],
             'address' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:40'],
+            'status' => ['required', Rule::in(['active', 'inactive', 'suspended'])],
+            'registration_open' => ['required', 'boolean'],
         ]);
-
         Branch::create([
             ...$validated,
             'slug' => Str::slug($validated['name']).'-'.Str::lower(Str::random(6)),
-            'is_active' => true,
+            'is_active' => $validated['status'] === 'active',
         ]);
-
         return redirect()->route('admin.batches.index')->with('success', 'Branch created successfully.');
     }
 
@@ -157,12 +131,12 @@ class BatchController extends Controller
             'name' => ['required', 'string', 'max:120', Rule::unique('branches', 'name')->ignore($branch->id)],
             'address' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:40'],
-            'is_active' => ['required', 'boolean'],
+            'status' => ['required', Rule::in(['active', 'inactive', 'suspended'])],
+            'registration_open' => ['required', 'boolean'],
         ]);
-
+        $validated['is_active'] = $validated['status'] === 'active';
         $branch->update($validated);
-
-        return redirect()->route('admin.batches.index')->with('success', 'Branch updated successfully.');
+        return redirect()->route('admin.batches.index')->with('success', 'Branch settings updated successfully.');
     }
 
     public function destroyBranch(Branch $branch): RedirectResponse
@@ -170,53 +144,44 @@ class BatchController extends Controller
         if ($branch->batches()->exists()) {
             return back()->with('error', 'Move or delete this branch’s batches before deleting the branch.');
         }
-
+        if (User::where('branch_id', $branch->id)->exists()) {
+            return back()->with('error', 'Reassign staff and students before deleting this branch.');
+        }
         $branch->delete();
-
         return back()->with('success', 'Branch deleted successfully.');
     }
 
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'branch_id' => ['required', Rule::exists('branches', 'id')->where(fn ($queryBuilder) => $queryBuilder->where('is_active', true))],
+            'branch_id' => ['required', Rule::exists('branches', 'id')->where(fn ($q) => $q->where('is_active', true)->where('status', 'active'))],
             'course_id' => ['required', 'exists:courses,id'],
-            'teacher_id' => ['required', Rule::exists('users', 'id')->where(fn ($queryBuilder) => $queryBuilder->where('role', 'teacher'))],
-            'title' => ['required', 'string', 'max:160'],
-            'capacity' => ['required', 'integer', 'min:1', 'max:1000'],
-            'starts_at' => ['required', 'date'],
-            'ends_at' => ['required', 'date', 'after:starts_at'],
+            'teacher_id' => ['required', Rule::exists('users', 'id')->where(fn ($q) => $q->where('role', 'teacher'))],
+            'title' => ['required', 'string', 'max:160'], 'capacity' => ['required', 'integer', 'min:1', 'max:1000'],
+            'starts_at' => ['required', 'date'], 'ends_at' => ['required', 'date', 'after:starts_at'],
             'fee' => ['required', 'numeric', 'min:0'],
         ]);
-
         Batch::create([...$validated, 'status' => 'open']);
-
         return redirect()->route('admin.batches.index')->with('success', 'Batch created successfully.');
     }
 
     public function update(Request $request, Batch $batch): RedirectResponse
     {
         $validated = $request->validate([
-            'branch_id' => ['required', Rule::exists('branches', 'id')->where(fn ($queryBuilder) => $queryBuilder->where('is_active', true))],
+            'branch_id' => ['required', Rule::exists('branches', 'id')->where(fn ($q) => $q->where('is_active', true)->where('status', 'active'))],
             'course_id' => ['required', 'exists:courses,id'],
-            'teacher_id' => ['required', Rule::exists('users', 'id')->where(fn ($queryBuilder) => $queryBuilder->where('role', 'teacher'))],
-            'title' => ['required', 'string', 'max:160'],
-            'capacity' => ['required', 'integer', 'min:1', 'max:1000'],
-            'starts_at' => ['required', 'date'],
-            'ends_at' => ['required', 'date', 'after:starts_at'],
-            'fee' => ['required', 'numeric', 'min:0'],
-            'status' => ['required', 'in:open,closed,completed'],
+            'teacher_id' => ['required', Rule::exists('users', 'id')->where(fn ($q) => $q->where('role', 'teacher'))],
+            'title' => ['required', 'string', 'max:160'], 'capacity' => ['required', 'integer', 'min:1', 'max:1000'],
+            'starts_at' => ['required', 'date'], 'ends_at' => ['required', 'date', 'after:starts_at'],
+            'fee' => ['required', 'numeric', 'min:0'], 'status' => ['required', 'in:open,closed,completed'],
         ]);
-
         $batch->update($validated);
-
         return redirect()->route('admin.batches.index')->with('success', 'Batch updated successfully.');
     }
 
     public function destroy(Batch $batch): RedirectResponse
     {
         $batch->delete();
-
         return back()->with('success', 'Batch deleted successfully.');
     }
 }
