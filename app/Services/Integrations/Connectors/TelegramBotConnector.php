@@ -41,6 +41,27 @@ final class TelegramBotConnector implements ApiConnector
         return ['valid' => true, 'account_id' => (string) ($bot['id'] ?? ''), 'scopes' => ['sendMessage', 'webhook_updates'], 'bot_username' => $bot['username'] ?? null];
     }
 
+    public function healthCheck(array $credentials): array
+    {
+        $result = $this->validateCredentials($credentials);
+        return [
+            'credentials' => (bool) ($result['valid'] ?? false),
+            'webhook' => filled($credentials['webhook_secret'] ?? null),
+            'api' => (bool) ($result['valid'] ?? false),
+            'detail' => ($result['valid'] ?? false) ? 'Telegram Bot API credentials are valid.' : 'Telegram Bot API rejected the bot token.',
+        ];
+    }
+
+    public function sendTemplate(array $credentials, array $message): array
+    {
+        return ['supported' => false, 'accepted' => false, 'status' => 'unsupported', 'reason' => 'Telegram Bot API does not provide the approved business-template capability used by this LMS.'];
+    }
+
+    public function getDeliveryStatus(array $credentials, string $providerMessageId): array
+    {
+        return ['supported' => false, 'status' => 'unsupported', 'reason' => 'Telegram Bot API does not expose authoritative delivery receipts for bot messages.'];
+    }
+
     public function verifyWebhook(Request $request, array $credentials): bool
     {
         $secret = (string) ($credentials['webhook_secret'] ?? '');
