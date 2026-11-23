@@ -300,6 +300,35 @@
                     <div><label for="dashboard-teachers-color">{{ __('Teachers card accent') }}</label><input id="dashboard-teachers-color" type="color" name="dashboard_teachers_color" value="{{ old('dashboard_teachers_color', $settings['dashboard_teachers_color'] ?? '#08b978') }}"></div>
                     <div><label for="dashboard-courses-color">{{ __('Courses card accent') }}</label><input id="dashboard-courses-color" type="color" name="dashboard_courses_color" value="{{ old('dashboard_courses_color', $settings['dashboard_courses_color'] ?? '#8525e8') }}"></div>
                     <div><label for="dashboard-certificates-color">{{ __('Certificates card accent') }}</label><input id="dashboard-certificates-color" type="color" name="dashboard_certificates_color" value="{{ old('dashboard_certificates_color', $settings['dashboard_certificates_color'] ?? '#f59e0b') }}"></div>
+                    <div>
+                        <label for="dashboard-theme-mode">{{ __('Dashboard theme') }}</label>
+                        <select id="dashboard-theme-mode" name="dashboard_theme_mode">
+                            <option value="light" @selected(old('dashboard_theme_mode', $settings['dashboard_theme_mode'] ?? 'light') === 'light')>{{ __('Futuristic glass light') }}</option>
+                            <option value="dark" @selected(old('dashboard_theme_mode', $settings['dashboard_theme_mode'] ?? 'light') === 'dark')>{{ __('Midnight dark') }}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="dashboard-card-radius">{{ __('Card corner radius') }}</label>
+                        <input id="dashboard-card-radius" type="number" name="dashboard_card_radius" min="12" max="32" value="{{ old('dashboard_card_radius', $settings['dashboard_card_radius'] ?? 19) }}">
+                    </div>
+                    <div>
+                        <label for="dashboard-card-shadow">{{ __('Card shadow style') }}</label>
+                        <select id="dashboard-card-shadow" name="dashboard_card_shadow">
+                            @foreach(['soft' => __('Soft'), 'medium' => __('Medium'), 'glow' => __('Glow')] as $value => $label)
+                                <option value="{{ $value }}" @selected(old('dashboard_card_shadow', $settings['dashboard_card_shadow'] ?? 'soft') === $value)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div><label for="dashboard-hero-eyebrow">{{ __('Welcome banner eyebrow') }}</label><input id="dashboard-hero-eyebrow" name="dashboard_hero_eyebrow" maxlength="80" value="{{ old('dashboard_hero_eyebrow', $settings['dashboard_hero_eyebrow'] ?? '') }}" placeholder="{{ __('Alom’s English Center LMS') }}"></div>
+                    <div><label for="dashboard-hero-cta-label">{{ __('Welcome banner primary button') }}</label><input id="dashboard-hero-cta-label" name="dashboard_hero_cta_label" maxlength="60" value="{{ old('dashboard_hero_cta_label', $settings['dashboard_hero_cta_label'] ?? '') }}" placeholder="{{ __('View Dashboard') }}"></div>
+                    <div>
+                        <label for="dashboard-hero-image-position">{{ __('Welcome banner image position') }}</label>
+                        <select id="dashboard-hero-image-position" name="dashboard_hero_image_position">
+                            @foreach(['center' => __('Center'), 'left' => __('Left'), 'right' => __('Right'), 'top' => __('Top'), 'bottom' => __('Bottom')] as $value => $label)
+                                <option value="{{ $value }}" @selected(old('dashboard_hero_image_position', $settings['dashboard_hero_image_position'] ?? 'center') === $value)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                     <div><label for="dashboard-hero-title">{{ __('Welcome banner title') }}</label><input id="dashboard-hero-title" name="dashboard_hero_title" maxlength="180" value="{{ old('dashboard_hero_title', $settings['dashboard_hero_title'] ?? '') }}" placeholder="{{ __('Welcome back,') }}"></div>
                     <div><label for="dashboard-hero-subtitle">{{ __('Welcome banner subtitle') }}</label><input id="dashboard-hero-subtitle" name="dashboard_hero_subtitle" maxlength="300" value="{{ old('dashboard_hero_subtitle', $settings['dashboard_hero_subtitle'] ?? '') }}"></div>
                     <div><label for="dashboard-hero-quote">{{ __('Banner quote / slogan') }}</label><input id="dashboard-hero-quote" name="dashboard_hero_quote" maxlength="180" value="{{ old('dashboard_hero_quote', $settings['dashboard_hero_quote'] ?? '') }}" placeholder="{{ __('Your Success, Our Mission') }}"></div>
