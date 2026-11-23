@@ -165,3 +165,23 @@ its adapter, migrations, queued jobs, webhook routes, permission checks, admin s
 documentation, contract tests and staged end-to-end tests all pass. Credentials and provider
 account approvals must be supplied by the institution; the repository cannot create those
 accounts or grant external permissions on its behalf.
+
+
+## Core rollout status
+
+The native registry, encrypted credential lifecycle, provider capability catalog, admin setup workspace,
+webhook event ledger, replay deduplication and audit trail are implemented in Laravel Core.
+The first live adapter is Telegram Bot API. It validates the bot with `getMe`, requires a
+separate webhook secret, authenticates Telegram's `X-Telegram-Bot-Api-Secret-Token` header,
+and deduplicates updates by `update_id`. Outbound text is refused unless the connection has
+received an authenticated webhook and is in the Connected state.
+
+For Telegram setup, create a bot with BotFather, save the bot token and a high-entropy webhook
+secret in Admin > API Integrations, then configure Telegram's `setWebhook` method with the
+displayed HTTPS callback URL and the exact same `secret_token`. The first authenticated update
+completes webhook verification. The LMS never treats credential entry alone as Connected.
+
+WhatsApp Cloud API, Messenger, Instagram Messaging, SMTP, SMS and Meta Marketing API remain
+unregistered until their provider-specific official adapters, permission checks, signature
+verification, delivery callbacks and staged acceptance tests are implemented. The UI does not
+pretend these providers are active.
