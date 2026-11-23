@@ -155,4 +155,22 @@ MAIL_FROM_NAME="Your Academy"</pre>
         </ul>
         <p class="muted">{{ __('Pixel events are not sent before marketing consent. Configure IDs in Admin Settings → SEO and tracking.') }}</p>
     </section>
+
+    <section class="panel">
+        <h2 style="margin-top:0;">{{ __('Omnichannel connector status') }}</h2>
+        <p class="muted">{{ __('Only verified, active provider connections can be used for outbound messaging. Consent and provider policies still apply to every recipient.') }}</p>
+        <div class="grid grid-2">
+            @forelse($apiConnectors as $connector)
+                <article class="card">
+                    <strong>{{ $connector['label'] }}</strong>
+                    <p class="muted">{{ __(ucwords(str_replace('_',' ',$connector['status']))) }}</p>
+                    <small>{{ collect($connector['capabilities'])->filter()->keys()->map(fn ($item) => str_replace('_',' ',$item))->implode(', ') }}</small>
+                </article>
+            @empty
+                <p class="muted">{{ __('No messaging connectors are registered yet.') }}</p>
+            @endforelse
+        </div>
+        <a class="btn secondary" href="{{ route('admin.integrations.index') }}">{{ __('Manage API integrations') }}</a>
+    </section>
+
 @endsection
