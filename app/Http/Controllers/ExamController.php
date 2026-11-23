@@ -37,6 +37,11 @@ class ExamController extends Controller
             'duration_minutes' => ['required', 'integer', 'min:1', 'max:600'],
             'pass_marks' => ['required', 'integer', 'min:0'],
             'questions_per_attempt' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'grading_rules' => ['nullable', 'array'],
+            'grading_rules.negative_marking_enabled' => ['nullable', 'boolean'],
+            'grading_rules.negative_marking_multiplier' => ['nullable', 'numeric', 'min:0', 'max:5'],
+            'grading_rules.score_floor_zero' => ['nullable', 'boolean'],
+            'grading_rules.short_answer_case_sensitive' => ['nullable', 'boolean'],
             'questions' => ['nullable', 'array', 'min:1', 'max:100'],
             'question_bank_ids' => ['nullable', 'array', 'min:1', 'max:100'],
             'question_bank_ids.*' => ['integer', 'distinct', 'exists:question_bank_questions,id'],
@@ -117,6 +122,12 @@ class ExamController extends Controller
                 'duration_minutes' => $validated['duration_minutes'],
                 'pass_marks' => $validated['pass_marks'],
                 'questions_per_attempt' => $validated['questions_per_attempt'] ?? null,
+                'grading_rules' => [
+                    'negative_marking_enabled' => (bool) ($validated['grading_rules']['negative_marking_enabled'] ?? true),
+                    'negative_marking_multiplier' => (float) ($validated['grading_rules']['negative_marking_multiplier'] ?? 1),
+                    'score_floor_zero' => (bool) ($validated['grading_rules']['score_floor_zero'] ?? true),
+                    'short_answer_case_sensitive' => (bool) ($validated['grading_rules']['short_answer_case_sensitive'] ?? false),
+                ],
                 'status' => 'published',
             ]);
 
@@ -391,75 +402,144 @@ class ExamController extends Controller
 
     public function submit(ExamAttempt $attempt, Request $request): RedirectResponse
     {
-        $score = DB::transaction(function () use ($attempt, $request): int {
+        DB::transaction(function () use ($attempt, $request): void {
             $lockedAttempt = ExamAttempt::query()->lockForUpdate()->findOrFail($attempt->id);
             abort_unless((int) $lockedAttempt->student_id === (int) Auth::id(), 403);
             abort_unless($lockedAttempt->status === 'in_progress', 403);
-
             $exam = $lockedAttempt->exam()->firstOrFail();
             $this->ensureEnrolled($exam);
-            $attemptQuestions = $lockedAttempt->attemptQuestions()
-                ->with('question')
-                ->orderBy('position')
-                ->get();
+            $attemptQuestions = $lockedAttempt->attemptQuestions()->with('question')->orderBy('position')->get();
             abort_if($attemptQuestions->isEmpty(), 422, 'No questions are assigned to this attempt.');
 
-            $deadline = min(
-                $exam->ends_at->getTimestamp(),
-                $lockedAttempt->started_at->copy()->addMinutes($exam->duration_minutes)->getTimestamp()
-            );
-            abort_if(now()->getTimestamp() > $deadline + 15, 403, 'The exam submission window has closed.');
-
-            $validated = $request->validate([
-                'answers' => ['sometimes', 'array', 'max:100'],
-                'answers.*' => ['required', 'integer', 'between:0,3'],
-            ]);
-            $submittedAnswers = $validated['answers'] ?? [];
+            $deadline = min($exam->ends_at->getTimestamp(), $lockedAttempt->started_at->copy()->addMinutes($exam->duration_minutes)->getTimestamp());
+            abort_if(now()->getTimestamp() > $deadline + 30, 403, 'The exam submission window has closed.');
+            $validated = $request->validate(['answers' => ['sometimes', 'array', 'max:100']]);
+            $submitted = $validated['answers'] ?? [];
             $questionIds = $attemptQuestions->pluck('exam_question_id')->map(fn ($id) => (string) $id)->all();
-            $submittedIds = array_map('strval', array_keys($submittedAnswers));
-            abort_unless(count(array_diff($submittedIds, $questionIds)) === 0, 422);
+            abort_unless(count(array_diff(array_map('strval', array_keys($submitted)), $questionIds)) === 0, 422);
 
-            $savedAnswers = $lockedAttempt->answers()->get()->keyBy('exam_question_id');
-            $totalScore = 0;
-
+            $saved = $lockedAttempt->answers()->get()->keyBy('exam_question_id');
+            $rules = $exam->grading_rules ?? [];
+            $total = 0;
+            $manualPending = false;
             foreach ($attemptQuestions as $attemptQuestion) {
                 $question = $attemptQuestion->question;
-                if (! $question) {
+                if (! $question) continue;
+                $answer = $saved[$question->id] ?? null;
+                $value = $submitted[(string) $question->id] ?? $submitted[$question->id] ?? null;
+                if ($value !== null) {
+                    if (in_array($question->type ?: 'mcq', ['mcq', 'true_false'], true)) {
+                        abort_unless(filter_var($value, FILTER_VALIDATE_INT) !== false && (int) $value >= 0 && (int) $value < count($question->options ?? []), 422);
+                        $answer = $lockedAttempt->answers()->updateOrCreate(
+                            ['exam_question_id' => $question->id],
+                            ['selected_option' => (int) $value, 'answer_text' => null, 'is_correct' => false, 'marks_awarded' => 0]
+                        );
+                    } else {
+                        abort_unless(is_string($value), 422);
+                        abort_if(mb_strlen($value) > 10000, 422);
+                        $answer = $lockedAttempt->answers()->updateOrCreate(
+                            ['exam_question_id' => $question->id],
+                            ['selected_option' => null, 'answer_text' => trim($value), 'is_correct' => false, 'marks_awarded' => 0]
+                        );
+                    }
+                }
+                if (! $answer) continue;
+
+                $type = $question->type ?: 'mcq';
+                if ($type === 'written') {
+                    $manualPending = true;
                     continue;
                 }
-
-                $questionId = (string) $question->id;
-                $selected = array_key_exists($questionId, $submittedAnswers)
-                    ? (int) $submittedAnswers[$questionId]
-                    : ($savedAnswers[$question->id]->selected_option ?? null);
-
-                if ($selected === null) {
-                    continue;
+                if ($type === 'short_answer') {
+                    $expected = trim((string) $question->correct_answer);
+                    $actual = trim((string) $answer->answer_text);
+                    if (! ($rules['short_answer_case_sensitive'] ?? false)) {
+                        $expected = mb_strtolower(preg_replace('/\\s+/u', ' ', $expected));
+                        $actual = mb_strtolower(preg_replace('/\\s+/u', ' ', $actual));
+                    }
+                    $correct = $expected !== '' && $actual === $expected;
+                } else {
+                    $correct = $answer->selected_option !== null && (int) $answer->selected_option === (int) $question->correct_option;
                 }
 
-                $correct = $selected === (int) $question->correct_option;
-                $awarded = $correct
-                    ? (int) $question->marks
-                    : -1 * (int) ($question->negative_marks ?? 0);
-                $totalScore += $awarded;
-
-                $lockedAttempt->answers()->updateOrCreate(
-                    ['exam_question_id' => $question->id],
-                    ['selected_option' => $selected, 'is_correct' => $correct, 'marks_awarded' => $awarded]
-                );
+                $penaltyEnabled = (bool) ($rules['negative_marking_enabled'] ?? true);
+                $multiplier = (float) ($rules['negative_marking_multiplier'] ?? 1);
+                $awarded = $correct ? (int) $question->marks : ($penaltyEnabled ? -1 * (int) ($question->negative_marks ?? 0) * $multiplier : 0);
+                $answer->update(['is_correct' => $correct, 'marks_awarded' => (int) round($awarded)]);
+                $total += (int) round($awarded);
             }
 
+            $floor = (bool) ($rules['score_floor_zero'] ?? true);
             $lockedAttempt->update([
                 'submitted_at' => now(),
-                'score' => max(0, $totalScore),
-                'status' => 'submitted',
+                'score' => $floor ? max(0, $total) : $total,
+                'status' => $manualPending ? 'awaiting_manual' : 'submitted',
             ]);
-
-            return max(0, $totalScore);
         });
 
+        $attempt->refresh();
         return redirect()->route('student.exams.show', $attempt->exam)
-            ->with('success', 'Exam submitted. Your score is '.$score.'.');
+            ->with('success', $attempt->status === 'awaiting_manual'
+                ? 'Exam submitted. Written answers are awaiting teacher review.'
+                : 'Exam submitted successfully.');
+    }
+
+    public function gradeAnswer(ExamAnswer $answer, Request $request): RedirectResponse
+    {
+        $exam = $answer->attempt->exam()->with('batch')->firstOrFail();
+        abort_unless(Auth::user()->isAdmin() || (int) $exam->batch->teacher_id === (int) Auth::id(), 403);
+        abort_unless($answer->question?->type === 'written', 422);
+        abort_unless($answer->attempt->status === 'awaiting_manual', 409);
+        $validated = $request->validate([
+            'marks_awarded' => ['required', 'integer', 'min:0', 'max:'.$answer->question->marks],
+            'teacher_feedback' => ['nullable', 'string', 'max:3000'],
+        ]);
+
+        DB::transaction(function () use ($answer, $validated, $request): void {
+            $lockedAttempt = ExamAttempt::query()->lockForUpdate()->findOrFail($answer->exam_attempt_id);
+            abort_unless($lockedAttempt->status === 'awaiting_manual', 409);
+            $lockedAnswer = $lockedAttempt->answers()->lockForUpdate()->findOrFail($answer->id);
+            $lockedAnswer->update([
+                'marks_awarded' => $validated['marks_awarded'],
+                'teacher_feedback' => $validated['teacher_feedback'] ?? null,
+                'graded_by' => $request->user()->id,
+                'graded_at' => now(),
+            ]);
+
+            $pending = $lockedAttempt->answers()->whereHas('question', fn ($query) => $query->where('type', 'written'))
+                ->whereNull('graded_at')->exists();
+            if (! $pending) {
+                $lockedAttempt->update([
+                    'score' => (int) $lockedAttempt->answers()->sum('marks_awarded'),
+                    'status' => 'submitted',
+                    'graded_by' => $request->user()->id,
+                    'graded_at' => now(),
+                ]);
+            }
+        });
+
+        return back()->with('success', __('Written answer graded successfully.'));
+    }
+
+    public function publishResults(Exam $exam): RedirectResponse
+    {
+        abort_unless(Auth::user()->isAdmin() || (int) $exam->batch->teacher_id === (int) Auth::id(), 403);
+        abort_if($exam->attempts()->where('status', 'awaiting_manual')->exists(), 409, __('Grade all written answers before publishing results.'));
+        $exam->update(['result_status' => 'published', 'results_published_at' => now()]);
+        return back()->with('success', __('Exam results are now published to students.'));
+    }
+
+    public function resultSheet(Exam $exam): View
+    {
+        abort_unless(Auth::user()->isAdmin() || (int) $exam->batch->teacher_id === (int) Auth::id(), 403);
+        $attempts = $exam->attempts()->with('student:id,name,email')
+            ->where('status', 'submitted')->orderByDesc('score')->orderBy('submitted_at')->get();
+        $attempts = $attempts->values()->map(function ($attempt, $index) use ($exam) {
+            $attempt->merit_position = $index + 1;
+            $attempt->result_label = $attempt->score >= $exam->pass_marks ? 'Passed' : 'Not passed';
+            return $attempt;
+        });
+        return view('teacher.exams.result-sheet', compact('exam', 'attempts'));
     }
 
     private function ensureEnrolled(Exam $exam): void
