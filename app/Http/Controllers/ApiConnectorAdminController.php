@@ -31,6 +31,15 @@ final class ApiConnectorAdminController extends Controller
         }
     }
 
+    public function healthCheck(string $provider, ApiConnectorManager $manager): RedirectResponse
+    {
+        $health = $manager->healthCheck($provider);
+        $message = ($health['credentials'] && $health['api'])
+            ? __('Provider API credentials are valid. Webhook verification remains :status.', ['status' => $health['webhook_verified'] ? __('verified') : __('pending')])
+            : __('Provider health check failed. Review credentials and permissions.');
+        return back()->with(($health['credentials'] && $health['api']) ? 'success' : 'error', $message);
+    }
+
     public function pause(string $provider, ApiConnectorManager $manager): RedirectResponse
     {
         $manager->pause($provider);
