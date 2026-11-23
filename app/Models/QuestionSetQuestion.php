@@ -9,7 +9,7 @@ class QuestionSetQuestion extends Model
 {
     protected $fillable = [
         'question_set_id', 'source_question_id', 'type', 'question', 'options',
-        'correct_option', 'correct_answer', 'explanation', 'difficulty', 'tags',
+        'correct_option', 'correct_answer', 'explanation', 'grading_rubric', 'difficulty', 'tags',
         'marks', 'position',
     ];
 
@@ -17,6 +17,7 @@ class QuestionSetQuestion extends Model
         'options' => 'array',
         'correct_option' => 'integer',
         'tags' => 'array',
+        'grading_rubric' => 'array',
         'marks' => 'integer',
         'position' => 'integer',
     ];
