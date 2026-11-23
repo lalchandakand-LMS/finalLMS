@@ -18,9 +18,6 @@ interface PaymentGateway
     /** @param array<string, mixed> $callback
      *  @return array{verified:array<string,mixed>,executed:array<string,mixed>}
      */
-    /** Extract the provider payment reference from an untrusted browser callback. */
-    public function callbackPaymentId(array $callback): ?string;
-
     /** Return verified fields normalized to status, payment_id, transaction_id, amount, currency and merchant_reference. */
     public function verifyCallback(Payment $payment, array $callback): array;
 }
