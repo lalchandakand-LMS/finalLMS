@@ -9,7 +9,7 @@ class QuestionSetAttemptQuestion extends Model
 {
     protected $fillable = [
         'question_set_attempt_id', 'question_set_question_id', 'type', 'question',
-        'options', 'correct_option', 'correct_answer', 'explanation', 'marks',
+        'options', 'correct_option', 'correct_answer', 'explanation', 'grading_rubric', 'marks', 'negative_marks',
         'position', 'selected_option', 'answer_text', 'is_correct', 'marks_awarded',
         'manual_feedback', 'graded_by', 'graded_at',
     ];
@@ -17,7 +17,9 @@ class QuestionSetAttemptQuestion extends Model
     protected $casts = [
         'options' => 'array',
         'correct_option' => 'integer',
+        'grading_rubric' => 'array',
         'marks' => 'integer',
+        'negative_marks' => 'integer',
         'position' => 'integer',
         'selected_option' => 'integer',
         'is_correct' => 'boolean',

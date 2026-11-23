@@ -58,6 +58,9 @@
                 @if($question->correct_answer)
                     <p><strong>{{ __('Reference answer:') }}</strong> {{ $question->correct_answer }}</p>
                 @endif
+                @if($question->grading_rubric)
+                    <div class="muted"><strong>{{ __('Grading rubric:') }}</strong><ul>@foreach($question->grading_rubric as $criterion)<li>{{ $criterion }}</li>@endforeach</ul></div>
+                @endif
                 @if($question->explanation)
                     <p class="muted"><strong>{{ __('Explanation:') }}</strong> {{ $question->explanation }}</p>
                 @endif

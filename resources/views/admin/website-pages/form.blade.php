@@ -23,10 +23,10 @@
         <p class="muted" id="page-section-status" role="status" aria-live="polite">Sections can be reordered with a mouse, keyboard-accessible buttons, or touch alternatives using the Up and Down controls.</p>
         <div id="page-section-list">
             @foreach(old('sections', $page->sections ?? []) as $i => $section)
-                @include('admin.website-pages.partials.section', ['i'=>$i, 'section'=>$section, 'media'=>$media])
+                @include('admin.website-pages.partials.section', ['i'=>$i, 'section'=>$section, 'media'=>$media, 'reusableBlocks'=>$reusableBlocks])
             @endforeach
         </div>
-        <template id="page-section-template">@include('admin.website-pages.partials.section', ['i'=>'__INDEX__', 'section'=>[], 'media'=>$media])</template>
+        <template id="page-section-template">@include('admin.website-pages.partials.section', ['i'=>'__INDEX__', 'section'=>[], 'media'=>$media, 'reusableBlocks'=>$reusableBlocks])</template>
     </section>
     @if($page->exists)
     <section class="panel" style="margin-bottom:20px;">
@@ -132,6 +132,24 @@
         reindex();
     });
     list.addEventListener('change', event => {
+        const reusable = event.target.closest('[data-reusable-block]');
+        if (reusable) {
+            const option = reusable.selectedOptions[0];
+            if (option && option.value) {
+                const card = reusable.closest('[data-page-section]');
+                const set = (selector, value) => { const field = card?.querySelector(selector); if (field) field.value = value || ''; };
+                set('[name$="[type]"]', 'feature');
+                set('[name$="[title]"]', option.dataset.title);
+                set('[name$="[body]"]', option.dataset.body);
+                set('[name$="[button_label]"]', option.dataset.buttonLabel);
+                set('[name$="[button_url]"]', option.dataset.buttonUrl);
+                set('[name$="[background_color]"]', option.dataset.backgroundColor || '#ffffff');
+                set('[name$="[text_color]"]', option.dataset.textColor || '#18212f');
+                set('[name$="[layout]"]', option.dataset.layout || 'standard');
+                reusable.value = '';
+                announce('Reusable block inserted into this section. You can edit it before saving.');
+            }
+        }
         if (!event.target.matches('[data-section-image]')) return;
         const card = event.target.closest('[data-page-section]');
         const preview = card?.querySelector('[data-image-preview]');

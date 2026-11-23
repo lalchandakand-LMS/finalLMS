@@ -22,8 +22,8 @@ The local/testing seeder creates `admin@lms.test`, `teacher@lms.test`, and `stud
 ## Implemented
 
 - Student registration, email verification, profile updates, and Twilio phone OTP integration
-- Admin, branch manager, accountant, teacher, and student role foundations; role middleware and protected routes
-- Branch managers are assigned one branch and can create/update only that branch's batches; accountants can access the invoice ledger without admin payment-review or user-management access
+- Five operational panel foundations: unified Admin, separate branch-scoped Branch, Teacher, Student and Guardian; role middleware and protected routes
+- Branch managers are assigned one active branch and use a dedicated Branch Panel for scoped batch/student operations; accountants can access the invoice ledger without admin payment-review or user-management access
 - Courses, lessons, course enrollment, certificates, and manual payment review
 - Admin-managed course combos with public package pages, fixed combo pricing, manual payment review, immutable purchased-course snapshots, and atomic enrollment into every included course after approval.
 - Student web sign-in with SMS verification for the first browser device, administrator approval for additional devices, one approved browser device at a time, and server-side invalidation of revoked browser sessions.
@@ -36,7 +36,7 @@ The local/testing seeder creates `admin@lms.test`, `teacher@lms.test`, and `stud
 - Lesson progress tracking; certificates require every course lesson completed
 - Batch seat reservation for pending payments, unique transaction references, and last-admin protection
 - SEO metadata, consent-gated GA4/GTM/Meta Pixel tags, and consent-based queued bulk SMS
-- Admin homepage, payment, user, course, and settings controls, including a branded responsive operations dashboard
+- Admin homepage, payment, user, course, and settings controls, including a branded responsive operations dashboard; role-specific Teacher, Student and Guardian navigation
 - Secure first-run cPanel web installer with database connection checks, empty-database guard, random app key, first-admin creation, and installation gate
 - Administrator assignment of students to active branches, with inactive-branch validation
 - Student invoices with fixed/percentage discounts (including student-specific scholarship adjustments), partial/installment receipts, and net outstanding balance tracking

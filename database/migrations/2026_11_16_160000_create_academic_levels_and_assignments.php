@@ -46,12 +46,15 @@ return new class extends Migration
         }
 
         Schema::table('website_pages', function (Blueprint $table): void {
+            // Remove the FK before the composite index it may rely on in MySQL.
+            $table->dropForeign(['academic_level_id']);
             $table->dropIndex(['academic_level_id', 'status']);
-            $table->dropConstrainedForeignId('academic_level_id');
+            $table->dropColumn('academic_level_id');
         });
         Schema::table('courses', function (Blueprint $table): void {
+            $table->dropForeign(['academic_level_id']);
             $table->dropIndex(['academic_level_id', 'status']);
-            $table->dropConstrainedForeignId('academic_level_id');
+            $table->dropColumn('academic_level_id');
         });
         Schema::dropIfExists('academic_levels');
     }

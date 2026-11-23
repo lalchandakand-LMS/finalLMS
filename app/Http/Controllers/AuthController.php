@@ -5,9 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\DeviceSession;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
+use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Password as PasswordBroker;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
 
@@ -60,6 +63,50 @@ class AuthController extends Controller
             ->with('meta_pixel_event', 'CompleteRegistration');
     }
 
+    public function showPasswordResetRequestForm(): View
+    {
+        return view('auth.login', ['showPasswordResetRequest' => true]);
+    }
+
+    public function showPasswordResetForm(Request $request, string $token): View
+    {
+        return view('auth.login', [
+            'passwordResetToken' => $token,
+            'passwordResetEmail' => (string) $request->query('email', ''),
+        ]);
+    }
+
+    public function sendPasswordResetLink(Request $request): RedirectResponse
+    {
+        $data = $request->validate(['email' => ['required', 'email', 'max:255']]);
+        $status = PasswordBroker::sendResetLink($data);
+
+        // Return the same response whether or not the email belongs to an account.
+        // This prevents the password-reset endpoint from becoming an account-enumeration oracle.
+        return back()->with('success', 'If an account matches that email address, a password reset link will be sent.');
+    }
+
+    public function resetPassword(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'token' => ['required', 'string'],
+            'email' => ['required', 'email', 'max:255'],
+            'password' => ['required', 'confirmed', Password::defaults()],
+        ]);
+
+        $status = PasswordBroker::reset($data, function (User $user, string $password): void {
+            $user->forceFill([
+                'password' => $password,
+                'remember_token' => Str::random(60),
+            ])->save();
+            event(new PasswordReset($user));
+        });
+
+        return $status === PasswordBroker::PASSWORD_RESET
+            ? redirect()->route('login')->with('success', __($status))
+            : back()->withErrors(['email' => __($status)]);
+    }
+
     public function logout(Request $request): RedirectResponse
     {
         if (Auth::check()) {
@@ -86,7 +133,7 @@ class AuthController extends Controller
             || ! str_starts_with($continue, '/')
             || str_starts_with($continue, '//')
             || str_contains($continue, chr(92))
-            || preg_match('/[\\r\\n]/', $continue)) {
+            || preg_match('/[\r\n]/', $continue)) {
             return;
         }
 

@@ -24,7 +24,7 @@ class TeacherQuestionSetGradingController extends Controller
             ->where('question_set_id', $questionSet->id)
             ->whereIn('status', ['awaiting_manual', 'graded'])
             ->with('student')
-            ->withCount(['questions as written_questions_count' => fn ($questions) => $questions->where('type', 'short_answer')])
+            ->withCount(['questions as written_questions_count' => fn ($questions) => $questions->whereIn('type', ['short_answer', 'written'])])
             ->orderByRaw("CASE WHEN status = 'awaiting_manual' THEN 0 ELSE 1 END")
             ->latest('submitted_at')
             ->paginate(20);
@@ -65,7 +65,7 @@ class TeacherQuestionSetGradingController extends Controller
             abort_unless($lockedAttempt->status === 'awaiting_manual', 409, __('This quiz attempt has already been graded or is not awaiting review.'));
 
             $writtenQuestions = $lockedAttempt->questions()
-                ->where('type', 'short_answer')
+                ->whereIn('type', ['short_answer', 'written'])
                 ->lockForUpdate()
                 ->get();
 

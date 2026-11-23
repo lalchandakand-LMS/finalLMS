@@ -11,8 +11,31 @@
 
         @if($attempt && $attempt->status === 'submitted')
             <span class="badge success">Submitted</span>
-            <h2>Your score: {{ $attempt->score }}</h2>
-            <p>Pass marks: {{ $exam->pass_marks }} · Result: {{ $attempt->score >= $exam->pass_marks ? 'Passed' : 'Not passed' }}</p>
+            @if($exam->result_status === 'published')
+                <h2>Your score: {{ $attempt->score }}</h2>
+                <p>Pass marks: {{ $exam->pass_marks }} · Result: {{ $attempt->score >= $exam->pass_marks ? 'Passed' : 'Not passed' }}</p>
+                @if($exam->allow_result_review && (!$exam->review_until || now()->lte($exam->review_until)))
+                    @if($review)
+                        <div class="course-item" style="margin-top:18px;">
+                            <strong>{{ __('Review request:') }} {{ ucfirst($review->status) }}</strong>
+                            <p>{{ $review->message }}</p>
+                            @if($review->teacher_response)<p class="muted">{{ __('Teacher response:') }} {{ $review->teacher_response }}</p>@endif
+                        </div>
+                    @else
+                        <form method="POST" action="{{ route('student.exams.result-review', $attempt) }}" class="course-item" style="margin-top:18px;">
+                            @csrf
+                            <h3>{{ __('Request a result review') }}</h3>
+                            <label>{{ __('Explain which answer or marking should be reviewed') }}<textarea name="message" minlength="10" maxlength="2000" required></textarea></label>
+                            <button class="btn secondary" type="submit">{{ __('Submit review request') }}</button>
+                        </form>
+                    @endif
+                @endif
+            @else
+                <h2>Result pending</h2><p class="muted">Your answers have been submitted. The teacher will publish the result after review.</p>
+            @endif
+        @elseif($attempt && $attempt->status === 'awaiting_manual')
+            <span class="badge warning">Awaiting teacher review</span>
+            <p>Your written answers have been submitted. The final result will be available after marking and publication.</p>
         @elseif($attempt && $attempt->status === 'in_progress')
             @php
                 $deadline = min($exam->ends_at->getTimestamp(), $attempt->started_at->copy()->addMinutes($exam->duration_minutes)->getTimestamp());
@@ -28,10 +51,16 @@
                     @if($question)
                     <div class="course-item" style="margin:16px 0;">
                         <h3>{{ $loop->iteration }}. {{ $question->question }}</h3>
-                        <p class="muted">{{ $question->marks }} marks</p>
-                        @foreach($question->options as $index => $option)
-                            <label style="font-weight:400;"><input style="width:auto;margin-right:8px;" type="radio" name="answers[{{ $question->id }}]" value="{{ $index }}" @checked(isset($savedAnswers[$question->id]) && (int) $savedAnswers[$question->id]->selected_option === $index)> {{ chr(65 + $index) }}. {{ $option }}</label>
-                        @endforeach
+                        <p class="muted">{{ ucfirst(str_replace('_', ' ', $question->type ?: 'mcq')) }} · {{ $question->marks }} marks</p>
+                        @if(in_array($question->type ?: 'mcq', ['mcq', 'true_false'], true))
+                            @foreach($question->options ?? [] as $index => $option)
+                                <label style="font-weight:400;display:block;"><input style="width:auto;margin-right:8px;" type="radio" name="answers[{{ $question->id }}]" value="{{ $index }}" @checked(isset($savedAnswers[$question->id]) && (int) $savedAnswers[$question->id]->selected_option === $index)> {{ chr(65 + $index) }}. {{ $option }}</label>
+                            @endforeach
+                        @else
+                            <label>{{ $question->type === 'written' ? 'Your written response' : 'Your short answer' }}
+                                <textarea name="answers[{{ $question->id }}]" rows="{{ $question->type === 'written' ? 7 : 2 }}" maxlength="10000" style="width:100%;">{{ $savedAnswers[$question->id]->answer_text ?? '' }}</textarea>
+                            </label>
+                        @endif
                     </div>
                     @endif
                 @endforeach

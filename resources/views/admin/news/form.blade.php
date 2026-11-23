@@ -7,6 +7,8 @@
 <label>{{ __('URL slug (optional)') }}<input name="slug" maxlength="200" value="{{ old('slug', $post->slug) }}"></label>
 <label>{{ __('Short summary') }}<textarea name="excerpt" rows="3" maxlength="500">{{ old('excerpt', $post->excerpt) }}</textarea></label>
 <label>{{ __('Article body') }}<textarea name="body" rows="16" maxlength="100000" required>{{ old('body', $post->body) }}</textarea></label>
+<label>{{ __('Categories (comma separated)') }}<input name="categories_text" maxlength="1000" value="{{ old('categories_text', $post->categories->pluck('name')->implode(', ')) }}" placeholder="Announcements, Learning tips"></label>
+<label>{{ __('Tags (comma separated)') }}<input name="tags_text" maxlength="1000" value="{{ old('tags_text', $post->tags->pluck('name')->implode(', ')) }}" placeholder="Spoken English, Grammar"></label>
 <label>{{ __('Cover image') }}<select name="cover_media_id"><option value="">{{ __('No cover') }}</option>@foreach($media as $asset)@if(str_starts_with($asset->mime_type, 'image/'))<option value="{{ $asset->id }}" @selected(old('cover_media_id', $post->cover_media_id) == $asset->id)>{{ $asset->original_name }}</option>@endif @endforeach</select></label>
 <label>{{ __('Status') }}<select name="status"><option value="draft" @selected(old('status', $post->status ?: 'draft') === 'draft')>{{ __('Draft') }}</option><option value="published" @selected(old('status', $post->status) === 'published')>{{ __('Published') }}</option></select></label>
 <label>{{ __('Publish date/time (optional)') }}<input type="datetime-local" name="published_at" value="{{ old('published_at', $post->published_at?->format('Y-m-d\TH:i')) }}"></label>

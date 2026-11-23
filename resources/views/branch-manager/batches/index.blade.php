@@ -9,16 +9,16 @@
             <h1 style="margin:12px 0 0;">{{ auth()->user()->branch?->name }} — {{ __('batches') }}</h1>
             <p class="muted">{{ __('You can view batches assigned to your branch only.') }}</p>
         </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;"><a href="{{ route('admin.branch-workspace.students.index') }}" class="btn secondary">{{ __('Students') }}</a><a href="{{ route('dashboard') }}" class="btn secondary">{{ __('Dashboard') }}</a></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;"><a href="{{ route('branch.students.index') }}" class="btn secondary">{{ __('Students') }}</a><a href="{{ route('branch.dashboard') }}" class="btn secondary">{{ __('Dashboard') }}</a></div>
     </div>
 
     <section class="panel" style="margin-bottom:22px;">
         <h2>{{ __('Create a batch in your branch') }}</h2>
-        <form method="POST" action="{{ route('admin.branch-workspace.batches.store') }}" class="grid grid-2">
+        <form method="POST" action="{{ route('branch.batches.store') }}" class="grid grid-2">
             @csrf
             <label>{{ __('Batch name') }}<input name="title" maxlength="160" required></label>
-            <label>{{ __('Course') }}<select name="course_id" required><option value="">{{ __('Select course') }}</option>@foreach(\App\Models\Course::where('status', 'published')->orderBy('title')->get() as $course)<option value="{{ $course->id }}">{{ $course->title }}</option>@endforeach</select></label>
-            <label>{{ __('Teacher') }}<select name="teacher_id" required><option value="">{{ __('Select teacher') }}</option>@foreach(\App\Models\User::where('role', 'teacher')->orderBy('name')->get() as $teacher)<option value="{{ $teacher->id }}">{{ $teacher->name }}</option>@endforeach</select></label>
+            <label>{{ __('Course') }}<select name="course_id" required><option value="">{{ __('Select course') }}</option>@foreach($courses as $course)<option value="{{ $course->id }}">{{ $course->title }}</option>@endforeach</select></label>
+            <label>{{ __('Teacher') }}<select name="teacher_id" required><option value="">{{ __('Select teacher') }}</option>@foreach($teachers as $teacher)<option value="{{ $teacher->id }}">{{ $teacher->name }}</option>@endforeach</select></label>
             <label>{{ __('Capacity') }}<input type="number" name="capacity" min="1" max="1000" required></label>
             <label>{{ __('Start') }}<input type="datetime-local" name="starts_at" required></label>
             <label>{{ __('End') }}<input type="datetime-local" name="ends_at" required></label>
@@ -37,7 +37,7 @@
                 <p class="muted">{{ $batch->starts_at->format('d M Y H:i') }} – {{ $batch->ends_at->format('d M Y H:i') }} · Fee ৳{{ number_format((float) $batch->fee, 2) }}</p>
                 <details style="margin-top:12px;">
                     <summary>{{ __('Manage this batch') }}</summary>
-                    <form method="POST" action="{{ route('admin.branch-workspace.batches.update', $batch) }}" class="grid grid-2" style="margin-top:12px;">
+                    <form method="POST" action="{{ route('branch.batches.update', $batch) }}" class="grid grid-2" style="margin-top:12px;">
                         @csrf
                         @method('PUT')
                         <label>{{ __('Batch name') }}<input name="title" value="{{ $batch->title }}" maxlength="160" required></label>
@@ -49,6 +49,9 @@
                         <div><button class="btn primary" type="submit">{{ __('Save batch') }}</button></div>
                     </form>
                 </details>
+                @if(auth()->user()->hasAdminPermission('branch.attendance') && app(\App\Services\Modules\ModuleRegistry::class)->isEnabled('attendance'))
+                    <a class="btn secondary" style="margin-top:12px" href="{{ route('branch.batches.attendance.index', $batch) }}">{{ __('Take attendance') }}</a>
+                @endif
             </article>
         @empty
             <div class="panel"><p class="muted">{{ __('No batches are assigned to this branch yet.') }}</p></div>

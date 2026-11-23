@@ -9,15 +9,17 @@ class QuestionSetQuestion extends Model
 {
     protected $fillable = [
         'question_set_id', 'source_question_id', 'type', 'question', 'options',
-        'correct_option', 'correct_answer', 'explanation', 'difficulty', 'tags',
-        'marks', 'position',
+        'correct_option', 'correct_answer', 'explanation', 'grading_rubric', 'difficulty', 'tags',
+        'marks', 'negative_marks', 'position',
     ];
 
     protected $casts = [
         'options' => 'array',
         'correct_option' => 'integer',
         'tags' => 'array',
+        'grading_rubric' => 'array',
         'marks' => 'integer',
+        'negative_marks' => 'integer',
         'position' => 'integer',
     ];
 

@@ -6,6 +6,7 @@ use App\Models\Assignment;
 use App\Models\AssignmentSubmission;
 use App\Models\Attendance;
 use App\Models\Batch;
+use App\Models\Branch;
 use App\Models\ExamAttempt;
 use App\Models\Lesson;
 use App\Models\LessonProgress;
@@ -44,6 +45,33 @@ class DashboardController extends Controller
             $recentCertificatesQuery->where('user_id', $user->id);
         } elseif ($user->isTeacher()) {
             $recentCertificatesQuery->whereHas('course', fn ($query) => $query->where('teacher_id', $user->id));
+        } elseif ($user->isGuardian()) {
+            $linkedStudents = $user->linkedStudents()->where('users.role', 'student');
+            if ($user->branch_id === null) {
+                $linkedStudents->whereNull('users.branch_id');
+            } elseif (Branch::query()->whereKey($user->branch_id)->where('is_active', true)->exists()) {
+                $linkedStudents->where('users.branch_id', $user->branch_id);
+            } else {
+                $recentCertificatesQuery->whereRaw('1 = 0');
+            }
+            $recentCertificatesQuery->whereIn('user_id', $linkedStudents->select('users.id'));
+        } elseif ($user->isBranchManager()) {
+            $activeBranchId = $user->branch_id && Branch::query()->whereKey($user->branch_id)->where('is_active', true)->value('id');
+            if ($activeBranchId) {
+                $recentCertificatesQuery->whereHas('user', function ($student) use ($activeBranchId): void {
+                    $student->where('role', 'student')->where(function ($scope) use ($activeBranchId): void {
+                        $scope->where('branch_id', $activeBranchId)
+                            ->orWhereHas('enrollments', fn ($enrollments) => $enrollments
+                                ->whereIn('status', ['active', 'completed'])
+                                ->whereHas('batch', fn ($batch) => $batch->where('branch_id', $activeBranchId)));
+                    });
+                });
+            } else {
+                $recentCertificatesQuery->whereRaw('1 = 0');
+            }
+        } elseif (! $user->isAdmin()) {
+            // Finance-only staff must not see academic records.
+            $recentCertificatesQuery->whereRaw('1 = 0');
         }
 
         $recentCertificates = $recentCertificatesQuery->take(5)->get();

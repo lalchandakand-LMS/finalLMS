@@ -28,6 +28,11 @@ class Course extends Model
 
     protected $casts = ['tags' => 'array'];
 
+    public function versions(): HasMany
+    {
+        return $this->hasMany(CourseVersion::class)->orderByDesc('version_number');
+    }
+
     public function categories(): BelongsToMany
     {
         return $this->belongsToMany(CourseCategory::class, 'course_category_course')->withTimestamps();

@@ -1,0 +1,68 @@
+@extends('layouts.app')
+
+@section('content')
+<div class="mx-auto max-w-7xl space-y-6 p-4 sm:p-6">
+    <div><h1 class="text-2xl font-bold">HR & Staff Management</h1><p class="text-sm text-gray-600">Employee directory, attendance, leave approvals and payroll ledger.</p></div>
+    @if(session('success'))<p class="rounded bg-green-50 p-3 text-green-800">{{ session('success') }}</p>@endif
+    @if(isset($errors) && $errors->any())<p class="rounded bg-red-50 p-3 text-red-800">{{ $errors->first() }}</p>@endif
+    <div class="grid gap-6 xl:grid-cols-2">
+        <section class="rounded border bg-white p-5">
+            <h2 class="mb-3 font-semibold">Register staff member</h2>
+            <form method="POST" action="{{ route(request()->routeIs('branch.*')?'branch.hr.staff.store':'admin.hr.staff.store') }}" class="grid gap-3 sm:grid-cols-2">@csrf
+                <input required name="employee_code" maxlength="40" placeholder="Employee code" class="rounded border-gray-300">
+                <input required name="full_name" maxlength="160" placeholder="Full name" class="rounded border-gray-300">
+                <input required name="designation" maxlength="120" placeholder="Designation" class="rounded border-gray-300">
+                <input required name="department" maxlength="100" value="Academic" placeholder="Department" class="rounded border-gray-300">
+                <input name="phone" maxlength="40" placeholder="Phone" class="rounded border-gray-300">
+                <input name="email" type="email" maxlength="160" placeholder="Email" class="rounded border-gray-300">
+                <input required type="number" min="0" step="0.01" name="base_salary" placeholder="Base salary (BDT)" class="rounded border-gray-300">
+                <select name="employment_type" required class="rounded border-gray-300"><option value="full_time">Full time</option><option value="part_time">Part time</option><option value="contract">Contract</option><option value="temporary">Temporary</option></select>
+                <input type="date" name="contract_ends_at" min="{{ now()->toDateString() }}" class="rounded border-gray-300" aria-label="Contract end date">
+                <select name="status" class="rounded border-gray-300"><option value="active">Active</option><option value="on_leave">On leave</option><option value="inactive">Inactive</option></select>
+                @if(!request()->routeIs('branch.*'))
+                    <select name="branch_id" class="rounded border-gray-300"><option value="">No branch</option>@foreach(\App\Models\Branch::query()->where('is_active',true)->orderBy('name')->get() as $branch)<option value="{{ $branch->id }}">{{ $branch->name }}</option>@endforeach</select>
+                @endif
+                <input type="number" min="1" name="user_id" placeholder="Link existing user ID (optional)" class="rounded border-gray-300">
+                <button class="rounded bg-blue-700 px-4 py-2 text-white sm:col-span-2">Save staff profile</button>
+            </form>
+        </section>
+        <section class="rounded border bg-white p-5">
+            <h2 class="mb-3 font-semibold">Record daily attendance</h2>
+            <form method="POST" action="{{ route(request()->routeIs('branch.*')?'branch.hr.attendance.store':'admin.hr.attendance.store') }}" class="grid gap-3 sm:grid-cols-2">@csrf
+                <select required name="staff_profile_id" class="rounded border-gray-300 sm:col-span-2"><option value="">Select staff member</option>@foreach($staff as $member)<option value="{{ $member->id }}">{{ $member->full_name }} — {{ $member->employee_code }}</option>@endforeach</select>
+                <input required type="date" name="attendance_date" max="{{ now()->toDateString() }}" value="{{ now()->toDateString() }}" class="rounded border-gray-300">
+                <select required name="status" class="rounded border-gray-300"><option value="present">Present</option><option value="late">Late</option><option value="half_day">Half day</option><option value="absent">Absent</option><option value="on_leave">On leave</option></select>
+                <label class="text-sm">Check in<input type="time" name="check_in_at" class="mt-1 w-full rounded border-gray-300"></label>
+                <label class="text-sm">Check out<input type="time" name="check_out_at" class="mt-1 w-full rounded border-gray-300"></label>
+                <input name="notes" maxlength="1000" placeholder="Notes (optional)" class="rounded border-gray-300 sm:col-span-2">
+                <button class="rounded bg-indigo-700 px-4 py-2 text-white sm:col-span-2">Save / update attendance</button>
+            </form>
+        </section>
+        <section class="rounded border bg-white p-5">
+            <h2 class="mb-3 font-semibold">Submit leave request</h2>
+            <form method="POST" action="{{ route(request()->routeIs('branch.*')?'branch.hr.leave.store':'admin.hr.leave.store') }}" class="grid gap-3 sm:grid-cols-2">@csrf
+                <select required name="staff_profile_id" class="rounded border-gray-300 sm:col-span-2"><option value="">Select staff member</option>@foreach($staff as $member)<option value="{{ $member->id }}">{{ $member->full_name }} — {{ $member->employee_code }}</option>@endforeach</select>
+                <select required name="leave_type" class="rounded border-gray-300"><option value="annual">Annual</option><option value="sick">Sick</option><option value="casual">Casual</option><option value="unpaid">Unpaid</option><option value="other">Other</option></select>
+                <input required type="date" name="starts_on" min="{{ now()->toDateString() }}" class="rounded border-gray-300">
+                <input required type="date" name="ends_on" min="{{ now()->toDateString() }}" class="rounded border-gray-300">
+                <textarea required name="reason" maxlength="2000" placeholder="Reason for leave" class="rounded border-gray-300 sm:col-span-2"></textarea>
+                <button class="rounded bg-amber-700 px-4 py-2 text-white sm:col-span-2">Submit for approval</button>
+            </form>
+        </section>
+        <section class="rounded border bg-white p-5">
+            <h2 class="mb-3 font-semibold">Prepare monthly payroll</h2>
+            <form method="POST" action="{{ route(request()->routeIs('branch.*')?'branch.hr.payrolls.store':'admin.hr.payrolls.store') }}" class="grid gap-3">@csrf
+                <select required name="staff_profile_id" class="rounded border-gray-300"><option value="">Select staff member</option>@foreach($staff as $member)<option value="{{ $member->id }}">{{ $member->full_name }} — ৳{{ $member->base_salary }}</option>@endforeach</select>
+                <input required type="month" name="payroll_month" value="{{ now()->format('Y-m') }}" class="rounded border-gray-300">
+                <div class="grid grid-cols-2 gap-3"><input type="number" min="0" step="0.01" name="allowances" value="0" placeholder="Allowances" class="rounded border-gray-300"><input type="number" min="0" step="0.01" name="bonus" value="0" placeholder="Bonus" class="rounded border-gray-300"><input type="number" min="0" step="0.01" name="overtime_hours" value="0" placeholder="Overtime hours" class="rounded border-gray-300"><input type="number" min="0" step="0.01" name="overtime_rate" value="0" placeholder="Overtime rate / hour" class="rounded border-gray-300"><input type="number" min="0" step="0.01" name="deductions" value="0" placeholder="Deductions" class="rounded border-gray-300"></div>
+                <button class="rounded bg-emerald-700 px-4 py-2 text-white">Record pending payroll</button>
+                <p class="text-xs text-gray-500">Disbursement requires a central administrator confirmation and payment reference.</p>
+            </form>
+        </section>
+    </div>
+    <section class="overflow-x-auto rounded border bg-white"><div class="border-b p-4 font-semibold">Staff directory</div><table class="min-w-full text-sm"><thead class="bg-gray-50"><tr><th class="p-3 text-left">Employee</th><th class="p-3 text-left">Department / Designation</th><th class="p-3 text-left">Branch</th><th class="p-3 text-left">Employment</th><th class="p-3 text-left">Salary</th><th class="p-3 text-left">Status</th></tr></thead><tbody>@forelse($staff as $member)<tr class="border-t"><td class="p-3">{{ $member->full_name }}<small class="block text-gray-500">{{ $member->employee_code }}</small></td><td class="p-3">{{ $member->department }} / {{ $member->designation }}</td><td class="p-3">{{ $member->branch_id ?? '—' }}</td><td class="p-3">{{ str_replace('_',' ',$member->employment_type ?? 'full_time') }} @if($member->contract_ends_at)<small class="block">Until {{ $member->contract_ends_at->format('d M Y') }}</small>@endif</td><td class="p-3">৳{{ $member->base_salary }}</td><td class="p-3">{{ $member->status }}</td></tr>@empty<tr><td colspan="6" class="p-5 text-center">No staff profiles.</td></tr>@endforelse</tbody></table>{{ $staff->links() }}</section>
+    <section class="overflow-x-auto rounded border bg-white"><div class="border-b p-4 font-semibold">Recent attendance (30 days)</div><table class="min-w-full text-sm"><thead class="bg-gray-50"><tr><th class="p-3 text-left">Staff</th><th class="p-3">Date</th><th class="p-3">Status</th><th class="p-3">Time</th><th class="p-3">Notes</th></tr></thead><tbody>@forelse($attendances as $row)<tr class="border-t"><td class="p-3">{{ $row->staff?->full_name }}</td><td class="p-3">{{ $row->attendance_date->format('d M Y') }}</td><td class="p-3">{{ ucfirst(str_replace('_',' ',$row->status)) }}</td><td class="p-3">{{ $row->check_in_at ?? '—' }} / {{ $row->check_out_at ?? '—' }}</td><td class="p-3">{{ $row->notes ?? '—' }}</td></tr>@empty<tr><td colspan="5" class="p-4 text-center">No attendance records.</td></tr>@endforelse</tbody></table></section>
+    <section class="overflow-x-auto rounded border bg-white"><div class="border-b p-4 font-semibold">Leave requests</div><table class="min-w-full text-sm"><thead class="bg-gray-50"><tr><th class="p-3 text-left">Staff</th><th class="p-3">Type</th><th class="p-3">Dates</th><th class="p-3">Reason / Status</th><th class="p-3">Review</th></tr></thead><tbody>@forelse($leaveRequests as $leave)<tr class="border-t"><td class="p-3">{{ $leave->staff?->full_name }}</td><td class="p-3">{{ ucfirst($leave->leave_type) }}</td><td class="p-3">{{ $leave->starts_on->format('d M Y') }} – {{ $leave->ends_on->format('d M Y') }}</td><td class="p-3">{{ $leave->reason }}<small class="block">{{ ucfirst($leave->status) }} {{ $leave->review_note ? '· '.$leave->review_note : '' }}</small></td><td class="p-3">@if($leave->status==='pending' && request()->routeIs('admin.*'))<div class="flex gap-2">@foreach(['approved'=>'Approve','rejected'=>'Reject'] as $decision=>$label)<form method="POST" action="{{ route('admin.hr.leave.review',$leave->id) }}">@csrf<input type="hidden" name="decision" value="{{ $decision }}"><button class="rounded px-2 py-1 text-xs text-white {{ $decision==='approved'?'bg-emerald-700':'bg-red-700' }}">{{ $label }}</button></form>@endforeach</div>@else{{ $leave->reviewed_at?->format('d M Y') ?? 'Pending review' }}@endif</td></tr>@empty<tr><td colspan="5" class="p-4 text-center">No leave requests.</td></tr>@endforelse</tbody></table></section>
+    <section class="overflow-x-auto rounded border bg-white"><div class="border-b p-4 font-semibold">Recent payroll ledger</div><table class="min-w-full text-sm"><thead class="bg-gray-50"><tr><th class="p-3 text-left">Staff</th><th class="p-3">Month</th><th class="p-3">Basic / Allowance / OT</th><th class="p-3">Gross / Bonus / Deduction</th><th class="p-3">Net</th><th class="p-3">Status / Disbursement</th></tr></thead><tbody>@forelse($payrolls as $pay)<tr class="border-t"><td class="p-3">{{ $pay->staff?->full_name ?? 'Staff #'.$pay->staff_profile_id }}</td><td class="p-3">{{ $pay->payroll_month }}</td><td class="p-3">৳{{ $pay->basic_salary ?? $pay->gross_salary }} / ৳{{ $pay->allowances ?? 0 }} / ৳{{ $pay->overtime_amount ?? 0 }}</td><td class="p-3">৳{{ $pay->gross_salary }} / ৳{{ $pay->bonus }} / ৳{{ $pay->deductions }}</td><td class="p-3 font-semibold">৳{{ $pay->net_paid }}</td><td class="p-3">{{ $pay->status }} @if($pay->status==='paid')<small class="block text-gray-500">{{ $pay->paid_at?->format('d M Y') }} · {{ $pay->payment_reference }}</small>@elseif(request()->routeIs('admin.*'))<form method="POST" action="{{ route('admin.hr.payroll.mark-paid',$pay->id) }}" class="mt-2 flex gap-2">@csrf<input required maxlength="120" name="payment_reference" placeholder="Payment reference" class="min-w-0 rounded border-gray-300 text-xs"><button class="rounded bg-emerald-700 px-2 py-1 text-xs text-white">Mark paid</button></form>@endif</td></tr>@empty<tr><td colspan="6" class="p-5 text-center">No payroll entries.</td></tr>@endforelse</tbody></table></section>
+</div>
+@endsection
