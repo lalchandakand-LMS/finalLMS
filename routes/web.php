@@ -86,6 +86,7 @@ use App\Modules\Library\LibraryController;
 use App\Modules\Referral\ReferralIncomeController;
 use App\Modules\Ai\AssistantController;
 use App\Modules\Ai\AdminSettingsController;
+use App\Http\Controllers\AdminApiConnectionController;
 use App\Modules\Ai\AgentActionController;
 use App\Modules\Ai\AgentContentController;
 use App\Http\Controllers\GamificationController;
@@ -709,6 +710,13 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
     });
 });
 
+
+Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('admin/integrations')->name('admin.integrations.')->group(function () {
+    Route::get('/', [AdminApiConnectionController::class, 'index'])->name('index');
+    Route::post('/', [AdminApiConnectionController::class, 'store'])->middleware('throttle:10,1')->name('store');
+    Route::post('/{connection}/pause', [AdminApiConnectionController::class, 'pause'])->whereNumber('connection')->middleware('throttle:10,1')->name('pause');
+    Route::post('/{connection}/disconnect', [AdminApiConnectionController::class, 'disconnect'])->whereNumber('connection')->middleware('throttle:5,1')->name('disconnect');
+});
 
 // Native AI assistant, specialist agents and human-reviewed actions.
 foreach (['admin' => 'admin', 'branch_manager' => 'branch', 'teacher' => 'teacher', 'student' => 'student', 'guardian' => 'guardian', 'support_staff' => 'support'] as $aiRole => $aiPrefix) {
