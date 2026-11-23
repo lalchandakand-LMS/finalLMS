@@ -63,6 +63,24 @@ jobs:
         run: |
           find app bootstrap config database plugins public routes tests .github/scripts -type f -name '*.php' -print0 | xargs -0 -n1 php -l
           php -l artisan
+      - name: Set up Python for PHP security analysis
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install Semgrep
+        run: python -m pip install --disable-pip-version-check semgrep
+      - name: Scan PHP application and plugin code
+        run: >-
+          semgrep scan
+          --config p/php
+          --config p/security-audit
+          --include '*.php'
+          --exclude vendor
+          --exclude node_modules
+          --exclude storage
+          --exclude bootstrap/cache
+          --error
+          --metrics=off
       - uses: actions/setup-node@v5
         with:
           node-version: '20'
