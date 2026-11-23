@@ -294,6 +294,9 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
             Route::post('/batches/{batch}/attendance', [AttendanceController::class, 'store'])
                 ->middleware(['admin.permission:branch.attendance', 'module.enabled:attendance'])
                 ->name('batches.attendance.store');
+            Route::post('/batches/{batch}/attendance-fees/generate', [AttendanceFeeBillingController::class, 'generate'])
+                ->middleware(['admin.permission:finance.invoices', 'module.enabled:attendance', 'throttle:10,1'])
+                ->name('batches.attendance-fees.generate');
         });
 
     Route::middleware('role:accountant')
