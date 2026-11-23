@@ -1356,7 +1356,7 @@
     "Attendance, course participation and learning progress from the LMS records.": "LMS-এর উপস্থিতি, কোর্সে অংশগ্রহণ ও শেখার অগ্রগতির তথ্য।",
     "Configure risk rules": "ঝুঁকি নির্ধারণের নিয়ম",
     "Students in scope": "অন্তর্ভুক্ত শিক্ষার্থী",
-    "Active enrollments": "সক্রিয় ভর্তি",
+    "Active enrollments": "সক্রিয় ভর্তি",
     "Attendance records today": "আজকের উপস্থিতি",
     "Needs attention on this page": "এই পাতায় পর্যালোচনা প্রয়োজন",
     "Search student": "শিক্ষার্থী খুঁজুন",
@@ -1557,5 +1557,12 @@
     "Flash sale campaign deleted.": "ফ্ল্যাশ সেল ক্যাম্পেইন মুছে ফেলা হয়েছে।",
     "(hidden)": "(গোপন)",
     "General guidance only. This assistant cannot access private LMS records or perform actions.": "শুধু সাধারণ দিকনির্দেশনা। এই সহকারী ব্যক্তিগত LMS রেকর্ডে প্রবেশ করতে পারে না বা কোনো কাজ সম্পাদন করতে পারে না।",
-    "This assistant may use read-only, role-scoped LMS context authorized for your account. It cannot perform actions.": "এই সহকারী আপনার অ্যাকাউন্টের জন্য অনুমোদিত, ভূমিকা-সীমাবদ্ধ LMS তথ্য শুধু পড়ার জন্য ব্যবহার করতে পারে। এটি কোনো কাজ সম্পাদন করতে পারে না।"
+    "This assistant may use read-only, role-scoped LMS context authorized for your account. It cannot perform actions.": "এই সহকারী আপনার অ্যাকাউন্টের জন্য অনুমোদিত, ভূমিকা-সীমাবদ্ধ LMS তথ্য শুধু পড়ার জন্য ব্যবহার করতে পারে। এটি কোনো কাজ সম্পাদন করতে পারে না।",
+    "Published courses": "প্রকাশিত কোর্স",
+    "Published lessons": "প্রকাশিত লেসন",
+    "Enrolled learners": "ভর্তিকৃত শিক্ষার্থী",
+    "Open batches": "চলমান ব্যাচ",
+    "Certificates issued": "প্রদানকৃত সার্টিফিকেট",
+    "New students this month": "এই মাসে নতুন শিক্ষার্থী",
+    "Completed courses": "সম্পন্ন কোর্স"
 }
