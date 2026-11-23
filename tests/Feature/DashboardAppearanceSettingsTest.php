@@ -196,6 +196,15 @@ class DashboardAppearanceSettingsTest extends TestCase
         $this->assertDatabaseHas('settings', ['key' => 'dashboard_sidebar_start_color', 'value' => '#123456']);
         $this->assertDatabaseHas('settings', ['key' => 'dashboard_sidebar_width', 'value' => '290']);
         $this->assertDatabaseHas('settings', ['key' => 'dashboard_topbar_background', 'value' => '#f8fafc']);
+
+        $this->actingAs($admin)->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('--aec-sidebar-start:#123456', false)
+            ->assertSee('--aec-sidebar-end:#234567', false)
+            ->assertSee('--aec-sidebar-text:#fefefe', false)
+            ->assertSee('--aec-topbar-bg:#f8fafc', false)
+            ->assertSee('--aec-topbar-text:#102030', false)
+            ->assertSee('--admin-sidebar-width:290px', false);
     }
 
     public function test_dashboard_customizer_rejects_unsafe_style_values(): void
