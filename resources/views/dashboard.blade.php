@@ -35,7 +35,7 @@
             .aec-stat strong { display:block; margin-top:12px; color:#102b63; font-size:clamp(1.65rem,2.4vw,2.15rem); line-height:1; letter-spacing:-.04em; }
             .aec-stat small { display:block; margin-top:8px; color:#8190a8; font-size:.76rem; }
             .aec-stat.blue { background:linear-gradient(135deg,#eaf3ff,#fff); } .aec-stat.green .aec-stat-icon { background:#ddf8ed; } .aec-stat.purple .aec-stat-icon { background:#f0e7ff; } .aec-stat.gold .aec-stat-icon { background:#fff2d8; }
-            .aec-content-grid { display:grid; grid-template-columns:minmax(0,1.45fr) minmax(270px,.85fr); gap:15px; }
+            .aec-live-class { display:grid; grid-template-columns:minmax(180px,280px) minmax(0,1fr); align-items:center; gap:18px; }\n            .aec-live-class img { width:100%; height:150px; object-fit:cover; border-radius:14px; }\n            .aec-content-grid { display:grid; grid-template-columns:minmax(0,1.45fr) minmax(270px,.85fr); gap:15px; }
             .aec-panel { min-width:0; padding:20px; border:1px solid var(--aec-line); border-radius:19px; background:var(--aec-surface); box-shadow:0 7px 22px rgba(18,48,102,.045); }
             .aec-panel h3 { display:flex; align-items:center; gap:9px; margin:0 0 15px; color:#172e5b; font-size:1rem; }
             .aec-panel-head { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:13px; }
@@ -58,7 +58,7 @@
             .aec-snapshot-row strong { color:#18335f; font-size:.83rem; text-align:right; overflow-wrap:anywhere; }
             .aec-admin .btn { border-radius:10px; }
             @media(max-width:1050px) { .aec-stats { grid-template-columns:repeat(2,minmax(0,1fr)); } .aec-action-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-            @media(max-width:760px) { .aec-content-grid { grid-template-columns:1fr; } .aec-hero-mark { width:82px;height:82px;font-size:2.7rem;border-radius:23px; } }
+            @media(max-width:760px) { .aec-live-class { grid-template-columns:1fr; } .aec-live-class img { height:190px; } .aec-content-grid { grid-template-columns:1fr; } .aec-hero-mark { width:82px;height:82px;font-size:2.7rem;border-radius:23px; } }
             @media(max-width:520px) { .aec-hero { min-height:0; padding:22px; } .aec-hero-mark { display:none; } .aec-stats { gap:9px; } .aec-stat { padding:14px; } .aec-stat-icon { width:36px;height:36px; } .aec-module-list { grid-template-columns:1fr; } .aec-panel { padding:16px; } }
             @media(prefers-reduced-motion:reduce) { .aec-action { transition:none; } .aec-action:hover { transform:none; } }
         </style>
@@ -97,7 +97,7 @@
             </section>
 
             @if($nextLiveClass)
-                <section class="aec-panel" style="display:grid;grid-template-columns:minmax(180px,280px) minmax(0,1fr);align-items:center;gap:18px;">
+                <section class="aec-panel aec-live-class">
                     @if($dashboardAppearance['live_class_image'])
                         <img src="{{ $dashboardAppearance['live_class_image'] }}" alt="{{ $nextLiveClass->title }}" loading="lazy" style="width:100%;height:150px;object-fit:cover;border-radius:14px;">
                     @else
