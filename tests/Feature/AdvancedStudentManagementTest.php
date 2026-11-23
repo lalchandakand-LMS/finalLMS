@@ -40,7 +40,7 @@ class AdvancedStudentManagementTest extends TestCase
         $this->actingAs($admin)->put(route('admin.students.reactivate', $student))->assertRedirect();
         $this->actingAs($admin)->put(route('admin.students.graduate', $student), ['reason' => 'Completed the full academic programme.'])->assertRedirect();
         $this->assertDatabaseHas('student_profiles', ['user_id' => $student->id, 'lifecycle_status' => 'graduated']);
-        $this->actingAs($student)->get(route('student.courses.index'))->assertForbidden();
+        $this->actingAs($student)->get(route('student.courses.index'))->assertRedirect(route('login'));
     }
 
     public function test_admin_can_view_student_directory_and_profile_history(): void
