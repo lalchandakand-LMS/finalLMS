@@ -46,6 +46,7 @@ class AdminHomeSettingsTest extends TestCase
 
     public function test_homepage_uses_admin_configured_values(): void
     {
+        Setting::setValue('homepage_template', 'academy-modern');
         Setting::setValue('home_title', 'Future Skills Academy');
         Setting::setValue('home_subtitle', 'Learn the skills that open tomorrow.');
         Setting::setValue('home_cta_primary', 'Explore programs');

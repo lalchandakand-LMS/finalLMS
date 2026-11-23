@@ -21,7 +21,7 @@
             .aec-heading { display:flex; justify-content:space-between; align-items:end; gap:12px; margin:22px 0 13px; }
             .aec-heading h2 { margin:0; color:#142b55; font-size:1.18rem; }
             .aec-heading p { margin:4px 0 0; color:var(--aec-muted); font-size:.9rem; }
-            .aec-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
+            .aec-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px; }
             .aec-stat { padding:18px; border:1px solid #e1eaf8; border-radius:16px; background:#fff; box-shadow:0 5px 18px rgba(15,42,90,.045); }
             .aec-stat-top { display:flex; justify-content:space-between; align-items:center; gap:8px; color:#536782; font-size:.88rem; }
             .aec-stat-icon { display:grid; place-items:center; width:40px; height:40px; border-radius:12px; background:#eaf2ff; font-size:1.25rem; }
@@ -76,6 +76,9 @@
                 <article class="aec-stat"><div class="aec-stat-top"><span>{{ __('Total students') }}</span><span class="aec-stat-icon">🎓</span></div><strong>{{ number_format($stats['students']) }}</strong><small>{{ __('Registered student accounts') }}</small></article>
                 <article class="aec-stat"><div class="aec-stat-top"><span>{{ __('Total teachers') }}</span><span class="aec-stat-icon">👩‍🏫</span></div><strong>{{ number_format($stats['teachers']) }}</strong><small>{{ __('Teacher accounts') }}</small></article>
                 <article class="aec-stat"><div class="aec-stat-top"><span>{{ __('Total courses') }}</span><span class="aec-stat-icon">📚</span></div><strong>{{ number_format($stats['courses']) }}</strong><small>{{ __('All courses in the catalog') }}</small></article>
+                <article class="aec-stat"><div class="aec-stat-top"><span>{{ __('Published courses') }}</span><span class="aec-stat-icon">🌐</span></div><strong>{{ number_format($stats['published_courses']) }}</strong><small>{{ __('Courses visible in the public catalog') }}</small></article>
+                <article class="aec-stat"><div class="aec-stat-top"><span>{{ __('Enrollments') }}</span><span class="aec-stat-icon">📝</span></div><strong>{{ number_format($stats['enrollments']) }}</strong><small>{{ __('Recorded course enrollments') }}</small></article>
+                <article class="aec-stat"><div class="aec-stat-top"><span>{{ __('Open batches') }}</span><span class="aec-stat-icon">🗓️</span></div><strong>{{ number_format($stats['active_batches']) }}</strong><small>{{ __('Batches currently open for learning') }}</small></article>
                 <article class="aec-stat"><div class="aec-stat-top"><span>{{ __('Certificates') }}</span><span class="aec-stat-icon">🏅</span></div><strong>{{ number_format($stats['certificates']) }}</strong><small>{{ __('Certificates issued') }}</small></article>
             </section>
 

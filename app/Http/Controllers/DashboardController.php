@@ -147,8 +147,11 @@ class DashboardController extends Controller
 
         $stats = [
             'courses' => Course::count(),
+            'published_courses' => Course::query()->where('status', 'published')->count(),
             'students' => \App\Models\User::where('role', 'student')->count(),
             'teachers' => \App\Models\User::where('role', 'teacher')->count(),
+            'enrollments' => Enrollment::query()->count(),
+            'active_batches' => Batch::query()->where('status', 'open')->count(),
             'certificates' => Certificate::count(),
         ];
 

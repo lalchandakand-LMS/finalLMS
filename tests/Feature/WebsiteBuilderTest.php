@@ -97,7 +97,7 @@ class WebsiteBuilderTest extends TestCase
         $savedHeaderLinks = json_decode((string) Setting::value('header_links'), true);
         $this->assertSame([['label' => 'Admissions', 'url' => '/admissions']], $savedHeaderLinks);
         Auth::logout();
-        $this->get('/')->assertOk()->assertSee('Alom Learning')->assertSee('Learn with confidence.')->assertSee('New batches open')->assertSee('Our live numbers')->assertSee('Choose a study path')->assertSee('Learners recommend us')->assertSee('Courses')->assertSee('Admissions')->assertDontSee('Unsafe menu');
+        $this->get('/')->assertOk()->assertSee('Alom Learning')->assertSee('Learn with confidence.')->assertSee('New batches open')->assertSee('Our live numbers')->assertSee('Learners recommend us')->assertSee('Featured courses')->assertSee('Courses')->assertSee('Admissions')->assertDontSee('Unsafe menu');
     }
 
     public function test_reference_homepage_design_is_available_as_a_main_builder_preset(): void
@@ -114,6 +114,82 @@ class WebsiteBuilderTest extends TestCase
             ->assertSee('Homepage slider')
             ->assertSee('Header navigation menu')
             ->assertSee('Footer content & links', false);
+    }
+
+    public function test_builder_saves_and_publishes_responsive_ordered_and_scheduled_slides(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $desktop = MediaAsset::create([
+            'uploaded_by' => $admin->id, 'disk' => 'public', 'path' => 'media/builder-desktop.jpg',
+            'original_name' => 'builder-desktop.jpg', 'mime_type' => 'image/jpeg', 'size' => 100,
+        ]);
+        $mobile = MediaAsset::create([
+            'uploaded_by' => $admin->id, 'disk' => 'public', 'path' => 'media/builder-mobile.jpg',
+            'original_name' => 'builder-mobile.jpg', 'mime_type' => 'image/jpeg', 'size' => 100,
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.website-builder.update'), [
+            'home_slider_transition' => 'fade',
+            'home_slider_progress' => '1',
+            'home_slider_play_pause' => '1',
+            'home_slider_overlay' => 45,
+            'home_slides' => [[
+                'enabled' => '1',
+                'image_id' => $desktop->id,
+                'mobile_image_id' => $mobile->id,
+                'sort_order' => 4,
+                'starts_at' => now()->subHour()->format('Y-m-d H:i:s'),
+                'ends_at' => now()->addDay()->format('Y-m-d H:i:s'),
+                'eyebrow' => 'Admissions open',
+                'secondary_button_label' => 'Student login',
+                'secondary_button_url' => '/login',
+                'image_position_x' => 35,
+                'image_position_y' => 42,
+                'mobile_position_x' => 65,
+                'mobile_position_y' => 30,
+                'content_alignment' => 'center',
+                'overlay_color' => '#123456',
+                'title' => 'Builder responsive slide',
+            ]],
+        ])->assertRedirect(route('admin.website-builder.index'));
+
+        $slides = json_decode((string) Setting::value('home_slides'), true);
+        $this->assertSame($desktop->id, $slides[0]['image_id']);
+        $this->assertSame($mobile->id, $slides[0]['mobile_image_id']);
+        $this->assertSame(4, $slides[0]['sort_order']);
+        $this->assertSame('Admissions open', $slides[0]['eyebrow']);
+        $this->assertSame('Student login', $slides[0]['secondary_button_label']);
+        $this->assertSame('/login', $slides[0]['secondary_button_url']);
+        $this->assertSame(35, $slides[0]['image_position_x']);
+        $this->assertSame(42, $slides[0]['image_position_y']);
+        $this->assertSame(65, $slides[0]['mobile_position_x']);
+        $this->assertSame(30, $slides[0]['mobile_position_y']);
+        $this->assertSame('center', $slides[0]['content_alignment']);
+        $this->assertSame('#123456', $slides[0]['overlay_color']);
+        $this->assertDatabaseHas('settings', ['key' => 'home_slider_transition', 'value' => 'fade']);
+        $this->assertDatabaseHas('settings', ['key' => 'home_slider_progress', 'value' => '1']);
+        $this->assertDatabaseHas('settings', ['key' => 'home_slider_play_pause', 'value' => '1']);
+        $this->assertDatabaseHas('settings', ['key' => 'home_slider_overlay', 'value' => '45']);
+        $this->assertNotEmpty($slides[0]['starts_at']);
+        $this->assertNotEmpty($slides[0]['ends_at']);
+
+        Auth::logout();
+        $this->get('/')->assertOk()->assertSee('Builder responsive slide')->assertSee('/storage/media/builder-mobile.jpg', false);
+    }
+
+    public function test_admin_can_configure_the_featured_course_carousel_from_website_builder(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->post(route('admin.website-builder.update'), [
+            'home_course_carousel_enabled' => '0',
+            'home_course_carousel_items' => '10',
+            'home_course_carousel_cards' => '4',
+        ])->assertRedirect(route('admin.website-builder.index'));
+
+        $this->assertDatabaseHas('settings', ['key' => 'home_course_carousel_enabled', 'value' => '0']);
+        $this->assertDatabaseHas('settings', ['key' => 'home_course_carousel_items', 'value' => '10']);
+        $this->assertDatabaseHas('settings', ['key' => 'home_course_carousel_cards', 'value' => '4']);
     }
 
     public function test_non_admin_cannot_access_website_builder(): void

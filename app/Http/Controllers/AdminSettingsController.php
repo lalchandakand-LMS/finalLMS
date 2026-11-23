@@ -6,6 +6,7 @@ use App\Models\Setting;
 use App\Models\MediaAsset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class AdminSettingsController extends Controller
@@ -63,14 +64,30 @@ class AdminSettingsController extends Controller
             'home_slider_pause_hover' => ['nullable', 'boolean'],
             'home_slider_height' => ['nullable', 'integer', 'min:320', 'max:720'],
             'home_slider_mobile_height' => ['nullable', 'integer', 'min:220', 'max:520'],
-            'home_slider_overlay' => ['nullable', 'integer', 'min:20', 'max:90'],
+            'home_slider_overlay' => ['nullable', 'integer', 'min:0', 'max:90'],
+            'home_slider_transition' => ['nullable', Rule::in(['slide', 'fade', 'zoom'])],
+            'home_slider_progress' => ['nullable', 'boolean'],
+            'home_slider_play_pause' => ['nullable', 'boolean'],
+            'home_slides.*.eyebrow' => ['nullable', 'string', 'max:80'],
+            'home_slides.*.secondary_button_label' => ['nullable', 'string', 'max:60'],
+            'home_slides.*.secondary_button_url' => ['nullable', 'string', 'max:500'],
+            'home_slides.*.image_position_x' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'home_slides.*.image_position_y' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'home_slides.*.mobile_position_x' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'home_slides.*.mobile_position_y' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'home_slides.*.content_alignment' => ['nullable', Rule::in(['left','center','right'])],
+            'home_slides.*.overlay_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'home_batches_title' => ['nullable', 'string', 'max:120'],
             'home_stats_title' => ['nullable', 'string', 'max:120'],
             'home_paths_title' => ['nullable', 'string', 'max:120'],
             'home_reviews_title' => ['nullable', 'string', 'max:120'],
-            'home_slides' => ['nullable', 'array', 'max:3'],
+            'home_slides' => ['nullable', 'array', 'max:8'],
             'home_slides.*.enabled' => ['nullable', 'boolean'],
-            'home_slides.*.image_id' => ['nullable', 'integer', 'exists:media_assets,id'],
+            'home_slides.*.image_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
+            'home_slides.*.mobile_image_id' => ['nullable', 'integer', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
+            'home_slides.*.sort_order' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'home_slides.*.starts_at' => ['nullable', 'date'],
+            'home_slides.*.ends_at' => ['nullable', 'date', 'after_or_equal:home_slides.*.starts_at'],
             'home_slides.*.title' => ['nullable', 'string', 'max:180'],
             'home_slides.*.subtitle' => ['nullable', 'string', 'max:500'],
             'home_slides.*.button_label' => ['nullable', 'string', 'max:60'],
@@ -118,7 +135,8 @@ class AdminSettingsController extends Controller
         ]);
 
         $paymentMethods = $validated['payment_methods'] ?? Setting::paymentMethods();
-        $slides = collect($validated['home_slides'] ?? [])->take(3)->map(function (array $slide) {
+        $hasHomeSlides = array_key_exists('home_slides', $validated);
+        $slides = collect($validated['home_slides'] ?? [])->take(8)->map(function (array $slide) {
             $image = !empty($slide['image_id']) ? MediaAsset::query()->whereKey($slide['image_id'])->where('mime_type', 'like', 'image/%')->first() : null;
             if (empty($slide['enabled']) || !$image) {
                 return null;
@@ -129,15 +147,32 @@ class AdminSettingsController extends Controller
                 $buttonUrl = '';
             }
 
+            $mobileImage = !empty($slide['mobile_image_id'])
+                ? MediaAsset::query()->whereKey($slide['mobile_image_id'])->where('mime_type', 'like', 'image/%')->first()
+                : null;
+
             return [
                 'image_id' => $image->id,
+                'mobile_image_id' => $mobileImage?->id,
+                'sort_order' => max(0, (int) ($slide['sort_order'] ?? 0)),
+                'starts_at' => $slide['starts_at'] ?? null,
+                'ends_at' => $slide['ends_at'] ?? null,
                 'title' => trim($slide['title'] ?? ''),
                 'subtitle' => trim($slide['subtitle'] ?? ''),
+                'eyebrow' => trim($slide['eyebrow'] ?? ''),
                 'button_label' => trim($slide['button_label'] ?? ''),
                 'button_url' => $buttonUrl,
+                'secondary_button_label' => trim($slide['secondary_button_label'] ?? ''),
+                'secondary_button_url' => preg_match('~^(https?://|/(?!/)|#)~i', trim($slide['secondary_button_url'] ?? '')) ? trim($slide['secondary_button_url']) : '',
+                'image_position_x' => max(0, min(100, (int) ($slide['image_position_x'] ?? 50))),
+                'image_position_y' => max(0, min(100, (int) ($slide['image_position_y'] ?? 50))),
+                'mobile_position_x' => max(0, min(100, (int) ($slide['mobile_position_x'] ?? $slide['image_position_x'] ?? 50))),
+                'mobile_position_y' => max(0, min(100, (int) ($slide['mobile_position_y'] ?? $slide['image_position_y'] ?? 50))),
+                'content_alignment' => in_array($slide['content_alignment'] ?? 'left', ['left','center','right'], true) ? ($slide['content_alignment'] ?? 'left') : 'left',
+                'overlay_color' => preg_match('/^#[0-9A-Fa-f]{6}$/', $slide['overlay_color'] ?? '') ? $slide['overlay_color'] : '#050f23',
                 'enabled' => true,
             ];
-        })->filter()->values()->all();
+        })->filter()->sortBy('sort_order')->values()->all();
         unset($validated['payment_methods'], $validated['home_slides']);
 
         foreach (['site_logo_media_id', 'site_favicon_media_id', 'loading_screen_logo_media_id'] as $mediaSetting) {
@@ -152,7 +187,9 @@ class AdminSettingsController extends Controller
         }
 
         Setting::setValue('payment_methods', json_encode($paymentMethods, JSON_THROW_ON_ERROR));
-        Setting::setValue('home_slides', json_encode($slides, JSON_THROW_ON_ERROR));
+        if ($hasHomeSlides) {
+            Setting::setValue('home_slides', json_encode($slides, JSON_THROW_ON_ERROR));
+        }
 
         return redirect()->route('admin.settings.index')->with('success', 'Settings updated successfully.');
     }
