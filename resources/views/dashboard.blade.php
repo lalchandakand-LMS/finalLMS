@@ -13,6 +13,24 @@
         <style>
             .aec-admin { --aec-primary:{{ $dashboardAppearance['primary'] }}; --aec-secondary:{{ $dashboardAppearance['secondary'] }}; --aec-accent:{{ $dashboardAppearance['accent'] }}; --aec-background:{{ $dashboardAppearance['background'] }}; --aec-surface:{{ $dashboardAppearance['surface'] }}; --aec-stat-students:{{ $dashboardAppearance['students_color'] }}; --aec-stat-teachers:{{ $dashboardAppearance['teachers_color'] }}; --aec-stat-courses:{{ $dashboardAppearance['courses_color'] }}; --aec-stat-certificates:{{ $dashboardAppearance['certificates_color'] }}; --aec-ink:#10234e; --aec-muted:#687895; --aec-line:#e4ebfa; color:var(--aec-ink); background:var(--aec-background); padding:4px; border-radius:22px; }
             .aec-admin * { box-sizing:border-box; }
+            .aec-admin[data-theme="dark"] { --aec-ink:#e8efff; --aec-muted:#a7b7d6; --aec-line:#26385e; color:var(--aec-ink); }
+            .aec-admin[data-theme="dark"] .aec-panel,
+            .aec-admin[data-theme="dark"] .aec-stat { background:#101d3b; border-color:var(--aec-line); color:var(--aec-ink); }
+            .aec-admin[data-theme="dark"] .aec-heading h2,
+            .aec-admin[data-theme="dark"] .aec-panel h3,
+            .aec-admin[data-theme="dark"] .aec-stat strong,
+            .aec-admin[data-theme="dark"] .aec-snapshot-row strong { color:#edf3ff; }
+            .aec-admin[data-theme="dark"] .aec-stat-top,
+            .aec-admin[data-theme="dark"] .aec-stat small,
+            .aec-admin[data-theme="dark"] .aec-snapshot-row span { color:#a7b7d6; }
+            .aec-admin[data-theme="dark"] .aec-action,
+            .aec-admin[data-theme="dark"] .aec-module { background:#142447; border-color:#2a3e68; color:#e8efff; }
+            .aec-admin[data-theme="dark"] .aec-action small { color:#a7b7d6; }
+            .aec-admin[data-shadow="medium"] .aec-panel,
+            .aec-admin[data-shadow="medium"] .aec-stat { box-shadow:0 14px 32px rgba(12,35,82,.13); }
+            .aec-admin[data-shadow="glow"] .aec-panel,
+            .aec-admin[data-shadow="glow"] .aec-stat { box-shadow:0 0 0 1px color-mix(in srgb,var(--aec-secondary) 18%,transparent),0 12px 34px color-mix(in srgb,var(--aec-secondary) 22%,transparent); }
+            .aec-admin .aec-hero,.aec-admin .aec-stat,.aec-admin .aec-panel,.aec-admin .aec-action,.aec-admin .aec-module { border-radius:var(--aec-radius); }
             .aec-admin-shell { display:grid; gap:18px; }
             .aec-hero { position:relative; isolation:isolate; overflow:hidden; display:flex; align-items:center; justify-content:space-between; gap:24px; min-height:190px; padding:30px clamp(22px,4vw,42px); border-radius:24px; color:#fff; background:radial-gradient(circle at 80% 20%,rgba(54,178,255,.4),transparent 28%),linear-gradient(115deg,var(--aec-primary) 0%,var(--aec-secondary) 100%); box-shadow:0 18px 42px rgba(14,62,151,.22); }
             .aec-hero:after { content:""; position:absolute; z-index:-1; width:330px; height:330px; right:8%; top:-190px; border:1px solid rgba(255,255,255,.2); border-radius:50%; box-shadow:0 0 0 34px rgba(255,255,255,.04),0 0 0 72px rgba(255,255,255,.035); }
@@ -65,15 +83,15 @@
             @media(prefers-reduced-motion:reduce) { .aec-action { transition:none; } .aec-action:hover { transform:none; } }
         </style>
 
-        <div class="aec-admin aec-admin-shell">
+        <div class="aec-admin aec-admin-shell" data-theme="{{ $dashboardAppearance['theme_mode'] }}" data-shadow="{{ $dashboardAppearance['card_shadow'] }}" style="--aec-radius:{{ $dashboardAppearance['card_radius'] }}px;">
             @if($dashboardAppearance['show_hero'])
-            <section class="aec-hero" style="order:{{ $dashboardAppearance['order_hero'] }};@if($dashboardAppearance['hero_image'])background-image:linear-gradient(90deg,rgba(5,22,68,.94),rgba(7,48,118,.72) 58%,rgba(7,48,118,.25)),url('{{ $dashboardAppearance['hero_image'] }}');background-size:cover;background-position:center;@endif">
+            <section class="aec-hero" style="order:{{ $dashboardAppearance['order_hero'] }};@if($dashboardAppearance['hero_image'])background-image:linear-gradient(90deg,rgba(5,22,68,.94),rgba(7,48,118,.72) 58%,rgba(7,48,118,.25)),url('{{ $dashboardAppearance['hero_image'] }}');background-size:cover;background-position:{{ $dashboardAppearance['hero_image_position'] }};@endif">
                 <div class="aec-hero-copy">
-                    <span class="aec-eyebrow">{{ $institutionName }} · {{ __('Learning Management System') }}</span>
+                    <span class="aec-eyebrow">{{ $dashboardAppearance['hero_eyebrow'] ?: $institutionName . ' · ' . __('Learning Management System') }}</span>
                     <h1>{{ $dashboardAppearance['hero_title'] ?: __('Welcome back,') . ' ' . $user->name . '! 👋' }}</h1>
                     <p>{{ $dashboardAppearance['hero_subtitle'] ?: __('Your success is our mission. Manage students, teachers, courses and daily learning operations from one dashboard.') }}</p>@if($dashboardAppearance['hero_quote'])<p style="margin-top:8px;font-weight:800;color:var(--aec-accent)">{{ $dashboardAppearance['hero_quote'] }}</p>@endif
                     <div class="aec-hero-actions">
-                        <a class="aec-hero-btn" href="{{ route('admin.courses.index') }}">{{ __('View courses') }} →</a>
+                        <a class="aec-hero-btn" href="{{ route('admin.courses.index') }}">{{ $dashboardAppearance['hero_cta_label'] ?: __('View courses') }} →</a>
                         <a class="aec-hero-btn secondary" href="{{ route('admin.users.index') }}">{{ __('Manage students') }}</a>
                     </div>
                 </div>
