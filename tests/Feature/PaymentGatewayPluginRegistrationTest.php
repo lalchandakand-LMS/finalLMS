@@ -185,7 +185,8 @@ PHP;
         $manager = app(PaymentGatewayManager::class);
 
         $this->assertArrayHasKey('fixture_gateway', $manager->catalog());
-        $plugin->update(['status' => 'inactive']);
+        // Registry status is intentionally guarded from mass assignment; mutate it explicitly in this lifecycle test.
+        $plugin->forceFill(['status' => 'inactive'])->save();
 
         $this->assertArrayNotHasKey('fixture_gateway', $manager->catalog());
         $this->assertNotContains('fixture_gateway', $manager->installedKeys());
