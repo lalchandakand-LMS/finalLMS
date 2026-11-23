@@ -64,6 +64,7 @@
         </style>
 
         <div class="aec-admin aec-admin-shell">
+            @if($dashboardAppearance['show_hero'])
             <section class="aec-hero" @if($dashboardAppearance['hero_image']) style="background-image:linear-gradient(90deg,rgba(5,22,68,.94),rgba(7,48,118,.72) 58%,rgba(7,48,118,.25)),url('{{ $dashboardAppearance['hero_image'] }}');background-size:cover;background-position:center;" @endif>
                 <div class="aec-hero-copy">
                     <span class="aec-eyebrow">{{ $institutionName }} · {{ __('Learning Management System') }}</span>
@@ -77,6 +78,8 @@
                 <div class="aec-hero-mark" aria-hidden="true">🎓</div>
             </section>
 
+            @endif
+
             @if($setupWizardPending)
                 <section class="aec-panel" style="border-color:#9bbdf5;background:#f5f9ff">
                     <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
@@ -86,6 +89,7 @@
                 </section>
             @endif
 
+            @if($dashboardAppearance['show_statistics'])
             <section>
                 <div class="aec-heading"><div><h2>{{ __('Academy overview') }}</h2><p>{{ __('Live totals from your current LMS records') }}</p></div><span class="badge success">{{ $roleLabel }}</span></div>
                 <div class="aec-stats" aria-label="{{ __('Academy statistics') }}">
@@ -96,7 +100,9 @@
                 </div>
             </section>
 
-            @if($nextLiveClass)
+            @endif
+
+            @if($dashboardAppearance['show_live_class'] && $nextLiveClass)
                 <section class="aec-panel aec-live-class">
                     @if($dashboardAppearance['live_class_image'])
                         <img src="{{ $dashboardAppearance['live_class_image'] }}" alt="{{ $nextLiveClass->title }}" loading="lazy" style="width:100%;height:150px;object-fit:cover;border-radius:14px;">
@@ -114,6 +120,7 @@
             @endif
 
             <div class="aec-content-grid">
+                @if($dashboardAppearance['show_quick_actions'])
                 <section class="aec-panel">
                     <div class="aec-panel-head"><h3>⚡ {{ __('Quick actions') }}</h3><span class="aec-pill">{{ __('Frequently used') }}</span></div>
                     <div class="aec-action-grid">
@@ -127,7 +134,9 @@
                         <a class="aec-action" href="{{ route('admin.analytics.index') }}"><span class="aec-action-icon">📊</span><strong>{{ __('View analytics') }}</strong><small>{{ __('Website and course insights') }}</small></a>
                     </div>
                 </section>
+                @endif
 
+                @if($dashboardAppearance['show_system_snapshot'])
                 <section class="aec-panel">
                     <h3>🏆 {{ __('System snapshot') }}</h3>
                     <div class="aec-snapshot">
@@ -141,8 +150,10 @@
                     </div>
                     <a class="btn secondary" style="margin-top:14px" href="{{ route('admin.system-health.index') }}">🩺 {{ __('Check website health') }}</a>
                 </section>
+                @endif
             </div>
 
+            @if($dashboardAppearance['show_learning_operations'])
             <section class="aec-panel">
                 <div class="aec-panel-head"><h3>🧭 {{ __('Learning operations') }}</h3><span class="aec-pill">{{ __('Administration') }}</span></div>
                 <div class="aec-module-list">
@@ -160,6 +171,7 @@
                     <a class="aec-module" href="{{ route('admin.updates.index') }}"><span>🔄</span>{{ __('System updates') }}</a>
                 </div>
             </section>
+            @endif
         </div>
     @else
         <div class="page-header">
