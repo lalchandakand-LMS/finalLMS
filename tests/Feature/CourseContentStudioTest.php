@@ -546,6 +546,7 @@ class CourseContentStudioTest extends TestCase
 
         $this->actingAs($admin)->put(route('admin.course-content-posts.update', $post), [
             'title' => 'Updated lesson',
+            'short_description' => null,
             'long_description' => 'Updated lesson body.',
             'video_url' => 'https://youtu.be/dQw4w9WgXcQ',
             'status' => 'published',
