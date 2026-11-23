@@ -92,13 +92,15 @@ Learning recommendations must not imply performance analysis from data that is n
 
 - **Phase 1 — role-specialist assistants:** specialist instructions, current role/branch
   authorization, optional read-only context, encrypted credentials, usage budgets and audit.
-- **Phase 2 — agent workspace and safe drafts (partial):** role entry points, a student study-plan
-  proposal form, approved-plan history and the first typed workflow are implemented. Teacher
-  question/lesson/feedback draft libraries and a cited support FAQ knowledge base remain open.
+- **Phase 2 — agent workspace and safe drafts:** student study-plan proposals, teacher draft
+  library with independent Admin review, a published Support Knowledge Base, cited FAQ retrieval
+  and private in-app notifications are implemented. Draft content is not automatically published
+  to student-facing courses.
 - **Phase 3 — approval workflow (initial action implemented):** typed proposals, approval inbox,
-  separation of duties, expiry, idempotency, version checks and append-only application audit
-  events are implemented for student study plans. Every additional action still requires its
-  own permission policy, threat-model review, compensation strategy and integration tests.
+  separation of duties, expiry, idempotency, version checks, application audit events and in-app
+  notifications are implemented for student study plans. Payment approval, refunds, fee changes,
+  admissions decisions and grading remain disabled until their existing business services are
+  safely integrated and tested.
 - **Phase 4 — scoped integrations:** admission/fee/reporting integrations and teacher workflows
   behind explicit permissions, human approval and comprehensive integration tests.
 - **Phase 5 — learning analytics:** only after lawful access to assessment data, consent/retention
@@ -124,9 +126,20 @@ model tool executor.
 - Rejection notes are bounded. Students can view their own proposals; teachers see only their
   assigned learners; administrators can see the institution-wide approval inbox.
 
-The only executable action in this initial release is `student.study_plan.create`. Other
-agent capabilities remain advice/draft-only until a dedicated typed handler, authorization
-policy, rollback/compensation strategy and integration tests exist for each action. Do not
+The only executable action in this initial release is `student.study_plan.create`. Teacher
+drafts can be saved and submitted to an independent administrator for approval; approved drafts
+remain in the teacher content library and are not published to students. Administrators can
+publish support FAQ entries with source labels/URLs; Support Agent retrieval is restricted to
+published entries and records retrieved FAQ IDs in the audit log. Agent workflow events appear
+in a private in-app notification inbox; no email, SMS or push delivery is claimed.
+
+Other consequential agent actions remain disabled until a dedicated typed handler,
+authorization policy, rollback/compensation strategy and integration tests exist for each
+action. In particular, payment approval must reuse the existing payment fulfillment logic
+(batch seat checks, enrollment creation, coupon redemption and referral accounting); simply
+changing a payment status is unsafe. The admissions application entity/workflow is not present
+in the inspected LMS schema, and refunds/fee changes require their own accounting and gateway
+reconciliation design. Do not
 enable arbitrary model-generated SQL, URLs, class names, controller names or generic tool
 dispatch. Run the new migration through the signed Plugin Manager lifecycle; do not execute
 plugin migrations manually on production.
