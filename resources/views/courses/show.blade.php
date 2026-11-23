@@ -208,9 +208,9 @@
                                     <button type="submit" class="btn primary">{{ __('Enroll now') }}</button>
                                 </form>
                             @elseif($paymentMethods->isEmpty())
-                                @unless(config('services.bkash.enabled'))
+                                @if($onlineGateways->isEmpty())
                                     <p class="muted">{{ __('Payment is not available for this course yet. Please contact the academy.') }}</p>
-                                @endunless
+                                @endif
                             @else
                                 <form method="POST" action="{{ route('courses.enroll', $course) }}" enctype="multipart/form-data">
                                     @csrf
