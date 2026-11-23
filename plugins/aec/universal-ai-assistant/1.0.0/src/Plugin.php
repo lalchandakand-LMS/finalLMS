@@ -41,6 +41,8 @@ return new class implements PluginContract
             Route::post('/drafts/{draft}/review', [AgentContentController::class, 'reviewDraft'])->middleware('throttle:20,1')->name('drafts.review');
             Route::get('/knowledge', [AgentContentController::class, 'knowledge'])->name('knowledge.index');
             Route::post('/knowledge', [AgentContentController::class, 'saveKnowledge'])->middleware('throttle:10,1')->name('knowledge.store');
+            Route::get('/notifications', [AgentContentController::class, 'notifications'])->name('notifications.index');
+            Route::post('/notifications/{notification}/read', [AgentContentController::class, 'markRead'])->name('notifications.read');
         }, 'ai-assistant.configure');
 
         foreach ([
