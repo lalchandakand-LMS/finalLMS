@@ -1,0 +1,136 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Contracts\Payments\PaymentGateway;
+use App\Models\Payment;
+use App\Models\PluginInstallation;
+use App\Services\Payments\PaymentGatewayManager;
+use App\Services\Plugins\PluginRuntime;
+use App\Services\Plugins\PluginSignatureVerifier;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\File;
+use Tests\TestCase;
+
+class PaymentGatewayPluginRegistrationTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private string $packagePath = 'plugins/test/payment-gateway/1.0.0';
+    private string $keyPair;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->keyPair = sodium_crypto_sign_keypair();
+        config(['plugins.trusted_public_keys' => [
+            'payment-test-key' => base64_encode(sodium_crypto_sign_publickey($this->keyPair)),
+        ]]);
+    }
+
+    protected function tearDown(): void
+    {
+        $path = base_path($this->packagePath);
+        if (is_dir($path) && ! is_link($path)) {
+            File::deleteDirectory($path);
+        }
+        parent::tearDown();
+    }
+
+    private function installSignedFixture(array $capabilities = ['payments.gateway']): PluginInstallation
+    {
+        $directory = base_path($this->packagePath.'/src');
+        File::ensureDirectoryExists($directory);
+        $entrypoint = <<<'PHP'
+<?php
+return new class implements \\App\\Contracts\\Plugins\\PluginContract {
+    public function register(\\App\\Services\\Plugins\\PluginContext $context): void
+    {
+        $context->registerPaymentGateway('fixture_gateway', \\Tests\\Feature\\TestPaymentGatewayAdapter::class);
+    }
+    public function boot(\\App\\Services\\Plugins\\PluginContext $context): void {}
+};
+PHP;
+        $file = $directory.'/Plugin.php';
+        file_put_contents($file, $entrypoint);
+        $manifest = [
+            'schema_version' => 1,
+            'key' => 'test.payment-gateway',
+            'name' => 'Payment Gateway Fixture',
+            'version' => '1.0.0',
+            'type' => 'provider',
+            'entrypoint' => 'src/Plugin.php',
+            'requires' => ['php' => '^8.3', 'laravel' => '^12.0', 'lms' => '^1.0'],
+            'dependencies' => [],
+            'conflicts' => [],
+            'portals' => [],
+            'permissions' => [],
+            'capabilities' => $capabilities,
+        ];
+        $checksum = hash('sha256', 'signed payment gateway fixture');
+        $signature = base64_encode(sodium_crypto_sign_detached(
+            PluginSignatureVerifier::payloadForSignature($manifest, $checksum),
+            sodium_crypto_sign_secretkey($this->keyPair),
+        ));
+        $plugin = new PluginInstallation();
+        $plugin->forceFill([
+            'plugin_key' => $manifest['key'],
+            'name' => $manifest['name'],
+            'version' => $manifest['version'],
+            'type' => $manifest['type'],
+            'status' => 'active',
+            'manifest' => $manifest,
+            'package_sha256' => $checksum,
+            'signature_key_id' => 'payment-test-key',
+            'signature_verified_at' => now(),
+            'package_path' => $this->packagePath,
+            'metadata' => [
+                'granted_permissions' => [],
+                'integrity_version' => 1,
+                'release_signature' => $signature,
+                'signature_record_version' => 1,
+                'installed_file_hashes' => ['src/Plugin.php' => hash_file('sha256', $file)],
+            ],
+        ])->save();
+
+        return $plugin;
+    }
+
+    public function test_active_signed_gateway_plugin_registers_its_adapter_with_core_catalog(): void
+    {
+        $this->installSignedFixture();
+
+        app(PluginRuntime::class)->registerActivePlugins();
+
+        $manager = app(PaymentGatewayManager::class);
+        $this->assertContains('fixture_gateway', $manager->installedKeys());
+        $this->assertSame('test.payment-gateway', $manager->catalog()['fixture_gateway']['plugin_key']);
+        $this->assertTrue($manager->catalog()['fixture_gateway']['configured']);
+        $this->assertSame('Fixture Gateway', $manager->catalog()['fixture_gateway']['name']);
+    }
+
+    public function test_plugin_without_payments_gateway_capability_cannot_register_adapter(): void
+    {
+        $plugin = $this->installSignedFixture(['read-only']);
+        app(PluginRuntime::class)->registerActivePlugins();
+
+        $this->assertSame('failed', $plugin->fresh()->status);
+        $this->assertNotContains('fixture_gateway', app(PaymentGatewayManager::class)->installedKeys());
+    }
+}
+
+class TestPaymentGatewayAdapter implements PaymentGateway
+{
+    public function key(): string { return 'fixture_gateway'; }
+    public function label(): string { return 'Fixture Gateway'; }
+    public function supportedCurrencies(): array { return ['BDT']; }
+    public function isConfigured(): bool { return true; }
+    public function createCheckout(Payment $payment, string $callbackUrl, string $payerReference): array
+    {
+        return ['payment_id' => 'fixture-payment', 'checkout_url' => 'https://payments.example.test/checkout'];
+    }
+    public function verifyCallback(Payment $payment, array $callback): array
+    {
+        return ['verified' => [], 'executed' => []];
+    }
+}
