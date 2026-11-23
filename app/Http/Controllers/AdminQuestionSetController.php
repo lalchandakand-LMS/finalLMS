@@ -109,7 +109,8 @@ class AdminQuestionSetController extends Controller
             'source_question_positions' => ['nullable', 'array'],
             'source_question_positions.*' => ['nullable', 'integer', 'min:0', 'max:100000'],
             'questions' => ['nullable', 'array', 'max:200'],
-            'questions.*.type' => ['required', Rule::in(['mcq', 'true_false', 'short_answer'])],
+            'questions.*.type' => ['required', Rule::in(['mcq', 'true_false', 'short_answer', 'written'])],
+            'questions.*.grading_rubric' => ['nullable', 'array', 'max:20'],
             'questions.*.question' => ['required', 'string', 'max:3000'],
             'questions.*.position' => ['nullable', 'integer', 'min:0', 'max:100000'],
             'questions.*.options' => ['nullable', 'array', 'max:4'],
@@ -132,14 +133,18 @@ class AdminQuestionSetController extends Controller
             $source = $sourceQuestions->get($id);
             $items[] = [
                 'source_question_id' => $source->id,
-                'type' => 'mcq',
+                'type' => $source->type ?: 'mcq',
                 'question' => $source->question,
                 'options' => $source->options,
                 'correct_option' => $source->correct_option,
-                'correct_answer' => null,
-                'explanation' => null,
+                'correct_answer' => $source->correct_answer,
+                'explanation' => $source->explanation,
+                'grading_rubric' => $source->grading_rubric,
                 'difficulty' => $source->difficulty ?: 'medium',
-                'tags' => array_values(array_filter([$source->subject, $source->category])),
+                'tags' => array_values(array_unique(array_filter(array_merge(
+                    [$source->subject, $source->category],
+                    $source->tags ?? []
+                )))),
                 'marks' => $source->marks,
                 'position' => (int) ($sourcePositions[$id] ?? (($index + 1) * 10)),
             ];
@@ -167,7 +172,7 @@ class AdminQuestionSetController extends Controller
                 }
                 $options = ['True', 'False'];
                 $correctOption = (int) $question['correct_option'];
-            } else {
+            } elseif ($type === 'short_answer') {
                 $correctAnswer = trim((string) ($question['correct_answer'] ?? ''));
                 if ($correctAnswer === '') {
                     throw ValidationException::withMessages([
@@ -191,6 +196,7 @@ class AdminQuestionSetController extends Controller
                 'correct_option' => $correctOption,
                 'correct_answer' => $correctAnswer,
                 'explanation' => $question['explanation'] ?? null,
+                'grading_rubric' => $question['grading_rubric'] ?? null,
                 'difficulty' => $question['difficulty'] ?? 'medium',
                 'tags' => $tags,
                 'marks' => (int) $question['marks'],
