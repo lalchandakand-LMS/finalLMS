@@ -76,6 +76,7 @@ class AdminDashboardControlCenterTest extends TestCase
             ->assertSee('Upcoming classes')
             ->assertSee('Top students')
             ->assertSee('Total batches');
+    }
 
     public function test_admin_dashboard_searches_students_teachers_and_courses(): void
     {
@@ -91,6 +92,5 @@ class AdminDashboardControlCenterTest extends TestCase
             ->assertSee('Searchable Student')
             ->assertSee('Searchable Teacher')
             ->assertSee('Searchable English Course');
-    }
     }
 }
