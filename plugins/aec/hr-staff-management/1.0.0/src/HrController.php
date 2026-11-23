@@ -41,15 +41,17 @@ final class HrController extends Controller
         return view('hr-staff-management::careers.index', compact('openings'));
     }
 
-    public function publicCareerShow(StaffJobOpening $opening): View
+    public function publicCareerShow(int $opening): View
     {
+        $opening = StaffJobOpening::query()->findOrFail($opening);
         abort_unless($opening->status === 'published' && (! $opening->closes_at || $opening->closes_at->isFuture()), 404);
 
         return view('hr-staff-management::careers.show', compact('opening'));
     }
 
-    public function applyCareer(Request $request, StaffJobOpening $opening): RedirectResponse
+    public function applyCareer(Request $request, int $opening): RedirectResponse
     {
+        $opening = StaffJobOpening::query()->findOrFail($opening);
         abort_unless($opening->status === 'published' && (! $opening->closes_at || $opening->closes_at->isFuture()), 404);
         $data = $request->validate([
             'applicant_name' => ['required', 'string', 'max:160'],
