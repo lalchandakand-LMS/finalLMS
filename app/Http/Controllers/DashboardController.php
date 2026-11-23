@@ -18,6 +18,7 @@ use App\Models\Enrollment;
 use App\Models\Setting;
 use App\Models\MediaAsset;
 use App\Models\Payment;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
@@ -221,7 +222,8 @@ class DashboardController extends Controller
         }
 
         $stats = $user->isAdmin() ? [
-            'courses' => Course::count(),\n            'batches' => Batch::count(),
+            'courses' => Course::count(),
+            'batches' => Batch::count(),
             'students' => \App\Models\User::where('role', 'student')->count(),
             'teachers' => \App\Models\User::where('role', 'teacher')->count(),
             'certificates' => Certificate::count(),
