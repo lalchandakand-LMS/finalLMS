@@ -119,6 +119,11 @@ class DashboardController extends Controller
                 ->whereNotNull('completed_at')
                 ->count();
             $videoProgressPoints = (float) (clone $videoProgressQuery)->sum('progress_percent');
+            $completedVideoProgressPoints = (float) (clone $videoProgressQuery)
+                ->whereNotNull('completed_at')
+                ->sum('progress_percent');
+            // A manually completed lesson may have no playback percentage; completed items count as 100%.
+            $videoProgressPoints += ($completedVideoLessons * 100) - $completedVideoProgressPoints;
 
             $totalLessons = $totalLegacyLessons + $totalVideoLessons;
             $completedLessons = min($totalLessons, $completedLegacyLessons + $completedVideoLessons);
