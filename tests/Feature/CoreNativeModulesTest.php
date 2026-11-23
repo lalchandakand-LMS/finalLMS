@@ -21,6 +21,7 @@ class CoreNativeModulesTest extends TestCase
             'admin.referrals.index',
             'admin.carousels.index',
             'admin.integrations.index',
+            'admin.marketing.index',
             'admin.ai-assistant.settings',
         ];
 
