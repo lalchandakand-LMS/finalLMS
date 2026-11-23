@@ -119,7 +119,7 @@ class ExamController extends Controller
                         'explanation' => $setQuestion->explanation,
                         'grading_rubric' => $setQuestion->grading_rubric,
                         'marks' => $setQuestion->marks,
-                        'negative_marks' => 0,
+                        'negative_marks' => $setQuestion->negative_marks ?? 0,
                     ]);
                 }
             }
