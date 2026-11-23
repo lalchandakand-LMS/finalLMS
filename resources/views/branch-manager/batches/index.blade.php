@@ -22,7 +22,9 @@
             <label>{{ __('Capacity') }}<input type="number" name="capacity" min="1" max="1000" required></label>
             <label>{{ __('Start') }}<input type="datetime-local" name="starts_at" required></label>
             <label>{{ __('End') }}<input type="datetime-local" name="ends_at" required></label>
-            <label>{{ __('Fee (BDT)') }}<input type="number" name="fee" min="0" step="0.01" value="0" required></label>
+            <label>{{ __('Fee mode') }}<select name="fee_calculation_mode"><option value="fixed">Fixed course fee</option><option value="per_class">Per attended class</option></select></label>
+            <label>{{ __('Per-class fee (BDT)') }}<input type="number" name="per_class_fee" min="0.01" step="0.01"></label>
+            <label>{{ __('Fixed fee (BDT)') }}<input type="number" name="fee" min="0" step="0.01" value="0" required></label>
             <div><button class="btn primary" type="submit">{{ __('Create batch') }}</button></div>
         </form>
     </section>
@@ -44,11 +46,16 @@
                         <label>{{ __('Capacity') }}<input type="number" name="capacity" min="{{ $batch->enrollments_count }}" max="1000" value="{{ $batch->capacity }}" required></label>
                         <label>{{ __('Start') }}<input type="datetime-local" name="starts_at" value="{{ $batch->starts_at->format('Y-m-d\\TH:i') }}" required></label>
                         <label>{{ __('End') }}<input type="datetime-local" name="ends_at" value="{{ $batch->ends_at->format('Y-m-d\\TH:i') }}" required></label>
-                        <label>{{ __('Fee (BDT)') }}<input type="number" name="fee" min="0" step="0.01" value="{{ $batch->fee }}" required></label>
+                        <label>{{ __('Fee mode') }}<select name="fee_calculation_mode"><option value="fixed" @selected(($batch->fee_calculation_mode ?? 'fixed') === 'fixed')>Fixed course fee</option><option value="per_class" @selected($batch->fee_calculation_mode === 'per_class')>Per attended class</option></select></label>
+                        <label>{{ __('Per-class fee (BDT)') }}<input type="number" name="per_class_fee" min="0.01" step="0.01" value="{{ $batch->per_class_fee }}"></label>
+                        <label>{{ __('Fixed fee (BDT)') }}<input type="number" name="fee" min="0" step="0.01" value="{{ $batch->fee }}" required></label>
                         <label>{{ __('Status') }}<select name="status"><option value="open" @selected($batch->status === 'open')>{{ __('Open') }}</option><option value="closed" @selected($batch->status === 'closed')>{{ __('Closed') }}</option><option value="completed" @selected($batch->status === 'completed')>{{ __('Completed') }}</option></select></label>
                         <div><button class="btn primary" type="submit">{{ __('Save batch') }}</button></div>
                     </form>
                 </details>
+                @if($batch->fee_calculation_mode === 'per_class' && auth()->user()->hasAdminPermission('finance.invoices'))
+                    <form method="POST" action="{{ route('branch.batches.attendance-fees.generate', $batch) }}" style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap;">@csrf<input type="month" name="billing_period" value="{{ now()->subMonth()->format('Y-m') }}" required><input type="date" name="due_date" value="{{ now()->addDays(7)->toDateString() }}"><button class="btn primary" type="submit">Generate class-fee invoices</button></form>
+                @endif
                 @if(auth()->user()->hasAdminPermission('branch.attendance') && app(\App\Services\Modules\ModuleRegistry::class)->isEnabled('attendance'))
                     <a class="btn secondary" style="margin-top:12px" href="{{ route('branch.batches.attendance.index', $batch) }}">{{ __('Take attendance') }}</a>
                 @endif
