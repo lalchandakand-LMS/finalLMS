@@ -180,7 +180,7 @@ class AgentActionWorkflowTest extends TestCase
             $workflow->approve($teacher, (int) $proposal->id, 1);
             $this->fail('A teacher without an assigned active learner course must not approve.');
         } catch (RuntimeException $exception) {
-            $this->assertStringContainsString('Only an administrator', $exception->getMessage());
+            $this->assertStringContainsString('Teachers may approve study plans only', $exception->getMessage());
         }
 
         $this->assertSame('pending', DB::table('ai_agent_action_proposals')->where('id', $proposal->id)->value('status'));
