@@ -593,6 +593,12 @@
                         <a href="{{ route('ebooks.orders') }}">My eBook library</a>
                         <a href="{{ route('student.transcript') }}">{{ __('Academic transcript') }}</a>
                         <a href="{{ route('student.gamification.index') }}">{{ __('Learning achievements') }}</a>
+                        <a href="{{ route('student.ai-assistant.index') }}">{{ __('AI Study Assistant') }}</a>
+                    @endif
+                    @if(auth()->user()->isTeacher())
+                        <a href="{{ route('teacher.hr.index') }}">{{ __('My HR & attendance') }}</a>
+                        <a href="{{ route('teacher.ai-assistant.index') }}">{{ __('AI Teaching Assistant') }}</a>
+                        <a href="{{ route('teacher.ai-assistant.drafts.index') }}">{{ __('AI teaching drafts') }}</a>
                     @endif
                     @if(auth()->user()->isAdmin())
                         <a href="{{ route('admin.batches.index') }}">Batches</a>
