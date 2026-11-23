@@ -27,7 +27,6 @@ final class ApiConnectorAdminController extends Controller
             $manager->connect($provider, $credentials);
             return back()->with('success', __('Credentials verified. Complete webhook verification before the connector is marked connected.'));
         } catch (Throwable $exception) {
-            report($exception);
             return back()->withErrors(['provider' => __('The provider could not verify these credentials. Check the account, permissions and token.')]);
         }
     }
