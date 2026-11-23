@@ -32,12 +32,21 @@ class DashboardAppearanceSettingsTest extends TestCase
             'dashboard_show_quick_actions' => '0',
             'dashboard_show_system_snapshot' => '1',
             'dashboard_show_learning_operations' => '0',
+            'dashboard_order_hero' => '2',
+            'dashboard_order_statistics' => '1',
+            'dashboard_order_live_class' => '3',
+            'dashboard_order_quick_actions' => '5',
+            'dashboard_order_system_snapshot' => '4',
+            'dashboard_order_learning_operations' => '6',
         ])->assertRedirect(route('admin.settings.index'));
 
         $this->assertDatabaseHas('settings', ['key' => 'dashboard_primary_color', 'value' => '#102b63']);
         $this->assertDatabaseHas('settings', ['key' => 'dashboard_students_color', 'value' => '#1675f5']);
         $this->assertDatabaseHas('settings', ['key' => 'dashboard_show_statistics', 'value' => '0']);
         $this->assertDatabaseHas('settings', ['key' => 'dashboard_show_quick_actions', 'value' => '0']);
+        $this->assertDatabaseHas('settings', ['key' => 'dashboard_order_hero', 'value' => '2']);
+        $this->assertDatabaseHas('settings', ['key' => 'dashboard_order_statistics', 'value' => '1']);
+        $this->assertDatabaseHas('settings', ['key' => 'dashboard_order_quick_actions', 'value' => '5']);
         $this->assertDatabaseHas('settings', ['key' => 'dashboard_show_learning_operations', 'value' => '0']);
     }
 
@@ -76,6 +85,25 @@ class DashboardAppearanceSettingsTest extends TestCase
             ->assertSee('--aec-primary:#123456', false)
             ->assertDontSee('Academy overview')
             ->assertDontSee('Quick actions');
+    }
+
+    public function test_invalid_dashboard_widget_positions_are_rejected(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->from(route('admin.settings.index'))
+            ->post(route('admin.settings.update'), [
+                'dashboard_order_hero' => 0,
+                'dashboard_order_statistics' => 7,
+                'dashboard_order_live_class' => 'first',
+            ])
+            ->assertRedirect(route('admin.settings.index'))
+            ->assertSessionHasErrors([
+                'dashboard_order_hero',
+                'dashboard_order_statistics',
+                'dashboard_order_live_class',
+            ]);
     }
 
     public function test_non_admin_cannot_change_dashboard_appearance_settings(): void
