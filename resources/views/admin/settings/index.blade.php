@@ -324,6 +324,12 @@
                             <option value="dark" @selected(old('dashboard_theme_mode', $settings['dashboard_theme_mode'] ?? 'light') === 'dark')>{{ __('Midnight dark') }}</option>
                         </select>
                     </div>
+                    <div><label for="dashboard-sidebar-start">{{ __('Sidebar gradient start') }}</label><input id="dashboard-sidebar-start" type="color" name="dashboard_sidebar_start_color" value="{{ old('dashboard_sidebar_start_color', $settings['dashboard_sidebar_start_color'] ?? '#102b63') }}"></div>
+                    <div><label for="dashboard-sidebar-end">{{ __('Sidebar gradient end') }}</label><input id="dashboard-sidebar-end" type="color" name="dashboard_sidebar_end_color" value="{{ old('dashboard_sidebar_end_color', $settings['dashboard_sidebar_end_color'] ?? '#0b1d42') }}"></div>
+                    <div><label for="dashboard-sidebar-text">{{ __('Sidebar text color') }}</label><input id="dashboard-sidebar-text" type="color" name="dashboard_sidebar_text_color" value="{{ old('dashboard_sidebar_text_color', $settings['dashboard_sidebar_text_color'] ?? '#dbe7ff') }}"></div>
+                    <div><label for="dashboard-sidebar-width">{{ __('Sidebar width (desktop)') }}</label><input id="dashboard-sidebar-width" type="number" name="dashboard_sidebar_width" min="220" max="320" value="{{ old('dashboard_sidebar_width', $settings['dashboard_sidebar_width'] ?? 270) }}"></div>
+                    <div><label for="dashboard-topbar-background">{{ __('Topbar background') }}</label><input id="dashboard-topbar-background" type="color" name="dashboard_topbar_background" value="{{ old('dashboard_topbar_background', $settings['dashboard_topbar_background'] ?? '#ffffff') }}"></div>
+                    <div><label for="dashboard-topbar-text">{{ __('Topbar text color') }}</label><input id="dashboard-topbar-text" type="color" name="dashboard_topbar_text_color" value="{{ old('dashboard_topbar_text_color', $settings['dashboard_topbar_text_color'] ?? '#102b63') }}"></div>
                     <div>
                         <label for="dashboard-card-radius">{{ __('Card corner radius') }}</label>
                         <input id="dashboard-card-radius" type="number" name="dashboard_card_radius" min="12" max="32" value="{{ old('dashboard_card_radius', $settings['dashboard_card_radius'] ?? 19) }}">
