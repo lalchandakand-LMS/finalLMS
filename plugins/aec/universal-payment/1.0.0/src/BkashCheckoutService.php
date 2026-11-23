@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Services\Payments;
+namespace Aloms\UniversalPayment\Gateways;
 
+use App\Services\Payments\MfsMerchantConfigurationService;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
