@@ -80,6 +80,11 @@ class StudentTranscriptController extends Controller
         $examAttempts->each(function ($attempt): void {
             $attempt->setAttribute('maximum_score', (int) $attempt->attemptQuestions
                 ->sum(fn ($attemptQuestion) => (int) ($attemptQuestion->question?->marks ?? 0)));
+            // Match the student exam page: do not expose marks before the teacher publishes results.
+            $attempt->setAttribute(
+                'transcript_score',
+                $attempt->exam?->result_status === 'published' ? $attempt->score : null
+            );
         });
 
         $assignmentSubmissions = AssignmentSubmission::query()
@@ -98,11 +103,11 @@ class StudentTranscriptController extends Controller
             ->get();
 
         $gradedExamAttempts = $examAttempts->filter(fn ($attempt) =>
-            $attempt->score !== null && $attempt->maximum_score > 0
+            $attempt->transcript_score !== null && $attempt->maximum_score > 0
         );
         $examAverage = $gradedExamAttempts->isNotEmpty()
             ? round($gradedExamAttempts->avg(fn ($attempt) =>
-                min(100, ((float) $attempt->score / $attempt->maximum_score) * 100)
+                min(100, ((float) $attempt->transcript_score / $attempt->maximum_score) * 100)
             ), 2)
             : null;
 
