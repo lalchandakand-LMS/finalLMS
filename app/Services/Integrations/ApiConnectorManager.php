@@ -58,7 +58,7 @@ final class ApiConnectorManager
         return $catalog;
     }
 
-    public function connect(string $key, array $credentials): ApiConnectorConnection
+    public function connect(string $key, array $credentials): ApiConnection
     {
         $driver = $this->driver($key);
         $result = $driver->validateCredentials($credentials);
@@ -147,7 +147,7 @@ final class ApiConnectorManager
 
     private function connection(string $key): ApiConnection
     {
-        return ApiConnectorConnection::query()->where('provider_key', $key)->whereNull('branch_id')->firstOrFail();
+        return ApiConnection::query()->where('provider_key', $key)->whereNull('branch_id')->firstOrFail();
     }
 
     private function audit(string $key, string $event, array $metadata = []): void
