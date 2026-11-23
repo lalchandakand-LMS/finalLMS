@@ -49,6 +49,7 @@ final class HrStaffManagementPluginTest extends TestCase
         Route::get('/__hr/teacher', [HrController::class, 'teacherIndex'])->name('teacher.hr.index');
         Route::post('/__hr/teacher/leave', [HrController::class, 'teacherRequestLeave'])->name('teacher.hr.leave.store');
         Route::post('/__hr/staff', [HrController::class, 'storeStaff'])->name('branch.hr.staff.store');
+        Route::put('/__hr/staff/{staff}', [HrController::class, 'updateStaff'])->name('branch.hr.staff.update');
         Route::post('/__hr/attendance', [HrController::class, 'recordAttendance'])->name('branch.hr.attendance.store');
         Route::post('/__hr/leave', [HrController::class, 'requestLeave'])->name('branch.hr.leave.store');
         Route::post('/__hr/leave/{leave}/review', [HrController::class, 'reviewLeave'])->name('admin.hr.leave.review');
@@ -139,6 +140,28 @@ final class HrStaffManagementPluginTest extends TestCase
         $this->actingAs($manager)->get('/__hr')->assertOk()->assertSee('Local Staff')->assertDontSee('Remote Staff');
         $this->actingAs($manager)->post('/__hr/payroll', ['staff_profile_id' => $remoteStaff->id, 'payroll_month' => '2026-11'])->assertNotFound();
         $this->actingAs($manager)->post('/__hr/payroll', ['staff_profile_id' => $localStaff->id, 'payroll_month' => '2026-11', 'bonus' => 1000, 'deductions' => 500])->assertRedirect();
+        $this->assertDatabaseHas('staff_payrolls', ['staff_profile_id' => $localStaff->id, 'net_paid' => 30500, 'status' => 'pending']);
+
+        $this->put('/__hr/staff/'.$localStaff->id, [
+            'employee_code' => 'EMP-LOCAL',
+            'full_name' => 'Local Staff Updated',
+            'designation' => 'Senior Teacher',
+            'department' => 'Academic',
+            'base_salary' => 36000,
+            'compensation_basis' => 'monthly_attendance',
+            'per_class_rate' => 0,
+            'working_days_per_month' => 22,
+            'status' => 'active',
+            'employment_type' => 'full_time',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('staff_profiles', [
+            'id' => $localStaff->id,
+            'full_name' => 'Local Staff Updated',
+            'compensation_basis' => 'monthly_attendance',
+            'base_salary' => 36000,
+        ]);
+        // A later salary-profile change must not rewrite an already prepared payroll.
         $this->assertDatabaseHas('staff_payrolls', ['staff_profile_id' => $localStaff->id, 'net_paid' => 30500, 'status' => 'pending']);
     }
 
