@@ -7,9 +7,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ExamQuestion extends Model
 {
-    protected $fillable = ['exam_id', 'question_bank_question_id', 'question', 'options', 'correct_option', 'marks', 'negative_marks', 'position'];
+    protected $fillable = ['exam_id', 'question_bank_question_id', 'question', 'type', 'options', 'correct_option', 'correct_answer', 'explanation', 'grading_rubric', 'marks', 'negative_marks', 'position'];
 
-    protected $casts = ['options' => 'array', 'correct_option' => 'integer', 'marks' => 'integer', 'negative_marks' => 'integer', 'position' => 'integer'];
+    protected $casts = ['options' => 'array', 'correct_option' => 'integer', 'grading_rubric' => 'array', 'marks' => 'integer', 'negative_marks' => 'integer', 'position' => 'integer'];
 
     public function questionBankQuestion(): BelongsTo
     {
