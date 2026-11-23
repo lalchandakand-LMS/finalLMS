@@ -115,6 +115,71 @@ class InvoiceManagementTest extends TestCase
         ]);
     }
 
+
+    public function test_branch_manager_cannot_generate_class_fee_invoices_for_another_branch(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $student = User::factory()->create(['role' => 'student']);
+        $localBranch = Branch::create(['name' => 'Local Fee Branch', 'slug' => 'local-fee-branch']);
+        $remoteBranch = Branch::create(['name' => 'Remote Fee Branch', 'slug' => 'remote-fee-branch']);
+        $manager = User::factory()->create([
+            'role' => 'branch_manager',
+            'branch_id' => $localBranch->id,
+            'admin_permissions' => ['finance.invoices'],
+        ]);
+        $course = Course::create([
+            'teacher_id' => $teacher->id,
+            'title' => 'Remote Fee Course',
+            'slug' => 'remote-fee-course',
+            'description' => 'Branch boundary test.',
+            'price' => 0,
+            'status' => 'published',
+        ]);
+        $batch = Batch::create([
+            'branch_id' => $remoteBranch->id,
+            'course_id' => $course->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Remote Class Fee Batch',
+            'capacity' => 20,
+            'starts_at' => now()->subMonths(2),
+            'ends_at' => now()->subMonth(),
+            'fee' => 0,
+            'fee_calculation_mode' => 'per_class',
+            'per_class_fee' => 100,
+            'status' => 'completed',
+        ]);
+        Enrollment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'batch_id' => $batch->id,
+            'status' => 'active',
+        ]);
+        $session = LiveClass::create([
+            'batch_id' => $batch->id,
+            'title' => 'Remote completed session',
+            'meeting_url' => 'https://example.test/remote-session',
+            'starts_at' => now()->subMonth()->startOfMonth()->addDay(),
+            'ends_at' => now()->subMonth()->startOfMonth()->addDay()->addHour(),
+            'status' => 'completed',
+            'created_by' => $teacher->id,
+        ]);
+        LiveClassAttendance::create([
+            'live_class_id' => $session->id,
+            'student_id' => $student->id,
+            'marked_by' => $teacher->id,
+            'status' => 'present',
+        ]);
+
+        $this->actingAs($manager)
+            ->post(route('branch.batches.attendance-fees.generate', $batch), [
+                'billing_period' => now()->subMonth()->format('Y-m'),
+            ])
+            ->assertNotFound();
+
+        $this->assertDatabaseCount('attendance_fee_periods', 0);
+        $this->assertDatabaseCount('invoices', 0);
+    }
+
     public function test_admin_can_create_an_invoice_and_student_can_only_see_their_own(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
