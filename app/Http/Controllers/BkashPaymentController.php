@@ -7,6 +7,7 @@ use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\Payment;
 use App\Models\InvoicePayment;
+use App\Models\Invoice;
 use App\Models\PaymentGatewayEvent;
 use App\Models\PaymentAuditEvent;
 use App\Models\Order;
@@ -216,6 +217,49 @@ class BkashPaymentController extends Controller
         }
     }
 
+
+    public function initiateInvoice(Invoice $invoice, Request $request, PaymentGatewayManager $gateways): RedirectResponse
+    {
+        $student = $request->user();
+        abort_unless($student && $student->isStudent(), 403);
+        abort_unless((int) $invoice->user_id === (int) $student->id, 404);
+        abort_unless($gateways->isAvailable('bkash'), 503, __('bKash checkout is not enabled or configured.'));
+        abort_unless(strtoupper((string) ($invoice->currency ?? 'BDT')) === 'BDT', 422, __('Online bKash payments support BDT invoices only.'));
+
+        $payment = DB::transaction(function () use ($invoice, $student): Payment {
+            $lockedInvoice = Invoice::query()->lockForUpdate()->findOrFail($invoice->id);
+            abort_unless((int) $lockedInvoice->user_id === (int) $student->id, 404);
+            abort_unless($lockedInvoice->status !== 'cancelled', 409, __('This invoice has been cancelled.'));
+
+            $refunded = (float) $lockedInvoice->refunds()->where('status', 'approved')->sum('amount');
+            $paid = max(0, (float) $lockedInvoice->payments()->sum('amount') - $refunded);
+            $due = round((float) $lockedInvoice->amount - $paid, 2);
+            abort_if($due <= 0, 409, __('This invoice has no outstanding balance.'));
+            abort_if(Payment::query()->where('invoice_id', $lockedInvoice->id)->where('status', 'pending')->exists(), 409, __('An online payment for this invoice is already awaiting verification.'));
+
+            return Payment::create([
+                'user_id' => $student->id,
+                'invoice_id' => $lockedInvoice->id,
+                'method' => 'bkash',
+                'gateway_provider' => 'bkash',
+                'amount' => number_format($due, 2, '.', ''),
+                'currency' => 'BDT',
+                'transaction_reference' => 'AEC-INV-'.$lockedInvoice->id.'-'.Str::upper(Str::random(16)),
+                'status' => 'pending',
+            ]);
+        }, 3);
+
+        try {
+            $checkout = $gateways->driver('bkash')->createCheckout($payment, route('payments.bkash.callback'), (string) $student->id);
+            $payment->update(['gateway_payment_id' => $checkout['payment_id']]);
+            return redirect()->away($checkout['checkout_url']);
+        } catch (Throwable $exception) {
+            report($exception);
+            $payment->update(['status' => 'rejected', 'admin_note' => 'bKash invoice checkout could not be initialized. The student may retry.']);
+            return redirect()->route('student.invoices.index')->with('error', __('bKash checkout could not be started. Please try again.'));
+        }
+    }
+
     public function callback(Request $request, PaymentGatewayManager $gateways): RedirectResponse
     {
         $paymentId = $request->query('paymentID');
@@ -229,6 +273,9 @@ class BkashPaymentController extends Controller
             ->firstOrFail();
 
         if ($payment->status === 'approved') {
+            if ($payment->invoice_id) {
+                return redirect()->route('student.invoices.index')->with('success', __('Your invoice payment is already verified.'));
+            }
             if ($payment->learn_earn_exam_id) {
                 return redirect()->to('/student/learn-earn/exams')
                     ->with('success', __('Your paid exam access is already verified.'));
@@ -328,6 +375,60 @@ class BkashPaymentController extends Controller
 
                 if ($lockedPayment->status !== 'pending') {
                     return 'closed';
+                }
+
+                if ($lockedPayment->invoice_id) {
+                    $invoiceRecord = Invoice::query()->lockForUpdate()->findOrFail($lockedPayment->invoice_id);
+                    if ((int) $invoiceRecord->user_id !== (int) $lockedPayment->user_id
+                        || $lockedPayment->course_id !== null
+                        || $lockedPayment->order_id !== null
+                        || strtoupper((string) $lockedPayment->currency) !== 'BDT'
+                        || $lockedPayment->gateway_provider !== 'bkash'
+                        || $invoiceRecord->status === 'cancelled') {
+                        $lockedPayment->update([
+                            'status' => 'rejected',
+                            'gateway_transaction_id' => $transactionId,
+                            'reviewed_at' => now(),
+                            'admin_note' => 'bKash invoice payment succeeded but invoice ownership or status validation failed. Manual reconciliation is required.',
+                        ]);
+                        return 'invoice_unavailable';
+                    }
+
+                    $refunded = (float) $invoiceRecord->refunds()->where('status', 'approved')->sum('amount');
+                    $paid = max(0, (float) $invoiceRecord->payments()->sum('amount') - $refunded);
+                    $due = round((float) $invoiceRecord->amount - $paid, 2);
+                    if ($due <= 0 || round((float) $lockedPayment->amount, 2) > $due) {
+                        $lockedPayment->update([
+                            'status' => 'rejected',
+                            'gateway_transaction_id' => $transactionId,
+                            'reviewed_at' => now(),
+                            'admin_note' => 'bKash invoice payment succeeded but the invoice balance changed before fulfillment. Manual reconciliation or refund is required.',
+                        ]);
+                        return 'invoice_balance_changed';
+                    }
+
+                    $receipt = InvoicePayment::create([
+                        'invoice_id' => $invoiceRecord->id,
+                        'received_by' => $lockedPayment->user_id,
+                        'amount' => $lockedPayment->amount,
+                        'method' => 'bkash',
+                        'gateway_provider' => 'bkash',
+                        'gateway_payment_id' => $lockedPayment->gateway_payment_id,
+                        'gateway_transaction_id' => $transactionId,
+                        'reference' => $lockedPayment->transaction_reference,
+                        'note' => 'Student online bKash checkout',
+                        'paid_at' => now(),
+                    ]);
+                    $invoiceRecord->update([
+                        'status' => ($paid + (float) $lockedPayment->amount) >= (float) $invoiceRecord->amount ? 'paid' : 'partial',
+                    ]);
+                    $lockedPayment->update([
+                        'status' => 'approved',
+                        'gateway_transaction_id' => $transactionId,
+                        'reviewed_at' => now(),
+                        'admin_note' => null,
+                    ]);
+                    return 'invoice_approved';
                 }
 
                 if ($lockedPayment->order_id) {
@@ -506,7 +607,13 @@ class BkashPaymentController extends Controller
                 return 'approved';
             });
 
-            $event->update(['processing_status' => 'processed', 'processed_at' => now()]);
+            $event->update([
+                'processing_status' => 'processed',
+                'processed_at' => now(),
+                'invoice_payment_id' => $payment->invoice_id
+                    ? InvoicePayment::query()->where('gateway_payment_id', $paymentId)->value('id')
+                    : null,
+            ]);
             $payment->refresh();
             if ($payment->status === 'approved') {
                 try {
@@ -528,6 +635,17 @@ class BkashPaymentController extends Controller
                     'after_state' => ['status' => $payment->status, 'gateway_transaction_id' => $transactionId],
                 ]
             );
+
+            if ($payment->invoice_id) {
+                return match ($result) {
+                    'invoice_approved', 'already' => redirect()->route('student.invoices.index')
+                        ->with('success', __('bKash payment verified. Your invoice balance has been updated.')),
+                    'invoice_unavailable', 'invoice_balance_changed' => redirect()->route('student.invoices.index')
+                        ->with('error', __('bKash payment succeeded but the invoice could not be updated automatically. The academy must reconcile this transaction.')),
+                    default => redirect()->route('student.invoices.index')
+                        ->with('warning', __('Your invoice payment is awaiting reconciliation.')),
+                };
+            }
 
             if ($payment->learn_earn_exam_id) {
                 return match ($result) {
