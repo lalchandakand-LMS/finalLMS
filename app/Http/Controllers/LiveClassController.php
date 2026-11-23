@@ -2,13 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
+use App\Models\AttendanceFeePeriod;
 use App\Models\Batch;
 use App\Models\LiveClass;
+use App\Models\LiveClassAttendance;
 use App\Models\User;
 use App\Services\Plugins\PluginResourceAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -19,7 +23,7 @@ class LiveClassController extends Controller
         $user = Auth::user();
         abort_unless($user && ($user->isAdmin() || $user->isTeacher() || $user->isStudent() || $user->isGuardian()), 403);
 
-        $query = LiveClass::with(['batch.course', 'batch.branch', 'batch.teacher'])
+        $query = LiveClass::with(['batch.course', 'batch.branch', 'batch.teacher', 'attendances'])
             ->orderBy('starts_at');
 
         if ($user->isTeacher()) {
@@ -140,6 +144,63 @@ class LiveClassController extends Controller
         $liveClass->update($validated);
 
         return back()->with('success', 'Live class updated successfully.');
+    }
+
+    public function storeAttendance(LiveClass $liveClass, Request $request): RedirectResponse
+    {
+        $this->authorizeBatch($liveClass->batch);
+        abort_if($liveClass->status === 'cancelled', 422, 'Cancelled classes cannot receive attendance.');
+        abort_unless($liveClass->ends_at->isPast(), 422, 'Attendance can be finalized after the class ends.');
+        $data = $request->validate([
+            'records' => ['required', 'array', 'min:1'],
+            'records.*.student_id' => ['required', 'integer', 'distinct'],
+            'records.*.status' => ['required', Rule::in(['present', 'late', 'absent', 'excused'])],
+            'records.*.note' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        DB::transaction(function () use ($liveClass, $data): void {
+            $lockedBatch = Batch::query()->lockForUpdate()->findOrFail($liveClass->batch_id);
+            $session = LiveClass::query()->where('batch_id', $lockedBatch->id)->lockForUpdate()->findOrFail($liveClass->id);
+            $billingPeriod = $session->starts_at->format('Y-m');
+            abort_if(
+                AttendanceFeePeriod::query()->where('batch_id', $lockedBatch->id)->where('billing_period', $billingPeriod)->exists(),
+                409,
+                'Class attendance is locked because this billing period has already been invoiced. Use a finance adjustment instead of changing billed attendance.'
+            );
+
+            $activeStudentIds = $lockedBatch->enrollments()
+                ->whereIn('status', ['active', 'completed'])
+                ->lockForUpdate()
+                ->pluck('user_id')
+                ->map(static fn ($id): int => (int) $id)
+                ->all();
+
+            foreach ($data['records'] as $record) {
+                abort_unless(in_array((int) $record['student_id'], $activeStudentIds, true), 422, 'Only currently enrolled students can be marked for this class.');
+                LiveClassAttendance::query()->updateOrCreate(
+                    ['live_class_id' => $session->id, 'student_id' => $record['student_id']],
+                    ['marked_by' => Auth::id(), 'status' => $record['status'], 'note' => $record['note'] ?? null]
+                );
+            }
+
+            $session->update(['status' => 'completed']);
+        }, 3);
+
+        try {
+            ActivityLog::query()->create([
+                'user_id' => Auth::id(),
+                'event' => 'live_class.attendance_recorded',
+                'description' => 'Recorded attendance for live class #'.$liveClass->id.' ('.count($data['records']).' student record(s)).',
+                'method' => $request->method(),
+                'route' => optional($request->route())->getName(),
+                'ip_address' => $request->ip(),
+                'user_agent' => mb_substr((string) $request->userAgent(), 0, 1000),
+            ]);
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
+
+        return back()->with('success', 'Class-session attendance saved successfully.');
     }
 
     public function destroy(LiveClass $liveClass): RedirectResponse
