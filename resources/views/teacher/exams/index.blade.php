@@ -26,6 +26,8 @@
                 <label>{{ __('Negative marking multiplier') }}<input type="number" name="grading_rules[negative_marking_multiplier]" min="0" max="5" step="0.25" value="1"></label>
                 <label><input type="checkbox" name="grading_rules[score_floor_zero]" value="1" checked> {{ __('Do not allow negative total score') }}</label>
                 <label><input type="checkbox" name="grading_rules[short_answer_case_sensitive]" value="1"> {{ __('Short answers are case-sensitive') }}</label>
+                <label><input type="checkbox" name="allow_result_review" value="1"> {{ __('Allow students to request result review') }}</label>
+                <label>{{ __('Result review deadline (optional)') }}<input type="datetime-local" name="review_until"></label>
             </div>
             <label><input type="checkbox" id="use-question-bank"> {{ __('Select random questions from my Question Bank') }}</label>
             <div id="question-bank-area" hidden>
