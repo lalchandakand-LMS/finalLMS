@@ -92,12 +92,13 @@ Learning recommendations must not imply performance analysis from data that is n
 
 - **Phase 1 — role-specialist assistants:** specialist instructions, current role/branch
   authorization, optional read-only context, encrypted credentials, usage budgets and audit.
-- **Phase 2 — agent workspace and safe drafts:** dedicated agent entry points, task templates,
-  structured output validation, teacher-reviewed question/lesson/feedback drafts, support FAQ
-  knowledge base with source citations, and learning-plan history with student controls.
-- **Phase 3 — approval workflow:** typed action proposals, approval inbox, separation of duties,
-  expiry, idempotency, record-version checks and immutable audit trail. No action is enabled
-  before permission and threat-model review.
+- **Phase 2 — agent workspace and safe drafts (partial):** role entry points, a student study-plan
+  proposal form, approved-plan history and the first typed workflow are implemented. Teacher
+  question/lesson/feedback draft libraries and a cited support FAQ knowledge base remain open.
+- **Phase 3 — approval workflow (initial action implemented):** typed proposals, approval inbox,
+  separation of duties, expiry, idempotency, version checks and append-only application audit
+  events are implemented for student study plans. Every additional action still requires its
+  own permission policy, threat-model review, compensation strategy and integration tests.
 - **Phase 4 — scoped integrations:** admission/fee/reporting integrations and teacher workflows
   behind explicit permissions, human approval and comprehensive integration tests.
 - **Phase 5 — learning analytics:** only after lawful access to assessment data, consent/retention
