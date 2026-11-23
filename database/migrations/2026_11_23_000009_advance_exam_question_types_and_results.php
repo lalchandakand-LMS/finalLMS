@@ -23,6 +23,7 @@ return new class extends Migration {
         });
 
         Schema::table('exam_answers', function (Blueprint $table): void {
+            $table->unsignedTinyInteger('selected_option')->nullable()->change();
             $table->longText('answer_text')->nullable();
             $table->text('teacher_feedback')->nullable();
             $table->foreignId('graded_by')->nullable()->after('marks_awarded')->constrained('users')->nullOnDelete();
