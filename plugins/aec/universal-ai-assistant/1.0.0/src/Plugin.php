@@ -16,6 +16,8 @@ require_once __DIR__.'/AssistantAudit.php';
 require_once __DIR__.'/AssistantStreamRedactor.php';
 require_once __DIR__.'/AdminSettingsController.php';
 require_once __DIR__.'/AssistantController.php';
+require_once __DIR__.'/AgentActionWorkflow.php';
+require_once __DIR__.'/AgentActionController.php';
 
 return new class implements PluginContract
 {
@@ -30,6 +32,9 @@ return new class implements PluginContract
             Route::put('/settings', [AdminSettingsController::class, 'update'])->middleware('throttle:10,1')->name('settings.update');
             Route::get('/', [AssistantController::class, 'index'])->name('index');
             Route::post('/messages', [AssistantController::class, 'send'])->middleware('throttle:10,1')->name('messages.store');
+            Route::get('/proposals', [AgentActionController::class, 'index'])->name('proposals.index');
+            Route::post('/proposals/{proposal}/approve', [AgentActionController::class, 'approve'])->middleware('throttle:20,1')->name('proposals.approve');
+            Route::post('/proposals/{proposal}/reject', [AgentActionController::class, 'reject'])->middleware('throttle:20,1')->name('proposals.reject');
         }, 'ai-assistant.configure');
 
         foreach ([
@@ -42,6 +47,15 @@ return new class implements PluginContract
             $context->routesForPortal($portal, $prefix, $namePrefix, function (): void {
                 Route::get('/', [AssistantController::class, 'index'])->name('index');
                 Route::post('/messages', [AssistantController::class, 'send'])->middleware('throttle:10,1')->name('messages.store');
+                if ($portal === 'teacher') {
+                    Route::get('/proposals', [AgentActionController::class, 'index'])->name('proposals.index');
+                    Route::post('/proposals/{proposal}/approve', [AgentActionController::class, 'approve'])->middleware('throttle:20,1')->name('proposals.approve');
+                    Route::post('/proposals/{proposal}/reject', [AgentActionController::class, 'reject'])->middleware('throttle:20,1')->name('proposals.reject');
+                }
+                if ($portal === 'student') {
+                    Route::get('/proposals', [AgentActionController::class, 'index'])->name('proposals.index');
+                    Route::post('/proposals', [AgentActionController::class, 'storeStudyPlan'])->middleware('throttle:10,1')->name('proposals.store');
+                }
             }, 'ai-assistant.use');
         }
     }
