@@ -47,7 +47,7 @@ class BkashPaymentController extends Controller
         ]);
         $batchId = $validated['batch_id'] ?? null;
 
-        $payment = DB::transaction(function () use ($batchId, $course, $user, $pendingPayments): Payment {
+        $payment = DB::transaction(function () use ($batchId, $course, $user, $pendingPayments, $provider): Payment {
             $lockedCourse = Course::query()->lockForUpdate()->findOrFail($course->id);
             abort_unless($lockedCourse->status === 'published', 404);
 
@@ -120,7 +120,7 @@ class BkashPaymentController extends Controller
         abort_unless(preg_match('/^[a-z][a-z0-9_]{1,39}$/D', $provider) === 1 && $gateways->isAvailable($provider), 503, 'The selected payment gateway is not enabled or configured.');
 
         $student = $request->user();
-        $payment = DB::transaction(function () use ($product, $student): Payment {
+        $payment = DB::transaction(function () use ($product, $student, $provider): Payment {
             $lockedProduct = Product::query()->whereKey($product->id)->lockForUpdate()->firstOrFail();
             abort_unless($lockedProduct->type === 'ebook' && $lockedProduct->is_downloadable
                 && $lockedProduct->status === 'published' && $lockedProduct->published_at
@@ -488,7 +488,7 @@ class BkashPaymentController extends Controller
                         $lockedPayment->update([
                             'status' => 'rejected',
                             'gateway_transaction_id' => $transactionId,
-                            'admin_note' => 'bKash payment succeeded, but the batch has no remaining seat. Manual refund or reassignment is required.',
+                            'admin_note' => 'Payment succeeded, but the batch has no remaining seat. Manual refund or reassignment is required.',
                         ]);
 
                         return 'full';
@@ -587,7 +587,7 @@ class BkashPaymentController extends Controller
             }
 
             return $payment->order_id
-                ? redirect()->route('ebooks.orders')->with('warning', __('Your bKash payment is awaiting server-side verification. Do not pay again; contact the academy if this message remains.'))
+                ? redirect()->route('ebooks.orders')->with('warning', __('Your payment is awaiting server-side verification. Do not pay again; contact the academy if this message remains.'))
                 : redirect()->route('courses.show', $payment->course)->with('warning', __('Your bKash payment is awaiting server-side verification. Do not pay again; contact the academy if this message remains.'));
         }
     }
