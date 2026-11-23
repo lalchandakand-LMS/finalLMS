@@ -41,10 +41,14 @@ class ExamController extends Controller
             'question_bank_ids' => ['nullable', 'array', 'min:1', 'max:100'],
             'question_bank_ids.*' => ['integer', 'distinct', 'exists:question_bank_questions,id'],
             'random_question_count' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'questions.*.type' => ['nullable', 'in:mcq,true_false,short_answer,written'],
             'questions.*.question' => ['required', 'string', 'max:3000'],
-            'questions.*.options' => ['required', 'array', 'size:4'],
+            'questions.*.options' => ['nullable', 'array'],
             'questions.*.options.*' => ['required', 'string', 'max:500', 'distinct'],
-            'questions.*.correct_option' => ['required', 'integer', 'between:0,3'],
+            'questions.*.correct_option' => ['nullable', 'integer', 'between:0,3'],
+            'questions.*.correct_answer' => ['nullable', 'string', 'max:2000'],
+            'questions.*.explanation' => ['nullable', 'string', 'max:3000'],
+            'questions.*.grading_rubric' => ['nullable', 'array', 'max:20'],
             'questions.*.marks' => ['required', 'integer', 'min:1', 'max:100'],
             'questions.*.negative_marks' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:100'],
         ]);
@@ -68,11 +72,35 @@ class ExamController extends Controller
                 'correct_option' => $question->correct_option,
                 'marks' => $question->marks,
                 'negative_marks' => $question->negative_marks,
+                'type' => $question->type ?: 'mcq',
+                'correct_answer' => $question->correct_answer,
+                'explanation' => $question->explanation,
+                'grading_rubric' => $question->grading_rubric,
             ]);
             $selectedQuestions = $selectedQuestions->concat($bankSelections)->values();
         }
 
         abort_if($selectedQuestions->isEmpty(), 422, 'Add questions or select questions from your question bank.');
+        $selectedQuestions = $selectedQuestions->values()->map(function (array $question): array {
+            $type = $question['type'] ?? 'mcq';
+            $question['type'] = $type;
+            if ($type === 'true_false') {
+                $question['options'] = ['True', 'False'];
+                $question['correct_option'] = (int) ($question['correct_option'] ?? 0);
+                abort_unless(in_array($question['correct_option'], [0, 1], true), 422, 'True/False answers must be True or False.');
+            } elseif ($type === 'mcq') {
+                abort_unless(count($question['options'] ?? []) === 4 && isset($question['correct_option']), 422, 'MCQ questions require four options and one correct answer.');
+            } elseif ($type === 'short_answer') {
+                abort_unless(trim((string) ($question['correct_answer'] ?? '')) !== '', 422, 'Short-answer questions require an expected answer.');
+                $question['options'] = null;
+                $question['correct_option'] = null;
+            } else {
+                $question['options'] = null;
+                $question['correct_option'] = null;
+                $question['correct_answer'] = null;
+            }
+            return $question;
+        });
         abort_if(($validated['questions_per_attempt'] ?? 0) > $selectedQuestions->count(), 422, 'Questions per attempt cannot exceed the number of questions in this exam.');
         $totalMarks = $selectedQuestions->sum('marks');
         if ($validated['pass_marks'] > $totalMarks) {
@@ -141,14 +169,21 @@ class ExamController extends Controller
             'subject' => ['nullable', 'string', 'max:120'],
             'category' => ['nullable', 'string', 'max:80'],
             'difficulty' => ['sometimes', 'in:easy,medium,hard'],
+            'type' => ['nullable', 'in:mcq,true_false,short_answer,written'],
             'question' => ['required', 'string', 'max:3000'],
-            'options' => ['required', 'array', 'size:4'],
+            'options' => ['nullable', 'array'],
             'options.*' => ['required', 'string', 'max:500', 'distinct'],
-            'correct_option' => ['required', 'integer', 'between:0,3'],
+            'correct_option' => ['nullable', 'integer', 'between:0,3'],
+            'correct_answer' => ['nullable', 'string', 'max:2000'],
+            'explanation' => ['nullable', 'string', 'max:3000'],
+            'grading_rubric' => ['nullable', 'array', 'max:20'],
+            'tags' => ['nullable', 'array', 'max:30'],
+            'tags.*' => ['string', 'max:40'],
             'marks' => ['required', 'integer', 'min:1', 'max:100'],
             'negative_marks' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:100'],
         ]);
 
+        $validated = $this->normalizeBankQuestion($validated);
         QuestionBankQuestion::create([...$validated, 'teacher_id' => $batch->teacher_id]);
 
         return back()->with('success', 'Question added to your question bank.');
@@ -163,16 +198,44 @@ class ExamController extends Controller
             'subject' => ['nullable', 'string', 'max:120'],
             'category' => ['nullable', 'string', 'max:80'],
             'difficulty' => ['sometimes', 'in:easy,medium,hard'],
+            'type' => ['nullable', 'in:mcq,true_false,short_answer,written'],
             'question' => ['required', 'string', 'max:3000'],
-            'options' => ['required', 'array', 'size:4'],
+            'options' => ['nullable', 'array'],
             'options.*' => ['required', 'string', 'max:500', 'distinct'],
-            'correct_option' => ['required', 'integer', 'between:0,3'],
+            'correct_option' => ['nullable', 'integer', 'between:0,3'],
+            'correct_answer' => ['nullable', 'string', 'max:2000'],
+            'explanation' => ['nullable', 'string', 'max:3000'],
+            'grading_rubric' => ['nullable', 'array', 'max:20'],
+            'tags' => ['nullable', 'array', 'max:30'],
+            'tags.*' => ['string', 'max:40'],
             'marks' => ['required', 'integer', 'min:1', 'max:100'],
             'negative_marks' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:100'],
         ]);
-        $question->update($validated);
+        $question->update($this->normalizeBankQuestion($validated));
 
         return back()->with('success', 'Question updated successfully.');
+    }
+
+    private function normalizeBankQuestion(array $question): array
+    {
+        $type = $question['type'] ?? 'mcq';
+        $question['type'] = $type;
+        if ($type === 'true_false') {
+            $question['options'] = ['True', 'False'];
+            $question['correct_option'] = (int) ($question['correct_option'] ?? 0);
+            abort_unless(in_array($question['correct_option'], [0, 1], true), 422);
+        } elseif ($type === 'mcq') {
+            abort_unless(count($question['options'] ?? []) === 4 && isset($question['correct_option']), 422);
+        } elseif ($type === 'short_answer') {
+            abort_unless(trim((string) ($question['correct_answer'] ?? '')) !== '', 422);
+            $question['options'] = null;
+            $question['correct_option'] = null;
+        } else {
+            $question['options'] = null;
+            $question['correct_option'] = null;
+            $question['correct_answer'] = null;
+        }
+        return $question;
     }
 
     public function destroyBankQuestion(Batch $batch, QuestionBankQuestion $question): RedirectResponse
