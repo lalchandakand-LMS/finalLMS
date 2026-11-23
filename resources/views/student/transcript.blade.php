@@ -35,7 +35,7 @@
         <p class="muted">{{ __('No course progress is available yet.') }}</p>
     @else
         <div class="table-responsive"><table class="table">
-            <thead><tr><th>{{ __('Course') }}</th><th>{{ __('Completed lessons') }}</th><th>{{ __('Total lessons') }}</th><th>{{ __('Progress') }}</th></tr></thead>
+            <thead><tr><th>{{ __('Course') }}</th><th>{{ __('Lessons completed / total') }}</th><th>{{ __('Progress') }}</th></tr></thead>
             <tbody>@foreach($enrollments as $enrollment)
                 @php
                     $totalLessons = $enrollment->course?->lessons->count() ?? 0;
@@ -44,8 +44,7 @@
                 @endphp
                 <tr>
                     <td>{{ $enrollment->course?->title ?? __('Course unavailable') }}</td>
-                    <td>{{ $completedLessons }}</td>
-                    <td>{{ $totalLessons }}</td>
+                    <td>{{ $completedLessons }} / {{ $totalLessons }}</td>
                     <td>{{ $progressPercent }}%</td>
                 </tr>
             @endforeach</tbody>
