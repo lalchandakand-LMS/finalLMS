@@ -575,7 +575,9 @@ class ExamController extends Controller
                 ->whereNull('graded_at')->exists();
             if (! $pending) {
                 $lockedAttempt->update([
-                    'score' => (int) $lockedAttempt->answers()->sum('marks_awarded'),
+                    'score' => ($lockedAttempt->exam->grading_rules['score_floor_zero'] ?? true)
+                        ? max(0, (int) $lockedAttempt->answers()->sum('marks_awarded'))
+                        : (int) $lockedAttempt->answers()->sum('marks_awarded'),
                     'status' => 'submitted',
                     'graded_by' => $request->user()->id,
                     'graded_at' => now(),
@@ -623,6 +625,8 @@ class ExamController extends Controller
     public function publishResults(Exam $exam): RedirectResponse
     {
         abort_unless(Auth::user()->isAdmin() || (int) $exam->batch->teacher_id === (int) Auth::id(), 403);
+        abort_if(now()->lt($exam->ends_at), 409, __('The exam must close before results can be published.'));
+        abort_if($exam->attempts()->where('status', 'in_progress')->exists(), 409, __('All active attempts must be auto-submitted or completed before publishing results.'));
         abort_if($exam->attempts()->where('status', 'awaiting_manual')->exists(), 409, __('Grade all written answers before publishing results.'));
         $exam->update(['result_status' => 'published', 'results_published_at' => now()]);
         return back()->with('success', __('Exam results are now published to students.'));
