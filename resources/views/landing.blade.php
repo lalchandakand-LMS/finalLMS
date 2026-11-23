@@ -84,7 +84,7 @@
                     'image_position_y' => max(0, min(100, (int) ($slide['image_position_y'] ?? 50))),
                     'mobile_position_x' => max(0, min(100, (int) ($slide['mobile_position_x'] ?? 50))),
                     'mobile_position_y' => max(0, min(100, (int) ($slide['mobile_position_y'] ?? 50))),
-                    'content_alignment' => in_array($slide['content_alignment'] ?? 'left', ['left','center','right'], true) ? $slide['content_alignment'] : 'left',
+                    'content_alignment' => in_array($slide['content_alignment'] ?? 'left', ['left','center','right'], true) ? ($slide['content_alignment'] ?? 'left') : 'left',
                     'overlay_color' => preg_match('/^#[0-9A-Fa-f]{6}$/', $slide['overlay_color'] ?? '') ? $slide['overlay_color'] : '#050f23',
                 ] : null;
             })->filter()->values();
