@@ -31,9 +31,7 @@ final class ApiConnectorManager
     public function driver(string $key): ApiConnector
     {
         $class = $this->drivers[$key] ?? null;
-        if (! $class) {
-            throw new InvalidArgumentException('Unsupported API connector.');
-        }
+        abort_unless($class, 404, 'Unsupported API connector.');
         return app($class);
     }
 
