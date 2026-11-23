@@ -22,10 +22,10 @@
                 <label>{{ __('Duration (minutes)') }}<input type="number" name="duration_minutes" min="1" max="600" required></label>
                 <label>{{ __('Pass marks') }}<input type="number" name="pass_marks" min="0" value="0" required></label>
                 <label>{{ __('Questions per student attempt (optional)') }}<input type="number" name="questions_per_attempt" min="1" max="100" placeholder="{{ __('Leave blank to use all questions') }}"></label>
-                <label><input type="checkbox" name="grading_rules[negative_marking_enabled]" value="1" checked> {{ __('Enable negative marking') }}</label>
+                <input type="hidden" name="grading_rules[negative_marking_enabled]" value="0"><label><input type="checkbox" name="grading_rules[negative_marking_enabled]" value="1" checked> {{ __('Enable negative marking') }}</label>
                 <label>{{ __('Negative marking multiplier') }}<input type="number" name="grading_rules[negative_marking_multiplier]" min="0" max="5" step="0.25" value="1"></label>
-                <label><input type="checkbox" name="grading_rules[score_floor_zero]" value="1" checked> {{ __('Do not allow negative total score') }}</label>
-                <label><input type="checkbox" name="grading_rules[short_answer_case_sensitive]" value="1"> {{ __('Short answers are case-sensitive') }}</label>
+                <input type="hidden" name="grading_rules[score_floor_zero]" value="0"><label><input type="checkbox" name="grading_rules[score_floor_zero]" value="1" checked> {{ __('Do not allow negative total score') }}</label>
+                <input type="hidden" name="grading_rules[short_answer_case_sensitive]" value="0"><label><input type="checkbox" name="grading_rules[short_answer_case_sensitive]" value="1"> {{ __('Short answers are case-sensitive') }}</label>
                 <label><input type="checkbox" name="allow_result_review" value="1"> {{ __('Allow students to request result review') }}</label>
                 <label>{{ __('Result review deadline (optional)') }}<input type="datetime-local" name="review_until"></label>
             </div>
@@ -108,7 +108,7 @@
             field.disabled = !choice || type === 'true_false';
             field.required = type === 'mcq' && (!bankToggle.checked || Boolean(card.querySelector('textarea[name$=\"[question]\"]')?.value.trim()));
         });
-        answer?.querySelectorAll('select').forEach(field => { field.disabled = !choice; });
+        answer?.querySelectorAll('select').forEach(field => { field.disabled = !choice; if (type === 'true_false') { [...field.options].forEach((option, index) => option.disabled = index > 1); if (Number(field.value) > 1) field.value = '0'; } });
         if (expected) {
             const field = expected.querySelector('input');
             field.disabled = type !== 'short_answer';
