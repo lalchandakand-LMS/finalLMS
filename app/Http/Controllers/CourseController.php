@@ -13,6 +13,7 @@ use App\Models\PageView;
 use App\Models\QuestionSetAttempt;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\Gamification\GamificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
 use Illuminate\Http\Request;
@@ -579,7 +580,7 @@ class CourseController extends Controller
             ->header('Referrer-Policy', 'same-origin');
     }
 
-    public function completeLesson(Course $course, Lesson $lesson): RedirectResponse
+    public function completeLesson(Course $course, Lesson $lesson, GamificationService $gamification): RedirectResponse
     {
         $user = Auth::user();
         abort_unless($user?->isStudent() && $course->status === 'published' && $lesson->course_id === $course->id, 403);
@@ -596,6 +597,8 @@ class CourseController extends Controller
                 'last_viewed_at' => $progress->last_viewed_at ?? now(),
             ])->save();
         }
+
+        $gamification->award($user, 'lesson_completed', 'lesson', $lesson->id);
 
         return back()->with('success', 'Lesson progress saved.');
     }
@@ -760,7 +763,7 @@ class CourseController extends Controller
         return back()->with('success', 'Lesson deleted successfully.');
     }
 
-    public function complete(Course $course, Request $request): RedirectResponse
+    public function complete(Course $course, Request $request, GamificationService $gamification): RedirectResponse
     {
         $user = Auth::user();
         $studentId = (int) ($request->input('student_id') ?? $user->id);
@@ -813,6 +816,11 @@ class CourseController extends Controller
                 'issued_at' => now(),
             ]
         );
+
+        $learner = User::query()->find($studentId);
+        if ($learner?->isStudent()) {
+            $gamification->award($learner, 'course_completed', 'course', $course->id);
+        }
 
         return back()->with('success', 'Course marked complete and certificate issued.');
     }
