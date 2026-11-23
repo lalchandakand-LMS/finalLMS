@@ -26,7 +26,7 @@ final class AgentActionWorkflow
                 'minutes' => (int) $item['minutes'],
             ], $payload['schedule'])),
         ];
-        $json = json_encode($normalized, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $json = json_encode($this->canonicalize($normalized), JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         if ($idempotencyKey !== null && ! preg_match('/^[A-Za-z0-9._:-]{16,64}$/', $idempotencyKey)) {
             throw new RuntimeException('The idempotency key format is invalid.');
         }
@@ -92,7 +92,7 @@ final class AgentActionWorkflow
                 throw new RuntimeException('No reviewed executor is registered for this action.');
             }
             $payload = json_decode((string) $proposal->payload, true, 16, JSON_THROW_ON_ERROR);
-            $canonical = json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            $canonical = json_encode($this->canonicalize($payload), JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             $expectedHash = hash('sha256', self::STUDY_PLAN_ACTION.'|'.$proposal->requester_id.'|'.$canonical);
             if (! hash_equals((string) $proposal->payload_hash, $expectedHash)) {
                 throw new RuntimeException('Proposal integrity check failed. This action is blocked.');
@@ -169,6 +169,26 @@ final class AgentActionWorkflow
 
             return DB::table('ai_agent_action_proposals')->where('id', $proposalId)->first();
         }, 3);
+    }
+
+    /**
+     * Normalize associative JSON object keys before hashing so MySQL JSON key
+     * ordering cannot cause a valid proposal to fail its integrity check.
+     */
+    private function canonicalize(array $value): array
+    {
+        if (array_is_list($value)) {
+            return array_map(fn ($item) => is_array($item) ? $this->canonicalize($item) : $item, $value);
+        }
+
+        ksort($value, SORT_STRING);
+        foreach ($value as $key => $item) {
+            if (is_array($item)) {
+                $value[$key] = $this->canonicalize($item);
+            }
+        }
+
+        return $value;
     }
 
     private function teacherOwnsStudentCourse(int $teacherId, int $studentId): bool
