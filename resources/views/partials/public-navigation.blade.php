@@ -8,6 +8,13 @@
         $mainMenuItems = \Illuminate\Support\Facades\Schema::hasTable('website_menu_items')
             ? \App\Models\WebsiteMenuItem::query()->whereNull('parent_id')->where('is_active', true)->with('activeChildren')->orderBy('sort_order')->orderBy('id')->get()
             : collect();
+        $configuredMenuPaths = $mainMenuItems->flatMap(function ($item) {
+            return collect([$item->url])->merge($item->activeChildren->pluck('url'));
+        })->map(fn ($url) => rtrim((string) parse_url((string) $url, PHP_URL_PATH), '/'))->filter()->unique()->values();
+        $headerMenuPaths = collect(is_array($websiteHeaderLinks ?? null) ? $websiteHeaderLinks : [])
+            ->filter(fn ($link) => is_array($link) && !empty($link['url']))
+            ->map(fn ($link) => rtrim((string) parse_url((string) $link['url'], PHP_URL_PATH), '/'));
+        $configuredMenuPaths = $configuredMenuPaths->merge($headerMenuPaths)->unique()->values();
     @endphp
     <aside id="public-navigation-drawer" class="public-drawer" role="dialog" aria-modal="true" aria-label="{{ __('Main navigation') }}" aria-hidden="true">
         <div class="public-drawer-head">
@@ -21,6 +28,27 @@
         <div class="public-drawer-links">
             <a href="{{ route('landing') }}"><span class="menu-icon">⌂</span>{{ __('Home') }}</a>
             <a href="{{ route('courses.index') }}"><span class="menu-icon">▤</span>{{ __('Courses') }}</a>
+            @if(\Illuminate\Support\Facades\Route::has('course-combos.index') && !$configuredMenuPaths->contains(rtrim((string) parse_url(route('course-combos.index'), PHP_URL_PATH), '/')))
+                <a href="{{ route('course-combos.index') }}"><span class="menu-icon">▦</span>{{ __('Course Combos') }}</a>
+            @endif
+            @if(\Illuminate\Support\Facades\Route::has('ebooks.index') && !$configuredMenuPaths->contains(rtrim((string) parse_url(route('ebooks.index'), PHP_URL_PATH), '/')))
+                <a href="{{ route('ebooks.index') }}"><span class="menu-icon">📚</span>{{ __('eBook Library') }}</a>
+            @endif
+            @if(\Illuminate\Support\Facades\Route::has('contests.index') && !$configuredMenuPaths->contains(rtrim((string) parse_url(route('contests.index'), PHP_URL_PATH), '/')))
+                <a href="{{ route('contests.index') }}"><span class="menu-icon">🏆</span>{{ __('Practice & Contests') }}</a>
+            @endif
+            @if(\Illuminate\Support\Facades\Route::has('teacher.apply') && !$configuredMenuPaths->contains(rtrim((string) parse_url(route('teacher.apply'), PHP_URL_PATH), '/')))
+                <a href="{{ route('teacher.apply') }}"><span class="menu-icon">👩‍🏫</span>{{ __('Teach with us') }}</a>
+            @endif
+            @if(\Illuminate\Support\Facades\Route::has('pages.about') && !$configuredMenuPaths->contains(rtrim((string) parse_url(route('pages.about'), PHP_URL_PATH), '/')))
+                <a href="{{ route('pages.about') }}"><span class="menu-icon">ⓘ</span>{{ __('About') }}</a>
+            @endif
+            @if(\Illuminate\Support\Facades\Route::has('pages.contact') && !$configuredMenuPaths->contains(rtrim((string) parse_url(route('pages.contact'), PHP_URL_PATH), '/')))
+                <a href="{{ route('pages.contact') }}"><span class="menu-icon">✉</span>{{ __('Contact') }}</a>
+            @endif
+            @if(\Illuminate\Support\Facades\Route::has('pages.faq') && !$configuredMenuPaths->contains(rtrim((string) parse_url(route('pages.faq'), PHP_URL_PATH), '/')))
+                <a href="{{ route('pages.faq') }}"><span class="menu-icon">?</span>{{ __('FAQ') }}</a>
+            @endif
             @if(\Illuminate\Support\Facades\Route::has('flash-sales.public') && \App\Models\FlashSale::isPluginActive() && (bool) (int) \App\Models\Setting::value('flash_sale_page_enabled', '1'))
                 <a href="{{ route('flash-sales.public') }}"><span class="menu-icon">🔥</span>{{ __('Flash Sale') }}</a>
             @endif
