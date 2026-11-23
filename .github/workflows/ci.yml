@@ -63,6 +63,24 @@ jobs:
         run: |
           find app bootstrap config database plugins public routes tests .github/scripts -type f -name '*.php' -print0 | xargs -0 -n1 php -l
           php -l artisan
+      - name: Set up Python for PHP security analysis
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install Semgrep
+        run: python -m pip install --disable-pip-version-check semgrep
+      - name: Scan PHP application and plugin code
+        run: >-
+          semgrep scan
+          --config p/php
+          --config p/security-audit
+          --include '*.php'
+          --exclude vendor
+          --exclude node_modules
+          --exclude storage
+          --exclude bootstrap/cache
+          --error
+          --metrics=off
       - uses: actions/setup-node@v5
         with:
           node-version: '20'
@@ -115,6 +133,62 @@ jobs:
           vendor/bin/phpunit tests/Feature/ExaminationWorkflowTest.php --filter=test_negative_marking_migration_refuses_rollback_without_changing_recorded_negative_scores
       - run: php artisan route:list
       - run: npm run build
+      - name: Prepare isolated browser-test database
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_USERNAME: root
+          DB_PASSWORD: root
+        run: |
+          mysql -h 127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS aloms_lms_browser_test"
+          DB_DATABASE=aloms_lms_browser_test php artisan migrate:fresh --force
+      - name: Clear cached Laravel bootstrap before browser smoke tests
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: aloms_lms_browser_test
+          DB_USERNAME: root
+          DB_PASSWORD: root
+        run: php artisan optimize:clear
+      - name: Start Laravel browser-test server
+        env:
+          APP_ENV: testing
+          APP_DEBUG: 'false'
+          APP_INSTALLED: 'true'
+          APP_URL: http://127.0.0.1:8000
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: aloms_lms_browser_test
+          DB_USERNAME: root
+          DB_PASSWORD: root
+        run: |
+          php artisan serve --host=127.0.0.1 --port=8000 > "$RUNNER_TEMP/lms-browser-server.log" 2>&1 &
+          for attempt in $(seq 1 30); do
+            status="$(curl --silent --show-error --output "$RUNNER_TEMP/lms-health-response.txt" --write-out '%{http_code}' --max-time 5 http://127.0.0.1:8000/up || true)"
+            if [ "$status" = "200" ]; then exit 0; fi
+            if [ "$attempt" -eq 30 ]; then
+              echo "Laravel liveness probe failed; last HTTP status: ${status:-no-response}"
+              echo "--- browser server output ---"
+              cat "$RUNNER_TEMP/lms-browser-server.log"
+              echo "--- liveness response body ---"
+              cat "$RUNNER_TEMP/lms-health-response.txt" 2>/dev/null || true
+              if [ -f storage/logs/laravel.log ]; then
+                echo "--- Laravel application log (last 100 lines) ---"
+                tail -n 100 storage/logs/laravel.log
+              fi
+              exit 1
+            fi
+            sleep 2
+          done
+      - name: Install Playwright Chromium
+        run: |
+          npm install --no-save --package-lock=false @playwright/test
+          npx playwright install --with-deps chromium
+      - name: Run mobile and desktop browser smoke tests
+        run: npx playwright test tests/browser/responsive-smoke.spec.cjs --reporter=line
 
   package:
     needs: test

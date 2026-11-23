@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\PluginInstallation;
+use App\Services\Plugins\PluginHookRegistry;
 use App\Services\Plugins\PluginRuntime;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
@@ -11,14 +12,17 @@ use Throwable;
 
 final class PluginRuntimeServiceProvider extends ServiceProvider
 {
-    private bool $runtimeAvailable = false;
-
     public function register(): void
     {
         $this->app->singleton(PluginHookRegistry::class);
         $this->app->singleton(PluginRuntime::class);
+    }
 
-        // Runtime code is loaded only for web requests, never during install/build CLI commands.
+    public function boot(): void
+    {
+        // Resolve the database-backed plugin registry only after every framework
+        // provider has registered its services (translator, exception handler, etc.).
+        // This keeps first-run and error responses safe during early application boot.
         if ($this->app->runningInConsole()) {
             return;
         }
@@ -37,14 +41,6 @@ final class PluginRuntimeServiceProvider extends ServiceProvider
             throw new RuntimeException('Active plugin routes cannot run from a cached route file. Run route:clear before enabling plugin runtime.');
         }
 
-        $this->app->make(PluginRuntime::class)->registerActivePlugins();
-        $this->runtimeAvailable = true;
-    }
-
-    public function boot(): void
-    {
-        if ($this->runtimeAvailable) {
-            $this->app->make(PluginRuntime::class)->bootActivePlugins();
-        }
+        $this->app->make(PluginRuntime::class)->bootActivePlugins();
     }
 }
