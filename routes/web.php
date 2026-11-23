@@ -369,10 +369,11 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
     Route::middleware('role:accountant')->get('/accountant/finance-reports', fn () => redirect()->route('admin.finance.reports.index', [], 301))->name('accountant.finance-reports.index');
     Route::middleware('role:accountant')->get('/accountant/expenses', fn () => redirect()->route('admin.finance.expenses.index', [], 301))->name('accountant.expenses.index');
     Route::post('/teacher/batches/{batch}/live-classes', [LiveClassController::class, 'store'])
-        Route::post('/live-classes/{liveClass}/attendance', [LiveClassController::class, 'storeAttendance'])->middleware(['role:teacher,admin', 'module.enabled:attendance', 'throttle:30,1'])->name('live-classes.attendance.store');
-    Route::post('/teacher/batches/{batch}/live-classes', [LiveClassController::class, 'store'])
         ->middleware('role:teacher')
         ->name('teacher.batches.live-classes.store');
+    Route::post('/live-classes/{liveClass}/attendance', [LiveClassController::class, 'storeAttendance'])
+        ->middleware(['role:teacher,admin', 'module.enabled:attendance', 'throttle:30,1'])
+        ->name('live-classes.attendance.store');
     Route::put('/live-classes/{liveClass}', [LiveClassController::class, 'update'])
         ->middleware('role:teacher,admin')
         ->name('live-classes.update');
