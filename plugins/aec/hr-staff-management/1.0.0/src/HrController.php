@@ -359,7 +359,19 @@ final class HrController extends Controller
             $presentDays = (float) ($attendance->present_days ?? 0);
             $absentDays = (float) ($attendance->absent_days ?? 0);
             $halfDays = (float) ($attendance->half_days ?? 0);
-            $leaveDays = (float) ($attendance->leave_days ?? 0);
+            $leaveDays = (float) DB::table('staff_attendances as attendance')
+                ->join('staff_leave_requests as leave_requests', function ($join): void {
+                    $join->on('leave_requests.staff_profile_id', '=', 'attendance.staff_profile_id')
+                        ->where('leave_requests.status', '=', 'approved')
+                        ->where('leave_requests.leave_type', '=', 'unpaid')
+                        ->whereColumn('leave_requests.starts_on', '<=', 'attendance.attendance_date')
+                        ->whereColumn('leave_requests.ends_on', '>=', 'attendance.attendance_date');
+                })
+                ->where('attendance.staff_profile_id', $member->id)
+                ->where('attendance.status', 'on_leave')
+                ->whereBetween('attendance.attendance_date', [$periodStart->toDateString(), $periodEnd->toDateString()])
+                ->distinct('attendance.attendance_date')
+                ->count('attendance.attendance_date');
             $classesDelivered = 0;
             $basis = $member->compensation_basis ?: 'monthly';
 
