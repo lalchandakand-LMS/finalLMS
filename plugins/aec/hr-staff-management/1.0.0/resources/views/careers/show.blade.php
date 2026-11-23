@@ -12,7 +12,8 @@
     <section class="rounded-xl border bg-white p-6">
         <h2 class="text-xl font-semibold">Apply for this position</h2>
         @if(session('success'))<p class="mt-3 rounded bg-green-50 p-3 text-green-800">{{ session('success') }}</p>@endif
-        @if($errors->any())<p class="mt-3 rounded bg-red-50 p-3 text-red-800">{{ $errors->first() }}</p>@endif
+        @php($validationErrors = session()->get('errors'))
+        @if($validationErrors?->any())<p class="mt-3 rounded bg-red-50 p-3 text-red-800">{{ $validationErrors->first() }}</p>@endif
         <form method="POST" enctype="multipart/form-data" action="{{ route('careers.apply', $opening) }}" class="mt-4 grid gap-4 sm:grid-cols-2">@csrf
             <label class="text-sm">Full name<input required name="applicant_name" maxlength="160" value="{{ old('applicant_name') }}" autocomplete="name" class="mt-1 w-full rounded border-gray-300"></label>
             <label class="text-sm">Email<input required type="email" name="email" maxlength="160" value="{{ old('email') }}" autocomplete="email" class="mt-1 w-full rounded border-gray-300"></label>
