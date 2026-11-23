@@ -276,8 +276,24 @@ final class ReferralIncomePluginTest extends TestCase
         $service->applyCode($owner, $ownerCode);
     }
 
+    public function test_referral_payouts_fail_closed_until_refund_reconciliation_is_enabled(): void
+    {
+        config(['referral-income.payouts_enabled' => false]);
+        $owner = User::factory()->create(['role' => 'student']);
+
+        try {
+            app(ReferralIncomeService::class)->requestPayout($owner, 'bkash', '01700000000');
+            $this->fail('Referral payouts must remain disabled until refund reconciliation is available.');
+        } catch (\\Symfony\\Component\\HttpKernel\\Exception\\HttpException $exception) {
+            $this->assertSame(503, $exception->getStatusCode());
+        }
+
+        $this->assertDatabaseCount('referral_payout_requests', 0);
+    }
+
     public function test_payout_requires_approved_minimum_balance_and_keeps_destination_encrypted(): void
     {
+        config(['referral-income.payouts_enabled' => true]);
         $referrer = User::factory()->create(['role' => 'teacher']);
         $buyer = User::factory()->create(['role' => 'student']);
         $service = app(ReferralIncomeService::class);
