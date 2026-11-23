@@ -338,7 +338,7 @@ class ExamController extends Controller
         abort_unless($exam->status === 'published', 404);
         $attempt = $exam->attempts()->where('student_id', Auth::id())->with(['attemptQuestions.question', 'answers'])->first();
         if ($attempt && $attempt->status === 'in_progress') {
-            app(\\App\\Services\\ExamAttemptFinalizer::class)->autoSubmitExpired((int) $attempt->id);
+            app(\App\\Services\\ExamAttemptFinalizer::class)->autoSubmitExpired((int) $attempt->id);
             $attempt->refresh()->load(['attemptQuestions.question', 'answers']);
         }
         $exam->load('batch.course');
