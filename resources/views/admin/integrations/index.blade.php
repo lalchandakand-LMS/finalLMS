@@ -28,7 +28,7 @@
                 <form method="POST" action="{{ route('admin.integrations.pause', $key) }}">@csrf<button class="btn secondary" type="submit">{{ __('Pause') }}</button></form>
                 <form method="POST" action="{{ route('admin.integrations.disconnect', $key) }}" onsubmit="return confirm('{{ __('Disconnect this provider?') }}')">@csrf<button class="btn danger" type="submit">{{ __('Disconnect') }}</button></form>
             </div>
-            <small class="muted">{{ __('Webhook URL') }}: {{ url('/webhooks/api-connectors/'.$key) }}</small>
+            <small class="muted">{{ __('Webhook URL') }}: {{ url('/api/webhooks/api-connectors/'.$key) }}</small>
         </section>
     @endforeach
 </div>
