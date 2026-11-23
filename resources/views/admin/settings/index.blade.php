@@ -303,6 +303,17 @@
                     <div><label for="dashboard-courses-color">{{ __('Courses card accent') }}</label><input id="dashboard-courses-color" type="color" name="dashboard_courses_color" value="{{ old('dashboard_courses_color', $settings['dashboard_courses_color'] ?? '#8525e8') }}"></div>
                     <div><label for="dashboard-certificates-color">{{ __('Certificates card accent') }}</label><input id="dashboard-certificates-color" type="color" name="dashboard_certificates_color" value="{{ old('dashboard_certificates_color', $settings['dashboard_certificates_color'] ?? '#f59e0b') }}"></div>
                     <div>
+                        <label for="dashboard-palette-preset">{{ __('Quick color palette') }}</label>
+                        <select id="dashboard-palette-preset" data-dashboard-palette-preset>
+                            <option value="">{{ __('Choose a palette') }}</option>
+                            <option value="blue">{{ __('Electric blue') }}</option>
+                            <option value="emerald">{{ __('Emerald teal') }}</option>
+                            <option value="purple">{{ __('Royal purple') }}</option>
+                            <option value="sunset">{{ __('Sunset amber') }}</option>
+                        </select>
+                        <small class="muted">{{ __('Selecting a palette updates the color controls; save to publish it.') }}</small>
+                    </div>
+                    <div>
                         <label for="dashboard-theme-mode">{{ __('Dashboard theme') }}</label>
                         <select id="dashboard-theme-mode" name="dashboard_theme_mode">
                             <option value="light" @selected(old('dashboard_theme_mode', $settings['dashboard_theme_mode'] ?? 'light') === 'light')>{{ __('Futuristic glass light') }}</option>
@@ -598,6 +609,24 @@
             const form = panel.closest('form');
             const previewTitle = panel.querySelector('[data-dashboard-preview-title]');
             const previewSubtitle = panel.querySelector('[data-dashboard-preview-subtitle]');
+            const palettePicker = panel.querySelector('[data-dashboard-palette-preset]');
+            const paletteColors = {
+                blue: { dashboard_primary_color:'#102b63', dashboard_secondary_color:'#0759c8', dashboard_accent_color:'#ffd52f', dashboard_background_color:'#f3f6ff', dashboard_surface_color:'#ffffff', dashboard_students_color:'#1675f5', dashboard_teachers_color:'#08b978', dashboard_courses_color:'#8525e8', dashboard_certificates_color:'#f59e0b' },
+                emerald: { dashboard_primary_color:'#064e3b', dashboard_secondary_color:'#059669', dashboard_accent_color:'#a7f3d0', dashboard_background_color:'#ecfdf5', dashboard_surface_color:'#ffffff', dashboard_students_color:'#059669', dashboard_teachers_color:'#0d9488', dashboard_courses_color:'#0f766e', dashboard_certificates_color:'#d97706' },
+                purple: { dashboard_primary_color:'#312e81', dashboard_secondary_color:'#7c3aed', dashboard_accent_color:'#f5d0fe', dashboard_background_color:'#f5f3ff', dashboard_surface_color:'#ffffff', dashboard_students_color:'#4f46e5', dashboard_teachers_color:'#0d9488', dashboard_courses_color:'#9333ea', dashboard_certificates_color:'#c026d3' },
+                sunset: { dashboard_primary_color:'#7c2d12', dashboard_secondary_color:'#ea580c', dashboard_accent_color:'#fde68a', dashboard_background_color:'#fff7ed', dashboard_surface_color:'#ffffff', dashboard_students_color:'#ea580c', dashboard_teachers_color:'#16a34a', dashboard_courses_color:'#9333ea', dashboard_certificates_color:'#d97706' }
+            };
+            if (palettePicker && form) {
+                palettePicker.addEventListener('change', () => {
+                    const colors = paletteColors[palettePicker.value];
+                    if (!colors) return;
+                    Object.entries(colors).forEach(([name, color]) => {
+                        const field = form.elements.namedItem(name);
+                        if (field) field.value = color;
+                    });
+                    updatePreview();
+                });
+            }
             const updatePreview = () => {
                 if (!form || !frame) return;
                 const value = name => form.elements.namedItem(name)?.value || '';
