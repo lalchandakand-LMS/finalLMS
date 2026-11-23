@@ -16,17 +16,17 @@
     @if($role === 'admin')<a class="btn secondary" href="{{ route('admin.ai-assistant.settings') }}">{{ __('AI Settings') }}</a>@endif
 </div>
 <div style="margin:12px 0;">
-    @if($role === 'student')
+    @if($role === 'student' && \Illuminate\Support\Facades\Route::has('student.ai-assistant.proposals.index'))
         <a class="btn secondary" href="{{ route('student.ai-assistant.proposals.index') }}">{{ __('My study plans & AI proposals') }}</a>
     @elseif($role === 'teacher')
-        <a class="btn secondary" href="{{ route('teacher.ai-assistant.proposals.index') }}">{{ __('Review AI proposals') }}</a>
+        @if(\Illuminate\Support\Facades\Route::has('teacher.ai-assistant.proposals.index'))<a class="btn secondary" href="{{ route('teacher.ai-assistant.proposals.index') }}">{{ __('Review AI proposals') }}</a>@endif
+        @if(\Illuminate\Support\Facades\Route::has('teacher.ai-assistant.drafts.index'))<a class="btn secondary" href="{{ route('teacher.ai-assistant.drafts.index') }}">{{ __('My AI teaching drafts') }}</a>@endif
     @elseif($role === 'admin')
-        <a class="btn secondary" href="{{ route('admin.ai-assistant.proposals.index') }}">{{ __('AI approval inbox') }}</a>
-        <a class="btn secondary" href="{{ route('admin.ai-assistant.drafts.index') }}">{{ __('Teacher draft review') }}</a>
-        <a class="btn secondary" href="{{ route('admin.ai-assistant.knowledge.index') }}">{{ __('Support Knowledge Base') }}</a>
+        @if(\Illuminate\Support\Facades\Route::has('admin.ai-assistant.proposals.index'))<a class="btn secondary" href="{{ route('admin.ai-assistant.proposals.index') }}">{{ __('AI approval inbox') }}</a>@endif
+        @if(\Illuminate\Support\Facades\Route::has('admin.ai-assistant.drafts.index'))<a class="btn secondary" href="{{ route('admin.ai-assistant.drafts.index') }}">{{ __('Teacher draft review') }}</a>@endif
+        @if(\Illuminate\Support\Facades\Route::has('admin.ai-assistant.knowledge.index'))<a class="btn secondary" href="{{ route('admin.ai-assistant.knowledge.index') }}">{{ __('Support Knowledge Base') }}</a>@endif
     @endif
-    @if($role === 'teacher') <a class="btn secondary" href="{{ route('teacher.ai-assistant.drafts.index') }}">{{ __('My AI teaching drafts') }}</a> @endif
-    @if($role === 'support_staff') <a class="btn secondary" href="{{ route('support.ai-assistant.knowledge.index') }}">{{ __('Verified Support FAQs') }}</a> @endif
+    @if($role === 'support_staff' && \Illuminate\Support\Facades\Route::has('support.ai-assistant.knowledge.index')) <a class="btn secondary" href="{{ route('support.ai-assistant.knowledge.index') }}">{{ __('Verified Support FAQs') }}</a> @endif
     @php($notificationPrefix = match($role) { 'admin' => 'admin', 'branch_manager' => 'branch', 'teacher' => 'teacher', 'student' => 'student', 'guardian' => 'guardian', default => 'support' })
     <a class="btn secondary" href="{{ route($notificationPrefix.'.ai-assistant.notifications.index') }}">{{ __('AI notifications') }}</a>
 </div>
