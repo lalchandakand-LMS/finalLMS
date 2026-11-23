@@ -22,6 +22,7 @@ use App\Http\Controllers\LessonMediaController;
 use App\Http\Controllers\TeacherApplicationController;
 use App\Http\Controllers\BatchController;
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\AttendanceReportController;
 use App\Http\Controllers\AdminAttendanceSyncReviewController;
 use App\Http\Controllers\AdminAttendanceAuditController;
 use App\Http\Controllers\AssignmentController;
@@ -213,6 +214,8 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::put('/batches/{batch}', [BatchController::class, 'branchManagerUpdate'])->middleware('admin.permission:branch.batches')->name('batches.update');
         Route::get('/batches/{batch}/attendance', [AttendanceController::class, 'index'])->middleware(['admin.permission:branch.attendance', 'module.enabled:attendance'])->name('batches.attendance.index');
         Route::post('/batches/{batch}/attendance', [AttendanceController::class, 'store'])->middleware(['admin.permission:branch.attendance', 'module.enabled:attendance'])->name('batches.attendance.store');
+        Route::get('/attendance-reports', [AttendanceReportController::class, 'index'])->middleware(['admin.permission:branch.attendance', 'module.enabled:attendance'])->name('attendance-reports.index');
+        Route::get('/attendance-reports/export', [AttendanceReportController::class, 'export'])->middleware(['admin.permission:branch.attendance', 'module.enabled:attendance', 'throttle:10,1'])->name('attendance-reports.export');
     });
 
     Route::middleware('role:branch_manager')
@@ -283,6 +286,8 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
     Route::middleware('role:teacher')->group(function () {
         Route::get('/teacher/batches/{batch}/attendance', [AttendanceController::class, 'index'])->middleware('module.enabled:attendance')->name('teacher.batches.attendance.index');
         Route::post('/teacher/batches/{batch}/attendance', [AttendanceController::class, 'store'])->middleware('module.enabled:attendance')->name('teacher.batches.attendance.store');
+        Route::get('/teacher/attendance-reports', [AttendanceReportController::class, 'index'])->middleware('module.enabled:attendance')->name('teacher.attendance-reports.index');
+        Route::get('/teacher/attendance-reports/export', [AttendanceReportController::class, 'export'])->middleware(['module.enabled:attendance', 'throttle:10,1'])->name('teacher.attendance-reports.export');
         Route::get('/teacher/batches/{batch}/assignments', [AssignmentController::class, 'index'])->name('teacher.batches.assignments.index');
         Route::get('/teacher/batches/{batch}/exams', [ExamController::class, 'teacherIndex'])->name('teacher.batches.exams.index');
         Route::get('/teacher/batches/{batch}/question-bank', [ExamController::class, 'questionBank'])->name('teacher.batches.question-bank.index');
@@ -480,6 +485,8 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::post('/assignments/{assignment}/submissions/{submission}/grade', [AssignmentController::class, 'grade'])->middleware('throttle:30,1')->name('admin.assignments.grade');
         Route::get('/batches/{batch}/attendance', [AttendanceController::class, 'index'])->middleware('module.enabled:attendance')->name('admin.batches.attendance.index');
         Route::post('/batches/{batch}/attendance', [AttendanceController::class, 'store'])->middleware('module.enabled:attendance')->name('admin.batches.attendance.store');
+        Route::get('/attendance-reports', [AttendanceReportController::class, 'index'])->middleware('module.enabled:attendance')->name('admin.attendance-reports.index');
+        Route::get('/attendance-reports/export', [AttendanceReportController::class, 'export'])->middleware(['module.enabled:attendance', 'throttle:10,1'])->name('admin.attendance-reports.export');
         Route::post('/branches', [BatchController::class, 'storeBranch'])->name('admin.branches.store');
         Route::put('/branches/{branch}', [BatchController::class, 'updateBranch'])->name('admin.branches.update');
         Route::delete('/branches/{branch}', [BatchController::class, 'destroyBranch'])->name('admin.branches.destroy');
