@@ -109,6 +109,66 @@ PHP;
         $this->assertSame('Fixture Gateway', $manager->catalog()['fixture_gateway']['name']);
     }
 
+    public function test_real_universal_payment_package_manifest_and_entrypoint_register_bkash_via_verified_runtime(): void
+    {
+        $packagePath = base_path('plugins/aec/universal-payment/1.0.0');
+        $manifest = json_decode((string) file_get_contents($packagePath.'/plugin.json'), true, 16, JSON_THROW_ON_ERROR);
+        $this->assertSame([], app(\\App\\Services\\Plugins\\PluginManifestValidator::class)->errors($manifest));
+
+        $files = [];
+        $iterator = new \\RecursiveIteratorIterator(new \\RecursiveDirectoryIterator($packagePath, \\FilesystemIterator::SKIP_DOTS));
+        foreach ($iterator as $file) {
+            if ($file->isFile()) {
+                $relative = str_replace(DIRECTORY_SEPARATOR, '/', substr($file->getPathname(), strlen($packagePath) + 1));
+                $files[$relative] = hash_file('sha256', $file->getPathname());
+            }
+        }
+        $checksum = hash('sha256', json_encode($files, JSON_THROW_ON_ERROR));
+        $signature = base64_encode(sodium_crypto_sign_detached(
+            PluginSignatureVerifier::payloadForSignature($manifest, $checksum),
+            sodium_crypto_sign_secretkey($this->keyPair),
+        ));
+        $plugin = new PluginInstallation();
+        $plugin->forceFill([
+            'plugin_key' => $manifest['key'],
+            'name' => $manifest['name'],
+            'version' => $manifest['version'],
+            'type' => $manifest['type'],
+            'status' => 'active',
+            'manifest' => $manifest,
+            'package_sha256' => $checksum,
+            'signature_key_id' => 'payment-test-key',
+            'signature_verified_at' => now(),
+            'package_path' => 'plugins/aec/universal-payment/1.0.0',
+            'metadata' => [
+                'granted_permissions' => [],
+                'integrity_version' => 1,
+                'release_signature' => $signature,
+                'signature_record_version' => 1,
+                'installed_file_hashes' => $files,
+            ],
+        ])->save();
+
+        config([
+            'services.bkash.enabled' => true,
+            'services.bkash.base_url' => 'https://tokenized.sandbox.bka.sh/v1.2.0-beta',
+            'services.bkash.username' => 'sandbox-user',
+            'services.bkash.password' => 'sandbox-password',
+            'services.bkash.app_key' => 'sandbox-app-key',
+            'services.bkash.app_secret' => 'sandbox-app-secret',
+            'services.bkash.verify_ssl' => true,
+        ]);
+
+        app(PluginRuntime::class)->registerActivePlugins();
+
+        $manager = app(PaymentGatewayManager::class);
+        $this->assertSame('active', $plugin->fresh()->status);
+        $this->assertContains('bkash', $manager->installedKeys());
+        $this->assertSame('aec.universal-payment', $manager->catalog()['bkash']['plugin_key']);
+        $this->assertTrue($manager->catalog()['bkash']['configured']);
+    }
+
+
     public function test_plugin_without_payments_gateway_capability_cannot_register_adapter(): void
     {
         $plugin = $this->installSignedFixture(['read-only']);
