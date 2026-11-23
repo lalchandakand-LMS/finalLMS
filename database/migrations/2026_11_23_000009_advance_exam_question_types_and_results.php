@@ -57,6 +57,10 @@ return new class extends Migration {
         if (DB::table('exam_attempts')->where('score', '<', 0)->exists()) {
             throw new RuntimeException('Cannot roll back custom negative total scores without preserving those results.');
         }
+        if (DB::table('exam_attempts')->where('status', 'awaiting_manual')->exists()
+            || DB::table('exam_answers')->whereNull('selected_option')->orWhereNotNull('answer_text')->exists()) {
+            throw new RuntimeException('Cannot roll back written exam attempts without preserving their answers and grading state.');
+        }
 
         Schema::table('exam_attempts', function (Blueprint $table): void {
             $table->unsignedInteger('score')->nullable()->change();
@@ -67,6 +71,7 @@ return new class extends Migration {
             $table->dropColumn(['grading_rules', 'result_status', 'results_published_at', 'allow_result_review', 'review_until']);
         });
         Schema::table('exam_answers', function (Blueprint $table): void {
+            $table->unsignedTinyInteger('selected_option')->nullable(false)->change();
             $table->dropConstrainedForeignId('graded_by');
             $table->dropColumn(['answer_text', 'teacher_feedback', 'graded_at']);
         });
