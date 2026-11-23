@@ -10,6 +10,7 @@ use App\Models\ExamAnswer;
 use App\Models\ExamResultReview;
 use App\Models\Enrollment;
 use App\Models\QuestionBankQuestion;
+use App\Models\QuestionSet;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,9 +24,14 @@ class ExamController extends Controller
         abort_unless(Auth::user()->isAdmin() || $batch->teacher_id === Auth::id(), 403);
         $exams = $batch->exams()->withCount(['questions', 'attempts'])->latest()->get();
         $bankQuestions = QuestionBankQuestion::where('teacher_id', $batch->teacher_id)->latest()->get();
+        $questionSets = QuestionSet::query()->published()->withCount('questions')
+            ->where(function ($query) use ($batch): void {
+                $query->where('created_by', $batch->teacher_id)
+                    ->orWhereHas('courses', fn ($courses) => $courses->whereKey($batch->course_id));
+            })->latest()->get();
         $isAdmin = Auth::user()->isAdmin();
 
-        return view('teacher.exams.index', compact('batch', 'exams', 'bankQuestions', 'isAdmin'));
+        return view('teacher.exams.index', compact('batch', 'exams', 'bankQuestions', 'questionSets', 'isAdmin'));
     }
 
     public function store(Batch $batch, Request $request): RedirectResponse
@@ -49,6 +55,8 @@ class ExamController extends Controller
             'questions' => ['nullable', 'array', 'min:1', 'max:100'],
             'question_bank_ids' => ['nullable', 'array', 'min:1', 'max:100'],
             'question_bank_ids.*' => ['integer', 'distinct', 'exists:question_bank_questions,id'],
+            'question_set_ids' => ['nullable', 'array', 'max:30'],
+            'question_set_ids.*' => ['integer', 'distinct', 'exists:question_sets,id'],
             'random_question_count' => ['nullable', 'integer', 'min:1', 'max:100'],
             'questions.*.type' => ['nullable', 'in:mcq,true_false,short_answer,written'],
             'questions.*.question' => ['required', 'string', 'max:3000'],
@@ -87,6 +95,31 @@ class ExamController extends Controller
                 'grading_rubric' => $question->grading_rubric,
             ]);
             $selectedQuestions = $selectedQuestions->concat($bankSelections)->values();
+        }
+
+        if (! empty($validated['question_set_ids'])) {
+            $sets = QuestionSet::query()->published()->with('questions')
+                ->whereIn('id', $validated['question_set_ids'])->get();
+            abort_unless($sets->count() === count($validated['question_set_ids']), 422, 'One or more question sets are unavailable.');
+            foreach ($sets as $set) {
+                $isOwned = (int) $set->created_by === (int) $batch->teacher_id;
+                $isAttached = $set->courses()->whereKey($batch->course_id)->exists();
+                abort_unless(Auth::user()->isAdmin() || $isOwned || $isAttached, 403, 'You cannot use this question set.');
+                foreach ($set->questions as $setQuestion) {
+                    $selectedQuestions->push([
+                        'question_set_question_id' => $setQuestion->id,
+                        'type' => $setQuestion->type ?: 'mcq',
+                        'question' => $setQuestion->question,
+                        'options' => $setQuestion->options,
+                        'correct_option' => $setQuestion->correct_option,
+                        'correct_answer' => $setQuestion->correct_answer,
+                        'explanation' => $setQuestion->explanation,
+                        'grading_rubric' => null,
+                        'marks' => $setQuestion->marks,
+                        'negative_marks' => 0,
+                    ]);
+                }
+            }
         }
 
         abort_if($selectedQuestions->isEmpty(), 422, 'Add questions or select questions from your question bank.');
