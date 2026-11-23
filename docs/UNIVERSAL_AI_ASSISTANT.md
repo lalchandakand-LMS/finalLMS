@@ -102,6 +102,33 @@ Learning recommendations must not imply performance analysis from data that is n
 - **Phase 5 — learning analytics:** only after lawful access to assessment data, consent/retention
   policy, branch isolation, explainable signals and teacher oversight are implemented.
 
+## Human-approved AI action workflow — initial executable action
+
+The agent workspace adds a narrowly allow-listed action workflow. It is not a general-purpose
+model tool executor.
+
+- Students can submit a personal study-plan proposal with bounded title, goals and schedule.
+- The proposal is stored as pending with an expiry, unique idempotency key, version number and
+  SHA-256 integrity hash. Retrying the same request key returns the original proposal.
+- Administrators can review institution-wide pending proposals. Teachers can review only
+  proposals from students with an active/completed enrollment in a course assigned to that teacher.
+- The requester cannot approve their own proposal. Only an administrator or an authorized
+  teacher can approve or reject. The approval endpoint rechecks the pending status, version,
+  expiry, payload integrity and teacher/student relationship inside a database transaction.
+- Approval creates the active learning plan and marks the proposal executed in the same
+  transaction. The unique source-proposal constraint and row lock prevent duplicate execution.
+- Proposal, approval, rejection, expiry and execution outcomes are written to the AI audit log.
+  Audit metadata contains identifiers and hashes, not the full student goals or schedule.
+- Rejection notes are bounded. Students can view their own proposals; teachers see only their
+  assigned learners; administrators can see the institution-wide approval inbox.
+
+The only executable action in this initial release is `student.study_plan.create`. Other
+agent capabilities remain advice/draft-only until a dedicated typed handler, authorization
+policy, rollback/compensation strategy and integration tests exist for each action. Do not
+enable arbitrary model-generated SQL, URLs, class names, controller names or generic tool
+dispatch. Run the new migration through the signed Plugin Manager lifecycle; do not execute
+plugin migrations manually on production.
+
 ## Release and activation
 
 The plugin requires a trusted signature, verified package checksum, manifest identity and
