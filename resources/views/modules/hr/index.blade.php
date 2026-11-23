@@ -1,6 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
+@php($hrRoutePrefix = request()->routeIs('branch.*') ? 'branch.hr' : 'admin.hr')
 <div class="mx-auto max-w-7xl space-y-6 p-4 sm:p-6">
     <div><h1 class="text-2xl font-bold">HR & Staff Management</h1><p class="text-sm text-gray-600">Employee directory, attendance, leave approvals and payroll ledger.</p></div>
     @if(session('success'))<p class="rounded bg-green-50 p-3 text-green-800">{{ session('success') }}</p>@endif
