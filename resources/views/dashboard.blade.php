@@ -143,6 +143,12 @@
                     <article class="aec-stat purple"><div class="aec-stat-top"><span>{{ __('Total courses') }}</span><span class="aec-stat-icon" aria-hidden="true">📚</span></div><strong>{{ number_format($stats['courses']) }}</strong><small>{{ __('All courses in the catalog') }}</small></article>
                     <article class="aec-stat gold"><div class="aec-stat-top"><span>{{ __('Total batches') }}</span><span class="aec-stat-icon" aria-hidden="true">🗂️</span></div><strong>{{ number_format($stats['batches']) }}</strong><small>{{ __('All academic and coaching batches') }}</small></article>
                 </div>
+                <div class="aec-snapshot" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:12px">
+                    <div class="aec-snapshot-row"><span>{{ __('Active enrollments') }}</span><strong>{{ number_format($stats['active_enrollments']) }}</strong></div>
+                    <div class="aec-snapshot-row"><span>{{ __('New this month') }}</span><strong>{{ number_format($stats['new_enrollments_this_month']) }}</strong></div>
+                    <div class="aec-snapshot-row"><span>{{ __('Pending payments') }}</span><strong>{{ number_format($stats['pending_payments']) }}</strong></div>
+                    <div class="aec-snapshot-row"><span>{{ __('Approved course payments') }}</span><strong>৳{{ number_format($stats['approved_course_payments'], 2) }}</strong></div>
+                </div>
             </section>
 
             @endif
