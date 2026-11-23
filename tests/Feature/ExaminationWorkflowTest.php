@@ -1033,7 +1033,7 @@ class ExaminationWorkflowTest extends TestCase
             ->assertOk()->assertSee('Approved')->assertSee('We reviewed your response');
 
         $this->actingAs($teacher)->get(route('teacher.exams.result-sheet', $exam))
-            ->assertOk()->assertSee('Merit list and result sheet')->assertSee($student->name);
+            ->assertOk()->assertSee('Exam merit list and result sheet')->assertSee($student->name);
     }
 
     public function test_teacher_can_create_exam_with_all_supported_question_types_and_custom_rules(): void
