@@ -278,6 +278,9 @@ class ExamController extends Controller
     {
         $type = $question['type'] ?? 'mcq';
         $question['type'] = $type;
+        if (isset($question['tags'])) {
+            $question['tags'] = array_values(array_unique(array_filter(array_map('trim', $question['tags']))));
+        }
         if ($type === 'true_false') {
             $question['options'] = ['True', 'False'];
             $question['correct_option'] = (int) ($question['correct_option'] ?? 0);
