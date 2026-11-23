@@ -15,6 +15,15 @@
     </div>
     @if($role === 'admin')<a class="btn secondary" href="{{ route('admin.ai-assistant.settings') }}">{{ __('AI Settings') }}</a>@endif
 </div>
+<div style="margin:12px 0;">
+    @if($role === 'student')
+        <a class="btn secondary" href="{{ route('student.ai-assistant.proposals.index') }}">{{ __('My study plans & AI proposals') }}</a>
+    @elseif($role === 'teacher')
+        <a class="btn secondary" href="{{ route('teacher.ai-assistant.proposals.index') }}">{{ __('Review AI proposals') }}</a>
+    @elseif($role === 'admin')
+        <a class="btn secondary" href="{{ route('admin.ai-assistant.proposals.index') }}">{{ __('AI approval inbox') }}</a>
+    @endif
+</div>
 <div class="grid grid-2">
     <aside class="panel">
         <h2>{{ __('Conversation history') }}</h2>
