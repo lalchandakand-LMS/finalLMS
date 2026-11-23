@@ -308,7 +308,18 @@
                 </div>
                 <h3 style="margin:20px 0 10px;">{{ __('Dashboard widget order') }}</h3>
                 <p class="muted">{{ __('Set a position from 1 to 6. Lower numbers appear earlier. Quick actions and system snapshot can be reordered independently.') }}</p>
-                <div class="grid grid-2">
+                <style>
+                    .dashboard-widget-order-list { display:grid; gap:9px; }
+                    .dashboard-widget-order-item { display:flex; align-items:center; gap:12px; padding:12px 14px; border:1px solid var(--border); border-radius:12px; background:var(--panel); }
+                    .dashboard-widget-order-item[aria-grabbed="true"] { opacity:.55; border-style:dashed; }
+                    .dashboard-widget-order-item [data-widget-drag-handle] { cursor:grab; user-select:none; touch-action:pan-y; font-size:1.2rem; }
+                    .dashboard-widget-order-item label { flex:1; margin:0; }
+                    .dashboard-widget-order-item input[type="number"] { width:76px; margin:0; }
+                    .dashboard-widget-order-controls { display:flex; gap:5px; }
+                    .dashboard-widget-order-controls button { min-width:34px; min-height:34px; border:1px solid var(--border); border-radius:8px; background:var(--panel-alt); cursor:pointer; }
+                    .dashboard-widget-order-controls button:disabled { opacity:.4; cursor:not-allowed; }
+                </style>
+                <div class="dashboard-widget-order-list" data-dashboard-widget-order-list>
                     @foreach([
                         'dashboard_order_hero' => ['Welcome banner', 1],
                         'dashboard_order_statistics' => ['Statistics cards', 2],
@@ -317,12 +328,18 @@
                         'dashboard_order_system_snapshot' => ['System snapshot', 5],
                         'dashboard_order_learning_operations' => ['Learning operations', 6],
                     ] as $key => [$label, $defaultOrder])
-                        <div>
+                        <div class="dashboard-widget-order-item" data-dashboard-widget-order-item draggable="true">
+                            <span data-widget-drag-handle aria-hidden="true" title="{{ __('Drag to reorder') }}">⠿</span>
                             <label for="{{ $key }}">{{ __($label) }}</label>
-                            <input id="{{ $key }}" type="number" name="{{ $key }}" min="1" max="6" step="1" value="{{ old($key, $settings[$key] ?? $defaultOrder) }}">
+                            <input id="{{ $key }}" type="number" name="{{ $key }}" min="1" max="6" step="1" value="{{ old($key, $settings[$key] ?? $defaultOrder) }}" aria-label="{{ __('Position for') }} {{ __($label) }}">
+                            <div class="dashboard-widget-order-controls">
+                                <button type="button" data-widget-move-up aria-label="{{ __('Move up') }}">↑</button>
+                                <button type="button" data-widget-move-down aria-label="{{ __('Move down') }}">↓</button>
+                            </div>
                         </div>
                     @endforeach
                 </div>
+                <p class="muted" data-dashboard-order-status role="status" aria-live="polite">{{ __('Drag widgets to reorder, or use the up and down buttons. Position numbers update automatically.') }}</p>
                 <p class="muted" style="margin-top:14px;">{{ __('Need another image? Upload it in the Media Library first. Changes apply to the admin dashboard after saving. Dashboard counts continue to come from real LMS records.') }} <a href="{{ route('admin.media.index') }}">{{ __('Open Media Library') }}</a></p>
             </section>
                 <span class="badge info">{{ __('Search and marketing') }}</span>
@@ -440,4 +457,69 @@
             </div>
         </form>
     </div>
+@push('scripts')
+    <script>
+        (() => {
+            const list = document.querySelector('[data-dashboard-widget-order-list]');
+            if (!list) return;
+            const status = document.querySelector('[data-dashboard-order-status]');
+            let dragged = null;
+            const items = () => Array.from(list.querySelectorAll('[data-dashboard-widget-order-item]'));
+            const announce = message => { if (status) status.textContent = message; };
+            const refresh = () => {
+                items().forEach((item, index) => {
+                    const position = item.querySelector('input[type="number"]');
+                    const up = item.querySelector('[data-widget-move-up]');
+                    const down = item.querySelector('[data-widget-move-down]');
+                    if (position) position.value = String(index + 1);
+                    if (up) up.disabled = index === 0;
+                    if (down) down.disabled = index === items().length - 1;
+                    item.setAttribute('aria-posinset', String(index + 1));
+                    item.setAttribute('aria-setsize', String(items().length));
+                    item.setAttribute('aria-grabbed', item === dragged ? 'true' : 'false');
+                });
+            };
+            list.addEventListener('dragstart', event => {
+                const item = event.target.closest('[data-dashboard-widget-order-item]');
+                if (!item) return;
+                dragged = item;
+                event.dataTransfer.effectAllowed = 'move';
+                event.dataTransfer.setData('text/plain', item.querySelector('label')?.textContent?.trim() || 'widget');
+                refresh();
+            });
+            list.addEventListener('dragover', event => {
+                if (!dragged) return;
+                event.preventDefault();
+                const target = event.target.closest('[data-dashboard-widget-order-item]');
+                if (!target || target === dragged) return;
+                const bounds = target.getBoundingClientRect();
+                list.insertBefore(dragged, event.clientY > bounds.top + bounds.height / 2 ? target.nextSibling : target);
+            });
+            list.addEventListener('drop', event => {
+                if (!dragged) return;
+                event.preventDefault();
+                const name = dragged.querySelector('label')?.textContent?.trim() || 'Widget';
+                dragged = null;
+                refresh();
+                announce(name + ' reordered.');
+            });
+            list.addEventListener('dragend', () => { dragged = null; refresh(); });
+            list.addEventListener('click', event => {
+                const button = event.target.closest('[data-widget-move-up], [data-widget-move-down]');
+                if (!button) return;
+                const item = button.closest('[data-dashboard-widget-order-item]');
+                if (!item) return;
+                if (button.hasAttribute('data-widget-move-up') && item.previousElementSibling) {
+                    list.insertBefore(item, item.previousElementSibling);
+                } else if (button.hasAttribute('data-widget-move-down') && item.nextElementSibling) {
+                    list.insertBefore(item.nextElementSibling, item);
+                }
+                refresh();
+                announce((item.querySelector('label')?.textContent?.trim() || 'Widget') + ' reordered.');
+            });
+            refresh();
+        })();
+    </script>
+@endpush
+
 @endsection
