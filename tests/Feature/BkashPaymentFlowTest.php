@@ -56,6 +56,33 @@ class BkashPaymentFlowTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+
+        require_once base_path('plugins/aec/universal-payment/1.0.0/src/BkashCheckoutService.php');
+        require_once base_path('plugins/aec/universal-payment/1.0.0/src/BkashGateway.php');
+        DB::table('plugin_registry')->insert([
+            'plugin_key' => 'aec.universal-payment',
+            'name' => 'Universal Payment',
+            'version' => '1.0.0',
+            'type' => 'provider',
+            'status' => 'active',
+            'manifest' => json_encode([
+                'key' => 'aec.universal-payment',
+                'capabilities' => ['payments.gateway'],
+            ], JSON_THROW_ON_ERROR),
+            'package_sha256' => str_repeat('a', 64),
+            'signature_key_id' => 'test-release-key',
+            'signature_verified_at' => now(),
+            'package_path' => 'plugins/aec/universal-payment/1.0.0',
+            'health_status' => 'healthy',
+            'metadata' => json_encode(['granted_permissions' => []], JSON_THROW_ON_ERROR),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        app(\\App\\Services\\Payments\\PaymentGatewayManager::class)->registerPluginGateway(
+            'aec.universal-payment',
+            'bkash',
+            \\Aloms\\UniversalPayment\\Gateways\\BkashGateway::class,
+        );
     }
 
     public function test_student_is_enrolled_only_after_bkash_server_side_verification(): void
