@@ -19,6 +19,11 @@ class Branch extends Model
         return $this->status === 'active' && $this->is_active;
     }
 
+    public function users(): HasMany
+    {
+        return $this->hasMany(User::class);
+    }
+
     public function batches(): HasMany
     {
         return $this->hasMany(Batch::class);
