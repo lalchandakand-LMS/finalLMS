@@ -13,7 +13,7 @@ class StaffRoleScopeTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_staff_subroles_use_the_shared_admin_shell_with_only_their_modules(): void
+    public function test_branch_and_finance_staff_have_separate_scoped_workspaces(): void
     {
         $branch = Branch::create(['name' => 'Workspace Branch', 'slug' => 'workspace-branch']);
         $manager = User::factory()->create(['role' => 'branch_manager',
@@ -24,8 +24,10 @@ class StaffRoleScopeTest extends TestCase
         $this->actingAs($manager)->get(route('dashboard'))
             ->assertOk()
             ->assertSee('admin-sidebar', false)
-            ->assertSee('Branch workspace')
+            ->assertSee('Branch Panel')
+            ->assertSee('Branch dashboard')
             ->assertSee('My branch batches')
+            ->assertSee('/branch/batches')
             ->assertDontSee('Finance workspace')
             ->assertDontSee('Admin users');
 
@@ -41,6 +43,31 @@ class StaffRoleScopeTest extends TestCase
         $this->actingAs($accountant)->get(route('admin.branch-workspace.batches.index'))->assertForbidden();
     }
 
+    public function test_teacher_student_and_guardian_have_distinct_portal_navigation(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $this->actingAs($teacher)->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Teacher Panel')
+            ->assertSee('My batches & classes')
+            ->assertSee('/teacher/batches');
+
+        $student = User::factory()->create(['role' => 'student']);
+        $this->actingAs($student)->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Student Panel')
+            ->assertSee('My courses')
+            ->assertSee('Guardian requests')
+            ->assertSee('/my/courses');
+
+        $guardian = User::factory()->create(['role' => 'guardian']);
+        $this->actingAs($guardian)->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Guardian Panel')
+            ->assertSee('Open guardian portal')
+            ->assertSee('/guardian/dashboard');
+    }
+
     public function test_staff_subroles_with_inactive_branch_assignments_are_denied(): void
     {
         $branch = Branch::create(['name' => 'Inactive Branch', 'slug' => 'inactive-branch', 'is_active' => false]);
@@ -53,7 +80,7 @@ class StaffRoleScopeTest extends TestCase
         $this->actingAs($accountant)->get(route('admin.finance.invoices.index'))->assertForbidden();
     }
 
-    public function test_legacy_staff_urls_redirect_into_the_shared_admin_modules(): void
+    public function test_legacy_staff_urls_redirect_into_their_dedicated_workspaces(): void
     {
         $branch = Branch::create(['name' => 'Legacy Branch', 'slug' => 'legacy-branch']);
         $manager = User::factory()->create(['role' => 'branch_manager',
@@ -62,7 +89,7 @@ class StaffRoleScopeTest extends TestCase
             'admin_permissions' => ['finance.invoices', 'finance.refunds', 'finance.reports', 'finance.expenses'], 'branch_id' => $branch->id]);
 
         $this->actingAs($manager)->get('/branch-manager/batches')
-            ->assertRedirect(route('admin.branch-workspace.batches.index'));
+            ->assertRedirect(route('branch.batches.index'));
         $this->actingAs($accountant)->get('/accountant/invoices')
             ->assertRedirect(route('admin.finance.invoices.index'));
         $this->actingAs($accountant)->get('/accountant/finance-reports')

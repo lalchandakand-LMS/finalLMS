@@ -14,7 +14,7 @@
     <label>{{ __('Status') }}<select name="status" required>@foreach(['draft','published','archived'] as $status)<option value="{{ $status }}" @selected(old('status', $questionSet->status ?: 'draft') === $status)>{{ __(ucfirst($status)) }}</option>@endforeach</select></label>
 
     <div class="panel" style="margin:18px 0;">
-        <h2>{{ __('Reuse Question Bank MCQs') }}</h2>
+        <h2>{{ __('Reuse Question Bank questions') }}</h2>
         <p class="muted">{{ __('Selected bank questions are copied into this set as a snapshot. Later edits to the source bank item will not silently change this set.') }}</p>
         @if($bankQuestions->isEmpty())
             <p class="muted">{{ __('No reusable Question Bank items are available yet.') }}</p>
@@ -32,7 +32,7 @@
     </div>
 
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-        <div><h2 style="margin-bottom:4px;">{{ __('Custom questions') }}</h2><p class="muted">{{ __('Supports multiple choice, true/false and short answer questions.') }}</p></div>
+        <div><h2 style="margin-bottom:4px;">{{ __('Custom questions') }}</h2><p class="muted">{{ __('Supports multiple choice, true/false, short answer and manually graded written questions.') }}</p></div>
         <button class="btn secondary" type="button" id="add-set-question">{{ __('Add question') }}</button>
     </div>
 
@@ -44,7 +44,7 @@
                     <h3>{{ __('Question') }} {{ $loop->iteration }}</h3>
                     <button type="button" class="btn secondary remove-set-question">{{ __('Remove') }}</button>
                 </div>
-                <label>{{ __('Question type') }}<select name="questions[{{ $index }}][type]" data-question-type>@foreach(['mcq' => 'Multiple choice', 'true_false' => 'True / False', 'short_answer' => 'Short answer'] as $value => $label)<option value="{{ $value }}" @selected($type === $value)>{{ __($label) }}</option>@endforeach</select></label>
+                <label>{{ __('Question type') }}<select name="questions[{{ $index }}][type]" data-question-type>@foreach(['mcq' => 'Multiple choice', 'true_false' => 'True / False', 'short_answer' => 'Short answer', 'written' => 'Written response'] as $value => $label)<option value="{{ $value }}" @selected($type === $value)>{{ __($label) }}</option>@endforeach</select></label>
                 <label>{{ __('Question text') }}<textarea name="questions[{{ $index }}][question]" maxlength="3000" required>{{ data_get($question, 'question') }}</textarea></label>
                 <label>{{ __('Order') }}<input type="number" name="questions[{{ $index }}][position]" min="0" max="100000" value="{{ old('questions.'.$index.'.position', data_get($question, 'position', (($bankQuestions->count() + $loop->iteration) * 10))) }}" style="width:100px;"></label>
                 <div data-mcq-fields>
@@ -61,8 +61,12 @@
                 <div data-short-answer-fields>
                     <label>{{ __('Expected answer') }}<textarea name="questions[{{ $index }}][correct_answer]" maxlength="2000">{{ data_get($question, 'correct_answer') }}</textarea></label>
                 </div>
+                <div data-written-fields>
+                    <label>{{ __('Written grading rubric (one criterion per line)') }}<textarea name="questions[{{ $index }}][grading_rubric_text]" rows="3">{{ is_array(data_get($question, 'grading_rubric')) ? implode("\n", data_get($question, 'grading_rubric')) : '' }}</textarea></label>
+                </div>
                 <div class="grid grid-2">
                     <label>{{ __('Marks') }}<input type="number" name="questions[{{ $index }}][marks]" min="1" max="100" value="{{ data_get($question, 'marks', 1) }}" required></label>
+                    <label>{{ __('Negative marks') }}<input type="number" name="questions[{{ $index }}][negative_marks]" min="0" max="100" value="{{ data_get($question, 'negative_marks', 0) }}"></label>
                     <label>{{ __('Difficulty') }}<select name="questions[{{ $index }}][difficulty]">@foreach(['easy','medium','hard'] as $level)<option value="{{ $level }}" @selected(data_get($question, 'difficulty', 'medium') === $level)>{{ __(ucfirst($level)) }}</option>@endforeach</select></label>
                 </div>
                 <label>{{ __('Explanation') }}<textarea name="questions[{{ $index }}][explanation]" maxlength="3000">{{ data_get($question, 'explanation') }}</textarea></label>
@@ -70,6 +74,22 @@
             </article>
         @endforeach
     </div>
+
+    <script>
+    document.querySelector('form').addEventListener('submit', event => {
+        event.currentTarget.querySelectorAll('[data-written-fields] textarea').forEach(textarea => {
+            const card = textarea.closest('[data-question-card]');
+            const select = card.querySelector('[data-question-type]');
+            if (select.value !== 'written' || !textarea.value.trim()) return;
+            const prefix = select.name.replace('[type]', '');
+            textarea.value.split('\n').map(value => value.trim()).filter(Boolean).forEach((value, index) => {
+                const input = document.createElement('input'); input.type = 'hidden';
+                input.name = prefix + '[grading_rubric][' + index + ']'; input.value = value;
+                event.currentTarget.appendChild(input);
+            });
+        });
+    });
+    </script>
 
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;">
         <button class="btn primary" type="submit">{{ __('Save question set') }}</button>
@@ -90,7 +110,8 @@
         const groups = [
             [card.querySelector('[data-mcq-fields]'), type === 'mcq'],
             [card.querySelector('[data-true-false-fields]'), type === 'true_false'],
-            [card.querySelector('[data-short-answer-fields]'), type === 'short_answer']
+            [card.querySelector('[data-short-answer-fields]'), type === 'short_answer'],
+            [card.querySelector('[data-written-fields]'), type === 'written']
         ];
         groups.forEach(([element, visible]) => {
             if (!element) return;
@@ -115,7 +136,7 @@
         card.style.margin = '14px 0';
         card.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;"><h3>Question</h3><button type="button" class="btn secondary remove-set-question">Remove</button></div>
-            <label>Question type<select name="questions[${index}][type]" data-question-type><option value="mcq">Multiple choice</option><option value="true_false">True / False</option><option value="short_answer">Short answer</option></select></label>
+            <label>Question type<select name="questions[${index}][type]" data-question-type><option value="mcq">Multiple choice</option><option value="true_false">True / False</option><option value="short_answer">Short answer</option><option value="written">Written response</option></select></label>
             <label>Question text<textarea name="questions[${index}][question]" maxlength="3000" required></textarea></label>
             <label>Order<input type="number" name="questions[${index}][position]" min="0" max="100000" value="${(sourceCount + index + 1) * 10}" style="width:100px;"></label>
             <div data-mcq-fields><div class="grid grid-2">
@@ -124,7 +145,9 @@
             </div><label>Correct option<select name="questions[${index}][correct_option]" data-correct-option><option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select></label></div>
             <div data-true-false-fields><label>Correct answer<select name="questions[${index}][correct_option]" data-correct-option><option value="0">True</option><option value="1">False</option></select></label></div>
             <div data-short-answer-fields><label>Expected answer<textarea name="questions[${index}][correct_answer]" maxlength="2000"></textarea></label></div>
+            <div data-written-fields><label>Written grading rubric (one criterion per line)<textarea name="questions[${index}][grading_rubric_text]" rows="3"></textarea></label></div>
             <div class="grid grid-2"><label>Marks<input type="number" name="questions[${index}][marks]" min="1" max="100" value="1" required></label>
+            <label>Negative marks<input type="number" name="questions[${index}][negative_marks]" min="0" max="100" value="0"></label>
             <label>Difficulty<select name="questions[${index}][difficulty]"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option></select></label></div>
             <label>Explanation<textarea name="questions[${index}][explanation]" maxlength="3000"></textarea></label>
             <label>Tags (comma separated)<input name="questions[${index}][tags]" maxlength="1000"></label>`;

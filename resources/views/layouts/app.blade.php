@@ -34,7 +34,10 @@
         $facebookPixelId = $hasSettingsTable ? \App\Models\Setting::value('facebook_pixel_id') : null;
         $googleSearchConsoleVerification = $hasSettingsTable ? \App\Models\Setting::value('google_search_console_verification') : null;
         $marketingConsent = request()->cookie('marketing_consent') === 'accepted';
-        $isAdminLayout = auth()->check() && (auth()->user()->isAdmin() || auth()->user()->isBranchManager() || auth()->user()->isAccountant());
+        $isBranchLayout = auth()->check() && auth()->user()->isBranchManager();
+    @endphp
+    @php
+        $isAdminLayout = auth()->check() && in_array(auth()->user()->role, ['admin', 'branch_manager', 'accountant', 'teacher', 'student', 'guardian'], true);
         $studentTrackingPlugin = auth()->check() && \Illuminate\Support\Facades\Schema::hasTable('plugin_registry')
             ? \App\Models\PluginInstallation::query()->where('plugin_key', 'aec.student-tracking')->where('status', 'active')->first()
             : null;
@@ -415,7 +418,7 @@
 
     @if($isAdminLayout)
         <aside class="admin-sidebar" aria-label="Admin navigation">
-            <a class="admin-sidebar-brand" href="{{ route('dashboard') }}">@if($institutionLogoUrl)<img src="{{ $institutionLogoUrl }}" alt="{{ $institutionName }}" style="width:39px;height:39px;object-fit:contain;border-radius:10px;background:#fff;padding:3px;">@else<span>📘</span>@endif<strong>{{ $institutionName }}<br><small style="font-weight:500;color:#a9bee0;">{{ $institutionShortName ?: __('Admin workspace') }}</small></strong></a>
+            <a class="admin-sidebar-brand" href="{{ $isBranchLayout ? route('branch.dashboard') : route('dashboard') }}">@if($institutionLogoUrl)<img src="{{ $institutionLogoUrl }}" alt="{{ $institutionName }}" style="width:39px;height:39px;object-fit:contain;border-radius:10px;background:#fff;padding:3px;">@else<span>📘</span>@endif<strong>{{ $institutionName }}<br><small style="font-weight:500;color:#a9bee0;">{{ auth()->user()->isAdmin() ? ($institutionShortName ?: __('Admin Panel')) : (auth()->user()->isBranchManager() ? __('Branch Panel') : (auth()->user()->isTeacher() ? __('Teacher Panel') : (auth()->user()->isStudent() ? __('Student Panel') : (auth()->user()->isGuardian() ? __('Guardian Panel') : __('Finance workspace'))))) }}</small></strong></a>
             <a class="{{ request()->routeIs('notices.*') ? 'active' : '' }}" href="{{ route('notices.index') }}"><span>🔔</span><span class="nav-text">Notice Board</span></a>
             @if(auth()->user()->isAdmin())
             <div class="admin-sidebar-label">Overview</div>
@@ -453,6 +456,7 @@
             <a href="{{ route('admin.refunds.index') }}"><span>↩️</span><span class="nav-text">Refunds</span></a>
             <a href="{{ route('admin.expenses.index') }}"><span>💸</span><span class="nav-text">Expenses & reports</span></a>
             <div class="admin-sidebar-label">Website & tools</div>
+            <a class="{{ request()->routeIs('admin.cms.*') ? 'active' : '' }}" href="{{ route('admin.cms.index') }}"><span>🧭</span><span class="nav-text">CMS Control Center</span></a>
             <a class="{{ request()->routeIs('admin.modules.*') ? 'active' : '' }}" href="{{ route('admin.modules.index') }}"><span>🧩</span><span class="nav-text">Module Manager</span></a>
             <a class="{{ request()->routeIs('admin.plugins.*') ? 'active' : '' }}" href="{{ route('admin.plugins.index') }}"><span>🧰</span><span class="nav-text">Plugin Manager</span></a>
             <a class="{{ request()->routeIs('admin.themes.*') ? 'active' : '' }}" href="{{ route('admin.themes.index') }}"><span>🎨</span><span class="nav-text">Theme Manager</span></a>
@@ -475,20 +479,41 @@
             <a href="{{ route('admin.settings.index') }}"><span>⚙️</span><span class="nav-text">Settings</span></a>
             <a href="{{ route('admin.sms-campaigns.index') }}"><span>✉️</span><span class="nav-text">SMS campaigns</span></a>
             @elseif(auth()->user()->isBranchManager())
-                <div class="admin-sidebar-label">Overview</div>
-                <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><span>▦</span><span class="nav-text">Dashboard</span></a>
+                <div class="admin-sidebar-label">Branch Panel</div>
+                <a class="{{ request()->routeIs('branch.dashboard') ? 'active' : '' }}" href="{{ route('branch.dashboard') }}"><span>▦</span><span class="nav-text">Branch dashboard</span></a>
                 @if(auth()->user()->hasAdminPermission('branch.batches') || auth()->user()->hasAdminPermission('branch.students'))
-                    <div class="admin-sidebar-label">Branch workspace</div>
+                    <div class="admin-sidebar-label">Branch operations</div>
                     @if(auth()->user()->hasAdminPermission('branch.batches'))
-                        <a class="{{ request()->routeIs('admin.branch-workspace.batches.*') ? 'active' : '' }}" href="{{ route('admin.branch-workspace.batches.index') }}"><span>🗓️</span><span class="nav-text">My branch batches</span></a>
+                        <a class="{{ request()->routeIs('branch.batches.*') ? 'active' : '' }}" href="{{ route('branch.batches.index') }}"><span>🗓️</span><span class="nav-text">My branch batches</span></a>
                     @endif
                     @if(auth()->user()->hasAdminPermission('branch.students'))
-                        <a class="{{ request()->routeIs('admin.branch-workspace.students.*') ? 'active' : '' }}" href="{{ route('admin.branch-workspace.students.index') }}"><span>👥</span><span class="nav-text">Branch students</span></a>
+                        <a class="{{ request()->routeIs('branch.students.*') ? 'active' : '' }}" href="{{ route('branch.students.index') }}"><span>👥</span><span class="nav-text">Branch students</span></a>
                     @endif
                     @if($studentTrackingAvailable && \Illuminate\Support\Facades\Route::has('branch.student-tracking.index'))
                         <a class="{{ request()->routeIs('branch.student-tracking.*') ? 'active' : '' }}" href="{{ route('branch.student-tracking.index') }}"><span>📊</span><span class="nav-text">Student Tracking</span></a>
                     @endif
                 @endif
+            @elseif(auth()->user()->isTeacher())
+                <div class="admin-sidebar-label">Teacher Panel</div>
+                <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><span>▦</span><span class="nav-text">Teacher dashboard</span></a>
+                <a class="{{ request()->routeIs('teacher.batches.*') ? 'active' : '' }}" href="{{ route('teacher.batches.index') }}"><span>🗓️</span><span class="nav-text">{{ __('My batches & classes') }}</span></a>
+                <a class="{{ request()->routeIs('live-classes.*') ? 'active' : '' }}" href="{{ route('live-classes.index') }}"><span>🎥</span><span class="nav-text">Live classes</span></a>
+            @elseif(auth()->user()->isStudent())
+                <div class="admin-sidebar-label">Student Panel</div>
+                <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><span>▦</span><span class="nav-text">Student dashboard</span></a>
+                <a class="{{ request()->routeIs('student.courses.*') ? 'active' : '' }}" href="{{ route('student.courses.index') }}"><span>📚</span><span class="nav-text">My courses</span></a>
+                <a class="{{ request()->routeIs('student.exams.*') ? 'active' : '' }}" href="{{ route('student.exams.index') }}"><span>📝</span><span class="nav-text">My exams</span></a>
+                <a class="{{ request()->routeIs('student.question-set-attempts.*') ? 'active' : '' }}" href="{{ route('student.question-set-attempts.index') }}"><span>🧩</span><span class="nav-text">Quiz history</span></a>
+                <a class="{{ request()->routeIs('student.invoices.*') ? 'active' : '' }}" href="{{ route('student.invoices.index') }}"><span>🧾</span><span class="nav-text">My invoices</span></a>
+                @if(\Illuminate\Support\Facades\Route::has('student.attendance.index'))
+                    <a class="{{ request()->routeIs('student.attendance.*') ? 'active' : '' }}" href="{{ route('student.attendance.index') }}"><span>📅</span><span class="nav-text">My attendance</span></a>
+                @endif
+                <a class="{{ request()->routeIs('student.guardian-requests.*') ? 'active' : '' }}" href="{{ route('student.guardian-requests.page') }}"><span>👨‍👩‍👧</span><span class="nav-text">Guardian requests</span></a>
+                <a href="{{ route('live-classes.index') }}"><span>🎥</span><span class="nav-text">Live classes</span></a>
+            @elseif(auth()->user()->isGuardian())
+                <div class="admin-sidebar-label">Guardian Panel</div>
+                <a class="{{ request()->routeIs('guardian.dashboard') ? 'active' : '' }}" href="{{ route('guardian.dashboard') }}"><span>▦</span><span class="nav-text">Guardian dashboard</span></a>
+                <a class="{{ request()->routeIs('guardian.links.*') ? 'active' : '' }}" href="{{ route('guardian.dashboard') }}"><span>👨‍👩‍👧</span><span class="nav-text">My children</span></a>
             @elseif(auth()->user()->isAccountant())
                 <div class="admin-sidebar-label">Overview</div>
                 <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}"><span>▦</span><span class="nav-text">Dashboard</span></a>
@@ -513,7 +538,7 @@
     @endif
     <header class="topbar">
         <nav class="nav">
-            <a href="/{{ auth()->check() ? 'dashboard' : '' }}" class="brand">@if($institutionLogoUrl)<img src="{{ $institutionLogoUrl }}" alt="" style="height:32px;max-width:140px;object-fit:contain;vertical-align:middle;margin-right:8px;">@endif{{ $institutionName }}</a>
+            <a href="{{ auth()->check() ? (auth()->user()->isBranchManager() ? route('branch.dashboard') : route('dashboard')) : '/' }}" class="brand">@if($institutionLogoUrl)<img src="{{ $institutionLogoUrl }}" alt="" style="height:32px;max-width:140px;object-fit:contain;vertical-align:middle;margin-right:8px;">@endif{{ $institutionName }}</a>
             @if($isAdminLayout)
             <div class="nav-links">
                 <button type="button" class="admin-toolbar-toggle" id="admin-sidebar-toggle" aria-label="Toggle admin navigation" aria-expanded="true">☰</button>
@@ -717,7 +742,7 @@
             });
         })();
     </script>
-    @if(! $isAdminLayout && app()->bound('popup_ads.render'))
+    @if((! auth()->check() || ! in_array(auth()->user()->role, ['admin', 'branch_manager', 'accountant'], true)) && app()->bound('popup_ads.render'))
         {!! app('popup_ads.render')(request()) !!}
     @endif
 

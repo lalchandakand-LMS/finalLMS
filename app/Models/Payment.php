@@ -10,6 +10,7 @@ class Payment extends Model
     protected $fillable = [
         'user_id',
         'course_id',
+        'invoice_id',
         'order_id',
         'learn_earn_exam_id',
         'course_combo_id',
@@ -48,6 +49,11 @@ class Payment extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    public function invoice(): BelongsTo
+    {
+        return $this->belongsTo(Invoice::class);
     }
 
     public function reviewer(): BelongsTo

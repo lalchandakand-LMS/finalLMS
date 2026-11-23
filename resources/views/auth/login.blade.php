@@ -54,18 +54,46 @@
                 <div class="flash error" role="alert">{{ $errors->first() }}</div>
             @endif
 
-            <form method="POST" action="{{ route('login.post') }}">
-                @csrf
-                <label>
-                    {{ __('Email address') }}
-                    <input type="email" name="email" value="{{ old('email') }}" autocomplete="username" inputmode="email" required autofocus>
-                </label>
-                <label>
-                    {{ __('Password') }}
-                    <input type="password" name="password" autocomplete="current-password" required>
-                </label>
-                <button type="submit" class="btn primary auth-login-submit">{{ __('Login securely') }} →</button>
-            </form>
+            @if(isset($passwordResetToken))
+                <form method="POST" action="{{ route('password.update') }}">
+                    @csrf
+                    <input type="hidden" name="token" value="{{ $passwordResetToken }}">
+                    <label>
+                        {{ __('Email address') }}
+                        <input type="email" name="email" value="{{ old('email', $passwordResetEmail ?? '') }}" autocomplete="email" required>
+                    </label>
+                    <label>
+                        {{ __('New password') }}
+                        <input type="password" name="password" autocomplete="new-password" required>
+                    </label>
+                    <label>
+                        {{ __('Confirm new password') }}
+                        <input type="password" name="password_confirmation" autocomplete="new-password" required>
+                    </label>
+                    <button type="submit" class="btn primary auth-login-submit">{{ __('Set password') }}</button>
+                </form>
+            @else
+                <form method="POST" action="{{ route('login.post') }}">
+                    @csrf
+                    <label>
+                        {{ __('Email address') }}
+                        <input type="email" name="email" value="{{ old('email') }}" autocomplete="username" inputmode="email" required autofocus>
+                    </label>
+                    <label>
+                        {{ __('Password') }}
+                        <input type="password" name="password" autocomplete="current-password" required>
+                    </label>
+                    <button type="submit" class="btn primary auth-login-submit">{{ __('Login securely') }} →</button>
+                </form>
+                <form method="POST" action="{{ route('password.email') }}" style="display:grid;gap:8px;margin-top:16px;">
+                    @csrf
+                    <label>
+                        {{ __('Forgot your password? Enter your email to receive a reset link.') }}
+                        <input type="email" name="email" value="{{ old('email') }}" autocomplete="email" required>
+                    </label>
+                    <button type="submit" class="btn secondary">{{ __('Send password reset link') }}</button>
+                </form>
+            @endif
 
             <p class="auth-login-foot">{{ __('Student and staff accounts verify new devices by mobile OTP. Administrators must enroll an authenticator app and verify a second factor before any admin session starts.') }}</p>
             <p class="auth-login-foot" style="margin-top:12px;">{{ __('New to') }} {{ config('app.name') }}? <a href="{{ route('register') }}">{{ __('Create a student account') }}</a></p>

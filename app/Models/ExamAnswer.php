@@ -7,9 +7,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ExamAnswer extends Model
 {
-    protected $fillable = ['exam_attempt_id', 'exam_question_id', 'selected_option', 'is_correct', 'marks_awarded'];
+    protected $fillable = ['exam_attempt_id', 'exam_question_id', 'selected_option', 'answer_text', 'is_correct', 'marks_awarded', 'teacher_feedback', 'graded_by', 'graded_at'];
 
-    protected $casts = ['selected_option' => 'integer', 'is_correct' => 'boolean', 'marks_awarded' => 'integer'];
+    protected $casts = ['selected_option' => 'integer', 'is_correct' => 'boolean', 'marks_awarded' => 'integer', 'graded_at' => 'datetime'];
 
     public function attempt(): BelongsTo
     {

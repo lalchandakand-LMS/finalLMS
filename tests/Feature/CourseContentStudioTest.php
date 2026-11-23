@@ -6,6 +6,8 @@ use App\Models\AcademicLevel;
 use App\Models\Course;
 use App\Models\CourseCategory;
 use App\Models\CourseContentPost;
+use App\Models\CourseContentPostVersion;
+use App\Models\CourseContentProgress;
 use App\Models\CourseCurriculumItem;
 use App\Models\DownloadPermission;
 use App\Models\Enrollment;
@@ -154,6 +156,36 @@ class CourseContentStudioTest extends TestCase
         $this->assertSame(1, $course->curriculumItems()->count());
     }
 
+    public function test_course_builder_persists_prerequisites_and_rejects_prerequisite_cycles(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $course = Course::factory()->create(['teacher_id' => $teacher->id]);
+        $first = $this->makePost($admin, null, 'Prerequisite A');
+        $second = $this->makePost($admin, null, 'Prerequisite B');
+
+        $this->actingAs($admin)->from(route('admin.course-builder.edit', $course))
+            ->put(route('admin.course-builder.update', $course), [
+                'post_ids' => [$first->id, $second->id],
+                'prerequisites' => [$first->id => $second->id, $second->id => $first->id],
+            ])->assertSessionHasErrors('prerequisites');
+        $this->assertDatabaseCount('course_curriculum_items', 0);
+
+        $this->put(route('admin.course-builder.update', $course), [
+            'post_ids' => [$first->id, $second->id],
+            'positions' => [$first->id => 10, $second->id => 20],
+            'prerequisites' => [$second->id => $first->id],
+            'unlock_after_previous' => [$second->id => '1'],
+        ])->assertRedirect(route('admin.course-builder.edit', $course));
+
+        $this->assertDatabaseHas('course_curriculum_items', [
+            'course_id' => $course->id,
+            'course_content_post_id' => $second->id,
+            'prerequisite_post_id' => $first->id,
+            'unlock_after_previous' => 1,
+        ]);
+    }
+
     public function test_preview_content_is_public_but_locked_curriculum_requires_enrollment(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
@@ -183,6 +215,54 @@ class CourseContentStudioTest extends TestCase
         Enrollment::create(['user_id' => $student->id, 'course_id' => $course->id, 'status' => 'active']);
         $this->actingAs($student)->get(route('courses.content.show', [$course, $locked]))
             ->assertOk()->assertSee('Members only lesson');
+    }
+
+    public function test_course_builder_exposes_drag_handles_and_safe_lesson_preview_links(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $course = Course::factory()->create(['teacher_id' => $teacher->id, 'status' => 'published']);
+        $post = $this->makePost($admin, null, 'Previewable curriculum lesson');
+        CourseCurriculumItem::create([
+            'course_id' => $course->id,
+            'course_content_post_id' => $post->id,
+            'position' => 10,
+            'is_preview' => true,
+        ]);
+
+        $this->actingAs($admin)->get(route('admin.course-builder.edit', $course))
+            ->assertOk()
+            ->assertSee('data-course-sortable="lessons"', false)
+            ->assertSee('data-drag-handle', false)
+            ->assertSee('Preview lesson')
+            ->assertSee(route('courses.content.show', [$course, $post]), false);
+    }
+
+    public function test_lesson_prerequisites_and_sequential_unlocks_block_access_until_previous_lesson_is_completed(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $student = User::factory()->create(['role' => 'student']);
+        $course = Course::factory()->create(['teacher_id' => $teacher->id, 'status' => 'published']);
+        $first = $this->makePost($teacher, null, 'Prerequisite lesson');
+        $second = $this->makePost($teacher, null, 'Locked lesson');
+        $firstItem = CourseCurriculumItem::create([
+            'course_id' => $course->id, 'course_content_post_id' => $first->id, 'position' => 10,
+        ]);
+        CourseCurriculumItem::create([
+            'course_id' => $course->id, 'course_content_post_id' => $second->id, 'position' => 20,
+            'prerequisite_post_id' => $first->id, 'unlock_after_previous' => true,
+        ]);
+        Enrollment::create(['user_id' => $student->id, 'course_id' => $course->id, 'status' => 'active']);
+
+        $this->actingAs($student)->get(route('courses.content.show', [$course, $second]))
+            ->assertRedirect(route('courses.show', $course));
+        $this->post(route('student.courses.content.complete', [$course, $second]))->assertForbidden();
+
+        CourseContentProgress::create([
+            'user_id' => $student->id, 'course_curriculum_item_id' => $firstItem->id,
+            'last_viewed_at' => now(), 'completed_at' => now(),
+        ]);
+        $this->get(route('courses.content.show', [$course, $second]))->assertOk();
     }
 
     public function test_non_admin_cannot_access_content_studio_or_course_builder(): void
@@ -455,6 +535,68 @@ class CourseContentStudioTest extends TestCase
         $this->assertDatabaseMissing('course_curriculum_items', [
             'course_id' => $course->id,
             'course_content_post_id' => $otherLevel->id,
+        ]);
+    }
+
+    public function test_content_edits_create_immutable_previous_versions_and_ignore_noop_updates(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $category = CourseCategory::create(['name' => 'Grammar', 'slug' => 'grammar']);
+        $post = $this->makePost($admin, $category, 'Original lesson');
+
+        $this->actingAs($admin)->put(route('admin.course-content-posts.update', $post), [
+            'title' => 'Updated lesson',
+            'short_description' => null,
+            'long_description' => 'Updated lesson body.',
+            'video_url' => 'https://youtu.be/dQw4w9WgXcQ',
+            'status' => 'published',
+            'category_ids' => [$category->id],
+        ])->assertRedirect(route('admin.course-content-posts.index'));
+
+        $version = CourseContentPostVersion::query()->where('course_content_post_id', $post->id)->firstOrFail();
+        $this->assertSame(1, $version->version_number);
+        $this->assertSame('Original lesson', $version->snapshot['title']);
+        $this->assertSame('Lesson content', $version->snapshot['long_description']);
+        $this->assertSame([$category->id], $version->snapshot['category_ids']);
+        $this->assertSame('Updated lesson', $post->fresh()->title);
+
+        $this->actingAs($admin)->put(route('admin.course-content-posts.update', $post->fresh()), [
+            'title' => 'Updated lesson',
+            'short_description' => null,
+            'long_description' => 'Updated lesson body.',
+            'video_url' => 'https://youtu.be/dQw4w9WgXcQ',
+            'tags' => '',
+            'status' => 'published',
+            'category_ids' => [$category->id],
+        ])->assertRedirect(route('admin.course-content-posts.index'));
+
+        $this->assertDatabaseCount('course_content_post_versions', 1);
+    }
+
+    public function test_admin_can_restore_a_previous_lesson_revision_without_rolling_back_paid_file_state(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $category = CourseCategory::create(['name' => 'Grammar', 'slug' => 'grammar']);
+        $post = $this->makePost($admin, $category, 'Original revision');
+
+        $this->actingAs($admin)->put(route('admin.course-content-posts.update', $post), [
+            'title' => 'Current revision',
+            'long_description' => 'Current lesson text.',
+            'status' => 'published',
+            'category_ids' => [$category->id],
+        ])->assertRedirect();
+
+        $version = CourseContentPostVersion::query()->where('course_content_post_id', $post->id)->firstOrFail();
+        $this->post(route('admin.course-content-posts.versions.restore', [$post, $version]))
+            ->assertRedirect(route('admin.course-content-posts.versions', $post));
+
+        $this->assertSame('Original revision', $post->fresh()->title);
+        $this->assertSame('Lesson content', $post->fresh()->long_description);
+        $this->assertDatabaseCount('course_content_post_versions', 2);
+        $this->assertDatabaseHas('course_content_post_versions', [
+            'course_content_post_id' => $post->id,
+            'version_number' => 2,
+            'change_type' => 'restore',
         ]);
     }
 

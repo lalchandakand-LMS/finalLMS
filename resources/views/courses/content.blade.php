@@ -47,9 +47,11 @@
     <div class="lesson-layout">
         <main>
             <article class="panel lesson-article">
-                @if($post->video_embed_url)
+                @if($contentProgress && $post->content_file_path && str_starts_with($post->content_file_mime ?? '', 'video/'))
+                    <div class="lesson-player" style="margin-bottom:22px;"><video id="lesson-video" controls playsinline preload="metadata" style="width:100%;height:100%;" data-progress-url="{{ route('student.courses.content.progress', [$course, $post]) }}" data-position="{{ $contentProgress->last_position_seconds ?? 0 }}"><source src="{{ route('courses.content.file', [$course, $post]) }}" type="{{ $post->content_file_mime }}"></video></div>
+                @elseif($post->video_embed_url)
                     <div class="lesson-player" style="margin-bottom:22px;">
-                        <iframe src="{{ $post->video_embed_url }}" title="{{ $post->title }}" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+                        <iframe id="lesson-video-embed" src="{{ $post->video_embed_url }}" title="{{ $post->title }}" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen @if($contentProgress) data-progress-url="{{ route('student.courses.content.progress', [$course, $post]) }}" @endif></iframe>
                     </div>
                 @elseif($post->thumbnail_path)
                     <img src="{{ asset('storage/'.$post->thumbnail_path) }}" alt="{{ $post->title }}" loading="lazy" style="width:100%;max-height:360px;object-fit:cover;border-radius:14px;margin-bottom:20px;">
@@ -140,4 +142,33 @@
             </div>
         </aside>
     </div>
+    @if($contentProgress)
+    <script>
+    (() => {
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
+        const save = (url, position, duration) => {
+            if (!url || !csrf || !Number.isFinite(position) || !Number.isFinite(duration) || duration <= 0) return;
+            fetch(url, {method:'POST', credentials:'same-origin', keepalive:true, headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':csrf}, body:JSON.stringify({position_seconds:Math.floor(position),duration_seconds:Math.floor(duration)})}).catch(() => {});
+        };
+        const video = document.getElementById('lesson-video');
+        if (video instanceof HTMLVideoElement) {
+            const resumeAt = Number(video.dataset.position || 0);
+            video.addEventListener('loadedmetadata', () => { if (resumeAt > 0 && resumeAt < video.duration - 2) video.currentTime = resumeAt; }, {once:true});
+            let lastSent = 0;
+            const sync = () => save(video.dataset.progressUrl, video.currentTime, video.duration);
+            video.addEventListener('timeupdate', () => { if (video.currentTime - lastSent >= 15) { lastSent = video.currentTime; sync(); } });
+            video.addEventListener('pause', sync); video.addEventListener('ended', sync); window.addEventListener('pagehide', sync);
+        }
+        const iframe = document.getElementById('lesson-video-embed');
+        if (iframe?.dataset.progressUrl && /youtube(?:-nocookie)?\.com/.test(new URL(iframe.src).hostname)) {
+            const url = new URL(iframe.src); url.searchParams.set('enablejsapi','1'); url.searchParams.set('origin',window.location.origin); iframe.src = url.toString();
+            window.onYouTubeIframeAPIReady = () => new YT.Player(iframe, {events:{
+                onReady: event => { let lastSent=0; window.setInterval(() => { if(event.target.getPlayerState()!==YT.PlayerState.PLAYING)return; const pos=event.target.getCurrentTime(); if(pos-lastSent>=15){lastSent=pos;save(iframe.dataset.progressUrl,pos,event.target.getDuration());}},5000); },
+                onStateChange: event => { if(event.data===YT.PlayerState.PAUSED||event.data===YT.PlayerState.ENDED)save(iframe.dataset.progressUrl,event.target.getCurrentTime(),event.target.getDuration()); }
+            }});
+            const api=document.createElement('script'); api.src='https://www.youtube.com/iframe_api'; document.head.appendChild(api);
+        }
+    })();
+    </script>
+    @endif
 @endsection

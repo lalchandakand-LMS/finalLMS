@@ -12,6 +12,9 @@ class PaymentGatewayManager
     /** @var array<string, class-string<PaymentGateway>> */
     private array $drivers = [];
 
+    /** @var array<string, string> Gateway key to owning plugin key. */
+    private array $pluginOwners = [];
+
     public function __construct(private readonly Container $container)
     {
     }
@@ -23,7 +26,28 @@ class PaymentGatewayManager
             throw new InvalidArgumentException('Invalid payment gateway registration.');
         }
 
+        if (isset($this->drivers[$key])) {
+            throw new InvalidArgumentException('A payment gateway with this key is already registered.');
+        }
+
         $this->drivers[$key] = $driver;
+    }
+
+    /** @param class-string<PaymentGateway> $driver */
+    public function registerPluginGateway(string $pluginKey, string $key, string $driver): void
+    {
+        if (preg_match('/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/D', $pluginKey) !== 1
+            || preg_match('/^[a-z][a-z0-9_]{1,39}$/D', $key) !== 1
+            || ! is_subclass_of($driver, PaymentGateway::class)) {
+            throw new InvalidArgumentException('Invalid payment gateway plugin registration.');
+        }
+
+        if (isset($this->drivers[$key])) {
+            throw new InvalidArgumentException('A payment gateway with this key is already registered.');
+        }
+
+        $this->drivers[$key] = $driver;
+        $this->pluginOwners[$key] = $pluginKey;
     }
 
     public function driver(string $key): PaymentGateway
@@ -54,6 +78,7 @@ class PaymentGatewayManager
             $enabled = (bool) ($saved[$key] ?? false);
             $catalog[$key] = [
                 'key' => $gateway->key(),
+                'plugin_key' => $this->pluginOwners[$key] ?? null,
                 'name' => $gateway->label(),
                 'currencies' => $gateway->supportedCurrencies(),
                 'installed' => true,

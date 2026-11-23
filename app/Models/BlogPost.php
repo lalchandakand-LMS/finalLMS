@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class BlogPost extends Model
@@ -21,6 +22,10 @@ class BlogPost extends Model
     {
         return $this->morphMany(Comment::class, 'commentable')->where('status', 'approved');
     }
+
+    public function categories(): BelongsToMany { return $this->belongsToMany(BlogCategory::class, 'blog_category_post'); }
+
+    public function tags(): BelongsToMany { return $this->belongsToMany(BlogTag::class, 'blog_post_tag'); }
 
     public function cover(): BelongsTo
     {

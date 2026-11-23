@@ -7,9 +7,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class QuestionBankQuestion extends Model
 {
-    protected $fillable = ['teacher_id', 'subject', 'category', 'difficulty', 'question', 'options', 'correct_option', 'marks', 'negative_marks'];
+    protected $fillable = ['teacher_id', 'subject', 'category', 'difficulty', 'question', 'type', 'options', 'correct_option', 'correct_answer', 'explanation', 'grading_rubric', 'tags', 'marks', 'negative_marks'];
 
-    protected $casts = ['options' => 'array', 'correct_option' => 'integer', 'marks' => 'integer', 'negative_marks' => 'integer'];
+    protected $casts = ['options' => 'array', 'correct_option' => 'integer', 'grading_rubric' => 'array', 'tags' => 'array', 'marks' => 'integer', 'negative_marks' => 'integer'];
 
     public function examQuestions()
     {

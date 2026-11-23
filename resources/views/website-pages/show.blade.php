@@ -32,7 +32,14 @@
         @continue(!is_array($section) || empty($section['enabled']))
         @php($asset = !empty($section['image_id']) ? $media->get($section['image_id']) : null)
         <section style="margin:18px 0;padding:clamp(20px,4vw,38px);border-radius:18px;background:{{ $section['background_color'] ?? '#ffffff' }};color:{{ $section['text_color'] ?? '#18212f' }};">
-            @if(($section['type'] ?? '') === 'hero')
+            @if(($section['type'] ?? '') === 'divider')
+                <hr style="border:0;border-top:2px solid currentColor;opacity:.25;margin:12px 0;">
+            @elseif(($section['type'] ?? '') === 'quote')
+                <blockquote style="margin:0;padding:8px 0 8px 22px;border-left:5px solid currentColor;font-size:clamp(20px,3vw,28px);font-weight:600;line-height:1.55;">
+                    @if(!empty($section['body']))<p style="white-space:pre-line;margin:0 0 12px;">{{ $section['body'] }}</p>@endif
+                    @if(!empty($section['title']))<cite style="display:block;font-size:15px;font-style:normal;font-weight:500;">— {{ $section['title'] }}</cite>@endif
+                </blockquote>
+            @elseif(($section['type'] ?? '') === 'hero')
                 <div style="text-align:{{ ($section['layout'] ?? '') === 'centered' ? 'center' : 'left' }};">
                     @if($asset)<img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($asset->path) }}" alt="{{ $section['title'] ?? $page->title }}" loading="lazy" style="width:100%;max-height:420px;object-fit:cover;border-radius:16px;margin-bottom:18px;">@endif
                     <h2>{{ $section['title'] }}</h2><p style="line-height:1.8;white-space:pre-line;">{{ $section['body'] }}</p>

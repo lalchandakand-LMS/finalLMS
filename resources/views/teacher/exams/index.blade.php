@@ -9,9 +9,9 @@
     </div>
 
     <div class="panel" style="margin-bottom:20px;">
-        <h2 style="margin-top:0;">{{ __('Create multiple-choice exam') }}</h2>
+        <h2 style="margin-top:0;">{{ __('Create advanced exam') }}</h2>
         <p><a class="btn secondary" href="{{ $isAdmin ? route('admin.batches.question-bank.index', $batch) : route('teacher.batches.question-bank.index', $batch) }}">{{ __('Manage Question Bank') }}</a></p>
-        <p class="muted">Add one or more questions. Each question has four options and one correct answer. Marks are awarded automatically.</p>
+        <p class="muted">Build exams with MCQ, True/False, short-answer and manually graded written questions. Autosave and timed submission are enabled for students.</p>
         <form method="POST" action="{{ $isAdmin ? route('admin.batches.exams.store', $batch) : route('teacher.batches.exams.store', $batch) }}">
             @csrf
             <label>{{ __('Exam title') }}<input name="title" maxlength="180" required></label>
@@ -22,6 +22,12 @@
                 <label>{{ __('Duration (minutes)') }}<input type="number" name="duration_minutes" min="1" max="600" required></label>
                 <label>{{ __('Pass marks') }}<input type="number" name="pass_marks" min="0" value="0" required></label>
                 <label>{{ __('Questions per student attempt (optional)') }}<input type="number" name="questions_per_attempt" min="1" max="100" placeholder="{{ __('Leave blank to use all questions') }}"></label>
+                <input type="hidden" name="grading_rules[negative_marking_enabled]" value="0"><label><input type="checkbox" name="grading_rules[negative_marking_enabled]" value="1" checked> {{ __('Enable negative marking') }}</label>
+                <label>{{ __('Negative marking multiplier') }}<input type="number" name="grading_rules[negative_marking_multiplier]" min="0" max="5" step="0.25" value="1"></label>
+                <input type="hidden" name="grading_rules[score_floor_zero]" value="0"><label><input type="checkbox" name="grading_rules[score_floor_zero]" value="1" checked> {{ __('Do not allow negative total score') }}</label>
+                <input type="hidden" name="grading_rules[short_answer_case_sensitive]" value="0"><label><input type="checkbox" name="grading_rules[short_answer_case_sensitive]" value="1"> {{ __('Short answers are case-sensitive') }}</label>
+                <label><input type="checkbox" name="allow_result_review" value="1"> {{ __('Allow students to request result review') }}</label>
+                <label>{{ __('Result review deadline (optional)') }}<input type="datetime-local" name="review_until"></label>
             </div>
             <label><input type="checkbox" id="use-question-bank"> {{ __('Select random questions from my Question Bank') }}</label>
             <div id="question-bank-area" hidden>
@@ -32,22 +38,28 @@
                     <p class="muted">Question Bank is empty. <a href="{{ $isAdmin ? route('admin.batches.question-bank.index', $batch) : route('teacher.batches.question-bank.index', $batch) }}">Add questions</a>.</p>
                 @endforelse
             </div>
+            <fieldset class="panel" style="margin:14px 0;">
+                <legend>{{ __('Add reusable question sets') }}</legend>
+                <p class="muted">{{ __('Selected published sets are copied into this exam as a frozen question paper. Later edits to the source set will not change an active exam.') }}</p>
+                @forelse($questionSets as $questionSet)
+                    <label style="display:block;"><input type="checkbox" name="question_set_ids[]" value="{{ $questionSet->id }}"> {{ $questionSet->title }} ({{ $questionSet->questions_count }} {{ __('questions') }})</label>
+                @empty
+                    <p class="muted">{{ __('No reusable published question sets are available for this course.') }}</p>
+                @endforelse
+            </fieldset>
             <div id="manual-question-area">
             <div id="exam-questions">
                 <div class="course-item exam-question">
-                    <h3>Question 1</h3>
+                    <label>{{ __('Question type') }}<select name="questions[0][type]" class="question-type"><option value="mcq">Multiple choice</option><option value="true_false">True / False</option><option value="short_answer">Short answer</option><option value="written">Written response</option></select></label>
                     <label>Question<textarea name="questions[0][question]" required maxlength="3000"></textarea></label>
-                    <div class="grid grid-2">
-                        <label>Option A<input name="questions[0][options][0]" required></label>
-                        <label>Option B<input name="questions[0][options][1]" required></label>
-                        <label>Option C<input name="questions[0][options][2]" required></label>
-                        <label>Option D<input name="questions[0][options][3]" required></label>
+                    <div class="grid grid-2 question-options">
+                        <label>Option A<input name="questions[0][options][0]" required></label><label>Option B<input name="questions[0][options][1]" required></label><label>Option C<input name="questions[0][options][2]" required></label><label>Option D<input name="questions[0][options][3]" required></label>
                     </div>
-                    <div class="grid grid-2">
-                        <label>Correct option<select name="questions[0][correct_option]"><option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select></label>
-                        <label>Positive marks<input type="number" name="questions[0][marks]" min="1" max="100" value="1" required></label>
-                        <label>Negative marks<input type="number" name="questions[0][negative_marks]" min="0" max="100" value="0"></label>
-                    </div>
+                    <div class="grid grid-2 question-answer"><label>Correct option<select name="questions[0][correct_option]"><option value="0">A / True</option><option value="1">B / False</option><option value="2">C</option><option value="3">D</option></select></label></div>
+                    <label class="question-correct-answer" hidden>Expected short answer<input name="questions[0][correct_answer]" maxlength="2000"></label>
+                    <label class="question-rubric" hidden>Written grading rubric (one criterion per line)<textarea class="rubric-text" rows="3"></textarea></label>
+                    <label>Explanation<textarea name="questions[0][explanation]" maxlength="3000"></textarea></label>
+                    <div class="grid grid-2"><label>Positive marks<input type="number" name="questions[0][marks]" min="1" max="100" value="1" required></label><label>Negative marks<input type="number" name="questions[0][negative_marks]" min="0" max="100" value="0"></label></div>
                 </div>
             </div>
             </div>
@@ -79,71 +91,93 @@
     const bankToggle = document.getElementById('use-question-bank');
     const bankArea = document.getElementById('question-bank-area');
     const manualArea = document.getElementById('manual-question-area');
-    const syncQuestionMode = () => {
+    const form = bankToggle.closest('form');
+
+    const syncCard = card => {
+        const type = card.querySelector('.question-type')?.value || 'mcq';
+        const choice = ['mcq', 'true_false'].includes(type);
+        const options = card.querySelector('.question-options');
+        const answer = card.querySelector('.question-answer');
+        const expected = card.querySelector('.question-correct-answer');
+        const rubric = card.querySelector('.question-rubric');
+        if (options) options.hidden = !choice;
+        if (answer) answer.hidden = !choice;
+        if (expected) expected.hidden = type !== 'short_answer';
+        if (rubric) rubric.hidden = type !== 'written';
+        options?.querySelectorAll('input').forEach((field, index) => {
+            field.disabled = !choice || type === 'true_false';
+            field.required = type === 'mcq' && (!bankToggle.checked || Boolean(card.querySelector('textarea[name$=\"[question]\"]')?.value.trim()));
+        });
+        answer?.querySelectorAll('select').forEach(field => { field.disabled = !choice; if (type === 'true_false') { [...field.options].forEach((option, index) => option.disabled = index > 1); if (Number(field.value) > 1) field.value = '0'; } });
+        if (expected) {
+            const field = expected.querySelector('input');
+            field.disabled = type !== 'short_answer';
+            field.required = type === 'short_answer';
+        }
+        const rubricText = rubric?.querySelector('.rubric-text');
+        if (rubricText) rubricText.disabled = type !== 'written';
+    };
+
+    const syncMode = () => {
         const useBank = bankToggle.checked;
         bankArea.hidden = !useBank;
         bankArea.querySelectorAll('input').forEach(field => field.disabled = !useBank);
         manualArea.hidden = false;
-
         manualArea.querySelectorAll('.exam-question').forEach(card => {
             const questionField = card.querySelector('textarea[name$="[question]"]');
-            const optionFields = [...card.querySelectorAll('input[name*="[options]"]')];
-            const hasManualContent = Boolean(
-                questionField?.value.trim() || optionFields.some(field => field.value.trim())
-            );
-
+            const hasManualContent = Boolean(questionField?.value.trim());
             card.querySelectorAll('input, textarea, select').forEach(field => {
-                field.disabled = false;
-                if (field.matches('textarea[name$="[question]"], input[name*="[options]"], input[name$="[marks]"]')) {
+                if (field.name.includes('[marks]') || field.name.endsWith('[question]')) {
                     field.required = !useBank || hasManualContent;
                 }
             });
+            syncCard(card);
         });
-
         button.hidden = false;
     };
-    bankToggle.addEventListener('change', syncQuestionMode);
-    manualArea.addEventListener('input', syncQuestionMode);
-    syncQuestionMode();
+    bankToggle.addEventListener('change', syncMode);
+    manualArea.addEventListener('input', syncMode);
+    manualArea.addEventListener('change', event => {
+        if (event.target.matches('.question-type')) syncCard(event.target.closest('.exam-question'));
+    });
+    syncMode();
 
-    const examForm = bankToggle.closest('form');
-    examForm.addEventListener('submit', () => {
-        if (!bankToggle.checked) return;
-
+    form.addEventListener('submit', () => {
+        if (bankToggle.checked) {
+            manualArea.querySelectorAll('.exam-question').forEach(card => {
+                const questionField = card.querySelector('textarea[name$="[question]"]');
+                if (!questionField?.value.trim()) card.querySelectorAll('input, textarea, select').forEach(field => field.disabled = true);
+            });
+        }
         manualArea.querySelectorAll('.exam-question').forEach(card => {
-            const questionField = card.querySelector('textarea[name$="[question]"]');
-            const optionFields = [...card.querySelectorAll('input[name*="[options]"]')];
-            const hasManualContent = Boolean(
-                questionField?.value.trim() || optionFields.some(field => field.value.trim())
-            );
-
-            if (!hasManualContent) {
-                card.querySelectorAll('input, textarea, select').forEach(field => field.disabled = true);
+            const rubric = card.querySelector('.rubric-text');
+            if (rubric && rubric.value.trim()) {
+                const prefix = card.querySelector('.question-type').name.replace('[type]', '');
+                rubric.value.split('\n').map(value => value.trim()).filter(Boolean).forEach((value, index) => {
+                    const hidden = document.createElement('input'); hidden.type = 'hidden';
+                    hidden.name = prefix + '[grading_rubric][' + index + ']';
+                    hidden.value = value; form.appendChild(hidden);
+                });
             }
         });
     });
-    if (!container || !button) return;
+
     button.addEventListener('click', () => {
         const index = container.querySelectorAll('.exam-question').length;
         const card = document.createElement('div');
         card.className = 'course-item exam-question';
         card.innerHTML = `
             <h3>Question ${index + 1}</h3>
+            <label>Question type<select name="questions[${index}][type]" class="question-type"><option value="mcq">Multiple choice</option><option value="true_false">True / False</option><option value="short_answer">Short answer</option><option value="written">Written response</option></select></label>
             <label>Question<textarea name="questions[${index}][question]" required maxlength="3000"></textarea></label>
-            <div class="grid grid-2">
-                <label>Option A<input name="questions[${index}][options][0]" required></label>
-                <label>Option B<input name="questions[${index}][options][1]" required></label>
-                <label>Option C<input name="questions[${index}][options][2]" required></label>
-                <label>Option D<input name="questions[${index}][options][3]" required></label>
-            </div>
-            <div class="grid grid-2">
-                <label>Correct option<select name="questions[${index}][correct_option]"><option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select></label>
-                <label>Positive marks<input type="number" name="questions[${index}][marks]" min="1" max="100" value="1" required></label>
-                <label>Negative marks<input type="number" name="questions[${index}][negative_marks]" min="0" max="100" value="0"></label>
-            </div>
+            <div class="grid grid-2 question-options"><label>Option A<input name="questions[${index}][options][0]" required></label><label>Option B<input name="questions[${index}][options][1]" required></label><label>Option C<input name="questions[${index}][options][2]" required></label><label>Option D<input name="questions[${index}][options][3]" required></label></div>
+            <div class="grid grid-2 question-answer"><label>Correct option<select name="questions[${index}][correct_option]"><option value="0">A / True</option><option value="1">B / False</option><option value="2">C</option><option value="3">D</option></select></label></div>
+            <label class="question-correct-answer" hidden>Expected short answer<input name="questions[${index}][correct_answer]" maxlength="2000"></label>
+            <label class="question-rubric" hidden>Written grading rubric (one criterion per line)<textarea class="rubric-text" rows="3"></textarea></label>
+            <label>Explanation<textarea name="questions[${index}][explanation]" maxlength="3000"></textarea></label>
+            <div class="grid grid-2"><label>Positive marks<input type="number" name="questions[${index}][marks]" min="1" max="100" value="1" required></label><label>Negative marks<input type="number" name="questions[${index}][negative_marks]" min="0" max="100" value="0"></label></div>
             <button type="button" class="btn secondary remove-question">Remove question</button>`;
-        container.appendChild(card);
-        syncQuestionMode();
+        container.appendChild(card); syncCard(card); syncMode();
     });
     container.addEventListener('click', event => {
         if (event.target.classList.contains('remove-question')) event.target.closest('.exam-question').remove();

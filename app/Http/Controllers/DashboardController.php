@@ -6,11 +6,14 @@ use App\Models\Assignment;
 use App\Models\AssignmentSubmission;
 use App\Models\Attendance;
 use App\Models\Batch;
+use App\Models\Branch;
 use App\Models\ExamAttempt;
 use App\Models\Lesson;
 use App\Models\LessonProgress;
 use App\Models\Certificate;
 use App\Models\Course;
+use App\Models\CourseContentProgress;
+use App\Models\CourseCurriculumItem;
 use App\Models\DashboardAnnouncement;
 use App\Models\Enrollment;
 use App\Models\Setting;
@@ -44,6 +47,33 @@ class DashboardController extends Controller
             $recentCertificatesQuery->where('user_id', $user->id);
         } elseif ($user->isTeacher()) {
             $recentCertificatesQuery->whereHas('course', fn ($query) => $query->where('teacher_id', $user->id));
+        } elseif ($user->isGuardian()) {
+            $linkedStudents = $user->linkedStudents()->where('users.role', 'student');
+            if ($user->branch_id === null) {
+                $linkedStudents->whereNull('users.branch_id');
+            } elseif (Branch::query()->whereKey($user->branch_id)->where('is_active', true)->exists()) {
+                $linkedStudents->where('users.branch_id', $user->branch_id);
+            } else {
+                $recentCertificatesQuery->whereRaw('1 = 0');
+            }
+            $recentCertificatesQuery->whereIn('user_id', $linkedStudents->select('users.id'));
+        } elseif ($user->isBranchManager()) {
+            $activeBranchId = $user->branch_id && Branch::query()->whereKey($user->branch_id)->where('is_active', true)->value('id');
+            if ($activeBranchId) {
+                $recentCertificatesQuery->whereHas('user', function ($student) use ($activeBranchId): void {
+                    $student->where('role', 'student')->where(function ($scope) use ($activeBranchId): void {
+                        $scope->where('branch_id', $activeBranchId)
+                            ->orWhereHas('enrollments', fn ($enrollments) => $enrollments
+                                ->whereIn('status', ['active', 'completed'])
+                                ->whereHas('batch', fn ($batch) => $batch->where('branch_id', $activeBranchId)));
+                    });
+                });
+            } else {
+                $recentCertificatesQuery->whereRaw('1 = 0');
+            }
+        } elseif (! $user->isAdmin()) {
+            // Finance-only staff must not see academic records.
+            $recentCertificatesQuery->whereRaw('1 = 0');
         }
 
         $recentCertificates = $recentCertificatesQuery->take(5)->get();
@@ -60,11 +90,18 @@ class DashboardController extends Controller
                 ->unique()
                 ->values();
 
-            $totalLessons = $studentCourseIds->isEmpty()
+            $totalLegacyLessons = $studentCourseIds->isEmpty()
                 ? 0
                 : Lesson::query()->whereIn('course_id', $studentCourseIds)->count();
 
-            $completedLessons = $studentCourseIds->isEmpty()
+            $totalVideoLessons = $studentCourseIds->isEmpty()
+                ? 0
+                : CourseCurriculumItem::query()
+                    ->whereIn('course_id', $studentCourseIds)
+                    ->whereHas('post', fn ($posts) => $posts->published())
+                    ->count();
+
+            $completedLegacyLessons = $studentCourseIds->isEmpty()
                 ? 0
                 : LessonProgress::query()
                     ->where('user_id', $user->id)
@@ -72,13 +109,33 @@ class DashboardController extends Controller
                     ->whereHas('lesson', fn ($query) => $query->whereIn('course_id', $studentCourseIds))
                     ->count();
 
+            $videoProgressQuery = CourseContentProgress::query()
+                ->where('user_id', $user->id)
+                ->whereHas('curriculumItem', fn ($items) => $items
+                    ->whereIn('course_id', $studentCourseIds)
+                    ->whereHas('post', fn ($posts) => $posts->published()));
+
+            $completedVideoLessons = (clone $videoProgressQuery)
+                ->whereNotNull('completed_at')
+                ->count();
+            $videoProgressPoints = (float) (clone $videoProgressQuery)->sum('progress_percent');
+            $completedVideoProgressPoints = (float) (clone $videoProgressQuery)
+                ->whereNotNull('completed_at')
+                ->sum('progress_percent');
+            // A manually completed lesson may have no playback percentage; completed items count as 100%.
+            $videoProgressPoints += ($completedVideoLessons * 100) - $completedVideoProgressPoints;
+
+            $totalLessons = $totalLegacyLessons + $totalVideoLessons;
+            $completedLessons = min($totalLessons, $completedLegacyLessons + $completedVideoLessons);
+            $learningProgressPercent = $totalLessons > 0
+                ? min(100, (int) round((($completedLegacyLessons * 100) + $videoProgressPoints) / $totalLessons))
+                : 0;
+
             $studentInsights = [
                 'enrolled_courses' => $studentCourseIds->count(),
                 'total_lessons' => $totalLessons,
                 'completed_lessons' => $completedLessons,
-                'progress_percent' => $totalLessons > 0
-                    ? min(100, (int) round(($completedLessons / $totalLessons) * 100))
-                    : 0,
+                'progress_percent' => $learningProgressPercent,
                 'assignments_submitted' => AssignmentSubmission::query()
                     ->where('student_id', $user->id)
                     ->whereIn('status', ['submitted', 'graded'])
