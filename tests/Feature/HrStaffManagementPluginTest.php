@@ -194,6 +194,62 @@ final class HrStaffManagementPluginTest extends TestCase
         $this->assertSame('33000.00', $payroll->net_paid);
     }
 
+
+    public function test_attendance_based_monthly_payroll_uses_absence_half_day_and_approved_unpaid_leave_snapshots(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $staff = StaffProfile::query()->create([
+            'employee_code' => 'ATT-PAY-001',
+            'full_name' => 'Attendance Payroll Staff',
+            'designation' => 'Teacher',
+            'department' => 'Academic',
+            'base_salary' => 26000,
+            'compensation_basis' => 'monthly_attendance',
+            'working_days_per_month' => 26,
+            'status' => 'active',
+        ]);
+        $monthStart = now()->startOfMonth();
+        foreach ([
+            [$monthStart->copy()->addDays(1), 'present'],
+            [$monthStart->copy()->addDays(2), 'present'],
+            [$monthStart->copy()->addDays(3), 'absent'],
+            [$monthStart->copy()->addDays(4), 'half_day'],
+            [$monthStart->copy()->addDays(5), 'on_leave'],
+        ] as [$date, $status]) {
+            StaffAttendance::query()->create([
+                'staff_profile_id' => $staff->id,
+                'attendance_date' => $date->toDateString(),
+                'status' => $status,
+                'recorded_by' => $admin->id,
+            ]);
+        }
+        StaffLeaveRequest::query()->create([
+            'staff_profile_id' => $staff->id,
+            'leave_type' => 'unpaid',
+            'starts_on' => $monthStart->copy()->addDays(5)->toDateString(),
+            'ends_on' => $monthStart->copy()->addDays(5)->toDateString(),
+            'reason' => 'Approved unpaid leave',
+            'status' => 'approved',
+            'reviewed_by' => $admin->id,
+            'reviewed_at' => now(),
+        ]);
+
+        $this->actingAs($admin)->post('/__hr/payroll', [
+            'staff_profile_id' => $staff->id,
+            'payroll_month' => now()->format('Y-m'),
+        ])->assertRedirect();
+
+        $payroll = StaffPayroll::query()->firstOrFail();
+        $this->assertSame('monthly_attendance', $payroll->compensation_basis_snapshot);
+        $this->assertSame('2.00', $payroll->present_days);
+        $this->assertSame('1.00', $payroll->absent_days);
+        $this->assertSame('1.00', $payroll->half_days);
+        $this->assertSame('1.00', $payroll->unpaid_leave_days);
+        $this->assertSame('2500.00', $payroll->attendance_deduction);
+        $this->assertSame('23500.00', $payroll->net_paid);
+        $this->assertSame('pending', $payroll->status);
+    }
+
     public function test_branch_manager_cannot_mark_payroll_paid(): void
     {
         $branch = Branch::query()->create(['name' => 'Branch', 'slug' => 'hr-branch', 'is_active' => true]);
