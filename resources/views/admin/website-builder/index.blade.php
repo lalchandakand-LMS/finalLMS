@@ -427,5 +427,4 @@
     });
 })();
 </script>
-@endpush
 @endsection
