@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class LiveClass extends Model
 {
@@ -35,5 +36,10 @@ class LiveClass extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function attendances(): HasMany
+    {
+        return $this->hasMany(LiveClassAttendance::class, 'live_class_id');
     }
 }
