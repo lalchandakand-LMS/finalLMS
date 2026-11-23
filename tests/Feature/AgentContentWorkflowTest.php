@@ -16,7 +16,12 @@ class AgentContentWorkflowTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AssistantAudit.php');
         require_once base_path('plugins/aec/universal-ai-assistant/1.0.0/src/AgentContentWorkflow.php');
+        if (! Schema::hasTable('ai_assistant_audit_events')) {
+            $auditMigration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_16_150000_create_ai_assistant_audit_events.php');
+            $auditMigration->up();
+        }
         if (! Schema::hasTable('ai_teacher_drafts')) {
             $migration = require base_path('plugins/aec/universal-ai-assistant/1.0.0/migrations/2026_11_23_110000_create_ai_agent_content_tables.php');
             $migration->up();
@@ -37,6 +42,7 @@ class AgentContentWorkflowTest extends TestCase
         ]);
 
         $this->assertSame('pending_review', $draft->status);
+        $this->assertDatabaseHas('ai_assistant_audit_events', ['event' => 'teacher_draft_submitted', 'user_id' => $teacher->id]);
         $this->assertDatabaseHas('ai_agent_notifications', [
             'user_id' => $admin->id,
             'event' => 'teacher_draft_submitted',
@@ -108,5 +114,6 @@ class AgentContentWorkflowTest extends TestCase
         $this->assertCount(1, $results);
         $this->assertSame($published->id, $results[0]->id);
         $this->assertSame('Student guide', $results[0]->source_label);
+        $this->assertDatabaseHas('ai_assistant_audit_events', ['event' => 'support_knowledge_published', 'user_id' => $admin->id]);
     }
 }
