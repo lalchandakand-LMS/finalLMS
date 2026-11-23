@@ -338,7 +338,7 @@ class ExamController extends Controller
             ->where('questions.exam_id', $exam->id)
             ->groupBy('questions.id', 'questions.question', 'questions.position', 'questions.marks', 'questions.type')
             ->orderBy('questions.position')
-            ->selectRaw("questions.id, questions.question, questions.position, questions.marks, questions.type, COUNT(attempts.id) as answered_count, SUM(CASE WHEN attempts.id IS NOT NULL AND answers.is_correct = 1 THEN 1 ELSE 0 END) as correct_count, SUM(CASE WHEN attempts.id IS NOT NULL AND answers.marks_awarded > 0 THEN answers.marks_awarded ELSE 0 END) as earned_marks")
+            ->selectRaw("questions.id, questions.question, questions.position, questions.marks, questions.type, COUNT(attempts.id) as answered_count, SUM(CASE WHEN attempts.id IS NOT NULL AND (answers.is_correct = 1 OR (questions.type = 'written' AND answers.marks_awarded >= questions.marks)) THEN 1 ELSE 0 END) as correct_count, SUM(CASE WHEN attempts.id IS NOT NULL AND answers.marks_awarded > 0 THEN answers.marks_awarded ELSE 0 END) as earned_marks")
             ->get()
             ->map(function ($row) {
                 $possibleMarks = (int) $row->answered_count * (int) $row->marks;
