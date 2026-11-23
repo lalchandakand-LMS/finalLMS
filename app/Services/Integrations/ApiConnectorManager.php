@@ -3,7 +3,7 @@
 namespace App\Services\Integrations;
 
 use App\Contracts\Integrations\ApiConnector;
-use App\Models\ApiConnectorConnection;
+use App\Models\ApiConnection;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use RuntimeException;
@@ -40,7 +40,7 @@ final class ApiConnectorManager
         $catalog = [];
         foreach ($this->drivers as $key => $class) {
             $driver = app($class);
-            $connection = ApiConnectorConnection::query()->where('provider_key', $key)->whereNull('branch_id')->first();
+            $connection = ApiConnection::query()->where('provider_key', $key)->whereNull('branch_id')->first();
             $catalog[$key] = [
                 'key' => $key,
                 'label' => $driver->label(),
@@ -52,7 +52,7 @@ final class ApiConnectorManager
                 'last_event_at' => $connection?->last_event_at,
                 'last_success_at' => $connection?->last_success_at,
                 'last_error' => $connection?->last_error,
-                'webhook_verified' => $connection?->webhook_verified_at !== null,
+                'webhook_verified' => (bool) $connection?->webhook_verified,
             ];
         }
         return $catalog;
@@ -66,15 +66,16 @@ final class ApiConnectorManager
             throw new RuntimeException('Provider credentials or required permissions could not be verified.');
         }
 
-        $connection = ApiConnectorConnection::query()->updateOrCreate(
+        $connection = ApiConnection::query()->updateOrCreate(
             ['provider_key' => $key, 'branch_id' => null],
             [
+                'display_name' => $driver->label(),
                 'external_account_id' => isset($result['account_id']) ? (string) $result['account_id'] : null,
-                'credentials' => $credentials,
+                'credentials_encrypted' => $credentials,
                 'granted_scopes' => is_array($result['scopes'] ?? null) ? $result['scopes'] : [],
                 'capabilities' => $driver->capabilities(),
                 'status' => 'pending_verification',
-                'last_checked_at' => now(),
+                'last_credential_check_at' => now(),
                 'last_error' => null,
             ]
         );
@@ -87,7 +88,7 @@ final class ApiConnectorManager
     {
         $driver = $this->driver($key);
         $connection = ApiConnectorConnection::query()->where('provider_key', $key)->whereNull('branch_id')->firstOrFail();
-        $credentials = $connection->credentials ?? [];
+        $credentials = $connection->credentials_encrypted ?? [];
         abort_unless($driver->verifyWebhook($request, $credentials), 401, 'Webhook authentication failed.');
         $event = $driver->normalizeWebhook($request);
         if (empty($event['event_id']) || empty($event['event_type'])) {
@@ -108,9 +109,9 @@ final class ApiConnectorManager
         if ($inserted) {
             $connection->forceFill([
                 'status' => 'connected',
-                'webhook_verified_at' => $connection->webhook_verified_at ?? now(),
-                'last_event_at' => now(),
-                'last_success_at' => now(),
+                'webhook_verified' => true,
+                'last_webhook_event_at' => now(),
+                'last_successful_operation_at' => now(),
                 'last_error' => null,
             ])->save();
             $this->audit($key, 'webhook_event_received', ['event_id' => (string) $event['event_id'], 'event_type' => (string) $event['event_type']]);
@@ -126,7 +127,7 @@ final class ApiConnectorManager
 
     public function disconnect(string $key): void
     {
-        $this->connection($key)->update(['status' => 'disconnected', 'credentials' => null]);
+        $this->connection($key)->update(['status' => 'disconnected', 'credentials_encrypted' => null, 'webhook_verified' => false, 'capabilities' => null]);
         $this->audit($key, 'disconnected');
     }
 
@@ -138,7 +139,7 @@ final class ApiConnectorManager
         }
         $result = $this->driver($key)->sendMessage($connection->credentials ?? [], $message);
         if (($result['accepted'] ?? false) === true) {
-            $connection->forceFill(['last_success_at' => now(), 'last_error' => null])->save();
+            $connection->forceFill(['last_successful_operation_at' => now(), 'last_error' => null])->save();
         }
         $this->audit($key, 'outbound_message_attempted', ['accepted' => (bool) ($result['accepted'] ?? false), 'status' => $result['status'] ?? 'unknown']);
         return $result;
