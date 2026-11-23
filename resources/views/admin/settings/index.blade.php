@@ -684,7 +684,7 @@
                 dashboard_hero_eyebrow:'', dashboard_hero_cta_label:'',
                 dashboard_hero_image_position:'center', dashboard_hero_title:'',
                 dashboard_hero_subtitle:'', dashboard_hero_quote:'',
-                dashboard_hero_image_media_id:'', dashboard_live_class_image_media_id:'',
+                dashboard_brand_logo_media_id:'', dashboard_hero_image_media_id:'', dashboard_live_class_image_media_id:'',
                 dashboard_show_hero:'1', dashboard_show_statistics:'1',
                 dashboard_show_live_class:'1', dashboard_show_quick_actions:'1',
                 dashboard_show_system_snapshot:'1', dashboard_show_learning_operations:'1',
