@@ -19,7 +19,7 @@ final class AgentContentController
             ->when($role === 'teacher', fn ($q) => $q->where('author_id', $request->user()->id))
             ->when($role === 'admin', fn ($q) => $q->where('status', 'pending_review'))
             ->latest()->limit(100)->get();
-        return view('universal-ai-assistant::drafts', compact('role', 'drafts'));
+        return view('modules.ai.drafts', compact('role', 'drafts'));
     }
 
     public function saveDraft(Request $request, AgentContentWorkflow $workflow): RedirectResponse
@@ -51,7 +51,7 @@ final class AgentContentController
     {
         abort_unless(in_array($request->user()->role, ['admin', 'support_staff'], true), 403);
         $items = DB::table('ai_support_knowledge')->where('status', 'published')->latest()->limit(100)->get();
-        return view('universal-ai-assistant::knowledge', ['items' => $items, 'canManage' => $request->user()->role === 'admin']);
+        return view('modules.ai.knowledge', ['items' => $items, 'canManage' => $request->user()->role === 'admin']);
     }
 
     public function saveKnowledge(Request $request, AgentContentWorkflow $workflow): RedirectResponse
@@ -71,7 +71,7 @@ final class AgentContentController
     {
         $items = DB::table('ai_agent_notifications')->where('user_id', $request->user()->id)->latest()->limit(100)->get();
         $routePrefix = match ((string) $request->user()->role) { 'admin' => 'admin.ai-assistant.', 'branch_manager' => 'branch.ai-assistant.', 'teacher' => 'teacher.ai-assistant.', 'student' => 'student.ai-assistant.', 'guardian' => 'guardian.ai-assistant.', default => 'support.ai-assistant.' };
-        return view('universal-ai-assistant::notifications', compact('items', 'routePrefix'));
+        return view('modules.ai.notifications', compact('items', 'routePrefix'));
     }
 
     public function markRead(Request $request, int $notification): RedirectResponse
