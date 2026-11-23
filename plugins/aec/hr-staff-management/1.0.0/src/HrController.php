@@ -263,6 +263,58 @@ final class HrController extends Controller
         return back()->with('success', 'Staff profile created.');
     }
 
+
+    public function updateStaff(Request $request, int $staff): RedirectResponse
+    {
+        $actor = $request->user();
+        $this->assertBranchAssigned($actor);
+        $member = StaffProfile::query()->lockForUpdate()->findOrFail($staff);
+        $this->assertRecordBranch($actor, $member->branch_id);
+
+        $data = $request->validate([
+            'employee_code' => ['required', 'string', 'max:40', 'regex:/^[A-Za-z0-9._-]+$/D', Rule::unique('staff_profiles', 'employee_code')->ignore($member->id)],
+            'full_name' => ['required', 'string', 'max:160'],
+            'designation' => ['required', 'string', 'max:120'],
+            'department' => ['required', 'string', 'max:100'],
+            'phone' => ['nullable', 'string', 'max:40'],
+            'email' => ['nullable', 'email:rfc', 'max:160'],
+            'base_salary' => ['required', 'numeric', 'min:0', 'max:9999999999.99'],
+            'compensation_basis' => ['required', 'in:monthly,monthly_attendance,per_class'],
+            'per_class_rate' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
+            'working_days_per_month' => ['nullable', 'integer', 'min:1', 'max:31'],
+            'status' => ['required', 'in:active,on_leave,inactive'],
+            'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
+            'user_id' => ['nullable', 'integer', 'exists:users,id', Rule::unique('staff_profiles', 'user_id')->ignore($member->id), 'required_if:compensation_basis,per_class'],
+            'employment_type' => ['required', 'in:full_time,part_time,contract,temporary'],
+            'contract_ends_at' => ['nullable', 'date'],
+        ]);
+
+        if ($actor->isBranchManager()) {
+            $data['branch_id'] = $actor->branch_id;
+        } elseif (! empty($data['branch_id'])) {
+            abort_unless(DB::table('branches')->where('id', $data['branch_id'])->where('is_active', true)->exists(), 422, 'Select an active branch.');
+        }
+        if (! empty($data['user_id'])) {
+            $linkedUser = User::query()->findOrFail($data['user_id']);
+            abort_unless(in_array($linkedUser->role, ['teacher', 'branch_manager', 'staff'], true), 422, 'Link only a teacher, branch manager or staff account.');
+            abort_unless($data['compensation_basis'] !== 'per_class' || $linkedUser->role === 'teacher', 422, 'Per-class compensation can only be linked to a teacher account.');
+            if ($actor->isBranchManager()) {
+                abort_unless($linkedUser->branch_id === null || (int) $linkedUser->branch_id === (int) $actor->branch_id, 422, 'You can only link an account assigned to your branch.');
+            }
+            if (! empty($data['branch_id'])) {
+                abort_unless($linkedUser->branch_id === null || (int) $linkedUser->branch_id === (int) $data['branch_id'], 422, 'The linked account belongs to another branch.');
+            }
+        }
+        $data['per_class_rate'] = $data['per_class_rate'] ?? 0;
+        $data['working_days_per_month'] = $data['working_days_per_month'] ?? 26;
+        abort_if($data['compensation_basis'] === 'per_class' && (float) $data['per_class_rate'] <= 0, 422, 'Set a per-class rate greater than zero.');
+
+        $member->update($data);
+        $this->audit($request, 'hr.staff_updated', 'Updated staff profile '.$member->employee_code.'; existing payroll snapshots remain unchanged.');
+
+        return back()->with('success', 'Staff profile updated. Existing payroll records are unchanged.');
+    }
+
     public function recordAttendance(Request $request): RedirectResponse
     {
         $actor = $request->user();
