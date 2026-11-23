@@ -46,6 +46,7 @@ class DashboardController extends Controller
             'hero_subtitle' => Setting::value('dashboard_hero_subtitle', ''),
             'hero_quote' => Setting::value('dashboard_hero_quote', ''),
             'hero_image' => null,
+            'brand_logo' => null,
             'live_class_image' => null,
             'show_hero' => (bool) (int) (Setting::value('dashboard_show_hero') ?? 1),
             'show_statistics' => (bool) (int) (Setting::value('dashboard_show_statistics') ?? 1),
@@ -60,12 +61,16 @@ class DashboardController extends Controller
             'order_system_snapshot' => (int) (Setting::value('dashboard_order_system_snapshot') ?: 5),
             'order_learning_operations' => (int) (Setting::value('dashboard_order_learning_operations') ?: 6),
         ];
+        $brandLogo = Setting::value('dashboard_brand_logo_media_id')
+            ? MediaAsset::query()->whereKey((int) Setting::value('dashboard_brand_logo_media_id'))->where('mime_type', 'like', 'image/%')->first()
+            : null;
         $heroImage = Setting::value('dashboard_hero_image_media_id')
             ? MediaAsset::query()->whereKey((int) Setting::value('dashboard_hero_image_media_id'))->where('mime_type', 'like', 'image/%')->first()
             : null;
         $liveClassImage = Setting::value('dashboard_live_class_image_media_id')
             ? MediaAsset::query()->whereKey((int) Setting::value('dashboard_live_class_image_media_id'))->where('mime_type', 'like', 'image/%')->first()
             : null;
+        $dashboardAppearance['brand_logo'] = $brandLogo?->url;
         $dashboardAppearance['hero_image'] = $heroImage?->url;
         $dashboardAppearance['live_class_image'] = $liveClassImage?->url;
 
