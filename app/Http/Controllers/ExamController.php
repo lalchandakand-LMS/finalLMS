@@ -7,6 +7,7 @@ use App\Models\AcademicLevel;
 use App\Models\Exam;
 use App\Models\ExamAttempt;
 use App\Models\ExamAnswer;
+use App\Models\ExamResultReview;
 use App\Models\Enrollment;
 use App\Models\QuestionBankQuestion;
 use Illuminate\Http\RedirectResponse;
@@ -43,6 +44,8 @@ class ExamController extends Controller
             'grading_rules.negative_marking_multiplier' => ['nullable', 'numeric', 'min:0', 'max:5'],
             'grading_rules.score_floor_zero' => ['nullable', 'boolean'],
             'grading_rules.short_answer_case_sensitive' => ['nullable', 'boolean'],
+            'allow_result_review' => ['nullable', 'boolean'],
+            'review_until' => ['nullable', 'date', 'after:ends_at'],
             'questions' => ['nullable', 'array', 'min:1', 'max:100'],
             'question_bank_ids' => ['nullable', 'array', 'min:1', 'max:100'],
             'question_bank_ids.*' => ['integer', 'distinct', 'exists:question_bank_questions,id'],
@@ -123,6 +126,8 @@ class ExamController extends Controller
                 'duration_minutes' => $validated['duration_minutes'],
                 'pass_marks' => $validated['pass_marks'],
                 'questions_per_attempt' => $validated['questions_per_attempt'] ?? null,
+                'allow_result_review' => (bool) ($validated['allow_result_review'] ?? false),
+                'review_until' => $validated['review_until'] ?? null,
                 'grading_rules' => [
                     'negative_marking_enabled' => (bool) ($validated['grading_rules']['negative_marking_enabled'] ?? true),
                     'negative_marking_multiplier' => (float) ($validated['grading_rules']['negative_marking_multiplier'] ?? 1),
@@ -298,9 +303,10 @@ class ExamController extends Controller
                 return $row;
             });
 
+        $reviews = ExamResultReview::query()->with('student')->whereHas('attempt', fn ($query) => $query->where('exam_id', $exam->id))->latest()->get();
         $isAdmin = Auth::user()->isAdmin();
 
-        return view('teacher.exams.results', compact('exam', 'attempts', 'isAdmin', 'summary', 'totalSubmitted', 'passRate', 'questionAnalytics'));
+        return view('teacher.exams.results', compact('exam', 'attempts', 'isAdmin', 'summary', 'totalSubmitted', 'passRate', 'questionAnalytics', 'reviews'));
     }
 
     public function studentExams(Request $request): View
@@ -342,9 +348,10 @@ class ExamController extends Controller
             app(\App\\Services\\ExamAttemptFinalizer::class)->autoSubmitExpired((int) $attempt->id);
             $attempt->refresh()->load(['attemptQuestions.question', 'answers']);
         }
+        $review = $attempt?->resultReview;
         $exam->load('batch.course');
 
-        return view('exams.show', compact('exam', 'attempt'));
+        return view('exams.show', compact('exam', 'attempt', 'review'));
     }
 
     public function start(Exam $exam): RedirectResponse
@@ -524,6 +531,40 @@ class ExamController extends Controller
         });
 
         return back()->with('success', __('Written answer graded successfully.'));
+    }
+
+    public function requestResultReview(ExamAttempt $attempt, Request $request): RedirectResponse
+    {
+        abort_unless((int) $attempt->student_id === (int) Auth::id(), 403);
+        $exam = $attempt->exam()->firstOrFail();
+        abort_unless($attempt->status === 'submitted' && $exam->result_status === 'published' && $exam->allow_result_review, 403);
+        abort_if($exam->review_until && now()->greaterThan($exam->review_until), 409, __('The result review period has closed.'));
+        abort_if($attempt->resultReview()->exists(), 409, __('A review request has already been submitted for this attempt.'));
+        $validated = $request->validate(['message' => ['required', 'string', 'min:10', 'max:2000']]);
+        $attempt->resultReview()->create([
+            'student_id' => Auth::id(),
+            'message' => $validated['message'],
+            'status' => 'pending',
+        ]);
+        return back()->with('success', __('Your result review request has been submitted.'));
+    }
+
+    public function respondToResultReview(ExamResultReview $review, Request $request): RedirectResponse
+    {
+        $exam = $review->attempt()->with('exam.batch')->firstOrFail()->exam;
+        abort_unless(Auth::user()->isAdmin() || (int) $exam->batch->teacher_id === (int) Auth::id(), 403);
+        abort_unless($review->status === 'pending', 409);
+        $validated = $request->validate([
+            'status' => ['required', 'in:approved,rejected'],
+            'teacher_response' => ['required', 'string', 'min:5', 'max:2000'],
+        ]);
+        $review->update([
+            'status' => $validated['status'],
+            'teacher_response' => $validated['teacher_response'],
+            'reviewed_by' => Auth::id(),
+            'reviewed_at' => now(),
+        ]);
+        return back()->with('success', __('Result review request updated.'));
     }
 
     public function publishResults(Exam $exam): RedirectResponse
