@@ -510,6 +510,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::get('/addons', [AddonRegistryController::class, 'index'])->name('admin.addons.index');
         Route::get('/payment-gateways', [AdminPaymentGatewayController::class, 'index'])->name('admin.payment-gateways.index');
         Route::patch('/payment-gateways/{key}', [AdminPaymentGatewayController::class, 'update'])->middleware('throttle:20,1')->name('admin.payment-gateways.update');
+        Route::put('/payment-gateways/mfs/{provider}', [AdminPaymentGatewayController::class, 'updateMfs'])->where('provider', 'bkash|nagad|rocket')->middleware('throttle:10,1')->name('admin.payment-gateways.mfs.update');
         Route::get('/ai-developer', [AiDeveloperController::class, 'index'])->name('admin.ai-developer.index');
         Route::post('/ai-developer/analyze', [AiDeveloperController::class, 'analyze'])->middleware('throttle:3,1')->name('admin.ai-developer.analyze');
         Route::patch('/addons/{key}', [AddonRegistryController::class, 'update'])->middleware('throttle:20,1')->name('admin.addons.update');
