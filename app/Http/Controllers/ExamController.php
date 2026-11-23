@@ -263,8 +263,8 @@ class ExamController extends Controller
         abort_unless(Auth::user()->isAdmin() || $exam->batch->teacher_id === Auth::id(), 403);
 
         $attempts = $exam->attempts()
-            ->with('student:id,name,email')
-            ->where('status', 'submitted')
+            ->with(['student:id,name,email', 'answers.question'])
+            ->whereIn('status', ['submitted', 'awaiting_manual'])
             ->latest('submitted_at')
             ->paginate(30);
 
