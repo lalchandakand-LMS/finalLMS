@@ -200,9 +200,6 @@ class StudentManagementController extends Controller
                 $otherBranchEnrollments = $student->enrollments()->where('status', 'active')->where('id', '!=', $enrollment->id)
                     ->whereHas('batch', fn ($q) => $q->where('branch_id', '!=', $target->branch_id))->exists();
                 abort_if($otherBranchEnrollments, 422, 'Transfer the student’s other active enrollments to the target branch first.');
-                $otherBranchEnrollments = $student->enrollments()->where('status', 'active')->where('id', '!=', $enrollment->id)
-                    ->whereHas('batch', fn ($q) => $q->where('branch_id', '!=', $target->branch_id))->exists();
-                abort_if($otherBranchEnrollments, 422, 'Transfer the student’s other active enrollments to the target branch first.');
             }
             if ($target->capacity !== null) {
                 $occupied = $target->enrollments()->where('status', 'active')->where('id', '!=', $enrollment->id)->count();
@@ -269,6 +266,7 @@ class StudentManagementController extends Controller
     public function reactivate(Request $request, User $student): RedirectResponse
     {
         abort_unless($student->isStudent(), 404);
+        $this->authorizeStudentScope($request, $student);
         DB::transaction(function () use ($student, $request): void {
             $profile = StudentProfile::query()->where('user_id', $student->id)->lockForUpdate()->firstOrFail();
             abort_unless($profile->lifecycle_status === 'suspended', 409);
