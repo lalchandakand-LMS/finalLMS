@@ -3,13 +3,14 @@
 namespace App\Services\Payments\Gateways;
 
 use App\Contracts\Payments\PaymentGateway;
+use App\Contracts\Payments\PaymentGatewayCallbackReference;
 use App\Models\Payment;
 use App\Services\Payments\BkashCheckoutService;
 use App\Services\Payments\MfsMerchantConfigurationService;
 use RuntimeException;
 use Throwable;
 
-class BkashGateway implements PaymentGateway
+class BkashGateway implements PaymentGateway, PaymentGatewayCallbackReference
 {
     private const ALLOWED_CHECKOUT_HOSTS = [
         'tokenized.sandbox.bka.sh',
