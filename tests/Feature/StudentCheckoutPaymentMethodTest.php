@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Course;
 use App\Models\Setting;
 use App\Models\StudentDevice;
+use App\Services\Payments\PaymentGatewayManager;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -35,6 +36,29 @@ class StudentCheckoutPaymentMethodTest extends TestCase
             'services.bkash.app_key' => 'test-app-key',
             'services.bkash.app_secret' => 'test-app-secret',
         ]);
+        \\Illuminate\\Support\\Facades\\DB::table('plugin_registry')->insert([
+            'plugin_key' => 'aec.universal-payment',
+            'name' => 'Universal Payment',
+            'version' => '1.0.0',
+            'type' => 'provider',
+            'status' => 'active',
+            'manifest' => json_encode(['key' => 'aec.universal-payment', 'capabilities' => ['payments.gateway']], JSON_THROW_ON_ERROR),
+            'package_sha256' => str_repeat('a', 64),
+            'signature_key_id' => 'test-release-key',
+            'signature_verified_at' => now(),
+            'package_path' => 'plugins/aec/universal-payment/1.0.0',
+            'metadata' => json_encode(['granted_permissions' => []], JSON_THROW_ON_ERROR),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        require_once base_path('plugins/aec/universal-payment/1.0.0/src/BkashCheckoutService.php');
+        require_once base_path('plugins/aec/universal-payment/1.0.0/src/BkashGateway.php');
+        app(PaymentGatewayManager::class)->registerPluginGateway(
+            'aec.universal-payment',
+            'bkash',
+            \\Aloms\\UniversalPayment\\Gateways\\BkashGateway::class,
+        );
+        Setting::setValue('payment_gateway_registry', json_encode(['bkash' => true], JSON_THROW_ON_ERROR));
 
         $this->withToken($this->studentToken($student))
             ->getJson('/api/v1/checkout/courses/'.$course->slug)
