@@ -561,56 +561,136 @@
     const next = root.querySelector('[data-carousel-next]');
     const viewport = root.querySelector('[data-carousel-viewport]');
     if (slides.length < 2 || !track) return;
+
     let active = 0;
     let timer = null;
-    let playing = root.dataset.autoplay === 'true' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let hovered = false;
+    let focused = false;
+    let inViewport = true;
+    const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let reducedMotion = motionPreference.matches;
+    let playing = root.dataset.autoplay === 'true' && !reducedMotion;
     const interval = Math.max(3000, Math.min(12000, Number(root.dataset.interval) || 5000));
     const pauseOnHover = root.dataset.pauseHover === 'true';
     const transition = ['slide','fade','zoom'].includes(root.dataset.transition) ? root.dataset.transition : 'slide';
     const progress = root.querySelector('[data-carousel-progress]');
     const toggle = root.querySelector('[data-carousel-toggle]');
+
     const render = (index) => {
         active = (index + slides.length) % slides.length;
         if (transition === 'slide') track.style.transform = 'translate3d(' + (-active * 100) + '%,0,0)';
-        slides.forEach((slide, i) => { slide.setAttribute('aria-hidden', i === active ? 'false' : 'true'); slide.classList.toggle('is-active', i === active); });
+        slides.forEach((slide, i) => {
+            slide.setAttribute('aria-hidden', i === active ? 'false' : 'true');
+            slide.classList.toggle('is-active', i === active);
+        });
         dots.forEach((dot, i) => dot.setAttribute('aria-current', i === active ? 'true' : 'false'));
-        if (progress) { progress.classList.remove('is-running'); void progress.offsetWidth; }
+        if (progress) {
+            progress.classList.remove('is-running');
+            void progress.offsetWidth;
+        }
     };
-    const stop = () => { if (timer) window.clearInterval(timer); timer = null; if (progress) progress.classList.remove('is-running'); };
+
+    const stop = () => {
+        if (timer !== null) {
+            window.clearInterval(timer);
+            timer = null;
+        }
+        if (progress) progress.classList.remove('is-running');
+    };
+
+    const canAutoplay = () => playing && inViewport && !document.hidden
+        && !hovered && !focused && !reducedMotion;
+
     const start = () => {
         stop();
-        if (playing && !document.hidden) {
+        if (canAutoplay()) {
             if (progress) progress.classList.add('is-running');
-            timer = window.setInterval(() => { render(active + 1); if (progress) progress.classList.add('is-running'); }, interval);
+            timer = window.setInterval(() => {
+                render(active + 1);
+                if (progress) progress.classList.add('is-running');
+            }, interval);
         }
-        if (toggle) { toggle.setAttribute('aria-pressed', playing ? 'true' : 'false'); toggle.textContent = playing ? 'Pause' : 'Play'; }
+        if (toggle) {
+            toggle.setAttribute('aria-pressed', playing ? 'true' : 'false');
+            toggle.textContent = playing ? 'Pause' : 'Play';
+        }
     };
-    const interact = (index) => { render(index); start(); };
-    toggle?.addEventListener('click', () => { playing = !playing; start(); });
-    document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
+
+    const interact = (index) => {
+        render(index);
+        start();
+    };
+
+    toggle?.addEventListener('click', () => {
+        playing = !playing;
+        start();
+    });
+    document.addEventListener('visibilitychange', start);
     previous?.addEventListener('click', () => interact(active - 1));
     next?.addEventListener('click', () => interact(active + 1));
     dots.forEach((dot) => dot.addEventListener('click', () => interact(Number(dot.dataset.carouselDot))));
-    if (pauseOnHover) { root.addEventListener('mouseenter', stop); root.addEventListener('mouseleave', start); }
-    root.addEventListener('focusin', stop);
-    root.addEventListener('focusout', (event) => { if (!root.contains(event.relatedTarget)) start(); });
+
+    if (pauseOnHover) {
+        root.addEventListener('mouseenter', () => { hovered = true; start(); });
+        root.addEventListener('mouseleave', () => { hovered = false; start(); });
+    }
+    root.addEventListener('focusin', () => { focused = true; start(); });
+    root.addEventListener('focusout', (event) => {
+        if (!root.contains(event.relatedTarget)) {
+            focused = false;
+            start();
+        }
+    });
+
     viewport?.addEventListener('keydown', (event) => {
         if (event.key === 'ArrowLeft') { event.preventDefault(); interact(active - 1); }
         if (event.key === 'ArrowRight') { event.preventDefault(); interact(active + 1); }
     });
+
     let touchStartX = null;
-    viewport?.addEventListener('touchstart', (event) => { touchStartX = event.changedTouches[0]?.clientX ?? null; }, {passive:true});
+    viewport?.addEventListener('touchstart', (event) => {
+        touchStartX = event.changedTouches[0]?.clientX ?? null;
+    }, {passive:true});
     viewport?.addEventListener('touchend', (event) => {
         if (touchStartX === null) return;
         const delta = (event.changedTouches[0]?.clientX ?? touchStartX) - touchStartX;
         if (Math.abs(delta) > 45) interact(active + (delta < 0 ? 1 : -1));
         touchStartX = null;
     }, {passive:true});
+
     if ('IntersectionObserver' in window) {
-        const observer = new IntersectionObserver(([entry]) => entry.isIntersecting ? start() : stop(), {threshold:0.15});
+        const observer = new IntersectionObserver(([entry]) => {
+            inViewport = Boolean(entry?.isIntersecting);
+            start();
+        }, {threshold:0.15});
         observer.observe(root);
-    } else start();
-})();
+    }
+
+    const refreshLayout = () => render(active);
+    if ('ResizeObserver' in window) {
+        const resizeObserver = new ResizeObserver(refreshLayout);
+        resizeObserver.observe(root);
+        if (viewport) resizeObserver.observe(viewport);
+    } else {
+        window.addEventListener('resize', refreshLayout, {passive:true});
+    }
+    slides.forEach((slide) => slide.querySelectorAll('img').forEach((image) => {
+        if (!image.complete) image.addEventListener('load', refreshLayout, {once:true});
+    }));
+
+    const onMotionPreferenceChange = (event) => {
+        reducedMotion = event.matches;
+        start();
+    };
+    if (typeof motionPreference.addEventListener === 'function') {
+        motionPreference.addEventListener('change', onMotionPreferenceChange);
+    } else if (typeof motionPreference.addListener === 'function') {
+        motionPreference.addListener(onMotionPreferenceChange);
+    }
+
+    render(active);
+    start();
+})();;
 </script>
 @endpush
 
