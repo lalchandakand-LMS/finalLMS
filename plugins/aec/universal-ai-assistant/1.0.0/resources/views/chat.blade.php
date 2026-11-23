@@ -60,6 +60,19 @@
             <button class="btn primary" id="ai-chat-submit" type="submit">{{ __('Send message') }}</button>
             <span id="ai-chat-status" class="muted" role="status"></span>
         </form>
+        @if($role === 'teacher')
+            <form id="ai-draft-save-form" method="POST" action="{{ route('teacher.ai-assistant.drafts.store') }}" style="display:none;margin-top:18px;padding-top:14px;border-top:1px solid var(--border-color,#ddd);">
+                @csrf
+                <h3>{{ __('Save this AI response as a teaching draft') }}</h3>
+                <label for="ai-draft-title">{{ __('Draft title') }}</label>
+                <input id="ai-draft-title" name="title" maxlength="180" required>
+                <label for="ai-draft-type">{{ __('Draft type') }}</label>
+                <select id="ai-draft-type" name="draft_type" required><option value="question_set">{{ __('Question set') }}</option><option value="lesson_plan">{{ __('Lesson plan') }}</option><option value="rubric">{{ __('Marking rubric') }}</option><option value="feedback_template">{{ __('Feedback template') }}</option></select>
+                <textarea id="ai-draft-content" name="content" maxlength="30000" hidden></textarea>
+                <label><input type="checkbox" name="submit_for_review" value="1"> {{ __('Submit to Admin for approval') }}</label>
+                <button class="btn secondary" type="submit">{{ __('Save generated draft') }}</button>
+            </form>
+        @endif
     </section>
 </div>
 <script>
@@ -72,6 +85,9 @@
     const submit = document.getElementById('ai-chat-submit');
     const conversation = document.getElementById('ai-conversation-id');
     const conversationList = document.getElementById('ai-conversation-list');
+    const draftForm = document.getElementById('ai-draft-save-form');
+    const draftContent = document.getElementById('ai-draft-content');
+    const draftTitle = document.getElementById('ai-draft-title');
     const endpoint = @json(route($messageRoute));
     const indexUrl = @json(route($indexRoute));
     form.addEventListener('submit', async (event) => {
@@ -131,6 +147,11 @@
                     const url = new URL(window.location.href);
                     url.searchParams.set('conversation_id', String(event.conversation_id));
                     window.history.replaceState({}, '', url);
+                    if (draftForm && assistantText.textContent.trim()) {
+                        draftContent.value = assistantText.textContent.trim().slice(0, 30000);
+                        if (!draftTitle.value.trim()) draftTitle.value = message.slice(0, 180);
+                        draftForm.style.display = 'block';
+                    }
                     completed = true;
                 } else if (event.type === 'error') {
                     throw new Error(event.message || 'The AI stream failed.');
