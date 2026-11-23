@@ -221,8 +221,8 @@ final class HrController extends Controller
             'phone' => ['nullable', 'string', 'max:40'],
             'email' => ['nullable', 'email:rfc', 'max:160'],
             'base_salary' => ['required', 'numeric', 'min:0', 'max:9999999999.99'],
-            'compensation_basis' => ['required', 'in:monthly,monthly_attendance,per_class'],
-            'per_class_rate' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99', 'required_if:compensation_basis,per_class'],
+            'compensation_basis' => ['nullable', 'in:monthly,monthly_attendance,per_class'],
+            'per_class_rate' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
             'working_days_per_month' => ['nullable', 'integer', 'min:1', 'max:31'],
             'status' => ['required', 'in:active,on_leave,inactive'],
             'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
@@ -246,6 +246,10 @@ final class HrController extends Controller
             }
         }
 
+        $data['compensation_basis'] = $data['compensation_basis'] ?? 'monthly';
+        $data['per_class_rate'] = $data['per_class_rate'] ?? 0;
+        $data['working_days_per_month'] = $data['working_days_per_month'] ?? 26;
+        abort_if($data['compensation_basis'] === 'per_class' && (float) $data['per_class_rate'] <= 0, 422, 'Set a per-class rate greater than zero.');
         $member = StaffProfile::query()->create($data + ['joined_at' => now()->toDateString()]);
         $this->audit($request, 'hr.staff_created', 'Created staff profile '.$member->employee_code);
 
