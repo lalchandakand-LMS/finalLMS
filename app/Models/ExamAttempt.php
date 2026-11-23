@@ -27,6 +27,11 @@ class ExamAttempt extends Model
         return $this->hasMany(ExamAnswer::class);
     }
 
+    public function resultReview(): \\Illuminate\\Database\\Eloquent\\Relations\\HasOne
+    {
+        return $this->hasOne(ExamResultReview::class);
+    }
+
     public function attemptQuestions(): HasMany
     {
         return $this->hasMany(ExamAttemptQuestion::class)->orderBy('position');
