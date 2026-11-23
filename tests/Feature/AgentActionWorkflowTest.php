@@ -64,11 +64,13 @@ class AgentActionWorkflowTest extends TestCase
             'schedule' => [['day' => 'Sunday', 'focus' => 'Grammar', 'minutes' => 25]],
         ], 'study-plan-request-0002');
 
+        $student->forceFill(['role' => 'admin'])->save();
+        $student->refresh();
         try {
             $workflow->approve($student, (int) $proposal->id, 1);
             $this->fail('A requester must not approve their own proposal.');
         } catch (RuntimeException $exception) {
-            $this->assertStringContainsString('Only an administrator', $exception->getMessage());
+            $this->assertStringContainsString('requester cannot approve their own', strtolower($exception->getMessage()));
         }
 
         $this->assertSame('pending', DB::table('ai_agent_action_proposals')->where('id', $proposal->id)->value('status'));
