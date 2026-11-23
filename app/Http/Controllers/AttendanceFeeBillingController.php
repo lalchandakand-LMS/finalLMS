@@ -21,7 +21,8 @@ final class AttendanceFeeBillingController extends Controller
         abort_unless($actor && ($actor->isAdmin() || $actor->isBranchManager()), 403);
         if ($actor->isBranchManager()) {
             abort_unless($actor->hasAdminPermission('finance.invoices'), 403);
-            abort_unless($actor->branch_id && (int) $batch->branch_id === (int) $actor->branch_id, 404);
+            abort_unless($actor->branch_id && DB::table('branches')->where('id', $actor->branch_id)->where('is_active', true)->exists(), 403);
+            abort_unless((int) $batch->branch_id === (int) $actor->branch_id, 404);
         }
 
         $data = $request->validate([
