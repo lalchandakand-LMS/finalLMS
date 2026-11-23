@@ -156,9 +156,11 @@ class TeacherQuestionSetGradingTest extends TestCase
         $this->actingAs($student)->post(route('student.question-sets.start', [$course, $set]));
         $attempt = QuestionSetAttempt::with('questions')->firstOrFail();
         $question = $attempt->questions->firstOrFail();
-        $this->post(route('student.question-sets.submit', [$course, $set, $attempt]), [
+        $this->post(route('student.question-sets.save', [$course, $set, $attempt]), [
             'answers' => [$question->id => ['answer_text' => 'My favourite book is a story about courage.']],
-        ])->assertRedirect();
+        ])->assertOk();
+
+        $this->post(route('student.question-sets.submit', [$course, $set, $attempt]), [])->assertRedirect();
 
         $this->assertSame('awaiting_manual', $attempt->fresh()->status);
         $this->actingAs($teacher)->get(route('teacher.question-set-attempts.show', $attempt))
