@@ -17,6 +17,22 @@
         @endif
     </div>
 
+    @if(auth()->user()->isAccountant() && isset($batches) && $batches->isNotEmpty())
+        <section class="panel" style="margin-bottom:22px;">
+            <h2>{{ __('Generate attendance-based class fees') }}</h2>
+            <p class="muted">{{ __('Only completed sessions with Present or Late attendance are billed. Each billing month can be invoiced once; existing invoices remain in the normal finance ledger.') }}</p>
+            @foreach($batches as $batch)
+                <form method="POST" action="{{ route('admin.finance.batches.attendance-fees.generate', $batch) }}" class="grid grid-2" style="margin:12px 0;padding:12px;border:1px solid #ddd;border-radius:8px;">
+                    @csrf
+                    <div><strong>{{ $batch->title }}</strong><small class="block muted">{{ $batch->course?->title }} · ৳{{ number_format((float) $batch->per_class_fee, 2) }}/class</small></div>
+                    <label>{{ __('Billing month') }}<input type="month" name="billing_period" value="{{ now()->subMonth()->format('Y-m') }}" required></label>
+                    <label>{{ __('Invoice due date') }}<input type="date" name="due_date" value="{{ now()->addDays(7)->toDateString() }}"></label>
+                    <div><button class="btn primary" type="submit">{{ __('Generate invoices') }}</button></div>
+                </form>
+            @endforeach
+        </section>
+    @endif
+
     <section class="panel" style="margin-bottom: 22px;">
         <h2>{{ __('Create student invoice') }}</h2>
         <form method="POST" action="{{ route(auth()->user()->isAccountant() ? 'admin.finance.invoices.store' : 'admin.invoices.store') }}" class="grid grid-2">
