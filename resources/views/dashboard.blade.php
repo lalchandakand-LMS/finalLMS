@@ -67,7 +67,7 @@
 
         <div class="aec-admin aec-admin-shell">
             @if($dashboardAppearance['show_hero'])
-            <section class="aec-hero" style="order:{{ $dashboardAppearance['order_hero'] }}" @if($dashboardAppearance['hero_image']) style="background-image:linear-gradient(90deg,rgba(5,22,68,.94),rgba(7,48,118,.72) 58%,rgba(7,48,118,.25)),url('{{ $dashboardAppearance['hero_image'] }}');background-size:cover;background-position:center;" @endif>
+            <section class="aec-hero" style="order:{{ $dashboardAppearance['order_hero'] }};@if($dashboardAppearance['hero_image'])background-image:linear-gradient(90deg,rgba(5,22,68,.94),rgba(7,48,118,.72) 58%,rgba(7,48,118,.25)),url('{{ $dashboardAppearance['hero_image'] }}');background-size:cover;background-position:center;@endif">
                 <div class="aec-hero-copy">
                     <span class="aec-eyebrow">{{ $institutionName }} · {{ __('Learning Management System') }}</span>
                     <h1>{{ $dashboardAppearance['hero_title'] ?: __('Welcome back,') . ' ' . $user->name . '! 👋' }}</h1>
