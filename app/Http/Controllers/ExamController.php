@@ -117,7 +117,7 @@ class ExamController extends Controller
                         'correct_option' => $setQuestion->correct_option,
                         'correct_answer' => $setQuestion->correct_answer,
                         'explanation' => $setQuestion->explanation,
-                        'grading_rubric' => null,
+                        'grading_rubric' => $setQuestion->grading_rubric,
                         'marks' => $setQuestion->marks,
                         'negative_marks' => 0,
                     ]);
