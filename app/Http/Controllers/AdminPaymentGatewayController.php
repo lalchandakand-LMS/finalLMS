@@ -73,6 +73,10 @@ class AdminPaymentGatewayController extends Controller
         if (! is_array($credentials) || array_is_list($credentials) || $credentials === []) {
             return back()->withErrors(['credentials_json' => __('Credentials must be a non-empty JSON object.')]);
         }
+        if ($provider === 'sslcommerz' && (! isset($credentials['store_id'], $credentials['store_password'])
+            || $credentials['store_id'] === '' || $credentials['store_password'] === '')) {
+            return back()->withErrors(['credentials_json' => __('SSLCOMMERZ requires store_id and store_password.')]);
+        }
         foreach ($credentials as $key => $value) {
             if (! is_string($key) || preg_match('/^[a-z][a-z0-9_]{0,49}$/D', $key) !== 1
                 || ! is_string($value) || $value === '' || mb_strlen($value) > 4096) {
