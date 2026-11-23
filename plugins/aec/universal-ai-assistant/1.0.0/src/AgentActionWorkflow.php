@@ -4,6 +4,7 @@ namespace Aloms\UniversalAiAssistant;
 
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use RuntimeException;
 
@@ -16,6 +17,14 @@ final class AgentActionWorkflow
         if ($student->role !== 'student') {
             throw new RuntimeException('Only an authenticated student can propose a personal study plan.');
         }
+        $payload = Validator::make($payload, [
+            'title' => ['required', 'string', 'max:120'],
+            'goals' => ['required', 'string', 'max:1500'],
+            'schedule' => ['required', 'array', 'min:1', 'max:14'],
+            'schedule.*.day' => ['required', 'string', 'max:24'],
+            'schedule.*.focus' => ['required', 'string', 'max:160'],
+            'schedule.*.minutes' => ['required', 'integer', 'min:5', 'max:240'],
+        ])->validate();
 
         $normalized = [
             'title' => trim((string) $payload['title']),
