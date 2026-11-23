@@ -1050,7 +1050,7 @@ class ExaminationWorkflowTest extends TestCase
         $this->postJson(route('student.exams.answers.save', $attempt), ['answers' => [$question->id => 0]])->assertOk();
 
         $this->travelTo($attempt->started_at->copy()->addMinutes(1)->addSecond());
-        $this->assertTrue(app(\App\\Services\\ExamAttemptFinalizer::class)->autoSubmitExpired($attempt->id));
+        $this->assertTrue(app(\App\Services\ExamAttemptFinalizer::class)->autoSubmitExpired($attempt->id));
         $this->assertDatabaseHas('exam_attempts', [
             'id' => $attempt->id, 'status' => 'submitted', 'score' => 1, 'auto_submitted' => true,
         ]);
