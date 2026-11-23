@@ -30,7 +30,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        if (Schema::hasTable('staff_payrolls') && \Illuminate\Support\Facades\DB::table('staff_payrolls')->where('attendance_deduction', '>', 0)->exists()) {
+        if (Schema::hasTable('staff_payrolls') && \Illuminate\Support\Facades\DB::table('staff_payrolls')->exists()) {
             throw new RuntimeException('Attendance-based payroll snapshots exist; retain them for financial audit history.');
         }
 
