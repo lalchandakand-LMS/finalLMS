@@ -4,11 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Batch;
 use App\Models\LiveClass;
+use App\Models\LiveClassAttendance;
 use App\Models\User;
 use App\Services\Plugins\PluginResourceAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -21,6 +23,10 @@ class LiveClassController extends Controller
 
         $query = LiveClass::with(['batch.course', 'batch.branch', 'batch.teacher', 'attendances'])
             ->orderBy('starts_at');
+
+        if ($user->isAdmin() || $user->isTeacher()) {
+            $query->with(['batch.enrollments' => fn ($enrollments) => $enrollments->where('status', 'active')->with('user')]);
+        }
 
         if ($user->isAdmin() || $user->isTeacher()) {
             $query->with(['batch.enrollments' => fn ($enrollments) => $enrollments->where('status', 'active')->with('user')]);
