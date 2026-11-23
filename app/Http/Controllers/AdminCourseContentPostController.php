@@ -206,7 +206,7 @@ class AdminCourseContentPostController extends Controller
 
     public function restoreVersion(Request $request, CourseContentPost $courseContentPost, CourseContentPostVersion $version): RedirectResponse
     {
-        abort_unless($version->course_content_post_id === $courseContentPost->id, 404);
+        abort_unless((int) $version->course_content_post_id === (int) $courseContentPost->id, 404);
         $snapshot = $version->snapshot;
         abort_unless(is_array($snapshot) && isset($snapshot['title'], $snapshot['slug'], $snapshot['long_description']), 422);
 
