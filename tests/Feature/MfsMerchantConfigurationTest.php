@@ -53,6 +53,35 @@ class MfsMerchantConfigurationTest extends TestCase
         $this->assertSame(['bkash'], app(\App\Services\Payments\PaymentGatewayManager::class)->installedKeys());
     }
 
+    public function test_admin_can_store_sslcommerz_sandbox_and_live_credentials_without_exposing_secrets(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        foreach (['sandbox', 'live'] as $mode) {
+            $secret = 'ssl-secret-'.$mode;
+            $this->actingAs($admin)->put(route('admin.payment-gateways.mfs.update', 'sslcommerz'), [
+                'mode' => $mode,
+                'credentials_json' => json_encode(['store_id' => 'aec-'.$mode, 'store_password' => $secret], JSON_THROW_ON_ERROR),
+            ])->assertRedirect(route('admin.payment-gateways.index'));
+            $record = MfsMerchantConfiguration::query()->where('provider', 'sslcommerz')->firstOrFail();
+            $this->assertSame($mode, $record->mode);
+            $this->assertSame($secret, $record->credentials['store_password']);
+            $this->assertStringNotContainsString($secret, $record->getRawOriginal('credentials'));
+            $this->actingAs($admin)->get(route('admin.payment-gateways.index'))
+                ->assertOk()->assertDontSee($secret)->assertDontSee('aec-'.$mode);
+        }
+        $this->assertTrue(app(MfsMerchantConfigurationService::class)->isSslcommerzConfigured());
+        $this->assertDatabaseHas('activity_logs', ['user_id' => $admin->id, 'event' => 'admin.mfs_merchant_configuration.updated']);
+    }
+
+    public function test_sslcommerz_requires_store_id_and_password(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
+        $this->actingAs($admin)->put(route('admin.payment-gateways.mfs.update', 'sslcommerz'), [
+            'mode' => 'sandbox', 'credentials_json' => '{"store_id":"aec-test"}',
+        ])->assertSessionHasErrors('credentials_json');
+        $this->assertDatabaseCount('mfs_merchant_configurations', 0);
+    }
+
     public function test_invalid_provider_mode_json_and_nested_values_are_rejected(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'email_verified_at' => now()]);
