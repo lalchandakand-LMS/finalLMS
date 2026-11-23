@@ -14,6 +14,7 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\DownloadPermission;
 use App\Models\FlashSale;
+use App\Contracts\Payments\PaymentGatewayCallbackReference;
 use App\Services\Payments\PaymentGatewayManager;
 use App\Services\Payments\PendingCoursePaymentGuard;
 use Illuminate\Http\RedirectResponse;
@@ -223,7 +224,9 @@ class BkashPaymentController extends Controller
         $provider = (string) $request->route('provider', 'bkash');
         abort_unless(in_array($provider, $gateways->installedKeys(), true), 404);
         $adapter = $gateways->driver($provider);
-        $paymentId = $adapter->callbackPaymentId($request->query());
+        $paymentId = $adapter instanceof PaymentGatewayCallbackReference
+            ? $adapter->callbackPaymentId($request->query())
+            : $request->query('paymentID');
         if (! is_string($paymentId) || $paymentId === '') {
             return redirect()->route('landing')->with('error', 'The payment provider callback did not include a valid payment reference.');
         }
