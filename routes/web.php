@@ -79,6 +79,7 @@ use App\Http\Controllers\AdminCourseContentPostController;
 use App\Http\Controllers\AdminCourseBuilderController;
 use App\Http\Controllers\CourseContentController;
 use App\Http\Controllers\CommentController;
+use App\Modules\Admissions\AdmissionController;
 use App\Http\Controllers\GamificationController;
 use App\Http\Controllers\LandingPageController;
 use Illuminate\Support\Facades\Route;
@@ -137,6 +138,12 @@ Route::get('/contests/{contest}', [QuizContestController::class, 'show'])->name(
 Route::get('/ebooks', [EbookStoreController::class, 'index'])->name('ebooks.index');
 Route::get('/ebooks/{product:slug}/preview/{previewPage}', [EbookStoreController::class, 'preview'])->name('ebooks.preview');
 Route::get('/ebooks/{product:slug}', [EbookStoreController::class, 'show'])->name('ebooks.show');
+
+Route::get('/admission/apply', [AdmissionController::class, 'publicForm'])->name('admission.public.apply');
+Route::post('/admission/apply', [AdmissionController::class, 'applyPublic'])->middleware('throttle:3,10')->name('admission.public.apply.store');
+Route::get('/admission/track', [AdmissionController::class, 'trackForm'])->name('admission.public.track');
+Route::post('/admission/track', [AdmissionController::class, 'track'])->middleware('throttle:5,10')->name('admission.public.track.submit');
+
 Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
 Route::get('/course-combos', [CourseComboController::class, 'publicIndex'])->name('course-combos.index');
 Route::get('/course-combos/{courseCombo:slug}', [CourseComboController::class, 'show'])->name('course-combos.show');
@@ -155,6 +162,18 @@ Route::middleware('auth')->group(function () {
     Route::post('/email/verification-notification', [EmailVerificationController::class, 'resend'])
         ->middleware('throttle:6,1')
         ->name('verification.send');
+});
+
+Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('admin/admissions')->name('admin.admissions.')->group(function () {
+    Route::get('/', [AdmissionController::class, 'index'])->name('index');
+    Route::get('/reports', [AdmissionController::class, 'reports'])->name('reports');
+    Route::get('/reports/export', [AdmissionController::class, 'exportReport'])->middleware('throttle:10,1')->name('reports.export');
+    Route::post('/', [AdmissionController::class, 'store'])->middleware('throttle:20,1')->name('store');
+    Route::post('/{application}/review', [AdmissionController::class, 'review'])->whereNumber('application')->middleware('throttle:20,1')->name('review');
+    Route::post('/{application}/documents', [AdmissionController::class, 'storeDocument'])->whereNumber('application')->middleware('throttle:10,1')->name('documents.store');
+    Route::post('/{application}/documents/{document}/review', [AdmissionController::class, 'reviewDocument'])->whereNumber('application')->whereNumber('document')->middleware('throttle:20,1')->name('documents.review');
+    Route::get('/{application}/documents/{document}', [AdmissionController::class, 'downloadDocument'])->whereNumber('application')->name('documents.download');
+    Route::post('/{application}/convert-to-student', [AdmissionController::class, 'convertToStudent'])->whereNumber('application')->middleware('throttle:5,1')->name('convert');
 });
 
 Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group(function () {
