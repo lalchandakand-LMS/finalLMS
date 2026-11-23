@@ -304,7 +304,7 @@ class StudentQuestionSetAttemptController extends Controller
             if (in_array($question->type, ['mcq', 'true_false'], true)) {
                 $selected = $question->selected_option;
                 $correct = $selected !== null && (int) $selected === (int) $question->correct_option;
-                $awarded = $correct ? (int) $question->marks : 0;
+                $awarded = $correct ? (int) $question->marks : ($selected !== null ? -1 * (int) ($question->negative_marks ?? 0) : 0);
                 $question->update(['is_correct' => $selected === null ? null : $correct, 'marks_awarded' => $awarded]);
                 $autoScore += $awarded;
             } else {
@@ -315,9 +315,9 @@ class StudentQuestionSetAttemptController extends Controller
         $attempt->update([
             'status' => $hasManualQuestions ? 'awaiting_manual' : 'submitted',
             'submitted_at' => now(),
-            'auto_score' => $autoScore,
+            'auto_score' => max(0, $autoScore),
             'manual_score' => 0,
-            'final_score' => $hasManualQuestions ? null : $autoScore,
+            'final_score' => $hasManualQuestions ? null : max(0, $autoScore),
         ]);
     }
 }
