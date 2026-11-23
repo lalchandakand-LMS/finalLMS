@@ -513,6 +513,13 @@
                     @if(auth()->user()->hasAdminPermission('branch.students'))
                         <a class="{{ request()->routeIs('admin.branch-workspace.students.*') ? 'active' : '' }}" href="{{ route('admin.branch-workspace.students.index') }}"><span>👥</span><span class="nav-text">Branch students</span></a>
                     @endif
+                    @if(auth()->user()->hasAdminPermission('branch.students'))
+                        <a class="{{ request()->routeIs('branch.admissions.*') ? 'active' : '' }}" href="{{ route('branch.admissions.index') }}"><span>📝</span><span class="nav-text">Branch admissions</span></a>
+                    @endif
+                    @if(auth()->user()->hasAdminPermission('branch.batches'))
+                        <a class="{{ request()->routeIs('branch.hr.*') ? 'active' : '' }}" href="{{ route('branch.hr.index') }}"><span>👥</span><span class="nav-text">Branch HR & Payroll</span></a>
+                        <a class="{{ request()->routeIs('branch.library.*') ? 'active' : '' }}" href="{{ route('branch.library.index') }}"><span>📚</span><span class="nav-text">Branch Library</span></a>
+                    @endif
                     @if($studentTrackingAvailable && \Illuminate\Support\Facades\Route::has('branch.student-tracking.index'))
                         <a class="{{ request()->routeIs('branch.student-tracking.*') ? 'active' : '' }}" href="{{ route('branch.student-tracking.index') }}"><span>📊</span><span class="nav-text">Student Tracking</span></a>
                     @endif
