@@ -369,7 +369,7 @@ class UniversalAiAssistantPluginTest extends TestCase
                 'The '.$role.' assistant must preserve its safety boundary against prompt injection.'
             );
             $this->assertStringContainsString(
-                'Do not perform consequential actions; give advice only.',
+                'Do not perform consequential actions directly from chat; give advice and draft content only.',
                 $prompt
             );
         }
