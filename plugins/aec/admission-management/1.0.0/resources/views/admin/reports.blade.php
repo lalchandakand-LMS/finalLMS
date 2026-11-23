@@ -5,7 +5,7 @@
 @php($routePrefix = $branchPortal ? 'branch.admissions.' : 'admin.admissions.')
 @php($statusLabels = ['pending'=>'Pending','screening'=>'Screening','shortlisted'=>'Shortlisted','waitlisted'=>'Waitlisted','approved'=>'Approved','rejected'=>'Rejected'])
 <div class="mx-auto max-w-7xl space-y-6 p-4 sm:p-6">
-    <header class="flex flex-wrap items-center justify-between gap-3"><div><p class="text-xs font-bold uppercase tracking-widest text-blue-700">Alom's English Center</p><h1 class="text-2xl font-bold">Admission Reports & Analytics</h1><p class="text-sm text-gray-600">Application volume, decisions, document verification and student conversion.</p></div><a href="{{ route($routePrefix.'index') }}" class="rounded-lg border bg-white px-4 py-2 text-sm">← Admission workbench</a></header>
+    <header class="flex flex-wrap items-center justify-between gap-3"><div><p class="text-xs font-bold uppercase tracking-widest text-blue-700">Alom's English Center</p><h1 class="text-2xl font-bold">{{ __('Admission Reports & Analytics') }}</h1><p class="text-sm text-gray-600">Application volume, decisions, document verification and student conversion.</p></div><a href="{{ route($routePrefix.'index') }}" class="rounded-lg border bg-white px-4 py-2 text-sm">← Admission workbench</a></header>
     <form method="GET" class="grid gap-3 rounded-xl border bg-white p-4 sm:grid-cols-2 lg:grid-cols-5">
         <label class="grid gap-1 text-xs">From date<input type="date" name="from_date" value="{{ $filters['from_date'] ?? '' }}" class="rounded border-gray-300"></label>
         <label class="grid gap-1 text-xs">To date<input type="date" name="to_date" value="{{ $filters['to_date'] ?? '' }}" class="rounded border-gray-300"></label>
