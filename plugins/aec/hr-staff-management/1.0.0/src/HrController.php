@@ -331,30 +331,90 @@ final class HrController extends Controller
             'bonus' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
             'deductions' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
         ]);
+
         $payroll = DB::transaction(function () use ($actor, $data): StaffPayroll {
             $member = StaffProfile::query()->lockForUpdate()->findOrFail($data['staff_profile_id']);
             $this->assertRecordBranch($actor, $member->branch_id);
             abort_unless($member->status === 'active', 422, 'Payroll can only be prepared for active staff.');
-            $basic = round((float) $member->base_salary, 2);
+            abort_if(StaffPayroll::query()->where('staff_profile_id', $member->id)->where('payroll_month', $data['payroll_month'])->exists(), 409, 'Payroll already exists for this staff member and month.');
+
+            $periodStart = \Carbon\CarbonImmutable::createFromFormat('!Y-m-d', $data['payroll_month'].'-01');
+            $periodEnd = $periodStart->endOfMonth();
+            $attendance = StaffAttendance::query()
+                ->where('staff_profile_id', $member->id)
+                ->whereBetween('attendance_date', [$periodStart->toDateString(), $periodEnd->toDateString()])
+                ->selectRaw("SUM(CASE WHEN status IN ('present','late') THEN 1 ELSE 0 END) as present_days")
+                ->selectRaw("SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent_days")
+                ->selectRaw("SUM(CASE WHEN status = 'half_day' THEN 1 ELSE 0 END) as half_days")
+                ->selectRaw("SUM(CASE WHEN status = 'on_leave' THEN 1 ELSE 0 END) as leave_days")
+                ->first();
+
+            $presentDays = (float) ($attendance->present_days ?? 0);
+            $absentDays = (float) ($attendance->absent_days ?? 0);
+            $halfDays = (float) ($attendance->half_days ?? 0);
+            $leaveDays = (float) ($attendance->leave_days ?? 0);
+            $classesDelivered = 0;
+            $basis = $member->compensation_basis ?: 'monthly';
+
+            if ($basis === 'per_class') {
+                abort_unless($member->user_id, 422, 'Per-class payroll requires this staff profile to be linked to a teacher user account.');
+                $classesDelivered = (int) DB::table('live_classes')
+                    ->join('batches', 'batches.id', '=', 'live_classes.batch_id')
+                    ->where('batches.teacher_id', $member->user_id)
+                    ->where('live_classes.status', 'completed')
+                    ->whereBetween('live_classes.starts_at', [$periodStart->toDateTimeString(), $periodEnd->toDateTimeString()])
+                    ->count();
+                abort_if($classesDelivered === 0, 422, 'No completed classes were found for this teacher in the selected payroll month.');
+                $basic = round($classesDelivered * (float) $member->per_class_rate, 2);
+            } else {
+                $basic = round((float) $member->base_salary, 2);
+            }
+
+            $attendanceDeduction = 0.0;
+            if ($basis === 'monthly_attendance') {
+                $workingDays = max(1, (int) ($member->working_days_per_month ?: 26));
+                $dailyRate = round((float) $member->base_salary / $workingDays, 6);
+                // Only recorded absences and half-days affect pay. Approved unpaid
+                // leave must be marked as on_leave in the staff attendance register.
+                $attendanceDeduction = round(($absentDays + ($halfDays * 0.5) + $leaveDays) * $dailyRate, 2);
+            }
+
             $allowances = round((float) ($data['allowances'] ?? 0), 2);
             $overtimeHours = round((float) ($data['overtime_hours'] ?? 0), 2);
             $overtimeRate = round((float) ($data['overtime_rate'] ?? 0), 2);
             $overtimeAmount = round($overtimeHours * $overtimeRate, 2);
             $bonus = round((float) ($data['bonus'] ?? 0), 2);
-            $deductions = round((float) ($data['deductions'] ?? 0), 2);
-            $gross = round($basic + $allowances + $overtimeAmount, 2);
-            abort_if($deductions > $gross + $bonus, 422, 'Deductions cannot exceed gross salary plus bonus.');
-            abort_if(StaffPayroll::query()->where('staff_profile_id', $member->id)->where('payroll_month', $data['payroll_month'])->exists(), 409, 'Payroll already exists for this staff member and month.');
+            $manualDeductions = round((float) ($data['deductions'] ?? 0), 2);
+            $gross = round(max(0, $basic - $attendanceDeduction) + $allowances + $overtimeAmount, 2);
+            $totalDeductions = round($attendanceDeduction + $manualDeductions, 2);
+            abort_if($totalDeductions > $basic + $allowances + $overtimeAmount + $bonus, 422, 'Total deductions cannot exceed the payable salary.');
+
             return StaffPayroll::query()->create([
-                'staff_profile_id' => $member->id, 'branch_id' => $member->branch_id, 'payroll_month' => $data['payroll_month'],
-                'basic_salary' => $basic, 'allowances' => $allowances, 'overtime_hours' => $overtimeHours,
-                'overtime_rate' => $overtimeRate, 'overtime_amount' => $overtimeAmount,
-                'gross_salary' => $gross, 'bonus' => $bonus, 'deductions' => $deductions,
-                'net_paid' => round($gross + $bonus - $deductions, 2), 'status' => 'pending',
+                'staff_profile_id' => $member->id,
+                'branch_id' => $member->branch_id,
+                'payroll_month' => $data['payroll_month'],
+                'basic_salary' => $basic,
+                'allowances' => $allowances,
+                'overtime_hours' => $overtimeHours,
+                'overtime_rate' => $overtimeRate,
+                'overtime_amount' => $overtimeAmount,
+                'gross_salary' => $gross,
+                'bonus' => $bonus,
+                'deductions' => $totalDeductions,
+                'net_paid' => round($gross + $bonus - $manualDeductions, 2),
+                'compensation_basis_snapshot' => $basis,
+                'present_days' => $presentDays,
+                'absent_days' => $absentDays,
+                'half_days' => $halfDays,
+                'unpaid_leave_days' => $leaveDays,
+                'payable_days' => max(0, $presentDays + ($halfDays * 0.5)),
+                'classes_delivered' => $classesDelivered,
+                'attendance_deduction' => $attendanceDeduction,
+                'status' => 'pending',
             ]);
         }, 3);
-        $this->audit($request, 'hr.payroll_recorded', 'Prepared payroll #'.$payroll->id.' for '.$payroll->payroll_month);
-        return back()->with('success', 'Payroll recorded as pending; payment must be confirmed separately.');
+        $this->audit($request, 'hr.payroll_recorded', 'Prepared payroll #'.$payroll->id.' for '.$payroll->payroll_month.' using '.$payroll->compensation_basis_snapshot.' calculation.');
+        return back()->with('success', 'Payroll calculated from the saved attendance and class records; awaiting disbursement confirmation.');
     }
 
     public function markPayrollPaid(Request $request, int $payroll): RedirectResponse
