@@ -125,6 +125,26 @@
 
             @endif
 
+            @if($dashboardSearchResults !== null)
+                <section class="aec-panel" style="order:1">
+                    <div class="aec-panel-head"><h3>🔎 {{ __('Search results') }}: “{{ $dashboardSearchTerm }}”</h3><span class="aec-pill">{{ __('Students · Teachers · Courses') }}</span></div>
+                    <div class="aec-module-list">
+                        @foreach($dashboardSearchResults['students'] as $result)
+                            <a class="aec-module" href="{{ route('admin.users.index', ['search' => $dashboardSearchTerm]) }}"><span>👨‍🎓</span>{{ $result->name }} · {{ $result->email }}</a>
+                        @endforeach
+                        @foreach($dashboardSearchResults['teachers'] as $result)
+                            <a class="aec-module" href="{{ route('admin.users.index', ['search' => $dashboardSearchTerm]) }}"><span>👨‍🏫</span>{{ $result->name }} · {{ $result->email }}</a>
+                        @endforeach
+                        @foreach($dashboardSearchResults['courses'] as $result)
+                            <a class="aec-module" href="{{ route('admin.courses.index', ['search' => $dashboardSearchTerm]) }}"><span>📚</span>{{ $result->title }}</a>
+                        @endforeach
+                    </div>
+                    @if(collect($dashboardSearchResults)->every(fn ($items) => $items->isEmpty()))
+                        <p class="muted">{{ __('No matching students, teachers or courses were found.') }}</p>
+                    @endif
+                </section>
+            @endif
+
             @if($setupWizardPending)
                 <section class="aec-panel" style="border-color:#9bbdf5;background:#f5f9ff">
                     <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
