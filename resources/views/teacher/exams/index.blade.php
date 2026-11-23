@@ -38,6 +38,15 @@
                     <p class="muted">Question Bank is empty. <a href="{{ $isAdmin ? route('admin.batches.question-bank.index', $batch) : route('teacher.batches.question-bank.index', $batch) }}">Add questions</a>.</p>
                 @endforelse
             </div>
+            <fieldset class="panel" style="margin:14px 0;">
+                <legend>{{ __('Add reusable question sets') }}</legend>
+                <p class="muted">{{ __('Selected published sets are copied into this exam as a frozen question paper. Later edits to the source set will not change an active exam.') }}</p>
+                @forelse($questionSets as $questionSet)
+                    <label style="display:block;"><input type="checkbox" name="question_set_ids[]" value="{{ $questionSet->id }}"> {{ $questionSet->title }} ({{ $questionSet->questions_count }} {{ __('questions') }})</label>
+                @empty
+                    <p class="muted">{{ __('No reusable published question sets are available for this course.') }}</p>
+                @endforelse
+            </fieldset>
             <div id="manual-question-area">
             <div id="exam-questions">
                 <div class="course-item exam-question">
