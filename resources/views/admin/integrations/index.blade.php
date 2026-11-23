@@ -24,10 +24,12 @@
                 @endforeach
                 <div><button class="btn primary" type="submit">{{ __('Verify credentials') }}</button></div>
             </form>
-            <div style="display:flex;gap:8px;margin-top:12px;">
-                <form method="POST" action="{{ route('admin.integrations.pause', $key) }}">@csrf<button class="btn secondary" type="submit">{{ __('Pause') }}</button></form>
-                <form method="POST" action="{{ route('admin.integrations.disconnect', $key) }}" onsubmit="return confirm('{{ __('Disconnect this provider?') }}')">@csrf<button class="btn danger" type="submit">{{ __('Disconnect') }}</button></form>
-            </div>
+            @if($connector['configured'])
+                <div style="display:flex;gap:8px;margin-top:12px;">
+                    <form method="POST" action="{{ route('admin.integrations.pause', $key) }}">@csrf<button class="btn secondary" type="submit">{{ __('Pause') }}</button></form>
+                    <form method="POST" action="{{ route('admin.integrations.disconnect', $key) }}" onsubmit="return confirm('{{ __('Disconnect this provider?') }}')">@csrf<button class="btn danger" type="submit">{{ __('Disconnect') }}</button></form>
+                </div>
+            @endif
             <small class="muted">{{ __('Webhook URL') }}: {{ url('/api/webhooks/api-connectors/'.$key) }}</small>
         </section>
     @endforeach
