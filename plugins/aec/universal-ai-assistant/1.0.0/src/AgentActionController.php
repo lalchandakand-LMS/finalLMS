@@ -56,10 +56,11 @@ final class AgentActionController
             'schedule.*.day' => ['required', 'string', 'max:24'],
             'schedule.*.focus' => ['required', 'string', 'max:160'],
             'schedule.*.minutes' => ['required', 'integer', 'min:5', 'max:240'],
+            'idempotency_key' => ['nullable', 'string', 'regex:/^[A-Za-z0-9._:-]{16,64}$/'],
         ])->validate();
 
         try {
-            $workflow->proposeStudyPlan($request->user(), $validated, $request->header('Idempotency-Key'));
+            $workflow->proposeStudyPlan($request->user(), $validated, $validated['idempotency_key'] ?? $request->header('Idempotency-Key'));
         } catch (RuntimeException $exception) {
             return back()->withErrors(['proposal' => $exception->getMessage()]);
         } catch (Throwable) {
