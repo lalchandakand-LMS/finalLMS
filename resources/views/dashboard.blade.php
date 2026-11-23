@@ -36,7 +36,8 @@
             .aec-stat small { display:block; margin-top:8px; color:#8190a8; font-size:.76rem; }
             .aec-stat.blue { background:linear-gradient(135deg,color-mix(in srgb,var(--aec-stat-students) 17%,white),var(--aec-surface)); } .aec-stat.green { background:linear-gradient(135deg,color-mix(in srgb,var(--aec-stat-teachers) 17%,white),var(--aec-surface)); } .aec-stat.purple { background:linear-gradient(135deg,color-mix(in srgb,var(--aec-stat-courses) 17%,white),var(--aec-surface)); } .aec-stat.gold { background:linear-gradient(135deg,color-mix(in srgb,var(--aec-stat-certificates) 17%,white),var(--aec-surface)); } .aec-stat.blue .aec-stat-icon { background:color-mix(in srgb,var(--aec-stat-students) 22%,white); } .aec-stat.green .aec-stat-icon { background:color-mix(in srgb,var(--aec-stat-teachers) 22%,white); } .aec-stat.purple .aec-stat-icon { background:color-mix(in srgb,var(--aec-stat-courses) 22%,white); } .aec-stat.gold .aec-stat-icon { background:color-mix(in srgb,var(--aec-stat-certificates) 22%,white); }
             .aec-live-class { display:grid; grid-template-columns:minmax(180px,280px) minmax(0,1fr); align-items:center; gap:18px; }
-            .aec-live-class img { width:100%; height:150px; object-fit:cover; border-radius:14px; }\n            .aec-content-grid { display:grid; grid-template-columns:minmax(0,1.45fr) minmax(270px,.85fr); gap:15px; }
+            .aec-live-class img { width:100%; height:150px; object-fit:cover; border-radius:14px; }
+            .aec-content-grid { display:grid; grid-template-columns:minmax(0,1.45fr) minmax(270px,.85fr); gap:15px; }
             .aec-panel { min-width:0; padding:20px; border:1px solid var(--aec-line); border-radius:19px; background:var(--aec-surface); box-shadow:0 7px 22px rgba(18,48,102,.045); }
             .aec-panel h3 { display:flex; align-items:center; gap:9px; margin:0 0 15px; color:#172e5b; font-size:1rem; }
             .aec-panel-head { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:13px; }
@@ -66,7 +67,7 @@
 
         <div class="aec-admin aec-admin-shell">
             @if($dashboardAppearance['show_hero'])
-            <section class="aec-hero" @if($dashboardAppearance['hero_image']) style="background-image:linear-gradient(90deg,rgba(5,22,68,.94),rgba(7,48,118,.72) 58%,rgba(7,48,118,.25)),url('{{ $dashboardAppearance['hero_image'] }}');background-size:cover;background-position:center;" @endif>
+            <section class="aec-hero" style="order:{{ $dashboardAppearance['order_hero'] }}" @if($dashboardAppearance['hero_image']) style="background-image:linear-gradient(90deg,rgba(5,22,68,.94),rgba(7,48,118,.72) 58%,rgba(7,48,118,.25)),url('{{ $dashboardAppearance['hero_image'] }}');background-size:cover;background-position:center;" @endif>
                 <div class="aec-hero-copy">
                     <span class="aec-eyebrow">{{ $institutionName }} · {{ __('Learning Management System') }}</span>
                     <h1>{{ $dashboardAppearance['hero_title'] ?: __('Welcome back,') . ' ' . $user->name . '! 👋' }}</h1>
@@ -91,7 +92,7 @@
             @endif
 
             @if($dashboardAppearance['show_statistics'])
-            <section>
+            <section style="order:{{ $dashboardAppearance['order_statistics'] }}">
                 <div class="aec-heading"><div><h2>{{ __('Academy overview') }}</h2><p>{{ __('Live totals from your current LMS records') }}</p></div><span class="badge success">{{ $roleLabel }}</span></div>
                 <div class="aec-stats" aria-label="{{ __('Academy statistics') }}">
                     <article class="aec-stat blue"><div class="aec-stat-top"><span>{{ __('Total students') }}</span><span class="aec-stat-icon" aria-hidden="true">👥</span></div><strong>{{ number_format($stats['students']) }}</strong><small>{{ __('Registered student accounts') }}</small></article>
@@ -104,7 +105,7 @@
             @endif
 
             @if($dashboardAppearance['show_live_class'] && $nextLiveClass)
-                <section class="aec-panel aec-live-class">
+                <section class="aec-panel aec-live-class" style="order:{{ $dashboardAppearance['order_live_class'] }}">
                     @if($dashboardAppearance['live_class_image'])
                         <img src="{{ $dashboardAppearance['live_class_image'] }}" alt="{{ $nextLiveClass->title }}" loading="lazy" style="width:100%;height:150px;object-fit:cover;border-radius:14px;">
                     @else
@@ -120,9 +121,9 @@
                 </section>
             @endif
 
-            <div class="aec-content-grid">
+            <div class="aec-content-grid" style="order:{{ min($dashboardAppearance['order_quick_actions'], $dashboardAppearance['order_system_snapshot']) }}">
                 @if($dashboardAppearance['show_quick_actions'])
-                <section class="aec-panel">
+                <section class="aec-panel" style="order:{{ $dashboardAppearance['order_quick_actions'] }}">
                     <div class="aec-panel-head"><h3>⚡ {{ __('Quick actions') }}</h3><span class="aec-pill">{{ __('Frequently used') }}</span></div>
                     <div class="aec-action-grid">
                         <a class="aec-action" href="{{ route('admin.users.index') }}"><span class="aec-action-icon">👥</span><strong>{{ __('Add / manage students') }}</strong><small>{{ __('Student and staff accounts') }}</small></a>
@@ -138,7 +139,7 @@
                 @endif
 
                 @if($dashboardAppearance['show_system_snapshot'])
-                <section class="aec-panel">
+                <section class="aec-panel" style="order:{{ $dashboardAppearance['order_system_snapshot'] }}">
                     <h3>🏆 {{ __('System snapshot') }}</h3>
                     <div class="aec-snapshot">
                         <div class="aec-snapshot-row"><span>{{ __('Signed-in account') }}</span><strong>{{ $user->name }}</strong></div>
@@ -155,7 +156,7 @@
             </div>
 
             @if($dashboardAppearance['show_learning_operations'])
-            <section class="aec-panel">
+            <section class="aec-panel" style="order:{{ $dashboardAppearance['order_learning_operations'] }}">
                 <div class="aec-panel-head"><h3>🧭 {{ __('Learning operations') }}</h3><span class="aec-pill">{{ __('Administration') }}</span></div>
                 <div class="aec-module-list">
                     <a class="aec-module" href="{{ route('admin.courses.index') }}"><span>📚</span>{{ __('Courses & lessons') }}</a>
