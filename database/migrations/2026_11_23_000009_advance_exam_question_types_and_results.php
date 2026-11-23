@@ -39,6 +39,7 @@ return new class extends Migration {
         });
 
         Schema::table('exam_attempts', function (Blueprint $table): void {
+            $table->integer('score')->nullable()->change();
             $table->boolean('auto_submitted')->default(false);
             $table->dateTime('last_saved_at')->nullable();
             $table->dateTime('graded_at')->nullable();
