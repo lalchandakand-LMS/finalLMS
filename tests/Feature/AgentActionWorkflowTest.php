@@ -140,4 +140,51 @@ class AgentActionWorkflowTest extends TestCase
         $this->assertSame(0, DB::table('ai_learning_plans')->count());
         $this->assertSame('pending', DB::table('ai_agent_action_proposals')->where('id', $proposal->id)->value('status'));
     }
+
+    public function test_expired_proposal_is_marked_expired_and_never_executes(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $workflow = app(AgentActionWorkflow::class);
+        $proposal = $workflow->proposeStudyPlan($student, [
+            'title' => 'Expired plan',
+            'goals' => 'No longer current.',
+            'schedule' => [['day' => 'Tuesday', 'focus' => 'Reading', 'minutes' => 20]],
+        ], 'study-plan-request-0005');
+        DB::table('ai_agent_action_proposals')->where('id', $proposal->id)->update(['expires_at' => now()->subMinute()]);
+
+        try {
+            $workflow->approve($admin, (int) $proposal->id, 1);
+            $this->fail('Expired proposals must not execute.');
+        } catch (RuntimeException $exception) {
+            $this->assertStringContainsString('expired', strtolower($exception->getMessage()));
+        }
+
+        $this->assertSame('expired', DB::table('ai_agent_action_proposals')->where('id', $proposal->id)->value('status'));
+        $this->assertSame(0, DB::table('ai_learning_plans')->count());
+        $this->assertDatabaseHas('ai_assistant_audit_events', ['event' => 'agent_action_expired']);
+    }
+
+    public function test_teacher_cannot_approve_a_student_outside_the_teachers_course_scope(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $workflow = app(AgentActionWorkflow::class);
+        $proposal = $workflow->proposeStudyPlan($student, [
+            'title' => 'Out of scope',
+            'goals' => 'Study English.',
+            'schedule' => [['day' => 'Wednesday', 'focus' => 'Speaking', 'minutes' => 20]],
+        ], 'study-plan-request-0006');
+
+        try {
+            $workflow->approve($teacher, (int) $proposal->id, 1);
+            $this->fail('A teacher without an assigned active learner course must not approve.');
+        } catch (RuntimeException $exception) {
+            $this->assertStringContainsString('Only an administrator', $exception->getMessage());
+        }
+
+        $this->assertSame('pending', DB::table('ai_agent_action_proposals')->where('id', $proposal->id)->value('status'));
+        $this->assertSame(0, DB::table('ai_learning_plans')->count());
+    }
+
 }
