@@ -128,7 +128,7 @@ PHP;
         $plugin->update(['status' => 'inactive']);
 
         $this->assertArrayNotHasKey('fixture_gateway', $manager->catalog());
-        $this->expectException(\\InvalidArgumentException::class);
+        $this->expectException(\InvalidArgumentException::class);
         $manager->driver('fixture_gateway');
     }
 }
