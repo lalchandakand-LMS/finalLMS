@@ -1,14 +1,14 @@
 <?php
 
-namespace App\\Http\\Controllers;
+namespace App\Http\Controllers;
 
-use App\\Models\\ActivityLog;
-use App\\Models\\Attendance;
-use Illuminate\\Database\\Eloquent\\Builder;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\View\\View;
-use Symfony\\Component\\HttpFoundation\\StreamedResponse;
+use App\Models\ActivityLog;
+use App\Models\Attendance;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AttendanceReportController extends Controller
 {
@@ -113,7 +113,7 @@ class AttendanceReportController extends Controller
 
     private function availableBatches(Request $request)
     {
-        $query = \\App\\Models\\Batch::query()->orderBy('title');
+        $query = \App\Models\Batch::query()->orderBy('title');
         if ($request->user()->isTeacher()) $query->where('teacher_id', $request->user()->id);
         elseif ($request->user()->isBranchManager()) $query->where('branch_id', $request->user()->branch_id);
         return $query->get(['id', 'title']);
@@ -121,6 +121,6 @@ class AttendanceReportController extends Controller
 
     private function csvSafe(string $value): string
     {
-        return preg_match('/^[=+@\\-\\t\\r]/', $value) ? "'".$value : $value;
+        return preg_match('/^[=+@\-\t\r]/', $value) ? "'".$value : $value;
     }
 }
