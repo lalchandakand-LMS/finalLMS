@@ -64,7 +64,7 @@
                 <tr>
                     <td>{{ $attempt->exam->title }}</td>
                     <td>{{ $attempt->exam->batch?->course?->title ?? '—' }}</td>
-                    <td>{{ $attempt->score === null ? __('Pending') : number_format((float) $attempt->score, 2) }}</td>
+                    <td>{{ $attempt->transcript_score === null ? __('Pending') : number_format((float) $attempt->transcript_score, 2) }}</td>
                     <td>{{ $maximum ?: '—' }}</td>
                     <td>{{ $attempt->submitted_at?->format('d M Y') ?? '—' }}</td>
                 </tr>
