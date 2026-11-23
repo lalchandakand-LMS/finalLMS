@@ -158,9 +158,18 @@ jobs:
         run: |
           php artisan serve --host=127.0.0.1 --port=8000 > "$RUNNER_TEMP/lms-browser-server.log" 2>&1 &
           for attempt in $(seq 1 30); do
-            if curl --fail --silent http://127.0.0.1:8000/up > /dev/null; then exit 0; fi
+            status="$(curl --silent --show-error --output "$RUNNER_TEMP/lms-health-response.txt" --write-out '%{http_code}' --max-time 5 http://127.0.0.1:8000/up || true)"
+            if [ "$status" = "200" ]; then exit 0; fi
             if [ "$attempt" -eq 30 ]; then
+              echo "Laravel liveness probe failed; last HTTP status: ${status:-no-response}"
+              echo "--- browser server output ---"
               cat "$RUNNER_TEMP/lms-browser-server.log"
+              echo "--- liveness response body ---"
+              cat "$RUNNER_TEMP/lms-health-response.txt" 2>/dev/null || true
+              if [ -f storage/logs/laravel.log ]; then
+                echo "--- Laravel application log (last 100 lines) ---"
+                tail -n 100 storage/logs/laravel.log
+              fi
               exit 1
             fi
             sleep 2
