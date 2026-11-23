@@ -26,11 +26,11 @@ class DashboardController extends Controller
         $institutionName = Setting::value('institution_name', config('app.name'));
         $setupWizardPending = $user->isAdmin() && ! Setting::value('setup_wizard_completed_at');
         $dashboardAppearance = [
-            'primary' => Setting::value('dashboard_primary_color', '#102b63'),
-            'secondary' => Setting::value('dashboard_secondary_color', '#0759c8'),
-            'accent' => Setting::value('dashboard_accent_color', '#ffd52f'),
-            'background' => Setting::value('dashboard_background_color', '#f3f6ff'),
-            'surface' => Setting::value('dashboard_surface_color', '#ffffff'),
+            'primary' => (Setting::value('dashboard_primary_color') ?: '#102b63'),
+            'secondary' => (Setting::value('dashboard_secondary_color') ?: '#0759c8'),
+            'accent' => (Setting::value('dashboard_accent_color') ?: '#ffd52f'),
+            'background' => (Setting::value('dashboard_background_color') ?: '#f3f6ff'),
+            'surface' => (Setting::value('dashboard_surface_color') ?: '#ffffff'),
             'hero_title' => Setting::value('dashboard_hero_title', ''),
             'hero_subtitle' => Setting::value('dashboard_hero_subtitle', ''),
             'hero_quote' => Setting::value('dashboard_hero_quote', ''),
