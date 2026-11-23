@@ -1,10 +1,10 @@
 <?php
 
-namespace Aloms\\UniversalAiAssistant;
+namespace Aloms\UniversalAiAssistant;
 
-use App\\Models\\User;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\Support\\Facades\\Validator;
+use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use RuntimeException;
 
 final class AgentContentWorkflow
@@ -93,12 +93,12 @@ final class AgentContentWorkflow
 
     public function searchKnowledge(string $query, int $limit = 8): array
     {
-        $terms = preg_split('/\\s+/u', trim($query), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $terms = preg_split('/\s+/u', trim($query), -1, PREG_SPLIT_NO_EMPTY) ?: [];
         if ($terms === []) return [];
         $builder = DB::table('ai_support_knowledge')->where('status', 'published');
         $builder->where(function ($outer) use ($terms): void {
             foreach (array_slice($terms, 0, 8) as $term) {
-                $needle = '%'.addcslashes($term, '%_\\\\').'%';
+                $needle = '%'.addcslashes($term, '%_\\').'%';
                 $outer->orWhere('question', 'like', $needle)->orWhere('answer', 'like', $needle)->orWhere('category', 'like', $needle);
             }
         });
