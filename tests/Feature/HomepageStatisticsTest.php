@@ -42,6 +42,11 @@ class HomepageStatisticsTest extends TestCase
             'status' => 'active',
         ]);
         Enrollment::create([
+            'user_id' => $course->teacher_id,
+            'course_id' => $secondActiveCourse->id,
+            'status' => 'active',
+        ]);
+        Enrollment::create([
             'user_id' => $student->id,
             'course_id' => $completedCourse->id,
             'status' => 'completed',
@@ -73,6 +78,33 @@ class HomepageStatisticsTest extends TestCase
             'course_id' => $course->id,
             'teacher_id' => $course->teacher_id,
             'title' => 'Morning Batch',
+            'capacity' => 20,
+            'starts_at' => now()->addDay(),
+            'ends_at' => now()->addMonths(3),
+            'fee' => 3000,
+            'status' => 'open',
+        ]);
+        Batch::create([
+            'branch_id' => $branch->id,
+            'course_id' => $course->id,
+            'teacher_id' => $course->teacher_id,
+            'title' => 'Expired Batch',
+            'capacity' => 20,
+            'starts_at' => now()->subMonths(3),
+            'ends_at' => now()->subDay(),
+            'fee' => 3000,
+            'status' => 'open',
+        ]);
+        $inactiveBranch = Branch::create([
+            'name' => 'Inactive Branch',
+            'slug' => 'inactive-branch',
+            'is_active' => false,
+        ]);
+        Batch::create([
+            'branch_id' => $inactiveBranch->id,
+            'course_id' => $course->id,
+            'teacher_id' => $course->teacher_id,
+            'title' => 'Inactive Branch Batch',
             'capacity' => 20,
             'starts_at' => now()->addDay(),
             'ends_at' => now()->addMonths(3),
