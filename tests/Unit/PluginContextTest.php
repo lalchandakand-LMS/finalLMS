@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use App\Models\PluginInstallation;
 use App\Services\Plugins\PluginContext;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
