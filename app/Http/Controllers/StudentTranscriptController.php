@@ -38,11 +38,13 @@ class StudentTranscriptController extends Controller
             ->latest('submitted_at')
             ->get();
 
-        $gradedExamAttempts = $examAttempts->filter(fn ($attempt) => $attempt->score !== null);
+        $gradedExamAttempts = $examAttempts->filter(fn ($attempt) =>
+            $attempt->score !== null && (int) $attempt->exam->questions->sum('marks') > 0
+        );
         $examAverage = $gradedExamAttempts->isNotEmpty()
             ? round($gradedExamAttempts->avg(function ($attempt) {
                 $maximum = (int) $attempt->exam->questions->sum('marks');
-                return $maximum > 0 ? min(100, ((float) $attempt->score / $maximum) * 100) : null;
+                return min(100, ((float) $attempt->score / $maximum) * 100);
             }), 2)
             : null;
 
