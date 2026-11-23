@@ -22,7 +22,13 @@
         <a class="btn secondary" href="{{ route('teacher.ai-assistant.proposals.index') }}">{{ __('Review AI proposals') }}</a>
     @elseif($role === 'admin')
         <a class="btn secondary" href="{{ route('admin.ai-assistant.proposals.index') }}">{{ __('AI approval inbox') }}</a>
+        <a class="btn secondary" href="{{ route('admin.ai-assistant.drafts.index') }}">{{ __('Teacher draft review') }}</a>
+        <a class="btn secondary" href="{{ route('admin.ai-assistant.knowledge.index') }}">{{ __('Support Knowledge Base') }}</a>
     @endif
+    @if($role === 'teacher') <a class="btn secondary" href="{{ route('teacher.ai-assistant.drafts.index') }}">{{ __('My AI teaching drafts') }}</a> @endif
+    @if($role === 'support_staff') <a class="btn secondary" href="{{ route('support.ai-assistant.knowledge.index') }}">{{ __('Verified Support FAQs') }}</a> @endif
+    @php($notificationPrefix = match($role) { 'admin' => 'admin', 'teacher' => 'teacher', 'student' => 'student', 'guardian' => 'guardian', default => 'support' })
+    <a class="btn secondary" href="{{ route($notificationPrefix.'.ai-assistant.notifications.index') }}">{{ __('AI notifications') }}</a>
 </div>
 <div class="grid grid-2">
     <aside class="panel">
