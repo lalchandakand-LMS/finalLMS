@@ -54,6 +54,17 @@ final class MfsMerchantConfigurationService
         return is_string($value) && $value !== '' ? $value : null;
     }
 
+    public function isSslcommerzConfigured(): bool
+    {
+        $configuration = $this->configuration('sslcommerz');
+        if (! $configuration || ! in_array($configuration->mode, ['sandbox', 'live'], true)) {
+            return false;
+        }
+        $credentials = $this->credentials('sslcommerz');
+        return isset($credentials['store_id'], $credentials['store_password'])
+            && $credentials['store_id'] !== '' && $credentials['store_password'] !== '';
+    }
+
     public function isBkashConfigured(): bool
     {
         if (! $this->hasStoredConfiguration('bkash') && ! (bool) config('services.bkash.enabled')) {
