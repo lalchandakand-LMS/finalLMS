@@ -377,6 +377,7 @@ final class HrController extends Controller
 
             if ($basis === 'per_class') {
                 abort_unless($member->user_id, 422, 'Per-class payroll requires this staff profile to be linked to a teacher user account.');
+                abort_if((float) $member->per_class_rate <= 0, 422, 'Set a per-class rate greater than zero before preparing payroll.');
                 $classesDelivered = (int) DB::table('live_classes')
                     ->join('batches', 'batches.id', '=', 'live_classes.batch_id')
                     ->where('batches.teacher_id', $member->user_id)
