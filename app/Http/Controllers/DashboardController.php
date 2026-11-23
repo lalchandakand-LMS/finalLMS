@@ -37,6 +37,12 @@ class DashboardController extends Controller
             'hero_quote' => Setting::value('dashboard_hero_quote', ''),
             'hero_image' => null,
             'live_class_image' => null,
+            'show_hero' => (bool) (int) (Setting::value('dashboard_show_hero') ?? 1),
+            'show_statistics' => (bool) (int) (Setting::value('dashboard_show_statistics') ?? 1),
+            'show_live_class' => (bool) (int) (Setting::value('dashboard_show_live_class') ?? 1),
+            'show_quick_actions' => (bool) (int) (Setting::value('dashboard_show_quick_actions') ?? 1),
+            'show_system_snapshot' => (bool) (int) (Setting::value('dashboard_show_system_snapshot') ?? 1),
+            'show_learning_operations' => (bool) (int) (Setting::value('dashboard_show_learning_operations') ?? 1),
         ];
         $heroImage = Setting::value('dashboard_hero_image_media_id')
             ? MediaAsset::query()->whereKey((int) Setting::value('dashboard_hero_image_media_id'))->where('mime_type', 'like', 'image/%')->first()
