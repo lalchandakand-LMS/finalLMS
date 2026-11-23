@@ -23,6 +23,7 @@ use App\Http\Controllers\TeacherApplicationController;
 use App\Http\Controllers\BatchController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AttendanceFeeBillingController;
+use App\Http\Controllers\ScormPackageController;
 use App\Http\Controllers\ApiConnectorAdminController;
 use App\Http\Controllers\ApiConnectorWebhookController;
 use App\Http\Controllers\AdminAttendanceSyncReviewController;
@@ -680,6 +681,12 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
     });
 });
 
+
+Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('admin/courses/{course}/scorm-packages')->name('admin.courses.scorm-packages.')->group(function () {
+    Route::get('/', [ScormPackageController::class, 'index'])->name('index');
+    Route::post('/', [ScormPackageController::class, 'store'])->middleware('throttle:5,10')->name('store');
+    Route::delete('/{package}', [ScormPackageController::class, 'destroy'])->whereNumber('package')->middleware('throttle:10,1')->name('destroy');
+});
 
 Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('admin/integrations')->name('admin.integrations.')->group(function () {
     Route::get('/', [AdminApiConnectionController::class, 'index'])->name('index');
