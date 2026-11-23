@@ -707,3 +707,33 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::delete('/courses/{course}/lessons/{lesson}', [CourseController::class, 'destroyLesson'])->name('admin.courses.lessons.destroy');
     });
 });
+
+
+// Native AI assistant, specialist agents and human-reviewed actions.
+foreach (['admin' => 'admin', 'branch_manager' => 'branch', 'teacher' => 'teacher', 'student' => 'student', 'guardian' => 'guardian', 'support_staff' => 'support'] as $aiRole => $aiPrefix) {
+    Route::middleware(['auth', 'verified', 'activity.log', 'role:'.$aiRole])
+        ->prefix($aiPrefix.'/ai-assistant')->name($aiPrefix.'.ai-assistant.')->group(function () {
+            Route::get('/', [AssistantController::class, 'index'])->name('index');
+            Route::post('/messages', [AssistantController::class, 'send'])->middleware('throttle:10,1')->name('messages.store');
+            if (in_array($aiRole, ['admin', 'teacher', 'student'], true)) {
+                Route::get('/proposals', [AgentActionController::class, 'index'])->name('proposals.index');
+                Route::post('/proposals/study-plan', [AgentActionController::class, 'storeStudyPlan'])->middleware('throttle:5,1')->name('proposals.study-plan');
+                Route::post('/proposals/{proposal}/approve', [AgentActionController::class, 'approve'])->whereNumber('proposal')->middleware('throttle:10,1')->name('proposals.approve');
+                Route::post('/proposals/{proposal}/reject', [AgentActionController::class, 'reject'])->whereNumber('proposal')->middleware('throttle:10,1')->name('proposals.reject');
+            }
+            if (in_array($aiRole, ['admin', 'teacher'], true)) {
+                Route::get('/drafts', [AgentContentController::class, 'drafts'])->name('drafts.index');
+                Route::post('/drafts', [AgentContentController::class, 'saveDraft'])->middleware('throttle:10,1')->name('drafts.store');
+                Route::post('/drafts/{draft}/review', [AgentContentController::class, 'reviewDraft'])->whereNumber('draft')->middleware('throttle:10,1')->name('drafts.review');
+                Route::get('/knowledge', [AgentContentController::class, 'knowledge'])->name('knowledge.index');
+                Route::post('/knowledge', [AgentContentController::class, 'saveKnowledge'])->middleware('throttle:10,1')->name('knowledge.store');
+            }
+            Route::get('/notifications', [AgentContentController::class, 'notifications'])->name('notifications.index');
+            Route::post('/notifications/{notification}/read', [AgentContentController::class, 'markRead'])->whereNumber('notification')->middleware('throttle:30,1')->name('notifications.read');
+        });
+}
+Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('admin/ai-assistant')->name('admin.ai-assistant.')->group(function () {
+    Route::get('/settings', [AdminSettingsController::class, 'index'])->name('settings');
+    Route::get('/models', [AdminSettingsController::class, 'models'])->middleware('throttle:10,1')->name('models');
+    Route::put('/settings', [AdminSettingsController::class, 'update'])->middleware('throttle:10,1')->name('settings.update');
+});
