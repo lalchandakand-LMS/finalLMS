@@ -208,6 +208,21 @@ class DashboardController extends Controller
                 ->orderBy('name')->take(3)->get()
             : collect();
 
+        $dashboardSearchTerm = trim((string) request('search', ''));
+        $dashboardSearchResults = null;
+        if ($user->isAdmin() && mb_strlen($dashboardSearchTerm) >= 2) {
+            $dashboardSearchResults = [
+                'students' => User::query()->where('role', 'student')
+                    ->where(fn ($query) => $query->where('name', 'like', '%' . $dashboardSearchTerm . '%')->orWhere('email', 'like', '%' . $dashboardSearchTerm . '%'))
+                    ->orderBy('name')->take(5)->get(['id', 'name', 'email']),
+                'teachers' => User::query()->where('role', 'teacher')
+                    ->where(fn ($query) => $query->where('name', 'like', '%' . $dashboardSearchTerm . '%')->orWhere('email', 'like', '%' . $dashboardSearchTerm . '%'))
+                    ->orderBy('name')->take(5)->get(['id', 'name', 'email']),
+                'courses' => Course::query()->where('title', 'like', '%' . $dashboardSearchTerm . '%')
+                    ->orderBy('title')->take(5)->get(['id', 'title', 'slug']),
+            ];
+        }
+
         $analyticsMonths = [];
         if ($user->isAdmin()) {
             for ($monthOffset = 5; $monthOffset >= 0; $monthOffset--) {
@@ -233,7 +248,7 @@ class DashboardController extends Controller
             'approved_course_payments' => (float) Payment::query()->where('status', 'approved')->sum('amount'),
         ] : [];
 
-        return view('dashboard', compact('user', 'courses', 'enrolledCourses', 'recentCertificates', 'stats', 'announcementSlides', 'studentInsights', 'teacherInsights', 'institutionName', 'setupWizardPending', 'dashboardAppearance', 'nextLiveClass', 'recentActivity', 'upcomingLiveClasses', 'courseProgress', 'courseProgressTotal', 'courseProgressPercent', 'topStudents', 'analyticsMonths'));
+        return view('dashboard', compact('user', 'courses', 'enrolledCourses', 'recentCertificates', 'stats', 'announcementSlides', 'studentInsights', 'teacherInsights', 'institutionName', 'setupWizardPending', 'dashboardAppearance', 'nextLiveClass', 'recentActivity', 'upcomingLiveClasses', 'courseProgress', 'courseProgressTotal', 'courseProgressPercent', 'topStudents', 'analyticsMonths', 'dashboardSearchTerm', 'dashboardSearchResults'));
     }
 
     public function certificate(Certificate $certificate): View
