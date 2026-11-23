@@ -157,6 +157,10 @@
         .admin-shell .nav-links > a { display:none; }
         .admin-shell .nav-links > a[href*="dashboard"], .admin-shell .nav-links > a[href*="profile"] { display:inline-flex; }
         .admin-shell .nav-links > form { display:inline-flex; }
+        .admin-shell .nav-links > .admin-dashboard-search { flex:1 1 280px; max-width:440px; }
+        .admin-shell .nav-links > .admin-dashboard-search button { min-width:42px; }
+        @media(max-width:900px) { .admin-shell .nav-links > .admin-dashboard-search { min-width:180px !important; } }
+        @media(max-width:600px) { .admin-shell .nav-links > .admin-dashboard-search { min-width:130px !important; flex:1 1 130px; } .admin-shell .nav-links > .admin-dashboard-search input { min-width:80px !important; } }
         .admin-shell .container { max-width:none; margin-left:252px; padding:28px 30px 55px; }
         @media(max-width:900px) { .admin-sidebar { width:76px; padding:20px 9px; } .admin-sidebar-brand { justify-content:center; padding:4px 0 22px; } .admin-sidebar-brand strong,.admin-sidebar-label,.admin-sidebar a .nav-text,.admin-sidebar-footer { display:none; } .admin-sidebar a { justify-content:center; padding:12px 5px; } .admin-sidebar a span:first-child { width:auto; } .admin-shell .topbar,.admin-shell .container { margin-left:76px; } .admin-shell .nav { padding:12px 16px; } }
         @media(max-width:600px) { .admin-sidebar { width:60px; } .admin-shell .topbar,.admin-shell .container { margin-left:60px; } .admin-shell .container { padding:18px 12px 40px; } .admin-shell .nav { padding:10px; } .admin-shell .brand { font-size:1rem; } }
@@ -534,6 +538,11 @@
             @if($isAdminLayout)
             <div class="nav-links">
                 <button type="button" class="admin-toolbar-toggle" id="admin-sidebar-toggle" aria-label="Toggle admin navigation" aria-expanded="true">☰</button>
+                <form method="GET" action="{{ route('dashboard') }}" class="admin-dashboard-search" role="search" style="display:flex;align-items:center;gap:8px;min-width:min(42vw,420px);">
+                    <label for="admin-dashboard-search" class="sr-only">{{ __('Search students, courses, teachers') }}</label>
+                    <input id="admin-dashboard-search" type="search" name="search" value="{{ request('search') }}" minlength="2" placeholder="{{ __('Search students, courses, teachers...') }}" style="width:100%;min-width:150px;border:1px solid var(--border);border-radius:999px;padding:10px 15px;background:#fff;">
+                    <button type="submit" aria-label="{{ __('Search') }}" style="border-radius:999px;padding:10px 15px;">⌕</button>
+                </form>
                 <a class="admin-view-site" href="/" target="_blank" rel="noopener">{{ __("View site") }} ↗</a>
                 <form method="POST" action="{{ route('locale.update') }}" class="inline-form" style="display:inline-flex;gap:6px;align-items:center;">
                     @csrf
