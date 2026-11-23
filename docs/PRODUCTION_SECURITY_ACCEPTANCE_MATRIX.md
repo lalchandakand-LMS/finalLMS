@@ -12,7 +12,7 @@ This document is an evidence checklist, not a declaration that production accept
 | Plugin trust/lifecycle | Signature verification, installed-file integrity, archive installer, lifecycle, migration runner, runtime and queued-job lifecycle tests | Required CI pass; invalid signatures, tampering, traversal and unsafe transitions must fail closed |
 | Backup/restore | Backup/restore tests cover private backup access, password + explicit confirmation, tamper rejection, database/media restoration and automatic compensation after failed restore | Required CI pass; verify retained safety snapshot and recovery logs |
 | Migrations/rollback | MySQL full migration in CI, MariaDB negative-marking rollback safety, SQLite plugin-route checks | Required CI pass; every release migration must be reviewed for reversible and data-safe behavior |
-| Dependencies/build | Composer strict validation/audit, production npm audit, PHP syntax lint, route:list, frontend build, cPanel package integrity checks | Required CI pass on the exact release SHA |
+| Static security analysis | CodeQL `security-extended` for JavaScript/TypeScript; Semgrep `p/php` + `p/security-audit` for PHP application/plugin code | Required scan pass on the exact release SHA; review findings and suppressions |\n| Dependencies/build | Composer strict validation/audit, production npm audit, PHP syntax lint, route:list, frontend build, cPanel package integrity checks | Required CI pass on the exact release SHA |
 
 ## Manual acceptance required before production release
 
