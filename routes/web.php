@@ -88,9 +88,7 @@ Route::post('/install', [InstallController::class, 'install'])->middleware('thro
 Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('seo.sitemap');
 Route::get('/robots.txt', [SeoController::class, 'robots'])->name('seo.robots');
 
-Route::get('/', function () {
-    return auth()->check() ? redirect('/dashboard') : app(LandingPageController::class)();
-})->name('landing');
+Route::get('/', LandingPageController::class)->name('landing');
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
