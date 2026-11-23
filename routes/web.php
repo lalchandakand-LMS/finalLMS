@@ -81,6 +81,7 @@ use App\Http\Controllers\CourseContentController;
 use App\Http\Controllers\CommentController;
 use App\Modules\Admissions\AdmissionController;
 use App\Modules\Hr\HrController;
+use App\Modules\Library\LibraryController;
 use App\Http\Controllers\GamificationController;
 use App\Http\Controllers\LandingPageController;
 use Illuminate\Support\Facades\Route;
@@ -166,6 +167,19 @@ Route::middleware('auth')->group(function () {
     Route::post('/email/verification-notification', [EmailVerificationController::class, 'resend'])
         ->middleware('throttle:6,1')
         ->name('verification.send');
+});
+
+Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('admin/library')->name('admin.library.')->group(function () {
+    Route::get('/', [LibraryController::class, 'index'])->name('index');
+    Route::post('/books', [LibraryController::class, 'storeBook'])->middleware('throttle:20,1')->name('books.store');
+    Route::post('/loans', [LibraryController::class, 'issueLoan'])->middleware('throttle:20,1')->name('loans.issue');
+    Route::post('/loans/{loan}/return', [LibraryController::class, 'returnLoan'])->whereNumber('loan')->middleware('throttle:20,1')->name('loans.return');
+});
+Route::middleware(['auth', 'verified', 'activity.log', 'role:branch_manager'])->prefix('branch/library')->name('branch.library.')->group(function () {
+    Route::get('/', [LibraryController::class, 'index'])->name('index');
+    Route::post('/books', [LibraryController::class, 'storeBook'])->middleware('throttle:20,1')->name('books.store');
+    Route::post('/loans', [LibraryController::class, 'issueLoan'])->middleware('throttle:20,1')->name('loans.issue');
+    Route::post('/loans/{loan}/return', [LibraryController::class, 'returnLoan'])->whereNumber('loan')->middleware('throttle:20,1')->name('loans.return');
 });
 
 Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('admin/hr')->name('admin.hr.')->group(function () {
