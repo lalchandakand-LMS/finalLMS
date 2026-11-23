@@ -34,6 +34,7 @@ final class AgentContentWorkflow
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+        AssistantAudit::record(! empty($data['submit_for_review']) ? 'teacher_draft_submitted' : 'teacher_draft_saved', (int) $teacher->id, null, null, 'teacher', 'internal', 'agent-content-v1', ['draft_id' => $id, 'draft_type' => $data['draft_type']]);
         if (! empty($data['submit_for_review'])) {
             $this->notifyAdmins('teacher_draft_submitted', 'Teacher draft submitted', 'A teaching draft is waiting for review.', ['draft_id' => $id]);
         }
@@ -61,6 +62,7 @@ final class AgentContentWorkflow
                 'version' => DB::raw('version + 1'),
                 'updated_at' => now(),
             ]);
+            AssistantAudit::record($approve ? 'teacher_draft_approved' : 'teacher_draft_changes_requested', (int) $admin->id, null, null, 'admin', 'internal', 'agent-content-v1', ['draft_id' => $draftId, 'author_id' => (int) $draft->author_id, 'version' => $version]);
             $this->notifyUser((int) $draft->author_id, $approve ? 'teacher_draft_approved' : 'teacher_draft_changes_requested',
                 $approve ? 'Teaching draft approved' : 'Changes requested',
                 $approve ? 'Your teaching draft has been approved.' : 'An administrator requested changes to your teaching draft.',
@@ -88,6 +90,7 @@ final class AgentContentWorkflow
             'source_url' => $data['source_url'] ?? null, 'status' => 'published', 'version' => 1,
             'created_at' => now(), 'updated_at' => now(),
         ]);
+        AssistantAudit::record('support_knowledge_published', (int) $admin->id, null, null, 'admin', 'internal', 'agent-content-v1', ['knowledge_id' => $id, 'category' => $data['category']]);
         return DB::table('ai_support_knowledge')->where('id', $id)->first();
     }
 
