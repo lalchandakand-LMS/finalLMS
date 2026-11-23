@@ -16,11 +16,11 @@
     @if($role === 'admin')<a class="btn secondary" href="{{ route('admin.ai-assistant.settings') }}">{{ __('AI Settings') }}</a>@endif
 </div>
 <div style="margin:12px 0;">
-    @if($role === 'student')
+    @if($role === 'student' && \\Illuminate\\Support\\Facades\\Route::has('student.ai-assistant.proposals.index'))
         <a class="btn secondary" href="{{ route('student.ai-assistant.proposals.index') }}">{{ __('My study plans & AI proposals') }}</a>
-    @elseif($role === 'teacher')
+    @elseif($role === 'teacher' && \\Illuminate\\Support\\Facades\\Route::has('teacher.ai-assistant.proposals.index'))
         <a class="btn secondary" href="{{ route('teacher.ai-assistant.proposals.index') }}">{{ __('Review AI proposals') }}</a>
-    @elseif($role === 'admin')
+    @elseif($role === 'admin' && \\Illuminate\\Support\\Facades\\Route::has('admin.ai-assistant.proposals.index'))
         <a class="btn secondary" href="{{ route('admin.ai-assistant.proposals.index') }}">{{ __('AI approval inbox') }}</a>
     @endif
 </div>
