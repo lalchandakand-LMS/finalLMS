@@ -32,21 +32,15 @@
         </form>
     @elseif($exam->access_type === 'paid' && $pendingPayment)
         <p class="badge warning">{{ __('Payment awaiting verification') }}</p>
-        <p class="muted">{{ __('A bKash payment is already pending for this exam. Do not pay again. Access will be granted only after the server verifies the payment.') }}</p>
-    @elseif($exam->access_type === 'paid' && $bkashAvailable)
-        <p class="muted">{{ __('Pay securely with bKash. Exam access is granted only after server-side transaction verification.') }}</p>
-        <form method="POST" action="{{ route('student.learn-earn.exams.checkout.bkash', $exam) }}">
-            @csrf
-            <button class="btn primary" type="submit">{{ __('Pay with bKash') }} · ৳{{ number_format((float)$exam->price, 2) }}</button>
-        </form>
-    @elseif($exam->access_type === 'paid')
-        <p class="badge warning">{{ __('Online payment is not currently available.') }}</p>
-        <p class="muted">{{ __('Please contact the academy. Do not send payment outside the verified checkout.') }}</p>
-    @else
-        <form method="POST" action="{{ route('student.learn-earn.exams.start', $exam) }}">
-            @csrf
-            <button class="btn primary" type="submit">{{ __('Start free exam') }}</button>
-        </form>
+        <p class="muted">{{ __('A payment is already pending for this exam. Do not pay again. Access will be granted only after the server verifies the payment.') }}</p>
+    @elseif($exam->access_type === 'paid' && $onlineGateways->isNotEmpty())
+        @foreach($onlineGateways as $gatewayKey => $gateway)
+            <p class="muted">{{ __('Pay securely with :provider. Exam access is granted only after server-side transaction verification.', ['provider' => $gateway['name']]) }}</p>
+            <form method="POST" action="{{ route('student.learn-earn.exams.checkout.gateway', ['exam' => $exam->slug, 'provider' => $gatewayKey]) }}">
+                @csrf
+                <button type="submit" class="btn primary">{{ __('Continue to :provider checkout', ['provider' => $gateway['name']]) }}</button>
+            </form>
+        @endforeach
     @endif
 </div>
 @endsection
