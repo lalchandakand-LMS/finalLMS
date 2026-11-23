@@ -346,6 +346,15 @@
                     <div><label for="dashboard-hero-subtitle">{{ __('Welcome banner subtitle') }}</label><input id="dashboard-hero-subtitle" name="dashboard_hero_subtitle" maxlength="300" value="{{ old('dashboard_hero_subtitle', $settings['dashboard_hero_subtitle'] ?? '') }}"></div>
                     <div><label for="dashboard-hero-quote">{{ __('Banner quote / slogan') }}</label><input id="dashboard-hero-quote" name="dashboard_hero_quote" maxlength="180" value="{{ old('dashboard_hero_quote', $settings['dashboard_hero_quote'] ?? '') }}" placeholder="{{ __('Your Success, Our Mission') }}"></div>
                     <div>
+                        <label for="dashboard-brand-logo">{{ __('Dashboard brand mark / logo') }}</label>
+                        <select id="dashboard-brand-logo" name="dashboard_brand_logo_media_id">
+                            <option value="">{{ __('Use graduation cap icon') }}</option>
+                            @foreach($mediaAssets as $asset)
+                                <option value="{{ $asset->id }}" @selected((string) old('dashboard_brand_logo_media_id', $settings['dashboard_brand_logo_media_id'] ?? '') === (string) $asset->id)>{{ $asset->original_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
                         <label for="dashboard-hero-image">{{ __('Dashboard welcome banner image') }}</label>
                         <select id="dashboard-hero-image" name="dashboard_hero_image_media_id">
                             <option value="">{{ __('Use built-in gradient banner') }}</option>
