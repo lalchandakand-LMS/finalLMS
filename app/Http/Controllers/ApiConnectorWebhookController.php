@@ -11,7 +11,7 @@ final class ApiConnectorWebhookController extends Controller
 {
     public function receive(string $provider, Request $request, ApiConnectorManager $manager): JsonResponse
     {
-        abort_if((int) $request->header('Content-Length', 0) > 1048576, 413);
+        abort_if(strlen($request->getContent()) > 1048576 || (int) $request->header('Content-Length', 0) > 1048576, 413);
         try {
             $inserted = $manager->processWebhook($provider, $request);
             return response()->json(['received' => true, 'duplicate' => ! $inserted], 202);
