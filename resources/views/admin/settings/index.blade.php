@@ -250,6 +250,40 @@
 
             <hr style="border: 0; border-top: 1px solid var(--border); margin: 28px 0;">
             <div style="margin-bottom: 18px;">
+            <section class="panel" style="padding:20px;margin-bottom:24px;border:1px solid var(--border);">
+                <span class="badge info">{{ __('Dashboard appearance') }}</span>
+                <h2 style="margin:12px 0 6px;">{{ __('Customize the admin dashboard') }}</h2>
+                <p class="muted">{{ __('Keep the dashboard layout while changing its colors, banner artwork, live-class image and welcome text. Select images already uploaded to the Media Library.') }}</p>
+                <div class="grid grid-2">
+                    <div><label for="dashboard-primary-color">{{ __('Primary navy') }}</label><input id="dashboard-primary-color" type="color" name="dashboard_primary_color" value="{{ old('dashboard_primary_color', $settings['dashboard_primary_color'] ?? '#102b63') }}"></div>
+                    <div><label for="dashboard-secondary-color">{{ __('Banner blue') }}</label><input id="dashboard-secondary-color" type="color" name="dashboard_secondary_color" value="{{ old('dashboard_secondary_color', $settings['dashboard_secondary_color'] ?? '#0759c8') }}"></div>
+                    <div><label for="dashboard-accent-color">{{ __('Highlight / button color') }}</label><input id="dashboard-accent-color" type="color" name="dashboard_accent_color" value="{{ old('dashboard_accent_color', $settings['dashboard_accent_color'] ?? '#ffd52f') }}"></div>
+                    <div><label for="dashboard-background-color">{{ __('Dashboard background') }}</label><input id="dashboard-background-color" type="color" name="dashboard_background_color" value="{{ old('dashboard_background_color', $settings['dashboard_background_color'] ?? '#f3f6ff') }}"></div>
+                    <div><label for="dashboard-surface-color">{{ __('Card surface color') }}</label><input id="dashboard-surface-color" type="color" name="dashboard_surface_color" value="{{ old('dashboard_surface_color', $settings['dashboard_surface_color'] ?? '#ffffff') }}"></div>
+                    <div><label for="dashboard-hero-title">{{ __('Welcome banner title') }}</label><input id="dashboard-hero-title" name="dashboard_hero_title" maxlength="180" value="{{ old('dashboard_hero_title', $settings['dashboard_hero_title'] ?? '') }}" placeholder="{{ __('Welcome back,') }}"></div>
+                    <div><label for="dashboard-hero-subtitle">{{ __('Welcome banner subtitle') }}</label><input id="dashboard-hero-subtitle" name="dashboard_hero_subtitle" maxlength="300" value="{{ old('dashboard_hero_subtitle', $settings['dashboard_hero_subtitle'] ?? '') }}"></div>
+                    <div><label for="dashboard-hero-quote">{{ __('Banner quote / slogan') }}</label><input id="dashboard-hero-quote" name="dashboard_hero_quote" maxlength="180" value="{{ old('dashboard_hero_quote', $settings['dashboard_hero_quote'] ?? '') }}" placeholder="{{ __('Your Success, Our Mission') }}"></div>
+                    <div>
+                        <label for="dashboard-hero-image">{{ __('Dashboard welcome banner image') }}</label>
+                        <select id="dashboard-hero-image" name="dashboard_hero_image_media_id">
+                            <option value="">{{ __('Use built-in gradient banner') }}</option>
+                            @foreach($mediaAssets as $asset)
+                                <option value="{{ $asset->id }}" @selected((string) old('dashboard_hero_image_media_id', $settings['dashboard_hero_image_media_id'] ?? '') === (string) $asset->id)>{{ $asset->original_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label for="dashboard-live-image">{{ __('Live class thumbnail') }}</label>
+                        <select id="dashboard-live-image" name="dashboard_live_class_image_media_id">
+                            <option value="">{{ __('Use default live class artwork') }}</option>
+                            @foreach($mediaAssets as $asset)
+                                <option value="{{ $asset->id }}" @selected((string) old('dashboard_live_class_image_media_id', $settings['dashboard_live_class_image_media_id'] ?? '') === (string) $asset->id)>{{ $asset->original_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <p class="muted" style="margin-top:14px;">{{ __('Need another image? Upload it in the Media Library first. Changes apply to the admin dashboard after saving. Dashboard counts continue to come from real LMS records.') }} <a href="{{ route('admin.media.index') }}">{{ __('Open Media Library') }}</a></p>
+            </section>
                 <span class="badge info">{{ __('Search and marketing') }}</span>
 
             <hr style="border: 0; border-top: 1px solid var(--border); margin: 28px 0;">
