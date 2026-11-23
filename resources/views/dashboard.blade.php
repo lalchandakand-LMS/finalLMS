@@ -247,7 +247,7 @@
                 </div>
                 <div class="dash-summary">
                     <div class="summary-box"><span class="muted">{{ __('Enrolled courses') }}</span><strong>{{ number_format($studentInsights['enrolled_courses']) }}</strong></div>
-                    <div class="summary-box"><span class="muted">{{ __('Lessons completed') }}</span><strong>{{ number_format($studentInsights['completed_lessons']) }} / {{ number_format($studentInsights['total_lessons']) }}</strong></div>
+                    <div class="summary-box"><span class="muted">{{ __('Lessons & videos completed') }}</span><strong>{{ number_format($studentInsights['completed_lessons']) }} / {{ number_format($studentInsights['total_lessons']) }}</strong></div>
                     <div class="summary-box"><span class="muted">{{ __('Assignments submitted') }}</span><strong>{{ number_format($studentInsights['assignments_submitted']) }}</strong></div>
                     <div class="summary-box"><span class="muted">{{ __('Exams attempted') }}</span><strong>{{ number_format($studentInsights['exams_attempted']) }}</strong></div>
                     <div class="summary-box"><span class="muted">{{ __('Attendance records') }}</span><strong>{{ number_format($studentInsights['attendance_marked']) }}</strong></div>
