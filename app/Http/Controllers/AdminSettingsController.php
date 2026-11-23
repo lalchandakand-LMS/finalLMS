@@ -33,6 +33,16 @@ class AdminSettingsController extends Controller
             'institution_favicon_url' => ['nullable', 'url', 'max:500'],
             'site_primary_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'site_background_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'dashboard_primary_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'dashboard_secondary_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'dashboard_accent_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'dashboard_background_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'dashboard_surface_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'dashboard_hero_image_media_id' => ['nullable', 'integer', 'min:1'],
+            'dashboard_live_class_image_media_id' => ['nullable', 'integer', 'min:1'],
+            'dashboard_hero_title' => ['nullable', 'string', 'max:180'],
+            'dashboard_hero_subtitle' => ['nullable', 'string', 'max:300'],
+            'dashboard_hero_quote' => ['nullable', 'string', 'max:180'],
             'institution_default_locale' => ['sometimes', 'required', 'in:en,bn'],
             'institution_timezone' => ['sometimes', 'required', 'timezone'],
             'site_logo_media_id' => ['nullable', 'integer', 'min:1'],
@@ -140,7 +150,7 @@ class AdminSettingsController extends Controller
         })->filter()->values()->all();
         unset($validated['payment_methods'], $validated['home_slides']);
 
-        foreach (['site_logo_media_id', 'site_favicon_media_id', 'loading_screen_logo_media_id'] as $mediaSetting) {
+        foreach (['site_logo_media_id', 'site_favicon_media_id', 'loading_screen_logo_media_id', 'dashboard_hero_image_media_id', 'dashboard_live_class_image_media_id'] as $mediaSetting) {
             $mediaId = $validated[$mediaSetting] ?? null;
             if ($mediaId !== null && !MediaAsset::query()->whereKey($mediaId)->where('mime_type', 'like', 'image/%')->exists()) {
                 return back()->withErrors([$mediaSetting => 'Please select a valid image from the Media Library.'])->withInput();
