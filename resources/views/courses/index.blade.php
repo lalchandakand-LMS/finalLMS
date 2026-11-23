@@ -45,9 +45,9 @@
     <form method="GET" action="{{ route('courses.index') }}" class="panel course-filter-panel">
         <h2 style="margin-top:0;">{{ __('Find your course') }}</h2>
         <div class="course-filter-grid">
-            <label>Academic level
+            <label>{{ __('Academic level') }}
             <select name="academic_level_id">
-                <option value="">All levels</option>
+                <option value="">{{ __('All levels') }}</option>
                 @foreach($academicLevels as $academicLevel)
                     <option value="{{ $academicLevel->id }}" @selected((string) request('academic_level_id') === (string) $academicLevel->id)>{{ $academicLevel->name }}</option>
                 @endforeach
