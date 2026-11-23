@@ -603,6 +603,13 @@
                 frame.style.setProperty('--dashboard-preview-secondary', value('dashboard_secondary_color') || '#0759c8');
                 if (previewTitle) previewTitle.textContent = value('dashboard_hero_title') || 'Welcome back, Administrator';
                 if (previewSubtitle) previewSubtitle.textContent = value('dashboard_hero_subtitle') || 'Your academy overview at a glance';
+                const previewEyebrow = panel.querySelector('[data-dashboard-preview-eyebrow]');
+                const previewButton = panel.querySelector('[data-dashboard-preview-button]');
+                if (previewEyebrow) previewEyebrow.textContent = value('dashboard_hero_eyebrow') || 'Alom’s English Center LMS';
+                if (previewButton) previewButton.textContent = value('dashboard_hero_cta_label') || 'View courses';
+                frame.dataset.previewTheme = value('dashboard_theme_mode') || 'light';
+                frame.style.setProperty('--dashboard-preview-radius', (Number(value('dashboard_card_radius')) || 19) + 'px');
+                frame.dataset.previewShadow = value('dashboard_card_shadow') || 'soft';
                 const accents = ['dashboard_students_color','dashboard_teachers_color','dashboard_courses_color','dashboard_certificates_color'];
                 panel.querySelectorAll('.dashboard-preview-stats > div').forEach((card,index) => {
                     card.style.borderTop = '3px solid ' + (value(accents[index]) || ['#1675f5','#08b978','#8525e8','#f59e0b'][index]);
@@ -632,7 +639,10 @@
                 dashboard_accent_color:'#ffd52f', dashboard_background_color:'#f3f6ff',
                 dashboard_surface_color:'#ffffff', dashboard_students_color:'#1675f5',
                 dashboard_teachers_color:'#08b978', dashboard_courses_color:'#8525e8',
-                dashboard_certificates_color:'#f59e0b', dashboard_hero_title:'',
+                dashboard_certificates_color:'#f59e0b', dashboard_theme_mode:'light',
+                dashboard_card_radius:'19', dashboard_card_shadow:'soft',
+                dashboard_hero_eyebrow:'', dashboard_hero_cta_label:'',
+                dashboard_hero_image_position:'center', dashboard_hero_title:'',
                 dashboard_hero_subtitle:'', dashboard_hero_quote:'',
                 dashboard_hero_image_media_id:'', dashboard_live_class_image_media_id:'',
                 dashboard_show_hero:'1', dashboard_show_statistics:'1',
