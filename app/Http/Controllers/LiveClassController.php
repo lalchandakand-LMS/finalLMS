@@ -168,14 +168,12 @@ class LiveClassController extends Controller
             // an attendance write racing a monthly billing snapshot.
             $lockedBatch = Batch::query()->lockForUpdate()->findOrFail($liveClass->batch_id);
             $session = LiveClass::query()->where('batch_id', $lockedBatch->id)->lockForUpdate()->findOrFail($liveClass->id);
-            if ($lockedBatch->fee_calculation_mode === 'per_class') {
-                $billingPeriod = $session->starts_at->format('Y-m');
-                abort_if(
-                    AttendanceFeePeriod::query()->where('batch_id', $lockedBatch->id)->where('billing_period', $billingPeriod)->exists(),
-                    409,
-                    'Class attendance is locked because this billing period has already been invoiced. Use a finance adjustment instead of changing billed attendance.'
-                );
-            }
+            $billingPeriod = $session->starts_at->format('Y-m');
+            abort_if(
+                AttendanceFeePeriod::query()->where('batch_id', $lockedBatch->id)->where('billing_period', $billingPeriod)->exists(),
+                409,
+                'Class attendance is locked because this billing period has already been invoiced. Use a finance adjustment instead of changing billed attendance.'
+            );
 
             $activeStudentIds = $lockedBatch->enrollments()
                 ->whereIn('status', ['active', 'completed'])
