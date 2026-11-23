@@ -149,6 +149,7 @@ class StudentTranscriptTest extends TestCase
             'duration_minutes' => 30,
             'pass_marks' => 3,
             'status' => 'published',
+            'result_status' => 'published',
         ]);
         $includedQuestion = ExamQuestion::create([
             'exam_id' => $exam->id,
@@ -192,6 +193,39 @@ class StudentTranscriptTest extends TestCase
             'exam_question_id' => $secondIncludedQuestion->id,
             'position' => 2,
         ]);
+        $unpublishedExam = Exam::create([
+            'batch_id' => $batch->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Unpublished Speaking Exam',
+            'starts_at' => now()->subHour(),
+            'ends_at' => now()->addHour(),
+            'duration_minutes' => 30,
+            'pass_marks' => 5,
+            'status' => 'published',
+            'result_status' => 'pending',
+        ]);
+        $unpublishedQuestion = ExamQuestion::create([
+            'exam_id' => $unpublishedExam->id,
+            'question' => 'Private unpublished question',
+            'options' => ['A', 'B', 'C', 'D'],
+            'correct_option' => 0,
+            'marks' => 10,
+            'position' => 1,
+        ]);
+        $unpublishedAttempt = ExamAttempt::create([
+            'exam_id' => $unpublishedExam->id,
+            'student_id' => $student->id,
+            'started_at' => now()->subMinutes(30),
+            'submitted_at' => now()->subMinutes(5),
+            'score' => 9,
+            'status' => 'submitted',
+        ]);
+        ExamAttemptQuestion::create([
+            'exam_attempt_id' => $unpublishedAttempt->id,
+            'exam_question_id' => $unpublishedQuestion->id,
+            'position' => 1,
+        ]);
+
 
         $assignment = Assignment::create([
             'batch_id' => $batch->id,
@@ -215,6 +249,9 @@ class StudentTranscriptTest extends TestCase
             ->get(route('student.transcript'))
             ->assertOk()
             ->assertSee('Randomized Grammar Exam')
+            ->assertSee('Unpublished Speaking Exam')
+            ->assertSee('Pending')
+            ->assertDontSee('9.00')
             ->assertSee('4.00')
             ->assertSee('2', false)
             ->assertSee('80.00%')
