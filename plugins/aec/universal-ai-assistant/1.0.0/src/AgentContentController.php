@@ -1,11 +1,11 @@
 <?php
 
-namespace Aloms\\UniversalAiAssistant;
+namespace Aloms\UniversalAiAssistant;
 
-use Illuminate\\Http\\RedirectResponse;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\View\\View;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\View\View;
 use RuntimeException;
 use Throwable;
 
