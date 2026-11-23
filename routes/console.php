@@ -242,6 +242,24 @@ Artisan::command('referral-income:reconcile-approved-payments', function (): int
     return 0;
 })->purpose('Retry missing referral commissions for approved payments');
 
+Artisan::command('exams:auto-submit-expired', function (): int {
+    $finalizer = app(\\App\\Services\\ExamAttemptFinalizer::class);
+    $processed = 0;
+    \\App\\Models\\ExamAttempt::query()
+        ->where('status', 'in_progress')
+        ->where('started_at', '<=', now()->subMinutes(1))
+        ->orderBy('id')
+        ->chunkById(100, function ($attempts) use ($finalizer, &$processed): void {
+            foreach ($attempts as $attempt) {
+                if ($finalizer->autoSubmitExpired((int) $attempt->id)) $processed++;
+            }
+        });
+    $this->info("Auto-submitted {$processed} expired exam attempt(s).");
+    return 0;
+})->purpose('Automatically submit expired student exam attempts');
+
+Schedule::command('exams:auto-submit-expired')->everyMinute()->withoutOverlapping();
+
 Schedule::command('referral-income:reconcile-approved-payments')->everyFiveMinutes()->withoutOverlapping();
 
 Schedule::command('system:heartbeat')->everyFiveMinutes()->withoutOverlapping();
