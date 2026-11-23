@@ -164,21 +164,25 @@ class CourseController extends Controller
             ->whereIn('course_curriculum_item_id', $curriculumItemIds)
             ->get();
         $completedByCurriculumItem = $contentProgress->whereNotNull('completed_at')->keyBy('course_curriculum_item_id');
+        $progressByCurriculumItem = $contentProgress->keyBy('course_curriculum_item_id');
         $lastViewedContentByCourse = $contentProgress->whereNotNull('last_viewed_at')
             ->sortByDesc('last_viewed_at')
             ->filter(fn ($progress) => $progress->curriculumItem)
             ->groupBy(fn ($progress) => $progress->curriculumItem->course_id);
 
-        $enrollments->each(function ($enrollment) use ($completedByLesson, $lastViewedByCourse, $completedByCurriculumItem, $lastViewedContentByCourse) {
+        $enrollments->each(function ($enrollment) use ($completedByLesson, $lastViewedByCourse, $completedByCurriculumItem, $progressByCurriculumItem, $lastViewedContentByCourse) {
             $lessons = $enrollment->course->lessons;
             $items = $enrollment->course->curriculumItems;
             $completedLessons = $lessons->filter(fn ($lesson) => $completedByLesson->has($lesson->id))->count();
             $completedItems = $items->filter(fn ($item) => $completedByCurriculumItem->has($item->id))->count();
             $enrollment->completed_lessons_count = $completedLessons + $completedItems;
             $enrollment->total_lessons_count = $lessons->count() + $items->count();
+            $learningProgressPoints = ($completedLessons * 100) + $items->sum(
+                fn ($item) => (float) ($progressByCurriculumItem->get($item->id)?->progress_percent ?? 0)
+            );
             $enrollment->progress_percent = $enrollment->total_lessons_count === 0
                 ? 0
-                : (int) round(($enrollment->completed_lessons_count / $enrollment->total_lessons_count) * 100);
+                : min(100, (int) round($learningProgressPoints / $enrollment->total_lessons_count));
 
             $lastViewedLessonProgress = ($lastViewedByCourse->get($enrollment->course_id) ?? collect())->first();
             $lastViewedLesson = $lastViewedLessonProgress?->lesson;
