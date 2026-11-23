@@ -17,5 +17,5 @@
   "capabilities": [
     "payments.gateway",
     "provider-adapter.bkash"
-  ],
+  ]
 }
