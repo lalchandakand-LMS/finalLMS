@@ -463,6 +463,11 @@
             <a class="{{ request()->routeIs('admin.verification-center.*') ? 'active' : '' }}" href="{{ route('admin.verification-center.index') }}"><span>✅</span><span class="nav-text">Verification center</span></a>
             <a class="{{ request()->routeIs('admin.security.sessions.*') ? 'active' : '' }}" href="{{ route('admin.security.sessions.index') }}"><span>🔐</span><span class="nav-text">Device sessions</span></a>
             <a href="{{ route('admin.batches.index') }}"><span>🗓️</span><span class="nav-text">Batches & branches</span></a>
+            <a class="{{ request()->routeIs('admin.admissions.*') ? 'active' : '' }}" href="{{ route('admin.admissions.index') }}"><span>📝</span><span class="nav-text">Admissions</span></a>
+            <a class="{{ request()->routeIs('admin.hr.*') ? 'active' : '' }}" href="{{ route('admin.hr.index') }}"><span>👥</span><span class="nav-text">HR & Payroll</span></a>
+            <a class="{{ request()->routeIs('admin.library.*') ? 'active' : '' }}" href="{{ route('admin.library.index') }}"><span>📚</span><span class="nav-text">Library</span></a>
+            <a class="{{ request()->routeIs('admin.referrals.*') ? 'active' : '' }}" href="{{ route('admin.referrals.index') }}"><span>🔗</span><span class="nav-text">Referral program</span></a>
+            <a class="{{ request()->routeIs('admin.ai-assistant.*') ? 'active' : '' }}" href="{{ route('admin.ai-assistant.index') }}"><span>🤖</span><span class="nav-text">AI Agent Center</span></a>
             <a href="{{ route('admin.contests.index') }}"><span>🎁</span><span class="nav-text">Quiz & lottery</span></a>
             @if(auth()->user()->isAdmin())
             <a class="{{ request()->routeIs('admin.ai-developer.*') ? 'active' : '' }}" href="{{ route('admin.ai-developer.index') }}"><span>🤖</span><span class="nav-text">AI Developer</span></a>
@@ -478,6 +483,7 @@
             <a class="{{ request()->routeIs('admin.plugins.*') ? 'active' : '' }}" href="{{ route('admin.plugins.index') }}"><span>🧰</span><span class="nav-text">Plugin Manager</span></a>
             <a class="{{ request()->routeIs('admin.themes.*') ? 'active' : '' }}" href="{{ route('admin.themes.index') }}"><span>🎨</span><span class="nav-text">Theme Manager</span></a>
             <a href="{{ route('admin.website-builder.index') }}"><span>🖥️</span><span class="nav-text">Website builder</span></a>
+            <a class="{{ request()->routeIs('admin.carousels.*') ? 'active' : '' }}" href="{{ route('admin.carousels.index') }}"><span>🎞️</span><span class="nav-text">Slider & Carousel Builder</span></a>
             <a href="{{ route('admin.website-pages.index') }}"><span>📄</span><span class="nav-text">Custom pages</span></a>
             <a href="{{ route('admin.media.index') }}"><span>🖼️</span><span class="nav-text">Media library</span></a>
             <a href="{{ route('admin.storage.index') }}"><span>🗄️</span><span class="nav-text">Storage manager</span></a>
