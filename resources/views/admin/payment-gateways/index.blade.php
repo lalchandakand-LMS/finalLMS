@@ -65,7 +65,7 @@
                     <textarea id="mfs-credentials-{{ $provider }}" name="credentials_json" rows="5" required maxlength="12000" autocomplete="off" spellcheck="false"
                         placeholder="{{ $provider === 'bkash' ? '{&#10;  &quot;username&quot;: &quot;SANDBOX_USERNAME&quot;,&#10;  &quot;password&quot;: &quot;SANDBOX_PASSWORD&quot;,&#10;  &quot;app_key&quot;: &quot;SANDBOX_APP_KEY&quot;,&#10;  &quot;app_secret&quot;: &quot;SANDBOX_APP_SECRET&quot;&#10;}' : ($provider === 'sslcommerz' ? '{&#10;  &quot;store_id&quot;: &quot;YOUR_STORE_ID&quot;,&#10;  &quot;store_password&quot;: &quot;YOUR_STORE_PASSWORD&quot;&#10;}' : '{&#10;  &quot;credential_name&quot;: &quot;SANDBOX_VALUE&quot;&#10;}') }}"></textarea>
                     <p class="muted">{{ __('Submitting replaces the complete stored credential set. Secrets are never included in the page response or activity log.') }}</p>
-                    <button class="btn primary" type="submit">{{ __('Save encrypted sandbox credentials') }}</button>
+                    <button class="btn primary" type="submit">{{ __('Save encrypted merchant credentials') }}</button>
                 </form>
             </article>
         @endforeach
@@ -73,6 +73,6 @@
 </section>
 <section class="panel" style="margin-top:20px;">
     <h2>{{ __('Additional providers') }}</h2>
-    <p class="muted">{{ __('Nagad and Rocket merchant configuration can be stored here, but checkout remains unavailable until their official API adapters, callback verification and sandbox acceptance tests are implemented. Live mode is intentionally disabled.') }}</p>
+    <p class="muted">{{ __('Nagad, Rocket and SSLCOMMERZ checkout remain unavailable until their official API adapters, callback/IPN verification, reconciliation and sandbox acceptance tests are implemented. Storing live merchant credentials does not enable live charging.') }}</p>
 </section>
 @endsection
