@@ -48,9 +48,9 @@ final class ApiConnectorManager
                 'external_account_id' => $connection?->external_account_id,
                 'capabilities' => $connection?->capabilities ?? $driver->capabilities(),
                 'credential_schema' => $driver->credentialSchema(),
-                'last_checked_at' => $connection?->last_checked_at,
-                'last_event_at' => $connection?->last_event_at,
-                'last_success_at' => $connection?->last_success_at,
+                'last_checked_at' => $connection?->last_credential_check_at,
+                'last_event_at' => $connection?->last_webhook_event_at,
+                'last_success_at' => $connection?->last_successful_operation_at,
                 'last_error' => $connection?->last_error,
                 'webhook_verified' => (bool) $connection?->webhook_verified,
             ];
@@ -87,7 +87,7 @@ final class ApiConnectorManager
     public function processWebhook(string $key, \Illuminate\Http\Request $request): bool
     {
         $driver = $this->driver($key);
-        $connection = ApiConnectorConnection::query()->where('provider_key', $key)->whereNull('branch_id')->firstOrFail();
+        $connection = ApiConnection::query()->where('provider_key', $key)->whereNull('branch_id')->firstOrFail();
         $credentials = $connection->credentials_encrypted ?? [];
         abort_unless($driver->verifyWebhook($request, $credentials), 401, 'Webhook authentication failed.');
         $event = $driver->normalizeWebhook($request);
@@ -137,7 +137,7 @@ final class ApiConnectorManager
         if (! $connection->isConnected()) {
             throw new RuntimeException('The connector is not fully connected and verified.');
         }
-        $result = $this->driver($key)->sendMessage($connection->credentials ?? [], $message);
+        $result = $this->driver($key)->sendMessage($connection->credentials_encrypted ?? [], $message);
         if (($result['accepted'] ?? false) === true) {
             $connection->forceFill(['last_successful_operation_at' => now(), 'last_error' => null])->save();
         }
@@ -145,7 +145,7 @@ final class ApiConnectorManager
         return $result;
     }
 
-    private function connection(string $key): ApiConnectorConnection
+    private function connection(string $key): ApiConnection
     {
         return ApiConnectorConnection::query()->where('provider_key', $key)->whereNull('branch_id')->firstOrFail();
     }
