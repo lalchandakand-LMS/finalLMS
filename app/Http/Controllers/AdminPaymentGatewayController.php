@@ -62,7 +62,7 @@ class AdminPaymentGatewayController extends Controller
     {
         abort_unless(array_key_exists($provider, $mfs->providers()), 404);
         $validated = $request->validate([
-            'mode' => ['required', 'in:sandbox'],
+            'mode' => ['required', $provider === 'sslcommerz' ? 'in:sandbox,live' : 'in:sandbox'],
             'credentials_json' => ['required', 'string', 'max:12000'],
         ]);
         try {
@@ -73,23 +73,28 @@ class AdminPaymentGatewayController extends Controller
         if (! is_array($credentials) || array_is_list($credentials) || $credentials === []) {
             return back()->withErrors(['credentials_json' => __('Credentials must be a non-empty JSON object.')]);
         }
+        if ($provider === 'sslcommerz' && (! isset($credentials['store_id'], $credentials['store_password'])
+            || $credentials['store_id'] === '' || $credentials['store_password'] === '')) {
+            return back()->withErrors(['credentials_json' => __('SSLCOMMERZ requires store_id and store_password.')]);
+        }
         foreach ($credentials as $key => $value) {
             if (! is_string($key) || preg_match('/^[a-z][a-z0-9_]{0,49}$/D', $key) !== 1
                 || ! is_string($value) || $value === '' || mb_strlen($value) > 4096) {
                 return back()->withErrors(['credentials_json' => __('Each credential must have a valid key and a non-empty string value (maximum 4096 characters).')]);
             }
         }
-        $mfs->save($provider, $credentials, (int) $request->user()->id);
+        $mode = $validated['mode'];
+        $mfs->save($provider, $credentials, (int) $request->user()->id, $mode);
         ActivityLog::create([
             'user_id' => $request->user()->id,
             'event' => 'admin.mfs_merchant_configuration.updated',
-            'description' => 'Updated '.$provider.' merchant configuration (sandbox). Credential values were not logged.',
+            'description' => 'Updated '.$provider.' merchant configuration ('.$mode.'). Credential values were not logged.',
             'method' => $request->method(),
             'route' => $request->route()?->getName(),
             'ip_address' => $request->ip(),
             'user_agent' => substr((string) $request->userAgent(), 0, 1000),
         ]);
         return redirect()->route('admin.payment-gateways.index')
-            ->with('success', __('Merchant configuration encrypted and saved. Live mode is not available in this foundation release.'));
+            ->with('success', __('Merchant configuration encrypted and saved. Gateway activation remains blocked until the provider adapter and sandbox acceptance checks pass.'));
     }
 }

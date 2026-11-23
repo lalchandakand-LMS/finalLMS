@@ -72,33 +72,43 @@ class StudentLearnEarnController extends Controller
             ->where('status', 'pending')
             ->latest('id')
             ->first();
-        $bkashAvailable = $exam->access_type === 'paid' && $gateways->isAvailable('bkash');
+        $currency = strtoupper((string) $exam->currency);
+        $onlineGateways = $exam->access_type === 'paid'
+            ? collect($gateways->catalog())->filter(fn (array $gateway): bool => $gateway['available'] && in_array($currency, $gateway['currencies'], true))
+            : collect();
 
         return view('learn-earn::student.show', compact(
             'exam',
             'attempt',
             'hasEntitlement',
             'pendingPayment',
-            'bkashAvailable'
+            'onlineGateways'
         ));
     }
 
     public function checkoutBkash(Request $request, LearnEarnExam $exam, PaymentGatewayManager $gateways): RedirectResponse
     {
+        return $this->checkoutGateway($request, $exam, 'bkash', $gateways);
+    }
+
+    public function checkoutGateway(Request $request, LearnEarnExam $exam, string $provider, PaymentGatewayManager $gateways): RedirectResponse
+    {
         abort_unless($request->user()?->isStudent(), 403);
-        abort_unless($gateways->isAvailable('bkash'), 503, __('bKash checkout is not enabled or configured.'));
+        abort_unless($gateways->isAvailable($provider), 503, __('The selected payment gateway is not enabled or configured.'));
+        $adapter = $gateways->driver($provider);
 
         $student = $request->user();
-        $payment = DB::transaction(function () use ($exam, $student): Payment {
+        $payment = DB::transaction(function () use ($exam, $student, $provider, $adapter): Payment {
             $lockedExam = LearnEarnExam::query()->lockForUpdate()->findOrFail($exam->id);
+            $currency = strtoupper((string) $lockedExam->currency);
             abort_unless(
                 $lockedExam->status === 'published'
                     && $lockedExam->access_type === 'paid'
                     && (float) $lockedExam->price > 0
-                    && strtoupper((string) $lockedExam->currency) === 'BDT'
+                    && in_array($currency, $adapter->supportedCurrencies(), true)
                     && $lockedExam->ends_at->gte(now()),
                 422,
-                __('This paid exam is not available for checkout.')
+                __('This paid exam is not available for the selected payment gateway.')
             );
 
             $owned = LearnEarnExamEntitlement::query()
@@ -120,19 +130,19 @@ class StudentLearnEarnController extends Controller
                 'course_id' => null,
                 'order_id' => null,
                 'learn_earn_exam_id' => $lockedExam->id,
-                'method' => 'bkash',
-                'gateway_provider' => 'bkash',
+                'method' => $provider,
+                'gateway_provider' => $provider,
                 'amount' => number_format((float) $lockedExam->price, 2, '.', ''),
-                'currency' => 'BDT',
+                'currency' => $currency,
                 'transaction_reference' => 'LEARN-EARN-'.Str::upper(Str::random(24)),
                 'status' => 'pending',
             ]);
         });
 
         try {
-            $checkout = $gateways->driver('bkash')->createCheckout(
+            $checkout = $adapter->createCheckout(
                 $payment,
-                route('payments.bkash.callback'),
+                route('payments.gateway.callback', ['provider' => $provider]),
                 (string) $payment->user_id
             );
             $payment->update(['gateway_payment_id' => $checkout['payment_id']]);
@@ -141,11 +151,11 @@ class StudentLearnEarnController extends Controller
         } catch (Throwable) {
             $payment->update([
                 'status' => 'rejected',
-                'admin_note' => 'bKash checkout could not be initialized for the paid Learn & Earn exam. The student may retry.',
+                'admin_note' => 'Payment gateway checkout could not be initialized for the paid Learn & Earn exam. The student may retry.',
             ]);
 
             return redirect()->route('student.learn-earn.exams.show', $exam)
-                ->with('error', __('bKash checkout could not be started. Please try again or contact the academy.'));
+                ->with('error', __('Payment gateway checkout could not be started. Please try again or contact the academy.'));
         }
     }
 

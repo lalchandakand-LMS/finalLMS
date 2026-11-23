@@ -14,6 +14,7 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\DownloadPermission;
 use App\Models\FlashSale;
+use App\Contracts\Payments\PaymentGatewayCallbackReference;
 use App\Services\Payments\PaymentGatewayManager;
 use App\Services\Payments\PendingCoursePaymentGuard;
 use Illuminate\Http\RedirectResponse;
@@ -30,7 +31,8 @@ class BkashPaymentController extends Controller
     {
         abort_unless($request->user()?->isStudent(), 403);
         abort_unless($course->status === 'published', 404);
-        abort_unless($gateways->isAvailable('bkash'), 503, 'bKash checkout is not enabled or configured.');
+        $provider = (string) $request->route('provider', 'bkash');
+        abort_unless(preg_match('/^[a-z][a-z0-9_]{1,39}$/D', $provider) === 1 && $gateways->isAvailable($provider), 503, 'The selected payment gateway is not enabled or configured.');
 
         $user = $request->user();
         $hasOpenBatches = $course->batches()->where('status', 'open')
@@ -46,7 +48,7 @@ class BkashPaymentController extends Controller
         ]);
         $batchId = $validated['batch_id'] ?? null;
 
-        $payment = DB::transaction(function () use ($batchId, $course, $user, $pendingPayments): Payment {
+        $payment = DB::transaction(function () use ($batchId, $course, $user, $pendingPayments, $provider): Payment {
             $lockedCourse = Course::query()->lockForUpdate()->findOrFail($course->id);
             abort_unless($lockedCourse->status === 'published', 404);
 
@@ -83,8 +85,8 @@ class BkashPaymentController extends Controller
                 'course_id' => $lockedCourse->id,
                 'flash_sale_id' => $sale?->id,
                 'batch_id' => $batchId,
-                'method' => 'bkash',
-                'gateway_provider' => 'bkash',
+                'method' => $provider,
+                'gateway_provider' => $provider,
                 'amount' => number_format($amount, 2, '.', ''),
                 'currency' => 'BDT',
                 'transaction_reference' => 'BKASH-'.Str::upper(Str::random(20)),
@@ -93,9 +95,9 @@ class BkashPaymentController extends Controller
         });
 
         try {
-            $checkout = $gateways->driver('bkash')->createCheckout(
+            $checkout = $gateways->driver($provider)->createCheckout(
                 $payment,
-                route('payments.bkash.callback'),
+                route('payments.gateway.callback', ['provider' => $provider]),
                 (string) $payment->user_id
             );
             $payment->update(['gateway_payment_id' => $checkout['payment_id']]);
@@ -104,21 +106,22 @@ class BkashPaymentController extends Controller
         } catch (Throwable) {
             $payment->update([
                 'status' => 'rejected',
-                'admin_note' => 'bKash checkout could not be initialized. The student may retry.',
+                'admin_note' => 'Payment gateway checkout could not be initialized. The student may retry.',
             ]);
 
             return redirect()->route('courses.show', $course)
-                ->with('error', __('bKash checkout could not be started. Please try again or contact the academy.'));
+                ->with('error', __('Payment gateway checkout could not be started. Please try again or contact the academy.'));
         }
     }
 
     public function initiateEbook(Product $product, Request $request, PaymentGatewayManager $gateways): RedirectResponse
     {
         abort_unless($request->user()?->isStudent(), 403);
-        abort_unless($gateways->isAvailable('bkash'), 503, 'bKash checkout is not enabled or configured.');
+        $provider = (string) $request->route('provider', 'bkash');
+        abort_unless(preg_match('/^[a-z][a-z0-9_]{1,39}$/D', $provider) === 1 && $gateways->isAvailable($provider), 503, 'The selected payment gateway is not enabled or configured.');
 
         $student = $request->user();
-        $payment = DB::transaction(function () use ($product, $student): Payment {
+        $payment = DB::transaction(function () use ($product, $student, $provider): Payment {
             $lockedProduct = Product::query()->whereKey($product->id)->lockForUpdate()->firstOrFail();
             abort_unless($lockedProduct->type === 'ebook' && $lockedProduct->is_downloadable
                 && $lockedProduct->status === 'published' && $lockedProduct->published_at
@@ -153,7 +156,7 @@ class BkashPaymentController extends Controller
                 'order_number' => 'AEC-'.now()->format('ymd').'-'.Str::upper(Str::random(8)),
                 'user_id' => $student->id,
                 'status' => 'pending',
-                'payment_method' => 'bkash',
+                'payment_method' => $provider,
                 'payment_reference' => $invoice,
                 'currency' => 'BDT',
                 'subtotal' => $regularAmount,
@@ -180,8 +183,8 @@ class BkashPaymentController extends Controller
                 'user_id' => $student->id,
                 'course_id' => null,
                 'order_id' => $order->id,
-                'method' => 'bkash',
-                'gateway_provider' => 'bkash',
+                'method' => $provider,
+                'gateway_provider' => $provider,
                 'amount' => number_format($amount, 2, '.', ''),
                 'currency' => 'BDT',
                 'transaction_reference' => $invoice,
@@ -190,9 +193,9 @@ class BkashPaymentController extends Controller
         });
 
         try {
-            $checkout = $gateways->driver('bkash')->createCheckout(
+            $checkout = $gateways->driver($provider)->createCheckout(
                 $payment,
-                route('payments.bkash.callback'),
+                route('payments.gateway.callback', ['provider' => $provider]),
                 (string) $payment->user_id
             );
             $payment->update(['gateway_payment_id' => $checkout['payment_id']]);
@@ -204,7 +207,7 @@ class BkashPaymentController extends Controller
                 if ($lockedPayment->status === 'pending') {
                     $lockedPayment->update([
                         'status' => 'rejected',
-                        'admin_note' => 'bKash checkout could not be initialized. The student may retry.',
+                        'admin_note' => 'Payment gateway checkout could not be initialized. The student may retry.',
                     ]);
                     Order::query()->whereKey($lockedPayment->order_id)->where('status', 'pending')
                         ->update(['status' => 'cancelled']);
@@ -212,19 +215,24 @@ class BkashPaymentController extends Controller
             });
 
             return redirect()->route('ebooks.show', $product)
-                ->with('error', __('bKash checkout could not be started. Please try again or contact the academy.'));
+                ->with('error', __('Payment gateway checkout could not be started. Please try again or contact the academy.'));
         }
     }
 
     public function callback(Request $request, PaymentGatewayManager $gateways): RedirectResponse
     {
-        $paymentId = $request->query('paymentID');
+        $provider = (string) $request->route('provider', 'bkash');
+        abort_unless(in_array($provider, $gateways->installedKeys(), true), 404);
+        $adapter = $gateways->driver($provider);
+        $paymentId = $adapter instanceof PaymentGatewayCallbackReference
+            ? $adapter->callbackPaymentId($request->query())
+            : $request->query('paymentID');
         if (! is_string($paymentId) || $paymentId === '') {
-            return redirect()->route('landing')->with('error', 'The bKash callback did not include a payment reference.');
+            return redirect()->route('landing')->with('error', 'The payment provider callback did not include a valid payment reference.');
         }
 
         $payment = Payment::query()
-            ->where('method', 'bkash')
+            ->where('gateway_provider', $provider)
             ->where('gateway_payment_id', $paymentId)
             ->firstOrFail();
 
@@ -240,19 +248,19 @@ class BkashPaymentController extends Controller
         }
 
         // The browser callback query string is not proof of payment success or failure.
-        // Always ask bKash for the authoritative server-side transaction status before
+        // Always ask the selected adapter for authoritative server-side transaction status before
         // changing the local payment state. Only attempt execute on a success callback;
         // queryPayment remains mandatory in either case.
         try {
-            $verification = $gateways->driver((string) $payment->gateway_provider)->verifyCallback($payment, $request->query());
+            $verification = $adapter->verifyCallback($payment, $request->query());
             $verified = $verification['verified'];
             $executed = $verification['executed'];
 
-            $status = strtolower((string) ($verified['transactionStatus'] ?? ''));
-            $verifiedPaymentId = $verified['paymentID'] ?? null;
+            $status = strtolower((string) ($verified['status'] ?? ''));
+            $verifiedPaymentId = $verified['payment_id'] ?? null;
             $verifiedAmount = round((float) ($verified['amount'] ?? -1), 2);
-            $transactionId = $verified['trxID'] ?? null;
-            $invoice = $verified['merchantInvoiceNumber'] ?? $executed['merchantInvoiceNumber'] ?? null;
+            $transactionId = $verified['transaction_id'] ?? null;
+            $invoice = $verified['merchant_reference'] ?? null;
 
             // Never infer provider identity, currency or merchant invoice from
             // the browser callback or local payment record. Require the
@@ -262,19 +270,18 @@ class BkashPaymentController extends Controller
                 || $verifiedPaymentId === ''
                 || $verifiedPaymentId !== $paymentId
                 || $verifiedAmount !== round((float) $payment->amount, 2)
-                || strtoupper((string) $payment->currency) !== 'BDT'
                 || ! isset($verified['currency'])
-                || strtoupper((string) $verified['currency']) !== 'BDT'
+                || strtoupper((string) $verified['currency']) !== strtoupper((string) $payment->currency)
                 || ! is_string($transactionId)
                 || $transactionId === ''
                 || ! is_string($invoice)
                 || $invoice === ''
                 || $invoice !== $payment->transaction_reference) {
-                throw new \RuntimeException('bKash transaction verification did not match the local payment.');
+                throw new \RuntimeException('Gateway transaction verification did not match the local payment.');
             }
 
             $invoiceReceiptExists = InvoicePayment::query()
-                ->where('gateway_provider', 'bkash')
+                ->where('gateway_provider', $provider)
                 ->where(function ($query) use ($paymentId, $transactionId): void {
                     $query->where('gateway_payment_id', $paymentId)
                         ->orWhere('gateway_transaction_id', $transactionId);
@@ -282,14 +289,14 @@ class BkashPaymentController extends Controller
                 ->exists();
 
             if ($invoiceReceiptExists) {
-                throw new \RuntimeException('This bKash transaction is already recorded as an invoice receipt.');
+                throw new \RuntimeException('This gateway transaction is already recorded as an invoice receipt.');
             }
 
-            $eventKey = hash('sha256', 'bkash:payment:'.$paymentId.':'.$transactionId);
+            $eventKey = hash('sha256', $provider.':payment:'.$paymentId.':'.$transactionId);
             $event = PaymentGatewayEvent::firstOrCreate(
                 ['event_key' => $eventKey],
                 [
-                    'provider' => 'bkash',
+                    'provider' => $provider,
                     'payment_id' => $payment->id,
                     'gateway_payment_id' => $paymentId,
                     'gateway_transaction_id' => $transactionId,
@@ -297,18 +304,18 @@ class BkashPaymentController extends Controller
                     'verification_status' => 'verified',
                     'processing_status' => 'processing',
                     'payload_hash' => hash('sha256', json_encode([
-                        'paymentID' => $verifiedPaymentId,
-                        'trxID' => $transactionId,
+                        'payment_id' => $verifiedPaymentId,
+                        'transaction_id' => $transactionId,
                         'amount' => $verifiedAmount,
                         'currency' => $verified['currency'] ?? null,
-                        'merchantInvoiceNumber' => $invoice,
+                        'merchant_reference' => $invoice,
                     ], JSON_THROW_ON_ERROR)),
                     'verified_payload' => [
-                        'paymentID' => $verifiedPaymentId,
-                        'trxID' => $transactionId,
+                        'payment_id' => $verifiedPaymentId,
+                        'transaction_id' => $transactionId,
                         'amount' => $verifiedAmount,
                         'currency' => $verified['currency'] ?? null,
-                        'merchantInvoiceNumber' => $invoice,
+                        'merchant_reference' => $invoice,
                     ],
                     'received_at' => now(),
                     'verified_at' => now(),
@@ -316,10 +323,10 @@ class BkashPaymentController extends Controller
             );
 
             if ($event->event_type !== 'payment.completed' || $event->invoice_payment_id) {
-                throw new \RuntimeException('This bKash transaction has already been recorded in the invoice ledger.');
+                throw new \RuntimeException('This gateway transaction has already been recorded in the invoice ledger.');
             }
 
-            $result = DB::transaction(function () use ($payment, $transactionId): string {
+            $result = DB::transaction(function () use ($payment, $transactionId, $provider): string {
                 $lockedPayment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
 
                 if ($lockedPayment->status === 'approved') {
@@ -363,7 +370,7 @@ class BkashPaymentController extends Controller
                             'status' => 'rejected',
                             'gateway_transaction_id' => $transactionId,
                             'reviewed_at' => now(),
-                            'admin_note' => 'bKash payment succeeded but the eBook order could not be fulfilled. Manual refund is required.',
+                            'admin_note' => 'Payment succeeded but the eBook order could not be fulfilled. Manual refund is required.',
                         ]);
                         $order->update(['status' => 'cancelled']);
 
@@ -411,12 +418,12 @@ class BkashPaymentController extends Controller
                         || $exam->access_type !== 'paid'
                         || (float) $lockedPayment->amount <= 0
                         || strtoupper((string) $lockedPayment->currency) !== 'BDT'
-                        || $lockedPayment->gateway_provider !== 'bkash') {
+                        || $lockedPayment->gateway_provider !== $provider) {
                         $lockedPayment->update([
                             'status' => 'rejected',
                             'gateway_transaction_id' => $transactionId,
                             'reviewed_at' => now(),
-                            'admin_note' => 'bKash payment succeeded but the paid exam entitlement could not be validated. Manual refund or review is required.',
+                            'admin_note' => 'Payment succeeded but the paid exam entitlement could not be validated. Manual refund or review is required.',
                         ]);
 
                         return 'learn_earn_exam_unavailable';
@@ -484,7 +491,7 @@ class BkashPaymentController extends Controller
                         $lockedPayment->update([
                             'status' => 'rejected',
                             'gateway_transaction_id' => $transactionId,
-                            'admin_note' => 'bKash payment succeeded, but the batch has no remaining seat. Manual refund or reassignment is required.',
+                            'admin_note' => 'Payment succeeded, but the batch has no remaining seat. Manual refund or reassignment is required.',
                         ]);
 
                         return 'full';
@@ -521,9 +528,9 @@ class BkashPaymentController extends Controller
                 ['correlation_id' => hash('sha256', $eventKey)],
                 [
                     'payment_id' => $payment->id,
-                    'provider' => 'bkash',
+                    'provider' => $provider,
                     'event' => 'gateway_callback_processed',
-                    'source' => 'bkash_callback',
+                    'source' => $provider.'_callback',
                     'before_state' => ['status' => 'pending'],
                     'after_state' => ['status' => $payment->status, 'gateway_transaction_id' => $transactionId],
                 ]
@@ -532,7 +539,7 @@ class BkashPaymentController extends Controller
             if ($payment->learn_earn_exam_id) {
                 return match ($result) {
                     'learn_earn_exam_approved', 'already' => redirect()->to('/student/learn-earn/exams')
-                        ->with('success', __('bKash payment verified. Your paid exam access is now active.')),
+                        ->with('success', __('Payment verified. Your paid exam access is now active.')),
                     'learn_earn_exam_already_owned' => redirect()->to('/student/learn-earn/exams')
                         ->with('error', __('An active entitlement already exists. The academy must review this duplicate payment for refund.')),
                     'learn_earn_exam_unavailable' => redirect()->to('/student/learn-earn/exams')
@@ -545,9 +552,9 @@ class BkashPaymentController extends Controller
             if ($payment->order_id) {
                 return match ($result) {
                     'ebook_approved', 'already' => redirect()->route('ebooks.orders')
-                        ->with('success', __('bKash payment verified. Your eBook is now available in your library.')),
+                        ->with('success', __('Payment verified. Your eBook is now available in your library.')),
                     'ebook_unavailable' => redirect()->route('ebooks.orders')
-                        ->with('error', __('bKash payment succeeded, but the eBook could not be fulfilled. The academy must arrange a manual refund.')),
+                        ->with('error', __('Payment succeeded, but the eBook could not be fulfilled. The academy must arrange a manual refund.')),
                     default => redirect()->route('ebooks.orders')
                         ->with('error', __('This eBook payment is no longer eligible for automatic fulfillment. Please contact the academy.')),
                 };
@@ -555,7 +562,7 @@ class BkashPaymentController extends Controller
 
             if ($result === 'full') {
                 return redirect()->route('courses.show', $payment->course)
-                    ->with('error', 'Your bKash payment succeeded, but the selected batch is full. Please contact the academy for a refund or another batch.');
+                    ->with('error', 'Your payment succeeded, but the selected batch is full. Please contact the academy for a refund or another batch.');
             }
 
             if ($result === 'closed') {
@@ -564,13 +571,13 @@ class BkashPaymentController extends Controller
             }
 
             return redirect()->route('courses.show', $payment->course)
-                ->with('success', 'bKash payment verified. Your course enrollment is now active.');
+                ->with('success', 'Payment verified. Your course enrollment is now active.');
         } catch (Throwable $exception) {
             report($exception);
 
             // Keep diagnostics useful without recording callback query data, tokens,
             // payer details, or provider credentials.
-            \Illuminate\Support\Facades\Log::warning('bKash callback verification failed.', [
+            \Illuminate\Support\Facades\Log::warning('Payment gateway callback verification failed.', [
                 'payment_record_id' => $payment->id,
                 'payment_intent' => $payment->learn_earn_exam_id ? 'learn_earn_exam' : ($payment->order_id ? 'ebook' : 'course'),
                 'exception_class' => get_class($exception),
@@ -579,11 +586,11 @@ class BkashPaymentController extends Controller
 
             if ($payment->learn_earn_exam_id) {
                 return redirect()->to('/student/learn-earn/exams')
-                    ->with('warning', __('Your bKash payment is awaiting server-side verification. Do not pay again; contact the academy if this message remains.'));
+                    ->with('warning', __('Your payment is awaiting server-side verification. Do not pay again; contact the academy if this message remains.'));
             }
 
             return $payment->order_id
-                ? redirect()->route('ebooks.orders')->with('warning', __('Your bKash payment is awaiting server-side verification. Do not pay again; contact the academy if this message remains.'))
+                ? redirect()->route('ebooks.orders')->with('warning', __('Your payment is awaiting server-side verification. Do not pay again; contact the academy if this message remains.'))
                 : redirect()->route('courses.show', $payment->course)->with('warning', __('Your bKash payment is awaiting server-side verification. Do not pay again; contact the academy if this message remains.'));
         }
     }

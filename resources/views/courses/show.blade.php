@@ -208,9 +208,9 @@
                                     <button type="submit" class="btn primary">{{ __('Enroll now') }}</button>
                                 </form>
                             @elseif($paymentMethods->isEmpty())
-                                @unless(config('services.bkash.enabled'))
+                                @if($onlineGateways->isEmpty())
                                     <p class="muted">{{ __('Payment is not available for this course yet. Please contact the academy.') }}</p>
-                                @endunless
+                                @endif
                             @else
                                 <form method="POST" action="{{ route('courses.enroll', $course) }}" enctype="multipart/form-data">
                                     @csrf
@@ -260,15 +260,15 @@
                                 </script>
                             @endif
                             @if((float) $course->price > 0 || $batches->contains(fn ($batch) => (float) $batch->fee > 0))
-                                @if(config('services.bkash.enabled'))
+                                @foreach($onlineGateways as $gatewayKey => $gateway)
                                     <section class="course-item" style="margin-top:18px;">
-                                        <h3>{{ __('Pay securely with bKash') }}</h3>
-                                        <p class="muted">{{ __('You will be redirected to the official bKash checkout. Enrollment is enabled only after server-side payment verification.') }}</p>
-                                        <form method="POST" action="{{ route('courses.payments.bkash', $course) }}">
+                                        <h3>{{ __('Pay securely with :provider', ['provider' => $gateway['name']]) }}</h3>
+                                        <p class="muted">{{ __('You will be redirected to the provider checkout. Enrollment is enabled only after server-side payment verification.') }}</p>
+                                        <form method="POST" action="{{ route('courses.payments.gateway', ['course' => $course, 'provider' => $gatewayKey]) }}">
                                             @csrf
                                             @if($batches->isNotEmpty())
-                                                <label for="bkash-batch">{{ __('Choose a batch') }}</label>
-                                                <select id="bkash-batch" name="batch_id" required>
+                                                <label for="gateway-batch-{{ $gatewayKey }}">{{ __('Choose a batch') }}</label>
+                                                <select id="gateway-batch-{{ $gatewayKey }}" name="batch_id" required>
                                                     <option value="">{{ __('Select batch') }}</option>
                                                     @foreach($batches as $batch)
                                                         @if($batch->enrollments_count < $batch->capacity)
@@ -277,10 +277,10 @@
                                                     @endforeach
                                                 </select>
                                             @endif
-                                            <button type="submit" class="btn primary" style="margin-top:12px;">{{ __('Continue to bKash checkout') }}</button>
+                                            <button type="submit" class="btn primary" style="margin-top:12px;">{{ __('Continue to :provider checkout', ['provider' => $gateway['name']]) }}</button>
                                         </form>
                                     </section>
-                                @endif
+                                @endforeach
                             @endif
                         @endif
                     @endif

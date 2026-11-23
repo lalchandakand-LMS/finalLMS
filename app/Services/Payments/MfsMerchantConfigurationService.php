@@ -7,7 +7,7 @@ use InvalidArgumentException;
 
 final class MfsMerchantConfigurationService
 {
-    private const PROVIDERS = ['bkash' => 'bKash', 'nagad' => 'Nagad', 'rocket' => 'Rocket'];
+    private const PROVIDERS = ['bkash' => 'bKash', 'nagad' => 'Nagad', 'rocket' => 'Rocket', 'sslcommerz' => 'SSLCOMMERZ'];
 
     public function providers(): array
     {
@@ -54,6 +54,17 @@ final class MfsMerchantConfigurationService
         return is_string($value) && $value !== '' ? $value : null;
     }
 
+    public function isSslcommerzConfigured(): bool
+    {
+        $configuration = $this->configuration('sslcommerz');
+        if (! $configuration || ! in_array($configuration->mode, ['sandbox', 'live'], true)) {
+            return false;
+        }
+        $credentials = $this->credentials('sslcommerz');
+        return isset($credentials['store_id'], $credentials['store_password'])
+            && $credentials['store_id'] !== '' && $credentials['store_password'] !== '';
+    }
+
     public function isBkashConfigured(): bool
     {
         if (! $this->hasStoredConfiguration('bkash') && ! (bool) config('services.bkash.enabled')) {
@@ -79,12 +90,15 @@ final class MfsMerchantConfigurationService
             && (bool) config('services.bkash.verify_ssl', true);
     }
 
-    public function save(string $provider, array $credentials, int $userId): MfsMerchantConfiguration
+    public function save(string $provider, array $credentials, int $userId, string $mode = 'sandbox'): MfsMerchantConfiguration
     {
         $this->assertProvider($provider);
+        if (! in_array($mode, $provider === 'sslcommerz' ? ['sandbox', 'live'] : ['sandbox'], true)) {
+            throw new InvalidArgumentException('The selected merchant mode is not supported for this provider.');
+        }
         return MfsMerchantConfiguration::query()->updateOrCreate(
             ['provider' => $provider],
-            ['mode' => 'sandbox', 'credentials' => $credentials, 'updated_by' => $userId]
+            ['mode' => $mode, 'credentials' => $credentials, 'updated_by' => $userId]
         );
     }
 }

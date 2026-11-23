@@ -14,6 +14,7 @@ use App\Models\PageView;
 use App\Models\QuestionSetAttempt;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\Payments\PaymentGatewayManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
 use Illuminate\Http\Request;
@@ -485,7 +486,7 @@ class CourseController extends Controller
         return redirect()->route('admin.courses.index')->with('success', __('Course deleted successfully.'));
     }
 
-    public function show(Request $request, Course $course): View
+    public function show(Request $request, Course $course, PaymentGatewayManager $gateways): View
     {
         $user = Auth::user();
         $canManageCourse = $user && ($user->isAdmin() || ($user->isTeacher() && $course->teacher_id === $user->id));
@@ -528,6 +529,8 @@ class CourseController extends Controller
             : null;
         $paymentMethods = collect(Setting::paymentMethods())
             ->filter(fn (array $method) => (bool) ($method['enabled'] ?? false));
+        $onlineGateways = collect($gateways->catalog())
+            ->filter(fn (array $gateway): bool => $gateway['available'] && in_array('BDT', $gateway['currencies'], true));
         $isEnrolled = $enrollment && in_array($enrollment->status, ['active', 'completed'], true);
         $canViewLessons = $canManageCourse || $isEnrolled;
         $lessonProgress = $isEnrolled && $user?->isStudent()
@@ -561,7 +564,7 @@ class CourseController extends Controller
         $courseContentCount = $publishedPostCount + $course->lessons->count();
 
         return view('courses.show', compact(
-            'course', 'enrollment', 'payment', 'paymentMethods', 'batches',
+            'course', 'enrollment', 'payment', 'paymentMethods', 'onlineGateways', 'batches',
             'canViewLessons', 'canManageCourse', 'isEnrolled', 'lessonProgress', 'isWishlisted', 'comments',
             'demoLesson', 'studentCount', 'courseContentCount'
         ));

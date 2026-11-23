@@ -20,7 +20,7 @@ use Throwable;
 
 class StudentCheckoutController extends Controller
 {
-    public function options(Request $request, Course $course): JsonResponse
+    public function options(Request $request, Course $course, PaymentGatewayManager $gateways): JsonResponse
     {
         abort_unless($request->user()->isStudent(), 403);
         abort_unless($course->status === 'published', 404);
@@ -42,6 +42,9 @@ class StudentCheckoutController extends Controller
                 'instructions' => (string) ($method['instructions'] ?? ''),
             ])->values();
 
+        $onlineGateways = collect($gateways->catalog())
+            ->filter(fn (array $gateway): bool => $gateway['available'] && in_array('BDT', $gateway['currencies'], true))
+            ->map(fn (array $gateway, string $key): array => ['key' => $key, 'name' => $gateway['name'], 'currencies' => $gateway['currencies']]);
         $sale = FlashSale::activeForCourse($course->id, $request->user()->id);
         $pendingPayment = Payment::query()
             ->where('user_id', $request->user()->id)
@@ -90,7 +93,8 @@ class StudentCheckoutController extends Controller
                     ];
                 })->values(),
                 'payment_methods' => $methods,
-                'online_bkash_available' => (bool) (Setting::paymentMethods()['bkash']['enabled'] ?? false) && $this->isBkashConfigured(),
+                'online_bkash_available' => $onlineGateways->has('bkash'),
+                'online_gateways' => $onlineGateways->values(),
                 'pricing' => [
                     'base_amount' => number_format($baseAmount, 2, '.', ''),
                     'discounted_amount' => number_format($discountedAmount, 2, '.', ''),
@@ -259,10 +263,16 @@ class StudentCheckoutController extends Controller
 
     public function initiateBkash(Request $request, Course $course, PaymentGatewayManager $gateways): JsonResponse
     {
+        return $this->initiateGateway($request, $course, 'bkash', $gateways);
+    }
+
+    public function initiateGateway(Request $request, Course $course, string $provider, PaymentGatewayManager $gateways): JsonResponse
+    {
         $student = $request->user();
         abort_unless($student->isStudent(), 403);
         abort_unless($course->status === 'published', 404);
-        abort_unless((bool) (Setting::paymentMethods()['bkash']['enabled'] ?? false) && $gateways->isAvailable('bkash'), 503, 'Online bKash checkout is not enabled or configured.');
+        abort_unless($gateways->isAvailable($provider), 503, 'The selected online payment gateway is not enabled or configured.');
+        $adapter = $gateways->driver($provider);
 
         $hasOpenBatches = $course->batches()
             ->where('status', 'open')
@@ -279,7 +289,7 @@ class StudentCheckoutController extends Controller
             ],
         ]);
 
-        $payment = DB::transaction(function () use ($course, $student, $validated): Payment {
+        $payment = DB::transaction(function () use ($course, $student, $validated, $provider, $adapter): Payment {
             $lockedCourse = Course::query()->lockForUpdate()->findOrFail($course->id);
             abort_unless($lockedCourse->status === 'published', 404);
 
@@ -316,24 +326,26 @@ class StudentCheckoutController extends Controller
             $amount = $sale ? $sale->discountedPrice($baseAmount) : $baseAmount;
             abort_if($amount <= 0, 422, 'Online checkout is not needed for a free course.');
 
+            abort_unless(in_array('BDT', $adapter->supportedCurrencies(), true), 422, 'The selected payment gateway does not support BDT.');
+
             return Payment::create([
                 'user_id' => $student->id,
                 'course_id' => $lockedCourse->id,
                 'flash_sale_id' => $sale?->id,
                 'batch_id' => $batchId,
-                'method' => 'bkash',
-                'gateway_provider' => 'bkash',
+                'method' => $provider,
+                'gateway_provider' => $provider,
                 'amount' => number_format($amount, 2, '.', ''),
                 'currency' => 'BDT',
-                'transaction_reference' => 'BKASH-'.Str::upper(Str::random(20)),
+                'transaction_reference' => Str::upper($provider).'-'.Str::upper(Str::random(20)),
                 'status' => 'pending',
             ]);
         });
 
         try {
-            $checkout = $gateways->driver('bkash')->createCheckout(
+            $checkout = $adapter->createCheckout(
                 $payment,
-                route('payments.bkash.callback'),
+                route('payments.gateway.callback', ['provider' => $provider]),
                 (string) $student->id
             );
             $payment->update(['gateway_payment_id' => $checkout['payment_id']]);
@@ -353,12 +365,12 @@ class StudentCheckoutController extends Controller
                 if ($lockedPayment->status === 'pending') {
                     $lockedPayment->update([
                         'status' => 'rejected',
-                        'admin_note' => 'bKash checkout could not be initialized. The student may retry.',
+                        'admin_note' => 'Payment gateway checkout could not be initialized. The student may retry.',
                     ]);
                 }
             });
 
-            return response()->json(['message' => 'bKash checkout could not be started. Please try again.'], 502);
+            return response()->json(['message' => 'Payment gateway checkout could not be started. Please try again.'], 502);
         }
     }
 

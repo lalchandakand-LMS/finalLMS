@@ -48,6 +48,7 @@ return new class implements PluginContract
             Route::get('/exams', [StudentLearnEarnController::class, 'index'])->name('exams.index');
             Route::get('/exams/{exam:slug}', [StudentLearnEarnController::class, 'show'])->name('exams.show');
             Route::post('/exams/{exam:slug}/checkout/bkash', [StudentLearnEarnController::class, 'checkoutBkash'])->middleware('throttle:5,1')->name('exams.checkout.bkash');
+            Route::post('/exams/{exam:slug}/checkout/{provider}', [StudentLearnEarnController::class, 'checkoutGateway'])->where('provider', '[a-z][a-z0-9_]{1,39}')->middleware('throttle:5,1')->name('exams.checkout.gateway');
             Route::post('/exams/{exam:slug}/start', [StudentLearnEarnController::class, 'start'])->middleware('throttle:5,1')->name('exams.start');
             Route::get('/attempts/{attempt}', [StudentLearnEarnController::class, 'attempt'])->whereNumber('attempt')->name('attempts.show');
             Route::post('/attempts/{attempt}/submit', [StudentLearnEarnController::class, 'submit'])->whereNumber('attempt')->middleware('throttle:5,1')->name('attempts.submit');

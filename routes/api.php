@@ -41,6 +41,7 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/checkout/courses/{course:slug}', [StudentCheckoutController::class, 'options'])->middleware('throttle:30,1');
         Route::post('/checkout/courses/{course:slug}/manual', [StudentCheckoutController::class, 'submitManual'])->middleware('throttle:10,1');
         Route::post('/checkout/courses/{course:slug}/bkash', [StudentCheckoutController::class, 'initiateBkash'])->middleware('throttle:5,1');
+        Route::post('/checkout/courses/{course:slug}/{provider}', [StudentCheckoutController::class, 'initiateGateway'])->where('provider', '[a-z][a-z0-9_]{1,39}')->middleware('throttle:5,1');
         Route::get('/my/notices', [StudentEngagementController::class, 'notices']);
         Route::post('/my/notices/{announcement}/read', [StudentEngagementController::class, 'markNoticeRead'])->middleware('throttle:60,1');
         Route::post('/my/courses/{course:slug}/reviews', [StudentEngagementController::class, 'submitCourseReview'])->middleware('throttle:5,1');

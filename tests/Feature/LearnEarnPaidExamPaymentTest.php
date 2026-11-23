@@ -11,6 +11,7 @@ use Aloms\LearnEarn\LearnEarnExamAnswer;
 use Aloms\LearnEarn\LearnEarnScorer;
 use Aloms\LearnEarn\StudentLearnEarnController;
 use App\Models\Payment;
+use App\Models\Setting;
 use App\Models\User;
 use App\Services\Payments\PaymentGatewayManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -29,16 +30,6 @@ class LearnEarnPaidExamPaymentTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-
-        config([
-            'services.bkash.enabled' => true,
-            'services.bkash.base_url' => 'https://tokenized.sandbox.bka.sh/v1.2.0-beta',
-            'services.bkash.username' => 'sandbox-user',
-            'services.bkash.password' => 'sandbox-password',
-            'services.bkash.app_key' => 'sandbox-app-key',
-            'services.bkash.app_secret' => 'sandbox-app-secret',
-            'services.bkash.verify_ssl' => true,
-        ]);
 
         // Plugin migrations create tables at runtime. MySQL implicitly commits DDL,
         // so temporarily end RefreshDatabase's transaction and start a fresh one
@@ -59,6 +50,47 @@ class LearnEarnPaidExamPaymentTest extends TestCase
         }
 
         $connection->beginTransaction();
+
+        // The adapter must be both configured and explicitly enabled in the Admin gateway registry.
+        Setting::setValue('payment_gateway_registry', json_encode(['bkash' => true], JSON_THROW_ON_ERROR));
+
+        config([
+            'services.bkash.enabled' => true,
+            'services.bkash.base_url' => 'https://tokenized.sandbox.bka.sh/v1.2.0-beta',
+            'services.bkash.username' => 'sandbox-user',
+            'services.bkash.password' => 'sandbox-password',
+            'services.bkash.app_key' => 'sandbox-app-key',
+            'services.bkash.app_secret' => 'sandbox-app-secret',
+            'services.bkash.verify_ssl' => true,
+        ]);
+
+        require_once base_path('plugins/aec/universal-payment/1.0.0/src/BkashCheckoutService.php');
+        require_once base_path('plugins/aec/universal-payment/1.0.0/src/BkashGateway.php');
+        DB::table('plugin_registry')->insert([
+            'plugin_key' => 'aec.universal-payment',
+            'name' => 'Universal Payment',
+            'version' => '1.0.0',
+            'type' => 'provider',
+            'status' => 'active',
+            'manifest' => json_encode([
+                'key' => 'aec.universal-payment',
+                'capabilities' => ['payments.gateway'],
+            ], JSON_THROW_ON_ERROR),
+            'package_sha256' => str_repeat('a', 64),
+            'signature_key_id' => 'test-release-key',
+            'signature_verified_at' => now(),
+            'package_path' => 'plugins/aec/universal-payment/1.0.0',
+            'health_status' => 'healthy',
+            'metadata' => json_encode(['granted_permissions' => []], JSON_THROW_ON_ERROR),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        app(PaymentGatewayManager::class)->registerPluginGateway(
+            'aec.universal-payment',
+            'bkash',
+            \Aloms\UniversalPayment\Gateways\BkashGateway::class,
+        );
+
 
         require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnExam.php');
         require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnExamEntitlement.php');
@@ -130,7 +162,7 @@ class LearnEarnPaidExamPaymentTest extends TestCase
         ]);
 
 
-        $this->get(route('payments.bkash.callback', [
+        $this->get(route('payments.gateway.callback', ['provider' => 'bkash', 
             'paymentID' => 'BKASH-LEARN-EARN-001',
             'status' => 'success',
         ]))->assertRedirect('/student/learn-earn/exams');
@@ -159,7 +191,7 @@ class LearnEarnPaidExamPaymentTest extends TestCase
         );
 
         Http::preventStrayRequests();
-        $this->get(route('payments.bkash.callback', ['paymentID' => 'BKASH-LEARN-EARN-001', 'status' => 'success']))
+        $this->get(route('payments.gateway.callback', ['provider' => 'bkash', 'paymentID' => 'BKASH-LEARN-EARN-001', 'status' => 'success']))
             ->assertRedirect('/student/learn-earn/exams');
         $this->assertDatabaseCount('learn_earn_exam_entitlements', 1);
     }
@@ -202,7 +234,7 @@ class LearnEarnPaidExamPaymentTest extends TestCase
             ], 200),
         ]);
 
-        $this->get(route('payments.bkash.callback', [
+        $this->get(route('payments.gateway.callback', ['provider' => 'bkash', 
             'paymentID' => 'BKASH-LEARN-EARN-002',
             'status' => 'success',
         ]))->assertRedirect('/student/learn-earn/exams');
@@ -287,7 +319,7 @@ class LearnEarnPaidExamPaymentTest extends TestCase
             ], 200),
         ]);
 
-        $this->get(route('payments.bkash.callback', [
+        $this->get(route('payments.gateway.callback', ['provider' => 'bkash', 
             'paymentID' => 'BKASH-LEARN-EARN-UNPUBLISHED',
             'status' => 'success',
         ]))->assertRedirect('/student/learn-earn/exams');

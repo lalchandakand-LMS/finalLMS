@@ -589,7 +589,7 @@ class CourseContentStudioTest extends TestCase
         $post->refresh(); // The update may regenerate the slug used by route-model binding.
         $version = CourseContentPostVersion::query()->where('course_content_post_id', $post->id)->firstOrFail();
         $this->post(route('admin.course-content-posts.versions.restore', [$post, $version]))
-            ->assertRedirect(route('admin.course-content-posts.versions', $post));
+            ->assertRedirect(route('admin.course-content-posts.versions', $post->fresh()));
 
         $this->assertSame('Original revision', $post->fresh()->title);
         $this->assertSame('Lesson content', $post->fresh()->long_description);

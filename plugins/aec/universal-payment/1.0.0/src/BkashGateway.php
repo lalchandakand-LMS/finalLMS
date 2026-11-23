@@ -1,15 +1,16 @@
 <?php
 
-namespace App\Services\Payments\Gateways;
+namespace Aloms\UniversalPayment\Gateways;
 
 use App\Contracts\Payments\PaymentGateway;
+use App\Contracts\Payments\PaymentGatewayCallbackReference;
 use App\Models\Payment;
-use App\Services\Payments\BkashCheckoutService;
+use Aloms\UniversalPayment\Gateways\BkashCheckoutService;
 use App\Services\Payments\MfsMerchantConfigurationService;
 use RuntimeException;
 use Throwable;
 
-class BkashGateway implements PaymentGateway
+class BkashGateway implements PaymentGateway, PaymentGatewayCallbackReference
 {
     private const ALLOWED_CHECKOUT_HOSTS = [
         'tokenized.sandbox.bka.sh',
@@ -76,6 +77,12 @@ class BkashGateway implements PaymentGateway
         return ['payment_id' => $paymentId, 'checkout_url' => $checkoutUrl];
     }
 
+    public function callbackPaymentId(array $callback): ?string
+    {
+        $paymentId = $callback['paymentID'] ?? null;
+        return is_string($paymentId) && $paymentId !== '' ? $paymentId : null;
+    }
+
     public function verifyCallback(Payment $payment, array $callback): array
     {
         $paymentId = $callback['paymentID'] ?? null;
@@ -93,8 +100,16 @@ class BkashGateway implements PaymentGateway
             }
         }
 
+        $verified = $this->client->queryPayment($token, $paymentId);
         return [
-            'verified' => $this->client->queryPayment($token, $paymentId),
+            'verified' => [
+                'status' => strtolower((string) ($verified['transactionStatus'] ?? '')),
+                'payment_id' => $verified['paymentID'] ?? null,
+                'transaction_id' => $verified['trxID'] ?? null,
+                'amount' => $verified['amount'] ?? null,
+                'currency' => $verified['currency'] ?? null,
+                'merchant_reference' => $verified['merchantInvoiceNumber'] ?? $executed['merchantInvoiceNumber'] ?? null,
+            ],
             'executed' => $executed,
         ];
     }

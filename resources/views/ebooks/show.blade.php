@@ -24,15 +24,13 @@
         <h2>৳{{ number_format((float)$product->currentPrice(),2) }} <small>BDT</small></h2>
         @auth
             @if((float)$product->currentPrice() > 0)
-                @if($bkashAvailable)
-                    <form method="POST" action="{{ route('ebooks.checkout.bkash', $product->slug) }}" style="margin:16px 0">
+                @foreach($onlineGateways as $gatewayKey => $gateway)
+                    <form method="POST" action="{{ route('ebooks.checkout.gateway', ['product' => $product->slug, 'provider' => $gatewayKey]) }}" style="margin:16px 0">
                         @csrf
-                        <button class="btn primary" type="submit">{{ __('Pay securely with bKash') }}</button>
+                        <button class="btn primary" type="submit">{{ __('Pay securely with :provider', ['provider' => $gateway['name']]) }}</button>
                     </form>
-                @endif
-                <div class="panel" style="margin-top:14px">
-                    <p>{{ __('Or pay manually using the academy payment instructions and submit the transaction reference for verification.') }}</p>
-                    <form method="POST" action="{{ route('ebooks.checkout',$product->slug) }}" enctype="multipart/form-data">
+                @endforeach
+                <form method="POST" action="{{ route('ebooks.checkout',$product->slug) }}" enctype="multipart/form-data">
                         @csrf
                         <label>{{ __('Manual payment transaction reference') }}<input name="payment_reference" maxlength="120" required></label>
                         <label>{{ __('Sender account (optional)') }}<input name="payment_sender" maxlength="60"></label>

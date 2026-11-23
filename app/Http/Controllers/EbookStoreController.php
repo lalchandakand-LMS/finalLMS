@@ -7,6 +7,7 @@ use App\Models\EbookPreviewPage;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Services\Payments\PaymentGatewayManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,20 +23,16 @@ class EbookStoreController extends Controller
         return view('ebooks.index', compact('products'));
     }
 
-    public function show(Product $product): View
+    public function show(Product $product, PaymentGatewayManager $gateways): View
     {
         abort_unless($product->type === 'ebook' && $product->status === 'published'
             && $product->published_at && $product->published_at->lte(now()) && $product->is_downloadable, 404);
         $product->load(['categories', 'previewPages' => fn ($query) => $query->where('is_active', true)]);
-        $bkashAvailable = strtoupper((string) ($product->currency ?: 'BDT')) === 'BDT'
-            && (bool) config('services.bkash.enabled')
-            && filled(config('services.bkash.base_url'))
-            && filled(config('services.bkash.username'))
-            && filled(config('services.bkash.password'))
-            && filled(config('services.bkash.app_key'))
-            && filled(config('services.bkash.app_secret'));
+        $currency = strtoupper((string) ($product->currency ?: 'BDT'));
+        $onlineGateways = collect($gateways->catalog())
+            ->filter(fn (array $gateway): bool => $gateway['available'] && in_array($currency, $gateway['currencies'], true));
 
-        return view('ebooks.show', compact('product', 'bkashAvailable'));
+        return view('ebooks.show', compact('product', 'onlineGateways'));
     }
 
     public function preview(Product $product, EbookPreviewPage $previewPage): \Symfony\Component\HttpFoundation\BinaryFileResponse
