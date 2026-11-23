@@ -113,10 +113,10 @@ PHP;
     {
         $packagePath = base_path('plugins/aec/universal-payment/1.0.0');
         $manifest = json_decode((string) file_get_contents($packagePath.'/plugin.json'), true, 16, JSON_THROW_ON_ERROR);
-        $this->assertSame([], app(\\App\\Services\\Plugins\\PluginManifestValidator::class)->errors($manifest));
+        $this->assertSame([], app(\App\Services\Plugins\PluginManifestValidator::class)->errors($manifest));
 
         $files = [];
-        $iterator = new \\RecursiveIteratorIterator(new \\RecursiveDirectoryIterator($packagePath, \\FilesystemIterator::SKIP_DOTS));
+        $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($packagePath, \FilesystemIterator::SKIP_DOTS));
         foreach ($iterator as $file) {
             if ($file->isFile()) {
                 $relative = str_replace(DIRECTORY_SEPARATOR, '/', substr($file->getPathname(), strlen($packagePath) + 1));
