@@ -39,7 +39,7 @@ final class AgentActionController
             ->limit(100)
             ->get();
 
-        return view('universal-ai-assistant::proposals', [
+        return view('modules.ai.proposals', [
             'role' => $role,
             'proposals' => $proposals,
             'canReview' => in_array($role, ['admin', 'teacher'], true),
