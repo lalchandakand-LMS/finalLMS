@@ -439,6 +439,7 @@ final class HrController extends Controller
             $basis = $member->compensation_basis ?: 'monthly';
 
             if ($basis === 'per_class') {
+                abort_if($periodEnd->isFuture(), 422, 'Class-based payroll can only be finalized after the selected month ends.');
                 abort_unless($member->user_id, 422, 'Per-class payroll requires this staff profile to be linked to a teacher user account.');
                 abort_if((float) $member->per_class_rate <= 0, 422, 'Set a per-class rate greater than zero before preparing payroll.');
                 $classesDelivered = (int) DB::table('live_classes')
