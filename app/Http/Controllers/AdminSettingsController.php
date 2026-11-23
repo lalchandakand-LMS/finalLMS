@@ -49,6 +49,7 @@ class AdminSettingsController extends Controller
             'dashboard_hero_eyebrow' => ['nullable', 'string', 'max:80'],
             'dashboard_hero_cta_label' => ['nullable', 'string', 'max:60'],
             'dashboard_hero_image_position' => ['nullable', 'in:center,left,right,top,bottom'],
+            'dashboard_brand_logo_media_id' => ['nullable', 'integer', 'min:1', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
             'dashboard_hero_image_media_id' => ['nullable', 'integer', 'min:1', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
             'dashboard_live_class_image_media_id' => ['nullable', 'integer', 'min:1', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
             'dashboard_hero_title' => ['nullable', 'string', 'max:180'],
@@ -173,7 +174,7 @@ class AdminSettingsController extends Controller
         })->filter()->values()->all();
         unset($validated['payment_methods'], $validated['home_slides']);
 
-        foreach (['site_logo_media_id', 'site_favicon_media_id', 'loading_screen_logo_media_id', 'dashboard_hero_image_media_id', 'dashboard_live_class_image_media_id'] as $mediaSetting) {
+        foreach (['site_logo_media_id', 'site_favicon_media_id', 'loading_screen_logo_media_id', 'dashboard_brand_logo_media_id', 'dashboard_hero_image_media_id', 'dashboard_live_class_image_media_id'] as $mediaSetting) {
             $mediaId = $validated[$mediaSetting] ?? null;
             if ($mediaId !== null && !MediaAsset::query()->whereKey($mediaId)->where('mime_type', 'like', 'image/%')->exists()) {
                 return back()->withErrors([$mediaSetting => 'Please select a valid image from the Media Library.'])->withInput();
