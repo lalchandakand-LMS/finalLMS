@@ -66,6 +66,7 @@
                 </div>
                 <div class="grid grid-2">
                     <label>{{ __('Marks') }}<input type="number" name="questions[{{ $index }}][marks]" min="1" max="100" value="{{ data_get($question, 'marks', 1) }}" required></label>
+                    <label>{{ __('Negative marks') }}<input type="number" name="questions[{{ $index }}][negative_marks]" min="0" max="100" value="{{ data_get($question, 'negative_marks', 0) }}"></label>
                     <label>{{ __('Difficulty') }}<select name="questions[{{ $index }}][difficulty]">@foreach(['easy','medium','hard'] as $level)<option value="{{ $level }}" @selected(data_get($question, 'difficulty', 'medium') === $level)>{{ __(ucfirst($level)) }}</option>@endforeach</select></label>
                 </div>
                 <label>{{ __('Explanation') }}<textarea name="questions[{{ $index }}][explanation]" maxlength="3000">{{ data_get($question, 'explanation') }}</textarea></label>
@@ -146,6 +147,7 @@
             <div data-short-answer-fields><label>Expected answer<textarea name="questions[${index}][correct_answer]" maxlength="2000"></textarea></label></div>
             <div data-written-fields><label>Written grading rubric (one criterion per line)<textarea name="questions[${index}][grading_rubric_text]" rows="3"></textarea></label></div>
             <div class="grid grid-2"><label>Marks<input type="number" name="questions[${index}][marks]" min="1" max="100" value="1" required></label>
+            <label>Negative marks<input type="number" name="questions[${index}][negative_marks]" min="0" max="100" value="0"></label>
             <label>Difficulty<select name="questions[${index}][difficulty]"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option></select></label></div>
             <label>Explanation<textarea name="questions[${index}][explanation]" maxlength="3000"></textarea></label>
             <label>Tags (comma separated)<input name="questions[${index}][tags]" maxlength="1000"></label>`;
