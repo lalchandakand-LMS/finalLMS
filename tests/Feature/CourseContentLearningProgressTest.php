@@ -67,6 +67,10 @@ class CourseContentLearningProgressTest extends TestCase
         }
         $response->assertOk()->assertJson(['completed' => true, 'progress_percent' => 95]);
         $this->assertNotNull(CourseContentProgress::query()->firstOrFail()->completed_at);
+
+        $this->get(route('student.courses.index'))
+            ->assertOk()
+            ->assertSee('100%');
     }
 
     public function test_seeking_to_the_end_does_not_falsely_complete_a_video_lesson(): void
