@@ -268,7 +268,7 @@ final class HrController extends Controller
     {
         $actor = $request->user();
         $this->assertBranchAssigned($actor);
-        $member = StaffProfile::query()->lockForUpdate()->findOrFail($staff);
+        $member = StaffProfile::query()->findOrFail($staff);
         $this->assertRecordBranch($actor, $member->branch_id);
 
         $data = $request->validate([
