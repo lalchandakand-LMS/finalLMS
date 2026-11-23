@@ -81,7 +81,7 @@
             const select = card.querySelector('[data-question-type]');
             if (select.value !== 'written' || !textarea.value.trim()) return;
             const prefix = select.name.replace('[type]', '');
-            textarea.value.split('\\n').map(value => value.trim()).filter(Boolean).forEach((value, index) => {
+            textarea.value.split('\n').map(value => value.trim()).filter(Boolean).forEach((value, index) => {
                 const input = document.createElement('input'); input.type = 'hidden';
                 input.name = prefix + '[grading_rubric][' + index + ']'; input.value = value;
                 event.currentTarget.appendChild(input);
