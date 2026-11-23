@@ -198,6 +198,18 @@
                 </div>
             </section>
             @endif
+
+            <section class="aec-panel" aria-labelledby="aec-recent-activity-title" style="order:7">
+                <div class="aec-panel-head"><h3 id="aec-recent-activity-title">🕘 {{ __('Recent activity') }}</h3><a class="aec-pill" href="{{ route('admin.activity-logs.index') }}">{{ __('View activity log') }} →</a></div>
+                @forelse($recentActivity as $activity)
+                    <div class="aec-snapshot-row">
+                        <span><strong>{{ $activity->user?->name ?? __('System') }}</strong> · {{ $activity->description }}</span>
+                        <time datetime="{{ $activity->created_at?->toIso8601String() }}" style="flex:0 0 auto;color:var(--aec-muted);font-size:.75rem">{{ $activity->created_at?->diffForHumans() }}</time>
+                    </div>
+                @empty
+                    <p class="muted" style="margin:0">{{ __('No activity has been recorded yet.') }}</p>
+                @endforelse
+            </section>
         </div>
     @else
         <div class="page-header">
