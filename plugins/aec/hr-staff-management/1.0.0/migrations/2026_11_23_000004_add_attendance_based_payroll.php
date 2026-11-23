@@ -25,6 +25,7 @@ return new class extends Migration
             $table->decimal('payable_days', 7, 2)->default(0);
             $table->unsignedSmallInteger('classes_delivered')->default(0);
             $table->decimal('attendance_deduction', 12, 2)->default(0);
+            $table->unsignedTinyInteger('attendance_records_count')->default(0);
         });
     }
 
@@ -37,7 +38,7 @@ return new class extends Migration
         Schema::table('staff_payrolls', function (Blueprint $table): void {
             $table->dropColumn([
                 'compensation_basis_snapshot', 'present_days', 'absent_days', 'half_days',
-                'unpaid_leave_days', 'payable_days', 'classes_delivered', 'attendance_deduction',
+                'unpaid_leave_days', 'payable_days', 'classes_delivered', 'attendance_deduction', 'attendance_records_count',
             ]);
         });
         Schema::table('staff_profiles', function (Blueprint $table): void {
