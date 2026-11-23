@@ -31,6 +31,26 @@ class LearnEarnPaidExamPaymentTest extends TestCase
     {
         parent::setUp();
 
+        // Plugin migrations create tables at runtime. MySQL implicitly commits DDL,
+        // so temporarily end RefreshDatabase's transaction and start a fresh one
+        // after the package schema is installed.
+        $connection = DB::connection();
+        while ($connection->transactionLevel() > 0) {
+            $connection->rollBack();
+        }
+
+        foreach ([
+            '2026_11_17_150000_create_learn_earn_question_tables.php',
+            '2026_11_17_160000_create_learn_earn_exam_tables.php',
+            '2026_11_17_170000_create_learn_earn_attempt_tables.php',
+            '2026_11_17_180000_create_learn_earn_payment_entitlements.php',
+        ] as $migrationFile) {
+            $migration = require base_path('plugins/aec/learn-earn/1.0.0/migrations/'.$migrationFile);
+            $migration->up();
+        }
+
+        $connection->beginTransaction();
+
         // The adapter must be both configured and explicitly enabled in the Admin gateway registry.
         Setting::setValue('payment_gateway_registry', json_encode(['bkash' => true], JSON_THROW_ON_ERROR));
 
@@ -71,25 +91,6 @@ class LearnEarnPaidExamPaymentTest extends TestCase
             \Aloms\UniversalPayment\Gateways\BkashGateway::class,
         );
 
-        // Plugin migrations create tables at runtime. MySQL implicitly commits DDL,
-        // so temporarily end RefreshDatabase's transaction and start a fresh one
-        // after the package schema is installed.
-        $connection = DB::connection();
-        while ($connection->transactionLevel() > 0) {
-            $connection->rollBack();
-        }
-
-        foreach ([
-            '2026_11_17_150000_create_learn_earn_question_tables.php',
-            '2026_11_17_160000_create_learn_earn_exam_tables.php',
-            '2026_11_17_170000_create_learn_earn_attempt_tables.php',
-            '2026_11_17_180000_create_learn_earn_payment_entitlements.php',
-        ] as $migrationFile) {
-            $migration = require base_path('plugins/aec/learn-earn/1.0.0/migrations/'.$migrationFile);
-            $migration->up();
-        }
-
-        $connection->beginTransaction();
 
         require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnExam.php');
         require_once base_path('plugins/aec/learn-earn/1.0.0/src/LearnEarnExamEntitlement.php');
@@ -161,7 +162,7 @@ class LearnEarnPaidExamPaymentTest extends TestCase
         ]);
 
 
-        $this->get(route('payments.bkash.callback', [
+        $this->get(route('payments.gateway.callback', ['provider' => 'bkash', 
             'paymentID' => 'BKASH-LEARN-EARN-001',
             'status' => 'success',
         ]))->assertRedirect('/student/learn-earn/exams');
@@ -190,7 +191,7 @@ class LearnEarnPaidExamPaymentTest extends TestCase
         );
 
         Http::preventStrayRequests();
-        $this->get(route('payments.bkash.callback', ['paymentID' => 'BKASH-LEARN-EARN-001', 'status' => 'success']))
+        $this->get(route('payments.gateway.callback', ['provider' => 'bkash', 'paymentID' => 'BKASH-LEARN-EARN-001', 'status' => 'success']))
             ->assertRedirect('/student/learn-earn/exams');
         $this->assertDatabaseCount('learn_earn_exam_entitlements', 1);
     }
@@ -233,7 +234,7 @@ class LearnEarnPaidExamPaymentTest extends TestCase
             ], 200),
         ]);
 
-        $this->get(route('payments.bkash.callback', [
+        $this->get(route('payments.gateway.callback', ['provider' => 'bkash', 
             'paymentID' => 'BKASH-LEARN-EARN-002',
             'status' => 'success',
         ]))->assertRedirect('/student/learn-earn/exams');
@@ -318,7 +319,7 @@ class LearnEarnPaidExamPaymentTest extends TestCase
             ], 200),
         ]);
 
-        $this->get(route('payments.bkash.callback', [
+        $this->get(route('payments.gateway.callback', ['provider' => 'bkash', 
             'paymentID' => 'BKASH-LEARN-EARN-UNPUBLISHED',
             'status' => 'success',
         ]))->assertRedirect('/student/learn-earn/exams');
