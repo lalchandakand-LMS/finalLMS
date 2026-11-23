@@ -254,6 +254,42 @@
                 <span class="badge info">{{ __('Dashboard appearance') }}</span>
                 <h2 style="margin:12px 0 6px;">{{ __('Customize the admin dashboard') }}</h2>
                 <p class="muted">{{ __('Keep the dashboard layout while changing its colors, banner artwork, live-class image and welcome text. Select images already uploaded to the Media Library.') }}</p>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:14px 0;">
+                    <button type="button" class="btn secondary" data-dashboard-restore>{{ __('Restore dashboard defaults') }}</button>
+                    <span class="muted" data-dashboard-restore-status role="status" aria-live="polite"></span>
+                </div>
+                <div class="panel" style="padding:16px;margin:16px 0;background:var(--panel-alt);" data-dashboard-preview>
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                        <strong>{{ __('Responsive dashboard preview') }}</strong>
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                            <button type="button" class="btn secondary" data-dashboard-preview-mode="desktop" aria-pressed="true">Desktop</button>
+                            <button type="button" class="btn secondary" data-dashboard-preview-mode="tablet" aria-pressed="false">Tablet</button>
+                            <button type="button" class="btn secondary" data-dashboard-preview-mode="mobile" aria-pressed="false">Mobile</button>
+                        </div>
+                    </div>
+                    <div class="dashboard-preview-frame" data-dashboard-preview-frame data-preview-mode="desktop" style="margin:14px auto 0;padding:12px;border:1px solid var(--border);border-radius:14px;background:var(--bg);transition:max-width .2s ease;">
+                        <div style="padding:18px;border-radius:10px;color:#fff;background:linear-gradient(115deg,#102b63,#0759c8);">
+                            <strong>{{ __('Welcome back,') }} {{ __('Administrator') }}</strong>
+                            <p style="margin:5px 0 0;color:#e7efff;font-size:.85rem;">{{ __('Your academy overview at a glance') }}</p>
+                        </div>
+                        <div class="dashboard-preview-stats" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:10px;">
+                            @foreach(['Students','Teachers','Courses','Certificates'] as $previewMetric)
+                                <div style="padding:12px 8px;border:1px solid var(--border);border-radius:9px;background:var(--panel);text-align:center;">
+                                    <strong style="display:block;font-size:1.1rem;">{{ $loop->iteration * 128 }}</strong>
+                                    <small class="muted">{{ __($previewMetric) }}</small>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                    <style>
+                        .dashboard-preview-frame[data-preview-mode="desktop"] { max-width:100%; }
+                        .dashboard-preview-frame[data-preview-mode="tablet"] { max-width:768px; }
+                        .dashboard-preview-frame[data-preview-mode="mobile"] { max-width:390px; }
+                        .dashboard-preview-frame[data-preview-mode="tablet"] .dashboard-preview-stats { grid-template-columns:repeat(2,minmax(0,1fr))!important; }
+                        .dashboard-preview-frame[data-preview-mode="mobile"] .dashboard-preview-stats { grid-template-columns:repeat(2,minmax(0,1fr))!important; }
+                        @media(max-width:560px) { .dashboard-preview-frame .dashboard-preview-stats { grid-template-columns:repeat(2,minmax(0,1fr))!important; } }
+                    </style>
+                </div>
                 <div class="grid grid-2">
                     <div><label for="dashboard-primary-color">{{ __('Primary navy') }}</label><input id="dashboard-primary-color" type="color" name="dashboard_primary_color" value="{{ old('dashboard_primary_color', $settings['dashboard_primary_color'] ?? '#102b63') }}"></div>
                     <div><label for="dashboard-secondary-color">{{ __('Banner blue') }}</label><input id="dashboard-secondary-color" type="color" name="dashboard_secondary_color" value="{{ old('dashboard_secondary_color', $settings['dashboard_secondary_color'] ?? '#0759c8') }}"></div>
@@ -518,6 +554,71 @@
                 announce((item.querySelector('label')?.textContent?.trim() || 'Widget') + ' reordered.');
             });
             refresh();
+        })();
+    </script>
+@endpush
+
+@push('scripts')
+    <script>
+        (() => {
+            const panel = document.querySelector('[data-dashboard-preview]');
+            if (!panel) return;
+            const frame = panel.querySelector('[data-dashboard-preview-frame]');
+            panel.querySelectorAll('[data-dashboard-preview-mode]').forEach(button => {
+                button.addEventListener('click', () => {
+                    const mode = button.getAttribute('data-dashboard-preview-mode');
+                    frame.setAttribute('data-preview-mode', mode);
+                    panel.querySelectorAll('[data-dashboard-preview-mode]').forEach(option => {
+                        option.setAttribute('aria-pressed', String(option === button));
+                    });
+                });
+            });
+            const restore = document.querySelector('[data-dashboard-restore]');
+            const status = document.querySelector('[data-dashboard-restore-status]');
+            if (!restore) return;
+            const defaults = {
+                dashboard_primary_color:'#102b63', dashboard_secondary_color:'#0759c8',
+                dashboard_accent_color:'#ffd52f', dashboard_background_color:'#f3f6ff',
+                dashboard_surface_color:'#ffffff', dashboard_students_color:'#1675f5',
+                dashboard_teachers_color:'#08b978', dashboard_courses_color:'#8525e8',
+                dashboard_certificates_color:'#f59e0b', dashboard_hero_title:'',
+                dashboard_hero_subtitle:'', dashboard_hero_quote:'',
+                dashboard_hero_image_media_id:'', dashboard_live_class_image_media_id:'',
+                dashboard_show_hero:'1', dashboard_show_statistics:'1',
+                dashboard_show_live_class:'1', dashboard_show_quick_actions:'1',
+                dashboard_show_system_snapshot:'1', dashboard_show_learning_operations:'1',
+                dashboard_order_hero:'1', dashboard_order_statistics:'2',
+                dashboard_order_live_class:'3', dashboard_order_quick_actions:'4',
+                dashboard_order_system_snapshot:'5', dashboard_order_learning_operations:'6'
+            };
+            restore.addEventListener('click', () => {
+                const form = restore.closest('form');
+                if (!form) return;
+                Object.entries(defaults).forEach(([name, value]) => {
+                    Array.from(form.elements).filter(field => field.name === name).forEach(field => {
+                        if (field.type === 'checkbox') field.checked = value === '1';
+                        else if (field.type === 'hidden' && name.startsWith('dashboard_show_')) field.value = '0';
+                        else field.value = value;
+                    });
+                });
+                const list = form.querySelector('[data-dashboard-widget-order-list]');
+                if (list) {
+                    const order = ['dashboard_order_hero','dashboard_order_statistics','dashboard_order_live_class','dashboard_order_quick_actions','dashboard_order_system_snapshot','dashboard_order_learning_operations'];
+                    order.forEach(name => {
+                        const input = Array.from(list.querySelectorAll('input[type="number"]')).find(field => field.name === name);
+                        if (input) list.appendChild(input.closest('[data-dashboard-widget-order-item]'));
+                    });
+                    list.querySelectorAll('[data-dashboard-widget-order-item]').forEach((item,index) => {
+                        const input = item.querySelector('input[type="number"]');
+                        if (input) input.value = String(index + 1);
+                        const up = item.querySelector('[data-widget-move-up]');
+                        const down = item.querySelector('[data-widget-move-down]');
+                        if (up) up.disabled = index === 0;
+                        if (down) down.disabled = index === order.length - 1;
+                    });
+                }
+                if (status) status.textContent = 'Dashboard defaults restored. Save settings to apply them.';
+            });
         })();
     </script>
 @endpush
