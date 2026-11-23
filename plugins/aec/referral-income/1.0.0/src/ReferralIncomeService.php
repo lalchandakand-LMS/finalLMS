@@ -124,6 +124,8 @@ final class ReferralIncomeService
 
     public function requestPayout(User $owner, string $method, string $account): int
     {
+        abort_unless((bool) config('referral-income.payouts_enabled', false), 503,
+            'Referral payouts are temporarily disabled until refund and reversal reconciliation is enabled.');
         $this->ownerType($owner);
         if (!in_array($method, ['bkash', 'nagad', 'bank'], true) || mb_strlen(trim($account)) < 6) {
             throw ValidationException::withMessages(['payout' => 'Enter a valid bKash, Nagad or bank payout destination.']);
@@ -170,6 +172,8 @@ final class ReferralIncomeService
 
     public function reviewPayout(int $id, int $adminId, string $status, ?string $note): void
     {
+        abort_unless((bool) config('referral-income.payouts_enabled', false), 503,
+            'Referral payouts are temporarily disabled until refund and reversal reconciliation is enabled.');
         abort_unless(User::query()->whereKey($adminId)->where('role', 'admin')->exists(), 403);
         if (!in_array($status, ['approved', 'paid', 'rejected'], true) || (in_array($status, ['paid', 'rejected'], true) && trim((string) $note) === '')) {
             throw ValidationException::withMessages(['status' => 'A payout reference is required when marking a payout paid.']);
