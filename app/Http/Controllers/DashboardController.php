@@ -12,6 +12,8 @@ use App\Models\Lesson;
 use App\Models\LessonProgress;
 use App\Models\Certificate;
 use App\Models\Course;
+use App\Models\CourseContentProgress;
+use App\Models\CourseCurriculumItem;
 use App\Models\DashboardAnnouncement;
 use App\Models\Enrollment;
 use App\Models\Setting;
