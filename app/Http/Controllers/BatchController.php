@@ -60,7 +60,11 @@ class BatchController extends Controller
             'starts_at' => ['required', 'date'],
             'ends_at' => ['required', 'date', 'after:starts_at'],
             'fee' => ['required', 'numeric', 'min:0'],
+            'fee_calculation_mode' => ['nullable', 'in:fixed,per_class'],
+            'per_class_fee' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
         ]);
+        $validated['fee_calculation_mode'] = $validated['fee_calculation_mode'] ?? 'fixed';
+        if ($validated['fee_calculation_mode'] === 'per_class') abort_if((float) ($validated['per_class_fee'] ?? 0) <= 0, 422, 'Set a per-class fee greater than zero.');
         Batch::create([...$validated, 'branch_id' => $branchId, 'status' => 'open']);
         return redirect()->route('branch.batches.index')->with('success', 'Batch created for your branch.');
     }
@@ -81,9 +85,14 @@ class BatchController extends Controller
             'starts_at' => ['required', 'date'],
             'ends_at' => ['required', 'date', 'after:starts_at'],
             'fee' => ['required', 'numeric', 'min:0'],
+            'fee_calculation_mode' => ['nullable', 'in:fixed,per_class'],
+            'per_class_fee' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
             'status' => ['required', 'in:open,closed,completed'],
         ]);
         abort_if($validated['capacity'] < $batch->enrollments()->whereIn('status', ['active', 'completed'])->count(), 422, 'Capacity cannot be lower than the current enrolled student count.');
+        $validated['fee_calculation_mode'] = $validated['fee_calculation_mode'] ?? $batch->fee_calculation_mode ?? 'fixed';
+        $validated['per_class_fee'] = $validated['per_class_fee'] ?? $batch->per_class_fee;
+        if ($validated['fee_calculation_mode'] === 'per_class') abort_if((float) $validated['per_class_fee'] <= 0, 422, 'Set a per-class fee greater than zero.');
         $batch->update($validated);
         return redirect()->route('branch.batches.index')->with('success', 'Your branch batch was updated.');
     }
@@ -187,8 +196,12 @@ class BatchController extends Controller
             'starts_at' => ['required', 'date'],
             'ends_at' => ['required', 'date', 'after:starts_at'],
             'fee' => ['required', 'numeric', 'min:0'],
+            'fee_calculation_mode' => ['nullable', 'in:fixed,per_class'],
+            'per_class_fee' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
         ]);
 
+        $validated['fee_calculation_mode'] = $validated['fee_calculation_mode'] ?? 'fixed';
+        if ($validated['fee_calculation_mode'] === 'per_class') abort_if((float) ($validated['per_class_fee'] ?? 0) <= 0, 422, 'Set a per-class fee greater than zero.');
         Batch::create([...$validated, 'status' => 'open']);
 
         return redirect()->route('admin.batches.index')->with('success', 'Batch created successfully.');
@@ -205,9 +218,14 @@ class BatchController extends Controller
             'starts_at' => ['required', 'date'],
             'ends_at' => ['required', 'date', 'after:starts_at'],
             'fee' => ['required', 'numeric', 'min:0'],
+            'fee_calculation_mode' => ['nullable', 'in:fixed,per_class'],
+            'per_class_fee' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
             'status' => ['required', 'in:open,closed,completed'],
         ]);
 
+        $validated['fee_calculation_mode'] = $validated['fee_calculation_mode'] ?? $batch->fee_calculation_mode ?? 'fixed';
+        $validated['per_class_fee'] = $validated['per_class_fee'] ?? $batch->per_class_fee;
+        if ($validated['fee_calculation_mode'] === 'per_class') abort_if((float) $validated['per_class_fee'] <= 0, 422, 'Set a per-class fee greater than zero.');
         $batch->update($validated);
 
         return redirect()->route('admin.batches.index')->with('success', 'Batch updated successfully.');
