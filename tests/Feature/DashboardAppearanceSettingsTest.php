@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\ActivityLog;
 use App\Models\MediaAsset;
 use App\Models\Setting;
 use App\Models\User;
@@ -226,6 +227,26 @@ class DashboardAppearanceSettingsTest extends TestCase
                 'dashboard_card_shadow',
                 'dashboard_hero_image_position',
             ]);
+    }
+
+    public function test_admin_dashboard_displays_recent_activity_with_actor_and_timestamp(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        ActivityLog::query()->create([
+            'user_id' => $admin->id,
+            'event' => 'student.created',
+            'description' => 'Created a new student account',
+            'method' => 'POST',
+            'route' => 'admin.users.store',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Recent activity')
+            ->assertSee('Created a new student account')
+            ->assertSee($admin->name)
+            ->assertSee('View activity log');
     }
 
     public function test_non_admin_cannot_change_dashboard_appearance_settings(): void
