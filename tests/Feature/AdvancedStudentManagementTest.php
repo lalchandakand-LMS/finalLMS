@@ -99,4 +99,17 @@ class AdvancedStudentManagementTest extends TestCase
         $response->assertOk();
         $this->assertStringContainsString('Exportable Learner', $response->streamedContent());
     }
+    public function test_branch_manager_cannot_reactivate_a_suspended_student_from_another_branch(): void
+    {
+        $branchA = Branch::query()->create(['name' => 'Branch A', 'slug' => 'branch-a', 'is_active' => true]);
+        $branchB = Branch::query()->create(['name' => 'Branch B', 'slug' => 'branch-b', 'is_active' => true]);
+        $manager = User::factory()->create(['role' => 'branch_manager', 'branch_id' => $branchA->id, 'admin_permissions' => ['branch.students']]);
+        $student = User::factory()->create(['role' => 'student', 'branch_id' => $branchB->id]);
+        StudentProfile::create(['user_id' => $student->id, 'lifecycle_status' => 'suspended']);
+
+        $this->actingAs($manager)->put(route('branch.students.manage.reactivate', $student))->assertNotFound();
+
+        $this->assertDatabaseHas('student_profiles', ['user_id' => $student->id, 'lifecycle_status' => 'suspended']);
+    }
+
 }
