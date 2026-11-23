@@ -7,6 +7,7 @@ use App\Models\MediaAsset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Illuminate\Validation\Rule;
 
 class AdminSettingsController extends Controller
 {
@@ -42,8 +43,8 @@ class AdminSettingsController extends Controller
             'dashboard_teachers_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'dashboard_courses_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'dashboard_certificates_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'dashboard_hero_image_media_id' => ['nullable', 'integer', 'min:1'],
-            'dashboard_live_class_image_media_id' => ['nullable', 'integer', 'min:1'],
+            'dashboard_hero_image_media_id' => ['nullable', 'integer', 'min:1', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
+            'dashboard_live_class_image_media_id' => ['nullable', 'integer', 'min:1', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
             'dashboard_hero_title' => ['nullable', 'string', 'max:180'],
             'dashboard_hero_subtitle' => ['nullable', 'string', 'max:300'],
             'dashboard_hero_quote' => ['nullable', 'string', 'max:180'],
@@ -61,10 +62,10 @@ class AdminSettingsController extends Controller
             'dashboard_order_learning_operations' => ['nullable', 'integer', 'min:1', 'max:6'],
             'institution_default_locale' => ['sometimes', 'required', 'in:en,bn'],
             'institution_timezone' => ['sometimes', 'required', 'timezone'],
-            'site_logo_media_id' => ['nullable', 'integer', 'min:1'],
-            'site_favicon_media_id' => ['nullable', 'integer', 'min:1'],
+            'site_logo_media_id' => ['nullable', 'integer', 'min:1', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
+            'site_favicon_media_id' => ['nullable', 'integer', 'min:1', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
             'loading_screen_enabled' => ['nullable', 'boolean'],
-            'loading_screen_logo_media_id' => ['nullable', 'integer', 'min:1'],
+            'loading_screen_logo_media_id' => ['nullable', 'integer', 'min:1', Rule::exists('media_assets', 'id')->where(fn ($query) => $query->where('mime_type', 'like', 'image/%'))],
             'loading_screen_style' => ['nullable', 'in:orbit,pulse,ring'],
             'loading_screen_text' => ['nullable', 'string', 'max:60'],
             'loading_screen_background' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
