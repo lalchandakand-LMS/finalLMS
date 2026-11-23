@@ -16,6 +16,7 @@ final class AgentActionController
     {
         $role = (string) $request->user()->role;
         abort_unless(in_array($role, ['admin', 'teacher', 'student'], true), 403);
+        $this->assertAgentEnabled($role);
 
         $proposals = DB::table('ai_agent_action_proposals as proposals')
             ->join('users as requester', 'requester.id', '=', 'proposals.requester_id')
@@ -49,6 +50,7 @@ final class AgentActionController
     public function storeStudyPlan(Request $request, AgentActionWorkflow $workflow): RedirectResponse
     {
         abort_unless($request->user()->role === 'student', 403);
+        $this->assertAgentEnabled('student');
         $validated = Validator::make($request->all(), [
             'title' => ['required', 'string', 'max:120'],
             'goals' => ['required', 'string', 'max:1500'],
@@ -73,6 +75,7 @@ final class AgentActionController
     public function approve(Request $request, int $proposal, AgentActionWorkflow $workflow): RedirectResponse
     {
         abort_unless(in_array($request->user()->role, ['admin', 'teacher'], true), 403);
+        $this->assertAgentEnabled((string) $request->user()->role);
         $validated = $request->validate(['version' => ['required', 'integer', 'min:1']]);
         try {
             $workflow->approve($request->user(), $proposal, (int) $validated['version']);
@@ -100,4 +103,15 @@ final class AgentActionController
 
         return back()->with('success', __('The proposal was rejected and audited.'));
     }
+    private function assertAgentEnabled(string $role): void
+    {
+        $settings = AssistantSettings::record();
+        abort_unless(
+            ($settings['global_enabled'] ?? false)
+            && ($settings['role_enabled'][$role] ?? false)
+            && filled($settings['api_key_encrypted'] ?? null),
+            404
+        );
+    }
+
 }
