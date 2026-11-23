@@ -23,6 +23,10 @@ class PaymentGatewayManager
             throw new InvalidArgumentException('Invalid payment gateway registration.');
         }
 
+        if (isset($this->drivers[$key])) {
+            throw new InvalidArgumentException('A payment gateway with this key is already registered.');
+        }
+
         $this->drivers[$key] = $driver;
     }
 
