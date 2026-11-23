@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use Aloms\UniversalAiAssistant\AgentActionWorkflow;
 use Aloms\UniversalAiAssistant\AssistantAudit;
+use App\Models\Course;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
