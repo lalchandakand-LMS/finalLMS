@@ -219,6 +219,7 @@ Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('a
     Route::post('/leave-requests', [HrController::class, 'requestLeave'])->middleware('throttle:20,1')->name('leave.store');
     Route::post('/leave-requests/{leave}/review', [HrController::class, 'reviewLeave'])->whereNumber('leave')->middleware('throttle:20,1')->name('leave.review');
     Route::post('/payrolls', [HrController::class, 'recordPayroll'])->middleware('throttle:20,1')->name('payrolls.store');
+    Route::post('/payrolls/{payroll}/mark-paid', [HrController::class, 'markPayrollPaid'])->whereNumber('payroll')->middleware(['admin.permission:finance.invoices', 'throttle:10,1'])->name('payrolls.mark-paid');
     Route::post('/payrolls/{payroll}/mark-paid', [HrController::class, 'markPayrollPaid'])->whereNumber('payroll')->middleware('throttle:10,1')->name('payrolls.mark-paid');
     Route::get('/recruitment', [HrController::class, 'recruitmentIndex'])->name('recruitment.index');
     Route::post('/recruitment/openings', [HrController::class, 'storeJobOpening'])->middleware('throttle:20,1')->name('recruitment.openings.store');
