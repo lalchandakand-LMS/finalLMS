@@ -26,6 +26,7 @@ return new class implements PluginContract {
             $context->routesForPortal($portal, $prefix.'/hr', $prefix.'.hr.', function (): void {
                 Route::get('/', [HrController::class, 'index'])->name('index');
                 Route::post('/staff', [HrController::class, 'storeStaff'])->middleware('throttle:20,1')->name('staff.store');
+                Route::put('/staff/{staff}', [HrController::class, 'updateStaff'])->whereNumber('staff')->middleware('throttle:20,1')->name('staff.update');
                 Route::post('/attendance', [HrController::class, 'recordAttendance'])->middleware('throttle:60,1')->name('attendance.store');
                 Route::post('/leave-requests', [HrController::class, 'requestLeave'])->middleware('throttle:20,1')->name('leave.store');
                 Route::post('/payrolls', [HrController::class, 'recordPayroll'])->middleware('throttle:20,1')->name('payrolls.store');
