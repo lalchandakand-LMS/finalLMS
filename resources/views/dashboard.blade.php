@@ -11,24 +11,24 @@
 
     @if($isAdmin)
         <style>
-            .aec-admin { --aec-ink:#10234e; --aec-muted:#687895; --aec-line:#e4ebfa; color:var(--aec-ink); }
+            .aec-admin { --aec-primary:{{ $dashboardAppearance['primary'] }}; --aec-secondary:{{ $dashboardAppearance['secondary'] }}; --aec-accent:{{ $dashboardAppearance['accent'] }}; --aec-background:{{ $dashboardAppearance['background'] }}; --aec-surface:{{ $dashboardAppearance['surface'] }}; --aec-ink:#10234e; --aec-muted:#687895; --aec-line:#e4ebfa; color:var(--aec-ink); background:var(--aec-background); padding:4px; border-radius:22px; }
             .aec-admin * { box-sizing:border-box; }
             .aec-admin-shell { display:grid; gap:18px; }
-            .aec-hero { position:relative; isolation:isolate; overflow:hidden; display:flex; align-items:center; justify-content:space-between; gap:24px; min-height:190px; padding:30px clamp(22px,4vw,42px); border-radius:24px; color:#fff; background:radial-gradient(circle at 80% 20%,rgba(54,178,255,.4),transparent 28%),linear-gradient(115deg,#071b54 0%,#0c3f9f 55%,#126ce2 100%); box-shadow:0 18px 42px rgba(14,62,151,.22); }
+            .aec-hero { position:relative; isolation:isolate; overflow:hidden; display:flex; align-items:center; justify-content:space-between; gap:24px; min-height:190px; padding:30px clamp(22px,4vw,42px); border-radius:24px; color:#fff; background:radial-gradient(circle at 80% 20%,rgba(54,178,255,.4),transparent 28%),linear-gradient(115deg,var(--aec-primary) 0%,var(--aec-secondary) 100%); box-shadow:0 18px 42px rgba(14,62,151,.22); }
             .aec-hero:after { content:""; position:absolute; z-index:-1; width:330px; height:330px; right:8%; top:-190px; border:1px solid rgba(255,255,255,.2); border-radius:50%; box-shadow:0 0 0 34px rgba(255,255,255,.04),0 0 0 72px rgba(255,255,255,.035); }
             .aec-hero-copy { max-width:760px; }
             .aec-eyebrow { display:inline-flex; align-items:center; gap:8px; padding:6px 11px; border:1px solid rgba(255,255,255,.25); border-radius:999px; background:rgba(255,255,255,.1); color:#dbeafe; font-size:.74rem; font-weight:800; letter-spacing:.09em; text-transform:uppercase; }
             .aec-hero h1 { margin:13px 0 7px; color:#fff; font-size:clamp(1.55rem,3vw,2.45rem); line-height:1.12; letter-spacing:-.035em; }
             .aec-hero p { max-width:650px; margin:0; color:#dbeafe; font-size:.98rem; }
             .aec-hero-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:20px; }
-            .aec-hero-btn { display:inline-flex; align-items:center; justify-content:center; min-height:42px; padding:10px 17px; border-radius:999px; background:#ffd52f; color:#14234b; font-weight:800; text-decoration:none; box-shadow:0 6px 18px rgba(0,0,0,.14); }
+            .aec-hero-btn { display:inline-flex; align-items:center; justify-content:center; min-height:42px; padding:10px 17px; border-radius:999px; background:var(--aec-accent); color:#14234b; font-weight:800; text-decoration:none; box-shadow:0 6px 18px rgba(0,0,0,.14); }
             .aec-hero-btn.secondary { border:1px solid rgba(255,255,255,.35); background:rgba(255,255,255,.12); color:#fff; box-shadow:none; }
             .aec-hero-mark { flex:0 0 auto; display:grid; place-items:center; width:112px; height:112px; border:1px solid rgba(255,255,255,.22); border-radius:30px; background:rgba(255,255,255,.12); font-size:3.8rem; transform:rotate(5deg); }
             .aec-heading { display:flex; align-items:end; justify-content:space-between; gap:12px; margin:2px 0 12px; }
             .aec-heading h2 { margin:0; color:#142b55; font-size:1.12rem; letter-spacing:-.02em; }
             .aec-heading p { margin:4px 0 0; color:var(--aec-muted); font-size:.86rem; }
             .aec-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
-            .aec-stat { position:relative; overflow:hidden; min-width:0; padding:18px; border:1px solid var(--aec-line); border-radius:19px; background:linear-gradient(145deg,#fff,#f7faff); box-shadow:0 8px 22px rgba(18,48,102,.055); }
+            .aec-stat { position:relative; overflow:hidden; min-width:0; padding:18px; border:1px solid var(--aec-line); border-radius:19px; background:linear-gradient(145deg,var(--aec-surface),var(--aec-background)); box-shadow:0 8px 22px rgba(18,48,102,.055); }
             .aec-stat:after { content:""; position:absolute; right:-28px; bottom:-44px; width:125px; height:125px; border:18px solid rgba(35,112,235,.055); border-radius:50%; }
             .aec-stat-top { display:flex; align-items:center; justify-content:space-between; gap:10px; color:#5d6f8d; font-size:.84rem; font-weight:700; }
             .aec-stat-icon { display:grid; place-items:center; flex:0 0 auto; width:43px; height:43px; border-radius:14px; background:#e8f1ff; font-size:1.35rem; }
@@ -36,7 +36,7 @@
             .aec-stat small { display:block; margin-top:8px; color:#8190a8; font-size:.76rem; }
             .aec-stat.blue { background:linear-gradient(135deg,#eaf3ff,#fff); } .aec-stat.green .aec-stat-icon { background:#ddf8ed; } .aec-stat.purple .aec-stat-icon { background:#f0e7ff; } .aec-stat.gold .aec-stat-icon { background:#fff2d8; }
             .aec-content-grid { display:grid; grid-template-columns:minmax(0,1.45fr) minmax(270px,.85fr); gap:15px; }
-            .aec-panel { min-width:0; padding:20px; border:1px solid var(--aec-line); border-radius:19px; background:#fff; box-shadow:0 7px 22px rgba(18,48,102,.045); }
+            .aec-panel { min-width:0; padding:20px; border:1px solid var(--aec-line); border-radius:19px; background:var(--aec-surface); box-shadow:0 7px 22px rgba(18,48,102,.045); }
             .aec-panel h3 { display:flex; align-items:center; gap:9px; margin:0 0 15px; color:#172e5b; font-size:1rem; }
             .aec-panel-head { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:13px; }
             .aec-panel-head h3 { margin:0; }
@@ -64,11 +64,11 @@
         </style>
 
         <div class="aec-admin aec-admin-shell">
-            <section class="aec-hero">
+            <section class="aec-hero" @if($dashboardAppearance['hero_image']) style="background-image:linear-gradient(90deg,rgba(5,22,68,.94),rgba(7,48,118,.72) 58%,rgba(7,48,118,.25)),url('{{ $dashboardAppearance['hero_image'] }}');background-size:cover;background-position:center;" @endif>
                 <div class="aec-hero-copy">
                     <span class="aec-eyebrow">{{ $institutionName }} · {{ __('Learning Management System') }}</span>
-                    <h1>{{ __('Welcome back,') }} {{ $user->name }}! 👋</h1>
-                    <p>{{ __('Your success is our mission. Manage students, teachers, courses and daily learning operations from one dashboard.') }}</p>
+                    <h1>{{ $dashboardAppearance['hero_title'] ?: __('Welcome back,') . ' ' . $user->name . '! 👋' }}</h1>
+                    <p>{{ $dashboardAppearance['hero_subtitle'] ?: __('Your success is our mission. Manage students, teachers, courses and daily learning operations from one dashboard.') }}</p>@if($dashboardAppearance['hero_quote'])<p style="margin-top:8px;font-weight:800;color:var(--aec-accent)">{{ $dashboardAppearance['hero_quote'] }}</p>@endif
                     <div class="aec-hero-actions">
                         <a class="aec-hero-btn" href="{{ route('admin.courses.index') }}">{{ __('View courses') }} →</a>
                         <a class="aec-hero-btn secondary" href="{{ route('admin.users.index') }}">{{ __('Manage students') }}</a>
