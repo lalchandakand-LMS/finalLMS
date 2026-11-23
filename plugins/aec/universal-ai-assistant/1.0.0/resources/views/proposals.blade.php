@@ -25,7 +25,7 @@
         <h2>{{ __('Submit a personal study plan for review') }}</h2>
         <p class="muted">{{ __('Describe your learning goals and weekly focus. A teacher assigned to one of your active courses or an administrator must approve it before it becomes an active plan.') }}</p>
         <form method="POST" action="{{ route('student.ai-assistant.proposals.store') }}">
-            <input type="hidden" name="idempotency_key" value="{{ (string) \\Illuminate\\Support\\Str::uuid() }}">
+            <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
             @csrf
             <div class="form-grid">
                 <div class="full-width"><label for="plan-title">{{ __('Plan title') }}</label><input id="plan-title" name="title" maxlength="120" required value="{{ old('title') }}"></div>
