@@ -523,6 +523,7 @@ class ExamController extends Controller
                 'submitted_at' => now(),
                 'score' => $floor ? max(0, $total) : $total,
                 'status' => $manualPending ? 'awaiting_manual' : 'submitted',
+                'auto_submitted' => now()->getTimestamp() >= $deadline,
             ]);
         });
 
