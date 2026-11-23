@@ -27,9 +27,10 @@ final class AgentActionWorkflow
             ], $payload['schedule'])),
         ];
         $json = json_encode($normalized, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        $key = $idempotencyKey && preg_match('/^[A-Za-z0-9._:-]{16,64}$/', $idempotencyKey)
-            ? $idempotencyKey
-            : (string) Str::uuid();
+        if ($idempotencyKey !== null && ! preg_match('/^[A-Za-z0-9._:-]{16,64}$/', $idempotencyKey)) {
+            throw new RuntimeException('The idempotency key format is invalid.');
+        }
+        $key = $idempotencyKey ?? (string) Str::uuid();
 
         return DB::transaction(function () use ($student, $normalized, $json, $key): object {
             $existing = DB::table('ai_agent_action_proposals')->where('idempotency_key', $key)->first();
