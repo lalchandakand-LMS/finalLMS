@@ -563,6 +563,7 @@ class ExamController extends Controller
             $lockedAttempt = ExamAttempt::query()->lockForUpdate()->findOrFail($answer->exam_attempt_id);
             abort_unless($lockedAttempt->status === 'awaiting_manual', 409);
             $lockedAnswer = $lockedAttempt->answers()->lockForUpdate()->findOrFail($answer->id);
+            abort_unless($lockedAnswer->graded_at === null, 409);
             $lockedAnswer->update([
                 'marks_awarded' => $validated['marks_awarded'],
                 'teacher_feedback' => $validated['teacher_feedback'] ?? null,
