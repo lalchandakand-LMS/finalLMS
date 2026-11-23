@@ -87,6 +87,21 @@ class DashboardAppearanceSettingsTest extends TestCase
             ->assertDontSee('Quick actions');
     }
 
+    public function test_admin_can_reorder_dashboard_widgets_with_drag_and_accessible_controls(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->get(route('admin.settings.index'))
+            ->assertOk()
+            ->assertSee('data-dashboard-widget-order-list', false)
+            ->assertSee('data-dashboard-widget-order-item', false)
+            ->assertSee('data-widget-move-up', false)
+            ->assertSee('data-widget-move-down', false)
+            ->assertSee('data-dashboard-order-status', false)
+            ->assertSee('Drag widgets to reorder');
+    }
+
     public function test_invalid_dashboard_widget_positions_are_rejected(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
