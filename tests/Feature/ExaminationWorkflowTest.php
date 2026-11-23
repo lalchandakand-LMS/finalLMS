@@ -942,6 +942,132 @@ class ExaminationWorkflowTest extends TestCase
             ->assertSee('Choose the correct answer.');
     }
 
+    public function test_exam_supports_true_false_short_answer_and_written_manual_grading_with_controlled_publication(): void
+    {
+        [$teacher, $student, $batch] = $this->makeBatchWithStudent();
+        $exam = Exam::create([
+            'batch_id' => $batch->id,
+            'teacher_id' => $teacher->id,
+            'title' => 'Mixed question assessment',
+            'starts_at' => now()->subMinute(),
+            'ends_at' => now()->addHour(),
+            'duration_minutes' => 30,
+            'pass_marks' => 6,
+            'status' => 'published',
+            'result_status' => 'draft',
+        ]);
+        $trueFalse = $exam->questions()->create([
+            'type' => 'true_false', 'question' => 'English is a language.', 'options' => ['True', 'False'],
+            'correct_option' => 0, 'marks' => 2, 'negative_marks' => 1, 'position' => 1,
+        ]);
+        $short = $exam->questions()->create([
+            'type' => 'short_answer', 'question' => 'Past tense of go?', 'correct_answer' => 'went',
+            'marks' => 3, 'negative_marks' => 1, 'position' => 2,
+        ]);
+        $written = $exam->questions()->create([
+            'type' => 'written', 'question' => 'Explain the present perfect tense.', 'grading_rubric' => ['Form', 'Usage', 'Example'],
+            'marks' => 5, 'position' => 3,
+        ]);
+
+        $this->actingAs($student)->post(route('student.exams.start', $exam))->assertRedirect();
+        $attempt = ExamAttempt::where('exam_id', $exam->id)->where('student_id', $student->id)->firstOrFail();
+
+        $this->postJson(route('student.exams.answers.save', $attempt), [
+            'answers' => [
+                $trueFalse->id => 0,
+                $short->id => '  Went  ',
+                $written->id => 'The present perfect links a past action to the present.',
+            ],
+        ])->assertOk()->assertJson(['saved' => 3]);
+
+        $this->post(route('student.exams.submit', $attempt), [])->assertRedirect();
+        $attempt->refresh();
+        $this->assertSame('awaiting_manual', $attempt->status);
+        $this->assertSame(5, $attempt->score);
+        $this->assertDatabaseHas('exam_answers', [
+            'exam_attempt_id' => $attempt->id,
+            'exam_question_id' => $short->id,
+            'is_correct' => true,
+            'marks_awarded' => 3,
+        ]);
+
+        $this->actingAs($teacher)->post(route('teacher.exams.results.publish', $exam))
+            ->assertSessionHasErrors();
+        $writtenAnswer = $attempt->answers()->where('exam_question_id', $written->id)->firstOrFail();
+        $this->post(route('teacher.exam-answers.grade', $writtenAnswer), [
+            'marks_awarded' => 4,
+            'teacher_feedback' => 'Good explanation with a relevant example.',
+        ])->assertRedirect();
+
+        $attempt->refresh();
+        $this->assertSame('submitted', $attempt->status);
+        $this->assertSame(9, $attempt->score);
+        $this->assertSame($teacher->id, $writtenAnswer->fresh()->graded_by);
+
+        $this->actingAs($student)->get(route('student.exams.show', $exam))
+            ->assertOk()->assertSee('Result pending')->assertDontSee('Your score: 9');
+        $this->actingAs($teacher)->post(route('teacher.exams.results.publish', $exam))
+            ->assertRedirect()->assertSessionHas('success');
+        $this->actingAs($student)->get(route('student.exams.show', $exam))
+            ->assertOk()->assertSee('Your score: 9')->assertSee('Passed');
+
+        $this->actingAs($teacher)->get(route('teacher.exams.result-sheet', $exam))
+            ->assertOk()->assertSee('Merit list and result sheet')->assertSee($student->name);
+    }
+
+    public function test_question_bank_accepts_reusable_true_false_and_short_answer_items(): void
+    {
+        [$teacher, , $batch] = $this->makeBatchWithStudent();
+        $this->actingAs($teacher)->post(route('teacher.batches.question-bank.store', $batch), [
+            'subject' => 'Grammar',
+            'type' => 'short_answer',
+            'question' => 'Past tense of write?',
+            'correct_answer' => 'wrote',
+            'marks' => 2,
+            'negative_marks' => 0,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('question_bank_questions', [
+            'teacher_id' => $teacher->id,
+            'type' => 'short_answer',
+            'correct_answer' => 'wrote',
+        ]);
+
+        $this->post(route('teacher.batches.question-bank.store', $batch), [
+            'subject' => 'Grammar',
+            'type' => 'true_false',
+            'question' => 'A noun names a person, place or thing.',
+            'correct_option' => 0,
+            'marks' => 1,
+            'negative_marks' => 0,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('question_bank_questions', [
+            'teacher_id' => $teacher->id,
+            'type' => 'true_false',
+            'correct_option' => 0,
+        ]);
+    }
+
+    public function test_custom_grading_rules_can_disable_negative_marking_and_apply_multiplier(): void
+    {
+        [$teacher, $student, $batch] = $this->makeBatchWithStudent();
+        $exam = Exam::create([
+            'batch_id' => $batch->id, 'teacher_id' => $teacher->id, 'title' => 'Custom grading',
+            'starts_at' => now()->subMinute(), 'ends_at' => now()->addHour(), 'duration_minutes' => 30,
+            'pass_marks' => 1, 'status' => 'published',
+            'grading_rules' => ['negative_marking_enabled' => true, 'negative_marking_multiplier' => 2, 'score_floor_zero' => false],
+        ]);
+        $question = $exam->questions()->create([
+            'type' => 'mcq', 'question' => 'Custom negative marking?', 'options' => ['A','B','C','D'],
+            'correct_option' => 0, 'marks' => 2, 'negative_marks' => 1, 'position' => 1,
+        ]);
+        $this->actingAs($student)->post(route('student.exams.start', $exam));
+        $attempt = ExamAttempt::where('exam_id', $exam->id)->firstOrFail();
+        $this->post(route('student.exams.submit', $attempt), ['answers' => [$question->id => 1]]);
+        $this->assertSame(-2, $attempt->fresh()->score);
+    }
+
     private function makeBatchWithStudent(bool $enroll = true): array
     {
         $teacher = User::factory()->create(['role' => 'teacher']);
