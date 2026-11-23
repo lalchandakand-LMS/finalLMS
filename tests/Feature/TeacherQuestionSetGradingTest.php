@@ -174,6 +174,36 @@ class TeacherQuestionSetGradingTest extends TestCase
         $this->assertSame(4, $attempt->fresh()->final_score);
     }
 
+    public function test_reusable_question_set_applies_negative_marks_without_allowing_negative_final_total(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $student = User::factory()->create(['role' => 'student']);
+        $course = Course::factory()->create(['teacher_id' => $teacher->id, 'status' => 'published']);
+        Enrollment::create(['user_id' => $student->id, 'course_id' => $course->id, 'status' => 'active']);
+        $set = QuestionSet::create(['title' => 'Negative marking set', 'status' => 'published']);
+        $set->questions()->create([
+            'type' => 'mcq',
+            'question' => 'Choose the correct answer.',
+            'options' => ['Correct', 'Wrong', 'Other', 'Last'],
+            'correct_option' => 0,
+            'marks' => 1,
+            'negative_marks' => 2,
+            'position' => 10,
+        ]);
+        $course->questionSets()->attach($set->id, ['position' => 10, 'max_attempts' => 1, 'randomize_questions' => false]);
+
+        $this->actingAs($student)->post(route('student.question-sets.start', [$course, $set]));
+        $attempt = QuestionSetAttempt::with('questions')->firstOrFail();
+        $question = $attempt->questions->firstOrFail();
+        $this->post(route('student.question-sets.submit', [$course, $set, $attempt]), [
+            'answers' => [$question->id => ['selected_option' => 1]],
+        ])->assertRedirect();
+
+        $this->assertSame(-2, $question->fresh()->marks_awarded);
+        $this->assertSame(0, $attempt->fresh()->auto_score);
+        $this->assertSame(0, $attempt->fresh()->final_score);
+    }
+
     private function submittedAttempt(): array
     {
         $teacher = User::factory()->create(['role' => 'teacher']);
