@@ -31,6 +31,8 @@ This document is an evidence checklist, not a declaration that production accept
 - Never test destructive upgrade/restore operations on the live academy database.
 
 ### Mobile and desktop browsers
+- Automated Playwright smoke coverage runs the public home, course catalogue and login pages at 360px, 390px, 768px, 1024px and 1440px, asserting successful HTTP responses and no horizontal overflow.
+- This automated Chromium smoke test is not a substitute for Safari/Firefox/Edge, real Android/iOS devices, authenticated role workflows or accessibility review.
 - Test current Chrome, Edge, Firefox and Safari where available; test Android Chrome and iOS Safari on real devices.
 - Check login/MFA/device approval, navigation, forms, attendance, exam flows, invoices/receipts, file/video access, keyboard focus, validation and error states.
 - Check representative widths: 360px, 390px, 768px, 1024px and 1440px; verify no horizontal overflow, clipped dialogs, inaccessible menus or broken tables.
