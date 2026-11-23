@@ -425,7 +425,9 @@ final class AdmissionManagementPluginTest extends TestCase
         $response = $this->actingAs($manager)->get('/__admission/reports/export?status=approved');
         $response->assertOk()->assertHeader('content-type', 'text/csv; charset=UTF-8');
         $csv = $response->streamedContent();
-        $this->assertStringContainsString("'=HYPERLINK(\"https://evil.example\"", $csv);
+        $rows = array_map('str_getcsv', preg_split('/\r\n|\n|\r/', trim($csv)) ?: []);
+        $this->assertStringStartsWith("'=HYPERLINK(", $rows[1][1] ?? '');
+        $this->assertStringContainsString('https://evil.example', $rows[1][1] ?? '');
         $this->assertStringNotContainsString('Branch B Private Applicant', $csv);
     }
 
