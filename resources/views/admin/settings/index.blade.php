@@ -268,9 +268,11 @@
                         </div>
                     </div>
                     <div class="dashboard-preview-frame" data-dashboard-preview-frame data-preview-mode="desktop" style="margin:14px auto 0;padding:12px;border:1px solid var(--border);border-radius:14px;background:var(--bg);transition:max-width .2s ease;">
-                        <div data-dashboard-preview-hero style="padding:18px;border-radius:10px;color:#fff;background:linear-gradient(115deg,var(--dashboard-preview-primary,#102b63),var(--dashboard-preview-secondary,#0759c8));">
+                        <div data-dashboard-preview-hero style="padding:18px;border-radius:var(--dashboard-preview-radius,10px);color:#fff;background:linear-gradient(115deg,var(--dashboard-preview-primary,#102b63),var(--dashboard-preview-secondary,#0759c8));box-shadow:0 8px 22px rgba(18,48,102,.12);">
+                            <small data-dashboard-preview-eyebrow style="display:block;color:#dbeafe;font-weight:700;">Alom’s English Center LMS</small>
                             <strong data-dashboard-preview-title>{{ __('Welcome back,') }} {{ __('Administrator') }}</strong>
                             <p data-dashboard-preview-subtitle style="margin:5px 0 0;color:#e7efff;font-size:.85rem;">{{ __('Your academy overview at a glance') }}</p>
+                            <span data-dashboard-preview-button style="display:inline-block;margin-top:10px;padding:7px 13px;border-radius:999px;background:#ffd52f;color:#14234b;font-weight:800;font-size:.78rem;">{{ __('View courses') }}</span>
                         </div>
                         <div class="dashboard-preview-stats" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:10px;">
                             @foreach(['Students','Teachers','Courses','Certificates'] as $previewMetric)
