@@ -475,6 +475,7 @@
             <a href="{{ route('live-classes.index') }}"><span>🎥</span><span class="nav-text">Live classes</span></a>
             <div class="admin-sidebar-label">Finance</div>
             <a href="{{ route('admin.payments.index') }}"><span>💳</span><span class="nav-text">Payments</span></a>
+            <a class="{{ request()->routeIs('admin.payment-gateways.*') ? 'active' : '' }}" href="{{ route('admin.payment-gateways.index') }}"><span>🏦</span><span class="nav-text">Payment gateways</span></a>
             <a href="{{ route('admin.invoices.index') }}"><span>🧾</span><span class="nav-text">Invoices</span></a>
             <a href="{{ route('admin.refunds.index') }}"><span>↩️</span><span class="nav-text">Refunds</span></a>
             <a href="{{ route('admin.expenses.index') }}"><span>💸</span><span class="nav-text">Expenses & reports</span></a>
