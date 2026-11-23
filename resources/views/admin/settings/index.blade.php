@@ -282,6 +282,26 @@
                         </select>
                     </div>
                 </div>
+                <h3 style="margin:20px 0 10px;">{{ __('Dashboard sections') }}</h3>
+                <p class="muted">{{ __('Choose which dashboard sections are visible. Hiding a section never deletes its records.') }}</p>
+                <div class="grid grid-2">
+                    @foreach([
+                        'dashboard_show_hero' => 'Welcome banner',
+                        'dashboard_show_statistics' => 'Statistics cards',
+                        'dashboard_show_live_class' => 'Upcoming live class',
+                        'dashboard_show_quick_actions' => 'Quick actions',
+                        'dashboard_show_system_snapshot' => 'System snapshot',
+                        'dashboard_show_learning_operations' => 'Learning operations'
+                    ] as $key => $label)
+                        <div>
+                            <input type="hidden" name="{{ $key }}" value="0">
+                            <label style="display:flex;align-items:center;gap:10px;">
+                                <input type="checkbox" name="{{ $key }}" value="1" style="width:auto;" @checked((bool) (int) old($key, $settings[$key] ?? '1'))>
+                                {{ __($label) }}
+                            </label>
+                        </div>
+                    @endforeach
+                </div>
                 <p class="muted" style="margin-top:14px;">{{ __('Need another image? Upload it in the Media Library first. Changes apply to the admin dashboard after saving. Dashboard counts continue to come from real LMS records.') }} <a href="{{ route('admin.media.index') }}">{{ __('Open Media Library') }}</a></p>
             </section>
                 <span class="badge info">{{ __('Search and marketing') }}</span>
