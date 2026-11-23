@@ -30,6 +30,28 @@
         </table></div>
     @endif
 
+    <h2 style="margin-top:28px;">{{ __('Learning progress by course') }}</h2>
+    @if($enrollments->isEmpty())
+        <p class="muted">{{ __('No course progress is available yet.') }}</p>
+    @else
+        <div class="table-responsive"><table class="table">
+            <thead><tr><th>{{ __('Course') }}</th><th>{{ __('Completed lessons') }}</th><th>{{ __('Total lessons') }}</th><th>{{ __('Progress') }}</th></tr></thead>
+            <tbody>@foreach($enrollments as $enrollment)
+                @php
+                    $totalLessons = $enrollment->course?->lessons->count() ?? 0;
+                    $completedLessons = (int) ($completedLessonsByCourse[$enrollment->course_id] ?? 0);
+                    $progressPercent = $totalLessons > 0 ? min(100, (int) round(($completedLessons / $totalLessons) * 100)) : 0;
+                @endphp
+                <tr>
+                    <td>{{ $enrollment->course?->title ?? __('Course unavailable') }}</td>
+                    <td>{{ $completedLessons }}</td>
+                    <td>{{ $totalLessons }}</td>
+                    <td>{{ $progressPercent }}%</td>
+                </tr>
+            @endforeach</tbody>
+        </table></div>
+    @endif
+
     <h2 style="margin-top:28px;">{{ __('Examination results') }}</h2>
     <p class="muted">{{ __('Average percentage across scored submitted exams:') }} {{ $examAverage === null ? '—' : number_format($examAverage, 2).'%' }}</p>
     @if($examAttempts->isEmpty())
@@ -63,6 +85,22 @@
                     <td>{{ number_format((float) $submission->score, 2) }}</td>
                     <td>{{ number_format((float) $submission->assignment->max_marks, 2) }}</td>
                     <td>{{ $submission->updated_at?->format('d M Y') ?? '—' }}</td>
+                </tr>
+            @endforeach</tbody>
+        </table></div>
+    @endif
+    <h2 style="margin-top:28px;">{{ __('Issued certificates') }}</h2>
+    @if($certificates->isEmpty())
+        <p class="muted">{{ __('No certificates have been issued yet.') }}</p>
+    @else
+        <div class="table-responsive"><table class="table">
+            <thead><tr><th>{{ __('Course') }}</th><th>{{ __('Certificate number') }}</th><th>{{ __('Issued') }}</th><th>{{ __('View') }}</th></tr></thead>
+            <tbody>@foreach($certificates as $certificate)
+                <tr>
+                    <td>{{ $certificate->course?->title ?? __('Course unavailable') }}</td>
+                    <td>{{ $certificate->certificate_number }}</td>
+                    <td>{{ $certificate->issued_at?->format('d M Y') ?? '—' }}</td>
+                    <td><a href="{{ route('certificates.show', $certificate) }}">{{ __('View certificate') }}</a></td>
                 </tr>
             @endforeach</tbody>
         </table></div>
