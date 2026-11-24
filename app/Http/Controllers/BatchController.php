@@ -119,8 +119,8 @@ class BatchController extends Controller
             'name' => ['required', 'string', 'max:120', 'unique:branches,name'],
             'address' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:40'],
-            'status' => ['required', Rule::in(['active', 'inactive', 'suspended'])],
-            'registration_open' => ['required', 'boolean'],
+            'status' => ['sometimes', Rule::in(['active', 'inactive', 'suspended'])],
+            'registration_open' => ['sometimes', 'boolean'],
         ]);
         Branch::create([
             ...$validated,
@@ -136,9 +136,11 @@ class BatchController extends Controller
             'name' => ['required', 'string', 'max:120', Rule::unique('branches', 'name')->ignore($branch->id)],
             'address' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:40'],
-            'status' => ['required', Rule::in(['active', 'inactive', 'suspended'])],
-            'registration_open' => ['required', 'boolean'],
+            'status' => ['sometimes', Rule::in(['active', 'inactive', 'suspended'])],
+            'registration_open' => ['sometimes', 'boolean'],
         ]);
+        $validated['status'] = $validated['status'] ?? $branch->status ?? ($branch->is_active ? 'active' : 'inactive');
+        $validated['registration_open'] = (bool) ($validated['registration_open'] ?? $branch->registration_open ?? true);
         $validated['is_active'] = $validated['status'] === 'active';
         $branch->update($validated);
         return redirect()->route('admin.batches.index')->with('success', 'Branch settings updated successfully.');
