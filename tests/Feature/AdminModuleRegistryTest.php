@@ -70,6 +70,9 @@ class AdminModuleRegistryTest extends TestCase
 
         foreach ([
             'branch_management',
+            'admissions_management',
+            'staff_management',
+            'library_management',
             'student_management',
             'teacher_management',
             'guardian_management',
@@ -95,6 +98,18 @@ class AdminModuleRegistryTest extends TestCase
         ] as $key) {
             $this->assertArrayHasKey($key, $catalog, "Expected independent module [{$key}].");
             $this->assertContains($catalog[$key]['type'], ['module', 'plugin']);
+        }
+    }
+
+    public function test_admissions_hr_and_library_are_native_first_party_modules_not_plugin_managed(): void
+    {
+        $catalog = app(ModuleRegistry::class)->catalog();
+
+        foreach (['admissions_management', 'staff_management', 'library_management'] as $key) {
+            $this->assertArrayHasKey($key, $catalog);
+            $this->assertSame('module', $catalog[$key]['type']);
+            $this->assertTrue($catalog[$key]['enabled']);
+            $this->assertFalse($catalog[$key]['managed_by_plugin_manager'] ?? false);
         }
     }
 
