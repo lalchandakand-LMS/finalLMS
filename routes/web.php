@@ -715,9 +715,6 @@ foreach (['admin' => 'admin', 'branch_manager' => 'branch', 'teacher' => 'teache
                 Route::post('/proposals/{proposal}/approve', [AgentActionController::class, 'approve'])->whereNumber('proposal')->middleware('throttle:10,1')->name('proposals.approve');
                 Route::post('/proposals/{proposal}/reject', [AgentActionController::class, 'reject'])->whereNumber('proposal')->middleware('throttle:10,1')->name('proposals.reject');
             }
-            if ($aiRole === 'support_staff') {
-                Route::get('/knowledge', [AgentContentController::class, 'knowledge'])->name('knowledge.index');
-            }
             if (in_array($aiRole, ['admin', 'teacher', 'support_staff'], true)) {
                 Route::get('/drafts', [AgentContentController::class, 'drafts'])->name('drafts.index');
                 Route::post('/drafts', [AgentContentController::class, 'saveDraft'])->middleware('throttle:10,1')->name('drafts.store');
