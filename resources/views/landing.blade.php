@@ -26,17 +26,28 @@
             'pauseHover' => $hasSettingsTable ? \App\Models\Setting::value('home_slider_pause_hover', '1') === '1' : true,
             'height' => $hasSettingsTable ? max(320, min(720, (int) \App\Models\Setting::value('home_slider_height', 480))) : 480,
             'mobileHeight' => $hasSettingsTable ? max(220, min(520, (int) \App\Models\Setting::value('home_slider_mobile_height', 300))) : 300,
-            'overlay' => $hasSettingsTable ? max(20, min(90, (int) \App\Models\Setting::value('home_slider_overlay', 60))) : 60,
+            'overlay' => $hasSettingsTable ? max(0, min(90, (int) \App\Models\Setting::value('home_slider_overlay', 60))) : 60,
+            'transition' => $hasSettingsTable && in_array(\App\Models\Setting::value('home_slider_transition', 'slide'), ['slide', 'fade', 'zoom'], true) ? \App\Models\Setting::value('home_slider_transition', 'slide') : 'slide',
+            'progress' => $hasSettingsTable ? \App\Models\Setting::value('home_slider_progress', '1') === '1' : true,
+            'playPause' => $hasSettingsTable ? \App\Models\Setting::value('home_slider_play_pause', '1') === '1' : true,
         ];
         $flashSales = \Illuminate\Support\Facades\Route::has('flash-sales.public')
             && \App\Models\FlashSale::isPluginActive()
             && (bool) (int) \App\Models\Setting::value('flash_sale_page_enabled', '1')
             ? \App\Models\FlashSale::activeCampaigns()
             : collect();
-        $homeSlides = collect(is_array($storedSlides) ? $storedSlides : [])->filter(fn ($slide) => is_array($slide) && !empty($slide['enabled']) && !empty($slide['image_id']))->map(function ($slide) {
-            $asset = \App\Models\MediaAsset::query()->whereKey($slide['image_id'])->where('mime_type', 'like', 'image/%')->first();
-            return $asset ? ['asset' => $asset, 'title' => $slide['title'] ?? '', 'subtitle' => $slide['subtitle'] ?? '', 'button_label' => $slide['button_label'] ?? '', 'button_url' => $slide['button_url'] ?? ''] : null;
-        })->filter()->values();
+        $homeSlides = collect(is_array($storedSlides) ? $storedSlides : [])
+            ->filter(function ($slide) {
+                if (!is_array($slide) || empty($slide['enabled']) || empty($slide['image_id'])) return false;
+                $now = now()->timestamp;
+                $startsAt = !empty($slide['starts_at']) ? strtotime((string) $slide['starts_at']) : null;
+                $endsAt = !empty($slide['ends_at']) ? strtotime((string) $slide['ends_at']) : null;
+                return ($startsAt === null || ($startsAt !== false && $startsAt <= $now)) && ($endsAt === null || ($endsAt !== false && $endsAt >= $now));
+            })->sortBy(fn ($slide) => (int) ($slide['sort_order'] ?? 0))->map(function ($slide) {
+                $asset = \App\Models\MediaAsset::query()->whereKey($slide['image_id'])->where('mime_type', 'like', 'image/%')->first();
+                $mobileAsset = !empty($slide['mobile_image_id']) ? \App\Models\MediaAsset::query()->whereKey($slide['mobile_image_id'])->where('mime_type', 'like', 'image/%')->first() : null;
+                return $asset ? ['asset' => $asset, 'mobile_asset' => $mobileAsset ?: $asset, 'title' => $slide['title'] ?? '', 'subtitle' => $slide['subtitle'] ?? '', 'button_label' => $slide['button_label'] ?? '', 'button_url' => $slide['button_url'] ?? '', 'eyebrow' => $slide['eyebrow'] ?? '', 'secondary_button_label' => $slide['secondary_button_label'] ?? '', 'secondary_button_url' => $slide['secondary_button_url'] ?? '', 'image_position_x' => max(0, min(100, (int) ($slide['image_position_x'] ?? 50))), 'image_position_y' => max(0, min(100, (int) ($slide['image_position_y'] ?? 50))), 'mobile_position_x' => max(0, min(100, (int) ($slide['mobile_position_x'] ?? 50))), 'mobile_position_y' => max(0, min(100, (int) ($slide['mobile_position_y'] ?? 50))), 'content_alignment' => in_array($slide['content_alignment'] ?? 'left', ['left', 'center', 'right'], true) ? ($slide['content_alignment'] ?? 'left') : 'left', 'overlay_color' => preg_match('/^#[0-9A-Fa-f]{6}$/', $slide['overlay_color'] ?? '') ? $slide['overlay_color'] : '#050f23'] : null;
+            })->filter()->values();
         $homepageTemplate = (string) ($hasSettingsTable ? \App\Models\Setting::value('homepage_template', 'redwans-method') : 'redwans-method');
         $homepageTemplate = array_key_exists($homepageTemplate, \App\Http\Controllers\WebsiteBuilderController::homepageTemplates()) ? $homepageTemplate : 'redwans-method';
 
@@ -165,19 +176,20 @@
     @include('partials.flash-sales', ['flashSales' => $flashSales])
 
     @if($hasHomeSlides)
-        <section class="home-carousel" aria-label="{{ __('Homepage highlights') }}" data-home-carousel data-autoplay="{{ $sliderOptions['autoplay'] ? 'true' : 'false' }}" data-interval="{{ $sliderOptions['interval'] }}" data-pause-hover="{{ $sliderOptions['pauseHover'] ? 'true' : 'false' }}" style="--carousel-height:{{ $sliderOptions['height'] }}px;--carousel-mobile-height:{{ $sliderOptions['mobileHeight'] }}px;--carousel-overlay:{{ $sliderOptions['overlay'] / 100 }};margin-bottom:28px;">
+        <section class="home-carousel home-carousel--{{ $sliderOptions['transition'] }}" aria-label="{{ __('Homepage highlights') }}" data-home-carousel data-transition="{{ $sliderOptions['transition'] }}" data-autoplay="{{ $sliderOptions['autoplay'] ? 'true' : 'false' }}" data-interval="{{ $sliderOptions['interval'] }}" data-pause-hover="{{ $sliderOptions['pauseHover'] ? 'true' : 'false' }}" style="--carousel-height:{{ $sliderOptions['height'] }}px;--carousel-mobile-height:{{ $sliderOptions['mobileHeight'] }}px;--carousel-overlay:{{ $sliderOptions['overlay'] / 100 }};margin-bottom:28px;">
             <div class="home-carousel__viewport" data-carousel-viewport tabindex="0" aria-roledescription="carousel">
                 <div class="home-carousel__track" data-carousel-track>
                     @foreach($homeSlides as $index => $slide)
                         <article class="home-carousel__slide" data-carousel-slide aria-label="{{ $index + 1 }} {{ __('of') }} {{ $homeSlides->count() }}" aria-roledescription="slide" aria-hidden="{{ $index === 0 ? 'false' : 'true' }}">
-                            <img src="{{ $slide['asset']->url }}" alt="{{ $slide['asset']->alt_text ?: $slide['title'] }}" loading="{{ $index === 0 ? 'eager' : 'lazy' }}">
+                            <picture><source media="(max-width: 700px)" srcset="{{ $slide['mobile_asset']->url }}"><img src="{{ $slide['asset']->url }}" alt="{{ $slide['asset']->alt_text ?: $slide['title'] }}" loading="{{ $index === 0 ? 'eager' : 'lazy' }}" style="object-position:{{ $slide['image_position_x'] }}% {{ $slide['image_position_y'] }}%;"></picture>
                             <div class="home-carousel__shade"></div>
-                            <div class="home-carousel__content">
+                            <div class="home-carousel__content home-carousel__content--{{ $slide['content_alignment'] }}">
                                 @php
                                     $hasSlideTitle = $slide['title'] !== '';
                                     $hasSlideSubtitle = $slide['subtitle'] !== '';
                                     $hasSlideButton = $slide['button_label'] !== '' && $slide['button_url'] !== '';
                                 @endphp
+                                @if($slide['eyebrow'] !== '')<span class="home-eyebrow">{{ $slide['eyebrow'] }}</span>@endif
                                 @if($hasSlideTitle)
                                     <h2>{{ $slide['title'] }}</h2>
                                 @endif
@@ -187,6 +199,7 @@
                                 @if($hasSlideButton)
                                     <a class="btn primary" href="{{ $slide['button_url'] }}" rel="noopener">{{ $slide['button_label'] }}</a>
                                 @endif
+                                @if($slide['secondary_button_label'] !== '' && $slide['secondary_button_url'] !== '')<a class="home-carousel__secondary" href="{{ $slide['secondary_button_url'] }}" rel="noopener">{{ $slide['secondary_button_label'] }}</a>@endif
                             </div>
                         </article>
                     @endforeach
