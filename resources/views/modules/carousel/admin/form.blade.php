@@ -1,4 +1,6 @@
-<x-app-layout>
+@extends('layouts.app')
+
+@section('content')
 <div class="mx-auto max-w-5xl space-y-5 p-4 sm:p-6">
     <div><a href="{{ route('admin.carousels.index') }}" class="text-sm text-blue-700">← All carousels</a><h1 class="mt-2 text-2xl font-bold">{{ $carousel->exists ? 'Edit carousel' : 'Create carousel' }}</h1><p class="text-sm text-gray-600">Configure content, responsive cards, motion, navigation and publication schedule.</p></div>
     @if($errors->any())<div class="rounded-lg bg-red-50 p-3 text-red-800">{{ $errors->first() }}</div>@endif
@@ -49,4 +51,4 @@
  let dragged=null;list.addEventListener('dragstart',e=>{dragged=e.target.closest('.carousel-item-row');if(dragged)e.dataTransfer.effectAllowed='move';});list.addEventListener('dragover',e=>{const target=e.target.closest('.carousel-item-row');if(!dragged||!target||target===dragged)return;e.preventDefault();const box=target.getBoundingClientRect();list.insertBefore(dragged,e.clientY<box.top+box.height/2?target:target.nextSibling);});list.addEventListener('drop',e=>{e.preventDefault();reindex();});list.addEventListener('dragend',()=>{dragged=null;reindex();});source.addEventListener('change',sync);sync();
 })();
 </script>
-</x-app-layout>
+@endsection
