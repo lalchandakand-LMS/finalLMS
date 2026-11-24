@@ -13,10 +13,10 @@ class HomepageSliderTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_admin_can_save_three_enabled_homepage_slides_from_media_library(): void
+    public function test_admin_can_save_eight_enabled_homepage_slides_from_media_library(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
-        $assets = collect(range(1, 3))->map(fn ($number) => MediaAsset::create([
+        $assets = collect(range(1, 8))->map(fn ($number) => MediaAsset::create([
             'uploaded_by' => $admin->id,
             'disk' => 'public',
             'path' => "media/slide-{$number}.jpg",
@@ -39,7 +39,7 @@ class HomepageSliderTest extends TestCase
             ->assertRedirect(route('admin.settings.index'));
 
         $saved = json_decode((string) Setting::value('home_slides'), true);
-        $this->assertCount(3, $saved);
+        $this->assertCount(8, $saved);
         $this->assertSame('Slide 1', $saved[0]['title']);
         $this->assertSame('/courses', $saved[0]['button_url']);
     }
@@ -73,6 +73,32 @@ class HomepageSliderTest extends TestCase
             ->assertSee('Browse courses')
             ->assertSee('Students learning English')
             ->assertSee('/storage/media/hero-slide.jpg', false);
+    }
+
+    public function test_admin_saves_mobile_art_schedule_order_and_slide_presentation_options(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $desktop = MediaAsset::create(['uploaded_by' => $admin->id, 'disk' => 'public', 'path' => 'media/desktop.jpg', 'original_name' => 'desktop.jpg', 'mime_type' => 'image/jpeg', 'size' => 1000]);
+        $mobile = MediaAsset::create(['uploaded_by' => $admin->id, 'disk' => 'public', 'path' => 'media/mobile.jpg', 'original_name' => 'mobile.jpg', 'mime_type' => 'image/jpeg', 'size' => 1000]);
+
+        $this->actingAs($admin)->post(route('admin.settings.update'), ['home_slides' => [[
+            'enabled' => '1', 'image_id' => (string) $desktop->id, 'mobile_image_id' => (string) $mobile->id,
+            'title' => 'Responsive slide', 'sort_order' => '4', 'starts_at' => now()->subHour()->format('Y-m-d H:i:s'),
+            'ends_at' => now()->addDay()->format('Y-m-d H:i:s'), 'secondary_button_label' => 'Student login',
+            'secondary_button_url' => '/login', 'image_position_x' => '30', 'image_position_y' => '40',
+            'mobile_position_x' => '70', 'mobile_position_y' => '20', 'content_alignment' => 'center',
+            'overlay_color' => '#123456',
+        ]]])->assertRedirect(route('admin.settings.index'));
+
+        $saved = json_decode((string) Setting::value('home_slides'), true);
+        $this->assertSame($mobile->id, $saved[0]['mobile_image_id']);
+        $this->assertSame(4, $saved[0]['sort_order']);
+        $this->assertSame('Student login', $saved[0]['secondary_button_label']);
+        $this->assertSame('/login', $saved[0]['secondary_button_url']);
+        $this->assertSame(30, $saved[0]['image_position_x']);
+        $this->assertSame(70, $saved[0]['mobile_position_x']);
+        $this->assertSame('center', $saved[0]['content_alignment']);
+        $this->assertSame('#123456', $saved[0]['overlay_color']);
     }
 
     public function test_slider_media_cannot_be_deleted_while_a_slide_uses_it(): void

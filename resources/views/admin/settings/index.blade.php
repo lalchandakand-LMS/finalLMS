@@ -137,7 +137,7 @@
             <div style="margin-bottom: 18px;">
                 <span class="badge info">{{ __('Homepage slider') }}</span>
                 <h2 style="margin: 12px 0 6px;">{{ __('Hero image slides') }}</h2>
-                <p class="muted" style="margin: 0;">{{ __('Choose up to three images from Media Library. Upload images there first, then select them here. Only enabled slides with an image are shown.') }} <a href="{{ route('admin.media.index') }}">{{ __('Open Media Library') }}</a></p>
+                <p class="muted" style="margin: 0;">{{ __('Choose up to eight slides. Set desktop/mobile images, display order and optional publication dates. Only enabled slides with an image are shown.') }} <a href="{{ route('admin.media.index') }}">{{ __('Open Media Library') }}</a></p>
             </div>
 
             <div class="panel" style="padding:18px;margin-bottom:18px;">
@@ -147,7 +147,10 @@
                     <div><label>{{ __('Slide interval (milliseconds)') }}</label><input type="number" name="home_slider_interval" min="3000" max="12000" step="500" value="{{ old('home_slider_interval',$settings['home_slider_interval'] ?? 5000) }}"></div>
                     <div><label>{{ __('Desktop height (px)') }}</label><input type="number" name="home_slider_height" min="320" max="720" value="{{ old('home_slider_height',$settings['home_slider_height'] ?? 480) }}"></div>
                     <div><label>{{ __('Mobile height (px)') }}</label><input type="number" name="home_slider_mobile_height" min="220" max="520" value="{{ old('home_slider_mobile_height',$settings['home_slider_mobile_height'] ?? 300) }}"></div>
-                    <div><label>{{ __('Image overlay (%)') }}</label><input type="number" name="home_slider_overlay" min="20" max="90" value="{{ old('home_slider_overlay',$settings['home_slider_overlay'] ?? 60) }}"></div>
+                    <div><label>{{ __('Image overlay (%)') }}</label><input type="number" name="home_slider_overlay" min="0" max="90" value="{{ old('home_slider_overlay',$settings['home_slider_overlay'] ?? 60) }}"></div>
+                    <div><label>{{ __('Transition effect') }}</label><select name="home_slider_transition"><option value="slide" @selected(old('home_slider_transition',$settings['home_slider_transition'] ?? 'slide') === 'slide')>{{ __('Slide') }}</option><option value="fade" @selected(old('home_slider_transition',$settings['home_slider_transition'] ?? 'slide') === 'fade')>{{ __('Fade') }}</option><option value="zoom" @selected(old('home_slider_transition',$settings['home_slider_transition'] ?? 'slide') === 'zoom')>{{ __('Zoom') }}</option></select></div>
+                    <div><label>{{ __('Progress bar') }}</label><select name="home_slider_progress"><option value="1" @selected(old('home_slider_progress',$settings['home_slider_progress'] ?? '1') == '1')>{{ __('Show') }}</option><option value="0" @selected(old('home_slider_progress',$settings['home_slider_progress'] ?? '1') == '0')>{{ __('Hide') }}</option></select></div>
+                    <div><label>{{ __('Play / pause control') }}</label><select name="home_slider_play_pause"><option value="1" @selected(old('home_slider_play_pause',$settings['home_slider_play_pause'] ?? '1') == '1')>{{ __('Show') }}</option><option value="0" @selected(old('home_slider_play_pause',$settings['home_slider_play_pause'] ?? '1') == '0')>{{ __('Hide') }}</option></select></div>
                     <div><label>{{ __('Pause on hover') }}</label><select name="home_slider_pause_hover"><option value="1" @selected(old('home_slider_pause_hover',$settings['home_slider_pause_hover'] ?? '1') == '1')>{{ __('On') }}</option><option value="0" @selected(old('home_slider_pause_hover',$settings['home_slider_pause_hover'] ?? '1') == '0')>{{ __('Off') }}</option></select></div>
                     <div><label>{{ __('Navigation arrows') }}</label><select name="home_slider_arrows"><option value="1" @selected(old('home_slider_arrows',$settings['home_slider_arrows'] ?? '1') == '1')>{{ __('Show') }}</option><option value="0" @selected(old('home_slider_arrows',$settings['home_slider_arrows'] ?? '1') == '0')>{{ __('Hide') }}</option></select></div>
                     <div><label>{{ __('Navigation dots') }}</label><select name="home_slider_dots"><option value="1" @selected(old('home_slider_dots',$settings['home_slider_dots'] ?? '1') == '1')>{{ __('Show') }}</option><option value="0" @selected(old('home_slider_dots',$settings['home_slider_dots'] ?? '1') == '0')>{{ __('Hide') }}</option></select></div>
@@ -161,7 +164,7 @@
                 <div><label>{{ __('Learning path section title') }}</label><input name="home_paths_title" maxlength="120" value="{{ old('home_paths_title',$settings['home_paths_title'] ?? 'Choose Your Learning Path') }}"></div>
                 <div><label>{{ __('Student reviews section title') }}</label><input name="home_reviews_title" maxlength="120" value="{{ old('home_reviews_title',$settings['home_reviews_title'] ?? 'What Our Students Say') }}"></div>
             </div>
-            @for($i = 0; $i < 3; $i++)
+            @for($i = 0; $i < 8; $i++)
                 @php($savedSlide = $savedSlides[$i] ?? [])
                 <section class="panel" style="padding:18px;margin-bottom:14px;">
                     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;">
@@ -184,7 +187,14 @@
                             <small class="muted">{{ __('No images available. Upload JPG, PNG, WebP or GIF files in Media Library first.') }}</small>
                         @endif
                     </div>
+                    <div class="grid grid-2" style="margin-bottom:14px;">
+                        <div><label>{{ __('Mobile image (optional)') }}<select name="home_slides[{{ $i }}][mobile_image_id]"><option value="">{{ __('Use desktop image') }}</option>@foreach($mediaAssets as $asset)<option value="{{ $asset->id }}" @selected((string) old("home_slides.$i.mobile_image_id", $savedSlide['mobile_image_id'] ?? '') === (string) $asset->id)>{{ $asset->original_name }}</option>@endforeach</select></label></div>
+                        <div><label>{{ __('Display order') }}<input type="number" min="0" max="1000" name="home_slides[{{ $i }}][sort_order]" value="{{ old("home_slides.$i.sort_order", $savedSlide['sort_order'] ?? $i) }}"></label></div>
+                        <div><label>{{ __('Start showing (optional)') }}<input type="datetime-local" name="home_slides[{{ $i }}][starts_at]" value="{{ old("home_slides.$i.starts_at", !empty($savedSlide['starts_at']) ? \Illuminate\Support\Carbon::parse($savedSlide['starts_at'])->format('Y-m-d\\TH:i') : '') }}"></label></div>
+                        <div><label>{{ __('Stop showing (optional)') }}<input type="datetime-local" name="home_slides[{{ $i }}][ends_at]" value="{{ old("home_slides.$i.ends_at", !empty($savedSlide['ends_at']) ? \Illuminate\Support\Carbon::parse($savedSlide['ends_at'])->format('Y-m-d\\TH:i') : '') }}"></label></div>
+                    </div>
                     <div class="grid grid-2">
+                        <div><label>{{ __('Eyebrow / small label') }}<input name="home_slides[{{ $i }}][eyebrow]" maxlength="80" value="{{ old("home_slides.$i.eyebrow", $savedSlide['eyebrow'] ?? '') }}"></label></div>
                         <div>
                             <label for="home-slide-{{ $i }}-title">{{ __('Slide title') }}</label>
                             <input id="home-slide-{{ $i }}-title" name="home_slides[{{ $i }}][title]" maxlength="180" value="{{ old("home_slides.$i.title", $savedSlide['title'] ?? '') }}">
@@ -201,6 +211,14 @@
                             <label for="home-slide-{{ $i }}-button-url">{{ __('Button URL') }}</label>
                             <input id="home-slide-{{ $i }}-button-url" name="home_slides[{{ $i }}][button_url]" maxlength="500" value="{{ old("home_slides.$i.button_url", $savedSlide['button_url'] ?? '') }}" placeholder="/courses">
                         </div>
+                        <div><label>{{ __('Secondary button label') }}<input name="home_slides[{{ $i }}][secondary_button_label]" maxlength="60" value="{{ old("home_slides.$i.secondary_button_label", $savedSlide['secondary_button_label'] ?? '') }}"></label></div>
+                        <div><label>{{ __('Secondary button URL') }}<input name="home_slides[{{ $i }}][secondary_button_url]" maxlength="500" value="{{ old("home_slides.$i.secondary_button_url", $savedSlide['secondary_button_url'] ?? '') }}" placeholder="/login"></label></div>
+                        <div><label>{{ __('Desktop image X position (%)') }}<input type="number" min="0" max="100" name="home_slides[{{ $i }}][image_position_x]" value="{{ old("home_slides.$i.image_position_x", $savedSlide['image_position_x'] ?? 50) }}"></label></div>
+                        <div><label>{{ __('Desktop image Y position (%)') }}<input type="number" min="0" max="100" name="home_slides[{{ $i }}][image_position_y]" value="{{ old("home_slides.$i.image_position_y", $savedSlide['image_position_y'] ?? 50) }}"></label></div>
+                        <div><label>{{ __('Mobile image X position (%)') }}<input type="number" min="0" max="100" name="home_slides[{{ $i }}][mobile_position_x]" value="{{ old("home_slides.$i.mobile_position_x", $savedSlide['mobile_position_x'] ?? 50) }}"></label></div>
+                        <div><label>{{ __('Mobile image Y position (%)') }}<input type="number" min="0" max="100" name="home_slides[{{ $i }}][mobile_position_y]" value="{{ old("home_slides.$i.mobile_position_y", $savedSlide['mobile_position_y'] ?? 50) }}"></label></div>
+                        <div><label>{{ __('Content alignment') }}<select name="home_slides[{{ $i }}][content_alignment]"><option value="left" @selected(old("home_slides.$i.content_alignment", $savedSlide['content_alignment'] ?? 'left') === 'left')>{{ __('Left') }}</option><option value="center" @selected(old("home_slides.$i.content_alignment", $savedSlide['content_alignment'] ?? 'left') === 'center')>{{ __('Center') }}</option><option value="right" @selected(old("home_slides.$i.content_alignment", $savedSlide['content_alignment'] ?? 'left') === 'right')>{{ __('Right') }}</option></select></label></div>
+                        <div><label>{{ __('Overlay color') }}<input type="color" name="home_slides[{{ $i }}][overlay_color]" value="{{ old("home_slides.$i.overlay_color", $savedSlide['overlay_color'] ?? '#050f23') }}"></label></div>
                     </div>
                 </section>
             @endfor
