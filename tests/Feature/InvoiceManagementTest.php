@@ -640,7 +640,7 @@ class InvoiceManagementTest extends TestCase
         Enrollment::create(['user_id' => $student->id, 'course_id' => $course->id, 'batch_id' => $batch->id, 'status' => 'active']);
         $session = LiveClass::create(['batch_id' => $batch->id, 'title' => 'Remote completed session', 'meeting_url' => 'https://example.test/remote-session', 'starts_at' => now()->subMonth()->startOfMonth()->addDay(), 'ends_at' => now()->subMonth()->startOfMonth()->addDay()->addHour(), 'status' => 'completed', 'created_by' => $teacher->id]);
         LiveClassAttendance::create(['live_class_id' => $session->id, 'student_id' => $student->id, 'marked_by' => $teacher->id, 'status' => 'present']);
-        $this->actingAs($manager)->post(route('branch.batches.attendance-fees.generate', $batch), ['billing_period' => now()->subMonth()->format('Y-m')])->assertNotFound();
+        $this->actingAs($manager)->post(route('admin.branch-workspace.batches.attendance-fees.generate', $batch), ['billing_period' => now()->subMonth()->format('Y-m')])->assertNotFound();
         $this->assertDatabaseCount('attendance_fee_periods', 0);
         $this->assertDatabaseCount('invoices', 0);
     }
