@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\\Modules\\Hr;
+namespace App\Modules\Hr;
 
-use App\\Http\\Controllers\\Controller;
-use App\\Models\\Branch;
-use App\\Models\\User;
-use Carbon\\CarbonImmutable;
-use Illuminate\\Http\\Request;
-use Illuminate\\Http\\StreamedResponse;
-use Illuminate\\View\\View;
+use App\Http\Controllers\Controller;
+use App\Models\Branch;
+use App\Models\User;
+use Carbon\CarbonImmutable;
+use Illuminate\Http\Request;
+use Illuminate\Http\StreamedResponse;
+use Illuminate\View\View;
 
 final class HrReportController extends Controller
 {
@@ -224,7 +224,7 @@ final class HrReportController extends Controller
     private function csvSafe(?string $value): string
     {
         $value = (string) $value;
-        if ($value !== '' && preg_match('/^[=+@\\-\\t\\r]/u', $value) === 1) {
+        if ($value !== '' && preg_match('/^[=+@\-\t\r]/u', $value) === 1) {
             return "'".$value;
         }
         return $value;
