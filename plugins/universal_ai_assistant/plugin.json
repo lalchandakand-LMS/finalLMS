@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "key": "universal_ai_assistant",
+  "name": "Universal AI Assistant",
+  "description": "Core-native role-aware AI agents with scoped context, usage controls and auditable human-approved actions.",
+  "type": "first_party",
+  "status": "metadata_only",
+  "provider": null,
+  "dependencies": [
+    "core",
+    "identity"
+  ],
+  "permissions": [],
+  "routes": [
+    "admin.ai-assistant.*",
+    "branch.ai-assistant.*",
+    "teacher.ai-assistant.*",
+    "student.ai-assistant.*",
+    "guardian.ai-assistant.*",
+    "support.ai-assistant.*"
+  ],
+  "settings": [],
+  "events": [],
+  "directory": "plugins/universal_ai_assistant",
+  "safety": {
+    "trusted_code_only": true,
+    "execute_uploaded_code": false,
+    "disable_preserves_data": true
+  }
+}
