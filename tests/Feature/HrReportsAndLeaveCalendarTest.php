@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use App\\Models\\Branch;
-use App\\Models\\User;
-use App\\Modules\\Hr\\StaffLeaveRequest;
-use App\\Modules\\Hr\\StaffPayroll;
-use App\\Modules\\Hr\\StaffProfile;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Tests\\TestCase;
+use App\Models\Branch;
+use App\Models\User;
+use App\Modules\Hr\StaffLeaveRequest;
+use App\Modules\Hr\StaffPayroll;
+use App\Modules\Hr\StaffProfile;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 final class HrReportsAndLeaveCalendarTest extends TestCase
 {
@@ -29,11 +29,11 @@ final class HrReportsAndLeaveCalendarTest extends TestCase
             'basic_salary' => 25000, 'gross_salary' => 25000, 'bonus' => 0,
             'deductions' => 0, 'net_paid' => 25000, 'status' => 'paid',
         ]);
-        $this->actingAs($admin)->get(route('admin.hr.payroll-reports.export', ['month' => '2026-10', 'status' => 'paid']))
-            ->assertOk()
-            ->assertHeader('content-type', 'text/csv; charset=UTF-8')
-            ->assertStreamedContentContains("'=FORMULA-01")
-            ->assertStreamedContentContains("'+Payroll Employee");
+        $response = $this->actingAs($admin)->get(route('admin.hr.payroll-reports.export', ['month' => '2026-10', 'status' => 'paid']));
+        $response->assertOk()->assertHeader('content-type', 'text/csv; charset=UTF-8');
+        $csv = $response->streamedContent();
+        $this->assertStringContainsString("'=FORMULA-01", $csv);
+        $this->assertStringContainsString("'+Payroll Employee", $csv);
     }
 
     public function test_branch_manager_payroll_export_is_limited_to_assigned_branch(): void
@@ -56,7 +56,10 @@ final class HrReportsAndLeaveCalendarTest extends TestCase
         }
 
         $response = $this->actingAs($manager)->get(route('branch.hr.payroll-reports.export', ['month' => '2026-10']));
-        $response->assertOk()->assertStreamedContentContains('Visible Staff')->assertStreamedContentDoesntContain('Hidden Staff');
+        $response->assertOk();
+        $csv = $response->streamedContent();
+        $this->assertStringContainsString('Visible Staff', $csv);
+        $this->assertStringNotContainsString('Hidden Staff', $csv);
     }
 
     public function test_branch_manager_leave_calendar_only_shows_their_branch_and_overlapping_month_requests(): void
