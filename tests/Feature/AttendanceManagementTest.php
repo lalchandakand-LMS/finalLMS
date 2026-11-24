@@ -180,7 +180,7 @@ class AttendanceManagementTest extends TestCase
                     'reason' => 'Checked against the signed register.',
                 ]],
             ])
-            ->assertRedirect();
+            ->assertRedirect(route('teacher.batches.attendance.index', ['batch' => $batch, 'date' => now()->toDateString()]));
 
         $this->assertDatabaseHas('attendances', [
             'batch_id' => $batch->id,
