@@ -1,4 +1,6 @@
-<x-app-layout>
+@extends('layouts.app')
+
+@section('content')
 <div class="mx-auto max-w-6xl space-y-6 p-4 sm:p-6">
 <h1 class="text-2xl font-bold">Referral Income</h1>
 @if(session('success'))<p class="rounded bg-green-50 p-3 text-green-800">{{ session('success') }}</p>@endif
@@ -13,4 +15,5 @@
 <form method="POST" action="{{ route(request()->routeIs('teacher.*')?'teacher.referrals.payout':'student.referrals.payout') }}" class="grid gap-2 rounded border bg-white p-4 sm:grid-cols-3">@csrf<label class="sm:col-span-3 font-medium">Request payout (approved BDT balance only)</label><select name="method" class="rounded border-gray-300"><option value="bkash">bKash</option><option value="nagad">Nagad</option><option value="bank">Bank</option></select><input name="account_details" required maxlength="500" class="rounded border-gray-300" placeholder="Payout account details"><button class="rounded bg-blue-700 px-4 py-2 text-white">Request payout</button></form>
 <div class="overflow-x-auto rounded border bg-white"><h2 class="p-4 font-semibold">Commission history</h2><table class="min-w-full text-sm"><thead><tr class="bg-gray-50"><th class="p-3 text-left">Payment</th><th class="p-3 text-left">Eligible</th><th class="p-3 text-left">Commission</th><th class="p-3 text-left">Status</th></tr></thead><tbody>@forelse($commissions as $row)<tr class="border-t"><td class="p-3">#{{ $row->payment_id }}</td><td class="p-3">৳{{ number_format((float)$row->eligible_amount,2) }}</td><td class="p-3">৳{{ number_format((float)$row->commission_amount,2) }}</td><td class="p-3">{{ ucfirst(str_replace('_',' ',$row->status)) }}</td></tr>@empty<tr><td colspan="4" class="p-4 text-gray-500">No commissions yet.</td></tr>@endforelse</tbody></table>{{ $commissions->links() }}</div>
 <div class="rounded border bg-white p-4"><h2 class="mb-3 font-semibold">Payout requests</h2>@forelse($payouts as $row)<p class="border-b py-2">#{{ $row->id }} · ৳{{ number_format((float)$row->amount,2) }} · {{ strtoupper($row->method) }} · {{ ucfirst($row->status) }}</p>@empty<p class="text-sm text-gray-500">No payout requests yet.</p>@endforelse</div>
-</div></x-app-layout>
+</div>
+@endsection
