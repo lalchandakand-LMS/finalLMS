@@ -27,7 +27,13 @@ class CoreNativeModulesTest extends TestCase
         ];
 
         foreach ($routes as $route) {
-            $this->actingAs($admin)->get(route($route))->assertOk("Failed workspace route: {$route}");
+            $response = $this->actingAs($admin)->get(route($route));
+
+            $this->assertSame(
+                200,
+                $response->getStatusCode(),
+                "Failed workspace route [{$route}]; response body: " . substr($response->getContent(), 0, 1000)
+            );
         }
     }
 }
