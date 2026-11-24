@@ -32,6 +32,8 @@ class BkashPaymentController extends Controller
         abort_unless($course->status === 'published', 404);
         $provider = (string) $request->route('provider', 'bkash');
         abort_unless(preg_match('/^[a-z][a-z0-9_]{1,39}$/D', $provider) === 1 && $gateways->isAvailable($provider), 503, 'The selected payment gateway is not enabled or configured.');
+        $gateway = $gateways->driver($provider);
+        abort_unless(in_array('BDT', array_map('strtoupper', $gateway->supportedCurrencies()), true), 422, 'The selected payment gateway does not support BDT.');
 
         $user = $request->user();
         $hasOpenBatches = $course->batches()->where('status', 'open')
@@ -88,13 +90,13 @@ class BkashPaymentController extends Controller
                 'gateway_provider' => $provider,
                 'amount' => number_format($amount, 2, '.', ''),
                 'currency' => 'BDT',
-                'transaction_reference' => 'BKASH-'.Str::upper(Str::random(20)),
+                'transaction_reference' => strtoupper($provider).'-'.Str::upper(Str::random(20)),
                 'status' => 'pending',
             ]);
         });
 
         try {
-            $checkout = $gateways->driver($provider)->createCheckout(
+            $checkout = $gateway->createCheckout(
                 $payment,
                 route('payments.gateway.callback', ['provider' => $provider]),
                 (string) $payment->user_id
@@ -582,7 +584,7 @@ class BkashPaymentController extends Controller
 
             return $payment->order_id
                 ? redirect()->route('ebooks.orders')->with('warning', __('Your payment is awaiting server-side verification. Do not pay again; contact the academy if this message remains.'))
-                : redirect()->route('courses.show', $payment->course)->with('warning', __('Your bKash payment is awaiting server-side verification. Do not pay again; contact the academy if this message remains.'));
+                : redirect()->route('courses.show', $payment->course)->with('warning', __('Your payment is awaiting server-side verification. Do not pay again; contact the academy if this message remains.'));
         }
     }
 
