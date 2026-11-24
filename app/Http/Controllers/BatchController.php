@@ -125,7 +125,9 @@ class BatchController extends Controller
         Branch::create([
             ...$validated,
             'slug' => Str::slug($validated['name']).'-'.Str::lower(Str::random(6)),
-            'is_active' => $validated['status'] === 'active',
+            'is_active' => ($validated['status'] ?? 'active') === 'active',
+            'status' => $validated['status'] ?? 'active',
+            'registration_open' => (bool) ($validated['registration_open'] ?? true),
         ]);
         return redirect()->route('admin.batches.index')->with('success', 'Branch created successfully.');
     }
