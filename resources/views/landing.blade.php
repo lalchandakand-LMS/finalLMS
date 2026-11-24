@@ -79,7 +79,21 @@
         .home-carousel__slide { position:relative; isolation:isolate; flex:0 0 100%; min-width:0; height:100%; display:flex; align-items:center; overflow:hidden; color:#fff; }
         .home-carousel__slide img { position:absolute; inset:0; z-index:-2; width:100%; height:100%; object-fit:cover; }
         .home-carousel__shade { position:absolute; inset:0; z-index:-1; background:linear-gradient(90deg,rgba(5,15,35,var(--carousel-overlay)),rgba(5,15,35,calc(var(--carousel-overlay) * .7)) 58%,rgba(5,15,35,.08)); }
-        .home-carousel__content { width:min(760px,85%); padding:clamp(24px,6vw,72px); }
+         .home-carousel__content { width:min(760px,85%); padding:clamp(24px,6vw,72px); }
+        .home-carousel__content--center { margin-inline:auto; text-align:center; }
+        .home-carousel__content--right { margin-left:auto; text-align:right; }
+        .home-carousel__secondary { display:inline-flex; margin-left:10px; padding:10px 18px; border:1px solid #ffffffa8; border-radius:10px; color:#fff; background:#ffffff18; text-decoration:none; font-weight:800; }
+        .home-carousel--fade .home-carousel__track,.home-carousel--zoom .home-carousel__track { position:relative; display:block; }
+        .home-carousel--fade .home-carousel__slide,.home-carousel--zoom .home-carousel__slide { position:absolute; inset:0; opacity:0; transition:opacity .6s ease,transform .6s ease; pointer-events:none; }
+        .home-carousel--fade .home-carousel__slide.is-active,.home-carousel--zoom .home-carousel__slide.is-active { opacity:1; pointer-events:auto; }
+        .home-carousel--zoom .home-carousel__slide { transform:scale(1.04); }
+        .home-carousel--zoom .home-carousel__slide.is-active { transform:scale(1); }
+        .home-carousel__progress { height:3px; overflow:hidden; background:#0b173822; }
+        .home-carousel__progress span { display:block; width:100%; height:100%; transform:scaleX(0); transform-origin:left; background:var(--primary); }
+        .home-carousel__progress span.is-running { animation:home-carousel-progress var(--progress-duration,5s) linear forwards; }
+        @keyframes home-carousel-progress { to { transform:scaleX(1); } }
+        .home-carousel__controls { display:flex; justify-content:flex-end; margin-top:8px; }
+        .home-carousel__toggle { border:1px solid var(--border); border-radius:999px; padding:6px 12px; background:var(--surface,#fff); color:var(--text); cursor:pointer; }
         .home-carousel__content h2 { margin:0 0 14px; color:#fff; font-size:clamp(28px,4.4vw,54px); line-height:1.1; letter-spacing:-.03em; }
         .home-carousel__content p { margin:0 0 24px; color:rgba(255,255,255,.94); font-size:clamp(15px,1.6vw,19px); line-height:1.7; }
         .home-carousel__arrow { position:absolute; top:50%; z-index:2; transform:translateY(-50%); width:46px; height:46px; border:1px solid #ffffff88; border-radius:50%; background:#0b1738aa; color:#fff; font-size:32px; line-height:1; cursor:pointer; backdrop-filter:blur(8px); }
@@ -176,11 +190,11 @@
     @include('partials.flash-sales', ['flashSales' => $flashSales])
 
     @if($hasHomeSlides)
-        <section class="home-carousel home-carousel--{{ $sliderOptions['transition'] }}" aria-label="{{ __('Homepage highlights') }}" data-home-carousel data-transition="{{ $sliderOptions['transition'] }}" data-autoplay="{{ $sliderOptions['autoplay'] ? 'true' : 'false' }}" data-interval="{{ $sliderOptions['interval'] }}" data-pause-hover="{{ $sliderOptions['pauseHover'] ? 'true' : 'false' }}" style="--carousel-height:{{ $sliderOptions['height'] }}px;--carousel-mobile-height:{{ $sliderOptions['mobileHeight'] }}px;--carousel-overlay:{{ $sliderOptions['overlay'] / 100 }};margin-bottom:28px;">
+        <section class="home-carousel home-carousel--{{ $sliderOptions['transition'] }}" aria-label="{{ __('Homepage highlights') }}" data-home-carousel data-transition="{{ $sliderOptions['transition'] }}" data-autoplay="{{ $sliderOptions['autoplay'] ? 'true' : 'false' }}" data-interval="{{ $sliderOptions['interval'] }}" data-pause-hover="{{ $sliderOptions['pauseHover'] ? 'true' : 'false' }}" style="--carousel-height:{{ $sliderOptions['height'] }}px;--carousel-mobile-height:{{ $sliderOptions['mobileHeight'] }}px;--carousel-overlay:{{ $sliderOptions['overlay'] / 100 }};--progress-duration:{{ $sliderOptions['interval'] }}ms;margin-bottom:28px;">
             <div class="home-carousel__viewport" data-carousel-viewport tabindex="0" aria-roledescription="carousel">
                 <div class="home-carousel__track" data-carousel-track>
                     @foreach($homeSlides as $index => $slide)
-                        <article class="home-carousel__slide" data-carousel-slide aria-label="{{ $index + 1 }} {{ __('of') }} {{ $homeSlides->count() }}" aria-roledescription="slide" aria-hidden="{{ $index === 0 ? 'false' : 'true' }}">
+                        <article class="home-carousel__slide" data-carousel-slide aria-label="{{ $index + 1 }} {{ __('of') }} {{ $homeSlides->count() }}" aria-roledescription="slide" aria-hidden="{{ $index === 0 ? 'false' : 'true' }}" class="{{ $index === 0 ? 'is-active' : '' }}">
                             <picture><source media="(max-width: 700px)" srcset="{{ $slide['mobile_asset']->url }}"><img src="{{ $slide['asset']->url }}" alt="{{ $slide['asset']->alt_text ?: $slide['title'] }}" loading="{{ $index === 0 ? 'eager' : 'lazy' }}" style="object-position:{{ $slide['image_position_x'] }}% {{ $slide['image_position_y'] }}%;"></picture>
                             <div class="home-carousel__shade"></div>
                             <div class="home-carousel__content home-carousel__content--{{ $slide['content_alignment'] }}">
@@ -209,6 +223,8 @@
                     <button type="button" class="home-carousel__arrow home-carousel__arrow--next" data-carousel-next aria-label="{{ __('Next slide') }}">›</button>
                 @endif
             </div>
+            @if($sliderOptions['progress'])<div class="home-carousel__progress" aria-hidden="true"><span data-carousel-progress></span></div>@endif
+            @if($sliderOptions['playPause'])<div class="home-carousel__controls"><button type="button" class="home-carousel__toggle" data-carousel-toggle aria-pressed="false">{{ __('Pause slideshow') }}</button></div>@endif
             @if($showSliderDots)
                 <nav class="home-carousel__dots" aria-label="{{ __('Slider navigation') }}" data-carousel-dots>
                     @foreach($homeSlides as $index => $slide)
@@ -384,17 +400,23 @@
     if (slides.length < 2 || !track) return;
     let active = 0;
     let timer = null;
+    let userPaused = false;
     const interval = Math.max(3000, Math.min(12000, Number(root.dataset.interval) || 5000));
+    const transition = root.dataset.transition || 'slide';
     const autoplay = root.dataset.autoplay === 'true' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const pauseOnHover = root.dataset.pauseHover === 'true';
+    const progress = root.querySelector('[data-carousel-progress]');
+    const toggle = root.querySelector('[data-carousel-toggle]');
     const render = (index) => {
         active = (index + slides.length) % slides.length;
-        track.style.transform = 'translate3d(' + (-active * 100) + '%,0,0)';
-        slides.forEach((slide, i) => slide.setAttribute('aria-hidden', i === active ? 'false' : 'true'));
+        if (transition === 'slide') track.style.transform = 'translate3d(' + (-active * 100) + '%,0,0)';
+        slides.forEach((slide, i) => { slide.setAttribute('aria-hidden', i === active ? 'false' : 'true'); slide.classList.toggle('is-active', i === active); });
         dots.forEach((dot, i) => dot.setAttribute('aria-current', i === active ? 'true' : 'false'));
+        if (progress) { progress.classList.remove('is-running'); void progress.offsetWidth; }
     };
-    const stop = () => { if (timer) window.clearInterval(timer); timer = null; };
-    const start = () => { stop(); if (autoplay) timer = window.setInterval(() => render(active + 1), interval); };
+    const stop = () => { if (timer) window.clearInterval(timer); timer = null; progress?.classList.remove('is-running'); };
+    const start = () => { stop(); if (autoplay && !userPaused) { if (progress) { void progress.offsetWidth; progress.classList.add('is-running'); } timer = window.setInterval(() => { render(active + 1); if (progress) progress.classList.add('is-running'); }, interval); } };
+    toggle?.addEventListener('click', () => { userPaused = !userPaused; toggle.setAttribute('aria-pressed', userPaused ? 'true' : 'false'); toggle.textContent = userPaused ? 'Play slideshow' : 'Pause slideshow'; userPaused ? stop() : start(); });
     const interact = (index) => { render(index); start(); };
     previous?.addEventListener('click', () => interact(active - 1));
     next?.addEventListener('click', () => interact(active + 1));
