@@ -22,6 +22,10 @@ use App\Http\Controllers\LessonMediaController;
 use App\Http\Controllers\TeacherApplicationController;
 use App\Http\Controllers\BatchController;
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\AttendanceFeeBillingController;
+use App\Http\Controllers\ScormPackageController;
+use App\Http\Controllers\ApiConnectorAdminController;
+use App\Http\Controllers\ApiConnectorWebhookController;
 use App\Http\Controllers\AdminAttendanceSyncReviewController;
 use App\Http\Controllers\AdminAttendanceAuditController;
 use App\Http\Controllers\AssignmentController;
@@ -79,11 +83,22 @@ use App\Http\Controllers\AdminCourseContentPostController;
 use App\Http\Controllers\AdminCourseBuilderController;
 use App\Http\Controllers\CourseContentController;
 use App\Http\Controllers\CommentController;
+use App\Modules\Admissions\AdmissionController;
+use App\Modules\Hr\HrController;
+use App\Modules\Library\LibraryController;
+use App\Modules\Referral\ReferralIncomeController;
+use App\Modules\Ai\AssistantController;
+use App\Modules\Ai\AdminSettingsController as AiAdminSettingsController;
+use App\Modules\Ai\AgentActionController;
+use App\Modules\Ai\AgentContentController;
+use App\Modules\Carousel\CarouselBuilderController;
+use App\Http\Controllers\GamificationController;
 use App\Http\Controllers\LandingPageController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/install', [InstallController::class, 'index'])->name('install.index');
 Route::post('/install', [InstallController::class, 'install'])->middleware('throttle:5,1')->name('install.store');
+
 
 Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('seo.sitemap');
 Route::get('/robots.txt', [SeoController::class, 'robots'])->name('seo.robots');
@@ -136,6 +151,16 @@ Route::get('/contests/{contest}', [QuizContestController::class, 'show'])->name(
 Route::get('/ebooks', [EbookStoreController::class, 'index'])->name('ebooks.index');
 Route::get('/ebooks/{product:slug}/preview/{previewPage}', [EbookStoreController::class, 'preview'])->name('ebooks.preview');
 Route::get('/ebooks/{product:slug}', [EbookStoreController::class, 'show'])->name('ebooks.show');
+
+Route::get('/r/{code}', [ReferralIncomeController::class, 'track'])->where('code', '[A-Za-z0-9]{6,32}')->name('referral.public.track');
+Route::get('/careers', [HrController::class, 'publicCareers'])->name('careers.index');
+Route::get('/careers/{opening}', [HrController::class, 'publicCareerShow'])->whereNumber('opening')->name('careers.show');
+Route::post('/careers/{opening}/apply', [HrController::class, 'applyCareer'])->whereNumber('opening')->middleware('throttle:5,10')->name('careers.apply');
+Route::get('/admission/apply', [AdmissionController::class, 'publicForm'])->name('admission.public.apply');
+Route::post('/admission/apply', [AdmissionController::class, 'applyPublic'])->middleware('throttle:3,10')->name('admission.public.apply.store');
+Route::get('/admission/track', [AdmissionController::class, 'trackForm'])->name('admission.public.track');
+Route::post('/admission/track', [AdmissionController::class, 'track'])->middleware('throttle:5,10')->name('admission.public.track.submit');
+
 Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
 Route::get('/course-combos', [CourseComboController::class, 'publicIndex'])->name('course-combos.index');
 Route::get('/course-combos/{courseCombo:slug}', [CourseComboController::class, 'show'])->name('course-combos.show');
@@ -156,8 +181,93 @@ Route::middleware('auth')->group(function () {
         ->name('verification.send');
 });
 
+Route::middleware(['auth', 'verified', 'student.device', 'activity.log', 'role:student'])->prefix('student/referrals')->name('student.referrals.')->group(function () {
+    Route::get('/', [ReferralIncomeController::class, 'dashboard'])->name('dashboard');
+    Route::post('/apply', [ReferralIncomeController::class, 'apply'])->middleware('throttle:5,1')->name('apply');
+    Route::post('/payout', [ReferralIncomeController::class, 'requestPayout'])->middleware('throttle:3,1')->name('payout');
+});
+Route::middleware(['auth', 'verified', 'activity.log', 'role:teacher'])->prefix('teacher/referrals')->name('teacher.referrals.')->group(function () {
+    Route::get('/', [ReferralIncomeController::class, 'dashboard'])->name('dashboard');
+    Route::post('/apply', [ReferralIncomeController::class, 'apply'])->middleware('throttle:5,1')->name('apply');
+    Route::post('/payout', [ReferralIncomeController::class, 'requestPayout'])->middleware('throttle:3,1')->name('payout');
+});
+Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('admin/referrals')->name('admin.referrals.')->group(function () {
+    Route::get('/', [ReferralIncomeController::class, 'adminIndex'])->name('index');
+    Route::put('/rules', [ReferralIncomeController::class, 'updateRules'])->middleware('throttle:10,1')->name('rules.update');
+    Route::post('/commissions/{commission}/review', [ReferralIncomeController::class, 'reviewCommission'])->whereNumber('commission')->middleware('throttle:20,1')->name('commissions.review');
+    Route::post('/payouts/{payout}/review', [ReferralIncomeController::class, 'reviewPayout'])->whereNumber('payout')->middleware('throttle:10,1')->name('payouts.review');
+});
+
+Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('admin/library')->name('admin.library.')->group(function () {
+    Route::get('/', [LibraryController::class, 'index'])->name('index');
+    Route::post('/books', [LibraryController::class, 'storeBook'])->middleware('throttle:20,1')->name('books.store');
+    Route::post('/loans', [LibraryController::class, 'issueLoan'])->middleware('throttle:20,1')->name('loans.issue');
+    Route::post('/loans/{loan}/return', [LibraryController::class, 'returnLoan'])->whereNumber('loan')->middleware('throttle:20,1')->name('loans.return');
+});
+Route::middleware(['auth', 'verified', 'activity.log', 'role:branch_manager'])->prefix('branch/library')->name('branch.library.')->group(function () {
+    Route::get('/', [LibraryController::class, 'index'])->name('index');
+    Route::post('/books', [LibraryController::class, 'storeBook'])->middleware('throttle:20,1')->name('books.store');
+    Route::post('/loans', [LibraryController::class, 'issueLoan'])->middleware('throttle:20,1')->name('loans.issue');
+    Route::post('/loans/{loan}/return', [LibraryController::class, 'returnLoan'])->whereNumber('loan')->middleware('throttle:20,1')->name('loans.return');
+});
+
+Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('admin/hr')->name('admin.hr.')->group(function () {
+    Route::get('/', [HrController::class, 'index'])->name('index');
+    Route::post('/staff', [HrController::class, 'storeStaff'])->middleware('throttle:20,1')->name('staff.store');
+    Route::put('/staff/{staff}', [HrController::class, 'updateStaff'])->whereNumber('staff')->middleware('throttle:20,1')->name('staff.update');
+    Route::post('/attendance', [HrController::class, 'recordAttendance'])->middleware('throttle:60,1')->name('attendance.store');
+    Route::post('/leave-requests', [HrController::class, 'requestLeave'])->middleware('throttle:20,1')->name('leave.store');
+    Route::post('/leave-requests/{leave}/review', [HrController::class, 'reviewLeave'])->whereNumber('leave')->middleware('throttle:20,1')->name('leave.review');
+    Route::post('/payrolls', [HrController::class, 'recordPayroll'])->middleware('throttle:20,1')->name('payrolls.store');
+    Route::post('/payrolls/{payroll}/mark-paid', [HrController::class, 'markPayrollPaid'])->whereNumber('payroll')->middleware(['admin.permission:finance.invoices', 'throttle:10,1'])->name('payrolls.mark-paid');
+    Route::get('/recruitment', [HrController::class, 'recruitmentIndex'])->name('recruitment.index');
+    Route::post('/recruitment/openings', [HrController::class, 'storeJobOpening'])->middleware('throttle:20,1')->name('recruitment.openings.store');
+    Route::patch('/recruitment/openings/{opening}/status', [HrController::class, 'updateJobOpeningStatus'])->whereNumber('opening')->name('recruitment.openings.status');
+    Route::post('/recruitment/applications/{application}/review', [HrController::class, 'reviewApplication'])->whereNumber('application')->middleware('throttle:20,1')->name('recruitment.applications.review');
+    Route::get('/recruitment/applications/{application}/resume', [HrController::class, 'downloadApplicationResume'])->whereNumber('application')->name('recruitment.applications.resume');
+});
+Route::middleware(['auth', 'verified', 'activity.log', 'role:branch_manager'])->prefix('branch/hr')->name('branch.hr.')->group(function () {
+    Route::get('/', [HrController::class, 'index'])->name('index');
+    Route::post('/staff', [HrController::class, 'storeStaff'])->middleware('throttle:20,1')->name('staff.store');
+    Route::put('/staff/{staff}', [HrController::class, 'updateStaff'])->whereNumber('staff')->middleware('throttle:20,1')->name('staff.update');
+    Route::post('/attendance', [HrController::class, 'recordAttendance'])->middleware('throttle:60,1')->name('attendance.store');
+    Route::post('/leave-requests', [HrController::class, 'requestLeave'])->middleware('throttle:20,1')->name('leave.store');
+    Route::post('/payrolls', [HrController::class, 'recordPayroll'])->middleware('throttle:20,1')->name('payrolls.store');
+});
+Route::middleware(['auth', 'verified', 'activity.log', 'role:teacher'])->prefix('teacher/hr')->name('teacher.hr.')->group(function () {
+    Route::get('/', [HrController::class, 'teacherIndex'])->name('index');
+    Route::post('/leave-requests', [HrController::class, 'teacherRequestLeave'])->middleware('throttle:10,1')->name('leave.store');
+});
+
+Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('admin/admissions')->name('admin.admissions.')->group(function () {
+    Route::get('/', [AdmissionController::class, 'index'])->name('index');
+    Route::get('/reports', [AdmissionController::class, 'reports'])->name('reports');
+    Route::get('/reports/export', [AdmissionController::class, 'exportReport'])->middleware('throttle:10,1')->name('reports.export');
+    Route::post('/', [AdmissionController::class, 'store'])->middleware('throttle:20,1')->name('store');
+    Route::post('/{application}/review', [AdmissionController::class, 'review'])->whereNumber('application')->middleware('throttle:20,1')->name('review');
+    Route::post('/{application}/documents', [AdmissionController::class, 'storeDocument'])->whereNumber('application')->middleware('throttle:10,1')->name('documents.store');
+    Route::post('/{application}/documents/{document}/review', [AdmissionController::class, 'reviewDocument'])->whereNumber('application')->whereNumber('document')->middleware('throttle:20,1')->name('documents.review');
+    Route::get('/{application}/documents/{document}', [AdmissionController::class, 'downloadDocument'])->whereNumber('application')->name('documents.download');
+    Route::post('/{application}/convert-to-student', [AdmissionController::class, 'convertToStudent'])->whereNumber('application')->middleware('throttle:5,1')->name('convert');
+});
+
+Route::middleware(['auth', 'verified', 'activity.log', 'role:branch_manager'])->prefix('branch/admissions')->name('branch.admissions.')->group(function () {
+    Route::get('/', [AdmissionController::class, 'index'])->name('index');
+    Route::post('/', [AdmissionController::class, 'store'])->middleware('throttle:20,1')->name('store');
+    Route::get('/reports', [AdmissionController::class, 'reports'])->name('reports');
+    Route::get('/reports/export', [AdmissionController::class, 'exportReport'])->middleware('throttle:10,1')->name('reports.export');
+    Route::post('/{application}/review', [AdmissionController::class, 'review'])->whereNumber('application')->middleware('throttle:20,1')->name('review');
+    Route::post('/{application}/convert-to-student', [AdmissionController::class, 'convertToStudent'])->whereNumber('application')->middleware('throttle:5,1')->name('convert');
+    Route::post('/{application}/documents', [AdmissionController::class, 'storeDocument'])->whereNumber('application')->middleware('throttle:10,1')->name('documents.store');
+    Route::post('/{application}/documents/{document}/review', [AdmissionController::class, 'reviewDocument'])->whereNumber('application')->whereNumber('document')->middleware('throttle:20,1')->name('documents.review');
+    Route::get('/{application}/documents/{document}', [AdmissionController::class, 'downloadDocument'])->whereNumber('document')->name('documents.download');
+});
+
 Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group(function () {
     Route::middleware('role:student')->group(function () {
+        Route::get('/my/gamification', [GamificationController::class, 'index'])->name('student.gamification.index');
+        Route::put('/my/gamification/preferences', [GamificationController::class, 'updatePreferences'])->middleware('throttle:10,1')->name('student.gamification.preferences');
+        Route::get('/my/gamification/leaderboard', [GamificationController::class, 'leaderboard'])->name('student.gamification.leaderboard');
         Route::post('/ebooks/{product:slug}/checkout', [EbookStoreController::class, 'checkout'])->middleware('throttle:5,1')->name('ebooks.checkout');
         Route::post('/ebooks/{product:slug}/checkout/bkash', [BkashPaymentController::class, 'initiateEbook'])->middleware('throttle:5,1')->name('ebooks.checkout.bkash');
         Route::get('/my/ebooks/orders', [EbookStoreController::class, 'orders'])->name('ebooks.orders');
@@ -200,6 +310,9 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
             Route::post('/batches/{batch}/attendance', [AttendanceController::class, 'store'])
                 ->middleware(['admin.permission:branch.attendance', 'module.enabled:attendance'])
                 ->name('batches.attendance.store');
+            Route::post('/batches/{batch}/attendance-fees/generate', [AttendanceFeeBillingController::class, 'generate'])
+                ->middleware(['admin.permission:finance.invoices', 'module.enabled:attendance', 'throttle:10,1'])
+                ->name('batches.attendance-fees.generate');
         });
 
     Route::middleware('role:accountant')
@@ -209,6 +322,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
             Route::get('/invoices', [InvoiceController::class, 'accountantIndex'])->middleware('admin.permission:finance.invoices')->name('invoices.index');
             Route::post('/invoices', [InvoiceController::class, 'store'])->middleware('admin.permission:finance.invoices')->name('invoices.store');
             Route::post('/invoices/{invoice}/payments', [InvoiceController::class, 'receivePayment'])->middleware('admin.permission:finance.invoices')->name('invoices.payments.store');
+        Route::post('/batches/{batch}/attendance-fees/generate', [AttendanceFeeBillingController::class, 'generate'])->middleware(['admin.permission:finance.invoices', 'module.enabled:attendance', 'throttle:10,1'])->name('batches.attendance-fees.generate');
             Route::get('/refunds', [InvoiceRefundController::class, 'index'])->middleware('admin.permission:finance.refunds')->name('refunds.index');
             Route::post('/refunds', [InvoiceRefundController::class, 'store'])->middleware('admin.permission:finance.refunds')->name('refunds.store');
             Route::get('/reports', [FinanceReportController::class, 'index'])->middleware('admin.permission:finance.reports')->name('reports.index');
@@ -228,6 +342,9 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
     Route::post('/teacher/batches/{batch}/live-classes', [LiveClassController::class, 'store'])
         ->middleware('role:teacher')
         ->name('teacher.batches.live-classes.store');
+    Route::post('/live-classes/{liveClass}/attendance', [LiveClassController::class, 'storeAttendance'])
+        ->middleware(['role:teacher,admin', 'module.enabled:attendance', 'throttle:30,1'])
+        ->name('live-classes.attendance.store');
     Route::put('/live-classes/{liveClass}', [LiveClassController::class, 'update'])
         ->middleware('role:teacher,admin')
         ->name('live-classes.update');
@@ -305,6 +422,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::get('/certificates/{certificate}', [DashboardController::class, 'certificate'])->name('certificates.show');
+    Route::get('/my/transcript', [\App\Http\Controllers\StudentTranscriptController::class, 'show'])->middleware('role:student')->name('student.transcript');
 
     Route::post('/course-combos/{courseCombo:slug}/enroll', [PaymentController::class, 'submitCombo'])->middleware('role:student')->name('course-combos.enroll');
     Route::post('/courses/{course}/enroll', [PaymentController::class, 'submit'])->name('courses.enroll');
@@ -391,6 +509,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::get('/addons', [AddonRegistryController::class, 'index'])->name('admin.addons.index');
         Route::get('/payment-gateways', [AdminPaymentGatewayController::class, 'index'])->name('admin.payment-gateways.index');
         Route::patch('/payment-gateways/{key}', [AdminPaymentGatewayController::class, 'update'])->middleware('throttle:20,1')->name('admin.payment-gateways.update');
+        Route::put('/payment-gateways/mfs/{provider}', [AdminPaymentGatewayController::class, 'updateMfs'])->where('provider', 'bkash|nagad|rocket')->middleware('throttle:10,1')->name('admin.payment-gateways.mfs.update');
         Route::get('/ai-developer', [AiDeveloperController::class, 'index'])->name('admin.ai-developer.index');
         Route::post('/ai-developer/analyze', [AiDeveloperController::class, 'analyze'])->middleware('throttle:3,1')->name('admin.ai-developer.analyze');
         Route::patch('/addons/{key}', [AddonRegistryController::class, 'update'])->middleware('throttle:20,1')->name('admin.addons.update');
@@ -438,6 +557,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::post('/assignments/{assignment}/submissions/{submission}/grade', [AssignmentController::class, 'grade'])->middleware('throttle:30,1')->name('admin.assignments.grade');
         Route::get('/batches/{batch}/attendance', [AttendanceController::class, 'index'])->middleware('module.enabled:attendance')->name('admin.batches.attendance.index');
         Route::post('/batches/{batch}/attendance', [AttendanceController::class, 'store'])->middleware('module.enabled:attendance')->name('admin.batches.attendance.store');
+        Route::post('/batches/{batch}/attendance-fees/generate', [AttendanceFeeBillingController::class, 'generate'])->middleware(['module.enabled:attendance', 'throttle:10,1'])->name('admin.batches.attendance-fees.generate');
         Route::post('/branches', [BatchController::class, 'storeBranch'])->name('admin.branches.store');
         Route::put('/branches/{branch}', [BatchController::class, 'updateBranch'])->name('admin.branches.update');
         Route::delete('/branches/{branch}', [BatchController::class, 'destroyBranch'])->name('admin.branches.destroy');
@@ -559,4 +679,64 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::put('/courses/{course}/lessons/{lesson}', [CourseController::class, 'updateLesson'])->name('admin.courses.lessons.update');
         Route::delete('/courses/{course}/lessons/{lesson}', [CourseController::class, 'destroyLesson'])->name('admin.courses.lessons.destroy');
     });
+});
+
+
+Route::middleware(['auth', 'verified', 'activity.log', 'role:teacher'])->prefix('teacher/courses/{course}/scorm-packages')->name('teacher.courses.scorm-packages.')->group(function () {
+    Route::get('/', [ScormPackageController::class, 'index'])->name('index');
+    Route::post('/', [ScormPackageController::class, 'store'])->middleware('throttle:5,10')->name('store');
+    Route::delete('/{package}', [ScormPackageController::class, 'destroy'])->whereNumber('package')->middleware('throttle:10,1')->name('destroy');
+});
+
+Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('admin/courses/{course}/scorm-packages')->name('admin.courses.scorm-packages.')->group(function () {
+    Route::get('/', [ScormPackageController::class, 'index'])->name('index');
+    Route::post('/', [ScormPackageController::class, 'store'])->middleware('throttle:5,10')->name('store');
+    Route::delete('/{package}', [ScormPackageController::class, 'destroy'])->whereNumber('package')->middleware('throttle:10,1')->name('destroy');
+});
+
+Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('admin/integrations')->name('admin.integrations.')->group(function () {
+    Route::get('/', [ApiConnectorAdminController::class, 'index'])->name('index');
+    Route::post('/{provider}/connect', [ApiConnectorAdminController::class, 'connect'])->where('provider', '[a-z][a-z0-9_]{1,79}')->middleware('throttle:10,1')->name('connect');
+    Route::post('/{provider}/health-check', [ApiConnectorAdminController::class, 'healthCheck'])->where('provider', '[a-z][a-z0-9_]{1,79}')->middleware('throttle:10,1')->name('health-check');
+    Route::post('/{provider}/pause', [ApiConnectorAdminController::class, 'pause'])->where('provider', '[a-z][a-z0-9_]{1,79}')->middleware('throttle:10,1')->name('pause');
+    Route::post('/{provider}/disconnect', [ApiConnectorAdminController::class, 'disconnect'])->where('provider', '[a-z][a-z0-9_]{1,79}')->middleware('throttle:5,1')->name('disconnect');
+});
+
+// Native AI assistant, specialist agents and human-reviewed actions.
+foreach (['admin' => 'admin', 'branch_manager' => 'branch', 'teacher' => 'teacher', 'student' => 'student', 'guardian' => 'guardian', 'support_staff' => 'support'] as $aiRole => $aiPrefix) {
+    Route::middleware(array_merge(['auth', 'verified', 'activity.log', 'role:'.$aiRole], $aiRole === 'student' ? ['student.device'] : []))
+        ->prefix($aiPrefix.'/ai-assistant')->name($aiPrefix.'.ai-assistant.')->group(function () use ($aiRole) {
+            Route::get('/', [AssistantController::class, 'index'])->name('index');
+            Route::post('/messages', [AssistantController::class, 'send'])->middleware('throttle:10,1')->name('messages.store');
+            if (in_array($aiRole, ['admin', 'teacher', 'student'], true)) {
+                Route::get('/proposals', [AgentActionController::class, 'index'])->name('proposals.index');
+                Route::post('/proposals/study-plan', [AgentActionController::class, 'storeStudyPlan'])->middleware('throttle:5,1')->name('proposals.study-plan');
+                Route::post('/proposals', [AgentActionController::class, 'storeStudyPlan'])->middleware('throttle:5,1')->name('proposals.store');
+                Route::post('/proposals/{proposal}/approve', [AgentActionController::class, 'approve'])->whereNumber('proposal')->middleware('throttle:10,1')->name('proposals.approve');
+                Route::post('/proposals/{proposal}/reject', [AgentActionController::class, 'reject'])->whereNumber('proposal')->middleware('throttle:10,1')->name('proposals.reject');
+            }
+            if (in_array($aiRole, ['admin', 'teacher', 'support_staff'], true)) {
+                Route::get('/drafts', [AgentContentController::class, 'drafts'])->name('drafts.index');
+                Route::post('/drafts', [AgentContentController::class, 'saveDraft'])->middleware('throttle:10,1')->name('drafts.store');
+                Route::post('/drafts/{draft}/review', [AgentContentController::class, 'reviewDraft'])->whereNumber('draft')->middleware('throttle:10,1')->name('drafts.review');
+                Route::get('/knowledge', [AgentContentController::class, 'knowledge'])->name('knowledge.index');
+                Route::post('/knowledge', [AgentContentController::class, 'saveKnowledge'])->middleware('throttle:10,1')->name('knowledge.store');
+            }
+            Route::get('/notifications', [AgentContentController::class, 'notifications'])->name('notifications.index');
+            Route::post('/notifications/{notification}/read', [AgentContentController::class, 'markRead'])->whereNumber('notification')->middleware('throttle:30,1')->name('notifications.read');
+        });
+}
+Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('admin/carousels')->name('admin.carousels.')->group(function () {
+    Route::get('/', [CarouselBuilderController::class, 'index'])->name('index');
+    Route::get('/create', [CarouselBuilderController::class, 'create'])->name('create');
+    Route::post('/', [CarouselBuilderController::class, 'store'])->middleware('throttle:20,1')->name('store');
+    Route::get('/{carousel}/edit', [CarouselBuilderController::class, 'edit'])->whereNumber('carousel')->name('edit');
+    Route::put('/{carousel}', [CarouselBuilderController::class, 'update'])->whereNumber('carousel')->middleware('throttle:20,1')->name('update');
+    Route::delete('/{carousel}', [CarouselBuilderController::class, 'destroy'])->whereNumber('carousel')->middleware('throttle:10,1')->name('destroy');
+});
+
+Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('admin/ai-assistant')->name('admin.ai-assistant.')->group(function () {
+    Route::get('/settings', [AiAdminSettingsController::class, 'index'])->name('settings');
+    Route::get('/models', [AiAdminSettingsController::class, 'models'])->middleware('throttle:10,1')->name('models');
+    Route::put('/settings', [AiAdminSettingsController::class, 'update'])->middleware('throttle:10,1')->name('settings.update');
 });

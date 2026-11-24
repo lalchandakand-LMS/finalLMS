@@ -8,6 +8,7 @@ use App\Models\Exam;
 use App\Models\ExamAttempt;
 use App\Models\Enrollment;
 use App\Models\QuestionBankQuestion;
+use App\Services\Gamification\GamificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -297,9 +298,9 @@ class ExamController extends Controller
         return redirect()->route('student.exams.show', $exam);
     }
 
-    public function submit(ExamAttempt $attempt, Request $request): RedirectResponse
+    public function submit(ExamAttempt $attempt, Request $request, GamificationService $gamification): RedirectResponse
     {
-        $score = DB::transaction(function () use ($attempt, $request): int {
+        $score = DB::transaction(function () use ($attempt, $request, $gamification): int {
             $lockedAttempt = ExamAttempt::query()->lockForUpdate()->findOrFail($attempt->id);
             abort_unless((int) $lockedAttempt->student_id === (int) Auth::id(), 403);
             abort_unless($lockedAttempt->status === 'in_progress', 403);
@@ -357,13 +358,16 @@ class ExamController extends Controller
                 );
             }
 
+            $finalScore = max(0, $totalScore);
             $lockedAttempt->update([
                 'submitted_at' => now(),
-                'score' => max(0, $totalScore),
+                'score' => $finalScore,
                 'status' => 'submitted',
             ]);
-
-            return max(0, $totalScore);
+            if ($finalScore >= (int) $exam->pass_marks) {
+                $gamification->award(Auth::user(), 'quiz_passed', 'exam_attempt', (int) $lockedAttempt->id, now());
+            }
+            return $finalScore;
         });
 
         return redirect()->route('student.exams.show', $attempt->exam)

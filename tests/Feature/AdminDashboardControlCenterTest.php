@@ -70,6 +70,27 @@ class AdminDashboardControlCenterTest extends TestCase
             ->assertSee('Users')
             ->assertSee('Courses')
             ->assertSee('Settings')
-            ->assertSee('View analytics');
+            ->assertSee('View analytics')
+            ->assertSee('Analytics overview')
+            ->assertSee('Course progress')
+            ->assertSee('Upcoming classes')
+            ->assertSee('Top students')
+            ->assertSee('Total batches');
+    }
+
+    public function test_admin_dashboard_searches_students_teachers_and_courses(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        User::factory()->create(['role' => 'student', 'name' => 'Searchable Student']);
+        User::factory()->create(['role' => 'teacher', 'name' => 'Searchable Teacher']);
+        Course::factory()->create(['title' => 'Searchable English Course']);
+
+        $this->actingAs($admin)
+            ->get(route('dashboard', ['search' => 'Searchable']))
+            ->assertOk()
+            ->assertSee('Search results')
+            ->assertSee('Searchable Student')
+            ->assertSee('Searchable Teacher')
+            ->assertSee('Searchable English Course');
     }
 }

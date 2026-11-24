@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Branch;
 use App\Models\DeviceSession;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
@@ -32,7 +33,8 @@ class AuthController extends Controller
             return redirect()->intended('/dashboard');
         }
 
-        return view('auth.register');
+        $branches = Branch::query()->where('is_active', true)->where('status', 'active')->where('registration_open', true)->orderBy('name')->get(['id', 'name']);
+        return view('auth.register', compact('branches'));
     }
 
     public function register(Request $request): RedirectResponse
@@ -42,6 +44,7 @@ class AuthController extends Controller
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'phone_number' => ['required', 'string', 'regex:/^\+[1-9][0-9]{7,14}$/', 'unique:users,phone_number'],
             'password' => ['required', 'confirmed', Password::defaults()],
+            'branch_id' => ['nullable', 'integer', \Illuminate\Validation\Rule::exists('branches', 'id')->where(fn ($query) => $query->where('is_active', true)->where('status', 'active')->where('registration_open', true))],
         ]);
 
         $user = User::create([
@@ -50,6 +53,7 @@ class AuthController extends Controller
             'phone_number' => $validated['phone_number'],
             'password' => $validated['password'],
             'role' => 'student',
+            'branch_id' => $validated['branch_id'] ?? null,
         ]);
 
         event(new Registered($user));

@@ -55,6 +55,42 @@
                     <p class="muted">{{ __('The teacher has not published this recording yet.') }}</p>
                 @endif
                 @if($canManage)
+                    @if($liveClass->ends_at->isPast() || $liveClass->status === 'completed')
+                        <details style="margin-top:14px;">
+                            <summary>{{ __('Record class attendance') }}</summary>
+                            <form method="POST" action="{{ route('live-classes.attendance.store', $liveClass) }}" style="margin-top:12px;">
+                                @csrf
+                                <p class="muted">{{ __('Mark each active student for this exact session. Only Present and Late records are billable in per-class fee mode.') }}</p>
+                                <div style="overflow-x:auto;">
+                                    <table style="width:100%;min-width:520px;">
+                                        <thead><tr><th style="text-align:left;padding:8px;">{{ __('Student') }}</th><th style="text-align:left;padding:8px;">{{ __('Attendance') }}</th><th style="text-align:left;padding:8px;">{{ __('Note') }}</th></tr></thead>
+                                        <tbody>
+                                        @forelse($liveClass->batch->enrollments as $enrollment)
+                                            @php $sessionAttendance = $liveClass->attendances->firstWhere('student_id', $enrollment->user_id); @endphp
+                                            <tr>
+                                                <td style="padding:8px;">{{ $enrollment->user?->name ?? 'Student #'.$enrollment->user_id }}</td>
+                                                <td style="padding:8px;">
+                                                    <input type="hidden" name="records[{{ $loop->index }}][student_id]" value="{{ $enrollment->user_id }}">
+                                                    <select name="records[{{ $loop->index }}][status]" required>
+                                                        @foreach(['present'=>'Present','late'=>'Late','absent'=>'Absent','excused'=>'Excused'] as $value=>$label)
+                                                            <option value="{{ $value }}" @selected(($sessionAttendance?->status ?? 'present') === $value)>{{ __($label) }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </td>
+                                                <td style="padding:8px;"><input name="records[{{ $loop->index }}][note]" maxlength="500" value="{{ $sessionAttendance?->note }}" placeholder="Optional note"></td>
+                                            </tr>
+                                        @empty
+                                            <tr><td colspan="3" style="padding:12px;">{{ __('No active students enrolled in this batch.') }}</td></tr>
+                                        @endforelse
+                                        </tbody>
+                                    </table>
+                                </div>
+                                @if($liveClass->batch->enrollments->isNotEmpty())
+                                    <button class="btn primary" type="submit">{{ __('Save session attendance') }}</button>
+                                @endif
+                            </form>
+                        </details>
+                    @endif
                     <details style="margin-top:14px;">
                         <summary>{{ __('Edit session') }}</summary>
                         <form method="POST" action="{{ route('live-classes.update', $liveClass) }}" class="grid grid-2" style="margin-top:12px;">

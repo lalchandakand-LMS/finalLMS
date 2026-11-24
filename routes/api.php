@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ApiConnectorWebhookController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CourseController;
 use App\Http\Controllers\Api\V1\InstructorAnalyticsController;
@@ -19,6 +20,8 @@ use App\Http\Controllers\Api\V1\StudentEngagementController;
 use App\Http\Controllers\Api\V1\StudentCartController;
 use App\Http\Controllers\Api\V1\StudentCartCheckoutController;
 use Illuminate\Support\Facades\Route;
+
+Route::post('/webhooks/api-connectors/{provider}', [ApiConnectorWebhookController::class, 'receive'])->where('provider', '[a-z][a-z0-9_]{1,79}')->middleware('throttle:120,1')->name('webhooks.api-connectors.receive');
 
 Route::prefix('v1')->group(function (): void {
     Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:5,1');

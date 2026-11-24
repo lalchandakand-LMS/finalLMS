@@ -12,11 +12,19 @@ class CourseContentProgress extends Model
         'course_curriculum_item_id',
         'last_viewed_at',
         'completed_at',
+        'progress_percent',
+        'watched_seconds',
+        'duration_seconds',
+        'last_position_seconds',
     ];
 
     protected $casts = [
         'last_viewed_at' => 'datetime',
         'completed_at' => 'datetime',
+        'progress_percent' => 'decimal:2',
+        'watched_seconds' => 'integer',
+        'duration_seconds' => 'integer',
+        'last_position_seconds' => 'integer',
     ];
 
     public function curriculumItem(): BelongsTo

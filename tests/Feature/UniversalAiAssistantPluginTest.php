@@ -701,13 +701,14 @@ class UniversalAiAssistantPluginTest extends TestCase
         $this->assertNull(AssistantSettings::roleForUser('unknown-role'));
     }
 
-    public function test_optional_plugin_catalogue_entry_is_not_installed_or_enabled_by_default(): void
+    public function test_universal_ai_assistant_is_a_core_native_module_enabled_by_default(): void
     {
         $catalog = app(ModuleRegistry::class)->catalog();
         $this->assertArrayHasKey('universal_ai_assistant', $catalog);
-        $this->assertFalse($catalog['universal_ai_assistant']['installed']);
-        $this->assertFalse($catalog['universal_ai_assistant']['enabled']);
-        $this->assertSame('not_installed', $catalog['universal_ai_assistant']['status']);
+        $this->assertTrue($catalog['universal_ai_assistant']['installed']);
+        $this->assertTrue($catalog['universal_ai_assistant']['enabled']);
+        $this->assertSame('enabled', $catalog['universal_ai_assistant']['status']);
+        $this->assertFalse($catalog['universal_ai_assistant']['managed_by_plugin_manager']);
 
         $manifest = json_decode(
             file_get_contents(base_path('plugins/aec/universal-ai-assistant/1.0.0/plugin.json')),
@@ -718,10 +719,13 @@ class UniversalAiAssistantPluginTest extends TestCase
         $this->assertContains('role-scoped-read-only-context', $manifest['capabilities']);
     }
 
-    public function test_optional_plugin_cannot_be_enabled_from_the_module_toggle(): void
+    public function test_core_native_ai_assistant_can_be_managed_by_the_module_toggle(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
-        app(ModuleRegistry::class)->setEnabled('universal_ai_assistant', true);
+        $registry = app(ModuleRegistry::class);
+        $registry->setEnabled('universal_ai_assistant', false);
+        $this->assertFalse($registry->isEnabled('universal_ai_assistant'));
+        $registry->setEnabled('universal_ai_assistant', true);
+        $this->assertTrue($registry->isEnabled('universal_ai_assistant'));
     }
 
 

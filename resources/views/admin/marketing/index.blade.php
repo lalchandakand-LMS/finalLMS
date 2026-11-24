@@ -12,6 +12,84 @@
         <a class="btn primary" href="{{ route('admin.settings.index') }}">{{ __('Configure integrations') }}</a>
     </div>
 
+    <section class="panel" style="margin-bottom:20px;">
+        <div class="page-header">
+            <div>
+                <h2 style="margin:0;">{{ __('Campaign performance snapshot') }}</h2>
+                <p class="muted" style="margin:6px 0 0;">{{ __('Live totals from existing LMS campaign, support and announcement records. These are not external ad-platform analytics.') }}</p>
+            </div>
+            <a class="btn secondary" href="{{ route('admin.dashboard-announcements.index') }}">{{ __('Manage in-app announcements') }}</a>
+        </div>
+        <div class="grid grid-4">
+            <article class="panel">
+                <span class="muted">{{ __('SMS campaigns') }}</span>
+                <strong style="display:block;font-size:1.8rem;">{{ number_format($broadcastMetrics['sms_campaigns']) }}</strong>
+                <small class="muted">{{ number_format($broadcastMetrics['sms_sent']) }} {{ __('sent') }} · {{ number_format($broadcastMetrics['sms_failed']) }} {{ __('failed') }}</small>
+            </article>
+            <article class="panel">
+                <span class="muted">{{ __('Meta boost plans') }}</span>
+                <strong style="display:block;font-size:1.8rem;">{{ number_format($broadcastMetrics['meta_plans']) }}</strong>
+                <small class="muted">{{ number_format($broadcastMetrics['meta_drafts']) }} {{ __('drafts') }}</small>
+            </article>
+            <article class="panel">
+                <span class="muted">{{ __('Reported Meta spend') }}</span>
+                <strong style="display:block;font-size:1.8rem;">৳{{ number_format($broadcastMetrics['meta_spend_bdt'], 2) }}</strong>
+                <small class="muted">{{ __('Manually reported; not live synced spend') }}</small>
+            </article>
+            <article class="panel">
+                <span class="muted">{{ __('Open support tickets') }}</span>
+                <strong style="display:block;font-size:1.8rem;">{{ number_format($broadcastMetrics['open_support_tickets']) }}</strong>
+                <small class="muted">{{ number_format($broadcastMetrics['active_announcements']) }} {{ __('active in-app announcements') }}</small>
+            </article>
+        </div>
+    </section>
+
+    <section class="panel" style="margin-bottom:20px;">
+        <div class="page-header" style="margin-bottom:12px;">
+            <div>
+                <h2 style="margin:0;">{{ __('Broadcasting, Marketing & Automation') }}</h2>
+                <p class="muted" style="margin:6px 0 0;">{{ __('One place to manage learner communications, campaigns, engagement and future channel integrations.') }}</p>
+            </div>
+            <span class="badge info">{{ __('Alom’s English Center') }}</span>
+        </div>
+        <div class="grid grid-3">
+            <article class="panel" style="background:var(--surface-muted, #f7f8fc);">
+                <h3 style="margin-top:0;">{{ __('SMS Broadcast') }}</h3>
+                <p class="muted">{{ __('Create queued SMS campaigns for verified learners who have explicitly opted in. Delivery status and recipient reports are available.') }}</p>
+                <span class="badge success">{{ __('Available') }}</span>
+                <div style="margin-top:12px;"><a class="btn primary" href="{{ route('admin.sms-campaigns.index') }}">{{ __('Open SMS Campaigns') }}</a></div>
+            </article>
+            <article class="panel" style="background:var(--surface-muted, #f7f8fc);">
+                <h3 style="margin-top:0;">{{ __('Meta Campaigns') }}</h3>
+                <p class="muted">{{ __('Plan and review Meta promotion activity. Live ad creation and publishing remain dependent on approved platform access.') }}</p>
+                <span class="badge success">{{ __('Planner available') }}</span>
+                <div style="margin-top:12px;"><a class="btn primary" href="{{ route('admin.marketing.boost-campaigns.index') }}">{{ __('Open Campaign Planner') }}</a></div>
+            </article>
+            <article class="panel" style="background:var(--surface-muted, #f7f8fc);">
+                <h3 style="margin-top:0;">{{ __('Support Inbox') }}</h3>
+                <p class="muted">{{ __('Review and respond to learner support tickets from the existing support workflow.') }}</p>
+                <span class="badge success">{{ __('Available') }}</span>
+                <div style="margin-top:12px;"><a class="btn primary" href="{{ route('admin.support-tickets.index') }}">{{ __('Open Support Inbox') }}</a></div>
+            </article>
+            <article class="panel" style="background:var(--surface-muted, #f7f8fc);">
+                <h3 style="margin-top:0;">{{ __('Email & Notices') }}</h3>
+                <p class="muted">{{ __('Use configured transactional email and the LMS notice board for operational communication. Bulk email marketing needs a dedicated consent-aware campaign queue.') }}</p>
+                <span class="badge warning">{{ __('Partially available') }}</span>
+            </article>
+            <article class="panel" style="background:var(--surface-muted, #f7f8fc);">
+                <h3 style="margin-top:0;">{{ __('Omnichannel Inbox') }}</h3>
+                <p class="muted">{{ __('A unified conversation timeline for WhatsApp, Messenger, Instagram, Telegram, website chat and email, with assignment and hand-off to staff.') }}</p>
+                <span class="badge warning">{{ __('Planned — not connected') }}</span>
+            </article>
+            <article class="panel" style="background:var(--surface-muted, #f7f8fc);">
+                <h3 style="margin-top:0;">{{ __('Workflow Automation & APIs') }}</h3>
+                <p class="muted">{{ __('Event-triggered journeys, approved webhooks, API keys, delivery retries and campaign analytics with human review for sensitive actions.') }}</p>
+                <span class="badge warning">{{ __('Planned') }}</span>
+            </article>
+        </div>
+        <p class="muted" style="margin:14px 0 0;">{{ __('Channel integrations are never shown as connected until credentials, webhook verification, consent checks and a successful health check are completed. Do not paste provider secrets into campaign messages or public settings.') }}</p>
+    </section>
+
     <div class="grid grid-2" style="margin-bottom:20px;">
         @foreach($integrations as $integration)
             <section class="panel">
@@ -77,4 +155,22 @@ MAIL_FROM_NAME="Your Academy"</pre>
         </ul>
         <p class="muted">{{ __('Pixel events are not sent before marketing consent. Configure IDs in Admin Settings → SEO and tracking.') }}</p>
     </section>
+
+    <section class="panel">
+        <h2 style="margin-top:0;">{{ __('Omnichannel connector status') }}</h2>
+        <p class="muted">{{ __('Only verified, active provider connections can be used for outbound messaging. Consent and provider policies still apply to every recipient.') }}</p>
+        <div class="grid grid-2">
+            @forelse($apiConnectors as $connector)
+                <article class="card">
+                    <strong>{{ $connector['label'] }}</strong>
+                    <p class="muted">{{ __(ucwords(str_replace('_',' ',$connector['status']))) }}</p>
+                    <small>{{ collect($connector['capabilities'])->filter()->keys()->map(fn ($item) => str_replace('_',' ',$item))->implode(', ') }}</small>
+                </article>
+            @empty
+                <p class="muted">{{ __('No messaging connectors are registered yet.') }}</p>
+            @endforelse
+        </div>
+        <a class="btn secondary" href="{{ route('admin.integrations.index') }}">{{ __('Manage API integrations') }}</a>
+    </section>
+
 @endsection

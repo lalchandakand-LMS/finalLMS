@@ -207,6 +207,10 @@
     @endif
 
 
+    @foreach(($websiteCarousels ?? collect()) as $carousel)
+        @include('modules.carousel.public.carousel', ['carousel' => $carousel])
+    @endforeach
+
     <section class="home-welcome">
         <div class="home-welcome__copy"><span class="home-eyebrow">{{ $siteName }}</span><h1>{{ $homeTitle }}</h1><p>{{ $homeSubtitle }}</p>
             <div class="home-actions"><a href="{{ route('courses.index') }}" class="home-button home-button--light">{{ $homePrimaryLabel }}</a>

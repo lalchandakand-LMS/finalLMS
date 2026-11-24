@@ -157,6 +157,10 @@
         .admin-shell .nav-links > a { display:none; }
         .admin-shell .nav-links > a[href*="dashboard"], .admin-shell .nav-links > a[href*="profile"] { display:inline-flex; }
         .admin-shell .nav-links > form { display:inline-flex; }
+        .admin-shell .nav-links > .admin-dashboard-search { flex:1 1 280px; max-width:440px; }
+        .admin-shell .nav-links > .admin-dashboard-search button { min-width:42px; }
+        @media(max-width:900px) { .admin-shell .nav-links > .admin-dashboard-search { min-width:180px !important; } }
+        @media(max-width:600px) { .admin-shell .nav-links > .admin-dashboard-search { min-width:130px !important; flex:1 1 130px; } .admin-shell .nav-links > .admin-dashboard-search input { min-width:80px !important; } }
         .admin-shell .container { max-width:none; margin-left:252px; padding:28px 30px 55px; }
         @media(max-width:900px) { .admin-sidebar { width:76px; padding:20px 9px; } .admin-sidebar-brand { justify-content:center; padding:4px 0 22px; } .admin-sidebar-brand strong,.admin-sidebar-label,.admin-sidebar a .nav-text,.admin-sidebar-footer { display:none; } .admin-sidebar a { justify-content:center; padding:12px 5px; } .admin-sidebar a span:first-child { width:auto; } .admin-shell .topbar,.admin-shell .container { margin-left:76px; } .admin-shell .nav { padding:12px 16px; } }
         @media(max-width:600px) { .admin-sidebar { width:60px; } .admin-shell .topbar,.admin-shell .container { margin-left:60px; } .admin-shell .container { padding:18px 12px 40px; } .admin-shell .nav { padding:10px; } .admin-shell .brand { font-size:1rem; } }
@@ -459,6 +463,11 @@
             <a class="{{ request()->routeIs('admin.verification-center.*') ? 'active' : '' }}" href="{{ route('admin.verification-center.index') }}"><span>✅</span><span class="nav-text">Verification center</span></a>
             <a class="{{ request()->routeIs('admin.security.sessions.*') ? 'active' : '' }}" href="{{ route('admin.security.sessions.index') }}"><span>🔐</span><span class="nav-text">Device sessions</span></a>
             <a href="{{ route('admin.batches.index') }}"><span>🗓️</span><span class="nav-text">Batches & branches</span></a>
+            <a class="{{ request()->routeIs('admin.admissions.*') ? 'active' : '' }}" href="{{ route('admin.admissions.index') }}"><span>📝</span><span class="nav-text">Admissions</span></a>
+            <a class="{{ request()->routeIs('admin.hr.*') ? 'active' : '' }}" href="{{ route('admin.hr.index') }}"><span>👥</span><span class="nav-text">HR & Payroll</span></a>
+            <a class="{{ request()->routeIs('admin.library.*') ? 'active' : '' }}" href="{{ route('admin.library.index') }}"><span>📚</span><span class="nav-text">Library</span></a>
+            <a class="{{ request()->routeIs('admin.referrals.*') ? 'active' : '' }}" href="{{ route('admin.referrals.index') }}"><span>🔗</span><span class="nav-text">Referral program</span></a>
+            <a class="{{ request()->routeIs('admin.ai-assistant.*') ? 'active' : '' }}" href="{{ route('admin.ai-assistant.index') }}"><span>🤖</span><span class="nav-text">AI Agent Center</span></a>
             <a href="{{ route('admin.contests.index') }}"><span>🎁</span><span class="nav-text">Quiz & lottery</span></a>
             @if(auth()->user()->isAdmin())
             <a class="{{ request()->routeIs('admin.ai-developer.*') ? 'active' : '' }}" href="{{ route('admin.ai-developer.index') }}"><span>🤖</span><span class="nav-text">AI Developer</span></a>
@@ -466,6 +475,7 @@
             <a href="{{ route('live-classes.index') }}"><span>🎥</span><span class="nav-text">Live classes</span></a>
             <div class="admin-sidebar-label">Finance</div>
             <a href="{{ route('admin.payments.index') }}"><span>💳</span><span class="nav-text">Payments</span></a>
+            <a class="{{ request()->routeIs('admin.payment-gateways.*') ? 'active' : '' }}" href="{{ route('admin.payment-gateways.index') }}"><span>🏦</span><span class="nav-text">Payment gateways</span></a>
             <a href="{{ route('admin.invoices.index') }}"><span>🧾</span><span class="nav-text">Invoices</span></a>
             <a href="{{ route('admin.refunds.index') }}"><span>↩️</span><span class="nav-text">Refunds</span></a>
             <a href="{{ route('admin.expenses.index') }}"><span>💸</span><span class="nav-text">Expenses & reports</span></a>
@@ -474,8 +484,10 @@
             <a class="{{ request()->routeIs('admin.plugins.*') ? 'active' : '' }}" href="{{ route('admin.plugins.index') }}"><span>🧰</span><span class="nav-text">Plugin Manager</span></a>
             <a class="{{ request()->routeIs('admin.themes.*') ? 'active' : '' }}" href="{{ route('admin.themes.index') }}"><span>🎨</span><span class="nav-text">Theme Manager</span></a>
             <a href="{{ route('admin.website-builder.index') }}"><span>🖥️</span><span class="nav-text">Website builder</span></a>
+            <a class="{{ request()->routeIs('admin.carousels.*') ? 'active' : '' }}" href="{{ route('admin.carousels.index') }}"><span>🎞️</span><span class="nav-text">Slider & Carousel Builder</span></a>
             <a href="{{ route('admin.website-pages.index') }}"><span>📄</span><span class="nav-text">Custom pages</span></a>
             <a href="{{ route('admin.media.index') }}"><span>🖼️</span><span class="nav-text">Media library</span></a>
+            <a class="{{ request()->routeIs('admin.integrations.*') ? 'active' : '' }}" href="{{ route('admin.integrations.index') }}"><span>🔌</span><span class="nav-text">API Integrations</span></a>
             <a href="{{ route('admin.storage.index') }}"><span>🗄️</span><span class="nav-text">Storage manager</span></a>
             <a href="{{ route('admin.news.index') }}"><span>📰</span><span class="nav-text">Blog & news</span></a>
             <a class="{{ request()->routeIs('admin.analytics.*') ? 'active' : '' }}" href="{{ route('admin.analytics.index') }}"><span>📈</span><span class="nav-text">Website analytics</span></a>
@@ -501,6 +513,13 @@
                     @endif
                     @if(auth()->user()->hasAdminPermission('branch.students'))
                         <a class="{{ request()->routeIs('admin.branch-workspace.students.*') ? 'active' : '' }}" href="{{ route('admin.branch-workspace.students.index') }}"><span>👥</span><span class="nav-text">Branch students</span></a>
+                    @endif
+                    @if(auth()->user()->hasAdminPermission('branch.students'))
+                        <a class="{{ request()->routeIs('branch.admissions.*') ? 'active' : '' }}" href="{{ route('branch.admissions.index') }}"><span>📝</span><span class="nav-text">Branch admissions</span></a>
+                    @endif
+                    @if(auth()->user()->hasAdminPermission('branch.batches'))
+                        <a class="{{ request()->routeIs('branch.hr.*') ? 'active' : '' }}" href="{{ route('branch.hr.index') }}"><span>👥</span><span class="nav-text">Branch HR & Payroll</span></a>
+                        <a class="{{ request()->routeIs('branch.library.*') ? 'active' : '' }}" href="{{ route('branch.library.index') }}"><span>📚</span><span class="nav-text">Branch Library</span></a>
                     @endif
                     @if($studentTrackingAvailable && \Illuminate\Support\Facades\Route::has('branch.student-tracking.index'))
                         <a class="{{ request()->routeIs('branch.student-tracking.*') ? 'active' : '' }}" href="{{ route('branch.student-tracking.index') }}"><span>📊</span><span class="nav-text">Student Tracking</span></a>
@@ -534,6 +553,11 @@
             @if($isAdminLayout)
             <div class="nav-links">
                 <button type="button" class="admin-toolbar-toggle" id="admin-sidebar-toggle" aria-label="Toggle admin navigation" aria-expanded="true">☰</button>
+                <form method="GET" action="{{ route('dashboard') }}" class="admin-dashboard-search" role="search" style="display:flex;align-items:center;gap:8px;min-width:min(42vw,420px);">
+                    <label for="admin-dashboard-search" class="sr-only">{{ __('Search students, courses, teachers') }}</label>
+                    <input id="admin-dashboard-search" type="search" name="search" value="{{ request('search') }}" minlength="2" placeholder="{{ __('Search students, courses, teachers...') }}" style="width:100%;min-width:150px;border:1px solid var(--border);border-radius:999px;padding:10px 15px;background:#fff;">
+                    <button type="submit" aria-label="{{ __('Search') }}" style="border-radius:999px;padding:10px 15px;">⌕</button>
+                </form>
                 <a class="admin-view-site" href="/" target="_blank" rel="noopener">{{ __("View site") }} ↗</a>
                 <form method="POST" action="{{ route('locale.update') }}" class="inline-form" style="display:inline-flex;gap:6px;align-items:center;">
                     @csrf
@@ -568,6 +592,14 @@
                     <a href="{{ route('live-classes.index') }}">{{ __('Live classes') }}</a>
                     @if(auth()->user()->isStudent())
                         <a href="{{ route('ebooks.orders') }}">My eBook library</a>
+                        <a href="{{ route('student.transcript') }}">{{ __('Academic transcript') }}</a>
+                        <a href="{{ route('student.gamification.index') }}">{{ __('Learning achievements') }}</a>
+                        <a href="{{ route('student.ai-assistant.index') }}">{{ __('AI Study Assistant') }}</a>
+                    @endif
+                    @if(auth()->user()->isTeacher())
+                        <a href="{{ route('teacher.hr.index') }}">{{ __('My HR & attendance') }}</a>
+                        <a href="{{ route('teacher.ai-assistant.index') }}">{{ __('AI Teaching Assistant') }}</a>
+                        <a href="{{ route('teacher.ai-assistant.drafts.index') }}">{{ __('AI teaching drafts') }}</a>
                     @endif
                     @if(auth()->user()->isAdmin())
                         <a href="{{ route('admin.batches.index') }}">Batches</a>

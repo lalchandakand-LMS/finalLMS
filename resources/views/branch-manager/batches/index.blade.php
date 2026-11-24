@@ -22,7 +22,9 @@
             <label>{{ __('Capacity') }}<input type="number" name="capacity" min="1" max="1000" required></label>
             <label>{{ __('Start') }}<input type="datetime-local" name="starts_at" required></label>
             <label>{{ __('End') }}<input type="datetime-local" name="ends_at" required></label>
-            <label>{{ __('Fee (BDT)') }}<input type="number" name="fee" min="0" step="0.01" value="0" required></label>
+            <label>{{ __('Fee mode') }}<select name="fee_calculation_mode"><option value="fixed">{{ __('Fixed course fee') }}</option><option value="per_class">{{ __('Per attended class') }}</option></select></label>
+            <label>{{ __('Per-class fee (BDT)') }}<input type="number" name="per_class_fee" min="0" step="0.01"></label>
+            <label>{{ __('Fixed fee (BDT)') }}<input type="number" name="fee" min="0" step="0.01" value="0" required></label>
             <div><button class="btn primary" type="submit">{{ __('Create batch') }}</button></div>
         </form>
     </section>
@@ -34,6 +36,14 @@
                 <p class="muted">{{ __('Course:') }} {{ $batch->course->title }}</p>
                 <p class="muted">{{ __('Teacher:') }} {{ $batch->teacher->name }}</p>
                 <p class="muted">{{ __('Students enrolled:') }} {{ $batch->enrollments_count }} / {{ $batch->capacity }}</p>
+                @if($batch->fee_calculation_mode === 'per_class')
+                    <form method="POST" action="{{ route('admin.branch-workspace.batches.attendance-fees.generate', $batch) }}" class="grid grid-2" style="margin:10px 0;">
+                        @csrf
+                        <label>{{ __('Billing month') }}<input type="month" name="billing_period" value="{{ now()->subMonth()->format('Y-m') }}" required></label>
+                        <label>{{ __('Invoice due date') }}<input type="date" name="due_date" value="{{ now()->addDays(7)->toDateString() }}"></label>
+                        <button class="btn primary" type="submit">{{ __('Generate class-fee invoices') }}</button>
+                    </form>
+                @endif
                 <p class="muted">{{ $batch->starts_at->format('d M Y H:i') }} – {{ $batch->ends_at->format('d M Y H:i') }} · Fee ৳{{ number_format((float) $batch->fee, 2) }}</p>
                 <details style="margin-top:12px;">
                     <summary>{{ __('Manage this batch') }}</summary>
@@ -44,7 +54,9 @@
                         <label>{{ __('Capacity') }}<input type="number" name="capacity" min="{{ $batch->enrollments_count }}" max="1000" value="{{ $batch->capacity }}" required></label>
                         <label>{{ __('Start') }}<input type="datetime-local" name="starts_at" value="{{ $batch->starts_at->format('Y-m-d\\TH:i') }}" required></label>
                         <label>{{ __('End') }}<input type="datetime-local" name="ends_at" value="{{ $batch->ends_at->format('Y-m-d\\TH:i') }}" required></label>
-                        <label>{{ __('Fee (BDT)') }}<input type="number" name="fee" min="0" step="0.01" value="{{ $batch->fee }}" required></label>
+                        <label>{{ __('Fee mode') }}<select name="fee_calculation_mode"><option value="fixed" @selected(($batch->fee_calculation_mode ?? 'fixed') === 'fixed')>{{ __('Fixed course fee') }}</option><option value="per_class" @selected($batch->fee_calculation_mode === 'per_class')>{{ __('Per attended class') }}</option></select></label>
+                        <label>{{ __('Per-class fee (BDT)') }}<input type="number" name="per_class_fee" min="0" step="0.01" value="{{ $batch->per_class_fee }}"></label>
+                        <label>{{ __('Fixed fee (BDT)') }}<input type="number" name="fee" min="0" step="0.01" value="{{ $batch->fee }}" required></label>
                         <label>{{ __('Status') }}<select name="status"><option value="open" @selected($batch->status === 'open')>{{ __('Open') }}</option><option value="closed" @selected($batch->status === 'closed')>{{ __('Closed') }}</option><option value="completed" @selected($batch->status === 'completed')>{{ __('Completed') }}</option></select></label>
                         <div><button class="btn primary" type="submit">{{ __('Save batch') }}</button></div>
                     </form>

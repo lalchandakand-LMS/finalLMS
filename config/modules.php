@@ -55,7 +55,7 @@ return [
     'page_builder' => ['name' => 'Page & Landing Builder', 'description' => 'Reusable page sections and publishing.', 'type' => 'module', 'dependencies' => ['core', 'website_cms', 'media_library', 'academic_levels']],
     'ai_builder' => ['name' => 'AI Builder', 'description' => 'Draft website, course, quiz, notice and content assets for review.', 'type' => 'module', 'dependencies' => ['core', 'identity']],
     'ai_developer' => ['name' => 'AI Developer', 'description' => 'Permission-scoped diagnostics and development assistance.', 'type' => 'module', 'dependencies' => ['core', 'identity']],
-    'universal_ai_assistant' => ['name' => 'Universal AI Assistant (Advanced Add-on)', 'description' => 'Optional role-aware assistant. Install and activate its signed package from Plugin Manager.', 'type' => 'module', 'plugin_key' => 'aec.universal-ai-assistant', 'dependencies' => ['core', 'identity']],
+    'universal_ai_assistant' => ['name' => 'Universal AI Assistant', 'description' => 'Core-native role-aware AI agents with scoped context, usage controls and auditable human-approved actions.', 'type' => 'module', 'dependencies' => ['core', 'identity']],
     'otp_verification' => ['name' => 'OTP Verification', 'description' => 'Provider-neutral OTP workflow, expiry and throttling.', 'type' => 'module', 'dependencies' => ['core', 'identity', 'communications']],
     'sms_otp' => ['name' => 'SMS OTP Adapter', 'description' => 'Deliver OTP through an enabled SMS provider.', 'type' => 'module', 'dependencies' => ['core', 'otp_verification', 'sms']],
     'email_otp' => ['name' => 'Email OTP Adapter', 'description' => 'Deliver OTP through enabled email providers.', 'type' => 'module', 'dependencies' => ['core', 'otp_verification', 'email']],
