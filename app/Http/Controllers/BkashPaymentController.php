@@ -248,7 +248,7 @@ class BkashPaymentController extends Controller
         }
 
         // The browser callback query string is not proof of payment success or failure.
-        // Always ask bKash for the authoritative server-side transaction status before
+        // Always ask the selected provider for authoritative server-side transaction status before
         // changing the local payment state. Only attempt execute on a success callback;
         // queryPayment remains mandatory in either case.
         try {
@@ -314,7 +314,7 @@ class BkashPaymentController extends Controller
                         'paymentID' => $verifiedPaymentId,
                         'trxID' => $transactionId,
                         'amount' => $verifiedAmount,
-                        'currency' => $verified['currency'] ?? null,
+                        'currency' => $verifiedCurrency,
                         'merchantInvoiceNumber' => $invoice,
                     ],
                     'received_at' => now(),
@@ -326,7 +326,7 @@ class BkashPaymentController extends Controller
                 throw new \RuntimeException('This provider transaction has already been recorded in the invoice ledger.');
             }
 
-            $result = DB::transaction(function () use ($payment, $transactionId): string {
+            $result = DB::transaction(function () use ($payment, $transactionId, $supportedCurrencies): string {
                 $lockedPayment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
 
                 if ($lockedPayment->status === 'approved') {
@@ -491,7 +491,7 @@ class BkashPaymentController extends Controller
                         $lockedPayment->update([
                             'status' => 'rejected',
                             'gateway_transaction_id' => $transactionId,
-                            'admin_note' => 'bKash payment succeeded, but the batch has no remaining seat. Manual refund or reassignment is required.',
+                            'admin_note' => 'Payment succeeded, but the batch has no remaining seat. Manual refund or reassignment is required.',
                         ]);
 
                         return 'full';
@@ -519,7 +519,7 @@ class BkashPaymentController extends Controller
                 ['correlation_id' => hash('sha256', $eventKey)],
                 [
                     'payment_id' => $payment->id,
-                    'provider' => 'bkash',
+                    'provider' => $provider,
                     'event' => 'gateway_callback_processed',
                     'source' => $provider.'_callback',
                     'before_state' => ['status' => 'pending'],
@@ -543,9 +543,9 @@ class BkashPaymentController extends Controller
             if ($payment->order_id) {
                 return match ($result) {
                     'ebook_approved', 'already' => redirect()->route('ebooks.orders')
-                        ->with('success', __('bKash payment verified. Your eBook is now available in your library.')),
+                        ->with('success', __('Payment verified. Your eBook is now available in your library.')),
                     'ebook_unavailable' => redirect()->route('ebooks.orders')
-                        ->with('error', __('bKash payment succeeded, but the eBook could not be fulfilled. The academy must arrange a manual refund.')),
+                        ->with('error', __('Payment succeeded, but the eBook could not be fulfilled. The academy must arrange a manual refund.')),
                     default => redirect()->route('ebooks.orders')
                         ->with('error', __('This eBook payment is no longer eligible for automatic fulfillment. Please contact the academy.')),
                 };
@@ -553,7 +553,7 @@ class BkashPaymentController extends Controller
 
             if ($result === 'full') {
                 return redirect()->route('courses.show', $payment->course)
-                    ->with('error', 'Your bKash payment succeeded, but the selected batch is full. Please contact the academy for a refund or another batch.');
+                    ->with('error', 'Your payment succeeded, but the selected batch is full. Please contact the academy for a refund or another batch.');
             }
 
             if ($result === 'closed') {
@@ -562,7 +562,7 @@ class BkashPaymentController extends Controller
             }
 
             return redirect()->route('courses.show', $payment->course)
-                ->with('success', 'bKash payment verified. Your course enrollment is now active.');
+                ->with('success', 'Payment verified. Your course enrollment is now active.');
         } catch (Throwable $exception) {
             report($exception);
 
@@ -581,7 +581,7 @@ class BkashPaymentController extends Controller
             }
 
             return $payment->order_id
-                ? redirect()->route('ebooks.orders')->with('warning', __('Your bKash payment is awaiting server-side verification. Do not pay again; contact the academy if this message remains.'))
+                ? redirect()->route('ebooks.orders')->with('warning', __('Your payment is awaiting server-side verification. Do not pay again; contact the academy if this message remains.'))
                 : redirect()->route('courses.show', $payment->course)->with('warning', __('Your bKash payment is awaiting server-side verification. Do not pay again; contact the academy if this message remains.'));
         }
     }
