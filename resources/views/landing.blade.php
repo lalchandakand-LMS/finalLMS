@@ -77,8 +77,8 @@
         .home-carousel__viewport { position:relative; overflow:hidden; height:var(--carousel-height); border-radius:24px; background:#10213d; outline-offset:4px; }
         .home-carousel__track { display:flex; height:100%; transition:transform .65s cubic-bezier(.22,.61,.36,1); will-change:transform; }
         .home-carousel__slide { position:relative; isolation:isolate; flex:0 0 100%; min-width:0; height:100%; display:flex; align-items:center; overflow:hidden; color:#fff; }
-        .home-carousel__slide img { position:absolute; inset:0; z-index:-2; width:100%; height:100%; object-fit:cover; }
-        .home-carousel__shade { position:absolute; inset:0; z-index:-1; background:linear-gradient(90deg,rgba(5,15,35,var(--carousel-overlay)),rgba(5,15,35,calc(var(--carousel-overlay) * .7)) 58%,rgba(5,15,35,.08)); }
+        .home-carousel__slide img { position:absolute; inset:0; z-index:-2; width:100%; height:100%; object-fit:cover; object-position:var(--desktop-image-position,50% 50%); }
+        .home-carousel__shade { position:absolute; inset:0; z-index:-1; background:linear-gradient(90deg,color-mix(in srgb,var(--slide-overlay,#050f23) calc(var(--carousel-overlay) * 100%),transparent),color-mix(in srgb,var(--slide-overlay,#050f23) calc(var(--carousel-overlay) * 70%),transparent) 58%,transparent); }
          .home-carousel__content { width:min(760px,85%); padding:clamp(24px,6vw,72px); }
         .home-carousel__content--center { margin-inline:auto; text-align:center; }
         .home-carousel__content--right { margin-left:auto; text-align:right; }
@@ -103,7 +103,7 @@
         .home-carousel__dots { display:flex; justify-content:center; align-items:center; gap:9px; margin-top:14px; }
         .home-carousel__dots button { width:9px; height:9px; padding:0; border:0; border-radius:50px; background:var(--primary); opacity:.35; cursor:pointer; transition:width .2s,opacity .2s; }
         .home-carousel__dots button[aria-current="true"] { width:26px; opacity:1; }
-        @media(max-width:700px) { .home-carousel__viewport { height:var(--carousel-mobile-height); border-radius:16px; } .home-carousel__content { width:100%; padding:24px; } .home-carousel__arrow { width:36px;height:36px;font-size:25px; } .home-carousel__arrow--prev { left:10px; } .home-carousel__arrow--next { right:10px; } }
+        @media(max-width:700px) { .home-carousel__viewport { height:var(--carousel-mobile-height); border-radius:16px; } .home-carousel__slide img { object-position:var(--mobile-image-position,var(--desktop-image-position,50% 50%)); } .home-carousel__content { width:100%; padding:24px; } .home-carousel__arrow { width:36px;height:36px;font-size:25px; } .home-carousel__arrow--prev { left:10px; } .home-carousel__arrow--next { right:10px; } }
         @media(prefers-reduced-motion:reduce) { .home-carousel__track,.home-carousel__dots button { transition:none; } }
 
         .home-welcome{display:grid;grid-template-columns:1.1fr .9fr;align-items:center;min-height:330px;margin-bottom:26px;padding:clamp(30px,5vw,66px);overflow:hidden;border-radius:24px;color:#fff;background:radial-gradient(circle at 78% 20%,#1b8eaa,transparent 34%),linear-gradient(120deg,#062f43,#07566b 58%,#073d5a);box-shadow:0 20px 45px #082b4430}.home-welcome__copy{position:relative;z-index:2}.home-eyebrow,.home-section-kicker,.home-heading-kicker{color:#8be5d1;font-size:.76rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.home-welcome h1{margin:14px 0;color:#fff;font-size:clamp(2.2rem,4.8vw,4.4rem);line-height:1.04}.home-welcome p{color:#d7edf3;line-height:1.75}.home-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:26px}.home-button{display:inline-flex;min-height:46px;align-items:center;justify-content:center;padding:12px 20px;border-radius:12px;font-weight:800;text-decoration:none}.home-button--light{color:#07384b;background:#fff}.home-button--outline{color:#fff;border:1px solid #ffffff70;background:#ffffff12}.home-button--primary{color:#fff;background:#087dbb}
@@ -195,8 +195,8 @@
                 <div class="home-carousel__track" data-carousel-track>
                     @foreach($homeSlides as $index => $slide)
                         <article class="home-carousel__slide" data-carousel-slide aria-label="{{ $index + 1 }} {{ __('of') }} {{ $homeSlides->count() }}" aria-roledescription="slide" aria-hidden="{{ $index === 0 ? 'false' : 'true' }}" class="{{ $index === 0 ? 'is-active' : '' }}">
-                            <picture><source media="(max-width: 700px)" srcset="{{ $slide['mobile_asset']->url }}"><img src="{{ $slide['asset']->url }}" alt="{{ $slide['asset']->alt_text ?: $slide['title'] }}" loading="{{ $index === 0 ? 'eager' : 'lazy' }}" style="object-position:{{ $slide['image_position_x'] }}% {{ $slide['image_position_y'] }}%;"></picture>
-                            <div class="home-carousel__shade"></div>
+                            <picture><source media="(max-width: 700px)" srcset="{{ $slide['mobile_asset']->url }}"><img src="{{ $slide['asset']->url }}" alt="{{ $slide['asset']->alt_text ?: $slide['title'] }}" loading="{{ $index === 0 ? 'eager' : 'lazy' }}" style="--desktop-image-position:{{ $slide['image_position_x'] }}% {{ $slide['image_position_y'] }}%;--mobile-image-position:{{ $slide['mobile_position_x'] }}% {{ $slide['mobile_position_y'] }}%;"></picture>
+                            <div class="home-carousel__shade" style="--slide-overlay:{{ $slide['overlay_color'] }};"></div>
                             <div class="home-carousel__content home-carousel__content--{{ $slide['content_alignment'] }}">
                                 @php
                                     $hasSlideTitle = $slide['title'] !== '';
