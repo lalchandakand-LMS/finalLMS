@@ -86,6 +86,7 @@ use App\Http\Controllers\CourseContentController;
 use App\Http\Controllers\CommentController;
 use App\Modules\Admissions\AdmissionController;
 use App\Modules\Hr\HrController;
+use App\Modules\Hr\HrReportController;
 use App\Modules\Library\LibraryController;
 use App\Modules\Referral\ReferralIncomeController;
 use App\Modules\Ai\AssistantController;
