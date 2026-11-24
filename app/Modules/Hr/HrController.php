@@ -386,6 +386,27 @@ final class HrController extends Controller
         return back()->with('success', 'Leave request '.$record->status.'.');
     }
 
+    public function showPayrollSlip(Request $request, int $payroll): View
+    {
+        $actor = $request->user();
+        abort_unless($actor, 403);
+        $record = StaffPayroll::query()->with('staff')->findOrFail($payroll);
+
+        if ($actor->isAdmin()) {
+            // Central administrators may view all payroll slips.
+        } elseif ($actor->isBranchManager()) {
+            $this->assertBranchAssigned($actor);
+            $this->assertRecordBranch($actor, $record->branch_id);
+        } elseif ($actor->isTeacher()) {
+            $profile = StaffProfile::query()->where('user_id', $actor->id)->first();
+            abort_unless($profile && (int) $profile->id === (int) $record->staff_profile_id, 404);
+        } else {
+            abort(403);
+        }
+
+        $this->audit($request, 'hr.payroll_slip_viewed', 'Viewed payroll slip #'.$record->id);
+        return view('modules.hr.payroll-slip', ['payroll' => $record]);
+    }
     public function recordPayroll(Request $request): RedirectResponse
     {
         $actor = $request->user();
