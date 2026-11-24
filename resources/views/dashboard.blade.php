@@ -100,7 +100,63 @@
             @media(max-width:900px) { .aec-insight-grid,.aec-dashboard-lower { grid-template-columns:1fr; } }\n            @media(max-width:760px) { .aec-live-class { grid-template-columns:1fr; } .aec-live-class img { height:190px; } .aec-content-grid { grid-template-columns:1fr; } .aec-hero-mark { width:82px;height:82px;font-size:2.7rem;border-radius:23px; } }
             @media(max-width:520px) { .aec-hero { min-height:0; padding:22px; } .aec-hero-mark { display:none; } .aec-stats { gap:9px; } .aec-stat { padding:14px; } .aec-stat-icon { width:36px;height:36px; } .aec-module-list { grid-template-columns:1fr; } .aec-panel { padding:16px; } }
             @media(prefers-reduced-motion:reduce) { .aec-action { transition:none; } .aec-action:hover { transform:none; } }
-        </style>
+        
+/* Reference-aligned AEC admin dashboard: preserve existing widgets and controls. */
+.aec-admin { background:radial-gradient(circle at 5% 0%,#e6edff 0,transparent 34%),linear-gradient(145deg,#f7f9ff,#edf2ff 58%,#f8f5ff); }
+.aec-admin-shell { gap:15px; }
+.aec-hero { min-height:184px; padding:clamp(22px,3vw,38px); border:1px solid #ffffff45; border-radius:22px; background-color:#092c78; background-image:radial-gradient(circle at 78% 22%,#18b8ff70,transparent 26%),linear-gradient(110deg,#061b58 0%,#0649a9 54%,#061f69 100%); }
+.aec-hero:before { content:""; position:absolute; inset:0; z-index:-1; opacity:.22; background:repeating-linear-gradient(125deg,transparent 0 54px,#ffffff 55px 56px,transparent 57px 110px); pointer-events:none; }
+.aec-hero h1 { text-shadow:0 2px 16px #001b55a6; }
+.aec-hero-mark { width:100px;height:100px;border-radius:26px;background:linear-gradient(145deg,#ffffff35,#ffffff0c);box-shadow:0 12px 35px #00194c55; }
+.aec-stats { gap:13px; }
+.aec-stat { min-height:112px; border:1px solid #ffffffb8; color:#fff; box-shadow:0 10px 24px #163b8420; }
+.aec-stat.blue { background:linear-gradient(125deg,#0757d8,#168bff); }
+.aec-stat.green { background:linear-gradient(125deg,#00965d,#12c98a); }
+.aec-stat.purple { background:linear-gradient(125deg,#6714d9,#a23bfa); }
+.aec-stat.gold { background:linear-gradient(125deg,#ed7900,#ffb21c); }
+.aec-stat-top,.aec-stat strong,.aec-stat small { color:#fff !important; }
+.aec-stat-icon { color:#fff;background:#ffffff26 !important;border:1px solid #ffffff40;border-radius:50%;width:48px;height:48px; }
+.aec-stat:after { border-color:#ffffff20; }
+.aec-panel { border-color:#dce6fb; box-shadow:0 8px 24px #244b9512,0 1px 3px #244b950d; }
+.aec-panel h3 { color:#102b63; }
+.aec-panel-head { margin-bottom:15px; }
+.aec-pill { background:#e9f0ff;color:#124fba; }
+.aec-chart-wrap svg { min-height:190px; }
+.aec-progress-ring { box-shadow:inset 0 0 0 1px #ffffff80,0 8px 22px #0b5b8c1c; }
+.aec-live-class { padding:0; }
+.aec-live-class img { min-height:155px; box-shadow:0 6px 16px #061d4b20; }
+.aec-action { min-height:105px; }
+.aec-action:nth-child(4n+1) .aec-action-icon { color:#075de1;background:#e5efff; }
+.aec-action:nth-child(4n+2) .aec-action-icon { color:#07865b;background:#ddf9ec; }
+.aec-action:nth-child(4n+3) .aec-action-icon { color:#7522d5;background:#f0e5ff; }
+.aec-action:nth-child(4n) .aec-action-icon { color:#d56a00;background:#fff0d8; }
+.aec-dashboard-lower { grid-template-columns:1.12fr 1fr 1fr; }
+.aec-ranking-row { min-height:62px; }
+.aec-admin .aec-snapshot-row { border-color:#e9eef8; }
+.aec-admin .aec-module:hover { transform:translateY(-1px); }
+@media(max-width:1100px){.aec-dashboard-lower{grid-template-columns:repeat(2,minmax(0,1fr))}.aec-dashboard-lower>.aec-panel:last-child{grid-column:1/-1}}
+@media(max-width:760px){.aec-hero{min-height:160px}.aec-hero-copy{max-width:100%}.aec-dashboard-lower{grid-template-columns:1fr}.aec-dashboard-lower>.aec-panel:last-child{grid-column:auto}.aec-admin{padding:0;border-radius:14px}}
+@media(max-width:520px){.aec-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.aec-stat{min-height:102px;padding:12px}.aec-stat strong{font-size:1.55rem}.aec-stat-top{align-items:flex-start}.aec-stat-icon{width:35px;height:35px;font-size:1rem}.aec-hero{padding:20px}.aec-hero h1{font-size:1.55rem}.aec-chart-wrap{overflow-x:auto}.aec-chart-wrap svg{min-width:480px}}
+@media(prefers-reduced-motion:reduce){.aec-admin *{scroll-behavior:auto!important;transition:none!important}}
+
+
+/* Match the reference dashboard's three-column insights and four-card operations row. */
+.aec-insight-grid{grid-template-columns:minmax(0,1.55fr) minmax(260px,.95fr) minmax(250px,.9fr);align-items:stretch}
+.aec-insight-grid>.aec-panel{min-width:0}
+.aec-live-class{display:flex;flex-direction:column;gap:12px;min-width:0;overflow:hidden}
+.aec-live-class img{width:100%;height:155px;object-fit:cover;border-radius:14px}
+.aec-live-class>div[aria-hidden="true"]{height:155px!important}
+.aec-content-grid{grid-template-columns:minmax(0,1fr)}
+.aec-dashboard-lower{grid-template-columns:1.2fr 1fr 1fr 1.05fr;align-items:stretch}
+.aec-dashboard-lower>.aec-panel{min-width:0}
+.aec-dashboard-lower .aec-action-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.aec-dashboard-lower .aec-action{min-height:86px;padding:10px}
+.aec-dashboard-lower .aec-action strong{font-size:.78rem}
+.aec-dashboard-lower .aec-action small{font-size:.68rem}
+@media(max-width:1250px){.aec-insight-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.aec-insight-grid>.aec-live-class{grid-column:1/-1;display:grid;grid-template-columns:minmax(180px,.8fr) minmax(0,1.2fr);align-items:center}.aec-dashboard-lower{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.aec-insight-grid,.aec-dashboard-lower{grid-template-columns:1fr}.aec-insight-grid>.aec-live-class{grid-column:auto;display:flex}.aec-dashboard-lower .aec-action-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+</style>
 
         <div class="aec-admin aec-admin-shell" data-theme="{{ $dashboardAppearance['theme_mode'] }}" data-shadow="{{ $dashboardAppearance['card_shadow'] }}" style="--aec-radius:{{ $dashboardAppearance['card_radius'] }}px;">
             @if($dashboardAppearance['show_hero'])
@@ -214,7 +270,7 @@
                     </div>
                     <a class="btn primary" style="margin-top:15px" href="{{ route('admin.analytics.index') }}">{{ __('View details') }} →</a>
                 </section>
-            </div>
+            
 
             @if($dashboardAppearance['show_live_class'] && $nextLiveClass)
                 <section class="aec-panel aec-live-class" style="order:{{ $dashboardAppearance['order_live_class'] }}">
@@ -232,24 +288,9 @@
                     </div>
                 </section>
             @endif
+            </div>
 
             <div class="aec-content-grid" style="order:{{ min($dashboardAppearance['order_quick_actions'], $dashboardAppearance['order_system_snapshot']) }}">
-                @if($dashboardAppearance['show_quick_actions'])
-                <section class="aec-panel" style="order:{{ $dashboardAppearance['order_quick_actions'] }}">
-                    <div class="aec-panel-head"><h3>⚡ {{ __('Quick actions') }}</h3><span class="aec-pill">{{ __('Frequently used') }}</span></div>
-                    <div class="aec-action-grid">
-                        <a class="aec-action" href="{{ route('admin.users.index') }}"><span class="aec-action-icon">👥</span><strong>{{ __('Add / manage students') }}</strong><small>{{ __('Student and staff accounts') }}</small></a>
-                        <a class="aec-action" href="{{ route('admin.courses.create') }}"><span class="aec-action-icon">📘</span><strong>{{ __('Create course') }}</strong><small>{{ __('Build a learning course') }}</small></a>
-                        <a class="aec-action" href="{{ route('admin.batches.index') }}"><span class="aec-action-icon">🗓️</span><strong>{{ __('Manage batches') }}</strong><small>{{ __('Class groups and schedules') }}</small></a>
-                        <a class="aec-action" href="{{ route('admin.payments.index') }}"><span class="aec-action-icon">💳</span><strong>{{ __('Review payments') }}</strong><small>{{ __('Payment records and review') }}</small></a>
-                        <a class="aec-action" href="{{ route('live-classes.index') }}"><span class="aec-action-icon">🎥</span><strong>{{ __('Live classes') }}</strong><small>{{ __('Open online class area') }}</small></a>
-                        <a class="aec-action" href="{{ route('admin.invoices.index') }}"><span class="aec-action-icon">🧾</span><strong>{{ __('Invoices & fees') }}</strong><small>{{ __('Manage fee records') }}</small></a>
-                        <a class="aec-action" href="{{ route('admin.backups.index') }}"><span class="aec-action-icon">💾</span><strong>{{ __('Create backup') }}</strong><small>{{ __('Protect LMS data') }}</small></a>
-                        <a class="aec-action" href="{{ route('admin.analytics.index') }}"><span class="aec-action-icon">📊</span><strong>{{ __('View analytics') }}</strong><small>{{ __('Website and course insights') }}</small></a>
-                    </div>
-                </section>
-                @endif
-
                 @if($dashboardAppearance['show_system_snapshot'])
                 <section class="aec-panel" style="order:{{ $dashboardAppearance['order_system_snapshot'] }}">
                     <h3>🏆 {{ __('System snapshot') }}</h3>
@@ -288,6 +329,17 @@
             @endif
 
             <div class="aec-dashboard-lower" style="order:6">
+                <section class="aec-panel" aria-labelledby="aec-recent-activity-title">
+                    <div class="aec-panel-head"><h3 id="aec-recent-activity-title">🕘 {{ __('Recent activity') }}</h3><a class="aec-pill" href="{{ route('admin.activity-logs.index') }}">{{ __('View activity log') }} →</a></div>
+                    @forelse($recentActivity as $activity)
+                        <div class="aec-snapshot-row">
+                            <span><strong>{{ $activity->user?->name ?? __('System') }}</strong> · {{ $activity->description }}</span>
+                            <time datetime="{{ $activity->created_at?->toIso8601String() }}" style="flex:0 0 auto;color:var(--aec-muted);font-size:.75rem">{{ $activity->created_at?->diffForHumans() }}</time>
+                        </div>
+                    @empty
+                        <p class="muted" style="margin:0">{{ __('No activity has been recorded yet.') }}</p>
+                    @endforelse
+                </section>
                 <section class="aec-panel">
                     <div class="aec-panel-head"><h3>🗓️ {{ __('Upcoming classes') }}</h3><a class="aec-pill" href="{{ route('live-classes.index') }}">{{ __('View calendar') }} →</a></div>
                     @forelse($upcomingLiveClasses as $class)
@@ -314,29 +366,21 @@
                 </section>
                 @if($dashboardAppearance['show_quick_actions'])
                 <section class="aec-panel">
-                    <div class="aec-panel-head"><h3>⚡ {{ __('Quick actions') }}</h3><span class="aec-pill">{{ __('Shortcuts') }}</span></div>
-                    <div class="aec-module-list" style="grid-template-columns:repeat(2,minmax(0,1fr))">
-                        <a class="aec-module" href="{{ route('admin.users.index') }}"><span>👥</span>{{ __('Add student') }}</a>
-                        <a class="aec-module" href="{{ route('admin.users.index') }}"><span>👨‍🏫</span>{{ __('Add teacher') }}</a>
-                        <a class="aec-module" href="{{ route('admin.batches.index') }}"><span>🗓️</span>{{ __('Create batch') }}</a>
-                        <a class="aec-module" href="{{ route('admin.courses.create') }}"><span>📚</span>{{ __('Add course') }}</a>
-                        <a class="aec-module" href="{{ route('live-classes.index') }}"><span>🎥</span>{{ __('Live classes') }}</a>
-                        <a class="aec-module" href="{{ route('admin.analytics.index') }}"><span>📊</span>{{ __('Analytics') }}</a>
+                    <div class="aec-panel-head"><h3>🚀 {{ __('Quick actions') }}</h3><span class="aec-pill">{{ __('Shortcuts') }}</span></div>
+                    <div class="aec-action-grid">
+                        <a class="aec-action" href="{{ route('admin.users.index') }}"><span class="aec-action-icon">👥</span><strong>{{ __('Add student') }}</strong><small>{{ __('Manage student accounts') }}</small></a>
+                        <a class="aec-action" href="{{ route('admin.users.index') }}"><span class="aec-action-icon">👨‍🏫</span><strong>{{ __('Add teacher') }}</strong><small>{{ __('Manage teacher accounts') }}</small></a>
+                        <a class="aec-action" href="{{ route('admin.batches.index') }}"><span class="aec-action-icon">🗓️</span><strong>{{ __('Create / manage batch') }}</strong><small>{{ __('Class groups and schedules') }}</small></a>
+                        <a class="aec-action" href="{{ route('admin.courses.create') }}"><span class="aec-action-icon">📚</span><strong>{{ __('Add course') }}</strong><small>{{ __('Build a learning course') }}</small></a>
+                        <a class="aec-action" href="{{ route('admin.payments.index') }}"><span class="aec-action-icon">💳</span><strong>{{ __('Review payments') }}</strong><small>{{ __('Payment records and review') }}</small></a>
+                        <a class="aec-action" href="{{ route('admin.invoices.index') }}"><span class="aec-action-icon">🧾</span><strong>{{ __('Invoices & fees') }}</strong><small>{{ __('Manage fee records') }}</small></a>
+                        <a class="aec-action" href="{{ route('live-classes.index') }}"><span class="aec-action-icon">🎥</span><strong>{{ __('Live classes') }}</strong><small>{{ __('Open online class area') }}</small></a>
+                        <a class="aec-action" href="{{ route('admin.backups.index') }}"><span class="aec-action-icon">💾</span><strong>{{ __('Create backup') }}</strong><small>{{ __('Protect LMS data') }}</small></a>
+                        <a class="aec-action" href="{{ route('admin.analytics.index') }}"><span class="aec-action-icon">📊</span><strong>{{ __('View analytics') }}</strong><small>{{ __('Website and course insights') }}</small></a>
                     </div>
                 </section>
                 @endif
             </div>
-            <section class="aec-panel" aria-labelledby="aec-recent-activity-title" style="order:7">
-                <div class="aec-panel-head"><h3 id="aec-recent-activity-title">🕘 {{ __('Recent activity') }}</h3><a class="aec-pill" href="{{ route('admin.activity-logs.index') }}">{{ __('View activity log') }} →</a></div>
-                @forelse($recentActivity as $activity)
-                    <div class="aec-snapshot-row">
-                        <span><strong>{{ $activity->user?->name ?? __('System') }}</strong> · {{ $activity->description }}</span>
-                        <time datetime="{{ $activity->created_at?->toIso8601String() }}" style="flex:0 0 auto;color:var(--aec-muted);font-size:.75rem">{{ $activity->created_at?->diffForHumans() }}</time>
-                    </div>
-                @empty
-                    <p class="muted" style="margin:0">{{ __('No activity has been recorded yet.') }}</p>
-                @endforelse
-            </section>
         </div>
     @else
         <div class="page-header">
