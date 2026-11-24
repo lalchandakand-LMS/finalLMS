@@ -1,5 +1,7 @@
-<x-app-layout>
-    <div class="mx-auto max-w-7xl space-y-6 p-4 sm:p-6">
+@extends('layouts.app')
+
+@section('content')
+<div class="mx-auto max-w-7xl space-y-6 p-4 sm:p-6">
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div><h1 class="text-2xl font-bold">Carousel Builder</h1><p class="text-sm text-gray-600">Create reusable, responsive website carousels from curated items, courses, teachers or approved student testimonials.</p></div>
             <a href="{{ route('admin.carousels.create') }}" class="rounded-lg bg-blue-700 px-4 py-2 font-semibold text-white">Create carousel</a>
@@ -15,4 +17,4 @@
         {{ $carousels->links() }}
         <div class="rounded-xl border bg-blue-50 p-4 text-sm text-blue-950"><strong>How to use:</strong> Publish a carousel and it will appear on the homepage. Manual items are fully editable; dynamic sources refresh from published courses, teacher profiles and approved course testimonials.</div>
     </div>
-</x-app-layout>
+@endsection
