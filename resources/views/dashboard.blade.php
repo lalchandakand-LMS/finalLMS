@@ -312,6 +312,7 @@
                         <p class="muted">{{ __('No student progress data yet.') }}</p>
                     @endforelse
                 </section>
+                @if($dashboardAppearance['show_quick_actions'])
                 <section class="aec-panel">
                     <div class="aec-panel-head"><h3>⚡ {{ __('Quick actions') }}</h3><span class="aec-pill">{{ __('Shortcuts') }}</span></div>
                     <div class="aec-module-list" style="grid-template-columns:repeat(2,minmax(0,1fr))">
@@ -323,6 +324,7 @@
                         <a class="aec-module" href="{{ route('admin.analytics.index') }}"><span>📊</span>{{ __('Analytics') }}</a>
                     </div>
                 </section>
+                @endif
             </div>
             <section class="aec-panel" aria-labelledby="aec-recent-activity-title" style="order:7">
                 <div class="aec-panel-head"><h3 id="aec-recent-activity-title">🕘 {{ __('Recent activity') }}</h3><a class="aec-pill" href="{{ route('admin.activity-logs.index') }}">{{ __('View activity log') }} →</a></div>
