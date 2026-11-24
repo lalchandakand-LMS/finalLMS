@@ -188,8 +188,9 @@ final class HrController extends Controller
         $profile = StaffProfile::query()->where('user_id', $teacher->id)->firstOrFail();
         $attendances = $profile->attendances()->latest('attendance_date')->limit(60)->get();
         $leaveRequests = $profile->leaveRequests()->latest()->limit(30)->get();
+        $payrolls = $profile->payrolls()->latest('payroll_month')->limit(24)->get();
 
-        return view('modules.hr.teacher', compact('profile', 'attendances', 'leaveRequests'));
+        return view('modules.hr.teacher', compact('profile', 'attendances', 'leaveRequests', 'payrolls'));
     }
 
     public function teacherRequestLeave(Request $request): RedirectResponse
