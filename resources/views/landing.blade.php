@@ -185,7 +185,32 @@
             .homepage-template--focus-learning .hero { text-align:left; }
             .homepage-template--focus-learning .hero .cta-row { justify-content:flex-start; }
         }
-    </style>
+    
+/* Reference-aligned public homepage: preserve all existing content and CMS controls. */
+.homepage-template { overflow:hidden; }
+.homepage-template .home-carousel { margin-bottom:22px; }
+.homepage-template .home-carousel__viewport { box-shadow:0 16px 36px #062c4930; }
+.homepage-template .home-welcome { position:relative; border:1px solid #ffffff1c; background:radial-gradient(circle at 78% 18%,#16a8c6 0,transparent 32%),linear-gradient(115deg,#062e42,#07546a 58%,#092d55); }
+.homepage-template .home-welcome:after { content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(110deg,transparent 52%,#ffffff0b 52.2%,transparent 53.5%); }
+.homepage-template .home-overview { box-shadow:0 14px 34px #06344a25; }
+.homepage-template .home-overview__panel { min-width:0; }
+.homepage-template .home-stat { transition:transform .18s ease,border-color .18s ease,background .18s ease; }
+.homepage-template .home-stat:hover { transform:translateY(-2px);border-color:#68d8e477;background:#ffffff15; }
+.homepage-template .home-paths { position:relative; }
+.homepage-template .home-course-tile { box-shadow:0 8px 22px #234d7a12; }
+.homepage-template .home-testimonials { position:relative; padding:clamp(42px,6vw,70px) 0; overflow:hidden; background:linear-gradient(135deg,#111d31,#17243b 55%,#0d1b30); }
+.homepage-template .home-testimonial-viewport { overflow:hidden; width:100%; mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent); }
+.homepage-template .home-testimonial-track { display:flex; width:max-content; gap:14px; padding:9px 0; animation:home-testimonial-left 52s linear infinite; }
+.homepage-template .home-testimonial-track--reverse { animation-name:home-testimonial-right; animation-duration:58s; }
+.homepage-template .home-testimonial-viewport:hover .home-testimonial-track { animation-play-state:paused; }
+.homepage-template .home-quote-card { flex:0 0 clamp(245px,29vw,330px); min-height:150px; border:1px solid #ffffff20; background:linear-gradient(145deg,#1b2b45,#15243a); box-shadow:0 10px 26px #00000020; }
+@keyframes home-testimonial-left { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+@keyframes home-testimonial-right { from{transform:translateX(-50%)} to{transform:translateX(0)} }
+@media(max-width:760px){.homepage-template .home-overview{grid-template-columns:1fr}.homepage-template .home-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.homepage-template .home-course-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.homepage-template .home-welcome{grid-template-columns:1fr}.homepage-template .home-welcome__art{min-height:180px}}
+@media(max-width:520px){.homepage-template .home-course-grid{grid-template-columns:1fr}.homepage-template .home-stat-grid{gap:8px}.homepage-template .home-stat{padding:10px}.homepage-template .home-quote-card{flex-basis:260px}.homepage-template .home-carousel__content h2{font-size:clamp(25px,8vw,36px)}}
+@media(prefers-reduced-motion:reduce){.homepage-template .home-testimonial-track{animation:none;transform:none}.homepage-template .home-stat,.homepage-template .home-course-tile{transition:none}}
+
+</style>
 
     @include('partials.flash-sales', ['flashSales' => $flashSales])
 
