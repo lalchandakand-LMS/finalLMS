@@ -220,6 +220,7 @@ Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('a
     Route::post('/attendance', [HrController::class, 'recordAttendance'])->middleware('throttle:60,1')->name('attendance.store');
     Route::post('/leave-requests', [HrController::class, 'requestLeave'])->middleware('throttle:20,1')->name('leave.store');
     Route::post('/leave-requests/{leave}/review', [HrController::class, 'reviewLeave'])->whereNumber('leave')->middleware('throttle:20,1')->name('leave.review');
+    Route::get('/payrolls/{payroll}/slip', [HrController::class, 'showPayrollSlip'])->whereNumber('payroll')->name('payrolls.slip');
     Route::post('/payrolls', [HrController::class, 'recordPayroll'])->middleware('throttle:20,1')->name('payrolls.store');
     Route::post('/payrolls/{payroll}/mark-paid', [HrController::class, 'markPayrollPaid'])->whereNumber('payroll')->middleware(['admin.permission:finance.invoices', 'throttle:10,1'])->name('payrolls.mark-paid');
     Route::get('/recruitment', [HrController::class, 'recruitmentIndex'])->name('recruitment.index');
@@ -230,6 +231,7 @@ Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('a
 });
 Route::middleware(['auth', 'verified', 'activity.log', 'role:branch_manager'])->prefix('branch/hr')->name('branch.hr.')->group(function () {
     Route::get('/', [HrController::class, 'index'])->name('index');
+    Route::get('/payrolls/{payroll}/slip', [HrController::class, 'showPayrollSlip'])->whereNumber('payroll')->name('payrolls.slip');
     Route::post('/staff', [HrController::class, 'storeStaff'])->middleware('throttle:20,1')->name('staff.store');
     Route::put('/staff/{staff}', [HrController::class, 'updateStaff'])->whereNumber('staff')->middleware('throttle:20,1')->name('staff.update');
     Route::post('/attendance', [HrController::class, 'recordAttendance'])->middleware('throttle:60,1')->name('attendance.store');
@@ -238,6 +240,7 @@ Route::middleware(['auth', 'verified', 'activity.log', 'role:branch_manager'])->
 });
 Route::middleware(['auth', 'verified', 'activity.log', 'role:teacher'])->prefix('teacher/hr')->name('teacher.hr.')->group(function () {
     Route::get('/', [HrController::class, 'teacherIndex'])->name('index');
+    Route::get('/payrolls/{payroll}/slip', [HrController::class, 'showPayrollSlip'])->whereNumber('payroll')->name('payrolls.slip');
     Route::post('/leave-requests', [HrController::class, 'teacherRequestLeave'])->middleware('throttle:10,1')->name('leave.store');
 });
 
