@@ -215,6 +215,10 @@ Route::middleware(['auth', 'verified', 'activity.log', 'role:branch_manager'])->
 
 Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('admin/hr')->name('admin.hr.')->group(function () {
     Route::get('/', [HrController::class, 'index'])->name('index');
+    Route::get('/payroll-reports', [HrReportController::class, 'payrollIndex'])->name('payroll-reports');
+    Route::get('/payroll-reports/export', [HrReportController::class, 'exportPayroll'])->middleware('throttle:10,1')->name('payroll-reports.export');
+    Route::get('/leave-calendar', [HrReportController::class, 'leaveCalendar'])->name('leave-calendar');
+    Route::get('/leave-reports/export', [HrReportController::class, 'exportLeaveReport'])->middleware('throttle:10,1')->name('leave-reports.export');
     Route::post('/staff', [HrController::class, 'storeStaff'])->middleware('throttle:20,1')->name('staff.store');
     Route::put('/staff/{staff}', [HrController::class, 'updateStaff'])->whereNumber('staff')->middleware('throttle:20,1')->name('staff.update');
     Route::post('/attendance', [HrController::class, 'recordAttendance'])->middleware('throttle:60,1')->name('attendance.store');
@@ -231,6 +235,10 @@ Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('a
 });
 Route::middleware(['auth', 'verified', 'activity.log', 'role:branch_manager'])->prefix('branch/hr')->name('branch.hr.')->group(function () {
     Route::get('/', [HrController::class, 'index'])->name('index');
+    Route::get('/payroll-reports', [HrReportController::class, 'payrollIndex'])->name('payroll-reports');
+    Route::get('/payroll-reports/export', [HrReportController::class, 'exportPayroll'])->middleware('throttle:10,1')->name('payroll-reports.export');
+    Route::get('/leave-calendar', [HrReportController::class, 'leaveCalendar'])->name('leave-calendar');
+    Route::get('/leave-reports/export', [HrReportController::class, 'exportLeaveReport'])->middleware('throttle:10,1')->name('leave-reports.export');
     Route::get('/payrolls/{payroll}/slip', [HrController::class, 'showPayrollSlip'])->whereNumber('payroll')->name('payrolls.slip');
     Route::post('/staff', [HrController::class, 'storeStaff'])->middleware('throttle:20,1')->name('staff.store');
     Route::put('/staff/{staff}', [HrController::class, 'updateStaff'])->whereNumber('staff')->middleware('throttle:20,1')->name('staff.update');
