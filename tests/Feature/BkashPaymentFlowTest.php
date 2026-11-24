@@ -839,4 +839,37 @@ class BkashPaymentFlowTest extends TestCase
         Http::assertNothingSent();
     }
 
+
+    public function test_provider_neutral_course_checkout_route_uses_the_registered_native_gateway(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $course = $this->paidCourse();
+
+        Http::fake([
+            '*/tokenized/checkout/token/grant' => Http::response(['id_token' => 'generic-route-token'], 200),
+            '*/tokenized/checkout/create' => Http::response([
+                'statusCode' => '0000',
+                'paymentID' => 'BKASH-GENERIC-ROUTE-001',
+                'bkashURL' => 'https://tokenized.sandbox.bka.sh/checkout/pay/BKASH-GENERIC-ROUTE-001',
+            ], 200),
+        ]);
+
+        $this->actingAs($student)
+            ->post(route('courses.payments.gateway', ['course' => $course, 'provider' => 'bkash']))
+            ->assertRedirect('https://tokenized.sandbox.bka.sh/checkout/pay/BKASH-GENERIC-ROUTE-001');
+
+        $this->assertDatabaseHas('payments', [
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'gateway_provider' => 'bkash',
+            'gateway_payment_id' => 'BKASH-GENERIC-ROUTE-001',
+            'status' => 'pending',
+        ]);
+    }
+
+    public function test_generic_callback_route_rejects_uninstalled_payment_providers(): void
+    {
+        $this->get('/payments/not-installed/callback?paymentID=UNTRUSTED-001')
+            ->assertNotFound();
+    }
 }
