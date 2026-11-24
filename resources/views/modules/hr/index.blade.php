@@ -3,7 +3,7 @@
 @section('content')
 @php($hrRoutePrefix = request()->routeIs('branch.*') ? 'branch.hr' : 'admin.hr')
 <div class="mx-auto max-w-7xl space-y-6 p-4 sm:p-6">
-    <div><h1 class="text-2xl font-bold">HR & Staff Management</h1><p class="text-sm text-gray-600">Employee directory, attendance, leave approvals and payroll ledger.</p></div>
+    <div class="flex flex-wrap items-center justify-between gap-3"><div><h1 class="text-2xl font-bold">HR & Staff Management</h1><p class="text-sm text-gray-600">Employee directory, attendance, leave approvals and payroll ledger.</p></div><nav class="flex flex-wrap gap-2"><a class="rounded border px-3 py-2 text-sm" href="{{ route($hrRoutePrefix.'.payroll-reports') }}">Monthly payroll reports</a><a class="rounded border px-3 py-2 text-sm" href="{{ route($hrRoutePrefix.'.leave-calendar') }}">Leave calendar & reports</a></nav></div>
     @if(session('success'))<p class="rounded bg-green-50 p-3 text-green-800">{{ session('success') }}</p>@endif
     @if(isset($errors) && $errors->any())<p class="rounded bg-red-50 p-3 text-red-800">{{ $errors->first() }}</p>@endif
     <div class="grid gap-6 xl:grid-cols-2">
