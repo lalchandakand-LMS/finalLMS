@@ -134,6 +134,7 @@ Route::get('/news/{post:slug}', [BlogController::class, 'show'])->name('news.sho
 Route::post('/news/{post:slug}/comments', [CommentController::class, 'storePost'])->middleware(['auth', 'throttle:5,1'])->name('news.comments.store');
 Route::post('/courses/{course}/comments', [CommentController::class, 'storeCourse'])->middleware(['auth', 'throttle:5,1'])->name('courses.comments.store');
 Route::post('/language', [LocaleController::class, 'update'])->middleware('throttle:20,1')->name('locale.update');
+Route::get('/payments/{provider}/callback', [BkashPaymentController::class, 'callback'])->where('provider', '[a-z][a-z0-9_]{1,39}')->middleware('throttle:30,1')->name('payments.gateway.callback');
 Route::get('/payments/bkash/callback', [BkashPaymentController::class, 'callback'])->middleware('throttle:30,1')->name('payments.bkash.callback');
 Route::get('/student/invoices/{invoice}/print', [StudentInvoiceController::class, 'printInvoice'])->middleware(['signed', 'throttle:30,1'])->name('student.invoices.print');
 Route::get('/student/invoices/{invoice}/payments/{payment}/print', [StudentInvoiceController::class, 'printReceipt'])->middleware(['signed', 'throttle:30,1'])->name('student.invoices.receipts.print');
@@ -387,6 +388,7 @@ Route::middleware(['auth', 'verified', 'student.device', 'activity.log'])->group
         Route::get('/my/wishlist', [CourseWishlistController::class, 'index'])->name('student.wishlist.index');
         Route::post('/courses/{course}/wishlist', [CourseWishlistController::class, 'store'])->middleware('throttle:30,1')->name('student.wishlist.store');
         Route::delete('/courses/{course}/wishlist', [CourseWishlistController::class, 'destroy'])->middleware('throttle:30,1')->name('student.wishlist.destroy');
+        Route::post('/courses/{course}/payments/{provider}', [BkashPaymentController::class, 'initiate'])->where('provider', '[a-z][a-z0-9_]{1,39}')->middleware('throttle:10,1')->name('courses.payments.gateway');
         Route::post('/courses/{course}/payments/bkash', [BkashPaymentController::class, 'initiate'])->middleware('throttle:10,1')->name('courses.payments.bkash');
         Route::get('/my/courses', [CourseController::class, 'myCourses'])->name('student.courses.index');
         Route::post('/courses/{course}/content/{post:slug}/complete', [CourseContentController::class, 'complete'])->middleware('throttle:30,1')->name('student.courses.content.complete');
