@@ -145,7 +145,11 @@ class AttendanceController extends Controller
             }
         });
 
-        return redirect()->route('teacher.batches.attendance.index', ['batch' => $batch, 'date' => $validated['attendance_date']])
+        $attendanceRoute = Auth::user()->isBranchManager()
+            ? 'admin.branch-workspace.batches.attendance.index'
+            : (Auth::user()->isAdmin() ? 'admin.batches.attendance.index' : 'teacher.batches.attendance.index');
+
+        return redirect()->route($attendanceRoute, ['batch' => $batch, 'date' => $validated['attendance_date']])
             ->with('success', 'Attendance saved successfully.');
     }
 
