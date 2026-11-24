@@ -27,7 +27,7 @@ class CoreNativeModulesTest extends TestCase
         ];
 
         foreach ($routes as $route) {
-            $this->actingAs($admin)->get(route($route))->assertOk();
+            $this->actingAs($admin)->get(route($route))->assertOk("Failed workspace route: {$route}");
         }
     }
 }
