@@ -1,13 +1,10 @@
 @extends('layouts.app')
 
 @section('content')
-@php($admissionRoutePrefix = request()->routeIs('branch.*') ? 'branch.admissions' : 'admin.admissions')
-@php
-    $branchPortal = request()->routeIs('branch.*');
-    $routePrefix = $branchPortal ? 'branch.admissions.' : 'admin.admissions.';
-    $documentLabels = ['photo' => 'Photo', 'birth_certificate' => 'Birth certificate', 'nid' => 'NID / identity', 'previous_certificate' => 'Previous certificate', 'other' => 'Other'];
-    $statusLabels = ['pending' => 'Pending', 'screening' => 'Screening', 'shortlisted' => 'Shortlisted', 'waitlisted' => 'Waitlisted', 'approved' => 'Approved', 'rejected' => 'Rejected'];
-@endphp
+@php($branchPortal = request()->routeIs('branch.*'))
+@php($routePrefix = $branchPortal ? 'branch.admissions.' : 'admin.admissions.')
+@php($documentLabels = ['photo' => 'Photo', 'birth_certificate' => 'Birth certificate', 'nid' => 'NID / identity', 'previous_certificate' => 'Previous certificate', 'other' => 'Other'])
+@php($statusLabels = ['pending' => 'Pending', 'screening' => 'Screening', 'shortlisted' => 'Shortlisted', 'waitlisted' => 'Waitlisted', 'approved' => 'Approved', 'rejected' => 'Rejected'])
 <div class="mx-auto max-w-7xl space-y-6 p-4 sm:p-6">
     <header class="flex flex-wrap items-center justify-between gap-3">
         <div><p class="text-xs font-bold uppercase tracking-widest text-blue-700">Alom's English Center · Admissions</p><h1 class="text-2xl font-bold">Admission Management</h1><p class="text-sm text-gray-600">Online and walk-in applications, document verification, screening, decisions and student conversion.</p></div>
