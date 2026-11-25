@@ -7,6 +7,7 @@ namespace App\Modules\Library;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 final class LibraryLoan extends Model
 {
@@ -23,9 +24,9 @@ final class LibraryLoan extends Model
         return $this->belongsTo(User::class, 'borrower_user_id');
     }
 
-    public function fineInvoice(): BelongsTo
+    public function fineInvoice(): HasOne
     {
-        return $this->belongsTo(\App\Models\Invoice::class, 'id', 'library_loan_id');
+        return $this->hasOne(\App\Models\Invoice::class, 'library_loan_id');
     }
 
     public function book(): BelongsTo
