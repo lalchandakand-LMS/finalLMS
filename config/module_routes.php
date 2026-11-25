@@ -13,6 +13,8 @@ return [
     'teacher_management' => ['teacher.applications.*', 'admin.teacher-applications.*', 'admin.teachers.*', 'teacher.profile.*', 'teacher.apply', 'teacher.apply.*'],
     'guardian_management' => ['admin.guardians.*', 'guardian.links.*', 'student.guardian-requests.*'],
     'staff_management' => ['admin.users.*', 'admin.staff.*', 'admin.hr.*'],
+    'admissions_management' => ['admin.admissions.*', 'branch.admissions.*'],
+    'library_management' => ['admin.library.*', 'branch.library.*'],
     'attendance' => ['teacher.batches.attendance.*', 'student.attendance.*', 'admin.attendance.*', 'admin.batches.attendance.*'],
     'assignment' => ['teacher.batches.assignments.*', 'teacher.assignments.*', 'student.assignments.*', 'admin.assignments.*', 'admin.batches.assignments.*', 'assignment-submissions.*'],
     'exam_management' => ['student.exams.*', 'teacher.exams.*', 'teacher.question-set-attempts.*', 'student.question-set-attempts.*', 'student.question-sets.*', 'question-set-attempts.*', 'admin.exams.*', 'admin.question-sets.*', 'admin.batches.exams.*', 'admin.batches.question-bank.*'],
