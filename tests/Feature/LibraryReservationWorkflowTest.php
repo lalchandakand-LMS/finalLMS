@@ -43,7 +43,7 @@ class LibraryReservationWorkflowTest extends TestCase
         $this->actingAs($first)->post(route('student.library.reservations.store'), ['library_book_id' => $book->id])->assertRedirect();
         $this->actingAs($second)->post(route('student.library.reservations.store'), ['library_book_id' => $book->id])->assertRedirect();
         $this->assertSame('waiting', LibraryReservation::query()->where('user_id', $first->id)->value('status'));
-        $this->assertSame(1, LibraryReservation::query()->where('user_id', $second->id)->value('queue_position'));
+        $this->assertSame(2, LibraryReservation::query()->where('user_id', $second->id)->value('queue_position'));
 
         $this->actingAs($admin)->post(route('admin.library.loans.return', $loan->id))->assertRedirect();
         $firstReservation = LibraryReservation::query()->where('user_id', $first->id)->firstOrFail();
