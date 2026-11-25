@@ -22,6 +22,7 @@ final class LibraryController extends Controller
         $this->assertBranchAssigned($actor);
         $books = $this->scoped(LibraryBook::query(), $actor)->orderBy('title')->paginate(25, ['*'], 'book_page')->withQueryString();
         $loans = $this->scoped(LibraryLoan::query()->with(['book', 'borrower']), $actor)->latest()->limit(60)->get();
+        $reservations = $this->scoped(LibraryReservation::query()->with(['book', 'user']), $actor)->latest()->limit(100)->get();
         $borrowableUsers = User::query()
             ->whereIn('role', ['student', 'teacher', 'staff'])
             ->when($actor->isBranchManager(), fn ($query) => $query->where('branch_id', $actor->branch_id))
@@ -29,7 +30,7 @@ final class LibraryController extends Controller
             ->limit(500)
             ->get(['id', 'name', 'email', 'role', 'branch_id']);
 
-        return view('modules.library.index', compact('books', 'loans', 'borrowableUsers'));
+        return view('modules.library.index', compact('books', 'loans', 'borrowableUsers', 'reservations'));
     }
 
     public function storeBook(Request $request): RedirectResponse
@@ -86,7 +87,16 @@ final class LibraryController extends Controller
                 }
             }
 
+            $this->expireAndPromote($book);
+            $ready = LibraryReservation::query()->where('library_book_id', $book->id)->where('status', 'ready_for_pickup')->where('expires_at', '>', now())->orderBy('created_at')->lockForUpdate()->first();
+            $claim = $borrower ? LibraryReservation::query()->where('library_book_id', $book->id)->where('user_id', $borrower->id)->where('status', 'ready_for_pickup')->where('expires_at', '>', now())->lockForUpdate()->first() : null;
+            abort_if($ready && (! $claim || $ready->id !== $claim->id), 409, 'This copy is reserved for the next borrower in the waiting list.');
+            $held = LibraryReservation::query()->where('library_book_id', $book->id)->where('status', 'ready_for_pickup')->where('expires_at', '>', now())->count();
+            abort_unless($claim || $book->available_copies > $held, 409, 'All available copies are held for reservations.');
             $book->decrement('available_copies');
+            if ($claim) {
+                $claim->forceFill(['status' => 'fulfilled', 'fulfilled_at' => now(), 'expires_at' => null])->save();
+            }
 
             return LibraryLoan::query()->create([
                 'library_book_id' => $book->id,
@@ -103,6 +113,74 @@ final class LibraryController extends Controller
         $this->audit($request, 'library.loan_issued', 'Issued library loan #'.$loan->id.'.');
 
         return back()->with('success', 'Book issued successfully.');
+    }
+
+    public function studentReservations(Request $request): View
+    {
+        $actor = $request->user();
+        abort_unless(in_array($actor->role, ['student', 'teacher', 'staff'], true), 403);
+        $books = LibraryBook::query()->where(function ($query) use ($actor): void {
+            $query->whereNull('branch_id')->orWhere('branch_id', $actor->branch_id);
+        })->orderBy('title')->paginate(30);
+        $reservations = LibraryReservation::query()->with('book')->where('user_id', $actor->id)->latest()->limit(100)->get();
+        return view('modules.library.student-reservations', compact('books', 'reservations'));
+    }
+
+    public function storeReservation(Request $request): RedirectResponse
+    {
+        $actor = $request->user();
+        abort_unless(in_array($actor->role, ['student', 'teacher', 'staff'], true), 403);
+        $data = $request->validate(['library_book_id' => ['required', 'integer', 'exists:library_books,id']]);
+        $reservation = DB::transaction(function () use ($actor, $data): LibraryReservation {
+            $book = LibraryBook::query()->lockForUpdate()->findOrFail($data['library_book_id']);
+            if ($book->branch_id !== null) abort_unless($actor->branch_id !== null && (int) $actor->branch_id === (int) $book->branch_id, 404);
+            $this->expireAndPromote($book);
+            $active = LibraryReservation::query()->where('library_book_id', $book->id)->where('user_id', $actor->id)->whereIn('status', ['waiting', 'ready_for_pickup'])->lockForUpdate()->first();
+            abort_if($active, 409, 'You already have an active reservation for this book.');
+            $held = LibraryReservation::query()->where('library_book_id', $book->id)->where('status', 'ready_for_pickup')->where('expires_at', '>', now())->count();
+            $free = max(0, (int) $book->available_copies - $held);
+            $waiting = LibraryReservation::query()->where('library_book_id', $book->id)->where('status', 'waiting')->count();
+            $ready = $free > 0 && $waiting === 0;
+            return LibraryReservation::query()->create([
+                'library_book_id' => $book->id, 'branch_id' => $book->branch_id, 'user_id' => $actor->id,
+                'status' => $ready ? 'ready_for_pickup' : 'waiting',
+                'queue_position' => $ready ? null : $waiting + 1,
+                'expires_at' => $ready ? now()->addDays(3) : null,
+            ]);
+        }, 3);
+        $this->audit($request, 'library.reservation_created', 'Created library reservation #'.$reservation->id.'.');
+        return back()->with('success', $reservation->status === 'ready_for_pickup' ? 'A copy is ready. Collect within 3 days.' : 'Added to the waiting list.');
+    }
+
+    public function cancelReservation(Request $request, int $reservation): RedirectResponse
+    {
+        $actor = $request->user();
+        DB::transaction(function () use ($actor, $reservation): void {
+            $record = LibraryReservation::query()->lockForUpdate()->findOrFail($reservation);
+            abort_unless((int) $record->user_id === (int) $actor->id, 404);
+            abort_unless(in_array($record->status, ['waiting', 'ready_for_pickup'], true), 409);
+            $record->forceFill(['status' => 'cancelled', 'expires_at' => null])->save();
+            $book = LibraryBook::query()->lockForUpdate()->find($record->library_book_id);
+            if ($book) $this->expireAndPromote($book);
+        }, 3);
+        $this->audit($request, 'library.reservation_cancelled', 'Cancelled library reservation #'.$reservation.'.');
+        return back()->with('success', 'Reservation cancelled.');
+    }
+
+    private function expireAndPromote(LibraryBook $book): void
+    {
+        LibraryReservation::query()->where('library_book_id', $book->id)->where('status', 'ready_for_pickup')->whereNotNull('expires_at')->where('expires_at', '<=', now())->update(['status' => 'expired', 'expires_at' => null, 'updated_at' => now()]);
+        $held = LibraryReservation::query()->where('library_book_id', $book->id)->where('status', 'ready_for_pickup')->where('expires_at', '>', now())->count();
+        $slots = max(0, (int) $book->available_copies - $held);
+        while ($slots-- > 0) {
+            $next = LibraryReservation::query()->where('library_book_id', $book->id)->where('status', 'waiting')->orderBy('created_at')->orderBy('id')->lockForUpdate()->first();
+            if (! $next) break;
+            $next->forceFill(['status' => 'ready_for_pickup', 'queue_position' => null, 'expires_at' => now()->addDays(3)])->save();
+        }
+        $position = 1;
+        LibraryReservation::query()->where('library_book_id', $book->id)->where('status', 'waiting')->orderBy('created_at')->orderBy('id')->get()->each(function (LibraryReservation $item) use (&$position): void {
+            $item->forceFill(['queue_position' => $position++])->save();
+        });
     }
 
     public function returnLoan(Request $request, int $loan): RedirectResponse
@@ -130,6 +208,7 @@ final class LibraryController extends Controller
             if ($book) {
                 abort_if($book->available_copies >= $book->total_copies, 409, 'Book inventory is inconsistent; return was not applied.');
                 $book->increment('available_copies');
+                $this->expireAndPromote($book->fresh());
             }
 
             return true;

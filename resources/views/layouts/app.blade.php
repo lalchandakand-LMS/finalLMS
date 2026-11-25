@@ -591,12 +591,14 @@
                     <a href="{{ route('profile.edit') }}">{{ __('Profile') }}</a>
                     <a href="{{ route('live-classes.index') }}">{{ __('Live classes') }}</a>
                     @if(auth()->user()->isStudent())
+                        <a href="{{ route('student.library.reservations.index') }}">Library reservations</a>
                         <a href="{{ route('ebooks.orders') }}">My eBook library</a>
                         <a href="{{ route('student.transcript') }}">{{ __('Academic transcript') }}</a>
                         <a href="{{ route('student.gamification.index') }}">{{ __('Learning achievements') }}</a>
                         <a href="{{ route('student.ai-assistant.index') }}">{{ __('AI Study Assistant') }}</a>
                     @endif
                     @if(auth()->user()->isTeacher())
+                        <a href="{{ route('teacher.library.reservations.index') }}">Library reservations</a>
                         <a href="{{ route('teacher.hr.index') }}">{{ __('My HR & attendance') }}</a>
                         <a href="{{ route('teacher.ai-assistant.index') }}">{{ __('AI Teaching Assistant') }}</a>
                         <a href="{{ route('teacher.ai-assistant.drafts.index') }}">{{ __('AI teaching drafts') }}</a>
@@ -627,6 +629,9 @@
                         @if($studentTrackingAvailable && \Illuminate\Support\Facades\Route::has('teacher.student-tracking.index'))
                             <a href="{{ route('teacher.student-tracking.index') }}">My Students</a>
                         @endif
+                    @endif
+                    @if(auth()->user()->role === 'staff')
+                        <a href="{{ route('staff.library.reservations.index') }}">Library reservations</a>
                     @endif
                     @if(auth()->user()->isGuardian())
                         <a href="{{ route('guardian.dashboard') }}">{{ __('Guardian portal') }}</a>

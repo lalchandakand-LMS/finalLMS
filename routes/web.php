@@ -207,12 +207,22 @@ Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('a
     Route::post('/loans', [LibraryController::class, 'issueLoan'])->middleware('throttle:20,1')->name('loans.issue');
     Route::post('/loans/{loan}/return', [LibraryController::class, 'returnLoan'])->whereNumber('loan')->middleware('throttle:20,1')->name('loans.return');
 });
+
 Route::middleware(['auth', 'verified', 'activity.log', 'role:branch_manager'])->prefix('branch/library')->name('branch.library.')->group(function () {
     Route::get('/', [LibraryController::class, 'index'])->name('index');
     Route::post('/books', [LibraryController::class, 'storeBook'])->middleware('throttle:20,1')->name('books.store');
     Route::post('/loans', [LibraryController::class, 'issueLoan'])->middleware('throttle:20,1')->name('loans.issue');
     Route::post('/loans/{loan}/return', [LibraryController::class, 'returnLoan'])->whereNumber('loan')->middleware('throttle:20,1')->name('loans.return');
 });
+
+foreach (['student', 'teacher', 'staff'] as $libraryRole) {
+    Route::middleware(['auth', 'verified', 'activity.log', 'role:'.$libraryRole])
+        ->prefix($libraryRole.'/library')->name($libraryRole.'.library.')->group(function () {
+            Route::get('/reservations', [LibraryController::class, 'studentReservations'])->name('reservations.index');
+            Route::post('/reservations', [LibraryController::class, 'storeReservation'])->middleware('throttle:10,1')->name('reservations.store');
+            Route::post('/reservations/{reservation}/cancel', [LibraryController::class, 'cancelReservation'])->whereNumber('reservation')->middleware('throttle:10,1')->name('reservations.cancel');
+        });
+}
 
 Route::middleware(['auth', 'verified', 'activity.log', 'role:admin'])->prefix('admin/hr')->name('admin.hr.')->group(function () {
     Route::get('/', [HrController::class, 'index'])->name('index');
