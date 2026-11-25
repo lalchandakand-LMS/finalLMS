@@ -23,6 +23,11 @@ final class LibraryLoan extends Model
         return $this->belongsTo(User::class, 'borrower_user_id');
     }
 
+    public function fineInvoice(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Invoice::class, 'id', 'library_loan_id');
+    }
+
     public function book(): BelongsTo
     {
         return $this->belongsTo(LibraryBook::class, 'library_book_id');
