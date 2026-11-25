@@ -21,9 +21,15 @@ final class LibraryController extends Controller
         $actor = $request->user();
         $this->assertBranchAssigned($actor);
         $books = $this->scoped(LibraryBook::query(), $actor)->orderBy('title')->paginate(25, ['*'], 'book_page')->withQueryString();
-        $loans = $this->scoped(LibraryLoan::query()->with('book'), $actor)->latest()->limit(60)->get();
+        $loans = $this->scoped(LibraryLoan::query()->with(['book', 'borrower']), $actor)->latest()->limit(60)->get();
+        $borrowableUsers = User::query()
+            ->whereIn('role', ['student', 'teacher', 'staff'])
+            ->when($actor->isBranchManager(), fn ($query) => $query->where('branch_id', $actor->branch_id))
+            ->orderBy('name')
+            ->limit(500)
+            ->get(['id', 'name', 'email', 'role', 'branch_id']);
 
-        return view('modules.library.index', compact('books', 'loans'));
+        return view('modules.library.index', compact('books', 'loans', 'borrowableUsers'));
     }
 
     public function storeBook(Request $request): RedirectResponse
@@ -57,8 +63,9 @@ final class LibraryController extends Controller
         $this->assertBranchAssigned($actor);
         $data = $request->validate([
             'library_book_id' => ['required', 'integer', 'exists:library_books,id'],
-            'borrower_name' => ['required', 'string', 'max:160'],
-            'borrower_code' => ['required', 'string', 'max:60'],
+            'borrower_user_id' => ['nullable', 'integer', 'required_without:borrower_name', 'exists:users,id'],
+            'borrower_name' => ['nullable', 'required_without:borrower_user_id', 'string', 'max:160'],
+            'borrower_code' => ['nullable', 'required_without:borrower_user_id', 'string', 'max:60'],
             'due_at' => ['required', 'date', 'after_or_equal:today'],
         ]);
 
@@ -66,13 +73,27 @@ final class LibraryController extends Controller
             $book = LibraryBook::query()->lockForUpdate()->findOrFail($data['library_book_id']);
             $this->assertRecordBranch($actor, $book->branch_id);
             abort_unless($book->available_copies > 0, 409, 'No copies of this book are currently available.');
+
+            $borrower = null;
+            if (! empty($data['borrower_user_id'])) {
+                $borrower = User::query()->whereKey($data['borrower_user_id'])
+                    ->whereIn('role', ['student', 'teacher', 'staff'])
+                    ->firstOrFail();
+                if ($actor->isBranchManager()) {
+                    abort_unless((int) $borrower->branch_id === (int) $actor->branch_id, 404, 'Borrower is not in your branch.');
+                } elseif ($borrower->branch_id !== null && (int) $borrower->branch_id !== (int) $book->branch_id) {
+                    abort(422, 'Borrower and book must belong to the same branch.');
+                }
+            }
+
             $book->decrement('available_copies');
 
             return LibraryLoan::query()->create([
                 'library_book_id' => $book->id,
                 'branch_id' => $book->branch_id,
-                'borrower_name' => trim($data['borrower_name']),
-                'borrower_code' => trim($data['borrower_code']),
+                'borrower_user_id' => $borrower?->id,
+                'borrower_name' => $borrower?->name ?? trim($data['borrower_name']),
+                'borrower_code' => $borrower ? 'USER-'.$borrower->id : trim($data['borrower_code']),
                 'borrowed_at' => now()->toDateString(),
                 'due_at' => $data['due_at'],
                 'status' => 'borrowed',
