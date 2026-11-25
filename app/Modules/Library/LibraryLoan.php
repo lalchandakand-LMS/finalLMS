@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 final class LibraryLoan extends Model
 {
     protected $table = 'library_loans';
-    protected $fillable = ['library_book_id', 'branch_id', 'borrower_name', 'borrower_code', 'borrowed_at', 'due_at', 'returned_at', 'fine_amount', 'status'];
+    protected $fillable = ['library_book_id', 'branch_id', 'borrower_user_id', 'borrower_name', 'borrower_code', 'borrowed_at', 'due_at', 'returned_at', 'fine_amount', 'status'];
 
     protected function casts(): array
     {
