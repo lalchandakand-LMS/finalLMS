@@ -13,7 +13,7 @@ class LibraryLostDamagedBookTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function createLoan(User $admin, int $totalCopies = 2, int $availableCopies = 1): array
+    private function createLoan(int $totalCopies = 2, int $availableCopies = 1): array
     {
         $book = LibraryBook::query()->create([
             'isbn' => 'COND-'.uniqid(), 'title' => 'Condition test', 'author' => 'Teacher',
@@ -31,7 +31,7 @@ class LibraryLostDamagedBookTest extends TestCase
     public function test_lost_copy_is_retired_without_increasing_available_stock(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
-        [$book, $loan] = $this->createLoan($admin);
+        [$book, $loan] = $this->createLoan();
 
         $this->actingAs($admin)->post(route('admin.library.loans.return', $loan->id), [
             'condition' => 'lost', 'condition_notes' => 'Borrower reported the book missing.',
@@ -48,7 +48,7 @@ class LibraryLostDamagedBookTest extends TestCase
     public function test_damaged_copy_is_retired_and_reason_is_kept_in_inventory_history(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
-        [$book, $loan] = $this->createLoan($admin, 3, 2);
+        [$book, $loan] = $this->createLoan(3, 2);
 
         $this->actingAs($admin)->post(route('admin.library.loans.return', $loan->id), [
             'condition' => 'damaged', 'condition_notes' => 'Pages are wet and unreadable.',
