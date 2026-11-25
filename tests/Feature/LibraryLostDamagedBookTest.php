@@ -66,7 +66,7 @@ class LibraryLostDamagedBookTest extends TestCase
     public function test_lost_or_damaged_copy_requires_a_reason_and_does_not_close_the_loan_without_it(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
-        [$book, $loan] = $this->createLoan($admin);
+        [$book, $loan] = $this->createLoan();
 
         $this->actingAs($admin)->post(route('admin.library.loans.return', $loan->id), [
             'condition' => 'damaged',
@@ -81,7 +81,7 @@ class LibraryLostDamagedBookTest extends TestCase
     public function test_closed_lost_or_damaged_loan_cannot_be_processed_twice(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
-        [$book, $loan] = $this->createLoan($admin);
+        [$book, $loan] = $this->createLoan();
 
         $payload = ['condition' => 'lost', 'condition_notes' => 'Missing after follow-up.'];
         $this->actingAs($admin)->post(route('admin.library.loans.return', $loan->id), $payload)->assertRedirect();
