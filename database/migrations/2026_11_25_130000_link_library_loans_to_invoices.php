@@ -18,6 +18,7 @@ return new class extends Migration {
     public function down(): void
     {
         Schema::table('invoices', function (Blueprint $table): void {
+            $table->dropUnique(['library_loan_id']);
             $table->dropConstrainedForeignId('library_loan_id');
         });
     }
