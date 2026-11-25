@@ -23,6 +23,7 @@ final class LibraryController extends Controller
         $books = $this->scoped(LibraryBook::query(), $actor)->orderBy('title')->paginate(25, ['*'], 'book_page')->withQueryString();
         $loans = $this->scoped(LibraryLoan::query()->with(['book', 'borrower']), $actor)->latest()->limit(60)->get();
         $reservations = $this->scoped(LibraryReservation::query()->with(['book', 'user']), $actor)->latest()->limit(100)->get();
+        $adjustments = $this->scoped(LibraryInventoryAdjustment::query()->with(['book', 'loan', 'adjustedBy']), $actor)->latest()->limit(100)->get();
         $borrowableUsers = User::query()
             ->whereIn('role', ['student', 'teacher', 'staff'])
             ->when($actor->isBranchManager(), fn ($query) => $query->where('branch_id', $actor->branch_id))
@@ -30,7 +31,7 @@ final class LibraryController extends Controller
             ->limit(500)
             ->get(['id', 'name', 'email', 'role', 'branch_id']);
 
-        return view('modules.library.index', compact('books', 'loans', 'borrowableUsers', 'reservations'));
+        return view('modules.library.index', compact('books', 'loans', 'borrowableUsers', 'reservations', 'adjustments'));
     }
 
     public function storeBook(Request $request): RedirectResponse
@@ -187,37 +188,64 @@ final class LibraryController extends Controller
     {
         $actor = $request->user();
         $this->assertBranchAssigned($actor);
+        $data = $request->validate([
+            'condition' => ['nullable', Rule::in(['good', 'lost', 'damaged'])],
+            'condition_notes' => ['nullable', 'string', 'max:1000', 'required_if:condition,lost,damaged'],
+        ]);
+        $condition = $data['condition'] ?? 'good';
         $dailyFine = max(0, (int) Setting::value('library_daily_fine_bdt', 10));
 
-        $returned = DB::transaction(function () use ($actor, $loan, $dailyFine): bool {
+        $closed = DB::transaction(function () use ($actor, $loan, $dailyFine, $condition, $data): bool {
             $record = LibraryLoan::query()->lockForUpdate()->findOrFail($loan);
             $this->assertRecordBranch($actor, $record->branch_id);
-            if ($record->status === 'returned') {
+            if ($record->status !== 'borrowed') {
                 return false;
             }
+
             $due = $record->due_at->copy()->startOfDay();
             $today = now()->startOfDay();
             $overdueDays = $today->greaterThan($due) ? (int) $due->diffInDays($today) : 0;
             $record->forceFill([
                 'returned_at' => $today->toDateString(),
                 'fine_amount' => round($overdueDays * $dailyFine, 2),
-                'status' => 'returned',
+                'status' => $condition === 'good' ? 'returned' : $condition,
             ])->save();
 
             $book = LibraryBook::query()->lockForUpdate()->find($record->library_book_id);
             if ($book) {
-                abort_if($book->available_copies >= $book->total_copies, 409, 'Book inventory is inconsistent; return was not applied.');
-                $book->increment('available_copies');
-                $this->expireAndPromote($book->fresh());
+                if ($condition === 'good') {
+                    abort_if($book->available_copies >= $book->total_copies, 409, 'Book inventory is inconsistent; return was not applied.');
+                    $book->increment('available_copies');
+                    $this->expireAndPromote($book->fresh());
+                } else {
+                    abort_if($book->total_copies <= $book->available_copies || $book->total_copies < 1, 409, 'Book inventory is inconsistent; the damaged or lost copy cannot be retired.');
+                    $book->decrement('total_copies');
+                    LibraryInventoryAdjustment::query()->create([
+                        'library_book_id' => $book->id,
+                        'library_loan_id' => $record->id,
+                        'branch_id' => $record->branch_id,
+                        'adjusted_by' => $actor->id,
+                        'condition' => $condition,
+                        'quantity' => 1,
+                        'notes' => trim($data['condition_notes']),
+                    ]);
+                }
             }
 
             return true;
         }, 3);
-        if ($returned) {
-            $this->audit($request, 'library.loan_returned', 'Returned library loan #'.$loan.'.');
+        if ($closed) {
+            $event = $condition === 'good' ? 'library.loan_returned' : 'library.inventory_copy_retired';
+            $this->audit($request, $event, 'Closed library loan #'.$loan.'; copy condition: '.$condition.'.');
         }
 
-        return back()->with('success', $returned ? 'Book return recorded.' : 'This loan was already returned.');
+        $message = match ($condition) {
+            'lost' => 'Loan closed. The lost copy was removed from active inventory.',
+            'damaged' => 'Loan closed. The damaged copy was removed from active inventory.',
+            default => 'Book return recorded.',
+        };
+
+        return back()->with('success', $closed ? $message : 'This loan was already closed.');
     }
 
     private function scoped($query, User $actor)
