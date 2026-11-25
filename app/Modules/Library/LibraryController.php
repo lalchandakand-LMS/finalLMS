@@ -6,11 +6,13 @@ namespace App\Modules\Library;
 
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
+use App\Models\Invoice;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -21,7 +23,7 @@ final class LibraryController extends Controller
         $actor = $request->user();
         $this->assertBranchAssigned($actor);
         $books = $this->scoped(LibraryBook::query(), $actor)->orderBy('title')->paginate(25, ['*'], 'book_page')->withQueryString();
-        $loans = $this->scoped(LibraryLoan::query()->with(['book', 'borrower']), $actor)->latest()->limit(60)->get();
+        $loans = $this->scoped(LibraryLoan::query()->with(['book', 'borrower', 'fineInvoice']), $actor)->latest()->limit(60)->get();
         $reservations = $this->scoped(LibraryReservation::query()->with(['book', 'user']), $actor)->latest()->limit(100)->get();
         $adjustments = $this->scoped(LibraryInventoryAdjustment::query()->with(['book', 'loan', 'adjustedBy']), $actor)->latest()->limit(100)->get();
         $borrowableUsers = User::query()
@@ -205,11 +207,31 @@ final class LibraryController extends Controller
             $due = $record->due_at->copy()->startOfDay();
             $today = now()->startOfDay();
             $overdueDays = $today->greaterThan($due) ? (int) $due->diffInDays($today) : 0;
+            $fineAmount = round($overdueDays * $dailyFine, 2);
             $record->forceFill([
                 'returned_at' => $today->toDateString(),
-                'fine_amount' => round($overdueDays * $dailyFine, 2),
+                'fine_amount' => $fineAmount,
                 'status' => $condition === 'good' ? 'returned' : $condition,
             ])->save();
+
+            // Registered borrowers receive a normal Finance invoice. Guest borrowers
+            // remain visible as outstanding library fines but cannot own LMS invoices.
+            if ($fineAmount > 0 && $record->borrower_user_id !== null) {
+                Invoice::query()->firstOrCreate(
+                    ['library_loan_id' => $record->id],
+                    [
+                        'user_id' => $record->borrower_user_id,
+                        'created_by' => $actor->id,
+                        'invoice_number' => 'AEC-LIB-'.now()->format('Ymd').'-'.Str::upper(Str::random(6)),
+                        'title' => 'Library overdue fine - Loan #'.$record->id,
+                        'description' => 'Overdue library fine for '.($record->book?->title ?? 'book #'.$record->library_book_id)
+                            .'. Overdue days: '.$overdueDays.'. Daily fine: BDT '.number_format($dailyFine, 2, '.', ''),
+                        'amount' => $fineAmount,
+                        'due_date' => $today->toDateString(),
+                        'status' => 'unpaid',
+                    ]
+                );
+            }
 
             $book = LibraryBook::query()->lockForUpdate()->find($record->library_book_id);
             if ($book) {
