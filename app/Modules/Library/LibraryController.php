@@ -119,7 +119,9 @@ final class LibraryController extends Controller
     {
         $actor = $request->user();
         abort_unless(in_array($actor->role, ['student', 'teacher', 'staff'], true), 403);
-        $books = LibraryBook::query()->orderBy('title')->paginate(30);
+        $books = LibraryBook::query()->where(function ($query) use ($actor): void {
+            $query->whereNull('branch_id')->orWhere('branch_id', $actor->branch_id);
+        })->orderBy('title')->paginate(30);
         $reservations = LibraryReservation::query()->with('book')->where('user_id', $actor->id)->latest()->limit(100)->get();
         return view('modules.library.student-reservations', compact('books', 'reservations'));
     }
@@ -131,7 +133,7 @@ final class LibraryController extends Controller
         $data = $request->validate(['library_book_id' => ['required', 'integer', 'exists:library_books,id']]);
         $reservation = DB::transaction(function () use ($actor, $data): LibraryReservation {
             $book = LibraryBook::query()->lockForUpdate()->findOrFail($data['library_book_id']);
-            if ($actor->branch_id !== null && $book->branch_id !== null) abort_unless((int) $actor->branch_id === (int) $book->branch_id, 404);
+            if ($book->branch_id !== null) abort_unless($actor->branch_id !== null && (int) $actor->branch_id === (int) $book->branch_id, 404);
             $this->expireAndPromote($book);
             $active = LibraryReservation::query()->where('library_book_id', $book->id)->where('user_id', $actor->id)->whereIn('status', ['waiting', 'ready_for_pickup'])->lockForUpdate()->first();
             abort_if($active, 409, 'You already have an active reservation for this book.');
